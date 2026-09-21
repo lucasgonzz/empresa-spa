@@ -6,6 +6,34 @@
 			{{ presentacion.titulo }}
 		</div>
 
+		<!-- Miniatura (misión asistente-masivas-imagenes-y-remito, 19/9/2026, contrato §3):
+		la imagen candidata para una categoría, que el job de imágenes encontró pero no se
+		animó a asignar solo. Es la foto de la que hablan los renglones, por eso va arriba de
+		ellos. `alt` es el título de la tarjeta ("Imagen para la categoría Bazar"): es lo que
+		un lector de pantalla necesita saber de la foto. Si la URL no carga (el archivo
+		candidato ya se limpió, o el storage no responde), la miniatura se esconde y queda
+		una línea atenuada en su lugar: la tarjeta sigue entera, con sus botones. Sin
+		`imagen_url` no se pinta nada, igual que hasta hoy. -->
+		<div
+		v-if="imagen_url && !imagen_rota"
+		class="asistente-ia-accion__imagen">
+			<img
+			:src="imagen_url"
+			:alt="presentacion.titulo"
+			loading="lazy"
+			data-testid="asistente-accion-imagen"
+			@error="imagen_rota = true">
+		</div>
+		<p
+		v-else-if="imagen_url"
+		class="asistente-ia-accion__imagen-rota"
+		data-testid="asistente-accion-imagen-rota">
+			<i
+			class="bi bi-image"
+			aria-hidden="true"></i>
+			<span>No se pudo mostrar la imagen</span>
+		</p>
+
 		<!-- Renglones etiqueta / valor tal cual los arma el API (§2.3 del plan): la SPA no
 		conoce la semántica de cada tipo. Interpolación normal de Vue, que escapa: nunca
 		v-html con texto que viene del API o de la IA. -->
@@ -216,6 +244,13 @@ function texto_de_falla(verbo, falla) {
  * español, y el comportamiento sale solo de `accion.estado`. Si mañana hay un tipo de carga
  * nuevo, esta tarjeta no cambia.
  *
+ * Desde la misión asistente-masivas-imagenes-y-remito (19/9/2026) la presentación admite
+ * cuatro claves OPCIONALES y aditivas (contrato §3): `imagen_url` (miniatura arriba de los
+ * renglones), `texto_confirmar` / `texto_cancelar` (etiquetas de los botones) y
+ * `texto_cancelada` (texto del cierre 'cancelada'). Sin ellas, la tarjeta se ve exactamente
+ * como antes; hoy las manda solo la tarjeta `imagen_categoria`, la que escribe el job de
+ * imágenes de categorías cuando encontró una foto pero no está seguro de que corresponda.
+ *
  * Vive adentro de la viñeta del asistente (MessageBubble.vue), así que aparece en el panel
  * flotante y también en el sidebar del informe del mostrador (SidebarConversacion.vue reusa
  * Conversation.vue). Por eso el id de la conversación llega del MENSAJE que trae la tarjeta
@@ -244,7 +279,22 @@ export default {
 			// true después de un 404: la conversación o la tarjeta ya no existen, así que se
 			// sacan los botones (reintentar no va a andar nunca).
 			no_disponible: false,
+			// true cuando el <img> de `presentacion.imagen_url` disparó @error: la miniatura
+			// se esconde y en su lugar va la línea "No se pudo mostrar la imagen". Vive acá
+			// porque es un hecho del navegador, no de la tarjeta: el API no sabe si la URL
+			// carga.
+			imagen_rota: false,
 		}
+	},
+	watch: {
+		/**
+		 * Si la tarjeta se redibuja con otra imagen (una versión corregida que llega por
+		 * patchAccion), la marca de rota es de la URL anterior y se limpia: hay que darle
+		 * la chance a la nueva.
+		 */
+		imagen_url() {
+			this.imagen_rota = false
+		},
 	},
 	computed: {
 		/**
@@ -257,6 +307,19 @@ export default {
 		},
 		renglones() {
 			return Array.isArray(this.presentacion.renglones) ? this.presentacion.renglones : []
+		},
+		/**
+		 * URL de la miniatura (contrato §3 de asistente-masivas-imagenes-y-remito), o null si
+		 * la presentación no trae una: hoy la manda solo la tarjeta `imagen_categoria`. Se
+		 * exige un string con algo adentro para que un "" o un null del API no pinten un
+		 * <img> vacío con su ícono de roto.
+		 */
+		imagen_url() {
+			let url = this.presentacion.imagen_url
+			if (typeof url != 'string' || url.trim() == '') {
+				return null
+			}
+			return url
 		},
 		es_propuesta() {
 			return this.accion.estado == 'propuesta'
@@ -272,8 +335,21 @@ export default {
 		es_cerrada() {
 			return !this.es_propuesta && !this.es_confirmada
 		},
+		/**
+		 * Texto e ícono del cierre. Para 'cancelada' el API puede mandar su propio texto en
+		 * `presentacion.texto_cancelada` (contrato §3: "No usaste esta imagen." para una
+		 * imagen de categoría, donde "Cancelaste esta carga." no describe nada que se haya
+		 * cargado); sin él, el de siempre. Los otros cierres no cambian.
+		 */
 		cierre() {
-			return CIERRE_POR_ESTADO[this.accion.estado] || null
+			let cierre = CIERRE_POR_ESTADO[this.accion.estado] || null
+			if (!cierre || this.accion.estado != 'cancelada') {
+				return cierre
+			}
+			return {
+				texto: this.texto_de_presentacion('texto_cancelada', cierre.texto),
+				icono: cierre.icono,
+			}
 		},
 		clases_de_la_tarjeta() {
 			return {
@@ -306,12 +382,24 @@ export default {
 		/**
 		 * "Registrando…" es el texto del plan para Confirmar en curso. Cancelar en curso
 		 * dice "Cancelando…": ahí no se registra nada, y decir otra cosa confundiría.
+		 *
+		 * En reposo, la etiqueta la puede mandar el API en `presentacion.texto_confirmar` /
+		 * `texto_cancelar` (contrato §3 de asistente-masivas-imagenes-y-remito: "Usar esta
+		 * imagen" / "No usarla" para una imagen de categoría). Sin ellas, "Confirmar" /
+		 * "Cancelar", como siempre. Los textos en curso no se personalizan: son el estado
+		 * del POST, no de la propuesta.
 		 */
 		texto_confirmar() {
-			return this.verbo_en_curso == 'confirmar' ? 'Registrando…' : 'Confirmar'
+			if (this.verbo_en_curso == 'confirmar') {
+				return 'Registrando…'
+			}
+			return this.texto_de_presentacion('texto_confirmar', 'Confirmar')
 		},
 		texto_cancelar() {
-			return this.verbo_en_curso == 'cancelar' ? 'Cancelando…' : 'Cancelar'
+			if (this.verbo_en_curso == 'cancelar') {
+				return 'Cancelando…'
+			}
+			return this.texto_de_presentacion('texto_cancelar', 'Cancelar')
 		},
 		/**
 		 * Lo que anuncia la región role="status" mientras viaja el POST. En reposo queda vacía:
@@ -347,6 +435,23 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Un texto opcional de `presentacion` (texto_confirmar, texto_cancelar,
+		 * texto_cancelada), o el de siempre si el API no lo mandó o lo mandó vacío. Se pide
+		 * un string con algo adentro: un "" o un null del API no pueden dejar un botón sin
+		 * etiqueta.
+		 *
+		 * @param {String} clave nombre de la clave en `presentacion`
+		 * @param {String} por_defecto texto que va si la clave no está
+		 * @returns {String}
+		 */
+		texto_de_presentacion(clave, por_defecto) {
+			let texto = this.presentacion[clave]
+			if (typeof texto != 'string' || texto.trim() == '') {
+				return por_defecto
+			}
+			return texto
+		},
 		confirmar() {
 			this.resolver('confirmar')
 		},
@@ -458,17 +563,15 @@ export default {
 <style lang="sass">
 // Tarjeta de una carga propuesta por el asistente (misión asistente-ia-acciones, 15/9/2026).
 //
-// 🔴 El fondo es --bg-hover + borde. Desde que el asistente pasó a estilo lista (sin
-// relleno propio, MessageBubble.vue, 17/9/2026), la tarjeta ya no se apoya en la viñeta:
-// tiene que despegarse sola del fondo sobre el que cae, que es --bg-card en el panel
-// flotante y --bg-section en el sidebar del informe del mostrador. --bg-hover queda del
-// otro lado de esos dos en los dos temas:
+// 🔴 El fondo es --bg-hover + borde. Con la viñeta del asistente de vuelta en --bg-section
+// (MessageBubble.vue, misión burbujas-y-negrita-asistente-ia, 21/9/2026), la tarjeta siempre
+// cae DENTRO de esa viñeta y el escalón es siempre el mismo, sin importar si el panel que la
+// aloja es el flotante o el sidebar del informe del mostrador:
 //
-//   panel   claro: tarjeta #f1f3f5 sobre panel #fff      · oscuro: #3a4048 sobre #2e333a
-//   sidebar claro: tarjeta #f1f3f5 sobre sidebar #f8f9fa · oscuro: #3a4048 sobre #272b31
+//   claro:  tarjeta #f1f3f5 sobre viñeta #f8f9fa · oscuro: tarjeta #3a4048 sobre viñeta #272b31
 //
-// En el sidebar claro los dos grises quedan muy cerca; ahí el borde --color-border es el
-// que la define. Sin sombra: repetida en cada tarjeta, ensuciaría la conversación.
+// Los dos grises quedan cerca en claro; ahí el borde --color-border es el que la define. Sin
+// sombra: repetida en cada tarjeta, ensuciaría la conversación.
 //
 // 🔴 Todo se acomoda por el ancho del CONTENEDOR y no del viewport: la misma tarjeta vive en
 // el panel flotante (984px por defecto, casi pantalla completa en teléfono) y en el sidebar
@@ -501,6 +604,51 @@ export default {
 
 	&__renglones
 		transition: opacity .15s ease
+
+	// Miniatura de la imagen candidata (misión asistente-masivas-imagenes-y-remito, 19/9/2026).
+	// Se acomoda por el ancho del CONTENEDOR, como todo lo demás de la tarjeta: en el panel de
+	// escritorio la tarjeta mide sus 460px de tope, en el sidebar de 380 del mostrador y en un
+	// teléfono de 360 queda bastante más angosta, y la foto entra siempre porque su ancho
+	// máximo es el 100% de la tarjeta y su alto máximo 160px; la proporción la conserva el
+	// navegador (width/height auto) y `object-fit: contain` es la red por si algún día se le
+	// fijan las dos medidas. Centrada porque casi siempre es más angosta que la tarjeta.
+	//
+	// 🔴 El fondo es #fff FIJO, también en modo oscuro, a propósito: es una foto de producto
+	// estilo e-commerce, con fondo blanco, y justamente lo que la persona tiene que juzgar es
+	// si ese fondo es blanco del todo. Un fondo oscuro atrás disfrazaría un recorte malo. El
+	// borde sí sale del token, para que en oscuro la foto no quede flotando sin límite.
+	&__imagen
+		margin: 8px 0 6px 0
+		text-align: center
+		line-height: 0
+		transition: opacity .15s ease
+
+		img
+			display: inline-block
+			max-width: 100%
+			max-height: 160px
+			width: auto
+			height: auto
+			object-fit: contain
+			padding: 4px
+			box-sizing: border-box
+			background: #fff
+			border: 1px solid var(--color-border-secondary, #e9ecef)
+			border-radius: 8px
+
+	// La URL no cargó: una línea atenuada donde iba la foto, con el mismo molde ícono + texto
+	// del aviso, para que la tarjeta no cambie de forma.
+	&__imagen-rota
+		display: flex
+		align-items: baseline
+		gap: 7px
+		margin: 8px 0 6px 0
+		font-size: .8rem
+		line-height: 1.4
+		color: var(--color-text-secondary, #6c757d)
+
+		i
+			flex-shrink: 0
 
 	&__renglon
 		display: flex
@@ -593,12 +741,13 @@ export default {
 		box-shadow: none
 
 	// Cancelada, reemplazada, vencida (o un estado que esta SPA no conoce): lo que decía la
-	// tarjeta queda atenuado, y el porqué, abajo, a color pleno para que se lea.
+	// tarjeta queda atenuado --la miniatura también: es parte de lo que se propuso--, y el
+	// porqué, abajo, a color pleno para que se lea.
 	&--cerrada
-		.asistente-ia-accion__renglones, .asistente-ia-accion__aviso
+		.asistente-ia-accion__renglones, .asistente-ia-accion__aviso, .asistente-ia-accion__imagen
 			opacity: .6
 
 @media (prefers-reduced-motion: reduce)
-	.asistente-ia-accion__renglones, .asistente-ia-accion__aviso
+	.asistente-ia-accion__renglones, .asistente-ia-accion__aviso, .asistente-ia-accion__imagen
 		transition: none
 </style>

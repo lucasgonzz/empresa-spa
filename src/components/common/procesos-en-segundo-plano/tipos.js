@@ -81,6 +81,15 @@ export const TIPOS = {
 		etiqueta: 'Imágenes automáticas',
 		detalle: DETALLE_GENERICO,
 	},
+	// Búsqueda de imágenes para las categorías, que manda el asistente (misión
+	// asistente-masivas-imagenes-y-remito, 19/9/2026, contrato §5). Mismo naranja que las
+	// imágenes de artículos: es la misma familia de proceso, cambia sobre qué corre.
+	imagenes_categorias: {
+		icono: 'bi-folder2-open',
+		acento: '253, 126, 20',
+		etiqueta: 'Imágenes de categorías',
+		detalle: DETALLE_GENERICO,
+	},
 	descripciones_ia: {
 		icono: 'bi-chat-left-text',
 		acento: '111, 66, 193',
@@ -179,6 +188,15 @@ export const ETIQUETAS_DE_RESULTADO = {
 	stock_minimo: 'Con stock mínimo',
 	restaurados: 'Restaurados',
 	con_error: 'Con error',
+	// Resultado de `imagenes_categorias` (contrato §5 de asistente-masivas-imagenes-y-remito):
+	// cuántas se miraron, a cuántas se les asignó imagen sola, cuántas quedaron con una tarjeta
+	// para que la persona decida, cuántas sin ninguna imagen que sirva y cuántas ni se
+	// buscaron porque se acabó la cuota diaria de Google.
+	procesadas: 'Procesadas',
+	asignadas: 'Con imagen asignada',
+	dudosas: 'Para revisar',
+	sin_resultado: 'Sin resultado',
+	sin_cuota: 'Sin cuota de búsqueda',
 }
 
 /**

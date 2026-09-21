@@ -188,18 +188,20 @@ export default {
 // eso: dio 1040. Que dependa de qué hojas ya se cargaron cuando se mide es justamente el
 // motivo por el que el escalón va fijo y no se confía en el default.
 //
-// El escalón completo, con lo que agregó esta misión:
+// El escalón completo (renumerado el 21/9/2026 por la misión mostrador-fotos-y-modales,
+// que insertó tres modales del mostrador entre la ficha del hover y el recordatorio):
 //
 //      botón del chat 1054 < panel del chat 1055 < video de la demo 1060
-//      < overlay del informe 1062 < ficha del hover 1063 < recordatorio de cobro 1064
-//      < ESTE MODAL 1065 < toasts 1066
+//      < overlay del informe 1062 < ficha del hover 1063
+//      < imagen ampliada / modal de artículo / modal de cliente (mostrador) 1064
+//      < recordatorio de cobro 1065 < ESTE MODAL 1066 < toasts 1067
 //
-// 1065 le gana a todo lo que puede haber debajo y queda ABAJO de los toasts, que tienen que
+// 1066 le gana a todo lo que puede haber debajo y queda ABAJO de los toasts, que tienen que
 // leerse aunque el modal esté abierto --y acá importa de verdad: adentro de este modal se
 // registran pagos, y el aviso de que salió (o de que no) es un toast--.
 //
 // El `!important` le gana al inline, que es una declaración normal. El id es el que arma
 // bootstrap-vue a partir del `modal_id` del template: si cambia uno, cambia el otro.
 #asistente-ia-current-acounts___BV_modal_outer_
-	z-index: 1065 !important
+	z-index: 1066 !important
 </style>

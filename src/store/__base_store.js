@@ -81,6 +81,29 @@ export default function __base_store(options = {}) {
 			filter_per_page: 50,
 			loading_filtered: false,
 
+			// Token de "intencion vigente" sobre esta tabla: que fecha/rango mira el usuario, o que
+			// busqueda disparo. Lo incrementa `incrementar_consulta_vigente_token`, llamada desde
+			// getModels (cambio de fecha, de rango o de modo, vía ControlFecha.vue) y al arrancar
+			// runFilter/runGlobalSearch (busqueda nueva o cambio de pagina). Cada una de esas acciones
+			// captura el valor vigente ANTES de salir a pedir al backend, y en su `.then()` solo
+			// commitea el resultado si el token no cambio mientras la request viajaba.
+			//
+			// 🔴 Guarda puntual contra la carrera documentada el 21/9/2026 (mision
+			// compras-tabla-vacia-por-fecha, cliente Arfren): sin esto, una respuesta de
+			// runGlobalSearch/runFilter que llega DESPUES de que el usuario ya cambio de dia
+			// (ControlFecha.vue::changeFromDate, que resetea is_filtered=false y pide el dia nuevo con
+			// getModels) pisa is_filtered=true + filtered=[...] con datos que no tienen nada que ver
+			// con el dia que la pantalla esta mostrando ahora. display/Index.vue renderiza `filtered`
+			// en cuanto is_filtered es true, asi que la tabla queda mostrando el resultado viejo de la
+			// busqueda (a veces vacio) mientras el total (que no mira is_filtered, lee `models`
+			// directo) ya tiene el valor correcto del dia nuevo. Sin error de consola ni de red: la
+			// respuesta que pierde la carrera es un 200 normal, solo que tardio.
+			//
+			// No sacar este guard "para simplificar" ni reemplazarlo por un debounce/throttle en el
+			// input: el problema no es que se disparen muchas requests, es que pueden volver en
+			// cualquier orden, y el guard es lo unico que garantiza que gane la mas nueva.
+			consulta_vigente_token: 0,
+
 			delete: null,
 			delete_image_prop: null,
 			delete_image_model: null,
@@ -362,6 +385,19 @@ export default function __base_store(options = {}) {
 		},
 		setIsFiltered(state, value) {
 			state.is_filtered = value
+		},
+		/**
+		 * Incrementa el token de "intencion vigente" (ver doc completa en `state.consulta_vigente_
+		 * token`). Cualquier accion que represente que el usuario paso a otra cosa —cambio de fecha,
+		 * nueva busqueda, cambio de pagina— la llama ANTES de salir a pedir al backend, para que una
+		 * respuesta de la intencion anterior que siga en vuelo se pueda detectar como vencida cuando
+		 * llegue.
+		 *
+		 * @param {Object} state Estado del modulo.
+		 * @returns {void}
+		 */
+		incrementar_consulta_vigente_token(state) {
+			state.consulta_vigente_token++
 		},
 		add(state, value) {
 			let index = state.models.findIndex(item => {
@@ -665,6 +701,10 @@ export default function __base_store(options = {}) {
 	/** Actions base (copiadas de `src/store/__base.js` y usadas por la mayoría de stores). */
 	let base_actions = {
 		getModels({commit, state, dispatch}) {
+			// Cambiar de fecha/rango/modo (ControlFecha.vue) es una intencion nueva del usuario:
+			// invalida cualquier runFilter/runGlobalSearch que siga en vuelo de la intencion anterior.
+			// Ver doc completa en `state.consulta_vigente_token`.
+			commit('incrementar_consulta_vigente_token')
 			// Con el modo selección manual activo, lo tildado a mano se acumula entre búsquedas: no
 			// se pisa acá. Se limpia al apagar el modo (BtnSeleccion.vue) o al salir del módulo
 			// (beforeRouteLeave de cada vista), nunca por pedir datos de vuelta.
@@ -858,6 +898,12 @@ export default function __base_store(options = {}) {
 			/** Nombre plural en español del modelo para el mensaje de feedback al usuario. */
 			let plural_model_name = generals.methods.plural(state.model_name)
 
+			// Esta llamada pasa a ser la intencion vigente (ver doc de consulta_vigente_token). Se
+			// captura el token DESPUES de incrementarlo: es el numero que esta request tiene que
+			// seguir viendo vigente cuando vuelva para que su resultado siga valiendo.
+			commit('incrementar_consulta_vigente_token')
+			let token_de_esta_consulta = state.consulta_vigente_token
+
 			commit('auth/setMessage', 'Filtrando ' + plural_model_name, {root: true})
 			commit('auth/setLoading', true, {root: true})
 
@@ -867,8 +913,20 @@ export default function __base_store(options = {}) {
 				per_page: per_page,
 			})
 				.then(res => {
+					// El overlay de carga se apaga siempre, gane o pierda la carrera: nada mas lo
+					// prende a partir de aca, y dejarlo pisado con "Filtrando..." serio peor que el bug
+					// que este guard corrige.
 					commit('auth/setLoading', false, {root: true})
 					commit('auth/setMessage', '', {root: true})
+
+					// 🔴 Guard de carrera (ver doc completa en `state.consulta_vigente_token`): si el
+					// token vigente cambio mientras esta request viajaba, el usuario ya paso a otra
+					// cosa (cambio de fecha, otra busqueda) y esta respuesta llego tarde. Se descarta
+					// sin commitear nada de lo que sigue: no hace falta ni loguearlo, es trafico normal
+					// de una request que perdio la carrera.
+					if (state.consulta_vigente_token !== token_de_esta_consulta) {
+						return
+					}
 
 					/** Filas devueltas por la búsqueda (puede ser vacío y sigue siendo filtrado activo). */
 					let rows = res.data.data || []
@@ -912,6 +970,14 @@ export default function __base_store(options = {}) {
 		 * @returns {Promise}
 		 */
 		runGlobalSearch({commit, state}, payload = {}) {
+			// Esta llamada pasa a ser la intencion vigente (ver doc de consulta_vigente_token), sea
+			// busqueda nueva o cambio de pagina: las dos formas pueden solaparse con un cambio de
+			// fecha (getModels) o entre si. Se captura el token DESPUES de incrementarlo: es el numero
+			// que esta request tiene que seguir viendo vigente cuando vuelva para que su resultado
+			// siga valiendo.
+			commit('incrementar_consulta_vigente_token')
+			let token_de_esta_consulta = state.consulta_vigente_token
+
 			/**
 			 * Payload completo a enviar: si viene con `props` es una búsqueda nueva (se persiste,
 			 * incluyendo `order_by`/`order_direction` si vinieron, ya que se persiste el payload entero);
@@ -1035,9 +1101,24 @@ export default function __base_store(options = {}) {
 				cuerpo
 			)
 				.then(res => {
+					// El overlay de carga se apaga siempre, gane o pierda la carrera: nada mas lo
+					// prende a partir de aca, y dejarlo pisado con "Buscando..." serio peor que el bug
+					// que este guard corrige.
 					if (!silencioso) {
 						commit('auth/setLoading', false, {root: true})
 						commit('auth/setMessage', '', {root: true})
+					}
+
+					// 🔴 Guard de carrera (ver doc completa en `state.consulta_vigente_token`): si el
+					// token vigente cambio mientras esta request viajaba, el usuario ya paso a otra
+					// cosa (cambio de fecha, otra busqueda, otra pagina) y esta respuesta llego tarde.
+					// Se descarta sin commitear nada de lo que sigue: no hace falta ni loguearlo, es
+					// trafico normal de una request que perdio la carrera. Es la causa concreta y ya
+					// verificada del bug de Compras del 21/9/2026 (cliente Arfren): sin este corte,
+					// esta misma respuesta pisaba is_filtered=true + filtered=[...] DESPUES de que
+					// ControlFecha.vue::changeFromDate ya habia pedido el dia nuevo con getModels.
+					if (state.consulta_vigente_token !== token_de_esta_consulta) {
+						return
 					}
 
 					/** Filas devueltas: el endpoint responde envuelto en `models` (paginador Laravel). */
@@ -1275,6 +1356,10 @@ export default function __base_store(options = {}) {
 			 * Si usa paginación, opcionalmente precarga modelos desde localStorage.
 			 * Esto reduce el tiempo de primera renderización mientras llega el request al server.
 			 */
+			// Mismo guard que en el getModels base (ver doc completa en `state.consulta_vigente_
+			// token`): cambiar de fecha/rango/modo es una intencion nueva del usuario e invalida
+			// cualquier runFilter/runGlobalSearch que siga en vuelo de la intencion anterior.
+			commit('incrementar_consulta_vigente_token')
 			// Mismo guard que en el getModels base: con selección manual activa, no se pisa lo
 			// tildado a mano.
 			if (!state.is_selecteable) {

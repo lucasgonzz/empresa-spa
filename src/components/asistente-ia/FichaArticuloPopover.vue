@@ -391,20 +391,22 @@ export default {
 //
 // 🔴 EL Z-INDEX ES 1063 Y NO EL DE FÁBRICA. Bootstrap le da 1060 a `.popover`
 // ($zindex-popover), y el escalón real del sistema --el de InformeAbierto.vue:253-290, más lo
-// que agregó esta misión-- es:
+// que agregó esta misión y lo que renumeró mostrador-fotos-y-modales el 21/9/2026-- es:
 //
 //      botón del chat 1054 < panel del chat 1055 < video de la demo 1060
-//      < overlay del informe 1062 < ESTA TARJETA 1063 < recordatorio de cobro 1064
-//      < cuenta corriente abierta desde el chat 1065 < toasts 1066
+//      < overlay del informe 1062 < ESTA TARJETA 1063
+//      < imagen ampliada / modal de artículo / modal de cliente (mostrador) 1064
+//      < recordatorio de cobro 1065 < cuenta corriente abierta desde el chat 1066
+//      < toasts 1067
 //
 // Con 1060 la tarjeta queda DETRÁS del overlay del informe (1062), que es exactamente uno de
 // los dos lugares desde donde se la usa: el sidebar de conversación del mostrador. 1063 es el
 // primer escalón que le gana a ese overlay.
 //
-// Y no sube más, a propósito. Arriba quedan cosas que SÍ tienen que taparla: los dos modales
-// (el recordatorio y la cuenta corriente que abre el clic en un cliente) y los toasts. Con un
-// modal abierto no se puede hoverear el texto de atrás --lo tapa el telón-- así que el caso
-// no se da; pero si se diera, quien manda es el modal.
+// Y no sube más, a propósito. Arriba quedan cosas que SÍ tienen que taparla: los modales del
+// mostrador, el recordatorio, la cuenta corriente que abre el clic en un cliente, y los
+// toasts. Con un modal abierto no se puede hoverear el texto de atrás --lo tapa el telón--
+// así que el caso no se da; pero si se diera, quien manda es el modal.
 //
 // El selector suma `.popover` --que bootstrap-vue ya pone en el mismo elemento-- para llegar
 // a (0,2,0) y ganarle a `.popover` de bootstrap (0,1,0) sin depender del orden de carga de
@@ -422,7 +424,7 @@ export default {
 // despegarla.
 // ══════════════════════════════════════════════════════════════════════════════════════════
 .popover.asistente-ia-ficha-popover
-	// Ver el bloque de arriba: 1062 (overlay del informe) < ESTO < 1064 (recordatorio).
+	// Ver el bloque de arriba: 1062 (overlay del informe) < ESTO < 1064 (mostrador) < 1065 (recordatorio).
 	z-index: 1063
 
 	--ficha-fondo: #fff

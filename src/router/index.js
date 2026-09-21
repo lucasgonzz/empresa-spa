@@ -70,6 +70,22 @@ const routes = [
         component: () => import('@/views/Expense')
     },
     {
+        // Misión cheques-endoso-y-bancos (21/9/2026): el módulo de Cheques sale de Reportes y
+        // pasa a Tesorería > Cheques con ruta propia. sub_view es recibido|emitido y
+        // sub_sub_view la solapa (pendientes, disponibles-para-cobrar, endosados...); la vista
+        // completa las dos si faltan.
+        path: '/cheques/:sub_view?/:sub_sub_view?',
+        name: 'cheque',
+        component: () => import('@/views/Cheques')
+    },
+    {
+        // Redirect de la ruta vieja del módulo de Cheques. Va ANTES que la de Reportes porque
+        // vue-router matchea en orden y `/reportes/:view?/...` se la comería: un acceso directo
+        // viejo (PWA, favorito, tour) caería en un Reportes vacío en vez de en el módulo.
+        path: '/reportes/cheques/:sub_view?/:sub_sub_view?',
+        redirect: to => ({ name: 'cheque', params: to.params }),
+    },
+    {
         path: '/reportes/:view?/:sub_view?/:sub_sub_view?',
         name: 'reportes',
         component: () => import('@/views/Reportes')

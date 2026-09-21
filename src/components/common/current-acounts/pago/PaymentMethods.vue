@@ -16,6 +16,7 @@
 
             :show_retencion="true"
             :show_datos_retencion="es_cobro_a_cliente"
+            :permitir_endoso="!es_cobro_a_cliente"
         >
         </multi-payment-methods>
     </div>
@@ -184,6 +185,16 @@ export default {
                 fecha_emision: '',
                 fecha_pago: '',
                 es_echeq: 0,
+                /*
+                 * Misión cheques-endoso-y-bancos (21/9/2026). `cheque_id` > 0 es un cheque
+                 * RECIBIDO que se endosa en este pago (solo a proveedor, ver `permitir_endoso`
+                 * arriba): la API no crea uno nuevo, marca el recibido como endosado y crea la
+                 * copia emitida. `cheque_banco_id` es el banco del catálogo; `banco` sigue
+                 * viajando con el nombre por compatibilidad. En 0 los dos = cheque nuevo sin
+                 * banco, como siempre.
+                 */
+                cheque_id: 0,
+                cheque_banco_id: 0,
 
                 // ✅ Tarjeta (ejemplo, ajustá a tu modelo real)
                 credit_card_id: 0,

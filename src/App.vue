@@ -69,6 +69,14 @@
             pantalla del sistema, no solo desde el listado de artículos.
         -->
         <sesion-cerrada-otro-dispositivo-modal></sesion-cerrada-otro-dispositivo-modal>
+        <!--
+            Candado de sesión por pestaña (misión candado-sesion-por-pestana, 19/9/2026): abrir
+            una pestaña nueva del mismo navegador ya logueado no pasa por LoginForm.vue -la
+            cookie ya autentica-, así que este aviso no puede vivir ahí. Mismo criterio que el
+            modal de arriba: SIEMPRE montado, porque el 403 puede llegar apenas arranca la SPA,
+            antes de que cualquier vista privada monte nada.
+        -->
+        <misma-sesion-otra-pestana-modal></misma-sesion-otra-pestana-modal>
 
         <!--
             Procesos en segundo plano (misión procesos-en-segundo-plano, 18/9/2026): la píldora de
@@ -166,6 +174,7 @@ export default {
         AvisoImagenesAutomaticas: () => import('@/components/common/AvisoImagenesAutomaticas'),
         AvisoDescripcionesAutomaticas: () => import('@/components/common/AvisoDescripcionesAutomaticas'),
         SesionCerradaOtroDispositivoModal: () => import('@/components/common/SesionCerradaOtroDispositivoModal'),
+        MismaSesionOtraPestanaModal: () => import('@/components/common/MismaSesionOtraPestanaModal'),
         // Procesos en segundo plano: píldora y modal (ver el comentario en el template).
         ProcesosTarjeta: () => import('@/components/common/procesos-en-segundo-plano/Tarjeta'),
         ProcesosModal: () => import('@/components/common/procesos-en-segundo-plano/Modal'),
