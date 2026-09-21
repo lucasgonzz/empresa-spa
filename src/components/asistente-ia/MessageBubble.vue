@@ -31,6 +31,16 @@
 		@click="al_activar_mencion(segmento)"
 		@keydown.enter="al_activar_mencion(segmento)">{{ segmento.texto }}</span></p>
 
+		<!-- Adjuntos del asistente (misión asistente-omnisciente, 21/9/2026, §1 del contrato):
+		hoy, la foto de un artículo. Van debajo del texto y ARRIBA de las tarjetas: la foto es
+		parte de lo que el asistente dice; la tarjeta, lo que propone hacer. Y van FUERA del
+		<p>, a propósito: adentro, con `white-space: pre-wrap`, cada salto de línea del template
+		se dibujaría como un espacio (ver el comentario de arriba). Sin `adjuntos` (API viejo)
+		o en un mensaje del usuario el computed devuelve [] y acá no se monta nada. -->
+		<adjuntos-de-mensaje
+		v-if="adjuntos_visibles.length"
+		:adjuntos="adjuntos_visibles"></adjuntos-de-mensaje>
+
 		<!-- Tarjetas de carga que propuso el asistente (misión asistente-ia-acciones,
 		15/9/2026): una por acción, debajo del texto y adentro de la viñeta. Las
 		'descartada' no se pintan (son de una respuesta que terminó en error). -->
@@ -79,6 +89,7 @@
 
 <script>
 import AccionCard from '@/components/asistente-ia/AccionCard'
+import AdjuntosDeMensaje from '@/components/asistente-ia/AdjuntosDeMensaje'
 import { segmentar_menciones } from '@/components/asistente-ia/menciones'
 import { segmentar_mensaje } from '@/components/asistente-ia/formato'
 
@@ -95,6 +106,7 @@ const TITULO_POR_TIPO = {
 export default {
 	components: {
 		AccionCard,
+		AdjuntosDeMensaje,
 	},
 	props: {
 		message: {
@@ -185,6 +197,19 @@ export default {
 				return []
 			}
 			return this.message.acciones.filter(accion => accion.estado != 'descartada')
+		},
+		/**
+		 * Adjuntos del mensaje (misión asistente-omnisciente, 21/9/2026, §1 del contrato): la
+		 * lista tal cual llega, o [] para un mensaje del usuario (sus fotos viajan por
+		 * `imagenes`, que es otra cosa) o sin la clave (API viejo). Qué se pinta de cada
+		 * adjunto lo decide AdjuntosDeMensaje.vue: acá solo se resuelve DE QUIÉN es el mensaje,
+		 * con el mismo criterio que acciones_visibles.
+		 */
+		adjuntos_visibles() {
+			if (this.es_del_usuario || !Array.isArray(this.message.adjuntos)) {
+				return []
+			}
+			return this.message.adjuntos
 		},
 		clases_del_globo() {
 			return {
