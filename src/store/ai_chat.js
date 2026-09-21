@@ -287,11 +287,12 @@ export default {
 		// foto-sucursal-y-asistente-configurable): GET api/mi-consumo-ia. Trae
 		// { consumo_mes, plan, cerca, supero, pensamiento, confianza }. null = todavía no se
 		// pidió, o el endpoint no está (API viejo, 404): ahí el footer no se muestra.
+		// pensamiento: 'agil'|'equilibrado'|'profundo'.
 		mi_consumo: null,
 
 		// Config del agente del dueño (S3): { confianza:'cauteloso'|'resuelto',
-		// pensamiento:'agil'|'profundo' }. GET/PUT api/user/asistente-config. null = todavía
-		// no se pidió (o API viejo): el modal de configuración cae a los defaults del sistema.
+		// pensamiento:'agil'|'equilibrado'|'profundo' }. GET/PUT api/user/asistente-config. null =
+		// todavía no se pidió (o API viejo): el modal de configuración cae a los defaults del sistema.
 		asistente_config: null,
 	},
 	getters: {
