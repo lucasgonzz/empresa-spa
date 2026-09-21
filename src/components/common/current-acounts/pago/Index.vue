@@ -48,8 +48,6 @@ title="Pago">
         @click="focus_primer_payment_method"
         @keydown.enter="focus_primer_payment_method">{{ price(pago.haber || 0) }}</div>
 
-        <p class="pago-cc__total-ayuda">El total se completa solo: sumá el importe en el método de pago de abajo.</p>
-
         <b-button
         size="sm"
         variant="primary"
@@ -59,6 +57,13 @@ title="Pago">
             <i class="icon-check"></i>
             Pago el total
         </b-button>
+
+        <!--
+            flex: 1 1 100% fuerza su propia linea sea cual sea el ancho -- va DESPUES del boton
+            "Pago el total" para que ese boton siga compartiendo la fila con el monto, como antes
+            de este cambio, y la ayuda quede como el renglon final de la tarjeta.
+        -->
+        <p class="pago-cc__total-ayuda">El total se completa solo: sumá el importe en el método de pago de abajo.</p>
     </div>
 
     <div class="pago-cc__campos">
