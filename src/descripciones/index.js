@@ -48,6 +48,7 @@ import agenda from './agenda'
 import alertas from './alertas'
 import asistente_ia from './asistente_ia'
 import procesos from './procesos'
+import tesoreria from './tesoreria'
 
 /* Un objeto por modulo. El orden no importa: las claves no se pisan entre modulos. */
 const modulos = {
@@ -58,6 +59,7 @@ const modulos = {
 	alertas: alertas,
 	asistente_ia: asistente_ia,
 	procesos: procesos,
+	tesoreria: tesoreria,
 }
 
 /**
