@@ -205,6 +205,13 @@ export default {
     	hacerPago() {
             if (this.check()) {
         		this.loading = true
+                /*
+                 * `skip_global_error_event`: el mensaje de un 422 lo muestra el catch de abajo,
+                 * una sola vez. Sin la bandera, el interceptor de main.js lo sacaba como warning
+                 * y acá encima salía "Error al registrar pago": dos avisos por el mismo motivo
+                 * (pasaba con las cajas sin apertura; desde la misión cheques-endoso-y-bancos,
+                 * 21/9/2026, también con un cheque que ya no se puede endosar).
+                 */
         		this.$api.post('/current-acount/pago', {
                     credit_account_id: this.from_credit_account.id,
                     model_name: this.from_model_name,
@@ -212,7 +219,9 @@ export default {
         			...this.pago,
                     to_pay: this.to_pay,
                     payment_plan_cuota: this.payment_plan_cuota,
-        		})
+        		}, {
+                    skip_global_error_event: true,
+                })
         		.then(res => {
                     this.$store.dispatch('current_acount/getModels')
         			this.loading = false
@@ -229,7 +238,20 @@ export default {
         		.catch(err => {
         			this.loading = false
         			console.log(err)
-        			this.$toast.error('Error al registrar pago')
+
+                    /*
+                     * La API responde 422 con `message` en lenguaje de comerciante cuando el pago
+                     * no puede registrarse (una caja sin apertura; un cheque a endosar que ya se
+                     * endosó, se cobró, venció o no es el monto de la fila). Ese texto es el que
+                     * el usuario tiene que leer; el genérico queda para cuando no vino ninguno.
+                     */
+                    let mensaje = 'Error al registrar pago'
+                    if (err && err.response && err.response.data && err.response.data.message) {
+                        mensaje = err.response.data.message
+                    }
+        			this.$toast.error(mensaje, {
+                        duration: 10000,
+                    })
         		})
             }
     	},
