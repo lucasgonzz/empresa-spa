@@ -203,6 +203,17 @@ export default {
             this.pago.current_acount_payment_methods[0].amount = this.maked_sale.total
         },
     	hacerPago() {
+            /*
+             * Hay tres @keydown.enter="hacerPago" en el modal además del botón, y `loading` se
+             * prendía recién después de check(): dos Enter seguidos mandaban dos POST iguales, y
+             * con un cheque a endosar el segundo llegaba con el mismo cheque_id (chequeo
+             * independiente de la misión cheques-endoso-y-bancos, 21/9/2026). Mientras hay un
+             * pago en vuelo no sale otro.
+             */
+            if (this.loading) {
+                return
+            }
+
             if (this.check()) {
         		this.loading = true
                 /*
@@ -380,6 +391,10 @@ export default {
                     credit_card_id: 0,
                     credit_card_payment_plan_id: 0,
                     caja_id: 0,
+                    // Cheque a endosar y banco del catálogo, en 0 como en el factory
+                    // (misión cheques-endoso-y-bancos, 21/9/2026).
+                    cheque_id: 0,
+                    cheque_banco_id: 0,
                     /*
                      * Certificado de retencion sufrida: las mismas claves que declara el factory de
                      * PaymentMethods.vue, para que la fila que queda despues de un pago exitoso sea
