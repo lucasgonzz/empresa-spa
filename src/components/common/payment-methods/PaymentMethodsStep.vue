@@ -488,6 +488,16 @@ export default {
                 return false
             }
 
+            /*
+             * 🔴 Un cheque recibido que se ENDOSA (cheque_id > 0) tampoco toca ninguna caja: el
+             * papel cambia de mano y del comercio no entra ni sale plata. Con el select a la
+             * vista alguien podría elegir una caja y la API rechazaría la fila (422 con
+             * cheque_id y caja_id). Misión cheques-endoso-y-bancos, chequeo independiente.
+             */
+            if (Number(payment_method.cheque_id) > 0) {
+                return false
+            }
+
             // El metodo 1 es cuenta corriente: no mueve caja.
             return method_id !== 1
         },
@@ -563,18 +573,38 @@ export default {
         on_check_fields_change(index, patch) {
             this.$emit('update_payment_method_fields', index, patch)
 
+            if (!patch) {
+                return
+            }
+
             /*
              * Si el patch trae monto (el del cheque a endosar), el cotizado se recalcula igual
              * que cuando el monto se tipea (set_amount): una fila en otra moneda que la del
              * comprobante se quedaría con el amount_cotizado viejo.
              */
-            if (patch && Object.prototype.hasOwnProperty.call(patch, 'amount')) {
+            if (Object.prototype.hasOwnProperty.call(patch, 'amount')) {
                 this.$nextTick(() => {
                     let pm = this.payment_methods[index]
                     if (!pm) {
                         return
                     }
                     this.check_moneda(pm, index, Number(pm.amount) || 0)
+                })
+            }
+
+            /*
+             * Vuelta a "Cheque nuevo" (patch con cheque_id en 0): el endoso había dejado la
+             * fila sin caja, y un cheque nuevo sí puede tener la suya. Se vuelve a proponer la
+             * caja por defecto, igual que al cambiar de método.
+             */
+            if (Object.prototype.hasOwnProperty.call(patch, 'cheque_id') && !Number(patch.cheque_id)) {
+                this.$nextTick(() => {
+                    let pm = this.payment_methods[index]
+                    if (!pm) {
+                        return
+                    }
+                    let method_id = Number(pm.current_acount_payment_method_id) || 0
+                    this.set_caja_por_defecto(index, method_id, this.resolve_payment_method_moneda_id(pm))
                 })
             }
         },
@@ -692,6 +722,22 @@ export default {
              * que no esta en la caja.
              */
             if (this.es_retencion({current_acount_payment_method_id: method_id})) {
+                this.$emit('update_caja_id', index, 0)
+                return
+            }
+
+            /*
+             * 🔴 Lo mismo para una fila que endosa un cheque recibido (cheque_id > 0): la caja
+             * se le saca, nunca se le propone. Este método corre al abrir el modal, al cambiar
+             * el método, la moneda o la sucursal, y si el comercio configuró una caja por
+             * defecto para el método Cheque (ABM > default_payment_method_caja) la dejaba
+             * cargada en la fila con el select oculto: el pago o el gasto generaban un egreso
+             * de caja por un cheque que nunca fue plata de caja. La API responde 422 a una fila
+             * con cheque_id y caja_id; acá se evita llegar a eso. Al volver a "Cheque nuevo",
+             * on_check_fields_change vuelve a proponer la caja por defecto.
+             */
+            let fila = this.payment_methods[index]
+            if (fila && Number(fila.cheque_id) > 0) {
                 this.$emit('update_caja_id', index, 0)
                 return
             }

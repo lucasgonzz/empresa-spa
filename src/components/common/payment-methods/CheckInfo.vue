@@ -504,6 +504,12 @@ export default {
 		 * del cheque: se endosa entero, no hay endoso parcial (supuesto del plan). Con la opción
 		 * vacía, la fila vuelve a blanco.
 		 *
+		 * 🔴 `caja_id: 0` va en el patch y no es opcional: un cheque endosado nunca es plata de
+		 * caja (el papel cambia de mano, no entra ni sale nada del comercio). Si el comercio
+		 * tiene una caja por defecto para el método Cheque, la fila la traía cargada aunque el
+		 * select estuviera oculto, y el pago generaba un egreso de caja que no existió. La API
+		 * rechaza con 422 una fila con cheque_id y caja_id; acá se evita que llegue a eso.
+		 *
 		 * @param {Number|String} cheque_id
 		 * @returns {void}
 		 */
@@ -532,6 +538,7 @@ export default {
 				es_echeq: cheque.es_echeq ? 1 : 0,
 				notes: cheque.notes || '',
 				amount: Number(cheque.amount) || 0,
+				caja_id: 0,
 			})
 		},
 		patch_en_blanco() {
