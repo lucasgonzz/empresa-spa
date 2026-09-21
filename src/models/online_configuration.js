@@ -233,6 +233,12 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Mostrar el stock disponible en la ficha del articulo',
+			key: 'mostrar_stock_disponible',
+			type: 'checkbox',
+			description: 'Si se desactiva, la pagina del articulo deja de mostrar "Stock disponible" y la cantidad de unidades disponibles. El control de stock al agregar al carrito sigue aplicando igual.',
+		},
+		{
 			text: 'Mostrar articulos sin imagenes en la Tienda',
 			key: 'show_articles_without_images',
 			type: 'checkbox',
