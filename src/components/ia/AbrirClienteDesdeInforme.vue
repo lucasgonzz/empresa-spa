@@ -33,6 +33,10 @@ const MODAL_ID = 'mostrador-client'
  * 'clients' (plural) para otro caso de uso (el picker de Vender) y no se probó que
  * mantenga sincronizado 'client' (singular): se sigue acá el camino confirmado, no el
  * que además arrastra esa duda.
+ *
+ * 🔴 Chequeo de dueño del lado del cliente: mismo motivo que
+ * AbrirArticuloDesdeInforme.vue (ver su comentario completo) — `GET client/{id}` sale de
+ * `Controller::fullModel()`, que busca por id pelado, sin scopear por dueño.
  */
 export default {
 	name: 'AbrirClienteDesdeInforme',
@@ -64,7 +68,7 @@ export default {
 					self.abriendo = false
 					let modulo = resultados[0]
 					let cliente = resultados[1].data.model
-					if (!cliente || !cliente.id) {
+					if (!cliente || !cliente.id || !self.es_del_dueno(cliente)) {
 						self.$toast.error('No pudimos abrir este cliente')
 						return
 					}
@@ -79,6 +83,22 @@ export default {
 					console.log(err)
 					self.$toast.error('No pudimos abrir este cliente')
 				})
+		},
+		/**
+		 * true si el cliente traído es del dueño de la sesión (ver el comentario de
+		 * arriba). Mismo camino que Index.vue para resolver el dueño real cuando quien
+		 * está logueado es un empleado.
+		 *
+		 * @param {Object} cliente
+		 * @returns {Boolean}
+		 */
+		es_del_dueno(cliente) {
+			let auth_user = this.$store.state.auth.user
+			if (!auth_user) {
+				return false
+			}
+			let owner_id = auth_user.owner ? auth_user.owner.id : auth_user.id
+			return !!owner_id && cliente.user_id == owner_id
 		},
 	},
 }
