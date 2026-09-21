@@ -472,6 +472,28 @@ export default [
 				icon: 'cash-coin',
 				can: 'expense.index',
 			},
+			{
+				/*
+					Misión cheques-endoso-y-bancos (21/9/2026): el módulo de Cheques vivía en
+					Reportes y pasa acá, debajo de Gastos, por pedido de Lucas. El permiso sigue
+					siendo `reportes.cheques` (decisión 3 del plan): los empleados que ya lo tenían
+					lo ven en el lugar nuevo sin seeder ni tarea manual.
+
+					Sin `model_name` a propósito: setRoute() del menú llenaría el store con
+					`cheque/getModels` y lo trataría como una lista, pero GET cheque devuelve los
+					cheques agrupados por tipo y estado. El store lo llena views/Cheques.vue.
+				*/
+				text: 'Cheques',
+				path: '/cheques',
+				name: 'cheque',
+				component: '@/views/Cheques',
+				icon: 'journal-check',
+				can: 'reportes.cheques',
+				params: {
+					sub_view: 'recibido',
+					sub_sub_view: 'pendientes',
+				},
+			},
 		]
 	},
 	{

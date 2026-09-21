@@ -60,6 +60,74 @@ export default {
             return neto + iva_importe
         },
 
+        /**
+         * Columna "Banco" de la tabla de cheques (prop `banco` de src/models/cheque.js, misión
+         * cheques-endoso-y-bancos, 21/9/2026).
+         *
+         * El banco pasó de texto libre a un catálogo, pero la columna `cheques.banco` no se
+         * saca: es la compatibilidad hacia atrás y lo que el asistente lee para unificar. Por
+         * eso acá gana el nombre del banco del catálogo si el cheque ya tiene uno, y si no se
+         * muestra el texto de siempre. Es display puro: no escribe nada en el modelo.
+         *
+         * 🔴 La relación se llama `cheque_banco` y NUNCA `banco`: toArray() del backend mergea
+         * las relaciones sobre los atributos y una relación `banco` pisaría el texto legacy.
+         *
+         * @param {Object} model el cheque.
+         * @returns {String}
+         */
+        cheque_banco_texto(model) {
+            if (!model) {
+                return ''
+            }
+
+            if (model.cheque_banco && model.cheque_banco.name) {
+                return model.cheque_banco.name
+            }
+
+            if (model.banco === null || typeof model.banco == 'undefined') {
+                return ''
+            }
+
+            return model.banco
+        },
+
+        /**
+         * Columna "Endosado en el gasto" de la solapa Endosados de cheques recibidos (prop
+         * `endosado_en_expense_id` de src/models/cheque.js). Un cheque recibido puede endosarse
+         * al registrar un GASTO, donde no hay proveedor: acá se muestra el gasto en su lugar,
+         * "Gasto N° 12 — Flete" (decisión 1 de Lucas, misión cheques-endoso-y-bancos).
+         *
+         * La relación `endosado_en_expense` (con `expense_concept`) la trae GET cheque. Si por
+         * lo que sea viniera solo el id, se muestra igual que hay un gasto y no una celda vacía
+         * que se lea como "no está endosado".
+         *
+         * @param {Object} model el cheque.
+         * @returns {String}
+         */
+        cheque_endosado_en_gasto_texto(model) {
+            if (!model || !model.endosado_en_expense_id) {
+                return ''
+            }
+
+            let gasto = model.endosado_en_expense
+
+            if (!gasto) {
+                return 'Gasto'
+            }
+
+            let texto = 'Gasto'
+
+            if (gasto.num) {
+                texto += ' N° ' + gasto.num
+            }
+
+            if (gasto.expense_concept && gasto.expense_concept.name) {
+                texto += ' — ' + gasto.expense_concept.name
+            }
+
+            return texto
+        },
+
         show_budget_sale_status_id(prop, model) {
             return this.$store.state.sale_status.models.length
         },

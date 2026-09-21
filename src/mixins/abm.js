@@ -79,6 +79,8 @@ export default {
 						'turno_caja',
 						'concepto_movimiento_caja',
 						'default_payment_method_caja',
+						// Bancos de cheques (misión cheques-endoso-y-bancos, 21/9/2026)
+						'cheque_banco',
 					],
 				},
 				// Gastos

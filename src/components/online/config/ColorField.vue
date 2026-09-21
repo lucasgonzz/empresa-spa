@@ -17,6 +17,7 @@
 			class="color-field__text"
 			maxlength="7"
 			v-model="text_value"
+			:placeholder="placeholder_text"
 			@blur="onBlur"></b-form-input>
 		</div>
 	</div>
@@ -46,23 +47,53 @@ export default {
 			type: Object,
 			required: true,
 		},
+		// Si es true, el campo puede quedar vacio (NULL = "hereda" otro color en vivo,
+		// no una copia congelada). Los 5 colores existentes no pasan esta prop, asi que
+		// siguen con optional: false y su comportamiento no cambia.
+		optional: {
+			type: Boolean,
+			default: false,
+		},
+		// Color a mostrar en el picker y el placeholder cuando el modelo esta vacio y
+		// optional es true (ej: el color secundario vigente del comercio).
+		fallback: {
+			type: String,
+			default: '#FFFFFF',
+		},
 	},
 	data() {
 		return {
 			// Valor de texto editable por el usuario (puede quedar momentaneamente invalido mientras escribe)
-			text_value: this.normalize_or_fallback(this.model[this.prop.key]),
+			// Con optional: true y el modelo vacio, arranca vacio en vez de forzar un hex.
+			text_value: this.optional && !this.is_valid_hex(this.model[this.prop.key])
+				? ''
+				: this.normalize_or_fallback(this.model[this.prop.key]),
 		}
 	},
 	computed: {
 		/**
 		 * Valor a mostrar en el <input type="color">. El input nativo exige siempre un
 		 * hex de 7 caracteres, asi que si el modelo todavia no tiene un valor cargado
-		 * (vacio o null) se usa un respaldo local sin escribirlo en el modelo.
+		 * (vacio o null) se usa un respaldo local sin escribirlo en el modelo. Con
+		 * optional: true ese respaldo es "fallback" (para mostrar que color se hereda);
+		 * si no, sigue siendo el blanco de siempre.
 		 *
 		 * @returns {String} Hex de 7 caracteres (#RRGGBB)
 		 */
 		picker_value() {
-			return this.is_valid_hex(this.model[this.prop.key]) ? this.model[this.prop.key] : '#FFFFFF'
+			if (this.is_valid_hex(this.model[this.prop.key])) {
+				return this.model[this.prop.key]
+			}
+			return this.optional ? this.normalize_or_fallback(this.fallback) : '#FFFFFF'
+		},
+		/**
+		 * Placeholder del input de texto: solo tiene sentido cuando el campo es
+		 * opcional, para mostrar que color se va a heredar si se deja vacio.
+		 *
+		 * @returns {String|null}
+		 */
+		placeholder_text() {
+			return this.optional ? this.normalize_or_fallback(this.fallback) : null
 		},
 	},
 	watch: {
@@ -71,7 +102,9 @@ export default {
 		 * cargo otro registro), refleja el nuevo valor en el input de texto.
 		 */
 		'model.id'() {
-			this.text_value = this.normalize_or_fallback(this.model[this.prop.key])
+			this.text_value = this.optional && !this.is_valid_hex(this.model[this.prop.key])
+				? ''
+				: this.normalize_or_fallback(this.model[this.prop.key])
 		},
 	},
 	methods: {
@@ -126,6 +159,11 @@ export default {
 		 * @returns {void}
 		 */
 		onBlur() {
+			if (this.optional && this.text_value.trim() === '') {
+				this.$set(this.model, this.prop.key, null)
+				return
+			}
+
 			if (this.is_valid_hex(this.text_value)) {
 				let normalized = this.normalize_or_fallback(this.text_value)
 				this.text_value = normalized
