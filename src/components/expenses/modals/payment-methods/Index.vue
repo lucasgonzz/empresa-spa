@@ -15,6 +15,7 @@
 
             :base_moneda="base_moneda"
             :show_cash_box="true"
+            :permitir_endoso="true"
             @changed="on_payment_methods_changed"
         >
         </multi-payment-methods>
@@ -221,6 +222,15 @@ export default {
                 cotizacion: this.owner.dollar,
                 amount_cotizado: '',
                 cuota_id: 0,
+                /*
+                 * Misión cheques-endoso-y-bancos (21/9/2026). `cheque_id` > 0 es un cheque
+                 * RECIBIDO que se endosa en este gasto (decisión 1 de Lucas: el recibido pasa a
+                 * "Endosados" mostrando el gasto, y en "Emitidos" queda la copia sin proveedor).
+                 * `cheque_banco_id` es el banco del catálogo; `banco` sigue viajando con el nombre
+                 * por compatibilidad. En 0 los dos = cheque nuevo sin banco, como siempre.
+                 */
+                cheque_id: 0,
+                cheque_banco_id: 0,
             }
         },
 

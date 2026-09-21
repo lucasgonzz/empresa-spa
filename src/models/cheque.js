@@ -60,9 +60,38 @@ export default {
 			search_from_api: true,
 		},
 		{
+			/*
+				Misión cheques-endoso-y-bancos (21/9/2026): el banco del cheque pasa de texto libre
+				a un catálogo (cheque_banco). Esta sigue siendo LA columna "Banco" de la tabla
+				--misma key, así las preferencias de columnas ya guardadas no se pierden-- pero
+				se resuelve por función: el nombre del banco elegido si el cheque tiene
+				cheque_banco_id, y si no el texto de siempre (los cheques anteriores a esta
+				versión, hasta que el asistente los unifique). Una sola columna y no dos, para
+				que el usuario no vea "Banco" repetido con el mismo dato.
+
+				No va al formulario: ahí el control es el select de abajo. El texto `banco` de un
+				cheque viejo no se pierde al editarlo porque el formulario manda el modelo entero.
+			*/
 			text: 'Banco',
 			key: 'banco',
 			type: 'text',
+			function: 'cheque_banco_texto',
+			not_show_on_form: true,
+		},
+		{
+			/*
+				Solo para el formulario: en la tabla la columna es `banco` (arriba). `not_show`
+				la deja destildada por defecto en el selector de columnas y `not_show_on_table`
+				hace que no se dibuje aunque alguien la tilde (column_preferences_helper la
+				excluye al armar props_to_show). base_properties_for_cheques_list --que arma las
+				columnas sin pasar por las preferencias-- también la respeta.
+			*/
+			text: 'Banco del cheque',
+			key: 'cheque_banco_id',
+			type: 'select',
+			use_store_models: true,
+			not_show: true,
+			not_show_on_table: true,
 		},
 		{
 			text: 'Monto',
@@ -86,6 +115,20 @@ export default {
 			key: 'fecha_pago',
 			type: 'date',
 			is_date: true,
+		},
+		{
+			/*
+				Un cheque recibido endosado en un GASTO (no a un proveedor): misión
+				cheques-endoso-y-bancos, decisión 1 de Lucas. Se muestra "Gasto N° 12 — Flete" a
+				partir de la relación `endosado_en_expense` (con su expense_concept) que trae
+				GET cheque. Visible solo en la solapa Endosados, igual que `endosado_a_provider_id`
+				(ver base_properties_for_cheques_list en components/cheques/list/Index.vue).
+			*/
+			text: 'Endosado en el gasto',
+			key: 'endosado_en_expense_id',
+			type: 'text',
+			function: 'cheque_endosado_en_gasto_texto',
+			not_show_on_form: true,
 		},
 		{
 			text: 'Fecha endoso',
