@@ -343,7 +343,7 @@ export default {
 			]
 		},
 		/**
-		 * Una opción por cheque disponible: `N° 123 · Banco Nación · $ 45.000 · pago 30/09 ·
+		 * Una opción por cheque disponible: `N° 123 · Banco Nación · $45.000 · pago 30/09 ·
 		 * Pérez SRL`. La fecha es la de PAGO (desde ahí se puede cobrar), y se rotula así y no
 		 * "vence": en el módulo de Cheques "vencido" es fecha_pago + 30 días, y un rótulo que
 		 * dijera "vence" con la fecha de pago se leería con ese otro significado.
@@ -579,7 +579,8 @@ export default {
 				partes.push(banco)
 			}
 
-			partes.push('$ ' + this.price(cheque.amount))
+			// price() ya devuelve el simbolo (numeral con '$0,0.00'): un '$ ' delante lo duplica.
+			partes.push(this.price(cheque.amount))
 
 			if (cheque.fecha_pago) {
 				partes.push('pago ' + moment(cheque.fecha_pago).format('DD/MM'))
