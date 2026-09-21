@@ -165,7 +165,6 @@ export default {
 	// "este texto abre a una persona".
 	&__nombre
 		display: inline
-		width: fit-content
 		font-weight: 600
 		color: var(--color-primary, #007bff)
 		cursor: pointer
