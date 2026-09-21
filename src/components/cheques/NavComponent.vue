@@ -24,7 +24,7 @@
 export default {
 	components: {
 		HorizontalNav: () => import('@/common-vue/components/horizontal-nav/Index'),
-		NavFiltrados: () => import('@/components/reportes/components/cheques/NavFiltrados'),
+		NavFiltrados: () => import('@/components/cheques/NavFiltrados'),
 	},
 	data() {
 		return {

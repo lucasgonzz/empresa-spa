@@ -25,8 +25,8 @@
 <script>
 export default {
 	components: {
-		NavComponent: () => import('@/components/reportes/components/cheques/NavComponent'),
-		List: () => import('@/components/reportes/components/cheques/list/Index'),
+		NavComponent: () => import('@/components/cheques/NavComponent'),
+		List: () => import('@/components/cheques/list/Index'),
 		/** Selector de columnas visibles, orden y ancho; persiste en API (`table-column-preference`). */
 		PropsToShow: () => import('@/common-vue/components/view/header/props-to-show/Index'),
 	},

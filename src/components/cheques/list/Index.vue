@@ -37,11 +37,11 @@
 export default {
 	components: {
 		TableComponent: () => import('@/common-vue/components/display/table/Index'),
-		TableButtons: () => import('@/components/reportes/components/cheques/list/TableButtons'),
-		CobrarCheque: () => import('@/components/reportes/components/cheques/list/modals/CobrarCheque'),
-		PagarCheque: () => import('@/components/reportes/components/cheques/list/modals/PagarCheque'),
-		EndozarCheque: () => import('@/components/reportes/components/cheques/list/modals/EndozarCheque'),
-		RechazarCheque: () => import('@/components/reportes/components/cheques/list/modals/RechazarCheque'),
+		TableButtons: () => import('@/components/cheques/list/TableButtons'),
+		CobrarCheque: () => import('@/components/cheques/list/modals/CobrarCheque'),
+		PagarCheque: () => import('@/components/cheques/list/modals/PagarCheque'),
+		EndozarCheque: () => import('@/components/cheques/list/modals/EndozarCheque'),
+		RechazarCheque: () => import('@/components/cheques/list/modals/RechazarCheque'),
 	},
 	computed: {
 		loading() {
