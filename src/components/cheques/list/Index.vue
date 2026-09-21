@@ -37,11 +37,11 @@
 export default {
 	components: {
 		TableComponent: () => import('@/common-vue/components/display/table/Index'),
-		TableButtons: () => import('@/components/reportes/components/cheques/list/TableButtons'),
-		CobrarCheque: () => import('@/components/reportes/components/cheques/list/modals/CobrarCheque'),
-		PagarCheque: () => import('@/components/reportes/components/cheques/list/modals/PagarCheque'),
-		EndozarCheque: () => import('@/components/reportes/components/cheques/list/modals/EndozarCheque'),
-		RechazarCheque: () => import('@/components/reportes/components/cheques/list/modals/RechazarCheque'),
+		TableButtons: () => import('@/components/cheques/list/TableButtons'),
+		CobrarCheque: () => import('@/components/cheques/list/modals/CobrarCheque'),
+		PagarCheque: () => import('@/components/cheques/list/modals/PagarCheque'),
+		EndozarCheque: () => import('@/components/cheques/list/modals/EndozarCheque'),
+		RechazarCheque: () => import('@/components/cheques/list/modals/RechazarCheque'),
 	},
 	computed: {
 		loading() {
@@ -62,21 +62,31 @@ export default {
 		/**
 		 * Columnas permitidas para la tabla según recibido/emitido/endosados o resultados filtrados.
 		 * No incluye aún orden ni visibilidad personalizados (eso aplica `properties_to_show`).
+		 *
+		 * Este camino NO pasa por las preferencias de columnas (column_preferences_helper), así
+		 * que las props con `not_show_on_table` --el select de banco del formulario, desde la
+		 * misión cheques-endoso-y-bancos-- se sacan acá a mano; si no, aparecían como columna.
+		 *
+		 * Las dos columnas de endoso (`endosado_a_provider_id`: a un proveedor;
+		 * `endosado_en_expense_id`: en un gasto, decisión 1 de Lucas) solo tienen sentido en la
+		 * solapa Endosados de recibidos: en el resto siempre están vacías.
 		 */
 		base_properties_for_cheques_list() {
+			let props = this.modelPropertiesFromName('cheque').filter(prop => !prop.not_show_on_table)
+
 			if (this.filtered.length == 0) {
 
 				if (this.sub_view == 'recibido') {
 					if (this.sub_sub_view == 'endosados') {
-						return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_desde_client_id')
+						return props.filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_desde_client_id')
 					} 
-					return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_desde_client_id')
+					return props.filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_en_expense_id' && prop.key != 'endosado_desde_client_id')
 				} else if (this.sub_view == 'emitido') {
-					return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'client_id' && prop.key != 'endosado_a_provider_id')
+					return props.filter(prop => prop.key != 'client_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_en_expense_id')
 				}
 			} 
 			
-			return this.modelPropertiesFromName('cheque')
+			return props
 		},
 		/**
 		 * Propiedades finales para `table-component`: si hay preferencias en el store (cargadas

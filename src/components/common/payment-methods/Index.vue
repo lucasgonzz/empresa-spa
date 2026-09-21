@@ -51,6 +51,7 @@
             :address_id="effective_address_id"
             :show_retencion="show_retencion"
             :show_datos_retencion="show_datos_retencion"
+            :permitir_endoso="permitir_endoso"
             :sobrante_a_repartir="sobrante_a_repartir"
             @add="add_payment_method"
             @remove="remove_payment_method"
@@ -63,6 +64,7 @@
             @update_caja_id="update_caja_id"
 
             @update_payment_method_field="update_payment_method_field"
+            @update_payment_method_fields="update_payment_method_fields"
         >
             <template v-slot:details="{ payment_method }">
                 <slot name="details" :payment_method="payment_method"></slot>
@@ -169,6 +171,16 @@ export default {
          * guardan o sacarle al proveedor un medio de pago que le corresponde.
          */
         show_datos_retencion: {
+            type: Boolean,
+            default: false,
+        },
+        /**
+         * Deja endosar un cheque RECIBIDO en la fila de un método de tipo cheque (misión
+         * cheques-endoso-y-bancos, 21/9/2026). Apagada por defecto: la prenden el pago a
+         * proveedor (`!es_cobro_a_cliente`) y el gasto. En Vender no tiene sentido: una venta
+         * cobrada con cheque es un cheque recibido, no uno que sale.
+         */
+        permitir_endoso: {
             type: Boolean,
             default: false,
         },
@@ -528,6 +540,31 @@ export default {
             let pm = Object.assign({}, next[index])
 
             pm[key] = value
+
+            next.splice(index, 1, pm)
+            this.payment_methods_proxy = next
+
+            this.$nextTick(() => this.$emit('changed', next))
+        },
+
+        /**
+         * Varios campos de una fila de una sola vez. Mismo molde que
+         * update_payment_method_field, pero con un patch entero: elegir un cheque a endosar
+         * copia ocho claves (cheque_id, numero, banco, cheque_banco_id, fechas, es_echeq, notes
+         * y amount), y hacerlo de a una eran ocho `changed` al padre con el total del pago
+         * recalculándose a mitad de camino con el monto viejo.
+         *
+         * @param {Number} index Fila del reparto.
+         * @param {Object} patch {clave: valor, ...}
+         * @returns {void}
+         */
+        update_payment_method_fields(index, patch) {
+            if (!patch || typeof patch != 'object') {
+                return
+            }
+
+            let next = this.payment_methods_proxy.slice()
+            let pm = Object.assign({}, next[index], patch)
 
             next.splice(index, 1, pm)
             this.payment_methods_proxy = next

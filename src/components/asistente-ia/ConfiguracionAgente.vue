@@ -200,13 +200,15 @@ export default {
 // (CuentaCorrienteDeMencion.vue): BootstrapVue le mide al div externo del modal un z-index
 // inline (~1040) que lo dejaría DETRÁS del panel del chat (overlay 1055). Este modal se abre
 // desde el engranaje de la sidebar del panel y desde el título del mostrador, así que tiene
-// que ganarle al panel. Comparte el 1065 del modal de cuenta corriente porque los dos nunca
+// que ganarle al panel. Comparte el 1066 del modal de cuenta corriente porque los dos nunca
 // están abiertos a la vez (mientras un modal bloquea el fondo no se puede disparar el otro), y
-// queda ABAJO de los toasts (1066), que avisan si el guardado salió o no.
+// queda ABAJO de los toasts (1067), que avisan si el guardado salió o no. Renumerado el
+// 21/9/2026 por mostrador-fotos-y-modales, que insertó tres modales nuevos más abajo en el
+// escalón (ver el comentario completo en InformeAbierto.vue).
 //
 // El id lo arma bootstrap-vue a partir del id del <b-modal>: si cambia uno, cambia el otro.
 #configuracion-agente___BV_modal_outer_
-	z-index: 1065 !important
+	z-index: 1066 !important
 
 .config-agente
 	&__intro

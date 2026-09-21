@@ -17,8 +17,6 @@
 
 		<articulos></articulos>
 
-		<cheques></cheques>
-
 		<!-- Reporte del pasivo del programa de puntos. Se monta siempre, como el resto: el
 		componente se autooculta si el comercio no tiene la extensión `puntos_clientes` o si la
 		sección activa es otra, y con eso no pide nada a la API. -->
@@ -58,6 +56,8 @@
 		<model-index model_name="expense"></model-index>
 		<model-index model_name="current_acount"></model-index>
 		<model-index model_name="movimiento_caja"></model-index>
+		<!-- El de cheque se queda aunque el módulo de Cheques se haya mudado a Tesorería (misión
+		cheques-endoso-y-bancos, 21/9/2026): es el drill-down de Flujo de Caja el que lo abre. -->
 		<model-index model_name="cheque"></model-index>
 	</div>
 </template>
@@ -73,7 +73,6 @@ export default {
 		DetalleModal: () => import('@/components/reportes/components/detalle-modal/Index'),
 		Graficos: () => import('@/components/reportes/components/graficos/Index'),
 		Articulos: () => import('@/components/reportes/components/articulos/Index'),
-		Cheques: () => import('@/components/reportes/components/cheques/Index'),
 		Puntos: () => import('@/components/reportes/components/puntos/Index'),
 		SaleModal: () => import('@/components/common/SaleModal'),
 		ModelIndex: () => import('@/common-vue/components/model/Index'),

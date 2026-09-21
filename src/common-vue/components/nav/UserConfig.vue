@@ -101,6 +101,17 @@
 					:model="slot_props.model"></color-field>
 				</template>
 
+				<template
+				v-if="config_model_name == 'online_configuration'"
+				v-slot:add_to_cart_button_color="slot_props">
+					<color-field
+					v-if="slot_props.model"
+					:prop="{ key: 'add_to_cart_button_color' }"
+					:model="slot_props.model"
+					:optional="true"
+					:fallback="slot_props.model.secondary_color || '#fe7802'"></color-field>
+				</template>
+
 				<!--
 					Generador de paleta con IA (grupo 202, prompt 03): se monta en el slot de
 					la propiedad virtual "ai_palette_generator" (ver
