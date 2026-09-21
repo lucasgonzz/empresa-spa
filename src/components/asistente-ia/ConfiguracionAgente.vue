@@ -75,6 +75,20 @@
 					<button
 					type="button"
 					class="config-agente__opcion"
+					:class="{ 'config-agente__opcion--activa': pensamiento == 'equilibrado' }"
+					@click="pensamiento = 'equilibrado'">
+						<span class="config-agente__opcion-icono">
+							<i class="bi bi-sliders" aria-hidden="true"></i>
+						</span>
+						<span class="config-agente__opcion-titulo">Equilibrado</span>
+						<span class="config-agente__opcion-desc">
+							Piensa balanceado: un término medio entre velocidad y profundidad.
+						</span>
+					</button>
+
+					<button
+					type="button"
+					class="config-agente__opcion"
 					:class="{ 'config-agente__opcion--activa': pensamiento == 'profundo' }"
 					@click="pensamiento = 'profundo'">
 						<span class="config-agente__opcion-icono">
