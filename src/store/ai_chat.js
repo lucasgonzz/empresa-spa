@@ -831,6 +831,13 @@ export default {
 		 *   rango largo que quedó guardado es una carga pesada para una pantalla que no se ve.
 		 * - pago (ruta null) -> current_acount/getModels, solo con el modal de cuenta corriente
 		 *   abierto y su cuenta cargada (from_model y from_credit_account).
+		 * - 'cheque' (unificar bancos de cheques, misión cheques-endoso-y-bancos) ->
+		 *   cheque_banco/getModels SIEMPRE, y cheque/getModels solo con Tesorería > Cheques a
+		 *   la vista (`ruta_actual`), el mismo criterio que Gastos. El catálogo se refresca
+		 *   aunque no se esté en esa pantalla porque no es la pantalla la que lo lee: lo lee el
+		 *   select de banco del cheque en cualquier pago a proveedor o gasto, y el ABM. Los
+		 *   bancos que la IA acaba de crear tienen que estar ahí antes del próximo pago, y es
+		 *   una fila por banco: no hay carga pesada ni búsqueda que pisar.
 		 *
 		 * @param {Object} payload { accion, ruta_actual } la AccionIa confirmada y el name de la ruta en pantalla
 		 */
@@ -850,6 +857,18 @@ export default {
 				let gastos = rootState.expense
 				if (payload.ruta_actual == 'expense' && gastos && !gastos.is_filtered) {
 					dispatch('expense/getModels', null, { root: true })
+				}
+				return
+			}
+
+			if (destino == 'cheque') {
+				// El catálogo, siempre (ver el docblock): es lo que lee el select del cheque.
+				dispatch('cheque_banco/getModels', null, { root: true })
+
+				// La tabla de cheques, solo si está a la vista: GET cheque trae todos los
+				// cheques del dueño agrupados, que es la carga pesada de este módulo.
+				if (payload.ruta_actual == 'cheque') {
+					dispatch('cheque/getModels', null, { root: true })
 				}
 				return
 			}
