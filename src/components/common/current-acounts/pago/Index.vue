@@ -37,16 +37,18 @@ title="Pago">
         v-model="pago.haber"></b-form-input>
 
         <!--
-            role="button"/tabindex/@keydown.enter: no es un <button> porque adentro va un numero
+            role="button"/tabindex/@keydown: no es un <button> porque adentro va un numero
             grande con el estilo de _inputs.sass, no el de un boton -- pero tiene que poder
-            recibir foco de teclado igual que cualquier control clickeable.
+            recibir foco de teclado igual que cualquier control clickeable. Enter Y espacio,
+            como pide WAI-ARIA para un role="button" que no es un <button> nativo.
         -->
         <div
         class="pago-cc__total-display"
         role="button"
         tabindex="0"
         @click="focus_primer_payment_method"
-        @keydown.enter="focus_primer_payment_method">{{ price(pago.haber || 0) }}</div>
+        @keydown.enter="focus_primer_payment_method"
+        @keydown.space.prevent="focus_primer_payment_method">{{ price(pago.haber || 0) }}</div>
 
         <b-button
         size="sm"
