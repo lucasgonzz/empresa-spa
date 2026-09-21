@@ -10,14 +10,25 @@
 			v-for="(item, index) in items"
 			:key="index"
 			class="informe-articulos__item"
-			:class="'informe-articulos__item--' + tono_de(item)">
-				<!-- La foto del artículo, o un placeholder con la inicial (§2.3). -->
+			:class="['informe-articulos__item--' + tono_de(item), { 'informe-articulos__item--clickeable': !!item.article_id }]"
+			:role="item.article_id ? 'button' : null"
+			:tabindex="item.article_id ? 0 : null"
+			@click="abrir_articulo(item)"
+			@keydown.enter="abrir_articulo(item)">
+				<!--
+					La foto del artículo, o un placeholder con la inicial (§2.3). La imagen tiene
+					su propio click con .stop (§2.1 del plan): abre la foto ampliada en vez del
+					modal del artículo que dispara el click de la tarjeta. El placeholder (sin
+					foto que ampliar) no lo intercepta: ahí el click cae en la tarjeta, como en
+					cualquier otro punto de la tarjeta.
+				-->
 				<span class="informe-articulos__foto">
 					<img
 					v-if="item.imagen_url"
 					:src="item.imagen_url"
 					alt=""
-					loading="lazy">
+					loading="lazy"
+					@click.stop="ampliar_imagen(item)">
 					<span
 					v-else
 					class="informe-articulos__inicial"
@@ -64,6 +75,31 @@ export default {
 			let nombre = (item && item.nombre) ? String(item.nombre).trim() : ''
 			return nombre ? nombre.charAt(0).toUpperCase() : '·'
 		},
+		/**
+		 * Click en la tarjeta (misión mostrador-fotos-y-modales): burbujea hasta
+		 * Informe.vue, que lo reenvía al bridge que trae el artículo completo y abre su
+		 * modal. Sin article_id (contenido depositado antes de esta misión) la tarjeta no
+		 * es clickeable: ver la clase --clickeable y el role/tabindex condicionales.
+		 *
+		 * @param {Object} item
+		 */
+		abrir_articulo(item) {
+			if (!item || !item.article_id) {
+				return
+			}
+			this.$emit('abrir-articulo', item.article_id)
+		},
+		/**
+		 * Click en la foto (con .stop en el template, para no abrir también el modal).
+		 *
+		 * @param {Object} item
+		 */
+		ampliar_imagen(item) {
+			if (!item || !item.imagen_url) {
+				return
+			}
+			this.$emit('ampliar-imagen', { url: item.imagen_url, alt: item.nombre })
+		},
 	},
 }
 </script>
@@ -92,6 +128,19 @@ export default {
 		background: var(--bg-section, #f8f9fa)
 		border: 1px solid var(--color-border-secondary, #e9ecef)
 		min-width: 0
+		transition: background .12s ease
+
+		// Solo la tarjeta con article_id se comporta como botón (§2.1 del plan): un
+		// informe depositado antes de esta misión no lo trae y sigue viéndose igual.
+		&--clickeable
+			cursor: pointer
+
+			&:hover
+				background: var(--bg-hover, #f1f3f5)
+
+			&:focus-visible
+				outline: 2px solid var(--color-primary, #007bff)
+				outline-offset: 2px
 
 	&__foto
 		flex-shrink: 0
@@ -110,6 +159,9 @@ export default {
 			height: 100%
 			object-fit: cover
 			display: block
+			// Su click (con .stop en el template) amplía la foto en vez de abrir el
+			// modal: el cursor la distingue del resto de la tarjeta.
+			cursor: zoom-in
 
 	&__inicial
 		font-size: 1.2rem
