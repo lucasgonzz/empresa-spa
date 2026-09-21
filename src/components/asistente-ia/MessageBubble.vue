@@ -80,7 +80,7 @@
 <script>
 import AccionCard from '@/components/asistente-ia/AccionCard'
 import { segmentar_menciones } from '@/components/asistente-ia/menciones'
-import { segmentar_negrita } from '@/components/asistente-ia/formato'
+import { segmentar_mensaje } from '@/components/asistente-ia/formato'
 
 /**
  * Texto del `title` (y de lo que lee un lector de pantalla) de cada tipo de mención. El de
@@ -115,13 +115,13 @@ export default {
 		 * Los mensajes del USUARIO no se segmentan nunca, ni por mención ni por negrita: el
 		 * API anota menciones solo en las respuestas del asistente y la IA es la única que
 		 * escribe con `**negrita**`. Marcar el texto de un mensaje del usuario sería
-		 * reinterpretar lo que él mismo tipeó.
+		 * reinterpretar lo que él mismo tipeó — sigue por `segmentar_menciones` sola, que con
+		 * `menciones=null` ya devuelve el mensaje entero como un único tramo plano.
 		 *
-		 * Cada tramo de mención (o el mensaje entero, si no hay menciones) se vuelve a
-		 * partir por `segmentar_negrita`, así una mención puede caer en negrita y un tramo
-		 * de negrita puede contener una mención sin que se pisen: son dos capas
-		 * independientes sobre el mismo texto, nunca "una gana y la otra se pierde" como sí
-		 * pasa entre menciones que se solapan entre sí.
+		 * Para el asistente, `segmentar_mensaje` (formato.js) cruza menciones y negrita
+		 * sobre el MISMO string antes de cortar nada: una mención puede caer en negrita y un
+		 * tramo de negrita puede contener una mención sin que se pisen, y ningún asterisco de
+		 * formato llega nunca a una hoja final (ver el comentario de por qué en formato.js).
 		 *
 		 * `mencion_id` y `tipo` viajan al DOM como `data-*` y son los que lee el listener
 		 * delegado de `FichaArticuloPopover.vue`: ese componente no conoce a este, solo
@@ -130,48 +130,48 @@ export default {
 		 * @returns {Array<Object>}
 		 */
 		segmentos_del_texto() {
-			let es_usuario = this.es_del_usuario
-			let menciones = es_usuario ? null : this.message.menciones
-			let segmentos_de_mencion = segmentar_menciones(this.message.contenido, menciones)
-			let resultado = []
-
-			segmentos_de_mencion.forEach(function (segmento_mencion) {
-				let sub_segmentos = es_usuario
-					? [{ texto: segmento_mencion.texto, negrita: false }]
-					: segmentar_negrita(segmento_mencion.texto)
-
-				sub_segmentos.forEach(function (sub) {
-					if (!segmento_mencion.mencion) {
-						resultado.push({
-							texto: sub.texto,
-							clase: sub.negrita ? 'asistente-ia-negrita' : null,
-							tipo: null,
-							mencion_id: null,
-							titulo: null,
-							role: null,
-							tabindex: null,
-						})
-						return
+			if (this.es_del_usuario) {
+				return segmentar_menciones(this.message.contenido, null).map(function (segmento) {
+					return {
+						texto: segmento.texto,
+						clase: null,
+						tipo: null,
+						mencion_id: null,
+						titulo: null,
+						role: null,
+						tabindex: null,
 					}
-					let tipo = segmento_mencion.mencion.tipo
-					let es_clickeable = tipo == 'cliente'
-					let clase_mencion = 'asistente-ia-mencion asistente-ia-mencion--' + tipo
-					resultado.push({
-						texto: sub.texto,
-						clase: sub.negrita ? clase_mencion + ' asistente-ia-negrita' : clase_mencion,
-						tipo: tipo,
-						mencion_id: segmento_mencion.mencion.id,
-						titulo: TITULO_POR_TIPO[tipo] || null,
-						// Solo lo que se ACTIVA es un botón y para el teclado. La mención de
-						// artículo no hace nada al tocarla (su tarjeta es de hover), así que
-						// dejarla como parada del tabulador sería prometer algo que no pasa.
-						role: es_clickeable ? 'button' : null,
-						tabindex: es_clickeable ? 0 : null,
-					})
 				})
-			})
+			}
 
-			return resultado
+			return segmentar_mensaje(this.message.contenido, this.message.menciones).map(function (segmento) {
+				if (!segmento.mencion) {
+					return {
+						texto: segmento.texto,
+						clase: segmento.negrita ? 'asistente-ia-negrita' : null,
+						tipo: null,
+						mencion_id: null,
+						titulo: null,
+						role: null,
+						tabindex: null,
+					}
+				}
+				let tipo = segmento.mencion.tipo
+				let es_clickeable = tipo == 'cliente'
+				let clase_mencion = 'asistente-ia-mencion asistente-ia-mencion--' + tipo
+				return {
+					texto: segmento.texto,
+					clase: segmento.negrita ? clase_mencion + ' asistente-ia-negrita' : clase_mencion,
+					tipo: tipo,
+					mencion_id: segmento.mencion.id,
+					titulo: TITULO_POR_TIPO[tipo] || null,
+					// Solo lo que se ACTIVA es un botón y para el teclado. La mención de
+					// artículo no hace nada al tocarla (su tarjeta es de hover), así que
+					// dejarla como parada del tabulador sería prometer algo que no pasa.
+					role: es_clickeable ? 'button' : null,
+					tabindex: es_clickeable ? 0 : null,
+				}
+			})
 		},
 		/**
 		 * Tarjetas de carga del mensaje (misión asistente-ia-acciones, §4 del plan), sin las
