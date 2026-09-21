@@ -15,13 +15,18 @@ title="Pago">
         `.inputValue()` (e2e/tests/compra-costeo-facturacion.spec.js) y el valor tiene que ser el
         numero crudo, no el formateado con price(). Cambiarlo por texto rompe ese spec sin que nada
         lo avise hasta que Lucas corra la suite. Lo que cambia acá es como se ve, no que elemento es.
+
+        Por eso el input real sigue existiendo tal cual (mismo id, mismo data-testid, mismo
+        v-model), pero se oculta visualmente con `.sr-only` (clase de Bootstrap, ya usada en el
+        repo). Al lado va un <div> nuevo que muestra el mismo valor formateado con price() y que
+        recibe el click/foco: el e2e sigue leyendo el input real, el usuario ve el numero grande.
     -->
     <div class="pago-cc__total">
         <label
         class="pago-cc__total-label"
         for="monto-pago">Total del pago</label>
         <b-form-input
-        class="pago-cc__total-valor"
+        class="sr-only"
         disabled
         type="number"
         min="0"
@@ -30,6 +35,20 @@ title="Pago">
         @keydown.enter="hacerPago"
         :placeholder="placeholder"
         v-model="pago.haber"></b-form-input>
+
+        <!--
+            role="button"/tabindex/@keydown.enter: no es un <button> porque adentro va un numero
+            grande con el estilo de _inputs.sass, no el de un boton -- pero tiene que poder
+            recibir foco de teclado igual que cualquier control clickeable.
+        -->
+        <div
+        class="pago-cc__total-display"
+        role="button"
+        tabindex="0"
+        @click="focus_primer_payment_method"
+        @keydown.enter="focus_primer_payment_method">{{ price(pago.haber || 0) }}</div>
+
+        <p class="pago-cc__total-ayuda">El total se completa solo: sumá el importe en el método de pago de abajo.</p>
 
         <b-button
         size="sm"
@@ -444,25 +463,40 @@ export default {
 		text-transform: uppercase
 		letter-spacing: 0.02em
 
-	// El input deshabilitado deja de parecer un campo que alguien se olvido de completar y pasa a
-	// leerse como el numero grande que es. No lleva font-size fijo: lo manda _ui_sizes.sass.
-	input.pago-cc__total-valor
+	// El div que reemplaza visualmente al input (que sigue vivo pero oculto con .sr-only, ver
+	// comentario del template). Mismo look que tenia el input deshabilitado: el numero grande que
+	// se viene a mirar, ahora ademas clickeable para saltar al primer metodo de pago.
+	//
+	// 🔴 Un <div> no hereda el font-size que el input real tomaba de _inputs.sass
+	// (input.form-control) ni el de _ui_sizes.sass (.ui-small input.form-control): hay que
+	// declararlos a mano para que el numero no cambie de tamaño al migrar de elemento.
+	.pago-cc__total-display
 		flex: 1 1 160px
 		min-width: 0
-		height: auto
-		padding: 0
-		border: none
-		background: transparent
 		color: var(--color-text-primary)
 		font-weight: 700
+		font-size: 1.4rem
+		cursor: pointer
 
-		&:disabled
-			background: transparent
-			color: var(--color-text-primary)
-			opacity: 1
+		&:hover,
+		&:focus-visible
+			outline: 2px solid var(--color-primary)
+			outline-offset: 2px
+			border-radius: 4px
+
+	.pago-cc__total-ayuda
+		flex: 1 1 100%
+		margin: 0
+		color: var(--color-text-secondary)
+		font-size: 0.72rem
 
 	.pago-cc__total-btn
 		flex: 0 0 auto
+
+// El modal se abre tambien en pantallas chicas con el body en .ui-small (_ui_sizes.sass), que le
+// baja el font-size a los inputs reales -- este selector replica esa reduccion para el div nuevo.
+.ui-small .pago-cc__total-display
+	font-size: 1rem
 
 // --- Los campos del pago --------------------------------------------------------------------
 .pago-cc__campos
