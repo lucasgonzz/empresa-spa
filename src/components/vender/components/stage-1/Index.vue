@@ -23,7 +23,7 @@
 			<span class="vender-stage__number">1</span>
 			<div class="vender-stage__header-text">
 				<span class="vender-stage__label">Configuración inicial</span>
-				<span class="vender-stage__sublabel">Sucursal, método de pago, lista de precios, cliente y AFIP</span>
+				<span class="vender-stage__sublabel">Sucursal, método de pago, lista de precios, fecha, cliente y AFIP</span>
 			</div>
 			<i
 			:class="stage1_open ? 'icon-up' : 'icon-down'"
@@ -76,6 +76,14 @@
 					<seller-selector></seller-selector>
 				</div>
 
+				<!--
+					Fecha de la venta - ultimo campo de la fila.
+					Por defecto hoy; si el operador la cambia, la venta se registra con ese dia.
+				-->
+				<div class="vender-stage__field">
+					<fecha-venta></fecha-venta>
+				</div>
+
 				<!-- Separador visual antes de los campos de cliente -->
 				<hr class="vender-stage__separator">
 
@@ -104,6 +112,7 @@ import SelectClient from './SelectClient'
 import AlertarPersonalizado from './AlertarPersonalizado'
 import OmitirEnCuentaCorriente from './OmitirEnCuentaCorriente'
 import GuardarComoPresupuesto from './GuardarComoPresupuesto'
+import FechaVenta from './FechaVenta'
 
 export default {
 	name: 'VenderStage1',
@@ -123,6 +132,8 @@ export default {
 		AlertarPersonalizado,
 		OmitirEnCuentaCorriente,
 		GuardarComoPresupuesto,
+		/* Fecha de la venta - ultimo campo de la fila de configuracion */
+		FechaVenta,
 	},
 	data() {
 		return {

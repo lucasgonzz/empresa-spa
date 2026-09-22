@@ -1,3 +1,4 @@
+import moment from 'moment'
 import start_methods from '@/mixins/start_methods'
 import vender_set_total from '@/mixins/vender_set_total'
 import set_price_type from '@/mixins/vender/price_types'
@@ -116,6 +117,13 @@ export default {
 			this.$store.commit('vender/setSellerId', 0)
 
 			this.$store.commit('vender/set_fecha_entrega', null)
+
+			/*
+				La fecha de la venta vuelve a HOY, no a null: si quedara en null, la venta siguiente
+				arrancaria con el campo de fecha vacio (es un <input type="date">) y el vendedor
+				tendria que completarlo a mano en cada venta. El default del state es el mismo.
+			*/
+			this.$store.commit('vender/set_created_at', moment().format('YYYY-MM-DD'))
 
 			this.$store.commit('vender/set_moneda_id', 1)
 
