@@ -57,7 +57,31 @@ export default {
 	},
 	created() {
 		if (this.value) {
-			this.date_value = moment(this.value, 'YYYY-MM-DD').format('YYYY-MM-DD') 
+			/*
+				🔴 Dos caminos, y hay que saber por que.
+
+				El valor puede llegar de dos formas distintas:
+
+				 - 'YYYY-MM-DD' pelado, que es como lo guarda un campo de fecha del formulario
+				   generico. Ese camino es el de siempre y no se toca.
+				 - Un ISO en UTC ('2026-09-23T01:30:00.000000Z'), que es como serializa la API
+				   cualquier timestamp de Eloquent (created_at, por ejemplo). Ahi
+				   `moment(valor, 'YYYY-MM-DD')` no sirve: el modo indulgente lee los primeros
+				   tokens y tira el resto, o sea se queda con el dia UTC. Entre las 21:00 y la
+				   medianoche de Argentina ese dia es el SIGUIENTE al que el usuario cargo.
+
+				   Y como el created() llama a setDate(), ModelForm escribe ese dia corrido de
+				   vuelta en el modelo solo, con abrir el formulario: el proximo guardado lo
+				   persiste, y el siguiente lo vuelve a correr. Un dia por guardado.
+
+				Por eso el ISO se parsea ENTERO --moment(valor) lo convierte a la zona del
+				navegador-- y recien ahi se formatea al 'YYYY-MM-DD' que pide el <input type="date">.
+			*/
+			if (typeof this.value === 'string' && this.value.indexOf('T') !== -1) {
+				this.date_value = moment(this.value).format('YYYY-MM-DD')
+			} else {
+				this.date_value = moment(this.value, 'YYYY-MM-DD').format('YYYY-MM-DD')
+			}
 			this.setDate()
 		}
 	},

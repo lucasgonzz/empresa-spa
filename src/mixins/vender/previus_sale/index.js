@@ -405,14 +405,26 @@ export default {
 			this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra ? model.numero_orden_de_compra : '')
 			this.$store.commit('vender/set_fecha_entrega', model.fecha_entrega ? model.fecha_entrega.split('T')[0] : null)
 			/*
-				Fecha de la venta. Viene del back como ISO ('2026-09-22T14:31:07.000000Z'), y al campo
-				de la etapa 1 --un <input type="date">-- hay que darle solo el 'YYYY-MM-DD': si le
-				llega el ISO entero no muestra nada. Se corta por la T y no se parsea con moment a
-				proposito: reinterpretar ese ISO con Z corre la fecha tres horas.
+				Fecha de la venta. Viene del back como ISO en UTC ('2026-09-23T01:30:00.000000Z'), y
+				al campo de la etapa 1 --un <input type="date">-- hay que darle solo el 'YYYY-MM-DD':
+				si le llega el ISO entero no muestra nada.
 
-				Si la venta no trajera created_at, se cae a hoy (nunca a null: el campo quedaria vacio).
+				🔴 Se parsea con moment y NO se corta por la T, y esto es exactamente al reves de lo
+				que decia este comentario hasta el 22/9/2026. La memoria de "no lo parsees, corre la
+				fecha tres horas" es del lado PHP: alla, reasignarle a un `created_at` de Eloquent un
+				ISO con Z lo corre +3 h (ver SaleHelper::resolver_created_at()). Del lado JS pasa lo
+				contrario: `moment(iso)` convierte el instante a la zona del navegador --que es la
+				del comercio-- y devuelve el dia que el vendedor vio, mientras que `.split('T')[0]`
+				se queda con el dia UTC, que entre las 21:00 y la medianoche es el dia SIGUIENTE.
+
+				El daño de cortar por la T era acumulativo: el campo mostraba el 23, el vendedor
+				guardaba sin tocar nada, el back veia que el dia cambio y reescribia la venta al 23,
+				y en la siguiente edicion se corria de nuevo. Un dia por guardado.
+
+				Si la venta no trajera created_at se manda null --o sea "no toques la fecha"-- y no
+				hoy: no saber la fecha no puede traducirse en reescribirla con la de hoy.
 			*/
-			this.$store.commit('vender/set_created_at', model.created_at ? model.created_at.split('T')[0] : moment().format('YYYY-MM-DD'))
+			this.$store.commit('vender/set_created_at', model.created_at ? moment(model.created_at).format('YYYY-MM-DD') : null)
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 
 			this.$store.commit('vender/setObservations', model.observations)
