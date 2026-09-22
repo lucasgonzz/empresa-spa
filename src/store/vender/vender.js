@@ -409,6 +409,22 @@ export default {
 
 			limpiar_vender lo devuelve a HOY (no a null) despues de guardar, asi la venta
 			siguiente arranca con el campo puesto.
+
+			🔴 ESTE VALOR ES SOLO LA SEMILLA DEL ARRANQUE, NO EL DEFAULT DE CADA VENTA, y no
+			alcanza solo. `state` es un objeto literal, no una funcion: Vuex lo evalua UNA vez,
+			al importar el modulo --o sea cuando se carga la pestaña-- y de ahi en mas este
+			moment() queda congelado en ese dia.
+
+			Una pestaña abierta desde la tarde le pone a la venta de las 00:05 el dia de AYER;
+			el back guarda "dia elegido + hora actual" (SaleHelper::resolver_created_at), asi
+			que la venta queda fechada casi 24 horas atras, fuera del listado del dia y fuera
+			del arqueo del turno, sin un solo error en el camino.
+
+			Los dos lugares que lo vuelven a calcular FRESCO son los que mandan:
+			  - views/Vender.vue, en el created(), al arrancar una venta nueva;
+			  - mixins/vender/limpiar_vender.js, al guardar / cancelar / limpiar.
+			Si alguno de los dos se "simplifica" a un literal o se borra por redundante,
+			vuelve el bug de la medianoche.
 		*/
 		created_at: moment().format('YYYY-MM-DD'),
 

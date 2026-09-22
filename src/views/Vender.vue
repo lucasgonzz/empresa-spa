@@ -31,6 +31,7 @@
 </template>
 
 <script>
+import moment from 'moment'
 import price_types from '@/mixins/vender/price_types'
 import default_articles from '@/mixins/vender/default_articles'
 import default_payment_method from '@/mixins/vender/default_payment_method'
@@ -108,6 +109,35 @@ export default {
 				this.setDefaultPaymentMethod()
 				this.set_omitir_en_cuenta_corriente()
 				this.set_caja_por_defecto()
+
+				/*
+					🔴 La fecha de la venta vuelve a HOY, y HOY se calcula ACA, no en el modulo.
+
+					El default de state.created_at (store/vender/vender.js) esta adentro de un
+					objeto literal, asi que Vuex lo evalua UNA sola vez: cuando se importa el
+					modulo, o sea cuando se carga la pestaña. De ahi en mas queda congelado en el
+					dia en que se abrio la SPA.
+
+					En un kiosco o un bar --justo los que venden pasada la medianoche-- la pestaña
+					queda abierta desde la tarde, y a las 00:05 el store sigue diciendo el dia de
+					AYER. Nadie mira el campo, el POST manda ese dia y el back guarda "dia elegido
+					+ hora actual" (SaleHelper::resolver_created_at): la venta queda fechada casi
+					24 horas atras. No aparece en el listado del dia, cae fuera del arqueo de caja
+					del turno, y es silencioso: se descubre cuando no cuadra la caja.
+
+					Por eso no se puede "simplificar" de vuelta a un valor literal ni sacar esta
+					linea: el unico momento en que "hoy" es el dia de verdad es cuando se arranca
+					la venta.
+
+					🔴 Y va ADENTRO del guard de edicion a proposito. Editando una venta previa o
+					un presupuesto, el campo tiene que seguir mostrando la fecha de ESE
+					comprobante. En el camino del presupuesto la precarga corre ANTES que este
+					created() --BtnActualizarEnVender.vue llama a
+					set_datos_para_actualizar_en_vender() y recien despues hace el $router.push--,
+					asi que afuera del guard esta linea le pisaria la fecha guardada.
+				*/
+				this.$store.commit('vender/set_created_at', moment().format('YYYY-MM-DD'))
+
 				this.$store.commit('vender/clear_sale_log')
 			} else {
 				/*
