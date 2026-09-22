@@ -444,6 +444,17 @@ export default {
 	// bootstrap, asi que el estado sin scrollear queda identico a como estaba.
 	background: var(--bg-card)
 
+// bootstrap-vue deja .modal-body con el padding: 1rem de Bootstrap en las cuatro puntas. Sin
+// sacarle el de arriba, `.pago-cc__total` (primer hijo del body) arranca 16px mas abajo que el
+// header, y recien al scrollear esos 16px queda "enganchado" al sticky (top:
+// var(--modal-chrome-min-h)) -- un salto visible justo en el momento de pegarse, que es lo que
+// Lucas reporto como "se mueve" / "no queda bien anclado" (22/9/2026). Sacando solo el
+// padding-top el total queda pegado al header desde que el modal se abre, sin salto ninguno; los
+// laterales y el inferior del padding siguen intactos, asi que .pago-cc__campos conserva el
+// margen de siempre.
+#current-acounts-pago .modal-body
+	padding-top: 0
+
 .pago-cc__total
 	position: sticky
 	top: var(--modal-chrome-min-h)
