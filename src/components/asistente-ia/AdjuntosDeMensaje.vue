@@ -92,12 +92,32 @@
 
 <script>
 /**
- * Los adjuntos de un mensaje del asistente (misión asistente-omnisciente, 21/9/2026, §1 del
- * contrato): hoy, la foto de un artículo cuando la persona la pide ("mostrame la foto"). El
- * API los manda en `message.adjuntos`, siempre lista, como `{ tipo, url, texto, articulo_id }`;
- * acá se pintan SOLO los de `tipo === 'imagen'` con `url`, y cualquier tipo que esta SPA no
- * conozca se saltea sin error, que es lo que el contrato pide para poder sumar tipos después.
+ * Las fotos de un mensaje del chat, pinte quien pinte. Son DOS cosas distintas del API que en
+ * pantalla son la misma, y por eso comparten este componente:
+ *
+ *   - Lo que ADJUNTA EL ASISTENTE (misión asistente-omnisciente, 21/9/2026, §1 del contrato):
+ *     hoy, la foto de un artículo cuando la persona la pide ("mostrame la foto"). Viaja en
+ *     `message.adjuntos`, siempre lista, como `{ tipo, url, texto, articulo_id }`, y va DEBAJO
+ *     del texto: la foto es parte de lo que el asistente dice.
+ *   - Lo que MANDA EL DUEÑO por WhatsApp (misión asistente-capacidades-y-hilos, 22/9/2026,
+ *     contrato 1): viaja en `message.imagenes` como `{ id, orden, url }` y va ARRIBA del texto,
+ *     como en cualquier chat. `MessageBubble.vue` lo traduce a la forma de los adjuntos antes
+ *     de pasarlo, así este componente conoce UN solo formato.
+ *
+ * Se pintan SOLO los de `tipo === 'imagen'` con `url`, y cualquier tipo que esta SPA no conozca
+ * se saltea sin error, que es lo que el contrato pide para poder sumar tipos después.
  * `articulo_id` no se usa: la ficha del artículo ya sale por la mención en el texto.
+ *
+ * 🔴 LA URL PUEDE SER DE UN ENDPOINT AUTENTICADO Y ESO NO PIDE NADA ESPECIAL ACÁ. Las fotos del
+ * dueño viven en el disco privado de `empresa-api` y se sirven por una ruta con sesión (son
+ * fotos del negocio, no van a una URL pública). Un `<img :src>` sin el atributo `crossorigin`
+ * pide en modo no-cors CON credenciales, y la cookie de Sanctum es del dominio padre
+ * (`SESSION_DOMAIN`, que cubre `<cliente>.comerciocity.com` y `api-<cliente>.comerciocity.com`),
+ * así que viaja sola. Es exactamente lo que ya hace el módulo de WhatsApp con `media_src` ("la
+ * ruta autenticada propia si el archivo es nuestro", whatsapp/conversation/MessageBubble.vue).
+ * 🔴 NO agregarle `crossorigin` a estos <img>: `anonymous` justamente SACA las credenciales y
+ * las fotos del dueño dejarían de verse. Si el endpoint contesta 401 o 403, salta el @error y
+ * queda la línea de "No se pudo cargar la imagen", que es la degradación correcta.
  *
  * Cada foto se ve como miniatura contenida (hasta 220px de alto, fondo blanco también en modo
  * oscuro: es una foto de producto, y sobre gris oscuro un recorte con fondo blanco se ve como
@@ -141,13 +161,30 @@
 export default {
 	name: 'AdjuntosDeMensaje',
 	props: {
-		// `message.adjuntos` tal cual llega del API (ya filtrado por MessageBubble.vue: solo
-		// mensajes del asistente). Puede traer tipos que esta SPA no conoce.
+		// Las fotos a pintar, en la forma de `message.adjuntos` del asistente. Quién las manda
+		// ya lo resolvió MessageBubble.vue: o son los adjuntos tal cual llegan del API, o son
+		// las fotos del dueño (`message.imagenes`) traducidas a esta forma. Puede traer tipos
+		// que esta SPA no conoce.
 		adjuntos: {
 			type: Array,
 			default: function () {
 				return []
 			},
+		},
+		/**
+		 * Qué dice un lector de pantalla de una foto SIN epígrafe.
+		 *
+		 * Los adjuntos del asistente casi siempre traen epígrafe (el nombre del artículo) y
+		 * ése es el mejor `alt` posible, así que este default casi no se usa ahí. Las fotos del
+		 * dueño no traen ninguno --no hay nada que poner debajo de la foto-- y ahí "Imagen" a
+		 * secas no dice nada: el llamador pasa algo que sí ("Foto que mandaste").
+		 *
+		 * No se pasa como `texto` porque `texto` se DIBUJA como epígrafe: un renglón repetido
+		 * abajo de cada foto sería ruido en pantalla para ganar una palabra en el lector.
+		 */
+		alt_por_defecto: {
+			type: String,
+			default: 'Imagen',
 		},
 	},
 	data() {
@@ -169,8 +206,8 @@ export default {
 	computed: {
 		/**
 		 * Los adjuntos que se pintan: solo imágenes con URL, ya con todo lo que la plantilla
-		 * necesita resuelto. `alt` es el epígrafe o "Imagen": es lo que un lector de pantalla
-		 * dice de la foto, y el epígrafe (el nombre del artículo) es exactamente eso.
+		 * necesita resuelto. `alt` es el epígrafe o `alt_por_defecto`: es lo que un lector de
+		 * pantalla dice de la foto, y el epígrafe (el nombre del artículo) es exactamente eso.
 		 *
 		 * La clave del v-for lleva la posición además de la URL: el API puede mandar la misma
 		 * foto dos veces (dos artículos que comparten imagen) y una clave repetida rompería el
@@ -197,7 +234,7 @@ export default {
 					clave: indice + '-' + url,
 					url: url,
 					texto: texto,
-					alt: texto || 'Imagen',
+					alt: texto || self.alt_por_defecto,
 					rota: Boolean(self.rotas[url]),
 				})
 			})

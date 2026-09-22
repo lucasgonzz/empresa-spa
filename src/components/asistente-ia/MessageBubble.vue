@@ -2,6 +2,24 @@
 	<div
 	class="asistente-ia-globo"
 	:class="clases_del_globo">
+		<!-- Las fotos que el dueño mandó por WhatsApp (misión asistente-capacidades-y-hilos,
+		22/9/2026, contrato 1). Lucas: "las fotos que le mando por whatsapp no las veo en el chat
+		del sistema" -- llegaban y se guardaban, pero la SPA no las pintaba nunca.
+
+		🔴 Van ARRIBA del texto, al revés que los adjuntos del asistente, y no es una
+		inconsistencia: es la maquetación de cualquier chat, la misma que ya usa el módulo de
+		WhatsApp ("va ARRIBA del texto porque así lo dibuja WhatsApp",
+		whatsapp/conversation/MessageBubble.vue). El dueño manda una foto y escribe SOBRE esa
+		foto: el texto es el epígrafe. El asistente hace lo contrario -- dice algo y lo ilustra.
+
+		Sin `imagenes` (API viejo) o en un mensaje del asistente el computed devuelve [] y acá
+		no se monta nada. -->
+		<adjuntos-de-mensaje
+		v-if="fotos_del_usuario.length"
+		class="asistente-ia-globo__fotos"
+		alt_por_defecto="Foto que mandaste"
+		:adjuntos="fotos_del_usuario"></adjuntos-de-mensaje>
+
 		<!-- Texto plano SIEMPRE: pre-wrap y la interpolación normal de Vue, que ya
 		escapa. Ni markdown, ni v-html, ni sanitizador (D43).
 
@@ -19,7 +37,9 @@
 		adentro del <p> y no un <template v-for> con varios: entre dos elementos
 		hermanos escritos en líneas distintas quedaría un nodo de espacio por cada
 		segmento. -->
-		<p class="asistente-ia-globo__texto"><span
+		<p
+		v-if="segmentos_del_texto.length"
+		class="asistente-ia-globo__texto"><span
 		v-for="(segmento, indice) in segmentos_del_texto"
 		:key="indice"
 		:class="segmento.clase"
@@ -139,6 +159,14 @@ export default {
 		 * delegado de `FichaArticuloPopover.vue`: ese componente no conoce a este, solo
 		 * mira el documento.
 		 *
+		 * 🔴 CON CONTENIDO VACÍO DEVUELVE [], y por eso el <p> lleva `v-if`. Un mensaje sin
+		 * texto es un caso REAL desde la misión asistente-capacidades-y-hilos (22/9/2026): el
+		 * dueño manda una foto sola por WhatsApp y el mensaje llega con `contenido` vacío
+		 * (pasó con el #97 de demo3). Sin el `v-if` quedaba un <p> sin hijos: hoy no mide nada
+		 * --un inline vacío no genera renglón-- pero es un nodo que existe, y cualquier regla
+		 * futura sobre `.asistente-ia-globo__texto` (un padding, un `min-height`, un `:empty`)
+		 * lo convertiría en un hueco adentro de la viñeta de la foto.
+		 *
 		 * @returns {Array<Object>}
 		 */
 		segmentos_del_texto() {
@@ -201,15 +229,53 @@ export default {
 		/**
 		 * Adjuntos del mensaje (misión asistente-omnisciente, 21/9/2026, §1 del contrato): la
 		 * lista tal cual llega, o [] para un mensaje del usuario (sus fotos viajan por
-		 * `imagenes`, que es otra cosa) o sin la clave (API viejo). Qué se pinta de cada
-		 * adjunto lo decide AdjuntosDeMensaje.vue: acá solo se resuelve DE QUIÉN es el mensaje,
-		 * con el mismo criterio que acciones_visibles.
+		 * `imagenes`, que es otra cosa: ver `fotos_del_usuario`) o sin la clave (API viejo).
+		 * Qué se pinta de cada adjunto lo decide AdjuntosDeMensaje.vue: acá solo se resuelve
+		 * DE QUIÉN es el mensaje, con el mismo criterio que acciones_visibles.
 		 */
 		adjuntos_visibles() {
 			if (this.es_del_usuario || !Array.isArray(this.message.adjuntos)) {
 				return []
 			}
 			return this.message.adjuntos
+		},
+		/**
+		 * Las fotos que el dueño mandó por WhatsApp (misión asistente-capacidades-y-hilos,
+		 * 22/9/2026, contrato 1), traducidas a la forma que entiende AdjuntosDeMensaje.vue.
+		 *
+		 * El API las manda en `message.imagenes` como `{ id, orden, url }`. Acá se convierten
+		 * al `{ tipo, url, texto }` de los adjuntos del asistente en vez de enseñarle a ese
+		 * componente un segundo formato: en pantalla las dos cosas son lo mismo --una foto con
+		 * visor--, y lo único que las distingue es de quién son y dónde van en la viñeta, que
+		 * se resuelve acá y no allá.
+		 *
+		 * 🔴 `undefined` se trata como [] y no se monta nada. No es defensa por las dudas: es
+		 * el contrato. La SPA nueva tiene que andar contra un API que todavía no manda la
+		 * clave, porque los dos lados nunca llegan a producción el mismo día.
+		 *
+		 * Solo para mensajes del USUARIO, con el mismo criterio que `adjuntos_visibles`: lo
+		 * que adjunta el asistente es otra lista y va en otro lugar de la viñeta.
+		 *
+		 * `orden` no se usa para ordenar: el API ya las manda en orden, y reordenarlas acá
+		 * sería repetir una regla del back que después puede cambiar de un solo lado.
+		 *
+		 * `texto` va vacío a propósito: sería el epígrafe debajo de la foto, y la foto que
+		 * mandó el dueño no tiene ninguno que valga la pena. Lo que el lector de pantalla dice
+		 * va por `alt_por_defecto`, que no se dibuja.
+		 *
+		 * @returns {Array<Object>}
+		 */
+		fotos_del_usuario() {
+			if (!this.es_del_usuario || !Array.isArray(this.message.imagenes)) {
+				return []
+			}
+			return this.message.imagenes.map(function (imagen) {
+				return {
+					tipo: 'imagen',
+					url: imagen && typeof imagen.url == 'string' ? imagen.url : '',
+					texto: '',
+				}
+			})
 		},
 		clases_del_globo() {
 			return {
@@ -298,6 +364,21 @@ export default {
 	&--error-respuesta
 		color: var(--caja-cerrar-texto, #9c3a36)
 		border-color: var(--btn-peligro-borde, #b4443f)
+
+	// Las fotos del dueño van ARRIBA del texto (ver el template), así que la separación de
+	// `.asistente-ia-adjuntos` --pensada para ir DEBAJO-- hay que darla vuelta. Con la foto
+	// sola (mensaje sin texto) el margen de abajo tampoco molesta: lo que sigue es el pie con
+	// el estado del envío, que ya se lee mejor despegado de la foto.
+	//
+	// 🔴 El selector suma la clase del componente a propósito: `.asistente-ia-adjuntos` pesa
+	// lo mismo que `.asistente-ia-globo__fotos` (0,1,0) y viven en dos .vue distintos, así que
+	// a igual especificidad decidiría el ORDEN en que queden en la hoja final -- que depende
+	// del orden de evaluación de los módulos y no es algo sobre lo que convenga apoyarse.
+	// Compuesto pesa (0,2,0) y gana siempre. Mismo criterio que el <style> del visor en
+	// AdjuntosDeMensaje.vue.
+	&__fotos.asistente-ia-adjuntos
+		margin-top: 0
+		margin-bottom: 8px
 
 	&__texto
 		margin: 0
