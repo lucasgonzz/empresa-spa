@@ -40,13 +40,6 @@
 				v-b-modal="'ai-palette-generator'">
 					{{ applied_palette_id ? 'Ver y cambiar paleta' : 'Ver paletas y elegir' }}
 				</b-button>
-
-				<btn-loader
-				:block="false"
-				:loader="loading"
-				variant="link"
-				text="Generar de nuevo"
-				@clicked="generatePalette"></btn-loader>
 			</div>
 
 			<!--
@@ -71,7 +64,6 @@
 		id="ai-palette-generator"
 		title="Elegí una paleta para tu tienda"
 		size="xl"
-		hide-footer
 		scrollable>
 			<!-- Aclaracion: se uso el logo de la empresa porque la tienda no tiene uno cargado -->
 			<p
@@ -152,6 +144,20 @@
 					</div>
 				</b-col>
 			</b-row>
+
+			<!--
+				"Generar de nuevo" vive en el footer del modal (no afuera, en la pagina) para
+				que se pueda regenerar sin tener que cerrarlo primero -- es justo el momento
+				en que el usuario esta comparando las tres propuestas y puede querer otra tanda.
+			-->
+			<template #modal-footer>
+				<btn-loader
+				:block="false"
+				:loader="loading"
+				variant="link"
+				text="Generar de nuevo"
+				@clicked="generatePalette"></btn-loader>
+			</template>
 		</b-modal>
 	</div>
 </template>
