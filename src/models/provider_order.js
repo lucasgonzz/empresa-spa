@@ -1,3 +1,4 @@
+import moment from 'moment'
 export default {
 	properties: [
 		{
@@ -190,6 +191,27 @@ export default {
 				'Una vez activada esta accion NO ES REVERSIBLE',
 				'Si una vez activada ustedes actualiza la compra y cambie el Total Final, el sistema actualizara la cuenta corriente del proveedor segun corresponda.',
 			]
+		},
+		{
+			/*
+				Mision fecha-creacion-editable (22/9/2026): la fecha con la que queda registrada la
+				compra. Por defecto el dia de hoy, asi el caso normal no cambia en nada. Viaja como
+				'created_at' (string YYYY-MM-DD) dentro del modelo entero que arma getModelToSend(),
+				tanto en el POST como en el PUT: el payload no hubo que tocarlo.
+
+				`not_show: true` significa que no sale como COLUMNA del listado de compras; en el
+				formulario se renderiza igual, que es lo que queremos.
+			*/
+			text: 'Fecha',
+			key: 'created_at',
+			type: 'date',
+			value: moment().format('YYYY-MM-DD'),
+			not_show: true,
+			descriptions: [
+				'Es la fecha con la que se registra la compra. Viene con el dia de hoy: si esta cargando una compra vieja, indique aca la fecha real en la que la hizo.',
+				'Ojo: con una fecha anterior, la compra NO aparece en el listado del dia de hoy, sino en el de esa fecha.',
+				'El movimiento en la Cuenta Corriente del proveedor se genera igual con la fecha de hoy.',
+			],
 		},
 		// {
 		// 	key: 'fecha_emision_comprobante',
