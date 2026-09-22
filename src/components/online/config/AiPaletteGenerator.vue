@@ -17,7 +17,62 @@
 		text="Generar paleta desde el logo"
 		@clicked="generatePalette"></btn-loader>
 
-		<div v-if="palettes.length">
+		<!--
+			Ya hay paletas generadas: en la pagina queda solo un resumen compacto y los
+			botones. El detalle (las tres tarjetas, comparables una al lado de la otra) vive
+			en el modal de abajo, para que no quede todo amontonado en la pestaña.
+		-->
+		<div v-if="palettes.length" class="ai-palette-generator__summary">
+			<p class="ai-palette-generator__summary-text">
+				<span v-if="applied_palette_id">
+					Tenés aplicada la paleta <b>"{{ applied_palette_name }}"</b>. Acordate de guardar
+					para que se vea en tu tienda.
+				</span>
+				<span v-else>
+					Se generaron {{ palettes.length }} propuestas de paleta a partir de tu logo.
+				</span>
+			</p>
+
+			<div class="ai-palette-generator__summary-actions">
+				<b-button
+				size="sm"
+				variant="outline-primary"
+				v-b-modal="'ai-palette-generator'">
+					{{ applied_palette_id ? 'Ver y cambiar paleta' : 'Ver paletas y elegir' }}
+				</b-button>
+
+				<btn-loader
+				:block="false"
+				:loader="loading"
+				variant="link"
+				text="Generar de nuevo"
+				@clicked="generatePalette"></btn-loader>
+			</div>
+
+			<!--
+				Aviso persistente de fondo oscuro (a diferencia de los warnings de la tarjeta
+				dentro del modal, que son informativos por paleta, este queda visible mientras
+				la paleta aplicada siga teniendo un fondo oscuro, no es un toast que desaparece
+				solo). Vive fuera del modal para seguir visible despues de cerrarlo.
+			-->
+			<div
+			v-if="applied_background_dark_warning"
+			class="ai-palette-generator__dark-bg-alert">
+				{{ applied_background_dark_warning }}
+			</div>
+		</div>
+
+		<!--
+			Modal con las tres propuestas lado a lado. Anida adentro del modal de edicion de
+			online_configuration (ver UserConfig.vue): patron ya usado en el repo, por ejemplo
+			en common-vue/components/model/images/Cropper.vue.
+		-->
+		<b-modal
+		id="ai-palette-generator"
+		title="Elegí una paleta para tu tienda"
+		size="xl"
+		hide-footer
+		scrollable>
 			<!-- Aclaracion: se uso el logo de la empresa porque la tienda no tiene uno cargado -->
 			<p
 			v-if="logo_source == 'empresa'"
@@ -97,25 +152,7 @@
 					</div>
 				</b-col>
 			</b-row>
-
-			<!--
-				Aviso persistente de fondo oscuro (a diferencia de los warnings de arriba,
-				que son informativos por paleta, este queda visible mientras la paleta
-				aplicada siga teniendo un fondo oscuro, no es un toast que desaparece solo).
-			-->
-			<div
-			v-if="applied_background_dark_warning"
-			class="ai-palette-generator__dark-bg-alert">
-				{{ applied_background_dark_warning }}
-			</div>
-
-			<btn-loader
-			:block="false"
-			:loader="loading"
-			variant="link"
-			text="Generar de nuevo"
-			@clicked="generatePalette"></btn-loader>
-		</div>
+		</b-modal>
 	</div>
 </template>
 <script>
@@ -128,6 +165,12 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
  * usuario por sesion) y muestra hasta tres propuestas (fiel al logo, sobria, contraste),
  * cada una con sus cinco swatches, una vista previa en miniatura y los warnings de
  * contraste que haya calculado el validador determinista del backend.
+ *
+ * Las tres propuestas se muestran dentro de un modal propio (id "ai-palette-generator"),
+ * que se abre solo apenas termina de generar, para poder comparar las tres lado a lado en
+ * vez de verlas amontonadas en la pestaña. Ese modal queda anidado dentro del modal de
+ * edicion de online_configuration (ver UserConfig.vue) -- patron ya usado en el repo (ej.
+ * common-vue/components/model/images/Cropper.vue).
  *
  * Al aplicar una paleta se escriben los cinco colores directo en `model` (el
  * online_configuration del formulario), sin guardar: el usuario guarda con el boton
@@ -170,6 +213,18 @@ export default {
 			],
 		}
 	},
+	computed: {
+		/**
+		 * Nombre de la paleta actualmente aplicada, para el resumen que queda en la pagina
+		 * una vez que el modal se cierra.
+		 *
+		 * @returns {String|null}
+		 */
+		applied_palette_name() {
+			let applied = this.palettes.find(palette => palette.id == this.applied_palette_id)
+			return applied ? applied.nombre : null
+		},
+	},
 	methods: {
 		/**
 		 * Pide al backend que genere las tres propuestas de paleta a partir del logo
@@ -195,6 +250,9 @@ export default {
 				// Al regenerar, se pierde la marca de "aplicada" (son paletas nuevas)
 				this.applied_palette_id = null
 				this.applied_background_dark_warning = null
+
+				// Se abre el modal solo: no hace falta un clic extra para ver el resultado
+				this.$bvModal.show('ai-palette-generator')
 			})
 			.catch(err => {
 				this.loading = false
@@ -247,6 +305,14 @@ export default {
 		font-size: 13px
 		color: #6c757d
 		margin-bottom: 10px
+	&__summary
+		&-text
+			margin-bottom: 10px
+		&-actions
+			display: flex
+			align-items: center
+			gap: 10px
+			flex-wrap: wrap
 	&__card
 		border: 1px solid #e2e2e2
 		border-radius: 12px
