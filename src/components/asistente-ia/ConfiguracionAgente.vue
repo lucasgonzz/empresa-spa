@@ -236,7 +236,7 @@ export default {
 					titulo: 'Profundo',
 					icono: 'bi bi-lightbulb',
 					desc: es_deepseek
-						? 'Pro: razona a fondo antes de contestar, tarda más y cuesta más.'
+						? 'Pro: razona a fondo antes de contestar, tarda más y cuesta más. Las fotos las mira Flash.'
 						: 'Piensa a fondo: mejores respuestas para lo difícil, tarda más y cuesta más.',
 				},
 			]
