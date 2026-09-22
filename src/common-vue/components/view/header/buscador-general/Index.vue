@@ -1793,12 +1793,17 @@ export default {
 		height: 100%
 		padding: 0 6px
 		font-size: 0.9rem
-		color: #1d1d1f
+		// Token de _dark_theme.sass (mision dark-mode-buscador-filtro, 22/9/2026): el pill ya
+		// usa --bg-card (mision 13, ver arriba) pero el texto seguia en hex fijo (#1d1d1f, casi
+		// negro) -- invisible sobre el pill oscuro. El resto del bloque (iconos, hover) queda
+		// con hex fijo a proposito: es el hallazgo aparte que ya registraba el comentario de
+		// .buscador-general__pill, mas arriba.
+		color: var(--color-text-primary)
 		// Anula la sombra global de input en _inputs.sass: la sombra la da el pill contenedor
 		box-shadow: none
 
 		&::placeholder
-			color: #9aa0a6
+			color: var(--color-text-secondary)
 
 	// Botones de icono dentro del pill (lupa, limpiar): planos, sin fondo
 	.buscador-general__icon-btn

@@ -167,8 +167,12 @@ id="sincronizar-descuentos-proveedor"
 
 		<!--
 			🔴 Los articulos que tienen descuentos que NO salieron de la ficha, sino de una compra
-			real o de un import de Excel. Solo aparecen en el modo "todos": el modo "solo los que
-			ya tienen estos descuentos" nunca los alcanza.
+			real o de un import de Excel. Aparecen con CUALQUIER alcance (mision
+			modos-sincronizar-descuentos-proveedor, 22/9/2026): un articulo con un descuento de
+			compra tagueado a este proveedor "ya tiene un descuento de este proveedor", asi que
+			tambien cae dentro de "Solo los que ya tienen estos descuentos". El backend ya aceptaba
+			y probaba esta combinacion desde el 17/9 (alcance y accion_sobre_compras son
+			independientes a proposito); lo unico que faltaba era que la ventana lo mostrara.
 
 			Son el punto delicado de la ventana, porque la opcion "agregar" DUPLICA el descuento y
 			eso no se ve hasta que el precio ya cambio: los descuentos se aplican en cascada, no
@@ -367,12 +371,19 @@ export default {
 			return !this.hay_descuentos_en_la_ficha || !this.total_articulos
 		},
 		/*
-			Los descuentos que vinieron de una compra o de un import solo estan en juego en el modo
-			"todos": el otro modo ni los mira. Preguntarlo cuando no aplica seria una decision que
-			el usuario toma y el sistema despues ignora.
+			🔴 Ya NO depende del alcance (mision modos-sincronizar-descuentos-proveedor,
+			22/9/2026). Antes se preguntaba solo con alcance="todos", pero el backend siempre
+			proceso este grupo con cualquier alcance -esta probado en
+			`solo_con_descuentos_con_pisar_si_toca_las_de_compra`, en el test PHP- asi que con
+			"Solo los que ya tienen estos descuentos" (el default) la ventana se quedaba muda: el
+			usuario nunca podia elegir pisar/agregar sobre un articulo con un descuento de compra,
+			aunque ese articulo cayera de lleno bajo "ya tiene un descuento de este proveedor".
+			Sacar la condicion no cambia el contrato con la API (que ya aceptaba esto), solo deja
+			de esconderle al usuario una decision que el sistema ya iba a tomar por el (con el
+			default seguro "saltear").
 		*/
 		mostrar_accion_sobre_compras() {
-			return this.con_descuentos_de_compra > 0 && this.alcance == 'todos'
+			return this.con_descuentos_de_compra > 0
 		},
 		/*
 			🔴 La UNICA fuente de verdad de que se va a hacer con los descuentos que vinieron de
