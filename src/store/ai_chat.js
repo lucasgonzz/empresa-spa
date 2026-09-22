@@ -294,7 +294,7 @@ export default {
 		// pueden no venir contra un API viejo: el footer las trata como opcionales.
 		mi_consumo: null,
 
-		// Config del agente del dueño (S3): { confianza:'cauteloso'|'resuelto',
+		// Config del agente del dueño (S3): { confianza:'cauteloso'|'resuelto'|'directo',
 		// pensamiento:'agil'|'equilibrado'|'profundo', proveedor:'anthropic'|'deepseek' (el ELEGIDO),
 		// proveedores_disponibles:['anthropic', 'deepseek'] (los que tienen clave en la instalación),
 		// pensamientos_por_proveedor:{anthropic:[...], deepseek:[...]},

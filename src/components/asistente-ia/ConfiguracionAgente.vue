@@ -11,6 +11,13 @@
 		filtran por proveedor: Claude tiene tres, DeepSeek dos (Flash = ágil, Pro = profundo).
 		Contra un API viejo que no manda las listas, se asume solo Claude con sus tres.
 
+		Misión asistente-capacidades-y-hilos (22/9/2026): la confianza pasó a tener TRES modos. Se
+		sumó `directo`, que ejecuta 16 tipos de carga en el acto —incluidas una venta y un pago—.
+		La baja, la actualización masiva y la unificación de bancos de cheques siguen pidiendo
+		confirmación en los tres modos; la tarjeta nombra las dos primeras, que son las que el
+		dueño reconoce. El default sigue siendo `resuelto`: nadie cambia de comportamiento porque
+		esta opción exista.
+
 		Se monta UNA sola vez (colgado del botón flotante, como CuentaCorrienteDeMencion) y se
 		abre por id desde los dos accesos: el engranaje de la sidebar del panel y el botón al
 		lado del título "Tu mostrador". Con una sola instancia no hay dos <b-modal> con el
@@ -27,7 +34,18 @@
 				Elegí cómo querés que trabaje tu asistente. Podés cambiarlo cuando quieras.
 			</p>
 
-			<!-- Pregunta 1: confianza / autonomía -->
+			<!--
+				Pregunta 1: confianza / autonomía.
+
+				🔴 Son TRES tarjetas y están escritas a mano, una por una (a diferencia de las
+				preguntas 2 y 3, que salen de un computed): cada modo tiene una redacción propia
+				y la de `directo` es una advertencia, no un subtítulo. Los tres valores son los
+				del enum de `users.agente_confianza` en el back —`cauteloso`, `resuelto`,
+				`directo`— y tienen que seguirlo: si allá se agrega o se renombra uno, el bloque
+				se toca acá a mano. Un valor guardado que no tenga su tarjeta no rompe nada, pero
+				deja el modal MUDO (ninguna opción marcada como activa), que es justo lo que
+				pasaba con `directo` antes de esta misión.
+			-->
 			<div class="config-agente__pregunta">
 				<h6 class="config-agente__titulo-pregunta">¿Cuánta confianza le tenés?</h6>
 				<div class="config-agente__opciones">
@@ -56,6 +74,23 @@
 							Resuelve solo lo simple: lo directo y sin riesgo, como ponerle la foto a
 							una sucursal, lo hace al toque y te avisa. Lo que toca plata, siempre te
 							pregunta.
+						</span>
+					</button>
+
+					<button
+					type="button"
+					class="config-agente__opcion"
+					:class="{ 'config-agente__opcion--activa': confianza == 'directo' }"
+					@click="confianza = 'directo'">
+						<span class="config-agente__opcion-icono">
+							<i class="bi bi-key" aria-hidden="true"></i>
+						</span>
+						<span class="config-agente__opcion-titulo">Directo</span>
+						<span class="config-agente__opcion-desc">
+							Hace las cargas en el acto y sin preguntarte: un gasto, un pago, una
+							compra, una oferta, hasta una venta. Igual te sigue pidiendo
+							confirmación para borrar algo y para la actualización masiva de
+							artículos. Es el que más confianza pide.
 						</span>
 					</button>
 				</div>
