@@ -48,8 +48,14 @@
 				</p>
 			</div>
 
+			<!-- `ref="mensajes"`: este div ES el alto del contenido (es la columna flex que
+			aloja todas las viñetas), así que observarlo es la forma de enterarse de que el
+			hilo creció o encogió SIN que nadie haya scrolleado -- una foto que termina de
+			decodificar, una tarjeta que se confirma, el indicador de pensando que se va. Ver
+			`arrancar_observador_de_alto()`. -->
 			<div
 			v-else
+			ref="mensajes"
 			class="asistente-ia-conversacion__mensajes">
 				<p
 				v-if="loading_more"
@@ -165,19 +171,6 @@ const ETIQUETA_POR_ORIGEN = {
  */
 const TOLERANCIA_FINAL = 120
 
-/**
- * Milisegundos durante los que, después de tocar el botón, un evento `scroll` no vuelve a
- * mostrarlo. El deslizamiento suave dispara `scroll` en cada cuadro, así que sin esta
- * ventana el botón reaparecería a mitad de camino y se volvería a ir al llegar abajo.
- *
- * Es un VENCIMIENTO y no un temporizador, a propósito: si la persona cancela el
- * deslizamiento con la rueda (el navegador aborta el scroll programático en cuanto la
- * tocás), no queda ningún timer colgado ni nada que limpiar en beforeDestroy — vencida la
- * ventana, el próximo `scroll` vuelve a mandar. 700ms cubre de sobra el tope de animación
- * de Chrome, que no pasa de ~500ms por lejos que estés.
- */
-const VENTANA_BAJADA = 700
-
 export default {
 	components: {
 		MessageBubble,
@@ -201,14 +194,26 @@ export default {
 			// el scroll exactamente donde estaba (si no, saltaría al tope).
 			scroll_height_before_prepend: 0,
 			// true cuando el último mensaje quedó a más de TOLERANCIA_FINAL de la vista:
-			// es lo único que muestra el botón flotante. Arranca en false porque una
+			// es lo único que muestra el botón de ir al final. Arranca en false porque una
 			// conversación recién abierta arranca abajo de todo (mounted).
+			//
+			// 🔴 Es un CACHE de una medición del DOM, no una fuente de verdad. Quien decide
+			// algo a partir de esto mide primero (`recalcular_lejos_del_final()`): redimensionar
+			// el panel, confirmar una tarjeta o una foto que termina de cargar la dejan vieja
+			// sin que nadie se entere.
 			lejos_del_final: false,
-			// Date.now() hasta el que se ignora el recálculo del botón: la ventana del
-			// deslizamiento que disparó el propio botón (ver VENTANA_BAJADA). 0 = nada
-			// en curso.
-			bajada_hasta: 0,
+			// Clave del último mensaje de la lista en la pasada anterior. Es lo que distingue
+			// "entró algo al final" de "se antepuso una página vieja" (ver el watch).
+			clave_del_ultimo_mensaje: null,
 		}
+	},
+	/**
+	 * `observador` y `nodo_observado` viven acá y NO en data() a propósito: no son estado de
+	 * pantalla, nadie los pinta, y meterlos en data() los haría reactivos para nada.
+	 */
+	created() {
+		this.observador = null
+		this.nodo_observado = null
 	},
 	computed: {
 		conversation() {
@@ -287,7 +292,25 @@ export default {
 		let self = this
 		this.$nextTick(function () {
 			self.scrollToBottom()
+			self.arrancar_observador_de_alto()
 		})
+	},
+	/**
+	 * El div de los mensajes aparece, desaparece y se re-crea con el `v-if`/`v-else` del
+	 * template (mientras carga la primera página hay un <p> de aviso en su lugar), así que la
+	 * suscripción se vuelve a atar después de cada redibujo. La guarda de identidad hace que
+	 * esto no cueste nada cuando el nodo es el mismo, que es casi siempre.
+	 */
+	updated() {
+		this.sincronizar_observador_de_alto()
+	},
+	beforeDestroy() {
+		window.removeEventListener('resize', this.al_cambiar_el_alto)
+		if (this.observador) {
+			this.observador.disconnect()
+			this.observador = null
+		}
+		this.nodo_observado = null
 	},
 	watch: {
 		selected_conversation_id() {
@@ -297,46 +320,75 @@ export default {
 				self.scrollToBottom()
 			})
 		},
-		'messages.length'(new_length, old_length) {
+		'messages.length'() {
 			let self = this
-			// Mensaje nuevo al final (no una página vieja anteponiéndose).
-			if (new_length > old_length && !this.loading_more) {
-				// 🔴 ACÁ ESTÁ EL CAMBIO DE COMPORTAMIENTO DEL 22/9/2026, Y ES A PROPÓSITO.
-				// Hasta el botón flotante esto era un `scrollToBottom()` pelado: entraba un
-				// mensaje y te llevaba al fondo estuvieras donde estuvieras. Con el botón
-				// puesto eso deja de tener sentido y pasa a molestar: si estás leyendo un
-				// mensaje de más arriba, la respuesta del asistente te sacaba del renglón.
-				//
-				// Ahora: si estabas abajo de todo, baja solo como siempre; si no, NO te mueve
-				// nada y aparece el botón, que es el pedido textual de Lucas ("mostrarlo solo
-				// cuando no estoy con el scroll en el último mensaje").
-				//
-				// 🔴 SI ALGUIEN LO "SIMPLIFICA" DE VUELTA a un scrollToBottom() incondicional,
-				// deshace el pedido entero: el botón no llegaría a verse nunca, porque el hilo
-				// se autocorregiría al fondo en cada mensaje.
-				//
-				// `lejos_del_final` se lee ANTES del $nextTick a propósito: en este punto
-				// todavía vale lo que valía antes de pintar el mensaje nuevo, o sea "¿dónde
-				// estaba parada la persona cuando esto llegó?", que es la pregunta correcta.
-				let seguia_el_final = !this.lejos_del_final
+
+			// 🔴 PRIMERO SE MIDE, NO SE LEE LA BANDERA GUARDADA, y éste es el único momento en
+			// que se puede: en Vue 2 los watchers de usuario se crean antes que el watcher de
+			// render, así que tienen id menor y el planificador los corre primero — acá el DOM
+			// TODAVÍA no pintó el mensaje que acaba de entrar. O sea que esto contesta
+			// exactamente "¿dónde estaba parada la persona cuando esto llegó?".
+			//
+			// Leer `lejos_del_final` cacheada era un defecto y no un atajo: redimensionar el
+			// panel, confirmar una tarjeta o una foto que terminó de decodificar cambian el
+			// alto sin disparar ningún `scroll`, y con esa bandera vieja se decidía si
+			// arrastrar a la persona o no.
+			this.recalcular_lejos_del_final()
+			let seguia_el_final = !this.lejos_del_final
+
+			// 🔴 DÓNDE se agregó, que es lo único que separa un mensaje nuevo de una página
+			// vieja que se antepone. Acá había un `!this.loading_more` con un comentario que
+			// decía que hacía justamente eso, y NO lo hacía: el store llama `prependMessages`
+			// y `setLoadingMoreMessages(false)` uno detrás del otro, los dos sincrónicos, y los
+			// watchers recién se vuelcan en el flush posterior — cuando esto corre ya vale
+			// false siempre. La pregunta de verdad la contesta el último mensaje: si sigue
+			// siendo el mismo, lo que entró fue arriba y no hay nada que seguir.
+			let ultimo = this.messages.length ? this.messages[this.messages.length - 1] : null
+			let clave = ultimo ? (ultimo.local_id || ultimo.id || null) : null
+			let hay_algo_nuevo_al_final = clave !== this.clave_del_ultimo_mensaje
+			this.clave_del_ultimo_mensaje = clave
+
+			// 🔴 Y si el último mensaje es MÍO, se baja siempre, esté la persona donde esté. El
+			// pedido de Lucas es sobre los mensajes que ENTRAN; ningún chat te deja sin ver tu
+			// propio mensaje salir. El globo optimista que agrega `sendMessage` entra con
+			// `rol: 'user'` y queda último, así que esto lo agarra en el mismo tick en que se
+			// escribió.
+			let es_mio = Boolean(ultimo && ultimo.rol == 'user')
+
+			// 🔴 ACÁ ESTÁ EL CAMBIO DE COMPORTAMIENTO DEL 22/9/2026, Y ES A PROPÓSITO. Hasta el
+			// botón esto era un `scrollToBottom()` pelado: entraba un mensaje y te llevaba al
+			// fondo estuvieras donde estuvieras. Con el botón puesto eso pasa a molestar: si
+			// estás leyendo más arriba, la respuesta del asistente te sacaba del renglón.
+			//
+			// 🔴 SI ALGUIEN LO "SIMPLIFICA" DE VUELTA a un scrollToBottom() incondicional,
+			// deshace el pedido entero: el botón no llegaría a verse nunca, porque el hilo se
+			// autocorregiría al fondo en cada mensaje.
+			if (hay_algo_nuevo_al_final && (seguia_el_final || es_mio)) {
 				this.$nextTick(function () {
-					if (seguia_el_final) {
-						self.scrollToBottom()
-						return
-					}
-					// No se mueve el scroll, pero el contenido creció: hay que recalcular,
-					// porque ningún evento `scroll` va a avisar de un cambio de alto.
-					self.recalcular_lejos_del_final()
+					self.scrollToBottom()
 				})
+				return
 			}
+
+			// No se mueve el scroll, pero el alto cambió: se recalcula con el DOM ya pintado.
+			// 🔴 Va SIEMPRE, también cuando la lista ENCOGIÓ. Antes esto vivía adentro de un
+			// `new_length > old_length` y ahí quedaba un agujero: al cambiar a una conversación
+			// más corta que la anterior (la página es de 30, pasa todo el tiempo) el watch no
+			// entraba, nadie recalculaba, y quedabas arriba de todo Y sin el botón que existe
+			// justamente para rescatarte.
+			this.$nextTick(function () {
+				self.recalcular_lejos_del_final()
+			})
 		},
 		hay_respuesta_en_curso(en_curso) {
 			let self = this
-			// Cuando la respuesta llega, el pendiente se convierte en texto (patch,
-			// sin cambiar el largo): también hay que bajar a leerla. Mismo criterio que
-			// arriba: solo si la persona estaba abajo de todo.
+			// Se mide fresco por el mismo motivo y en el mismo instante que en el watch de
+			// arriba (ver el 🔴 largo de ahí): el DOM todavía no pintó el cambio.
+			this.recalcular_lejos_del_final()
+			let seguia_el_final = !this.lejos_del_final
+			// Cuando la respuesta llega, el pendiente se convierte en texto (patch, sin cambiar
+			// el largo): también hay que bajar a leerla, si la persona estaba abajo.
 			if (!en_curso) {
-				let seguia_el_final = !this.lejos_del_final
 				this.$nextTick(function () {
 					if (seguia_el_final) {
 						self.scrollToBottom()
@@ -376,51 +428,35 @@ export default {
 	},
 	methods: {
 		/**
-		 * Baja al último mensaje.
+		 * Baja al último mensaje, de un salto.
 		 *
-		 * `suave` lo pasa SOLO el botón flotante: todo lo demás (abrir una conversación,
-		 * seguir un mensaje que entra) tiene que ser instantáneo, si no la conversación se
-		 * vería deslizándose sola cada vez que el asistente contesta.
+		 * 🔴 DE UN SALTO Y NO DESLIZANDO, y no es por no saber hacerlo: hubo una versión con
+		 * `scrollTo({behavior: 'smooth'})` y se sacó porque el deslizamiento dispara `scroll`
+		 * en cada cuadro, así que el botón reaparecía a mitad de camino. Taparlo pedía una
+		 * ventana de tiempo durante la cual el recálculo se ignora — y esa ventana tenía su
+		 * propio agujero: si la persona cancela el deslizamiento con la rueda y SE QUEDA
+		 * QUIETA, no llega ningún `scroll` más y la bandera queda mal hasta que vuelva a
+		 * tocar algo. Un salto no tiene ninguno de esos estados, y es además lo que hace todo
+		 * el resto de este componente.
 		 *
-		 * @param {Boolean} [suave] true para deslizar en lugar de saltar.
 		 * @returns {void}
 		 */
-		scrollToBottom(suave) {
+		scrollToBottom() {
 			if (!this.$refs.container) {
 				return
 			}
-			let container = this.$refs.container
-			if (suave && !this.prefiere_menos_movimiento() && typeof container.scrollTo == 'function') {
-				container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
-			} else {
-				container.scrollTop = container.scrollHeight
-			}
-			// El evento `scroll` va a llegar igual y recalcular, pero llega después; con el
-			// salto instantáneo esto deja el botón resuelto en el mismo tick.
+			this.$refs.container.scrollTop = this.$refs.container.scrollHeight
+			// El evento `scroll` va a llegar igual y recalcular, pero llega después: esto deja
+			// el botón resuelto en el mismo tick.
 			this.recalcular_lejos_del_final()
 		},
 		/**
-		 * ¿La persona pidió menos movimiento en el sistema operativo? Es la misma pregunta que
-		 * contesta el `@media (prefers-reduced-motion: reduce)` del <style>, pero desde JS: un
-		 * scroll suave se dispara por código y ningún media query puede frenarlo.
+		 * Mide contra el DOM si el último mensaje quedó fuera de la vista. Es lo único que
+		 * decide si el botón se ve, y no tiene memoria: contesta por el estado de ahora.
 		 *
-		 * @returns {Boolean}
-		 */
-		prefiere_menos_movimiento() {
-			if (typeof window.matchMedia != 'function') {
-				return false
-			}
-			return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-		},
-		/**
-		 * Recalcula si el último mensaje quedó fuera de la vista, que es lo único que decide
-		 * si el botón flotante se ve.
-		 *
-		 * 🔴 Se llama a mano desde `mounted`, desde `scrollToBottom` y desde los tres watch
-		 * además de desde `on_scroll`, y no es por las dudas: el evento `scroll` avisa cuando
-		 * cambia `scrollTop`, pero NO cuando cambia `scrollHeight`. Un mensaje que entra, una
-		 * página vieja que se antepone o el indicador de pensando que se va cambian el alto
-		 * sin mover el scroll, y sin estas llamadas el botón se quedaría en el estado anterior.
+		 * 🔴 Se llama desde todos lados --`mounted`, `scrollToBottom`, los tres watch, el
+		 * observador de alto y `on_scroll`-- y no es por las dudas: el evento `scroll` avisa
+		 * cuando cambia `scrollTop`, pero NO cuando cambia `scrollHeight` ni `clientHeight`.
 		 *
 		 * @returns {void}
 		 */
@@ -430,28 +466,98 @@ export default {
 				return
 			}
 			let distancia = container.scrollHeight - container.scrollTop - container.clientHeight
-			let llego = distancia <= TOLERANCIA_FINAL
-			if (!llego && Date.now() < this.bajada_hasta) {
-				// El deslizamiento que disparó el propio botón sigue en camino (ver
-				// VENTANA_BAJADA): sus eventos `scroll` no tienen que volver a mostrarlo.
-				return
-			}
-			this.bajada_hasta = 0
-			this.lejos_del_final = !llego
+			this.lejos_del_final = distancia > TOLERANCIA_FINAL
 		},
 		/**
-		 * Clic en el botón flotante: al último mensaje, deslizando.
-		 *
-		 * El botón se esconde en el acto y no al llegar: si esperara al final del
-		 * deslizamiento, se vería el cartelito quieto mientras la conversación se mueve
-		 * debajo.
+		 * Clic en el botón: al último mensaje.
 		 *
 		 * @returns {void}
 		 */
 		ir_al_final() {
-			this.lejos_del_final = false
-			this.bajada_hasta = Date.now() + VENTANA_BAJADA
-			this.scrollToBottom(true)
+			this.scrollToBottom()
+		},
+		/**
+		 * Arranca el observador que avisa cuando el alto cambia SIN que nadie haya scrolleado.
+		 *
+		 * 🔴 POR QUÉ HACE FALTA, con los tres casos medidos que lo pidieron:
+		 *
+		 *   1. Una foto que termina de cargar. El <img> de AdjuntosDeMensaje.vue va con
+		 *      `loading="lazy"`, `height: auto` y sin `aspect-ratio`: mientras no decodificó
+		 *      mide ~10px, y al decodificar el hilo crece ~210px de golpe. El dueño manda una
+		 *      foto por WhatsApp con el panel abierto, el watch baja al fondo con la miniatura
+		 *      todavía en 10px, y la persona termina POR ENCIMA del último mensaje — que es
+		 *      literalmente para lo que existe el botón, y sin esto no aparecía.
+		 *   2. Redimensionar el panel con la manija, o la ventana. Cambia `clientHeight` y
+		 *      reacomoda todo el texto sin disparar un solo `scroll`.
+		 *   3. Confirmar o cancelar una tarjeta de carga (AccionCard.vue): la tarjeta cambia
+		 *      de alto en su lugar.
+		 *
+		 * Se observan DOS nodos y cada uno cubre una cosa: el scroller (su caja cambia cuando
+		 * cambia el tamaño del panel) y el div de los mensajes (su alto ES el alto del
+		 * contenido). Un `@load` en el <img> habría tapado solo el caso 1.
+		 *
+		 * 🔴 El callback NO cambia la maquetación --solo escribe `scrollTop` y prende o apaga
+		 * un botón `position: absolute`--, así que no puede realimentar al observador.
+		 *
+		 * @returns {void}
+		 */
+		arrancar_observador_de_alto() {
+			if (typeof window.ResizeObserver != 'function') {
+				// Navegador sin ResizeObserver: queda el respaldo del resize de ventana, que
+				// cubre la parte gruesa del caso 2. Los otros dos se corrigen igual en cuanto
+				// la persona scrollea.
+				window.addEventListener('resize', this.al_cambiar_el_alto)
+				return
+			}
+			let self = this
+			this.observador = new window.ResizeObserver(function () {
+				self.al_cambiar_el_alto()
+			})
+			if (this.$refs.container) {
+				this.observador.observe(this.$refs.container)
+			}
+			this.sincronizar_observador_de_alto()
+		},
+		/**
+		 * Ata el observador al div de los mensajes de ahora. Ese div va y viene con el
+		 * `v-if`/`v-else` del template, así que se revisa después de cada redibujo (`updated`);
+		 * la comparación de identidad hace que no cueste nada cuando es el mismo nodo.
+		 *
+		 * @returns {void}
+		 */
+		sincronizar_observador_de_alto() {
+			if (!this.observador) {
+				return
+			}
+			let nodo = this.$refs.mensajes || null
+			if (nodo === this.nodo_observado) {
+				return
+			}
+			if (this.nodo_observado) {
+				this.observador.unobserve(this.nodo_observado)
+			}
+			this.nodo_observado = nodo
+			if (nodo) {
+				this.observador.observe(nodo)
+			}
+		},
+		/**
+		 * Cambió el alto sin que nadie scrollee.
+		 *
+		 * Si la persona venía siguiendo el final, se la deja pegada abajo mientras el contenido
+		 * crece: es lo que tiene que pasar con la foto que acaba de entrar y termina de cargar
+		 * --seguía mirando el final, no se movió, y no tiene por qué aparecerle un botón para
+		 * volver a donde ya estaba--. Si estaba leyendo más arriba NO se la mueve: solo se
+		 * recalcula, que es lo que hace aparecer el botón.
+		 *
+		 * @returns {void}
+		 */
+		al_cambiar_el_alto() {
+			if (!this.lejos_del_final) {
+				this.scrollToBottom()
+				return
+			}
+			this.recalcular_lejos_del_final()
 		},
 		/**
 		 * Scroll infinito hacia arriba: cerca del tope pide la página anterior. Y, desde el
@@ -675,9 +781,8 @@ export default {
 		margin: 0 0 12px 0
 		padding: 0 2px
 
-// El deslizamiento del botón se apaga en JS y no acá (ningún media query puede frenar un
-// `scrollTo({behavior: 'smooth'})`): lo mira `prefiere_menos_movimiento()`. Esto cubre lo que sí
-// es CSS, que es el tinte del hover.
+// El botón no anima nada por su cuenta --baja de un salto, ver `scrollToBottom()`--, así que lo
+// único que hay para apagar acá es el tinte del hover.
 @media (prefers-reduced-motion: reduce)
 	.asistente-ia-conversacion-marco__ir-al-final
 		transition: none

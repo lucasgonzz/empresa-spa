@@ -12,7 +12,16 @@
 			<!-- La miniatura es un botón (role + tabindex) y no un <button>: `_inputs.sass` le
 			pone sombra y chasis a todo <button> del sistema, y una foto con sombra de botón se
 			veía como un control y no como una imagen. Enter y espacio la activan igual que el
-			clic, que es lo que role="button" promete al teclado. -->
+			clic, que es lo que role="button" promete al teclado.
+
+			🔴 EL <img> NO TIENE @load Y NO LE FALTA. Con `loading="lazy"`, `height: auto` y sin
+			`aspect-ratio`, esta miniatura mide ~10px hasta que la foto decodifica y después
+			pega un salto de ~210px: el hilo crece sin que nadie haya scrolleado. De eso se
+			entera `Conversation.vue` con un ResizeObserver sobre el div de los mensajes, que
+			además cubre el resize del panel y las tarjetas que cambian de alto — un @load acá
+			taparía solo este caso y habría que acordarse de agregarlo en cada componente
+			nuevo. Si algún día se le pone `aspect-ratio` para reservar el lugar, el observador
+			sigue haciendo falta por los otros dos. -->
 			<div
 			v-if="!adjunto.rota"
 			class="asistente-ia-adjuntos__miniatura"
