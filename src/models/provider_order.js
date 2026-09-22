@@ -1,4 +1,3 @@
-import moment from 'moment'
 export default {
 	properties: [
 		{
@@ -201,11 +200,34 @@ export default {
 
 				`not_show: true` significa que no sale como COLUMNA del listado de compras; en el
 				formulario se renderiza igual, que es lo que queremos.
+
+				🔴 EL VALOR ARRANCA EN null, Y NO EN moment().format('YYYY-MM-DD'), aunque el campo
+				se VEA con el dia de hoy. No es un descuido ni algo para "completar":
+
+				 - Un `value` de este archivo se evalua UNA sola vez, cuando `require()` cachea el
+				   modelo, o sea cuando se carga la pestaña. `__base_store::setModel()` siembra el
+				   formulario con ese valor congelado. Una pestaña abierta desde el lunes le pone
+				   el lunes a todas las compras que se carguen el jueves, y en compras eso no se
+				   corrige nunca: no hay un limpiar_vender que vuelva a commitear la fecha. El
+				   comercio se entera cuando la compra no aparece en el listado del dia ni en el
+				   Libro IVA del mes que corresponde.
+				 - En null, el POST manda `created_at: null` y la fecha la pone el SERVIDOR:
+				   `SaleHelper::resolver_created_at()` cae a `Carbon::now()` con cualquier valor
+				   que no sea exactamente 'YYYY-MM-DD'. O sea el dia de hoy de verdad, sin
+				   depender de hace cuanto esta abierta la pestaña ni del reloj del navegador.
+				 - Lo que el usuario VE es el dia de hoy igual, porque el control del campo esta
+				   reemplazado por el slot #created_at de
+				   components/provider/components/orders/Index.vue, que resuelve el null a hoy al
+				   renderizar. Si el usuario elige una fecha, esa fecha se escribe en el modelo y
+				   viaja tal cual.
+
+				Volver a poner un valor aca no rompe nada a la vista --y por eso es tentador--:
+				simplemente le devuelve la fecha congelada al formulario y el slot la muestra.
 			*/
 			text: 'Fecha',
 			key: 'created_at',
 			type: 'date',
-			value: moment().format('YYYY-MM-DD'),
+			value: null,
 			not_show: true,
 			descriptions: [
 				'Es la fecha con la que se registra la compra. Viene con el dia de hoy: si esta cargando una compra vieja, indique aca la fecha real en la que la hizo.',
