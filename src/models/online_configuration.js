@@ -15,6 +15,12 @@ export default {
 			type: 'checkbox',
 			description: 'Si se activa, se mostrara el enlace Catalogo en el navbar de la tienda online.',
 		},
+		{
+			text: 'Al tocar una categoría del sidebar, mostrar sus subcategorías en vez de sus artículos',
+			key: 'mostrar_subcategorias_al_click_categoria',
+			type: 'checkbox',
+			description: 'Si se activa, tocar el nombre de una categoría en el panel lateral de la tienda se comporta igual que tocar la flecha: despliega sus subcategorías, con la opción "Todos" primero, en vez de mostrar directamente todos sus artículos. Si se desactiva (comportamiento actual), tocar el nombre muestra directo los artículos de la categoría.',
+		},
 
 		{
 			group_title: 'Precios'
@@ -144,6 +150,12 @@ export default {
 			description: 'Es el fondo general de la tienda, detrás de las tarjetas de productos. Antes lo definía la plantilla elegida; ahora lo elegís vos.',
 		},
 		{
+			text: 'Color del botón "Agregar al carrito"',
+			key: 'add_to_cart_button_color',
+			type: 'text',
+			description: 'Si lo dejás vacío, usa el mismo color que el resto de los botones de la tienda (el color secundario).',
+		},
+		{
 			text: 'Cantidad tarjetas en telefono',
 			key: 'cantidad_tarjetas_en_telefono',
 			type: 'number',
@@ -225,6 +237,18 @@ export default {
 			text: 'Cuando el stock este sin especificar, es igual a 0',
 			key: 'stock_null_equal_0',
 			type: 'checkbox',
+		},
+		{
+			text: 'Mostrar el stock disponible en la ficha del articulo',
+			key: 'mostrar_stock_disponible',
+			type: 'checkbox',
+			description: 'Si se desactiva, la pagina del articulo deja de mostrar "Stock disponible" y la cantidad de unidades disponibles. El control de stock al agregar al carrito sigue aplicando igual.',
+		},
+		{
+			text: 'Ignorar el stock en la Tienda',
+			key: 'ignorar_stock',
+			type: 'checkbox',
+			description: 'Si se activa, la tienda deja de tener en cuenta el stock de los articulos: ningun producto se muestra como agotado y se puede pedir cualquier cantidad, sin importar el stock cargado. No modifica el stock real de los articulos: el comercio puede terminar vendiendo mas de lo que tiene fisicamente si lo activa.',
 		},
 		{
 			text: 'Mostrar articulos sin imagenes en la Tienda',

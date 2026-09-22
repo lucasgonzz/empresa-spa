@@ -112,7 +112,7 @@
 					<p
 					class="m-0"
 					v-if="a"
-					v-for="(a, b) in JSON.parse(models[data.index].columnas)">
+					v-for="(a, b) in parse_json_o_array(models[data.index].columnas, {})">
 						{{b}}: {{ a }}
 					</p>
 				</div>
@@ -123,7 +123,7 @@
 				class="cont-columns">
 					<p
 					class="m-0"
-					v-for="operacion in JSON.parse(models[data.index].operaciones)">
+					v-for="operacion in parse_json_o_array(models[data.index].operaciones, [])">
 						{{ operacion.name }}: {{ operacion.value }}
 					</p>
 				</div>
@@ -667,6 +667,37 @@ export default {
 		chunks(model) {
 			this.import_history_show_lotes = model
 			this.$bvModal.show('chunks')
+		},
+		/**
+		 * Normaliza una columna que puede llegar como string JSON crudo (sin cast en el modelo del
+		 * backend) o ya parseada en array/objeto ($casts => 'array', como `operaciones` desde la
+		 * mision import-excel-compras-chunks del 14/9/2026). Mismo idioma defensivo que ya usan
+		 * EnvioModal::json_de() y model_functions.js::order_envio_opcion() para el mismo problema en
+		 * otras columnas: la API puede mandar cualquiera de los dos formatos y este componente no
+		 * puede asumir cual le toca.
+		 *
+		 * 🔴 Sin esto, un valor ya parseado (array/objeto) volvia a pasar por JSON.parse(), que lo
+		 * coacciona a texto ("[object Object]") y tira SyntaxError DENTRO del render de la celda de
+		 * la b-table -- eso rompia el render de TODA la tabla, no solo la celda, y el modal quedaba
+		 * vacio sin ningun estado de error (asi se reporto en Doble P, con las dos importaciones que
+		 * tenia perfectamente guardadas en la base).
+		 *
+		 * @param {string|Array|Object|null} valor
+		 * @param {Array|Object} valor_por_defecto - que devolver si no hay nada para mostrar
+		 * @returns {Array|Object}
+		 */
+		parse_json_o_array(valor, valor_por_defecto) {
+			if (!valor) {
+				return valor_por_defecto
+			}
+			if (typeof valor === 'string') {
+				try {
+					return JSON.parse(valor)
+				} catch (error) {
+					return valor_por_defecto
+				}
+			}
+			return valor
 		},
 		/**
 		 * Determina si un estado de importacion se considera fallido.

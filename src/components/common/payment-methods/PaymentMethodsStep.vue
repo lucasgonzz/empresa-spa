@@ -97,6 +97,11 @@
                     class="metodo-pago-card__campo--ancho"
                     label="Monto">
 
+                        <!--
+                            Con un cheque recibido elegido para endosar (cheque_id > 0) el monto
+                            es el del cheque y no se toca: se endosa entero, no hay endoso parcial
+                            (misión cheques-endoso-y-bancos, 21/9/2026). Lo mismo para "Completar".
+                        -->
                         <div class="metodo-pago-card__monto">
                             <b-form-input
                                 class="payment-method-amount"
@@ -104,6 +109,7 @@
                                 :value="payment_method.amount"
                                 placeholder="Monto"
                                 inputmode="decimal"
+                                :disabled="!!payment_method.cheque_id"
                                 @paste.prevent
                                 @input="set_amount(payment_method, index, $event)"
                             ></b-form-input>
@@ -112,6 +118,7 @@
                             size="sm"
                             :data-testid="'pago-completar-'+index"
                             v-if="total_a_repartir"
+                            :disabled="!!payment_method.cheque_id"
                             @click="completar(index)"
                             variant="outline-primary">
                                 Completar
@@ -158,8 +165,17 @@
                         @field_change="on_check_field_change(index, $event)"
                         :payment_method="payment_method"></cuotas>
 
+                        <!--
+                            El índice va para los data-testid de sus controles. Los cheques
+                            disponibles para endosar bajan ya sin los que eligieron las OTRAS
+                            filas: el mismo cheque no puede endosarse dos veces en un pago.
+                        -->
                         <check-info
                         @field_change="on_check_field_change(index, $event)"
+                        @fields_change="on_check_fields_change(index, $event)"
+                        :index="index"
+                        :permitir_endoso="permitir_endoso"
+                        :cheques_disponibles="cheques_disponibles_para_fila(index)"
                         :payment_method="payment_method"></check-info>
 
                         <!--
@@ -255,6 +271,24 @@ export default {
             type: Boolean,
             default: false,
         },
+        /**
+         * Ofrece, en la fila de un cheque, endosar uno RECIBIDO que ya está en cartera en vez de
+         * cargar uno nuevo (misión cheques-endoso-y-bancos, 21/9/2026). La prenden solo el pago
+         * a proveedor y el gasto; Vender, la agenda y las comisiones no la pasan.
+         *
+         * Con la prop en true, al abrirse el modal se pide UNA vez la lista de disponibles
+         * (GET cheque/disponibles-para-endosar) y baja por prop a cada CheckInfo.
+         */
+        permitir_endoso: {
+            type: Boolean,
+            default: false,
+        },
+    },
+    data() {
+        return {
+            /** Cheques recibidos disponibles para endosar, pedidos una vez por apertura del modal. */
+            cheques_disponibles: [],
+        }
     },
     computed: {
         payment_method_select_options() {
@@ -328,6 +362,69 @@ export default {
             let payment_method = this.payment_methods[0]
             let moneda_id = this.resolve_payment_method_moneda_id(payment_method)
             this.set_caja_por_defecto(0, payment_method.current_acount_payment_method_id, moneda_id)
+
+            this.pedir_cheques_disponibles()
+        },
+
+        /**
+         * GET cheque/disponibles-para-endosar: los recibidos en cartera (sin cobrar, sin
+         * rechazar, sin endosar) y no vencidos, con sus relaciones. Se pide acá, una vez por
+         * apertura del modal, y no en cada CheckInfo: con tres filas serían tres pedidos
+         * iguales, y además cada fila necesita saber qué eligieron las otras.
+         *
+         * Si la API todavía no tiene la ruta (SPA nueva con API vieja) la lista queda vacía y
+         * la opción "Endosar" se ve deshabilitada: el pago sigue funcionando como siempre.
+         *
+         * @returns {void}
+         */
+        pedir_cheques_disponibles() {
+            if (!this.permitir_endoso) {
+                return
+            }
+
+            let self = this
+
+            this.$api.get('cheque/disponibles-para-endosar', {
+                skip_global_error_event: true,
+            })
+            .then(res => {
+                self.cheques_disponibles = res.data && Array.isArray(res.data.models) ? res.data.models : []
+            })
+            .catch(err => {
+                console.log(err)
+                self.cheques_disponibles = []
+            })
+        },
+
+        /**
+         * Los disponibles para UNA fila: todos menos los que ya eligieron las otras filas del
+         * reparto. El elegido por esta misma fila se queda, o el select no podría mostrarlo.
+         *
+         * @param {Number} index Fila del reparto.
+         * @returns {Array}
+         */
+        cheques_disponibles_para_fila(index) {
+            if (!this.permitir_endoso || !this.cheques_disponibles.length) {
+                return []
+            }
+
+            let elegidos_en_otras = []
+
+            this.payment_methods.forEach((payment_method, i) => {
+                if (i == index || !payment_method) {
+                    return
+                }
+                let cheque_id = Number(payment_method.cheque_id) || 0
+                if (cheque_id) {
+                    elegidos_en_otras.push(cheque_id)
+                }
+            })
+
+            if (!elegidos_en_otras.length) {
+                return this.cheques_disponibles
+            }
+
+            return this.cheques_disponibles.filter(cheque => elegidos_en_otras.indexOf(Number(cheque.id)) === -1)
         },
 
         /**
@@ -388,6 +485,16 @@ export default {
              * por eso NO cuelga de `show_retencion`.
              */
             if (this.es_retencion(payment_method)) {
+                return false
+            }
+
+            /*
+             * 🔴 Un cheque recibido que se ENDOSA (cheque_id > 0) tampoco toca ninguna caja: el
+             * papel cambia de mano y del comercio no entra ni sale plata. Con el select a la
+             * vista alguien podría elegir una caja y la API rechazaría la fila (422 con
+             * cheque_id y caja_id). Misión cheques-endoso-y-bancos, chequeo independiente.
+             */
+            if (Number(payment_method.cheque_id) > 0) {
                 return false
             }
 
@@ -454,10 +561,77 @@ export default {
             this.$emit('update_payment_method_field', index, payload.key, payload.value)
         },
 
+        /**
+         * Varios campos de la fila de una sola vez: es lo que manda CheckInfo al elegir un
+         * cheque a endosar (ocho claves) o al volver a "cheque nuevo". Sube tal cual a
+         * MultiPaymentMethods, que aplica el patch entero con un solo `changed`.
+         *
+         * @param {Number} index Fila del reparto.
+         * @param {Object} patch {clave: valor, ...}
+         * @returns {void}
+         */
+        on_check_fields_change(index, patch) {
+            this.$emit('update_payment_method_fields', index, patch)
+
+            if (!patch) {
+                return
+            }
+
+            /*
+             * Si el patch trae monto (el del cheque a endosar), el cotizado se recalcula igual
+             * que cuando el monto se tipea (set_amount): una fila en otra moneda que la del
+             * comprobante se quedaría con el amount_cotizado viejo.
+             */
+            if (Object.prototype.hasOwnProperty.call(patch, 'amount')) {
+                this.$nextTick(() => {
+                    let pm = this.payment_methods[index]
+                    if (!pm) {
+                        return
+                    }
+                    this.check_moneda(pm, index, Number(pm.amount) || 0)
+                })
+            }
+
+            /*
+             * Vuelta a "Cheque nuevo" (patch con cheque_id en 0): el endoso había dejado la
+             * fila sin caja, y un cheque nuevo sí puede tener la suya. Se vuelve a proponer la
+             * caja por defecto, igual que al cambiar de método.
+             */
+            if (Object.prototype.hasOwnProperty.call(patch, 'cheque_id') && !Number(patch.cheque_id)) {
+                this.$nextTick(() => {
+                    let pm = this.payment_methods[index]
+                    if (!pm) {
+                        return
+                    }
+                    let method_id = Number(pm.current_acount_payment_method_id) || 0
+                    this.set_caja_por_defecto(index, method_id, this.resolve_payment_method_moneda_id(pm))
+                })
+            }
+        },
+
         set_payment_method_id(row, index, new_value) {
             let method_id = Number(new_value) || 0
 
             this.$emit('update_payment_method_id', index, method_id)
+
+            /*
+             * Si la fila tenía un cheque recibido elegido para endosar y el usuario cambia el
+             * método, ese cheque se suelta: si no, la fila viajaría con cheque_id y el monto
+             * seguiría clavado en el del cheque, con "Efectivo" elegido arriba.
+             */
+            if (row && Number(row.cheque_id) > 0) {
+                this.$emit('update_payment_method_fields', index, {
+                    cheque_id: 0,
+                    numero: '',
+                    banco: '',
+                    cheque_banco_id: 0,
+                    fecha_emision: '',
+                    fecha_pago: '',
+                    es_echeq: 0,
+                    notes: '',
+                    amount: '',
+                })
+            }
 
             this.$nextTick(() => {
                 let pm = this.payment_methods[index]
@@ -548,6 +722,22 @@ export default {
              * que no esta en la caja.
              */
             if (this.es_retencion({current_acount_payment_method_id: method_id})) {
+                this.$emit('update_caja_id', index, 0)
+                return
+            }
+
+            /*
+             * 🔴 Lo mismo para una fila que endosa un cheque recibido (cheque_id > 0): la caja
+             * se le saca, nunca se le propone. Este método corre al abrir el modal, al cambiar
+             * el método, la moneda o la sucursal, y si el comercio configuró una caja por
+             * defecto para el método Cheque (ABM > default_payment_method_caja) la dejaba
+             * cargada en la fila con el select oculto: el pago o el gasto generaban un egreso
+             * de caja por un cheque que nunca fue plata de caja. La API responde 422 a una fila
+             * con cheque_id y caja_id; acá se evita llegar a eso. Al volver a "Cheque nuevo",
+             * on_check_fields_change vuelve a proponer la caja por defecto.
+             */
+            let fila = this.payment_methods[index]
+            if (fila && Number(fila.cheque_id) > 0) {
                 this.$emit('update_caja_id', index, 0)
                 return
             }

@@ -55,6 +55,11 @@ class="cc-lista">
                 v-if="show_badge_facturado_error(slotProps.model)"
                 variant="danger">Factura sin cae</b-badge>
 
+                <b-badge
+                v-for="ticket in facturas_arca_de(slotProps.model)"
+                :key="ticket.id"
+                variant="success">Factura {{ ticket.code }}</b-badge>
+
                 <cerrar-venta
                 v-if="slotProps.model.sale"
                 :sale="slotProps.model.sale"></cerrar-venta>
@@ -153,13 +158,19 @@ export default {
             }
 
             if (
-                current_acount.afip_ticket 
+                current_acount.afip_ticket
                 && current_acount.status == 'nota_credito'
                 && current_acount.afip_ticket.cae
             ) {
                 return false
             }
             return false
+        },
+        facturas_arca_de(current_acount) {
+            if (!current_acount.provider_order || !current_acount.provider_order.provider_order_afip_tickets) {
+                return []
+            }
+            return current_acount.provider_order.provider_order_afip_tickets.filter(ticket => ticket.code)
         },
         showPaymentMethods(current_acount) {
             this.$store.commit('current_acount/setToShowPaymentMethods', current_acount)

@@ -67,16 +67,53 @@ export default {
 			return this.plan.nombre || ''
 		},
 		/**
-		 * El modo de pensamiento activo. Cualquier valor que no sea 'profundo' se lee como
-		 * ágil (el default del sistema), así una respuesta sin la clave no rompe el footer.
+		 * El modo de pensamiento activo. Cualquier valor que no sea 'profundo' ni 'equilibrado'
+		 * se lee como agil (el default del sistema), asi una respuesta sin la clave no rompe el
+		 * footer.
+		 *
+		 * Misión proveedores-ia-deepseek: si el consumo trae `proveedor` (el que efectivamente
+		 * corre), se le suma el nombre de la inteligencia: "Pensando ágil · DeepSeek" /
+		 * "Pensando a fondo · Claude". Sin la clave (API viejo) queda el texto de siempre.
 		 *
 		 * @returns {String}
 		 */
 		texto_pensamiento() {
-			return this.consumo && this.consumo.pensamiento == 'profundo' ? 'Pensando a fondo' : 'Pensando ágil'
+			if (!this.consumo) {
+				return 'Pensando ágil'
+			}
+			let texto = 'Pensando ágil'
+			if (this.consumo.pensamiento == 'profundo') {
+				texto = 'Pensando a fondo'
+			}
+			if (this.consumo.pensamiento == 'equilibrado') {
+				texto = 'Pensando equilibrado'
+			}
+			if (this.nombre_proveedor) {
+				texto += ' · ' + this.nombre_proveedor
+			}
+			return texto
+		},
+		/**
+		 * El nombre de la inteligencia que corre, a partir de `consumo.proveedor`: 'deepseek' es
+		 * DeepSeek y cualquier otro valor no vacio es Claude (el proveedor de siempre). Vacio si
+		 * la clave no viene.
+		 *
+		 * @returns {String}
+		 */
+		nombre_proveedor() {
+			if (!this.consumo || !this.consumo.proveedor) {
+				return ''
+			}
+			return this.consumo.proveedor == 'deepseek' ? 'DeepSeek' : 'Claude'
 		},
 		icono_pensamiento() {
-			return this.consumo && this.consumo.pensamiento == 'profundo' ? 'bi bi-lightbulb' : 'bi bi-lightning-charge-fill'
+			if (this.consumo && this.consumo.pensamiento == 'profundo') {
+				return 'bi bi-lightbulb'
+			}
+			if (this.consumo && this.consumo.pensamiento == 'equilibrado') {
+				return 'bi bi-sliders'
+			}
+			return 'bi bi-lightning-charge-fill'
 		},
 		/**
 		 * Tope de tokens del mes. null o 0 = sin tope: ahí no hay barra ni corte (es la

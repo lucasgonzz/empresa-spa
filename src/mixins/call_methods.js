@@ -113,6 +113,10 @@ export default [
     'afip_selected_payment_method',
     'expense_concept',
     'expense_category',
+    // Bancos de cheques (misión cheques-endoso-y-bancos, 21/9/2026): el select de banco del
+    // cheque lo lee en cualquier pago a proveedor o gasto, así que tiene que estar desde el
+    // arranque. Es un catálogo chico (una fila por banco) y entra por recursos-iniciales.
+    'cheque_banco',
     'article_pre_import_range',
     'unidad_medida',
     'article_property_type',

@@ -563,17 +563,15 @@ export default {
 <style lang="sass">
 // Tarjeta de una carga propuesta por el asistente (misión asistente-ia-acciones, 15/9/2026).
 //
-// 🔴 El fondo es --bg-hover + borde. Desde que el asistente pasó a estilo lista (sin
-// relleno propio, MessageBubble.vue, 17/9/2026), la tarjeta ya no se apoya en la viñeta:
-// tiene que despegarse sola del fondo sobre el que cae, que es --bg-card en el panel
-// flotante y --bg-section en el sidebar del informe del mostrador. --bg-hover queda del
-// otro lado de esos dos en los dos temas:
+// 🔴 El fondo es --bg-hover + borde. Con la viñeta del asistente de vuelta en --bg-section
+// (MessageBubble.vue, misión burbujas-y-negrita-asistente-ia, 21/9/2026), la tarjeta siempre
+// cae DENTRO de esa viñeta y el escalón es siempre el mismo, sin importar si el panel que la
+// aloja es el flotante o el sidebar del informe del mostrador:
 //
-//   panel   claro: tarjeta #f1f3f5 sobre panel #fff      · oscuro: #3a4048 sobre #2e333a
-//   sidebar claro: tarjeta #f1f3f5 sobre sidebar #f8f9fa · oscuro: #3a4048 sobre #272b31
+//   claro:  tarjeta #f1f3f5 sobre viñeta #f8f9fa · oscuro: tarjeta #3a4048 sobre viñeta #272b31
 //
-// En el sidebar claro los dos grises quedan muy cerca; ahí el borde --color-border es el
-// que la define. Sin sombra: repetida en cada tarjeta, ensuciaría la conversación.
+// Los dos grises quedan cerca en claro; ahí el borde --color-border es el que la define. Sin
+// sombra: repetida en cada tarjeta, ensuciaría la conversación.
 //
 // 🔴 Todo se acomoda por el ancho del CONTENEDOR y no del viewport: la misma tarjeta vive en
 // el panel flotante (984px por defecto, casi pantalla completa en teléfono) y en el sidebar
