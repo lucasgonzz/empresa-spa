@@ -25,6 +25,7 @@
 			<div
 			v-if="!adjunto.rota"
 			class="asistente-ia-adjuntos__miniatura"
+			:class="{ 'asistente-ia-adjuntos__miniatura--camara': foto_de_camara }"
 			role="button"
 			tabindex="0"
 			title="Ver la imagen completa"
@@ -128,10 +129,13 @@
  * las fotos del dueño dejarían de verse. Si el endpoint contesta 401 o 403, salta el @error y
  * queda la línea de "No se pudo cargar la imagen", que es la degradación correcta.
  *
- * Cada foto se ve como miniatura contenida (hasta 220px de alto, fondo blanco también en modo
- * oscuro: es una foto de producto, y sobre gris oscuro un recorte con fondo blanco se ve como
- * un cartel), con el epígrafe debajo, y el clic (o Enter) la abre a tamaño natural limitada a
- * la ventana. Si la URL no carga, una línea lo dice y el mensaje sigue entero.
+ * Cada foto se ve como miniatura contenida (hasta 220px de alto) con el epígrafe debajo, y el
+ * clic (o Enter) la abre a tamaño natural limitada a la ventana. Si la URL no carga, una línea
+ * lo dice y el mensaje sigue entero.
+ *
+ * El FONDO del marco depende de qué clase de foto es, y lo elige el llamador con
+ * `foto_de_camara`: blanco fijo para el recorte de catálogo del asistente, del tema para la
+ * foto de celular del dueño. El porqué está en el prop.
  *
  * 🔴 POR QUÉ EL VISOR ES UN b-modal PROPIO Y NO UNO DE LOS DOS QUE YA EXISTEN. Los dos se
  * miraron antes de escribir este:
@@ -194,6 +198,23 @@ export default {
 		alt_por_defecto: {
 			type: String,
 			default: 'Imagen',
+		},
+		/**
+		 * true cuando las fotos las sacó alguien con una cámara (las del dueño por WhatsApp) y
+		 * no son recortes de catálogo.
+		 *
+		 * 🔴 Lo que cambia es el FONDO del marco, y no es un gusto. Una foto de producto de
+		 * e-commerce viene recortada sobre blanco, así que el marco va blanco fijo en los dos
+		 * temas: si no, el recorte se leería como un cartel blanco pegado sobre el gris de la
+		 * viñeta oscura. Una foto de celular --una factura, un remito, un artículo sobre el
+		 * mostrador-- no tiene ni fondo blanco ni recorte, así que ese mismo blanco fijo deja
+		 * un rectángulo iluminado alrededor de la foto en modo oscuro (medido en el navegador
+		 * el 22/9/2026: `rgb(255,255,255)` sobre un hilo transparente). Ahí el marco tiene que
+		 * salir del tema.
+		 */
+		foto_de_camara: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	data() {
@@ -354,6 +375,9 @@ export default {
 	// blanco, y sobre el gris de la viñeta oscura el recorte de la foto se leería como un
 	// cartel blanco pegado. El borde sí sale del token, para que en oscuro el marco no quede
 	// flotando sin límite.
+	//
+	// ⚠️ Eso vale para la foto de CATÁLOGO y solo para ella. La foto que saca alguien con una
+	// cámara va por el modificador `--camara` de más abajo, con el fondo del tema.
 	&__miniatura
 		// flex: 1 1 auto: en una fila de varias fotos los ítems se estiran al alto de la fila y el
 		// marco acompaña, así dos fotos de distinto alto lado a lado tienen marcos parejos y cada
@@ -369,6 +393,22 @@ export default {
 		border-radius: 12px
 		cursor: zoom-in
 		transition: border-color .12s ease
+
+		// 🔴 La foto que sacó alguien con una cámara NO va sobre el blanco fijo de arriba (ver
+		// el prop `foto_de_camara`): no viene recortada sobre blanco, así que ese blanco no es
+		// la continuación de la foto sino un rectángulo iluminado alrededor, y en modo oscuro
+		// se ve exactamente así.
+		//
+		// --bg-card y no --bg-section: en claro vale #fff, o sea que el modo claro queda
+		// IDÉNTICO a como está hoy --que es lo que queremos, ahí el blanco nunca molestó--, y
+		// en oscuro vale #2e333a, un escalón por encima del --bg-section de la viñeta
+		// (#272b31). Así el marco se despega apenas de la burbuja en los dos temas en vez de
+		// gritar. El borde y el radio no se tocan: son los mismos del marco de catálogo.
+		//
+		// Gana sin compuesto porque pesa lo mismo (0,1,0) y va DESPUÉS en este mismo archivo:
+		// acá el orden sí es determinístico, a diferencia de una regla que viva en otro .vue.
+		&--camara
+			background: var(--bg-card, #fff)
 
 		&:hover
 			border-color: var(--color-primary, #007bff)

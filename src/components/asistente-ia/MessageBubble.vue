@@ -18,6 +18,7 @@
 		v-if="fotos_del_usuario.length"
 		class="asistente-ia-globo__fotos"
 		alt_por_defecto="Foto que mandaste"
+		foto_de_camara
 		:adjuntos="fotos_del_usuario"></adjuntos-de-mensaje>
 
 		<!-- Texto plano SIEMPRE: pre-wrap y la interpolación normal de Vue, que ya
