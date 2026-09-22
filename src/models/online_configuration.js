@@ -144,6 +144,12 @@ export default {
 			description: 'Es el fondo general de la tienda, detrás de las tarjetas de productos. Antes lo definía la plantilla elegida; ahora lo elegís vos.',
 		},
 		{
+			text: 'Color del botón "Agregar al carrito"',
+			key: 'add_to_cart_button_color',
+			type: 'text',
+			description: 'Si lo dejás vacío, usa el mismo color que el resto de los botones de la tienda (el color secundario).',
+		},
+		{
 			text: 'Cantidad tarjetas en telefono',
 			key: 'cantidad_tarjetas_en_telefono',
 			type: 'number',
@@ -205,6 +211,12 @@ export default {
 			type: 'number',
 			description: 'Cada cuantos milisegundos se aplica el scroll automatico. Si no tiene valor, usa 1000.',
 		},
+		{
+			text: 'Mostrar catálogo de categorías en el Inicio',
+			key: 'mostrar_catalogo_categorias_home',
+			type: 'checkbox',
+			description: 'Si se activa, se muestra debajo del banner del Inicio una tarjeta por cada categoría con su logo, nombre y descripción. Al hacer clic en una categoría se filtran sus artículos, igual que desde el panel de categorías. Distinto de "Mostrar sección Catálogo en la Tienda", que controla el link del navbar.',
+		},
 
 		{
 			group_title: 'Catalogo y stock'
@@ -219,6 +231,12 @@ export default {
 			text: 'Cuando el stock este sin especificar, es igual a 0',
 			key: 'stock_null_equal_0',
 			type: 'checkbox',
+		},
+		{
+			text: 'Mostrar el stock disponible en la ficha del articulo',
+			key: 'mostrar_stock_disponible',
+			type: 'checkbox',
+			description: 'Si se desactiva, la pagina del articulo deja de mostrar "Stock disponible" y la cantidad de unidades disponibles. El control de stock al agregar al carrito sigue aplicando igual.',
 		},
 		{
 			text: 'Mostrar articulos sin imagenes en la Tienda',
@@ -259,6 +277,12 @@ export default {
 			text: 'Ofrecer opcion de envio en la Tienda',
 			key: 'has_delivery',
 			type: 'checkbox',
+		},
+		{
+			text: 'Mostrar boton "Comprar ahora" en la ficha del articulo',
+			key: 'mostrar_comprar_ahora',
+			type: 'checkbox',
+			description: 'Si se activa, la ficha del articulo muestra el boton "Comprar ahora", que agrega el articulo al carrito y lleva directo a terminar la compra. Si se desactiva, solo aparece "Agregar al carrito" y el comprador puede seguir navegando.',
 		},
 		{
 			text: 'Cliente envia whatsapp al negocio al finalizar pedido',

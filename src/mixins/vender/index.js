@@ -6,16 +6,18 @@ import computed from '@/mixins/vender/computed'
 import repetidos from '@/mixins/vender/repetidos'
 import price_types from '@/mixins/vender/price_types'
 import set_items_prices from '@/mixins/vender/set_items_prices'
+import deteccion_combos from '@/mixins/vender/deteccion_combos'
 export default {
 	mixins: [
-		limpiar_item_vender, 
+		limpiar_item_vender,
 		price_ranges,
-		article_price_range, 
-		check_stock, 
-		computed, 
-		repetidos, 
+		article_price_range,
+		check_stock,
+		computed,
+		repetidos,
 		price_types,
 		set_items_prices,
+		deteccion_combos,
 	],
 	data() {
 		return {
@@ -118,7 +120,15 @@ export default {
 		},
 
 
-		add_item_to_sale() {
+		/**
+		 * Confirma el item de cabecera como una linea del remito.
+		 *
+		 * @param {boolean} permitir_deteccion_de_combos - Lo llama en false la carga de articulos
+		 *        por defecto (default_articles.js), que entra por aca salteandose add_item_vender:
+		 *        esos articulos los pone el sistema, no el vendedor, y no tienen por que disparar
+		 *        la pregunta de combos apenas se abre VENDER.
+		 */
+		add_item_to_sale(permitir_deteccion_de_combos = true) {
 
 			console.log('add_item_to_sale. amount:')
 			console.log(this.item_vender.amount)
@@ -139,6 +149,14 @@ export default {
 			item = this.check_price_range(item)
 
 			this.$store.commit('vender/addItem', item)
+
+			/*
+				Punto de confirmacion de una linea nueva: es aca donde el remito puede pasar a
+				alcanzar para un combo. El setTotal() viene despues, en add_item_vender().
+			*/
+			if (permitir_deteccion_de_combos) {
+				this.programar_deteccion_de_combos()
+			}
 
 			if (this.editando_venta_previa) {
 				this.setItemsPrices(true, false)

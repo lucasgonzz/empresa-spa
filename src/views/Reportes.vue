@@ -17,8 +17,6 @@
 
 		<articulos></articulos>
 
-		<cheques></cheques>
-
 		<!-- Reporte del pasivo del programa de puntos. Se monta siempre, como el resto: el
 		componente se autooculta si el comercio no tiene la extensión `puntos_clientes` o si la
 		sección activa es otra, y con eso no pide nada a la API. -->
@@ -30,7 +28,25 @@
 		<!-- Modales de comprobante que "Ver comprobante" del detalle abre por id via show_model.
 		No se referencian desde el template: si parecen sin uso, no borrar. -->
 		<sale-modal></sale-modal>
-		<model-index model_name="provider_order"></model-index>
+		<!--
+			Mision `compras-factura-manual-alicuotas` (17/9/2026): el mismo slot de alicuotas que
+			declara la pantalla de Compras.
+
+			🔴 NO ES OPCIONAL Y NO ES UNA COPIA DE MAS. Un slot solo lo puede llenar un ancestro, y
+			esta es OTRA puerta al mismo modal de compra: el drill-down de un reporte abre la misma
+			factura con los mismos datos. Sin esta declaracion, la factura abierta desde aca se cae
+			al has_many pelado --sin la columna Bruto, sin calculo en vivo y sin la leyenda del modo
+			automatico-- y la misma pantalla se comporta distinto segun de donde se la abrio, que es
+			peor que no tener la funcionalidad.
+
+			Las tres puertas al modal de compra son `provider/components/orders/Index.vue`,
+			`common/current-acounts/Index.vue` y esta. Si aparece una cuarta, va la misma linea.
+		-->
+		<model-index model_name="provider_order">
+			<template #has-many-prop-provider_order_afip_ticket_ivas>
+				<alicuotas-iva></alicuotas-iva>
+			</template>
+		</model-index>
 		<!-- Los otros cuatro tipos que el backend devuelve en el drill-down. El grupo 319 monto solo
 		los dos de arriba y escondio el boton para estos, que era lo correcto entonces: mejor sin
 		boton que con un boton muerto. Ahora se montan, asi que el boton vuelve a aparecer y abre.
@@ -40,6 +56,8 @@
 		<model-index model_name="expense"></model-index>
 		<model-index model_name="current_acount"></model-index>
 		<model-index model_name="movimiento_caja"></model-index>
+		<!-- El de cheque se queda aunque el módulo de Cheques se haya mudado a Tesorería (misión
+		cheques-endoso-y-bancos, 21/9/2026): es el drill-down de Flujo de Caja el que lo abre. -->
 		<model-index model_name="cheque"></model-index>
 	</div>
 </template>
@@ -55,10 +73,12 @@ export default {
 		DetalleModal: () => import('@/components/reportes/components/detalle-modal/Index'),
 		Graficos: () => import('@/components/reportes/components/graficos/Index'),
 		Articulos: () => import('@/components/reportes/components/articulos/Index'),
-		Cheques: () => import('@/components/reportes/components/cheques/Index'),
 		Puntos: () => import('@/components/reportes/components/puntos/Index'),
 		SaleModal: () => import('@/components/common/SaleModal'),
 		ModelIndex: () => import('@/common-vue/components/model/Index'),
+		// Mision `compras-factura-manual-alicuotas` (17/9/2026): las alicuotas de IVA de la factura
+		// de compra que se abre desde el drill-down de un reporte (ver el comentario del slot).
+		AlicuotasIva: () => import('@/components/provider/components/orders/afip-ticket/AlicuotasIva'),
 	},
 	computed: {
 		/* El selector de moneda unico solo tiene sentido en las 3 secciones contables nuevas */
@@ -68,7 +88,8 @@ export default {
 	},
 	created() {
 		/* Se traslada aca desde el ya eliminado components/general/Index.vue: Articulos y Graficos siguen leyendo state.reportes.model (poblado por esta action, que pega contra api/company-performance) para varios de sus graficos, asi que el fetch tiene que seguir disparandose siempre al entrar a Reportes, sin importar la seccion activa. */
-		this.$store.dispatch('reportes/getReportes')
+		/* encolar_fetch_de_widget en vez de dispatch directo: si esta pantalla es el aterrizaje de un login, este fetch se encadena con los de los 3 hijos de abajo en vez de salir junto con ellos (mision 11/9/2026, arranque secuencial). En navegacion normal durante el dia sale de inmediato, como siempre. */
+		this.$store.dispatch('reportes/encolar_fetch_de_widget', 'getReportes')
 	},
 }
 </script>

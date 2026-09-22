@@ -31,7 +31,9 @@ module.exports = {
 	pwa: {
         workboxOptions: {
             skipWaiting: true,
-            exclude: ['.htaccess'],
+            // config.js (window.__CC_CONFIG__) lo escribe el admin por frente en cada deploy: no se
+            // precachea, para que el service worker nunca sirva una configuración vieja.
+            exclude: ['.htaccess', /config\.js$/],
         },
 		themeColor: "#007bff",
 		msTileColor: "#007bff",

@@ -3,6 +3,7 @@
 v-if="from_model"
 id="current-acounts-pago"
 data-tour="cuentas_corrientes.modal_pago"
+@shown="enfocar_primer_monto"
 title="Pago">
 
     <!--
@@ -128,18 +129,6 @@ export default {
         PaymentMethods,
     	BtnLoader,
     },
-    mounted() {
-        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-            if (modalId === 'current-acounts-pago') {
-
-                setTimeout(() => {
-                    this.focus_primer_payment_method()
-                    // this.$refs.paymentMethodComponent.set_all_caja_ids()
-                }, 500)
-
-            }
-        })
-    },
     data() {
         return {
         	pago: {
@@ -183,6 +172,22 @@ export default {
         },
     },
     methods: {
+        /**
+         * Enfoca el primer monto cuando el modal termino de mostrarse.
+         *
+         * Cuelga del @shown del propio <b-modal> y no de un $root.$on: el bus global vive toda la
+         * sesion, asi que un listener registrado ahi en mounted seguia corriendo despues de que la
+         * instancia se destruia y se acumulaba uno por montaje. Un evento del componente muere con
+         * el componente.
+         *
+         * @returns {void}
+         */
+        enfocar_primer_monto() {
+            setTimeout(() => {
+                this.focus_primer_payment_method()
+                // this.$refs.paymentMethodComponent.set_all_caja_ids()
+            }, 500)
+        },
         focus_primer_payment_method() {
             let input = document.getElementsByClassName('payment-method-amount')[0]      
             if (input) {
@@ -198,8 +203,26 @@ export default {
             this.pago.current_acount_payment_methods[0].amount = this.maked_sale.total
         },
     	hacerPago() {
+            /*
+             * Hay tres @keydown.enter="hacerPago" en el modal además del botón, y `loading` se
+             * prendía recién después de check(): dos Enter seguidos mandaban dos POST iguales, y
+             * con un cheque a endosar el segundo llegaba con el mismo cheque_id (chequeo
+             * independiente de la misión cheques-endoso-y-bancos, 21/9/2026). Mientras hay un
+             * pago en vuelo no sale otro.
+             */
+            if (this.loading) {
+                return
+            }
+
             if (this.check()) {
         		this.loading = true
+                /*
+                 * `skip_global_error_event`: el mensaje de un 422 lo muestra el catch de abajo,
+                 * una sola vez. Sin la bandera, el interceptor de main.js lo sacaba como warning
+                 * y acá encima salía "Error al registrar pago": dos avisos por el mismo motivo
+                 * (pasaba con las cajas sin apertura; desde la misión cheques-endoso-y-bancos,
+                 * 21/9/2026, también con un cheque que ya no se puede endosar).
+                 */
         		this.$api.post('/current-acount/pago', {
                     credit_account_id: this.from_credit_account.id,
                     model_name: this.from_model_name,
@@ -207,7 +230,9 @@ export default {
         			...this.pago,
                     to_pay: this.to_pay,
                     payment_plan_cuota: this.payment_plan_cuota,
-        		})
+        		}, {
+                    skip_global_error_event: true,
+                })
         		.then(res => {
                     this.$store.dispatch('current_acount/getModels')
         			this.loading = false
@@ -224,7 +249,20 @@ export default {
         		.catch(err => {
         			this.loading = false
         			console.log(err)
-        			this.$toast.error('Error al registrar pago')
+
+                    /*
+                     * La API responde 422 con `message` en lenguaje de comerciante cuando el pago
+                     * no puede registrarse (una caja sin apertura; un cheque a endosar que ya se
+                     * endosó, se cobró, venció o no es el monto de la fila). Ese texto es el que
+                     * el usuario tiene que leer; el genérico queda para cuando no vino ninguno.
+                     */
+                    let mensaje = 'Error al registrar pago'
+                    if (err && err.response && err.response.data && err.response.data.message) {
+                        mensaje = err.response.data.message
+                    }
+        			this.$toast.error(mensaje, {
+                        duration: 10000,
+                    })
         		})
             }
     	},
@@ -353,6 +391,22 @@ export default {
                     credit_card_id: 0,
                     credit_card_payment_plan_id: 0,
                     caja_id: 0,
+                    // Cheque a endosar y banco del catálogo, en 0 como en el factory
+                    // (misión cheques-endoso-y-bancos, 21/9/2026).
+                    cheque_id: 0,
+                    cheque_banco_id: 0,
+                    /*
+                     * Certificado de retencion sufrida: las mismas claves que declara el factory de
+                     * PaymentMethods.vue, para que la fila que queda despues de un pago exitoso sea
+                     * identica a la que nace con el modal. El importe NO va aca: es el `amount` de
+                     * la fila, igual que para el efectivo (ver RetencionInfo.vue).
+                     */
+                    retencion_impuesto: 'ganancias',
+                    retencion_numero_certificado: '',
+                    retencion_fecha: '',
+                    retencion_regimen: '',
+                    retencion_base_imponible: '',
+                    retencion_alicuota: '',
                 }],
             }
             this.$store.commit('current_acount/setToPay', null)

@@ -41,13 +41,31 @@
         </template>
     </model-index>  
 
+    <!--
+        Mision `compras-factura-manual-alicuotas` (17/9/2026): el mismo slot de alicuotas que
+        declara la pantalla de Compras.
+
+        🔴 NO ES OPCIONAL Y NO ES UNA COPIA DE MAS. Un slot solo lo puede llenar un ancestro, y
+        esta es OTRA puerta al mismo modal de compra: desde la cuenta corriente del proveedor se
+        abre la misma factura con los mismos datos. Sin esta declaracion, la factura abierta desde
+        aca se cae al has_many pelado --sin la columna Bruto, sin calculo en vivo y sin la leyenda
+        del modo automatico-- y la misma pantalla se comporta distinto segun de donde se la abrio,
+        que es peor que no tener la funcionalidad.
+
+        Las tres puertas al modal de compra son `provider/components/orders/Index.vue`,
+        `views/Reportes.vue` y esta. Si aparece una cuarta, va la misma linea.
+    -->
     <model-index
-    model_name="provider_order"></model-index>  
+    model_name="provider_order">
+        <template #has-many-prop-provider_order_afip_ticket_ivas>
+            <alicuotas-iva></alicuotas-iva>
+        </template>
+    </model-index>
 
     <sale-modal></sale-modal>
 
-    <b-modal 
-    id="current-acounts" 
+    <b-modal
+    :id="modal_id"
     data-tour="cuentas_corrientes.modal_cuenta"
     ref="current_acounts"
     :title="title" 
@@ -98,6 +116,18 @@ import BtnPagoNotaCredito from '@/components/common/current-acounts/BtnPagoNotaC
 export default {
     name: 'CurrentAcountIndex',
     mixins: [current_acounts],
+    props: {
+        // Id del `b-modal`. Default 'current-acounts', el de siempre en las ~25 pantallas que
+        // montan este componente. Un caller que pueda convivir con OTRA instancia ya montada
+        // en la misma página (el header del sidebar de WhatsApp, que puede estar abierto
+        // ENCIMA de Clientes/Vender/Ventas, que ya montan la suya) tiene que pasar uno
+        // distinto: con dos `<b-modal>` compartiendo id, `$bvModal.show()` los abre a los dos
+        // a la vez.
+        modal_id: {
+            type: String,
+            default: 'current-acounts',
+        },
+    },
     components: {
         // Modals
         Confirm,
@@ -121,6 +151,9 @@ export default {
         BtnPagoNotaCredito,
         SaldoYLimite: () => import('@/components/common/current-acounts/SaldoYLimite'),
         ModelIndex: () => import('@/common-vue/components/model/Index'),
+        // Mision `compras-factura-manual-alicuotas` (17/9/2026): las alicuotas de IVA de la factura
+        // de compra que se abre desde la cuenta corriente (ver el comentario del slot).
+        AlicuotasIva: () => import('@/components/provider/components/orders/afip-ticket/AlicuotasIva'),
         SaleDetails: () => import('@/components/ventas/modals/details/Index'),
         BudgetModalButtons: () => import('@/components/budget/components/ModalButtons'),
         OrderProductionModalButtons: () => import('@/components/produccion/components/order-productions/ModalButtons'),
@@ -288,9 +321,20 @@ export default {
 		// (`border-radius: 10px 10px 10px 0` en TableComponent.vue, y encima con la esquina de
 		// abajo a la derecha en cero): las dos curvas juntas dejan una media luna del fondo
 		// asomando en cada esquina.
+		//
+		// 🔴 EL MARGEN DEBAJO DEL ULTIMO MOVIMIENTO. Medido en la aplicacion corriendo: el wrapper
+		// media 148px con una tabla de 132px adentro -- 16px de diferencia, exactos a 1rem. Es el
+		// `margin-bottom: 1rem` que Bootstrap le pone a TODA `.table`, y que aca nadie reseteaba
+		// (b-table ya no lleva `responsive`, asi que no hay un `.table-responsive` de por medio
+		// que lo absorba). El wrapper mide lo que mide `.table-component-scroll` con `height:
+		// auto`, y ese alto incluye el margen del hijo porque `overflow: auto` crea un nuevo
+		// contexto de formato y el margen deja de colapsar con el padre. El mismo reset ya existe
+		// para `.tabla-modulo` en _controles_modulo.sass -- es el trato que le faltaba copiar a
+		// esta tabla junto con el radio.
 		.table-component-scroll .table.table-component-b-table,
 		.table-component-scroll table.table
 			border-radius: 0
+			margin-bottom: 0
 
 		// 🔴 VENCIDO al 7/9/2026: _tables.sass le PONIA a TODO tbody del sistema `border: 2px solid #DDDDDD` y un radio
 		// propio abajo (lineas 11-14). Adentro de la caja redondeada ese marco se ve como un

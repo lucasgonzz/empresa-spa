@@ -16,6 +16,16 @@ export default {
 			type: 'number',
 		},
 		{
+			text: 'Mostrar en la tienda',
+			key: 'online',
+			type: 'checkbox',
+			show: true,
+			description: 'Si lo activás, el combo se publica en tu ecommerce y los compradores pueden agregarlo al carrito. Apagado, el combo sigue existiendo solo para vender desde el sistema.',
+			// Arranca apagado: hay cuentas con combos armados solo para cargar ventas mas rapido,
+			// y esos no tienen por que aparecer en el ecommerce sin que el dueño lo decida.
+			value: 0,
+		},
+		{
 			text: 'Articulos',
 			store: 'article',
 			search_on_models_by: 'name',

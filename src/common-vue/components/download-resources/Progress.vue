@@ -99,6 +99,11 @@ export default {
 				this.mostrar_final()
 			}
 		},
+		// Le avisa al store si la tarjeta esta en pantalla: la pildora de procesos en segundo plano
+		// comparte esta esquina y se corre para abajo mientras esta este visible.
+		visible(valor) {
+			this.$store.commit('download_resources/set_tarjeta_visible', valor)
+		},
 	},
 	beforeDestroy() {
 		this.limpiar_timers()

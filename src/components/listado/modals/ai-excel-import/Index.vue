@@ -1053,6 +1053,52 @@
 			</b-form-radio>
 		</b-form-group>
 
+		<!--
+			Decisión nueva: desempatar_por_nombre — de los artículos que comparten el código de
+			proveedor, quedarse con el que además coincide en el nombre (misión
+			desempate-por-nombre-codigo-repetido, 9/9/2026).
+
+			Va pegada a politica_intra_archivo porque la pregunta nace del mismo problema —un
+			código de proveedor que no alcanza para saber de qué artículo se está hablando—, pero
+			🔴 NO comparte su condición de visibilidad: politica_intra_archivo sólo mira el
+			archivo, y el desempate también tiene que ofrecerse cuando los repetidos están en la
+			base (ver mostrar_desempate_por_nombre()). El caso real es el proveedor que codifica
+			igual el producto suelto y su pack (FA-NN "SILICONA NEUTRA 280 ML NEGRO" y FA-NN
+			"... X 15 BULTOS COMBINABLES"): el código no desempata, el nombre sí.
+
+			🔴 El default es false y con el default el comportamiento es idéntico al de hoy. No lo
+			cambies "porque parece mejor": la opción existe justamente porque no siempre sirve, y el
+			aviso de arriba es lo que le dice al usuario si en SU archivo va a servir.
+		-->
+		<b-form-group
+		v-if="mostrar_desempate_por_nombre"
+		label-class="ai-import-decision-title">
+			<template #label>
+				Cuando el código de proveedor coincide con más de un artículo, ¿desempatamos por el nombre?
+				<small
+				v-if="aviso_desempate_por_nombre"
+				class="d-block text-muted font-weight-normal m-t-3"
+				data-testid="ai-import-aviso-desempate-por-nombre">
+					{{ aviso_desempate_por_nombre }}
+				</small>
+			</template>
+			<b-form-radio v-model="desempatar_por_nombre" :value="false" data-testid="ai-import-desempatar-por-nombre-no" class="m-b-5">
+				No, identificar sólo por el código de proveedor
+				<small class="d-block text-muted m-t-3">
+					Es el comportamiento de siempre: si un código coincide con más de un artículo, la fila se
+					resuelve con lo que elijas más abajo.
+				</small>
+			</b-form-radio>
+			<b-form-radio v-model="desempatar_por_nombre" :value="true" data-testid="ai-import-desempatar-por-nombre-si" class="m-b-5">
+				Sí, usar el nombre para saber a cuál le corresponde cada fila
+				<small class="d-block text-muted m-t-3">
+					De los artículos que comparten el código, se actualiza el que además coincide en el nombre.
+					Si el nombre no alcanza para desempatar, esa fila se resuelve como hasta ahora y queda
+					reportada al terminar. Nunca se crea un artículo nuevo por no haber podido desempatar.
+				</small>
+			</b-form-radio>
+		</b-form-group>
+
 		<!-- Decisión 2: política de colisión — visible cuando hay filas que se van a identificar
 		por código de proveedor (grupo 284, prompt 04: antes dependía de "clave_identidad", que ya
 		no existe como pregunta; la jerarquía es fija y este es el único escalón donde la decisión
@@ -1538,6 +1584,41 @@ export default {
 			 * 'productos_distintos'. Viaja siempre en el payload de importar(), con este mismo default.
 			 */
 			politica_intra_archivo: 'ultima_gana',
+
+			/*
+			 * Misión desempate-por-nombre-codigo-repetido (9/9/2026): cuando un código de
+			 * proveedor coincide con más de un artículo, ¿nos quedamos con el que además
+			 * coincide en el nombre? Booleano, default false, y con false el comportamiento es
+			 * exactamente el de hoy. Viaja siempre en el payload de importar() con este mismo
+			 * nombre — es el contrato con empresa-api.
+			 */
+			desempatar_por_nombre: false,
+
+			/*
+			 * Lo que el análisis del backend puede afirmar MIRANDO EL ARCHIVO sobre el desempate
+			 * por nombre. Es lo que alimenta el aviso de la decisión de arriba; sin él, la opción
+			 * se elegiría a ciegas. Forma (AiExcelAnalyzer::resumir_desempate_por_nombre):
+			 *
+			 *   aplica                        -> hay al menos un código de proveedor repetido EN EL ARCHIVO
+			 *   alcance                       -> qué universo miró el backend; hoy siempre 'solo_el_archivo'
+			 *   sirve_en_el_archivo           -> aplica Y ninguno de esos códigos repite nombres
+			 *   codigos_repetidos             -> cuántos códigos aparecen más de una vez
+			 *   codigos_con_nombres_distintos -> de esos, cuántos tienen todos sus nombres distintos
+			 *   codigos_con_nombres_repetidos -> de esos, cuántos repiten algún nombre
+			 *   filas_afectadas               -> filas involucradas en códigos repetidos
+			 *   ejemplos                      -> [{ codigo, veces, nombres_distintos, todos_los_nombres_distintos }]
+			 *
+			 * 🔴 Ninguna clave se llama "sirve" a secas, y no es un detalle de redacción: el
+			 * análisis mira el ARCHIVO y el desempate real compara contra los ARTÍCULOS DE LA
+			 * BASE. `alcance` es el que dice hasta dónde llega lo que este dato afirma — ver
+			 * aviso_desempate_por_nombre(), que es donde se traduce a texto.
+			 *
+			 * ⚠️ Hasta el 9/9/2026 las claves se llamaban `sirve`, `codigos_que_desempata` y
+			 * `codigos_que_no_desempata`. Se leen las dos formas mientras la API vieja pueda
+			 * estar del otro lado: sin el respaldo, contra una API sin actualizar el aviso
+			 * desaparece EN SILENCIO.
+			 */
+			desempate_por_nombre: null,
 
 			/* Filas de muestra del Excel (máx. 5) para la preview del paso 2. */
 			preview_rows: [],
@@ -2235,6 +2316,181 @@ export default {
 			}
 
 			return texto
+		},
+
+		/*
+		 * Misión desempate-por-nombre-codigo-repetido (9/9/2026): cuándo se le ofrece al usuario
+		 * la pregunta del desempate por nombre.
+		 *
+		 * 🔴 Esta condición era `provider_codes_duplicados_intra_archivo > 0`, o sea: sólo cuando
+		 * el código se repite DENTRO del archivo que se está subiendo. Ese es el caso menos
+		 * frecuente. El habitual es el otro: el proveedor manda una sola fila por código (este mes
+		 * sólo el pack) contra una base que ya tiene los dos artículos con ese código. Ahí el
+		 * contador intra-archivo da 0, la pregunta no se renderizaba, y esa única fila seguía
+		 * escribiendo en los dos artículos — que es exactamente el defecto que la opción vino a
+		 * resolver. El backend ya soportaba ese caso; lo que fallaba era que la pantalla nunca lo
+		 * ofrecía.
+		 *
+		 * ⚠️ `provider_codes_existentes_mismo_proveedor` NO dice "repetidos en la base": dice
+		 * cuántos códigos del archivo tienen AL MENOS UN artículo de ese proveedor. El cruce
+		 * (ExcelDuplicateStats::crossCheckProviderCodes()) agrupa por código y sólo se guarda un
+		 * booleano por proveedor, así que el conteo de códigos con MÁS DE UN artículo en la base
+		 * NO existe hoy en duplicate_stats. Se usa igual porque es un superconjunto exacto:
+		 * siempre que haya códigos repetidos en la base este número es > 0. Y ofrecerlo de más es
+		 * inocuo: el desempate del backend vive adentro del bloque de dos o más candidatos de
+		 * ArticleIndexCache::find_with_index(), así que con un solo artículo por código la opción
+		 * no cambia absolutamente nada. Preferimos una opción de más —que no hace nada— antes que
+		 * esconderla justo en el caso que la motivó.
+		 */
+		mostrar_desempate_por_nombre() {
+			if (!this.duplicate_stats) {
+				return false
+			}
+
+			/* Repetidos dentro del propio archivo: el caso original. */
+			if (this.duplicate_stats.provider_codes_duplicados_intra_archivo > 0) {
+				return true
+			}
+
+			/* Códigos del archivo que ya tienen artículos de ESTE proveedor en la base. */
+			if (this.duplicate_stats.provider_codes_existentes_mismo_proveedor > 0) {
+				return true
+			}
+
+			/*
+			 * Sin proveedor elegido, el cruce contra la base cuenta TODO como "otros proveedores"
+			 * (crossCheckProviderCodes() sólo marca "mismo" cuando hay provider_id > 0), mientras
+			 * que el matching real de find_with_index() en ese caso trata a todos los candidatos
+			 * como propios. Si no miráramos este contador acá, "Sin proveedor" volvería a esconder
+			 * la pregunta justo en el escenario que la necesita.
+			 */
+			if (!this.has_selected_provider && this.duplicate_stats.provider_codes_existentes_otros_proveedores > 0) {
+				return true
+			}
+
+			return false
+		},
+
+		/*
+		 * Misión desempate-por-nombre-codigo-repetido (9/9/2026): le adelanta al usuario si el
+		 * desempate por nombre va a servir en SU archivo, ANTES de que elija. Sin esto la opción
+		 * se elige a ciegas, que es justo lo que no queremos: el desempate sólo separa los
+		 * códigos repetidos cuyas filas tienen nombres distintos entre sí.
+		 *
+		 * El total sale de duplicate_stats (que la SPA ya tenía) y cuántos de esos son separables
+		 * lo calcula el backend en el análisis. Vacío si el backend no mandó el dato: preferimos
+		 * mostrar la opción sin aviso antes que inventar un número.
+		 */
+		aviso_desempate_por_nombre() {
+			let stats = this.desempate_por_nombre
+
+			/* Sin el dato del backend no se dice nada: no inventamos un número ni una promesa. */
+			if (!stats) {
+				return ''
+			}
+
+			if (!stats.aplica) {
+				/*
+				 * El resumen del backend mira SÓLO las repeticiones dentro del archivo, así que
+				 * cuando la pregunta se muestra porque los repetidos están en la base (ver
+				 * mostrar_desempate_por_nombre()) no tiene nada que decir. En vez de dejar la
+				 * pregunta pelada, se dice lo único que se sabe con certeza, sin prometer nada:
+				 * en este archivo no hay códigos repetidos, y si los hay están del otro lado.
+				 *
+				 * ⚠️ El chequeo contra duplicate_stats no es decorativo: los dos conteos salen de
+				 * pasadas distintas del archivo y pueden discrepar. Si el bloque de arriba dice
+				 * "este archivo tiene 6 códigos repetidos", este aviso NO puede decir lo
+				 * contrario dos renglones más abajo — ante la duda, callarse.
+				 */
+				if (this.duplicate_stats && this.duplicate_stats.provider_codes_duplicados_intra_archivo > 0) {
+					return ''
+				}
+
+				return 'En este archivo no hay códigos de proveedor repetidos. Igual puede haber '
+					+ 'artículos ya cargados que compartan el código: si es así, el nombre es lo '
+					+ 'único que los distingue.'
+			}
+
+			/*
+			 * El total sale del propio resumen y NO de duplicate_stats a propósito: los dos
+			 * conteos salen de pasadas distintas del archivo (ExcelDuplicateStats lee la columna
+			 * cruda; el resumen usa el normalizador del matching real y sólo cuenta las filas que
+			 * llegan al escalón del código de proveedor), así que pueden no dar igual. Mezclarlos
+			 * daría un aviso que no cierra consigo mismo, del tipo "de los 6, 4 y 3".
+			 *
+			 * Las claves nuevas van primero y las viejas quedan de respaldo: la API se mergea
+			 * antes que la SPA, pero durante esa ventana —y contra cualquier instalación que
+			 * todavía corra la anterior— el aviso tiene que seguir saliendo.
+			 */
+			let total      = Number(stats.codigos_repetidos) || 0
+			let separables = Number(
+				typeof stats.codigos_con_nombres_distintos !== 'undefined'
+					? stats.codigos_con_nombres_distintos
+					: stats.codigos_que_desempata
+			)
+
+			if (total === 0 || isNaN(separables)) {
+				return ''
+			}
+
+			let plural   = total > 1
+			let el_total = plural
+				? 'Los ' + this.numero_es(total) + ' códigos repetidos'
+				: 'El código repetido'
+
+			if (separables === 0) {
+				return el_total + (plural ? ' repiten' : ' repite') + ' también el nombre: '
+					+ (plural ? 'separarlos' : 'separarlo') + ' por nombre no va a alcanzar.'
+			}
+
+			/*
+			 * 🔴 La salvedad NO es un adorno y no se saca "porque alarga el texto". Este resumen
+			 * mide las repeticiones DENTRO del archivo —o sea, si las filas de un mismo código se
+			 * llaman distinto entre sí—, pero el desempate real, al reimportar, compara el nombre
+			 * de la fila contra el nombre de los ARTÍCULOS YA CARGADOS. Son dos cosas distintas:
+			 * un archivo donde los seis códigos tienen nombres perfectamente distintos entre sí
+			 * puede no desempatar ni uno si el proveedor le cambió la redacción a los nombres
+			 * entre una lista y la siguiente. Decir "se pueden separar por nombre" a secas es
+			 * prometer una certeza que este dato no afirma.
+			 *
+			 * La salvedad cuelga de `alcance`, que es el backend diciendo qué universo miró
+			 * (AiExcelAnalyzer::ALCANCE_DESEMPATE, hoy siempre 'solo_el_archivo'). El día que el
+			 * análisis consulte además la base, ese valor cambia y esta salvedad deja de
+			 * corresponder sola — sin que haya que acordarse de venir a sacarla a mano. Sin la
+			 * clave (API anterior) se asume el alcance chico, que es el que había.
+			 */
+			let solo_mira_el_archivo = !stats.alcance || stats.alcance === 'solo_el_archivo'
+
+			let salvedad = !solo_mira_el_archivo ? '' : (' Para que separe de verdad, el nombre del'
+				+ ' Excel tiene que coincidir con el del artículo ya cargado: si el proveedor le'
+				+ ' cambió la redacción, esa fila se resuelve como hasta ahora y queda reportada al'
+				+ ' terminar.')
+
+			/*
+			 * Lo decide el backend y es estricto a propósito: sólo es true si NINGÚN código
+			 * repetido del archivo repite nombres. Se lee de ahí en vez de recalcularlo acá para
+			 * que las dos puntas no puedan discrepar sobre qué es "alcanza".
+			 */
+			let todos_distintos = typeof stats.sirve_en_el_archivo !== 'undefined'
+				? stats.sirve_en_el_archivo
+				: stats.sirve
+
+			if (todos_distintos) {
+				return el_total + (plural ? ' tienen' : ' tiene')
+					+ ' nombres distintos entre sí en este archivo.' + salvedad
+			}
+
+			let sin_separar = Number(
+				typeof stats.codigos_con_nombres_repetidos !== 'undefined'
+					? stats.codigos_con_nombres_repetidos
+					: stats.codigos_que_no_desempata
+			) || (total - separables)
+
+			return 'De los ' + this.numero_es(total) + ' códigos repetidos, ' + this.numero_es(separables)
+				+ (separables > 1 ? ' tienen' : ' tiene') + ' nombres distintos entre sí; '
+				+ (sin_separar > 1 ? 'los otros ' + this.numero_es(sin_separar) + ' repiten' : 'el otro repite')
+				+ ' también el nombre y se '
+				+ (sin_separar > 1 ? 'van' : 'va') + ' a resolver como hasta ahora.' + salvedad
 		},
 
 		/*
@@ -3846,6 +4102,16 @@ export default {
 			this.nombres_duplicados     = resultado.nombres_duplicados || null
 
 			/*
+			 * Misión desempate-por-nombre-codigo-repetido (9/9/2026): si los códigos de proveedor
+			 * repetidos del archivo tienen nombres distintos entre sí. Alimenta el aviso de la
+			 * decisión del paso 3, para que el usuario no elija a ciegas.
+			 *
+			 * 🔴 El nombre de esta clave es contrato con empresa-api. Si allá se le cambia el
+			 * nombre, el aviso desaparece EN SILENCIO — no tira ningún error, sólo deja de avisar.
+			 */
+			this.desempate_por_nombre   = resultado.desempate_por_nombre || null
+
+			/*
 			 * Hoja y encabezado que el backend efectivamente usó. Se muestran en el paso 2
 			 * como un renglón fijo: el usuario tiene que poder ver de qué hoja y con qué
 			 * fila de encabezado salió el mapeo que está por confirmar, ANTES de importar.
@@ -4289,6 +4555,19 @@ export default {
 				 * backend tiene el mismo default ('ultima_gana'), así que es inocuo.
 				 */
 				filas_repetidas_del_archivo:                        this.politica_intra_archivo || 'ultima_gana',
+				/*
+				 * Misión desempate-por-nombre-codigo-repetido (9/9/2026): de los artículos que
+				 * comparten el código de proveedor, quedarse con el que además coincide en el
+				 * nombre. Se manda siempre, también apagado, por lo mismo que precios_incluyen_iva
+				 * y vaciar_valores_en_blanco: si la clave no viaja, el backend cae en su default y
+				 * un cambio de default del otro lado le cambia el matching a este flujo sin que
+				 * nadie lo haya declarado acá.
+				 *
+				 * Booleano real (este endpoint recibe JSON) y el === true no es decorativo: el
+				 * v-model de un b-form-radio puede quedar en undefined si el bloque nunca se
+				 * mostró, y `undefined` en JSON se pierde en vez de viajar como false.
+				 */
+				desempatar_por_nombre:                              this.desempatar_por_nombre === true,
 			})
 			.then(() => {
 				this.loading = false
@@ -5192,6 +5471,9 @@ export default {
 			this.politica_colision           = null
 			this.politica_otro_proveedor     = null
 			this.politica_intra_archivo      = 'ultima_gana'
+			/* 🔴 Vuelve al seguro: una importación no hereda el desempate por nombre de la anterior. */
+			this.desempatar_por_nombre       = false
+			this.desempate_por_nombre        = null
 			this.preview_rows                = []
 			this.assistant_notes             = []
 			this.placeholders                = []

@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 export default {
 	namespaced: true,
@@ -257,8 +258,14 @@ export default {
 			if (payload.attachment) {
 				form_data.append('attachment', payload.attachment)
 			}
+			/*
+			 * `skip_navigation_cancel`: el chat de soporte es un widget global (montado en
+			 * App.vue), y navegar a otra pantalla después de mandar es el uso normal — no tiene
+			 * que cancelar el envío y mostrar un "no se pudo enviar" falso sobre un mensaje que
+			 * sí salió (misión cartel-sin-conexion-accesorios, 18/9/2026).
+			 */
 			return axios
-				.post('/api/support-message', form_data)
+				.post('/api/support-message', form_data, { skip_navigation_cancel: true })
 				.then(response => {
 					commit('setSending', false)
 					commit('replacePendingWithModel', { client_key: client_key, model: response.data.model })

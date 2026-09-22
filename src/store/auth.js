@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 // axios.defaults.baseURL = 'https://micovid.online'
 // axios.defaults.baseURL = 'http://localhost:8000'
 export default {
@@ -14,6 +15,25 @@ export default {
 		loading: false,
 		message: '',
 		online: true,
+
+		/**
+		 * Promesa de la cadena de arranque post-login (App.vue, watch de `authenticated`), o
+		 * `null` cuando no hay ninguna en curso. Mision 11/9/2026 (arranque secuencial): los
+		 * widgets de Reportes la usan para saber si tienen que esperar su turno (llegaron como
+		 * pantalla de aterrizaje de un login) o disparar su fetch ya mismo (navegacion normal
+		 * durante el dia). No es un flag boolean porque lo que hace falta no es solo saber SI
+		 * hay arranque en curso, sino poder engancharse (`.then()`) a CUANDO termina.
+		 */
+		arranque_en_curso: null,
+
+		/**
+		 * Candado de sesión por pestaña (misión candado-sesion-por-pestana, 19/9/2026): `true`
+		 * cuando `GET /api/user` respondió 403 con `misma_sesion_otra_pestana` -esta cuenta ya
+		 * está abierta en otra pestaña de este MISMO navegador, y el owner activó el modo
+		 * estricto-. Lo mira `MismaSesionOtraPestanaModal.vue` (siempre montado en App.vue,
+		 * mismo patrón que `SesionCerradaOtroDispositivoModal.vue`) para mostrarse solo.
+		 */
+		misma_sesion_otra_pestana: false,
 	},
 	getters: {
 		authenticated(state) {
@@ -27,8 +47,18 @@ export default {
 		set_online(state, value) {
 			state.online = value
 		},
+		/* Promesa de arranque en curso (o null). Ver el comentario de arranque_en_curso en el state. */
+		set_arranque_en_curso(state, value) {
+			state.arranque_en_curso = value
+		},
 		setAuthenticated(state, value) {
 			state.authenticated = value
+		},
+		/**
+		 * Ver el comentario de `misma_sesion_otra_pestana` en el state.
+		 */
+		setMismaSesionOtraPestana(state, value) {
+			state.misma_sesion_otra_pestana = value
 		},
 		setUser(state, user) {
 			if (user && user.owner_id) {
@@ -143,8 +173,23 @@ export default {
 					// commit('setUserWorkdaysId')
 				})
 				.catch(err => {
-					console.log('NO ESTA AUTH')
 					commit('setLoading', false)
+
+					// Misión candado-sesion-por-pestana (19/9/2026): este 403 puntual NO
+					// significa "no autenticado" -la cookie es válida, AuthController::get_user()
+					// ya confirmó Auth::check() antes de armar la respuesta-, sino "esta cuenta
+					// ya está abierta en otra pestaña de este mismo navegador y el owner activó
+					// el modo estricto". Por eso NO se pisa authenticated/user acá: si el usuario
+					// resuelve el candado con el botón del modal nuevo, el arranque sigue normal
+					// con el usuario que devuelve forzar-pestana, sin haber pasado por un
+					// setAuthenticated(false) que después haya que deshacer.
+					if (err && err.response && err.response.status === 403
+						&& err.response.data && err.response.data.misma_sesion_otra_pestana) {
+						commit('setMismaSesionOtraPestana', true)
+						return
+					}
+
+					console.log('NO ESTA AUTH')
 					commit('setAuthenticated', false)
 					commit('setUser', null)
 				})

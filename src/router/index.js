@@ -23,8 +23,20 @@ const routes = [
         component: () => import('@/views/DemoIngreso'),
     },
     {
+        // Informe del mostrador abierto desde el link que llegó por WhatsApp (misión
+        // asistente-por-whatsapp, 16/9/2026). Ruta PÚBLICA: el dueño la abre desde el
+        // teléfono, en la calle, sin tipear usuario ni contraseña — decisión de Lucas en la
+        // Fase 2. Lo que la sostiene es el token de la URL: 64 caracteres al azar que el
+        // backend guarda solo hasheado, vencen a los 7 días y abren UN informe de solo
+        // lectura. Va listada abajo en `public_route_names`, y App.vue la excluye de su
+        // arranque autenticado por el mismo motivo que a `demoIngreso`.
+        path: '/informe/:token',
+        name: 'informeCompartido',
+        component: () => import('@/views/InformeCompartido'),
+    },
+    {
         path: '/recuperar-clave/:view?/:sub_view?',
-        name: 'passwordReset', 
+        name: 'passwordReset',
         component: () => import('@/common-vue/views/PasswordReset')
     },
     {
@@ -56,6 +68,22 @@ const routes = [
         path: '/gastos',
         name: 'expense',
         component: () => import('@/views/Expense')
+    },
+    {
+        // Misión cheques-endoso-y-bancos (21/9/2026): el módulo de Cheques sale de Reportes y
+        // pasa a Tesorería > Cheques con ruta propia. sub_view es recibido|emitido y
+        // sub_sub_view la solapa (pendientes, disponibles-para-cobrar, endosados...); la vista
+        // completa las dos si faltan.
+        path: '/cheques/:sub_view?/:sub_sub_view?',
+        name: 'cheque',
+        component: () => import('@/views/Cheques')
+    },
+    {
+        // Redirect de la ruta vieja del módulo de Cheques. Va ANTES que la de Reportes porque
+        // vue-router matchea en orden y `/reportes/:view?/...` se la comería: un acceso directo
+        // viejo (PWA, favorito, tour) caería en un Reportes vacío en vez de en el módulo.
+        path: '/reportes/cheques/:sub_view?/:sub_sub_view?',
+        redirect: to => ({ name: 'cheque', params: to.params }),
     },
     {
         path: '/reportes/:view?/:sub_view?/:sub_sub_view?',
@@ -183,29 +211,26 @@ const routes = [
         component: () => import('@/views/Devoluciones')
     },
     {
-        // Vista propia de sugerencias inteligentes de stock (extension
-        // 'sugerencias_inteligentes'). Sin :id muestra el listado; con :id, el
-        // detalle. El gate por extension vive en el menu (routes.js), en el
-        // componente (aviso si no la tiene) y en el backend (403).
-        path: '/sugerencias-de-stock/:id?',
-        name: 'sugerencias_stock',
-        component: () => import('@/views/SugerenciasDeStock')
-    },
-    {
-        // Vista propia de sugerencias de compra a proveedores (extension
-        // 'sugerencias_compras'). Mismo patron que sugerencias-de-stock de arriba:
-        // sin :id muestra el listado; con :id, el detalle. El router no procesa
-        // extensiones: el gate vive en el menu (routes.js), en el componente
-        // (aviso si no la tiene) y en el backend (403).
-        path: '/sugerencias-de-compra/:id?',
-        name: 'sugerencias_compra',
-        component: () => import('@/views/SugerenciasDeCompra')
+        // Módulo IA: el mostrador (misión "modulo-ia-mostrador", 14/9/2026). Sin :id
+        // muestra el escritorio con las carpetas; con :id abre directamente ese
+        // informe (es el puente "Ver el informe" de una conversación del chat,
+        // components/asistente-ia/Conversation.vue). El router no procesa
+        // extensiones ni dueño: el gate vive en el menú (routes.js), en el
+        // componente (aviso si no corresponde) y en el backend (403).
+        //
+        // Las rutas /sugerencias-de-stock y /sugerencias-de-compra que vivían acá
+        // se quitaron en la misma misión, junto con sus vistas: las carpetas Stock y
+        // Compras del mostrador las reemplazan.
+        path: '/ia/:id?',
+        name: 'ia',
+        component: () => import('@/views/Ia')
     },
     {
         // Motor de ofertas por cliente (extension 'motor_de_ofertas'). Sin :id
         // muestra el listado; con :id, el detalle de esa corrida. El MISMO
         // componente se monta ademas en /online/promociones (Tienda Online ->
-        // Promociones), que no necesita ruta propia: entra por la de /online.
+        // Promociones), que desde el 14/9/2026 es su unica entrada del menu; esta
+        // ruta queda porque el puente "Ver las ofertas sugeridas" del chat la usa.
         path: '/ofertas/:id?',
         name: 'ofertas',
         component: () => import('@/views/Ofertas')
@@ -237,7 +262,10 @@ const router = new VueRouter({
 router.beforeEach((to, from, next) => {
     // Rutas públicas que deben poder accederse sin sesión iniciada.
     // 'demoIngreso' es el ingreso a la demo vía token: la vista maneja su propia autenticación.
-    const public_route_names = ['login', 'passwordReset', 'demoIngreso']
+    // 'informeCompartido' es el informe del mostrador abierto desde el link que llegó por
+    // WhatsApp (misión asistente-por-whatsapp): no inicia ninguna sesión y el que la autoriza es
+    // el token de la URL, contra la ruta pública informe-compartido/{token} del API.
+    const public_route_names = ['login', 'passwordReset', 'demoIngreso', 'informeCompartido']
 
     // Estado de sesión: `null` se trata como no autenticado (hasta que `auth/me` resuelva).
     const is_authenticated = store && store.state && store.state.auth && store.state.auth.authenticated

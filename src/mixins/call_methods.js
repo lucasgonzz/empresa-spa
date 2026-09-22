@@ -50,7 +50,20 @@ export default [
         model_name: 'production_batch_movement_type',
         if_has_extencion: 'productionV2',
     },
-    
+    /*
+        Los combos no estaban en memoria: el unico getModels vivia en el ABM, asi que VENDER
+        buscaba contra la API. La deteccion automatica (mixins/vender/deteccion_combos.js) necesita
+        el catalogo entero en memoria para cruzarlo contra el remito en cada cambio de cantidad --
+        sin el, no hay contra que detectar.
+
+        Va detras de la extension para no sumarle una request al arranque de las cuentas que no
+        usan combos, que son la mayoria.
+    */
+    {
+        model_name: 'combo',
+        if_has_extencion: 'combos',
+    },
+
     // Deben descargarse antes que 'table_column_preference': su bootstrap calcula ya las
     // columnas dinamicas de articulo (listas de precio, depositos, descuentos por metodo de
     // pago) usando estas colecciones, y si estan vacias en ese momento, esas columnas quedan
@@ -100,6 +113,10 @@ export default [
     'afip_selected_payment_method',
     'expense_concept',
     'expense_category',
+    // Bancos de cheques (misión cheques-endoso-y-bancos, 21/9/2026): el select de banco del
+    // cheque lo lee en cualquier pago a proveedor o gasto, así que tiene que estar desde el
+    // arranque. Es un catálogo chico (una fila por banco) y entra por recursos-iniciales.
+    'cheque_banco',
     'article_pre_import_range',
     'unidad_medida',
     'article_property_type',

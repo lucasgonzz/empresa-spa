@@ -274,11 +274,15 @@ export default {
 		// 		})
 		// 	}
 		// },
-		callVender() {
-			if (!this.is_provider) {
-				this.vender()
-			}
-		},
+		/*
+			Aca vivian callVender() -> vender() -> check_vender(): la cadena vieja de guardado de
+			la venta, anterior a mixins/vender/guardar_venta (guardar_venta() -> checkear_vender()),
+			que es lo que llama BtnGuardar y el atajo de teclado. No tenia ningun llamador en src/
+			(el _callVender de ArticleBarCode.vue es otro metodo y llama a guardar_venta()), y
+			check_vender() ademas invocaba check_sobrante_a_repartir(), que la tanda 1 de
+			vender-lista-obligatoria borro de chequeos/payment_methods.js. Se borro entera en la
+			tanda 2.
+		*/
 		get_discounts() {
 			let discounts = []
 
@@ -306,57 +310,6 @@ export default {
 			})
 
 			return surchages
-		},
-		vender() {
-			console.log('se llamo a vender')
-			if (this.check_vender()) {
-				console.log('paso check')
-				if (!this.download_articles || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length)) {
-
-				} else {
-					if (!this.to_check && !this.checked) {
-						this.$store.commit('article/removeStock', this.items)
-					}
-				}
-				this.$store.dispatch('vender/vender', {
-					selected_address: this.selected_address,
-					discounts: this.get_discounts(),
-					surchages: this.get_surchages(),
-				})
-				.then(() => {
-					if (this.view == 'remito') {
-						let bar_code_input = document.getElementById('article-bar-code')
-						if (bar_code_input) {
-							bar_code_input.focus()
-						}
-					}
-					
-					this.limpiar_vender()
-
-					this.setDefaultPaymentMethod(true)
-
-					this.set_omitir_en_cuenta_corriente()
-
-					if (this.maked_sale.client_id && this.maked_sale.save_current_acount) {
-						this.loadModel('client', this.maked_sale.client_id)
-					}
-
-					this.setDefaultArticles()
-
-					this.sendAfipTicket()
-
-					if (this.view != 'remito') {
-						this.$router.push({name: 'vender', params: {view: 'remito'}})
-					}
-				})
-				.catch(err => {
-					this.sonido_error()
-					this.$toast.error('Error al guardar venta', {
-						duration: 10000
-					})
-					this.$toast.error(err)
-				})
-			}
 		},
 		limpiar_cuotas() {
 			this.$store.commit('vender/set_cuota_id', 0)
@@ -393,108 +346,6 @@ export default {
 				}
 			})
 
-		},
-		check_vender() {
-			console.log('check antes de vender')
-			console.log(this.hasExtencion('articles_default_in_vender'))
-
-			if (!this.check_article_variants()) {
-				return false
-			}
-
-			if (!this.check_cajas()) {
-				return false
-			}
-
-			if (!this.current_acount_payment_method_id 
-				&& (!this.client || this.omitir_en_cuenta_corriente)) {
-
-				if (!this.check_sobrante_a_repartir()) {
-				// if (!this.guardarMetodosPago()) {
-					return false 
-				} 
-
-			} 
-
-			console.log('-> Ya chequeo los metodos de pago')
-
-			if (this.check_guardar_ventas_con_cliente()) {
-				this.$toast.error('Asigne un cliente para esta venta')
-				return false
-			}
-
-			if (this.hasExtencion('articles_default_in_vender')) {
-				this.checkDefaultArticles()
-			}
-			if (!this.items.length) {
-				this.$toast.error('Ingrese al menos un articulo o servicio')
-				return false 
-			}
-			if (this.$store.state.sale_type.models.length && this.sale_type_id == 0) {
-				this.$toast.error('Indique el tipo de venta')
-				return false 
-			} 
-			// if (this.afip_information_id && this.total >= 61500 && !this.client) {
-			// 	this.$toast.error('El total de la venta supera los $61.500, debera indicar un cliente que posea CUIL o CUIT para poder realizar la factura')
-			// 	return false
-			// }
-			// if (this.afip_information_id && this.client && this.client.iva_condition_id && this.client.iva_condition_id == 1 && !this.client.cuit) {
-			// 	this.$toast.error('Para emitir comprobante tipo A, debe indicar el CUIT del cliente')
-			// 	return false
-			// }
-			if (this.address_id == 0 && this.articulos_con_depositos.length) {
-				this.$toast.error('Hay '+this.articulos_con_depositos.length+' articulos con stock en diferentes depositos')
-				this.$toast.error('Indique la DIRECCION de la venta para restar el stock en los depositos que correspondan')
-				return false
-			}
-			if (this.afip_information_id) {
-
-				// Esto es para Feito, si es efectivo, no pide que se indique el tipo de comprobante
-				if (this.check_metodos_de_pago_para_facturar()) {
-					return true
-				}
-				
-				if (!this.afip_tipo_comprobante_id) {
-
-					this.$toast.error('Indique el Tipo de Comprobante a Facturar')
-					return false
-				}
-
-				if (this.afip_tipo_comprobante_id == 1 
-					|| this.afip_tipo_comprobante_id == 4
-					|| this.afip_tipo_comprobante_id == 5) {
-
-					if (!this.client) {
-
-						this.$toast.error('Para Factura A, debe indicar un Cliente')
-						return false
-					}
-
-					if (!this.client.cuit) {
-
-						this.$toast.error('Para Factura A, el Cliente debe tener asignado un CUIT')
-						return false
-					}
-				}
-
-				if (this.total >= 344488) {
-						
-
-					if (!this.client) {
-
-						this.$toast.error('Para montos mayores a $344.488, debe indicar el receptor')
-						return false
-					}			
-
-					if (!this.client.dni && !this.client.cuit) {
-
-						this.$toast.error('Para montos mayores a $344.488, el cliente debe tener asignado un CUIT o DNI')
-						return false
-					}					
-				}
-			
-			}
-			return true 
 		},
 		
 		

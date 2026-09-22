@@ -28,6 +28,7 @@
 <script>
 
 import listado_articles_source from '@/mixins/listado/listado_articles_source'
+import { env } from '@/runtime_config'
 
 export default {
 
@@ -65,7 +66,7 @@ export default {
 				return
 			}
 
-			let link = process.env.VUE_APP_API_URL + '/article/bar-codes-pdf/' + ids.join('-')
+			let link = env('VUE_APP_API_URL') + '/article/bar-codes-pdf/' + ids.join('-')
 			window.open(link)
 
 		},

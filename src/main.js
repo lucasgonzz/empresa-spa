@@ -4,6 +4,8 @@ import './registerServiceWorker'
 import router from './router'
 import store from './store'
 import { apply_dark_mode_class, read_stored_dark_mode } from '@/utils/dark_mode'
+import { get_tab_id } from '@/utils/tab_id'
+import { env } from '@/runtime_config'
 
 // Vue Scrool
 Vue.prototype.$scrollToTop = (() => {
@@ -38,10 +40,10 @@ import Echo from "laravel-echo"
 
 Vue.prototype.Echo = new Echo({
     broadcaster: 'pusher',
-    key: process.env.VUE_APP_PUSHER_KEY,
-    cluster: process.env.VUE_APP_PUSHER_CLUSTER,
+    key: env('VUE_APP_PUSHER_KEY'),
+    cluster: env('VUE_APP_PUSHER_CLUSTER'),
     // Alineado con Pusher (TLS); si usás túnel/HTTP local, podés setear VUE_APP_PUSHER_USE_TLS=false en .env
-    forceTLS: process.env.VUE_APP_PUSHER_USE_TLS === 'false' ? false : true,
+    forceTLS: env('VUE_APP_PUSHER_USE_TLS') === 'false' ? false : true,
     /**
      * Autorizador custom para canales PRIVADOS (ej: `whatsapp.{owner_id}`, grupo 137).
      * El fetch relativo por defecto de Echo pegaría a `/broadcasting/auth` en el dominio
@@ -52,7 +54,7 @@ Vue.prototype.Echo = new Echo({
     authorizer: (channel) => {
         return {
             authorize: (socket_id, callback) => {
-                axios.post(process.env.VUE_APP_API_URL + '/broadcasting/auth', {
+                axios.post(env('VUE_APP_API_URL') + '/broadcasting/auth', {
                     socket_id: socket_id,
                     channel_name: channel.name,
                 }, {
@@ -68,6 +70,87 @@ Vue.prototype.Echo = new Echo({
         }
     },
 });
+
+/**
+ * Estado de la conexión al broadcast, publicado en el store (misión procesos-en-segundo-plano,
+ * 18/9/2026). Alimenta el punto verde/rojo junto al nombre del usuario y el respaldo por polling
+ * de la píldora de procesos.
+ *
+ * Va acá y no en un componente porque es el ÚNICO lugar donde la conexión de Pusher existe
+ * antes que cualquier componente: Echo se crea arriba y conecta mucho antes de que resuelva la
+ * sesión. Un componente que se enganchara en su created() se perdería el estado inicial.
+ *
+ * Los estados de Pusher se reducen a los tres que muestra la interfaz: `connected` es
+ * conectado; `connecting` e `initialized` son conectando; todo lo demás (`unavailable`,
+ * `failed`, `disconnected`) es desconectado. Se chequea que el conector exista en vez de
+ * asumirlo: si algún día cambia el broadcaster, lo único que se pierde es el punto, no la app.
+ */
+function observar_estado_del_broadcast(echo) {
+    if (!echo || !echo.connector || !echo.connector.pusher || !echo.connector.pusher.connection) {
+        return
+    }
+
+    /** Conexión de Pusher, la que emite los cambios de estado. */
+    const connection = echo.connector.pusher.connection
+
+    /**
+     * @param {string} estado_pusher Estado tal como lo nombra pusher-js.
+     * @returns {string} 'conectado' | 'conectando' | 'desconectado'
+     */
+    function traducir(estado_pusher) {
+        if (estado_pusher === 'connected') {
+            return 'conectado'
+        }
+        if (estado_pusher === 'connecting' || estado_pusher === 'initialized') {
+            return 'conectando'
+        }
+        return 'desconectado'
+    }
+
+    store.commit('background_processes/setEstadoConexion', traducir(connection.state))
+
+    connection.bind('state_change', (estados) => {
+        store.commit('background_processes/setEstadoConexion', traducir(estados ? estados.current : null))
+    })
+}
+
+observar_estado_del_broadcast(Vue.prototype.Echo)
+
+/**
+ * Cancelación de pedidos en curso al navegar entre pantallas (misión
+ * cartel-sin-conexion-accesorios, 18/9/2026).
+ *
+ * Sin esto, un pedido lento disparado desde una pantalla que el usuario ya abandonó (cambió de
+ * módulo mientras un GET pesado seguía en vuelo) resuelve igual más tarde con un error de red
+ * genérico, y `global_api_error_interceptor` no tiene forma de distinguirlo de un corte real:
+ * dispara el cartel "No pudimos conectarnos con el servidor" por algo que el usuario nunca llegó
+ * a ver como error.
+ *
+ * El token vigente vive acá (variable de módulo). El interceptor de request de más abajo se lo
+ * engancha a cualquier pedido que no traiga uno propio ya seteado; el `router.beforeEach` de acá
+ * abajo lo cancela y renueva en cada navegación.
+ */
+let cancel_token_source = axios.CancelToken.source()
+
+/**
+ * Guarda de navegación NUEVA (no reemplaza la que valida sesión en `router/index.js`, se agrega
+ * aparte): cancela los pedidos que quedaron colgados de la pantalla que el usuario abandona.
+ *
+ * El orden es crítico: cancelar y renovar el token ANTES de llamar a `next()`, nunca después. Si
+ * se cancelara después de `next()`, la pantalla nueva ya habría montado sus componentes y
+ * enganchado sus propios pedidos al token viejo — quedarían cancelados también. Yendo antes,
+ * cuando la pantalla nueva monte va a enganchar sus pedidos al token ya renovado.
+ *
+ * @param {Object} to destino de navegación (sin uso acá, lo pide la firma de Vue Router).
+ * @param {Object} from origen de navegación (sin uso acá, lo pide la firma de Vue Router).
+ * @param {Function} next callback para continuar la navegación.
+ * @returns {void}
+ */
+router.beforeEach((to, from, next) => {
+    cancel_token_source.cancel('Navegación a otra pantalla')
+    cancel_token_source = axios.CancelToken.source()
+    next()
+})
 
 // Notifications
 import VueToast from 'vue-toast-notification';
@@ -162,6 +245,40 @@ function mostrar_toast_global(tipo, mensaje) {
 }
 
 /**
+ * Ventana en la que un 401 tapa a los que vienen atrás.
+ *
+ * Cinco segundos. Cuando una sesión se cae, no se cae para un request: se cae para la ráfaga
+ * entera del arranque (~15-18 llamadas que salen en el mismo tick y resuelven en menos de un
+ * segundo, o en dos o tres si el servidor está cargado). Cinco segundos cubren la ráfaga con
+ * margen. Y es corto a propósito: si el usuario vuelve a intentar algo unos segundos después y
+ * también le da 401, se lo tiene que enterar de nuevo.
+ */
+const VENTANA_AVISO_401_MS = 5000
+
+/**
+ * Momento del último 401 que sí se avisó (epoch en ms). 0 = todavía no se avisó ninguno.
+ */
+let ultimo_aviso_401_en = 0
+
+/**
+ * ¿A este 401 le toca aviso, o llegó pegado a uno que ya se avisó?
+ *
+ * Marca el momento cuando devuelve `true`, así que se llama UNA sola vez por error.
+ *
+ * @returns {boolean}
+ */
+function debe_avisar_este_401() {
+    const ahora = Date.now()
+
+    if (ahora - ultimo_aviso_401_en < VENTANA_AVISO_401_MS) {
+        return false
+    }
+
+    ultimo_aviso_401_en = ahora
+    return true
+}
+
+/**
  * Interceptor de respuesta: errores de validación Laravel (422) → toast detallado;
  * el resto mantiene el evento global `errorEvent` (logo loading, modal legacy, etc.).
  *
@@ -240,18 +357,73 @@ function global_api_error_interceptor(error) {
     if (is_validation && !skip_validation_toast) {
         show_laravel_validation_toast(data)
     } else if (response && is_authenticated && !skip_global_error_event) {
-        // Solo emitimos el error global cuando ya hay sesión iniciada.
-        // Esto evita alerts/toasts automáticos durante el arranque o antes del login.
-        document.dispatchEvent(
-            new CustomEvent('errorEvent', { detail: error })
-        )
+        if (status === 401 && !debe_avisar_este_401()) {
+            /*
+             * 🔴 Camino deduplicado: este 401 llegó pegado a otro que ya se avisó, así que NO
+             * se despacha `errorEvent` y el usuario ve un solo aviso en vez de quince toasts
+             * de 10 segundos apilados (lo que pasa cuando se cae la sesión y falla la ráfaga
+             * entera del arranque).
+             *
+             * Pero el loading se apaga IGUAL, y acá está la trampa: el handler de `errorEvent`
+             * (common-vue/components/error/Index.vue) es el ÚNICO lugar de toda la aplicación
+             * que hace `auth/setLoading = false` ante un error. Si simplemente no se
+             * despachara el evento, el overlay quedaría tapando la aplicación entera hasta un
+             * F5. Es el mismo cuelgue que ya pasó con los errores sin `response`, atendido
+             * arriba de la misma manera.
+             */
+            store.commit('auth/setLoading', false)
+            store.commit('auth/setMessage', '')
+        } else {
+            // Solo emitimos el error global cuando ya hay sesión iniciada.
+            // Esto evita alerts/toasts automáticos durante el arranque o antes del login.
+            document.dispatchEvent(
+                new CustomEvent('errorEvent', { detail: error })
+            )
+        }
     }
     return Promise.reject(error)
 }
 
+/**
+ * Interceptor de request: engancha el CancelToken vigente (ver bloque de cancelación por
+ * navegación, más arriba) a todo pedido que no traiga uno propio ya seteado.
+ *
+ * Excepción: `config.skip_navigation_cancel` (misma idea que `skip_global_error_event`, revisión
+ * independiente de la misión cartel-sin-conexion-accesorios, 18/9/2026). Un pedido disparado
+ * desde un componente global montado en `App.vue` —no desde la vista de una ruta— no tiene por
+ * qué morir porque el usuario cambió de pantalla: el polling de background_processes, el polling
+ * de pedidos sin confirmar de order.js, y el envío del chat de soporte son los tres casos
+ * detectados. Sin esta bandera, esos pedidos se cancelaban con cualquier navegación ajena — en
+ * el chat de soporte eso se veía como un "no se pudo enviar" falso sobre un mensaje que sí salió.
+ *
+ * @param {import('axios').AxiosRequestConfig} config Configuración del pedido saliente.
+ * @returns {import('axios').AxiosRequestConfig}
+ */
+function global_api_cancel_token_interceptor(config) {
+    if (!config.cancelToken && !config.skip_navigation_cancel) {
+        config.cancelToken = cancel_token_source.token
+    }
+    return config
+}
+
+/**
+ * Interceptor de request: manda el id de esta pestaña en el header `X-Tab-Id` en TODAS las
+ * requests (misión candado-sesion-por-pestana, 19/9/2026). `AuthHelper::checkUserLastActivity()`
+ * lo usa, del lado del backend, solo cuando el owner activó el modo estricto -para cualquier
+ * otro caso el backend lo ignora, así que mandarlo siempre es inocuo-.
+ *
+ * @param {import('axios').AxiosRequestConfig} config Configuración del pedido saliente.
+ * @returns {import('axios').AxiosRequestConfig}
+ */
+function global_api_tab_id_interceptor(config) {
+    config.headers = config.headers || {}
+    config.headers['X-Tab-Id'] = get_tab_id()
+    return config
+}
+
 // Instancia usada como Vue.prototype.$api (prefijo /api)
 const apiInstance = axios.create({
-    baseURL: process.env.VUE_APP_API_URL + '/api',
+    baseURL: env('VUE_APP_API_URL') + '/api',
     withCredentials: true
 })
 
@@ -259,6 +431,8 @@ apiInstance.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
+apiInstance.interceptors.request.use(global_api_cancel_token_interceptor)
+apiInstance.interceptors.request.use(global_api_tab_id_interceptor)
 
 // ✅ Registramos $api como plugin (como hacías vos)
 Vue.use({
@@ -269,7 +443,7 @@ Vue.use({
 
 
 const axiosInstance = axios.create({
-    baseURL: process.env.VUE_APP_API_URL,
+    baseURL: env('VUE_APP_API_URL'),
     withCredentials: true
 })
 
@@ -277,12 +451,18 @@ axiosInstance.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
+axiosInstance.interceptors.request.use(global_api_cancel_token_interceptor)
+axiosInstance.interceptors.request.use(global_api_tab_id_interceptor)
 
-// Misma lógica para el axios por defecto (stores que importan `axios` sin `create`)
+// Misma lógica para el axios por defecto (stores que importan `axios` sin `create`, como
+// store/auth.js: es el que hace el GET /api/user de arranque, así que también necesita el
+// header X-Tab-Id)
 axios.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
+axios.interceptors.request.use(global_api_cancel_token_interceptor)
+axios.interceptors.request.use(global_api_tab_id_interceptor)
 
 Vue.use({
   install(Vue) {
@@ -293,7 +473,7 @@ Vue.use({
 // Vue.use({
 //   install (Vue) {
 //     Vue.prototype.$axios = axios.create({
-//       baseURL: process.env.VUE_APP_API_URL,
+//       baseURL: env('VUE_APP_API_URL'),
 //       withCredentials: true
 //     })
 //   }
@@ -301,7 +481,7 @@ Vue.use({
 // Vue.use({
 //   install (Vue) {
 //     Vue.prototype.$api = axios.create({
-//       baseURL: process.env.VUE_APP_API_URL+'/api',
+//       baseURL: env('VUE_APP_API_URL')+'/api',
 //       withCredentials: true
 //     })
 //   }

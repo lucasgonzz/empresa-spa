@@ -617,7 +617,14 @@ export default {
 
 				let tipo_compobante_id = this.get_afip_tipo_comprobante(this.ventas_afip_information_id, this.selected_sales[0].client)
 
-				this.afip_tipo_comprobante_id = tipo_compobante_id
+				/*
+					get_afip_tipo_comprobante() devuelve null cuando no puede resolverlo (desde el
+					18/9/2026: catalogo sin cargar, o punto de venta sin condicion de IVA). Aca el
+					"sin elegir" es 0 --check() compara `== 0`, y `null == 0` es false en JS--, asi
+					que se mapea: si no, el modal no frenaba y el POST salia con null (500 en el
+					back). Antes de esa fecha el mismo caso tiraba TypeError aca y el tipo quedaba en 0.
+				*/
+				this.afip_tipo_comprobante_id = tipo_compobante_id ? tipo_compobante_id : 0
 			}
 
 		},

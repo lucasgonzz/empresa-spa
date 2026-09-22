@@ -45,6 +45,10 @@ export default {
 		valor_dolar() {
 			return this.$store.state.vender.valor_dolar
 		},
+		/* Monto con signo del total forzado (extension forzar_total) */
+		forzar_total_monto() {
+			return this.$store.state.vender.forzar_total_monto
+		},
 		articles() {
 			return this.items.filter(item => item.is_article)
 		},
@@ -53,6 +57,19 @@ export default {
 		},
 		promocion_vinotecas() {
 			return this.items.filter(item => item.is_promocion_vinoteca)
+		},
+		/*
+			🔴 Sin este computed, un combo cargado en VENDER con "Guardar como presupuesto" tildado
+			rompia el guardado con un 500. El combo entra igual al remito (el unico chequeo que mira
+			guardar_como_presupuesto es el de stock) y SI suma a this.total, que viaja en el payload
+			(vender_set_total.js, bucket total_combos). Pero la clave `combos` no se mandaba, asi que
+			BudgetHelper::getTotal() recalculaba sin el combo, le daba una diferencia mayor a 3 y
+			rechazaba con "El total del presupuesto no corresponde con los productos ingresados".
+			O sea que el vendedor no veia "el combo no se guardo": veia un total descuadrado que no
+			explicaba nada.
+		*/
+		combos() {
+			return this.items.filter(item => item.is_combo)
 		},
 	},
 	methods: {
@@ -71,6 +88,17 @@ export default {
 				// en la edición); si por algún motivo no hay cliente en store, se usa el original
 				// del presupuesto como resguardo.
 				'client_id'                 : this.client ? this.client.id : this.budget.client_id,
+
+				/*
+					Viaja tambien al actualizar, no solo al crear. Hasta esta mision el PUT no lo
+					mandaba y BudgetController::update() no tocaba price_type_id, asi que un
+					presupuesto guardado sin lista (o con una que ya no corresponde) se quedaba asi
+					para siempre, y la venta que nace al confirmarlo heredaba ese null. En el back
+					la clave ausente preserva lo guardado (SPA vieja) y null explicito en una
+					cuenta con listas contesta 422.
+				*/
+				'price_type_id'				: this.get_price_type_id(),
+
 				'start_at'                  : this.budget.start_at,
 				'finish_at'                 : this.budget.finish_at,
 				'observations'              : this.observations,
@@ -89,8 +117,23 @@ export default {
 				*/
 				'aplicar_recargos_directo_a_items'	: this.aplicar_recargos_directo_a_items,
 
+				/*
+					🔴 El total forzado tiene que viajar, igual que el flag de arriba y por el mismo
+					motivo: `total` ya lo trae aplicado (lo suma vender_set_total.js al final de
+					setTotal()), pero BudgetHelper::getTotal() recalcula el total desde los items,
+					donde el ajuste no esta. Sin este campo la diferencia se pasa de la tolerancia y
+					el guardado rebota con "El total del presupuesto no corresponde con los
+					productos ingresados" --un mensaje que no nombra al forzado por ningun lado--.
+
+					Y lo necesita ademas para arrastrarlo a la venta cuando el presupuesto se
+					convierte, que es donde el forzado tiene que sobrevivir.
+				*/
+				'forzar_total_monto'		: this.forzar_total_monto,
+
 				'moneda_id'              	: this.moneda_id,
-				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
+				// Un presupuesto va siempre a la cuenta corriente (decision de Lucas, 18/9/2026): viaja 0
+				// pase lo que pase con el store, y el back lo fija en 0 igual.
+				'omitir_en_cuenta_corriente'              	: 0,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : this.budget.budget_status_id,
@@ -100,6 +143,7 @@ export default {
 				'articles'					: this.get_articles(true),
 				'services'					: this.get_services(),
 				'promocion_vinotecas'		: this.get_promocion_vinotecas(),
+				'combos'					: this.get_combos(),
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
@@ -109,6 +153,11 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.success('Presupuesto actualizado')
 				this.$store.commit('budget/add', res.data.model)
+				/*
+					limpiar_vender() vuelve a poner el metodo de pago por defecto (lo hace adentro
+					desde esta mision): abrir un presupuesto para editarlo lo deja en 0, y sin eso
+					la venta siguiente arrancaba en "Seleccione metodo de pago".
+				*/
 				this.limpiar_vender()
 			})
 			.catch(err => {
@@ -131,14 +180,20 @@ export default {
 					o desde otra pestaña— mientras vos lo estas editando en VENDER.
 
 					El detalle tecnico queda solo para cuando NO hay mensaje del back y el handler
-					global no tiene nada que mostrar: caida de red, timeout, respuesta sin cuerpo.
+					global no tiene nada que mostrar: respuesta sin cuerpo, o un error que no es de
+					axios (un TypeError en el .then de arriba). La caida de red y el timeout tambien
+					van por el global (main.js muestra "No pudimos conectarnos..." para todo error de
+					axios sin `response`): acá NO se suma nada, que antes eran tres carteles por el
+					mismo corte --el del global y estos dos-- y el vendedor no sabia cual leer.
 				*/
-				let hay_mensaje_del_back = Boolean(err.response && err.response.data && err.response.data.message)
+				let hay_mensaje_del_back = Boolean(err && err.response && err.response.data && err.response.data.message)
 
-				if (!hay_mensaje_del_back) {
+				let es_corte_de_red = Boolean(err && err.isAxiosError && !err.response)
+
+				if (!hay_mensaje_del_back && !es_corte_de_red) {
 					this.$toast.error('Error al guardar Presupuesto')
 					console.log(err)
-					this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
+					this.$toast.error('Codigo: '+(err ? err.code : '')+'. Detalle: '+(err ? err.message : ''), {
 						duration: 100000,
 					})
 				}
@@ -162,8 +217,14 @@ export default {
 				// el total.
 				'aplicar_recargos_directo_a_items'	: this.aplicar_recargos_directo_a_items,
 
+				// Viaja por el mismo motivo que en actualizar(): sin el, BudgetHelper::getTotal()
+				// recalcula el total sin el ajuste y rechaza el guardado.
+				'forzar_total_monto'		: this.forzar_total_monto,
+
 				'valor_dolar'				: this.valor_dolar,
-				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
+				// Un presupuesto va siempre a la cuenta corriente (decision de Lucas, 18/9/2026): viaja 0
+				// pase lo que pase con el store, y el back lo fija en 0 igual.
+				'omitir_en_cuenta_corriente'              	: 0,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : 1, 
@@ -173,9 +234,18 @@ export default {
 				'articles'					: this.get_articles(),
 				'services'					: this.get_services(),
 				'promocion_vinotecas'		: this.get_promocion_vinotecas(),
+				'combos'					: this.get_combos(),
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
+			}, {
+				/*
+					El aviso global del interceptor se apaga: el catch de abajo ya muestra el
+					mensaje del back (el 422 de la lista de precios, entre otros), y con el handler
+					global el mismo texto salia repetido. actualizar() no lo apaga a proposito:
+					confia solo en el global.
+				*/
+				skip_global_error_event: true,
 			})
 			.then(res => {
 				this.$store.commit('auth/setMessage', '')
@@ -187,18 +257,51 @@ export default {
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
-				this.$toast.error('Error al guardar Presupuesto')
 				console.log(err)
 
-				if (err.response && err.response.data && err.response.data.message) {
+				/*
+					🔴 UN solo aviso por error. Este POST apaga el aviso global del interceptor
+					(skip_global_error_event, arriba), que ademas del mensaje del back calla el toast
+					de red: este catch es el unico que avisa, asi que tiene que cubrir los tres casos.
 
-					this.$toast.error(err.response.data.message, {
+					- Con mensaje del back (el 422 de la lista de precios, entre otros): solo ese.
+					  Antes salia ademas el generico "Error al guardar Presupuesto" encima.
+					- Error de axios sin `response` (servidor caido, red cortada, timeout): un mensaje
+					  de conexion, en vez del "Codigo: ERR_NETWORK. Detalle: Network Error" de cien
+					  segundos.
+					- Con respuesta pero sin mensaje: el generico con el detalle tecnico.
+					- Un error que NO es de axios (un TypeError en el .then de arriba, DESPUES de que
+					  el POST ya guardo): tampoco tiene `response`, y decirle "lo mas probable es que
+					  NO se haya guardado" lo manda a duplicarlo. Se distingue por isAxiosError.
+				*/
+				let mensaje_del_back = err && err.response && err.response.data && err.response.data.message
+					? err.response.data.message
+					: null
+
+				let es_error_de_red = Boolean(err && err.isAxiosError && !err.response)
+
+				if (mensaje_del_back) {
+
+					this.$toast.error(mensaje_del_back, {
 						duration: 10000
 					})
+
+				} else if (!err || !err.isAxiosError) {
+
+					this.$toast.error('Ocurrió un error inesperado al guardar. Fijate en Presupuestos si quedó guardado antes de volver a intentar; si el problema sigue, recargá la página.', {
+						duration: 15000,
+					})
+
+				} else if (es_error_de_red) {
+
+					this.$toast.error('No pudimos conectarnos con el servidor. Lo más probable es que el presupuesto NO se haya guardado: revisá la conexión, fijate en Presupuestos y volvé a intentar.', {
+						duration: 15000,
+					})
+
 				} else {
-					
-					this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
-						duration: 100000,
+
+					this.$toast.error('Error al guardar Presupuesto. Codigo: '+err.code+'. Detalle: '+err.message, {
+						duration: 15000,
 					})
 				}
 			})
@@ -353,6 +456,24 @@ export default {
 				console.log(promocion_vinotecas)
 			})
 			return promocion_vinotecas
+		},
+		/*
+			Mismo contrato que get_promocion_vinotecas(): el pivot viaja con la cantidad y el precio
+			que quedo en el remito (price_vender, no combo.price, para que el presupuesto guarde el
+			precio que el vendedor vio). BudgetHelper del lado API lo lee de esta misma forma.
+		*/
+		get_combos() {
+			let combos = []
+			this.combos.forEach(combo => {
+				combos.push({
+					id: combo.id,
+					pivot: {
+						amount: combo.amount,
+						price: combo.price_vender,
+					}
+				})
+			})
+			return combos
 		},
 
 	}

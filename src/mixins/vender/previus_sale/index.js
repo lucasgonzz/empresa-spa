@@ -10,8 +10,15 @@ import default_payment_method from '@/mixins/vender/default_payment_method'
 import price_ranges from '@/mixins/vender/price_ranges'
 import axios from 'axios'
 import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_methods'
+/*
+	Por limpiar_afip(), que cancelPreviusSale() necesita (ver el comentario ahi). El mixin no
+	tiene data() ni hooks: solo computed y metodos, y ninguno choca con los componentes que
+	mezclan este mixin.
+*/
+import facturar from '@/mixins/vender/guardar_venta/facturar'
+import { env } from '@/runtime_config'
 export default {
-	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods],
+	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods, facturar],
 	// mixins: [vender, set_employee_vender, vender_set_total],
 	data() {
 		return {
@@ -56,6 +63,24 @@ export default {
 			this.$router.push({name: 'vender', params: {view: 'remito'}})
 		},
 		callGetSale(sale_id) {
+
+			/*
+				🔴 Lo que la venta EN CURSO tenia y no puede pasarle a la que se abre. Abrir una
+				venta guardada no pasa por limpiar_vender (setPreviusSale solo prende el flag y
+				navega), asi que estos dos sobrevivian:
+
+				- guardar_como_presupuesto: con el toggle prendido en la venta en curso, el boton
+				  pasaba a decir "Guardar Presupuesto" y BtnGuardar.saveSale() creaba un presupuesto
+				  NUEVO con las lineas de la venta abierta, y la venta quedaba sin actualizar. Una
+				  venta guardada es una venta: se apaga siempre. Un presupuesto no entra por aca
+				  (BtnActualizarEnVender lo abre por su cuenta y lo prende despues).
+				- pending_attachments: los adjuntos que el vendedor habia cargado en la venta en
+				  curso se subian, al guardar, a la venta editada (updateSale los toma del store).
+
+				Van ACA y no en set_datos_para_actualizar_en_vender, que comparte con el presupuesto.
+			*/
+			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
+			this.$store.commit('vender/clearPendingAttachments')
 
 			this.$store.commit('auth/setMessage', 'Cargando venta')
 			this.$store.commit('auth/setLoading', true)
@@ -110,7 +135,7 @@ export default {
 			})
 		},
 		load_previus_sale_attachments(sale_id) {
-			axios.get(process.env.VUE_APP_API_URL + '/api/sale-article-attachment/by-sale/' + sale_id)
+			axios.get(env('VUE_APP_API_URL') + '/api/sale-article-attachment/by-sale/' + sale_id)
 				.then(res => {
 					this.$store.commit('vender/setSaleAttachments', res.data.models)
 				})
@@ -133,7 +158,30 @@ export default {
 
 					if (previus_discount.pivot.percentage != store_discount.percentage) {
 
-						store_discount.updated_percentage = store_discount.percentage
+						/*
+							🔴 El porcentaje VIGENTE del catalogo se guarda en updated_percentage UNA sola
+							vez. Si ya tiene valor es porque otro comprobante abierto antes --sin pasar
+							por limpiar_vender, que es lo unico que lo anula (limpiar_descuentos)-- ya lo
+							guardo, y lo que hay ahora en `percentage` es el porcentaje HISTORICO de ese
+							otro comprobante, no el vigente.
+
+							La secuencia que lo rompia: catalogo al 10 %; abrir la venta A (pivote 8 %)
+							dejaba updated 10 y percentage 8; ir a Ventas y abrir la venta B (pivote 5 %)
+							sin cancelar la A --setPreviusSale no limpia-- daba 5 != 8, y entonces
+							updated pasaba a 8 y percentage a 5; cancelar restauraba el 8, y el catalogo
+							quedaba al 8 % HASTA RECARGAR LA PAGINA: toda venta nueva que tildara ese
+							descuento lo aplicaba al 8 % y lo mandaba al back como vigente, y el panel
+							mostraba "8 %" como si fuera el configurado. Es la clase "estado derivado
+							guardado en su propio slot" (APRENDER_NO_PARCHEAR): el guard va sobre la
+							fuente, no sobre el que restaura.
+						*/
+						if (
+							store_discount.updated_percentage === null
+							|| typeof store_discount.updated_percentage == 'undefined'
+						) {
+							store_discount.updated_percentage = store_discount.percentage
+						}
+
 						store_discount.percentage = previus_discount.pivot.percentage
 
 					}
@@ -155,7 +203,19 @@ export default {
 
 					if (previus_surchage.pivot.percentage != store_surchage.percentage) {
 
-						store_surchage.updated_percentage = store_surchage.percentage
+						/*
+							Mismo guard, mismo motivo que en set_discounts_store_with_pivot_percetage:
+							el porcentaje vigente se guarda una sola vez, o abrir dos comprobantes
+							seguidos deja el catalogo de recargos con el porcentaje historico del
+							primero hasta recargar la pagina.
+						*/
+						if (
+							store_surchage.updated_percentage === null
+							|| typeof store_surchage.updated_percentage == 'undefined'
+						) {
+							store_surchage.updated_percentage = store_surchage.percentage
+						}
+
 						store_surchage.percentage = previus_surchage.pivot.percentage
 
 					}
@@ -220,19 +280,40 @@ export default {
 				this.$store.commit('vender/setClient', model.client)
 			} else {
 				this.$store.commit('vender/setClient', null)
-				this.$store.commit('vender/setPriceType', null)
 			}
 
-			if (model.price_type) {
-				this.$store.commit('vender/setPriceType', model.price_type)
-			} else if (model.client && model.client.price_type_id) {
-				this.$store.commit('vender/setPriceType', model.client.price_type_id)
-			} else {
-				this.$store.commit('vender/setPriceType', null)
-			}
+			/*
+				🔴 LA LISTA DE PRECIOS DEL COMPROBANTE QUE SE ESTA EDITANDO, SIEMPRE COMO OBJETO.
 
-			// this.setPriceType()
-			
+				La que quedo guardada en el comprobante manda. Si no tiene, la del cliente: pero el
+				OBJETO del catalogo, no `client.price_type_id` pelado como se hacia hasta esta
+				mision --ese id en vender/price_type dejaba `price_type_vender.id` en undefined, y
+				un articulo agregado durante la edicion se preciaba con su final_price base--.
+
+				Y si tampoco el cliente tiene y la cuenta vende con listas, la lista por defecto del
+				comercio (mayor position, mismo criterio que el back), en vez de null: con null el
+				PUT viajaba sin lista y el articulo nuevo salia a precio base.
+
+				Lo que esta lista NO hace es re-preciar lo que ya estaba: las lineas existentes
+				conservan su pivot.price (from_pivot en vender_set_total.js), asi que resolverla
+				aca no cambia ningun importe del comprobante. Solo un articulo que se agregue en
+				esta edicion se precia con ella, y es lo que viaja en price_type_id del PUT.
+
+				Y antes de caer a la del cliente, el propio price_type_id del comprobante resuelto
+				contra el catalogo: un endpoint que no embeba la relacion `price_type` no puede
+				hacer que una venta que TENIA lista la pierda en el PUT (o la cambie por la del
+				cliente, que puede ser otra). Si el id no esta en el catalogo --la lista se borro--,
+				la venta no tiene lista, y se sigue con el cliente y el default.
+
+				El criterio vive en price_types.js (resolver_lista_de_comprobante_guardado) porque
+				lo usa tambien setPriceType() cuando el catalogo llega DESPUES de abrir el
+				comprobante: ahi se propone la misma lista que aca. Si el catalogo esta vacio en
+				este momento, queda null y ese camino la resuelve cuando llega.
+			*/
+			let lista_del_comprobante = this.resolver_lista_de_comprobante_guardado(model)
+
+			this.$store.commit('vender/setPriceType', lista_del_comprobante ? lista_del_comprobante : null)
+
 			this.$store.commit('vender/setSellerId', model.seller_id)
 			
 			if (model.current_acount_payment_method_id) {
@@ -282,26 +363,46 @@ export default {
 				this.$store.commit('vender/setSelectedPaymentMethods', [])
 			}
 
-			if (model.afip_information_id) {
-				this.$store.commit('vender/setAfipInformationId', model.afip_information_id)
-			}
-			if (model.employee_id) {
-				this.$store.commit('vender/setEmployeeId', model.employee_id)
-			}
+			/*
+				🔴 INCONDICIONALES, no `if (model.x)`: lo que el comprobante guardado NO tiene vuelve
+				a 0 / vacio / null, en vez de heredar lo que tuviera la venta EN CURSO en el momento
+				de abrirlo (setPreviusSale no pasa por limpiar_vender, y beforeRouteLeave de
+				Vender.vue ya no cancela nada).
+
+				Con el `if`, una venta en curso con punto de venta elegido contaminaba a la que se
+				abria: el PUT manda afip_information_id y SaleController@update lo asigna pelado, asi
+				que la venta editada quedaba marcada para facturar con un punto de venta que nadie
+				eligio para ella. Lo mismo con el tipo de venta, el numero de orden de compra y la
+				fecha de entrega, que ademas mete la venta editada en "por entregar".
+
+			*/
+			this.$store.commit('vender/setAfipInformationId', model.afip_information_id ? model.afip_information_id : 0)
+
+			/*
+				🔴 El empleado de la venta se restaura SIEMPRE, tambien cuando es null (venta del
+				dueño). Hasta la tanda 2 de vender-lista-obligatoria iba con `if (model.employee_id)`:
+				una venta del dueño abierta por un empleado dejaba en el store el id del empleado
+				logueado (lo pone setEmployeeVender), el PUT lo mandaba, y SaleController@update se
+				lo asignaba: la venta del dueño quedaba a nombre del empleado que la edito. Con el
+				null en el store, el PUT manda employee_id null y el back (que ahora preserva el
+				empleado de la venta cuando no le llega uno > 0) la deja como estaba.
+
+				El select de empleado (header-2/.../Employee.vue) esta deshabilitado en edicion y
+				tolera el null (queda sin opcion marcada, no revienta); cancelPreviusSale() vuelve a
+				poner el del usuario logueado con setEmployeeVender() para la venta siguiente. Un
+				presupuesto tambien trae employee_id (el back lo escribe al crearlo) y su PUT no lo
+				manda, asi que ahi no cambia nada.
+			*/
+			this.$store.commit('vender/setEmployeeId', model.employee_id)
+
 			if (model.address_id) {
 				this.$store.commit('vender/setAddressId', model.address_id)
 			} else {
 				this.$store.commit('vender/setAddressId', 0)
 			}
-			if (model.sale_type_id) {
-				this.$store.commit('vender/setSaleTypeId', model.sale_type_id)
-			}
-			if (model.numero_orden_de_compra) {
-				this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra)
-			}
-			if (model.fecha_entrega) {
-				this.$store.commit('vender/set_fecha_entrega', model.fecha_entrega.split('T')[0])
-			}
+			this.$store.commit('vender/setSaleTypeId', model.sale_type_id ? model.sale_type_id : 0)
+			this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra ? model.numero_orden_de_compra : '')
+			this.$store.commit('vender/set_fecha_entrega', model.fecha_entrega ? model.fecha_entrega.split('T')[0] : null)
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 
 			this.$store.commit('vender/setObservations', model.observations)
@@ -354,6 +455,30 @@ export default {
 				this.$store.commit('vender/set_descuento_puntos', null)
 			}
 
+			/*
+				🔴 EL TOTAL FORZADO DE LA VENTA O DEL PRESUPUESTO QUE SE ESTA EDITANDO. VA ANTES
+				DEL setTotal() DE ABAJO, POR EL MISMO MOTIVO QUE EL CANJE DE PUNTOS.
+
+				setTotal() recalcula el total desde los items y aplica el ajuste al final leyendo
+				`vender.forzar_total_monto` del store. Si el monto no esta commiteado todavia, el
+				total vuelve al bruto: abrir para editar una venta que se habia forzado en 4.000 la
+				mostraba en 4.012, y guardar asi le cobraba al cliente 12 pesos que nadie le
+				aviso que iba a pagar. Es exactamente el agujero que tenia la version vieja de esta
+				extension, que no restauraba nada.
+
+				Se commitea siempre, tambien la rama sin forzado: abrir una venta sin ajuste
+				despues de una con ajuste tiene que dejar el campo limpio, y depender de que
+				limpiar_vender() haya pasado antes es como aparecen estos bugs.
+
+				Number() y no la verdad del valor a secas: es decimal(22,2) y Laravel lo serializa
+				como string, asi que un "0.00" seria truthy.
+			*/
+			if (Number(model.forzar_total_monto)) {
+				this.$store.commit('vender/set_forzar_total_monto', Number(model.forzar_total_monto))
+			} else {
+				this.$store.commit('vender/set_forzar_total_monto', null)
+			}
+
 			// this.$store.commit('vender/setTotal')
 			this.setTotal()
 			// Log limpio solo para cambios posteriores a la carga de la venta a editar.
@@ -393,7 +518,7 @@ export default {
 				form.append('observation', att.observation || '')
 				try {
 					await axios.post(
-						process.env.VUE_APP_API_URL + '/api/sale-article-attachment',
+						env('VUE_APP_API_URL') + '/api/sale-article-attachment',
 						form,
 						{ headers: { 'Content-Type': 'multipart/form-data' } }
 					)
@@ -430,7 +555,13 @@ export default {
 				afip_information_id: this.afip_information_id,
 				sale_type_id: this.sale_type_id,
 				address_id: this.address_id,
-				employee_id: this.employee_id,
+				/*
+					Del store y no del computed, como la lista de precios en el PUT: es lo que
+					set_datos_para_actualizar_en_vender() restauro de la venta (null incluido, ver
+					el comentario ahi), y asi viaja aunque quien llame no tenga el computed
+					employee_id de mixins/vender.js.
+				*/
+				employee_id: this.$store.state.vender.employee_id,
 				to_check: this.to_check,
 				checked: this.checked,
 				confirmed: this.confirmed,
@@ -441,6 +572,12 @@ export default {
 				seller_id: this.seller_id,
 				sub_total: this.sub_total,
 				total: this.total,
+				/*
+					Total forzado. Viaja siempre, con valor o en null: el motivo completo esta en el
+					PUT de store/vender/previus_sales.js, que es donde alguien lo va a querer sacar
+					por "limpieza".
+				*/
+				forzar_total_monto: this.$store.state.vender.forzar_total_monto,
 				fecha_entrega: this.fecha_entrega,
 				valor_dolar: this.valor_dolar,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
@@ -473,7 +610,14 @@ export default {
 			.catch(err => {
 				console.log(err)
 
-				/* El backend rechaza con 409 y un motivo legible (venta facturada, cerrada o con varios metodos de pago) */
+				/*
+					El backend rechaza con 409 y un motivo legible (venta facturada, cerrada o con
+					varios metodos de pago), o con 422 (sin lista de precios en una cuenta que vende
+					con listas). Se muestra el mensaje y la edicion QUEDA ABIERTA, con lo que el
+					vendedor corrigio adentro: nada de cancelPreviusSale() aca. Este catch corre
+					desde que la action del store relanza el error (antes lo tragaba con un alert y
+					el .then de arriba daba la venta por actualizada).
+				*/
 				if (
 					err.response
 					&& err.response.data
@@ -495,6 +639,16 @@ export default {
 
 			this.limpiar_vender()
 			// this.resetear_vender()
+
+			/*
+				🔴 Igual que resetear_vender, y por lo mismo. limpiar_vender no toca AFIP, y hasta
+				esta mision cancelar la edicion (que corre tambien despues de un PUT exitoso)
+				dejaba el punto de venta y el tipo de comprobante de la venta editada para la venta
+				SIGUIENTE. Como set_afip_tipo_comprobante le pone el tipo al elegir cliente y
+				check_afip pasa, resetear_vender la FACTURABA sola al guardar, con un punto de venta
+				que nadie eligio: el select se veia verde, pero nadie lo toco.
+			*/
+			this.limpiar_afip()
 
 			this.setDefaultPaymentMethod(true)
 

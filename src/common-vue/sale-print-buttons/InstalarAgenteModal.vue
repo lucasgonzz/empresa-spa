@@ -244,6 +244,13 @@ export default {
 	margin-left: -6px
 	margin-right: -6px
 
+// En oscuro --bg-card-secondary resuelve al gris neutro del tema y el paso perdería el tinte de
+// "atención" que lo distingue de los demás. El rgba sobre el acento ámbar se apoya en --bg-card
+// sin pelearse con él, igual que los fondos de estado de Cajas en _dark_theme.sass. En claro
+// sigue el #fff8e6 del fallback de arriba: el token no existe en ese modo.
+html.dark-mode .instalar-agente__paso--atencion
+	background: rgba(255, 193, 7, 0.10)
+
 .instalar-agente__numero
 	flex: 0 0 auto
 	width: 30px

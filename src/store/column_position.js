@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
@@ -286,9 +287,11 @@ export default {
 				url += '/'+state.until_date
 			}
 			if (state.use_per_page) {
-				url += '?page='+state.page 
+				url += '?page='+state.page
 			}
-			return axios.get(url)
+			// Configuración de columnas del importador: es decorativa, la pantalla arma igual
+			// sin ella. No hace falta el cartel global de conexión (interceptor de `main.js`).
+			return axios.get(url, { skip_global_error_event: true })
 			.then(res => {
 				if (state.use_per_page) {
 					let loaded_models = res.data.models.data

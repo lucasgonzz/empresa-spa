@@ -19,6 +19,13 @@ export default {
 			type: 'image',
 		},
 		{
+			text: 'Descripción',
+			key: 'descripcion',
+			type: 'textarea',
+			value: '',
+			description: 'Se muestra en la tienda online cuando el catálogo de categorías está activo en el Inicio.',
+		},
+		{
 			text: 'Margen de ganancia',
 			key: 'percentage_gain',
 			type: 'number',

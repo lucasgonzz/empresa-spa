@@ -27,7 +27,51 @@ jobs:
           VERSION=$(echo "$MSG" | grep -oP '(?<=\[release:)[^\]]+')
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
+      # El build del SPA sale de acá, UNA vez por versión, y viaja como asset del release: el admin
+      # lo baja en cada upgrade en vez de compilar en el VPS de producción. Va sin .env a propósito:
+      # los valores por frente (URL de la API, URL del SPA, Pusher...) los lee la SPA en runtime de
+      # config.js (ver src/runtime_config.js), así que el mismo zip sirve para todos los clientes.
+      #
+      # 🔴 EL BUILD VA ANTES DEL MERGE A MASTER, y el orden importa. El admin ya no compila en el
+      # VPS cuando falta el asset: falla el upgrade. Una versión publicada sin su zip sería una
+      # versión que no se puede desplegar, así que si el build falla acá el job corta ANTES de
+      # tocar master: no queda ni merge, ni tag, ni release. Se arregla en develop y se vuelve a
+      # pushear el [release:X.Y.Z], o se relanza el job si el fallo fue transitorio.
+      #
+      # Se compila sobre el árbol de develop, que es exactamente el que master va a recibir en el
+      # merge --no-ff de abajo (master es ancestro de develop en este punto).
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Compilar el SPA
+        # El `set NODE_OPTIONS=...` del script build de package.json es sintaxis de Windows: en Linux
+        # no exporta nada. Por eso la variable va acá (webpack 4 la necesita en Node 17 o más nuevo).
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+        run: npm run build
+
+      - name: Empaquetar dist
+        # index.html queda en la raíz del zip: el admin lo descomprime directo en el directorio del
+        # SPA. El `.` incluye los dotfiles, o sea el .htaccess, sin el cual ninguna ruta profunda
+        # de la SPA resuelve. El unzip -l de abajo lo deja asentado en el log del job.
+        run: |
+          cd dist
+          zip -r ../empresa-spa-v${{ steps.version.outputs.VERSION }}-dist.zip .
+          cd ..
+          ZIP=empresa-spa-v${{ steps.version.outputs.VERSION }}-dist.zip
+          unzip -l "$ZIP" | grep -qE ' index\.html$' || { echo 'FALTA index.html en la raiz del zip'; exit 1; }
+          unzip -l "$ZIP" | grep -qE ' \.htaccess$'   || { echo 'FALTA .htaccess en la raiz del zip'; exit 1; }
+          unzip -l "$ZIP" | tail -1
+
       - name: Merge develop a master
+        # dist/ está en el .gitignore y el zip queda como archivo sin trackear: ninguno de los dos
+        # existe en master, así que el checkout no tiene con qué chocar.
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
@@ -42,5 +86,6 @@ jobs:
           name: v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
           target_commitish: master
+          files: empresa-spa-v${{ steps.version.outputs.VERSION }}-dist.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

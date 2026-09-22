@@ -46,24 +46,70 @@ $vender_stages_padding: 8px
 	&--no-collapse
 		display: contents
 
-/* Acentos por número de etapa (orden en .vender-stages) */
+/* Acentos por número de etapa (orden en .vender-stages): header teñido con el color de la */
+/* sección + borde de ese mismo color en toda la tarjeta ("Opción A+B" del mockup validado por */
+/* Lucas el 17/9/2026, https://claude.ai/artifact/TDnkeFMHxS9nrVpUjkndmY). Reemplaza al acento de */
+/* borde izquierdo de 4px que tenía el header solo: con el borde de color ya en toda la tarjeta, */
+/* un acento aparte quedaba señalando lo mismo dos veces. */
+/* El tono de reposo (header cerrado) es más claro que el de header abierto -- calca la relación */
+/* que ya tenían --bg-section/--bg-hover antes de este cambio, así que la apertura de la etapa */
+/* se sigue notando por contraste, no solo por el chevron. */
+/* Los selectores de fondo le ganan por especificidad a `.vender-stage__header` y a */
+/* `.vender-stage--open > .vender-stage__header` (base, más abajo en este archivo) sin depender */
+/* del orden: 4-5 clases/pseudo-clases contra 1-2. border-bottom-color y box-shadow del header */
+/* siguen viniendo de la regla base -- acá solo se pisa el fondo. */
 .vender-stages .vender-stage:nth-child(1) .vender-stage__header
-	border-left: 4px solid var(--color-primary, #007bff)
+	background: rgba(0, 123, 255, .09)
+
+	&:hover
+		background: rgba(0, 123, 255, .16)
+
+.vender-stages .vender-stage--open:nth-child(1) > .vender-stage__header
+	background: rgba(0, 123, 255, .13)
+
+	&:hover
+		background: rgba(0, 123, 255, .18)
 
 .vender-stages .vender-stage:nth-child(1) .vender-stage__number
 	background: var(--color-primary, #007bff)
 
-.vender-stages .vender-stage:nth-child(2) .vender-stage__header
-	border-left: 4px solid #198754
+/* Etapa 1: borde de tarjeta completo, en vez del neutro de la regla base .vender-stage. */
+.vender-stages .vender-stage:nth-child(1)
+	border-color: rgba(0, 123, 255, .45)
+	border-width: 1.5px
+
+/* Etapa 2: siempre "abierta" (--no-collapse), un solo tono de header -- no hay estado cerrado */
+/* que distinguir. El borde de la tarjeta completa NO se puede tocar acá: la etapa 2 es */
+/* display: contents (ver .vender-stage--no-collapse) y no genera caja propia, así que su chasis */
+/* lo dibujan .vender-stage__pinned y .vender-stage__body--scroll por separado, más abajo. */
+.vender-stages .vender-stage:nth-child(2) .vender-stage__header--no-collapse
+	background: rgba(25, 135, 84, .13)
+
+	&:hover
+		background: rgba(25, 135, 84, .18)
 
 .vender-stages .vender-stage:nth-child(2) .vender-stage__number
 	background: #198754
 
 .vender-stages .vender-stage:nth-child(3) .vender-stage__header
-	border-left: 4px solid #e67700
+	background: rgba(230, 119, 0, .09)
+
+	&:hover
+		background: rgba(230, 119, 0, .16)
+
+.vender-stages .vender-stage--open:nth-child(3) > .vender-stage__header
+	background: rgba(230, 119, 0, .13)
+
+	&:hover
+		background: rgba(230, 119, 0, .18)
 
 .vender-stages .vender-stage:nth-child(3) .vender-stage__number
 	background: #e67700
+
+/* Etapa 3: borde de tarjeta completo, mismo criterio que la etapa 1. */
+.vender-stages .vender-stage:nth-child(3)
+	border-color: rgba(230, 119, 0, .45)
+	border-width: 1.5px
 
 /* Header de etapa: número + textos + chevron */
 /* Las tres superficies son distintas A PROPOSITO y no hay que unificarlas: el body de la etapa va */
@@ -110,7 +156,10 @@ $vender_stages_padding: 8px
 	position: sticky
 	top: $vender_stage_gap - $vender_stages_padding
 	z-index: 10
-	border: 1px solid var(--color-border-tertiary, #dee2e6)
+	/* Verde de la etapa 2 (mismo tono que .vender-stage:nth-child(3) usa para naranja, ver arriba): */
+	/* acá va literal y no por nth-child porque esta clase es exclusiva de la etapa 2 -- no hay */
+	/* otra etapa que la use y que necesite un color distinto. */
+	border: 1.5px solid rgba(25, 135, 84, .45)
 	border-bottom: none
 	border-radius: 6px 6px 0 0
 	background: var(--bg-card, #fff)
@@ -281,7 +330,9 @@ $vender_stages_padding: 8px
 	/* tarjeta ya no genera caja -- ver .vender-stage--no-collapse. */
 	&--scroll
 		padding-top: 0
-		border: 1px solid var(--color-border-tertiary, #dee2e6)
+		/* Mismo verde y mismo motivo que .vender-stage__pinned: literal porque esta clase también */
+		/* es exclusiva de la etapa 2. */
+		border: 1.5px solid rgba(25, 135, 84, .45)
 		border-top: none
 		border-radius: 0 0 6px 6px
 		background: var(--bg-card, #fff)

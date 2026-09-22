@@ -10,13 +10,14 @@
 	</b-button>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	props: {
 		model: Object,
 	},
 	methods: {
 		exportarExcel() {
-            var link = process.env.VUE_APP_API_URL+'/provider-orders/export/'+this.model.id
+            var link = env('VUE_APP_API_URL')+'/provider-orders/export/'+this.model.id
             window.open(link)
 		}
 	}

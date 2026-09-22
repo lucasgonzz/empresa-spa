@@ -10,7 +10,8 @@
 	size="lg"
 	:title="title"
 	:id="id"
-	hide-footer>
+	hide-footer
+	@show="al_abrir_modal_import">
 
 		<div
 		v-if="model_name == 'article'">
@@ -674,6 +675,7 @@
 import * as XLSX from 'xlsx/xlsx.mjs'
 import Advises from '@/common-vue/components/import/Advises'
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import { env } from '@/runtime_config'
 export default { 
 	components: {
 		Advises,
@@ -821,16 +823,6 @@ export default {
 	},
 	mounted() {
 		console.log('Modal Import mounted')
-	    this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
-	        if (modalId === this.id) {
-				this.hubo_un_error = false
-				this.demora_de_todas_las_solicitud = 0
-				console.log('Se puso hubo_un_error en '+this.hubo_un_error)
-				this.set_default_columns_positions()
-				this.load_import_stores()
-				this.$store.commit('column_position/set_selected_column_position_id', 0)
-	        }
-	    })
 	},
 	watch: {
 		/*
@@ -876,6 +868,15 @@ export default {
 		},
 	},
 	methods: {
+		// Se dispara con el @show del propio modal de importacion (el que tiene :id="id").
+		al_abrir_modal_import() {
+			this.hubo_un_error = false
+			this.demora_de_todas_las_solicitud = 0
+			console.log('Se puso hubo_un_error en '+this.hubo_un_error)
+			this.set_default_columns_positions()
+			this.load_import_stores()
+			this.$store.commit('column_position/set_selected_column_position_id', 0)
+		},
 		excel_column(column, _default) {
 			// console.log('excel_column: '+column.group_title)
 			if (column.group_title) {
@@ -1182,7 +1183,7 @@ export default {
 		    return number;
 		},
 		base_export() {
-			let url = process.env.VUE_APP_API_URL+'/'+this.model_name+'-base/excel/export'
+			let url = env('VUE_APP_API_URL')+'/'+this.model_name+'-base/excel/export'
 			window.open(url)		
 		},
 		onFileChange(event) {
@@ -1674,8 +1675,8 @@ export default {
 
 				this.$bvModal.hide(this.id)
 
-				if (!this.hubo_un_error && this.model_name == 'article') {
-					
+				if (!this.hubo_un_error && (this.model_name == 'article' || this.model_name == 'provider_order')) {
+
 					this.$toast.success('Estamos precesando tu archivo, te notificaremos cuando termine', {
 						duration: 7000
 					})
@@ -1806,10 +1807,18 @@ export default {
 			.then(res => {
 				console.log('se envio')
 				console.log(res)
-				
-				if (this.model_name == 'article') {
 
+				/*
+				 * El backend ya despachó el procesamiento a la cola (misión
+				 * `import-excel-compras-chunks`, 14/9/2026: antes solo pasaba para 'article',
+				 * porque era el único model_name que corría asíncrono). Sin esto el usuario no
+				 * ve ningún progreso hasta que la importación de la compra termina sola.
+				 */
+				if (this.model_name == 'article' || this.model_name == 'provider_order') {
 					this.load_import_status()
+				}
+
+				if (this.model_name == 'article') {
 					this.guardar_column_position()
 				}
 

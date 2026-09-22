@@ -175,6 +175,7 @@
 </template>
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import { env } from '@/runtime_config'
 
 /**
  * Formulario en memoria: alineado con sale_delivery_infos y con el merge cliente + overrides.
@@ -290,7 +291,7 @@ export default {
 				.then(function (res) {
 					self.generando_pdf = false
 					self.$store.commit('sale/add', res.data.model)
-					var url = process.env.VUE_APP_API_URL + '/sale/etiqueta-envio/pdf/' + self.sale.id
+					var url = env('VUE_APP_API_URL') + '/sale/etiqueta-envio/pdf/' + self.sale.id
 						+ '?sale_sender_info_id=' + self.selected_sender_id
 					window.open(url)
 					self.$bvModal.hide(self.modal_remitente_id)

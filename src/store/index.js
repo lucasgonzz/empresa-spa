@@ -112,6 +112,7 @@ import reportes from '@/store/reportes/index'
 import article_pre_import_range from '@/store/article_pre_import_range'
 import unidad_medida from '@/store/unidad_medida'
 import cheque from '@/store/cheque'
+import cheque_banco from '@/store/cheque_banco'
 import expense from '@/store/expense'
 import expense_concept from '@/store/expense_concept'
 import current_acount_payment_method_discount from '@/store/current_acount_payment_method_discount'
@@ -119,6 +120,8 @@ import afip_selected_payment_method from '@/store/afip_selected_payment_method'
 import unidad_frecuencia from '@/store/unidad_frecuencia'
 import pending from '@/store/pending'
 import pending_completed from '@/store/pending_completed'
+// Agenda de tareas (Alertas -> Agenda). No es un ABM: trabaja con ocurrencias que expande la API.
+import agenda from '@/store/agenda'
 
 import article_discount_blanco from '@/store/article_discount_blanco'
 import article_surchage from '@/store/article_surchage'
@@ -190,6 +193,7 @@ import pdf_column_option from '@/store/pdf_column_option'
 import pdf_column_profile from '@/store/pdf_column_profile'
 
 import platform from '@/store/platform'
+import article_embeddings_estado from '@/store/article_embeddings_estado'
 import platform_connector from '@/store/platform_connector'
 import whatsapp_bot_config from '@/store/whatsapp_bot_config'
 import whatsapp_chat from '@/store/whatsapp_chat'
@@ -197,6 +201,8 @@ import whatsapp_template from '@/store/whatsapp_template'
 
 // Chat del asistente IA (botón flotante + panel, extensión asistente_ia).
 import ai_chat from '@/store/ai_chat'
+// El mostrador del módulo IA (escritorio de informes del dueño, misma extensión).
+import mostrador from '@/store/mostrador'
 
 import price_type_surchage from '@/store/price_type_surchage'
 
@@ -241,10 +247,11 @@ import turno_caja from '@/store/turno_caja'
 import resumen_caja from '@/store/resumen_caja'
 
 import sync_to_tn_article from '@/store/sync_to_tn_article'
-import search_by_cuit from './search_by_cuit'
 import tag from '@/store/tag'
 
 import import_status from '@/store/import_status'
+// Procesos en segundo plano (pildora, modal y estado de la conexion al broadcast).
+import background_processes from '@/store/background_processes'
 import excel_analysis from '@/store/excel_analysis'
 import filter_history from '@/store/filter_history'
 
@@ -391,6 +398,7 @@ export default new Vuex.Store({
         article_pre_import_range,
         unidad_medida,
         cheque,
+        cheque_banco,
         expense,
         expense_concept,
         current_acount_payment_method_discount,
@@ -398,6 +406,7 @@ export default new Vuex.Store({
         unidad_frecuencia,
         pending,
         pending_completed,
+        agenda,
 
         article_discount_blanco,
         article_surchage,
@@ -466,11 +475,13 @@ export default new Vuex.Store({
 
         platform,
         platform_connector,
+        article_embeddings_estado,
         whatsapp_bot_config,
         whatsapp_chat,
         whatsapp_template,
 
         ai_chat,
+        mostrador,
 
         price_type_surchage,
 
@@ -514,10 +525,10 @@ export default new Vuex.Store({
         resumen_caja,
 
         sync_to_tn_article,
-        search_by_cuit,
         tag,
 
         import_status,
+        background_processes,
         excel_analysis,
         filter_history,
 

@@ -29,6 +29,7 @@
 </template>
 <script>
 import listado_articles_source from '@/mixins/listado/listado_articles_source'
+import { env } from '@/runtime_config'
 
 export default {
 	mixins: [listado_articles_source],
@@ -54,7 +55,7 @@ export default {
 				return
 			}
 
-			let link = process.env.VUE_APP_API_URL + '/article/pdf/' + ids.join('-') 
+			let link = env('VUE_APP_API_URL') + '/article/pdf/' + ids.join('-') 
 			
 			if (moneda) {
 				link += '/' + moneda.id

@@ -140,6 +140,68 @@ export default {
 
                 this.$store.commit('import_status/setModel', e.import_status)
             })
+
+            // Registro unico de procesos en segundo plano (importaciones, recalculo de precios,
+            // masivas...): alimenta la pildora de arriba a la derecha y su modal.
+            this.escuchar_procesos_en_segundo_plano()
+		},
+
+		/*
+		 * Se suscribe al canal por el que `empresa-api` avisa el avance de CUALQUIER proceso en
+		 * segundo plano (mision procesos-en-segundo-plano, 18/9/2026): `background_processes.{owner_id}`,
+		 * evento `.BackgroundProcessUpdated` con `{ proceso }`. Cada evento reemplaza al proceso
+		 * por id en el store (o lo da de alta), asi que la lista siempre refleja el ultimo estado
+		 * que se emitio -- no se acumula nada.
+		 *
+		 * El store background_processes es del SPA de empresa; este mixin lo comparten otros
+		 * proyectos, asi que se chequea que exista antes de usarlo (mismo criterio que
+		 * esta_mirando_este_analisis).
+		 *
+		 * La guarda de "no suscribirse dos veces" es la misma que usa src/mixins/broadcast.js
+		 * para order.created: listenChannels() corre en el watch de `authenticated`, que puede
+		 * dispararse mas de una vez en la misma sesion, y sin esto se acumularian listeners (cada
+		 * evento commitearia N veces). El nombre del canal suscripto vive en el store y no en un
+		 * data() de este mixin porque el mixin es GLOBAL (Vue.mixin(app) en main.js): un data()
+		 * aca le agregaria una propiedad reactiva a cada componente del sistema.
+		 *
+		 * 🔴 El Echo.leave va ANTES de asignar el canal nuevo: si en la misma pestaña se cierra
+		 * sesion y entra un usuario de OTRO comercio, dejar viva la suscripcion anterior le
+		 * mostraria a este usuario los procesos del comercio de antes.
+		 *
+		 * 🔴 Es .listen('.BackgroundProcessUpdated'), NO .notification(): lo que viaja es un
+		 * ShouldBroadcastNow con broadcastAs(), igual que .ImportStatusUpdated de aca arriba. Un
+		 * .notification() sobre este canal no recibiria NADA NUNCA, sin ningun error a la vista.
+		 *
+		 * @return {void}
+		 */
+		escuchar_procesos_en_segundo_plano() {
+			if (!this.$store.state.background_processes) {
+				return
+			}
+			if (!this.Echo || !this.owner_id) {
+				return
+			}
+
+			/** Canal publico del comercio, el mismo dueño que import_status.{id}. */
+			const canal = 'background_processes.' + this.owner_id
+			/** Canal al que ya esta suscripta esta sesion (null si ninguno). */
+			const canal_anterior = this.$store.state.background_processes.canal_suscripto
+
+			if (canal_anterior === canal) {
+				return
+			}
+			if (canal_anterior) {
+				this.Echo.leave(canal_anterior)
+			}
+			this.$store.commit('background_processes/setCanalSuscripto', canal)
+
+			this.Echo.channel(canal)
+			.listen('.BackgroundProcessUpdated', (e) => {
+				if (!e || !e.proceso) {
+					return
+				}
+				this.$store.commit('background_processes/upsert', e.proceso)
+			})
 		},
 
 		/*

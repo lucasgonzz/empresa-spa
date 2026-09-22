@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
@@ -80,6 +81,29 @@ export default function __base_store(options = {}) {
 			filter_per_page: 50,
 			loading_filtered: false,
 
+			// Token de "intencion vigente" sobre esta tabla: que fecha/rango mira el usuario, o que
+			// busqueda disparo. Lo incrementa `incrementar_consulta_vigente_token`, llamada desde
+			// getModels (cambio de fecha, de rango o de modo, vía ControlFecha.vue) y al arrancar
+			// runFilter/runGlobalSearch (busqueda nueva o cambio de pagina). Cada una de esas acciones
+			// captura el valor vigente ANTES de salir a pedir al backend, y en su `.then()` solo
+			// commitea el resultado si el token no cambio mientras la request viajaba.
+			//
+			// 🔴 Guarda puntual contra la carrera documentada el 21/9/2026 (mision
+			// compras-tabla-vacia-por-fecha, cliente Arfren): sin esto, una respuesta de
+			// runGlobalSearch/runFilter que llega DESPUES de que el usuario ya cambio de dia
+			// (ControlFecha.vue::changeFromDate, que resetea is_filtered=false y pide el dia nuevo con
+			// getModels) pisa is_filtered=true + filtered=[...] con datos que no tienen nada que ver
+			// con el dia que la pantalla esta mostrando ahora. display/Index.vue renderiza `filtered`
+			// en cuanto is_filtered es true, asi que la tabla queda mostrando el resultado viejo de la
+			// busqueda (a veces vacio) mientras el total (que no mira is_filtered, lee `models`
+			// directo) ya tiene el valor correcto del dia nuevo. Sin error de consola ni de red: la
+			// respuesta que pierde la carrera es un 200 normal, solo que tardio.
+			//
+			// No sacar este guard "para simplificar" ni reemplazarlo por un debounce/throttle en el
+			// input: el problema no es que se disparen muchas requests, es que pueden volver en
+			// cualquier orden, y el guard es lo unico que garantiza que gane la mas nueva.
+			consulta_vigente_token: 0,
+
 			delete: null,
 			delete_image_prop: null,
 			delete_image_model: null,
@@ -91,6 +115,14 @@ export default function __base_store(options = {}) {
 			loading: false,
 
 			props_to_show: [],
+
+			// Columnas de la tabla por ámbito de vista: { por_entregar: [...props] }. Existe porque
+			// una misma tabla puede mirarse desde más de una pantalla con columnas distintas sin
+			// pisar `props_to_show`, que es la del listado principal del módulo. El primer caso es
+			// Ventas > Por Entregar, que comparte el store `sale` con el listado de Ventas
+			// (preference_type `table_por_entregar`, ver column_preferences_helper.js). Arranca
+			// vacío y ningún módulo lo escribe salvo el que lo necesita.
+			props_to_show_por_ambito: {},
 
 			// Flag que indica si el estado filtered fue cargado por un buscador rápido sin usar el FilterForm (ej. el buscador general).
 			// Permite distinguir entre "filtrado por formulario" y "filtrado por buscador rápido".
@@ -145,6 +177,14 @@ export default function __base_store(options = {}) {
 			// criterio puesto, solo el listado inicial.
 			listado_por_defecto: false,
 
+			// Suma de saldos (pesos y dólares) de TODOS los registros que matchean el filtro vigente
+			// en el backend, sin importar la página en la que está parado el usuario. La llena
+			// runGlobalSearch con lo que devuelve globalSearch() del backend (SUM en SQL sobre el
+			// mismo WHERE que arma la tabla, sin LIMIT/OFFSET). `null` para los modelos que no tienen
+			// columnas de saldo (el backend solo lo calcula si la tabla tiene `saldo_pesos`) y para
+			// cuando todavía no corrió ninguna búsqueda.
+			saldos_filtrados: null,
+
 			/**
 			 * Origen del último dropdown masivo (filtrados vs seleccionados).
 			 * Lo usan modales globales fuera del árbol del menú desplegable.
@@ -160,6 +200,17 @@ export default function __base_store(options = {}) {
 			// Si ya se pidió una vez en esta sesión: evita re-pedir en cada `created()` que la use.
 			options_loaded: false,
 			loading_options: false,
+
+			// Si el listado de este store falla por un corte de red (sin `response`), NO se
+			// muestra el cartel global "No pudimos conectarnos con el servidor" (interceptor de
+			// `main.js`, config `skip_global_error_event`).
+			//
+			// Arranca en `false` y ningún módulo lo prende salvo el que lo necesita: para todos
+			// los demás stores construidos con este factory, esto no cambia absolutamente nada.
+			// Pensado para listados DECORATIVOS de una pantalla que ya se arma sin ellos (ver
+			// `article_pdf.js`) — nunca para el listado principal de un módulo: ahí, si el pedido
+			// se cae, el cartel tiene que seguir avisando.
+			omitir_cartel_de_conexion_en_listado: false,
 		}
 
 		/**
@@ -188,6 +239,20 @@ export default function __base_store(options = {}) {
 	let base_mutations = {
 		set_props_to_show(state, value) {
 			state.props_to_show = value
+		},
+		/**
+		 * Fija las columnas de un ámbito de vista (ver state.props_to_show_por_ambito).
+		 * Reemplaza el objeto entero en vez de asignar la clave: una clave nueva sobre un objeto
+		 * ya observado no es reactiva en Vue 2 sin Vue.set, y la vista no se enteraría.
+		 *
+		 * @param {Object} state
+		 * @param {{ambito: string, props: Array}} value
+		 */
+		set_props_to_show_por_ambito(state, value) {
+			state.props_to_show_por_ambito = {
+				...state.props_to_show_por_ambito,
+				[value.ambito]: value.props,
+			}
 		},
 		set_route_prefix(state, value) {
 			state.route_prefix = value
@@ -321,6 +386,19 @@ export default function __base_store(options = {}) {
 		setIsFiltered(state, value) {
 			state.is_filtered = value
 		},
+		/**
+		 * Incrementa el token de "intencion vigente" (ver doc completa en `state.consulta_vigente_
+		 * token`). Cualquier accion que represente que el usuario paso a otra cosa —cambio de fecha,
+		 * nueva busqueda, cambio de pagina— la llama ANTES de salir a pedir al backend, para que una
+		 * respuesta de la intencion anterior que siga en vuelo se pueda detectar como vencida cuando
+		 * llegue.
+		 *
+		 * @param {Object} state Estado del modulo.
+		 * @returns {void}
+		 */
+		incrementar_consulta_vigente_token(state) {
+			state.consulta_vigente_token++
+		},
 		add(state, value) {
 			let index = state.models.findIndex(item => {
 				return item.id == value.id
@@ -445,6 +523,16 @@ export default function __base_store(options = {}) {
 		},
 		setTotalFilterResults(state, value) {
 			state.total_filter_results = value
+		},
+		/**
+		 * Persiste (o limpia, con `null`) la suma de saldos que devolvió el backend para el filtro
+		 * vigente. Ver la doc de `saldos_filtrados` en el state.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Object|null} value `{ saldo_pesos, saldo_dolares? }` o `null`.
+		 */
+		setSaldosFiltrados(state, value) {
+			state.saldos_filtrados = value
 		},
 		addFiltered(state, value) {
 			state.filtered = state.filtered.concat(value)
@@ -613,6 +701,10 @@ export default function __base_store(options = {}) {
 	/** Actions base (copiadas de `src/store/__base.js` y usadas por la mayoría de stores). */
 	let base_actions = {
 		getModels({commit, state, dispatch}) {
+			// Cambiar de fecha/rango/modo (ControlFecha.vue) es una intencion nueva del usuario:
+			// invalida cualquier runFilter/runGlobalSearch que siga en vuelo de la intencion anterior.
+			// Ver doc completa en `state.consulta_vigente_token`.
+			commit('incrementar_consulta_vigente_token')
 			// Con el modo selección manual activo, lo tildado a mano se acumula entre búsquedas: no
 			// se pisa acá. Se limpia al apagar el modo (BtnSeleccion.vue) o al salir del módulo
 			// (beforeRouteLeave de cada vista), nunca por pedir datos de vuelta.
@@ -621,6 +713,7 @@ export default function __base_store(options = {}) {
 			}
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
+			commit('setSaldosFiltrados', null)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
 			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
@@ -657,7 +750,9 @@ export default function __base_store(options = {}) {
 			if (state.use_per_page) {
 				url += '?page=' + state.page + '&per_page=' + state.per_page
 			}
-			return axios.get(url)
+			return axios.get(url, {
+				skip_global_error_event: state.omitir_cartel_de_conexion_en_listado,
+			})
 			.then(res => {
 				if (state.use_per_page) {
 					let loaded_models = res.data.models.data
@@ -803,6 +898,12 @@ export default function __base_store(options = {}) {
 			/** Nombre plural en español del modelo para el mensaje de feedback al usuario. */
 			let plural_model_name = generals.methods.plural(state.model_name)
 
+			// Esta llamada pasa a ser la intencion vigente (ver doc de consulta_vigente_token). Se
+			// captura el token DESPUES de incrementarlo: es el numero que esta request tiene que
+			// seguir viendo vigente cuando vuelva para que su resultado siga valiendo.
+			commit('incrementar_consulta_vigente_token')
+			let token_de_esta_consulta = state.consulta_vigente_token
+
 			commit('auth/setMessage', 'Filtrando ' + plural_model_name, {root: true})
 			commit('auth/setLoading', true, {root: true})
 
@@ -812,8 +913,20 @@ export default function __base_store(options = {}) {
 				per_page: per_page,
 			})
 				.then(res => {
+					// El overlay de carga se apaga siempre, gane o pierda la carrera: nada mas lo
+					// prende a partir de aca, y dejarlo pisado con "Filtrando..." serio peor que el bug
+					// que este guard corrige.
 					commit('auth/setLoading', false, {root: true})
 					commit('auth/setMessage', '', {root: true})
+
+					// 🔴 Guard de carrera (ver doc completa en `state.consulta_vigente_token`): si el
+					// token vigente cambio mientras esta request viajaba, el usuario ya paso a otra
+					// cosa (cambio de fecha, otra busqueda) y esta respuesta llego tarde. Se descarta
+					// sin commitear nada de lo que sigue: no hace falta ni loguearlo, es trafico normal
+					// de una request que perdio la carrera.
+					if (state.consulta_vigente_token !== token_de_esta_consulta) {
+						return
+					}
 
 					/** Filas devueltas por la búsqueda (puede ser vacío y sigue siendo filtrado activo). */
 					let rows = res.data.data || []
@@ -857,6 +970,14 @@ export default function __base_store(options = {}) {
 		 * @returns {Promise}
 		 */
 		runGlobalSearch({commit, state}, payload = {}) {
+			// Esta llamada pasa a ser la intencion vigente (ver doc de consulta_vigente_token), sea
+			// busqueda nueva o cambio de pagina: las dos formas pueden solaparse con un cambio de
+			// fecha (getModels) o entre si. Se captura el token DESPUES de incrementarlo: es el numero
+			// que esta request tiene que seguir viendo vigente cuando vuelva para que su resultado
+			// siga valiendo.
+			commit('incrementar_consulta_vigente_token')
+			let token_de_esta_consulta = state.consulta_vigente_token
+
 			/**
 			 * Payload completo a enviar: si viene con `props` es una búsqueda nueva (se persiste,
 			 * incluyendo `order_by`/`order_direction` si vinieron, ya que se persiste el payload entero);
@@ -980,9 +1101,24 @@ export default function __base_store(options = {}) {
 				cuerpo
 			)
 				.then(res => {
+					// El overlay de carga se apaga siempre, gane o pierda la carrera: nada mas lo
+					// prende a partir de aca, y dejarlo pisado con "Buscando..." serio peor que el bug
+					// que este guard corrige.
 					if (!silencioso) {
 						commit('auth/setLoading', false, {root: true})
 						commit('auth/setMessage', '', {root: true})
+					}
+
+					// 🔴 Guard de carrera (ver doc completa en `state.consulta_vigente_token`): si el
+					// token vigente cambio mientras esta request viajaba, el usuario ya paso a otra
+					// cosa (cambio de fecha, otra busqueda, otra pagina) y esta respuesta llego tarde.
+					// Se descarta sin commitear nada de lo que sigue: no hace falta ni loguearlo, es
+					// trafico normal de una request que perdio la carrera. Es la causa concreta y ya
+					// verificada del bug de Compras del 21/9/2026 (cliente Arfren): sin este corte,
+					// esta misma respuesta pisaba is_filtered=true + filtered=[...] DESPUES de que
+					// ControlFecha.vue::changeFromDate ya habia pedido el dia nuevo con getModels.
+					if (state.consulta_vigente_token !== token_de_esta_consulta) {
+						return
 					}
 
 					/** Filas devueltas: el endpoint responde envuelto en `models` (paginador Laravel). */
@@ -997,6 +1133,9 @@ export default function __base_store(options = {}) {
 					commit('setIsFiltered', true)
 					commit('setTotalFilterPages', res.data.models ? res.data.models.last_page : null)
 					commit('setTotalFilterResults', res.data.models ? res.data.models.total : 0)
+					// Suma de saldos del universo filtrado completo (sin paginar), calculada en el
+					// backend. `null` en los modelos que no tienen columnas de saldo.
+					commit('setSaldosFiltrados', res.data.saldos || null)
 					// Marca que lo que se ve salio del buscador general de texto libre y NO de un filtro
 					// estructurado. El dropdown del embudo lo lee para deshabilitar Actualizar/Eliminar masivos
 					// (OptionsDropdown.vue, ocultar_actualizar_eliminar_por_filtro).
@@ -1217,6 +1356,10 @@ export default function __base_store(options = {}) {
 			 * Si usa paginación, opcionalmente precarga modelos desde localStorage.
 			 * Esto reduce el tiempo de primera renderización mientras llega el request al server.
 			 */
+			// Mismo guard que en el getModels base (ver doc completa en `state.consulta_vigente_
+			// token`): cambiar de fecha/rango/modo es una intencion nueva del usuario e invalida
+			// cualquier runFilter/runGlobalSearch que siga en vuelo de la intencion anterior.
+			commit('incrementar_consulta_vigente_token')
 			// Mismo guard que en el getModels base: con selección manual activa, no se pisa lo
 			// tildado a mano.
 			if (!state.is_selecteable) {
@@ -1224,6 +1367,7 @@ export default function __base_store(options = {}) {
 			}
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
+			commit('setSaldosFiltrados', null)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
 			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.

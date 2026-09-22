@@ -65,6 +65,7 @@ import CurrentAcountsPago from '@/components/common/current-acounts/pago/Index'
 
 import afip_ticket from '@/mixins/afip_ticket'
 import print_sale from '@/mixins/print_sale'
+import { env } from '@/runtime_config'
 export default {
     mixins: [afip_ticket, print_sale],
     components: {
@@ -100,11 +101,11 @@ export default {
             this.$bvModal.show('current-acounts-pago')
         },
         pdfClient() {
-            var link = process.env.VUE_APP_API_URL+`/sales/pdf/${this.sale.id}/0`
+            var link = env('VUE_APP_API_URL')+`/sales/pdf/${this.sale.id}/0`
             window.open(link)
         },
         pdfCommerce() {
-            var link = process.env.VUE_APP_API_URL+`/sales/pdf/${this.sale.id}/1`
+            var link = env('VUE_APP_API_URL')+`/sales/pdf/${this.sale.id}/1`
             window.open(link)
         },
     }

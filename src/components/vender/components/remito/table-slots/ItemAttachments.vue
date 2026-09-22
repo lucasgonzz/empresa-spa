@@ -158,8 +158,9 @@ class="item-attachments">
 </template>
 <script>
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']
 
@@ -240,7 +241,7 @@ export default {
 	},
 	methods: {
 		file_url(attachment_id) {
-			return process.env.VUE_APP_API_URL + '/api/sale-article-attachment/file/' + attachment_id
+			return env('VUE_APP_API_URL') + '/api/sale-article-attachment/file/' + attachment_id
 		},
 		isImage(filename) {
 			const ext = (filename || '').split('.').pop().toLowerCase()

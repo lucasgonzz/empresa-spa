@@ -24,6 +24,7 @@
 	</div>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	components: {
 		ExcelDropdownOptionItem: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'),
@@ -40,7 +41,7 @@ export default {
 	methods: {
 		exportModels(price_type = null) {
 
-			let url = process.env.VUE_APP_API_URL+'/article-clients/excel/export'
+			let url = env('VUE_APP_API_URL')+'/article-clients/excel/export'
 
 			if (price_type) {
 				url += '/'+price_type.id

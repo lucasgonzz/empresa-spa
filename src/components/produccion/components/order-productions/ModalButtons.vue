@@ -27,6 +27,7 @@
 	</div>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	computed: {
 		model_name() {
@@ -38,15 +39,15 @@ export default {
 	},
 	methods: {
 		printTickets() {
-			let link = process.env.VUE_APP_API_URL+'/order-production/articles-pdf/'+this.model.id
+			let link = env('VUE_APP_API_URL')+'/order-production/articles-pdf/'+this.model.id
 			window.open(link)
 		},
 		printWithoutPrices() {
-            var link = process.env.VUE_APP_API_URL+'/order-production/pdf/'+this.model.id+'/0'
+            var link = env('VUE_APP_API_URL')+'/order-production/pdf/'+this.model.id+'/0'
             window.open(link)
 		},
 		printWithPrices() {
-            var link = process.env.VUE_APP_API_URL+'/order-production/pdf/'+this.model.id+'/1'
+            var link = env('VUE_APP_API_URL')+'/order-production/pdf/'+this.model.id+'/1'
             window.open(link)
 		},
 	}

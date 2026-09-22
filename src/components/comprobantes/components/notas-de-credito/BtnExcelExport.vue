@@ -16,6 +16,7 @@
 
 <script>
 import generals from '@/common-vue/mixins/generals'
+import { env } from '@/runtime_config'
 
 /**
  * Botón de exportación Excel para el listado de notas de crédito.
@@ -39,7 +40,7 @@ export default {
 		 * Si hay `until_date`, se agrega al path como en `__base_store` para el GET del listado.
 		 */
 		export_excel() {
-			let link = process.env.VUE_APP_API_URL + '/nota-credito/excel/export/' + this.from_date
+			let link = env('VUE_APP_API_URL') + '/nota-credito/excel/export/' + this.from_date
 			if (this.until_date != '') {
 				link += '/' + this.until_date
 			}

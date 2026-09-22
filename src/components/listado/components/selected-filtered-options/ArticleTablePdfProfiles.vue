@@ -37,6 +37,7 @@
 <script>
 import generals from '@/mixins/generals'
 import listado_articles_source from '@/mixins/listado/listado_articles_source'
+import { env } from '@/runtime_config'
 
 /**
  * Lista plantillas PdfColumnProfile (model_name article) y abre PDF tabular.
@@ -101,6 +102,11 @@ export default {
 		/**
 		 * Arma URL del PDF y abre en nueva pestaña.
 		 *
+		 * El PDF respeta el orden que el usuario ve en la tabla (misión catalogo-pdf-encabezado,
+		 * 18/9/2026): con origen filtrados viajan también los filtros de solo orden; con origen
+		 * seleccionados, los ids van en el orden de la tabla y no en el de los clics. Del lado
+		 * de la API, ArticleTablePdfHelper conserva ese orden en vez de pisarlo con created_at.
+		 *
 		 * @param {Object}      profile        Perfil con id y name.
 		 * @param {number|null} price_type_id  Lista de precios; query `price_type_id` si aplica.
 		 * @return {void}
@@ -110,7 +116,7 @@ export default {
 				return
 			}
 
-			let link = process.env.VUE_APP_API_URL + '/article/table-pdf?pdf_column_profile_id=' + profile.id
+			let link = env('VUE_APP_API_URL') + '/article/table-pdf?pdf_column_profile_id=' + profile.id
 			let query = ''
 
 			if (price_type_id) {
@@ -123,10 +129,22 @@ export default {
 					this.$toast.error('Aplicá un filtro en el listado', { duration: 4000 })
 					return
 				}
-				let json_data = JSON.stringify(active_filters)
+
+				/*
+					Los filtros de solo orden (la columna que el usuario ordenó con las flechas del
+					header) se suman recién ACÁ, después de haber decidido con los de valor que sí
+					hay filtros: si entraran en resolve_active_filters_for_export(), ordenar una
+					columna en un listado sin filtrar contaría como "filtrar" y en vez del toast de
+					arriba saldría el catálogo ENTERO. Esa doctrina ("ordenar no es filtrar") vive
+					en common-vue/mixins/filters.js y no se toca; lo que cambia es que el orden
+					elegido ahora viaja y el PDF sale en el mismo orden que la tabla.
+				*/
+				let filters_to_send = active_filters.concat(this.resolve_order_only_filters())
+				let json_data = JSON.stringify(filters_to_send)
 				query += '&filters=' + encodeURIComponent(json_data)
 			} else {
-				let ids = this.resolve_article_ids()
+				/* En el orden de la tabla visible, no en el orden en que se tildaron */
+				let ids = this.resolve_article_ids_in_table_order()
 				if (!ids.length) {
 					this.$toast.error('Seleccioná al menos un artículo', { duration: 4000 })
 					return

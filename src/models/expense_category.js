@@ -8,9 +8,9 @@ export default {
 		},
 	],
 	abm_descripcion: {
-		para_que_sirve: 'Agrupa los conceptos de gasto en categorías generales (servicios, impuestos, logística, etc.).',
+		para_que_sirve: 'Agrupa las sub categorías de gasto en categorías generales (servicios, impuestos, logística, etc.).',
 		implicancias: 'Las categorías permiten ver los gastos agrupados en los reportes y analizar en qué se va la plata a nivel general.',
-		como_se_utiliza: 'Creá las categorías y asignáselas a los conceptos de gasto.',
+		como_se_utiliza: 'Creá las categorías y asignáselas a las sub categorías de gasto.',
 		palabras_clave: ['gastos', 'agrupar', 'reportes', 'egresos'],
 	},
 	singular_model_name_spanish: 'Categoria de Gasto',

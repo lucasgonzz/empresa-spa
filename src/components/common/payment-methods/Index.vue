@@ -49,6 +49,9 @@
             :total_a_repartir="total_a_repartir"
             :base_moneda="base_moneda"
             :address_id="effective_address_id"
+            :show_retencion="show_retencion"
+            :show_datos_retencion="show_datos_retencion"
+            :permitir_endoso="permitir_endoso"
             :sobrante_a_repartir="sobrante_a_repartir"
             @add="add_payment_method"
             @remove="remove_payment_method"
@@ -61,6 +64,7 @@
             @update_caja_id="update_caja_id"
 
             @update_payment_method_field="update_payment_method_field"
+            @update_payment_method_fields="update_payment_method_fields"
         >
             <template v-slot:details="{ payment_method }">
                 <slot name="details" :payment_method="payment_method"></slot>
@@ -144,13 +148,89 @@ export default {
             type: String,
             default: null,
         },
+        /**
+         * Ofrece "Retencion" en el desplegable de metodos de pago. Apagada por defecto: la prende
+         * solo el modal de cobro/pago de cuenta corriente. En Vender y en Gastos el metodo no se
+         * ofrece, porque ahi el certificado no se guarda en ningun lado.
+         */
+        show_retencion: {
+            type: Boolean,
+            default: false,
+        },
+        /**
+         * Dibuja los datos del certificado cuando el metodo elegido es una retencion.
+         *
+         * 🔴 ES UNA PROP APARTE DE `show_retencion` A PROPOSITO, y la diferencia no es cosmetica:
+         * en un PAGO A PROVEEDOR el metodo SI se ofrece (si vos sos agente de retencion, le retenes
+         * al proveedor: le pagas menos plata y le cancelas la deuda completa) pero el certificado
+         * NO se pide, porque esa retencion es PRACTICADA y no sufrida — el agente sos vos, no te la
+         * hicieron a vos. `CurrentAcountController::guardar_retenciones_sufridas()` corta con
+         * `if ($model_name != 'client') return 0;`, asi que esos campos no irian a ningun lado.
+         *
+         * Una sola prop para las dos cosas obligaba a elegir entre dibujar campos que no se
+         * guardan o sacarle al proveedor un medio de pago que le corresponde.
+         */
+        show_datos_retencion: {
+            type: Boolean,
+            default: false,
+        },
+        /**
+         * Deja endosar un cheque RECIBIDO en la fila de un método de tipo cheque (misión
+         * cheques-endoso-y-bancos, 21/9/2026). Apagada por defecto: la prenden el pago a
+         * proveedor (`!es_cobro_a_cliente`) y el gasto. En Vender no tiene sentido: una venta
+         * cobrada con cheque es un cheque recibido, no uno que sale.
+         */
+        permitir_endoso: {
+            type: Boolean,
+            default: false,
+        },
     },
     computed: {
+        /**
+         * Los metodos de pago que se ofrecen en el desplegable: los que pasa el padre, o —si no
+         * pasa ninguno— el catalogo entero del store.
+         *
+         * 🔴 SALVO LA RETENCION, QUE SE SACA DONDE NADIE GUARDA EL CERTIFICADO. Este componente lo
+         * usan Vender y Gastos ademas del cobro de cuenta corriente, y los dos primeros caen al
+         * catalogo entero. Ahi el importe de una retencion sumaria al total del comprobante y no
+         * entraria a caja (las dos cosas bien), pero
+         * CurrentAcountController::guardar_retenciones_sufridas() NO corre: no quedaria ningun
+         * certificado y esa retencion no llegaria NUNCA a la Posicion Fiscal. El comercio perderia
+         * el credito fiscal sin un solo aviso, que es exactamente el agujero que esta parte vino a
+         * tapar. `show_retencion` la habilita solo en la cuenta corriente, que es el unico circuito
+         * con el certificado atras.
+         *
+         * ⚠️ ESTE FILTRO NO CUBRE EL SELECT PRINCIPAL DE VENDER. Ese componente
+         * (`vender/.../payment-method-afip-information/PaymentMethod.vue`) arma sus propias
+         * opciones iterando el catalogo derecho, asi que lleva el mismo filtro escrito aparte. Son
+         * dos caminos distintos a la misma lista y se descubrio mirando la pantalla, no leyendo:
+         * si aparece un tercero, va a necesitar lo suyo.
+         *
+         * El id a excluir se resuelve contra el CATALOGO del store por SLUG, no mirando
+         * `opcion.type` ni el nombre: las opciones que pasa Vender son filas decoradas con sus
+         * descuentos y no siempre traen la relacion `type`, y el nombre lo puede cambiar el
+         * comercio desde el ABM. El id es lo unico que tienen todas las formas.
+         *
+         * @returns {Array}
+         */
         __payment_method_options() {
-            if (this.payment_method_options.length) {
-                return this.payment_method_options
+            let opciones = this.payment_method_options.length
+                ? this.payment_method_options
+                : this.$store.state.current_acount_payment_method.models
+
+            if (this.show_retencion) {
+                return opciones
             }
-            return this.$store.state.current_acount_payment_method.models
+
+            let ids_de_retencion = this.$store.state.current_acount_payment_method.models
+                .filter(metodo => metodo.type && metodo.type.slug == 'retencion')
+                .map(metodo => metodo.id)
+
+            if (!ids_de_retencion.length) {
+                return opciones
+            }
+
+            return opciones.filter(opcion => ids_de_retencion.indexOf(opcion.id) === -1)
         },
 
         /**
@@ -460,6 +540,31 @@ export default {
             let pm = Object.assign({}, next[index])
 
             pm[key] = value
+
+            next.splice(index, 1, pm)
+            this.payment_methods_proxy = next
+
+            this.$nextTick(() => this.$emit('changed', next))
+        },
+
+        /**
+         * Varios campos de una fila de una sola vez. Mismo molde que
+         * update_payment_method_field, pero con un patch entero: elegir un cheque a endosar
+         * copia ocho claves (cheque_id, numero, banco, cheque_banco_id, fechas, es_echeq, notes
+         * y amount), y hacerlo de a una eran ocho `changed` al padre con el total del pago
+         * recalculándose a mitad de camino con el monto viejo.
+         *
+         * @param {Number} index Fila del reparto.
+         * @param {Object} patch {clave: valor, ...}
+         * @returns {void}
+         */
+        update_payment_method_fields(index, patch) {
+            if (!patch || typeof patch != 'object') {
+                return
+            }
+
+            let next = this.payment_methods_proxy.slice()
+            let pm = Object.assign({}, next[index], patch)
 
             next.splice(index, 1, pm)
             this.payment_methods_proxy = next

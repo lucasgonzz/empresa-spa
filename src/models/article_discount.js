@@ -5,6 +5,24 @@ export default {
 			key: 'percentage',
 			type: 'number',
 			is_title: true,
+			// Un descuento lleva SOLO porcentaje o SOLO monto, nunca los dos: `aplicar_descuentos`
+			// usa el porcentaje si lo hay y el monto queda inerte, ignorado en silencio.
+			// Ver `deshabilitado_si_hay` en common-vue/components/model/ModelForm.vue.
+			deshabilitado_si_hay: 'amount',
+		},
+		{
+			// Nombre del descuento tal como viene del proveedor. Lo llena el sistema al sincronizar
+			// las bonificaciones del proveedor; el usuario no lo tipea.
+			//
+			// Va `not_show_on_form` y no `only_show`, igual que `provider_id` aca abajo y por la
+			// misma razon: un descuento cargado a mano NUNCA va a tener nombre —el nombre sale del
+			// descuento del proveedor—, y `only_show` le habria dejado un "Sin datos" fijo en el
+			// formulario a todas esas filas, para siempre. Se ve en la tabla, donde una celda vacia
+			// es simplemente una celda vacia.
+			text: 'Nombre',
+			key: 'nombre',
+			type: 'text',
+			not_show_on_form: true,
 		},
 		{
 			// Clasifica el origen/motivo del descuento. Se usa para diferenciar descuentos cargados manualmente de las bonificaciones de proveedor (prompt 262/264)
@@ -27,6 +45,8 @@ export default {
 			key: 'amount',
 			type: 'number',
 			is_price: true,
+			// La otra mitad de la regla: si ya hay porcentaje, el monto se apaga.
+			deshabilitado_si_hay: 'percentage',
 		},
 		{
 			// Prompt 309 (tarea 4): distingue visualmente un descuento heredado de un proveedor

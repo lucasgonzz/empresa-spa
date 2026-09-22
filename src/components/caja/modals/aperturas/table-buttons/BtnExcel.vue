@@ -5,6 +5,7 @@
 	@clicked="excel"></btn-accion>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	props: {
 		apertura_caja: Object,
@@ -14,7 +15,7 @@ export default {
 	},
 	methods: {
 		excel() {
-            let link = process.env.VUE_APP_API_URL+'/apertura-caja/excel/export/'+this.apertura_caja.id
+            let link = env('VUE_APP_API_URL')+'/apertura-caja/excel/export/'+this.apertura_caja.id
             window.open(link)
 		}
 	}

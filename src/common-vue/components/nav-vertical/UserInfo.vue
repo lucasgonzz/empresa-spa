@@ -2,10 +2,24 @@
 	<div
 	class="user-info">
 		<hr>
+		<!--
+			La fila del nombre queda SIEMPRE visible (las demas se esconden con el menu colapsado):
+			adentro, el icono y el nombre siguen apareciendo solo al pasar el mouse, y el punto de
+			conexion al broadcast queda a la derecha, en la franja de 56 px que se ve colapsada.
+		-->
 		<div 
-		class="item">
-			<i class="icon-user"></i>
-			{{ user.name }}
+		class="item item--usuario">
+			<i class="icon-user usuario__icono"></i>
+			<span class="usuario__nombre">
+				{{ user.name }}
+			</span>
+			<span
+			v-if="hay_estado_broadcast"
+			class="estado-broadcast"
+			:class="'estado-broadcast--' + estado_broadcast"
+			:title="titulo_estado_broadcast"
+			data-testid="estado-broadcast"
+			:data-estado="estado_broadcast"></span>
 		</div>
 
 		<div
@@ -101,6 +115,41 @@ export default {
 		dark_mode_activo() {
 			return Boolean(this.user && this.user.dark_mode)
 		},
+		/**
+		 * El store background_processes es del SPA de empresa; este componente lo comparten otros
+		 * proyectos, asi que el punto solo se dibuja si el store existe.
+		 *
+		 * @returns {boolean}
+		 */
+		hay_estado_broadcast() {
+			return Boolean(this.$store.state.background_processes)
+		},
+		/**
+		 * Estado del punto de conexion al broadcast: 'conectado' (verde) o 'desconectado' (rojo).
+		 * Lucas pidio dos colores: 'conectando' se pinta rojo y el matiz lo da el `title`. Tambien
+		 * es rojo cuando el socket esta sano pero ESE servidor no puede emitir
+		 * (broadcast_servidor.habilitado === false).
+		 *
+		 * @returns {string}
+		 */
+		estado_broadcast() {
+			if (!this.hay_estado_broadcast) {
+				return 'desconectado'
+			}
+			return this.$store.getters['background_processes/estado_visual_conexion']
+		},
+		/**
+		 * "Conectado en tiempo real" / "Conectando…" / "Sin conexión en tiempo real: los avisos
+		 * pueden demorar" / "El sistema no está configurado para avisar en tiempo real".
+		 *
+		 * @returns {string}
+		 */
+		titulo_estado_broadcast() {
+			if (!this.hay_estado_broadcast) {
+				return ''
+			}
+			return this.$store.getters['background_processes/titulo_conexion']
+		},
 	},
 	methods: {
 		/**
@@ -162,6 +211,15 @@ $nav_text_muted: rgba(255, 255, 255, 0.5)
 $nav_hover_bg: rgba(255, 255, 255, 0.06)
 $nav_item_radius: 8px
 
+// Punto de conexion al broadcast (mision procesos-en-segundo-plano, 18/9/2026). No hay token de
+// exito ni de error en _dark_theme.sass, asi que van como variables Sass con su contraparte
+// oscura: el par verde/rojo del sistema de iOS (la referencia estetica del proyecto). El menu es
+// oscuro en los DOS modos ($nav_bg en NavVertical.vue), por eso los dos pares son casi iguales.
+$estado_conectado: #34c759
+$estado_desconectado: #ff453a
+$estado_conectado_oscuro: #30d158
+$estado_desconectado_oscuro: #ff6961
+
 .user-info
 	color: $nav_text
 	padding: 8px 8px 16px
@@ -215,4 +273,58 @@ $nav_item_radius: 8px
 		margin: 0
 		i
 			display: none
+	// Fila del nombre: la fila queda siempre visible (le gana al opacity: 0 de .item de arriba por
+	// orden, misma especificidad), y son el icono y el nombre los que se esconden con el menu
+	// colapsado. Asi el punto de conexion queda a la vista en la franja de 56 px.
+	.item--usuario
+		@media screen and (min-width: 768px)
+			opacity: 1
+		.usuario__icono, .usuario__nombre
+			transition: opacity 0.15s ease
+			@media screen and (min-width: 768px)
+				opacity: 0
+		.usuario__nombre
+			min-width: 0
+			overflow: hidden
+			text-overflow: ellipsis
+			white-space: nowrap
+
+// Con el menu expandido (hover en escritorio) el icono y el nombre vuelven. En telefono el menu
+// es off-canvas y no tiene estado colapsado: ahi se ven siempre. El <style> no es scoped y
+// .nav-vertical es el padre (NavVertical.vue), por eso el selector puede salir de aca.
+.nav-vertical:hover .user-info .item--usuario
+	.usuario__icono, .usuario__nombre
+		opacity: 1
+
+.estado-broadcast
+	flex: 0 0 8px
+	width: 8px
+	height: 8px
+	margin-left: auto
+	border-radius: 50%
+	background: $estado_desconectado
+	transition: background 0.2s ease
+
+.estado-broadcast--conectado
+	background: $estado_conectado
+	// Un halo que se expande UNA vez al pasar a verde (la animacion corre cuando el elemento
+	// recibe la clase), no un pulso permanente.
+	animation: estado-broadcast-halo 1.1s cubic-bezier(.22, .61, .36, 1) 1
+
+@keyframes estado-broadcast-halo
+	from
+		box-shadow: 0 0 0 0 rgba($estado_conectado, 0.6)
+	to
+		box-shadow: 0 0 0 10px rgba($estado_conectado, 0)
+
+@media (prefers-reduced-motion: reduce)
+	.estado-broadcast--conectado
+		animation: none
+
+html.dark-mode
+	.estado-broadcast
+		background: $estado_desconectado_oscuro
+
+	.estado-broadcast--conectado
+		background: $estado_conectado_oscuro
 </style>

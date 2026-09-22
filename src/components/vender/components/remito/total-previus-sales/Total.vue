@@ -62,9 +62,7 @@
 
 		<div
 		class="cont-selects m-l-10">
-			
-			<forzar-total></forzar-total>
-			
+
 			<price-type></price-type>
 
 			<moneda></moneda>	
@@ -82,7 +80,6 @@ export default {
 	mixins: [vender],
 	components: {
 		PriceType: () => import('@/components/vender/components/remito/total-previus-sales/price-type/Index'),
-		ForzarTotal: () => import('@/components/vender/components/remito/total-previus-sales/forzar-total/Index'),
 		Moneda: () => import('@/components/vender/components/remito/total-previus-sales/Moneda'),
 		PriceDescription: () => import('@/components/common/PriceDescription'),
 	},

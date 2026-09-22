@@ -37,7 +37,7 @@
 						<hr>
 						<h5 class="m-b-5">Integraciones</h5>
 						<p class="text-muted m-b-10">
-							Mercado Pago y los envíos de Zippin se conectan desde ABM → Integraciones →
+							Mercado Pago y los envíos de Zipnova se conectan desde ABM → Integraciones →
 							Tienda online.
 						</p>
 						<b-button
@@ -99,6 +99,17 @@
 					v-if="slot_props.model"
 					:prop="{ key: 'background_color' }"
 					:model="slot_props.model"></color-field>
+				</template>
+
+				<template
+				v-if="config_model_name == 'online_configuration'"
+				v-slot:add_to_cart_button_color="slot_props">
+					<color-field
+					v-if="slot_props.model"
+					:prop="{ key: 'add_to_cart_button_color' }"
+					:model="slot_props.model"
+					:optional="true"
+					:fallback="slot_props.model.secondary_color || '#fe7802'"></color-field>
 				</template>
 
 				<!--

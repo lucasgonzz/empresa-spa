@@ -181,6 +181,7 @@
 import previus_sale from '@/mixins/vender/previus_sale/index'
 import se_puede_actualizar from '@/mixins/vender/previus_sale/se_puede_actualizar'
 import print_sale from '@/mixins/print_sale'
+import { env } from '@/runtime_config'
 export default {
 	mixins: [previus_sale, print_sale, se_puede_actualizar],
 	components: {
@@ -235,7 +236,7 @@ export default {
 		 * Abre el PDF de unidades entregadas en acopio.
 		 */
 		printDeliveredArticles() {
-			let link = process.env.VUE_APP_API_URL+'/sale/delivered-articles-pdf/'+this.sale_details.id 
+			let link = env('VUE_APP_API_URL')+'/sale/delivered-articles-pdf/'+this.sale_details.id 
 			window.open(link)
 		},
 		saveCurrentAcount() {

@@ -79,6 +79,8 @@ export default {
 						'turno_caja',
 						'concepto_movimiento_caja',
 						'default_payment_method_caja',
+						// Bancos de cheques (misión cheques-endoso-y-bancos, 21/9/2026)
+						'cheque_banco',
 					],
 				},
 				// Gastos
@@ -147,7 +149,7 @@ export default {
 				},
 				// Integraciones externas, en tres solapas: lo que conecta el SISTEMA con otra
 				// plataforma (Mercado Libre, Tienda Nube), lo que conecta la TIENDA ONLINE
-				// (Mercado Pago, Zippin) y el bot de WHATSAPP.
+				// (Mercado Pago, Zipnova) y el bot de WHATSAPP.
 				{
 					view: 'integraciones',
 					models: [

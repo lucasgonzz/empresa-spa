@@ -1,4 +1,5 @@
 import moment from 'moment'
+import { env } from '@/runtime_config'
 export default {
     computed: {
         has_online() {
@@ -61,7 +62,7 @@ export default {
             return this.$store.state.vender.price_type
         },
         download_articles() {  
-            let env_var = process.env.VUE_APP_DOWNLOAD_ARTICLES
+            let env_var = env('VUE_APP_DOWNLOAD_ARTICLES')
             if (typeof env_var != 'undefined') {
                 if (env_var === 'true') {
                     return true
@@ -237,7 +238,7 @@ export default {
         expense_concept_options_de_la_categoria(prop, model) {
 
             let opciones = [
-                { value: 0, text: 'Seleccione Concepto' },
+                { value: 0, text: 'Seleccione Sub categoría' },
             ]
 
             let conceptos = this.$store.state.expense_concept.models

@@ -81,6 +81,7 @@
 		:show_previus_days="show_previus_days"
 		:model_name_for_get_models="model_name_for_get_models"
 		:check_permissions_previus_days="check_permissions_previus_days"
+		:table_preference_scope="table_preference_scope"
 		:model_name="model_name">
 			<template v-slot:btn_create>
 				<slot name="horizontal_nav_btn_create"></slot>
@@ -170,6 +171,7 @@
 		:mostrar_models_que_vinienen_por_prop_siempre="mostrar_models_que_vinienen_por_prop_siempre"
 		:set_model_on_row_selected="set_model_on_row_selected"
 		:slice_models="slice_models"
+		:table_preference_scope="table_preference_scope"
 		@clicked="clicked">
 			<template v-slot:display_top>
 				<slot name="display_top"></slot>
@@ -373,6 +375,17 @@ export default {
 		},
 		properties_to_show: {
 			type: Array,
+			default: null,
+		},
+		/**
+		 * Ámbito de vista de la tabla (ej. 'por_entregar'): la lista toma sus columnas de
+		 * `props_to_show_por_ambito[ambito]` del store en vez de `props_to_show`, y el botón de
+		 * columnas del header guarda la preferencia como `table_<ambito>`. Así una misma tabla
+		 * puede tener columnas distintas según desde qué pantalla se la mira, sin pisar las del
+		 * listado principal del modelo. null = como siempre.
+		 */
+		table_preference_scope: {
+			type: String,
 			default: null,
 		},
 		// Fuente alternativa (siempre completa) de propiedades extra para el modal de

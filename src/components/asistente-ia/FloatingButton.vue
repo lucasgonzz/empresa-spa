@@ -30,15 +30,50 @@
 		pueda abrirlo desde cualquier lado, ej: la notificación de sugerencias. -->
 		<asistente-ia-panel
 		v-if="panel_abierto"></asistente-ia-panel>
+
+		<!-- 🔴 Lo que abren las menciones del chat (misión agente-ia-mano-derecha,
+		16/9/2026) va acá y NO adentro del panel, por dos motivos:
+
+		1. La conversación se dibuja en DOS contenedores —el panel flotante y el sidebar
+		   del informe del mostrador (`ia/SidebarConversacion.vue`)—, que montan el mismo
+		   `MessageBubble`. Este componente es el único que está montado siempre que la
+		   extensión esté prendida, así que cubre los dos de una vez sin duplicar nada.
+		2. El panel tiene `overflow: hidden` (Panel.vue:367) y el informe también
+		   (InformeAbierto.vue:256 y :308): una tarjeta flotante hija de cualquiera de los
+		   dos queda recortada contra su borde.
+
+		Los dos son livianos mientras no se usan: la tarjeta es un `b-popover` que no
+		existe hasta el primer hover, y el modal de cuenta corriente no baja su chunk
+		hasta el primer clic. -->
+		<ficha-articulo-popover></ficha-articulo-popover>
+		<cuenta-corriente-de-mencion></cuenta-corriente-de-mencion>
+
+		<!-- El modal de configuración del agente (S3), montado UNA sola vez acá por el mismo
+		motivo que el de cuenta corriente: los dos accesos (el engranaje de la sidebar y el
+		botón del mostrador) lo abren por id, y con una sola instancia no hay dos <b-modal>
+		con el mismo id peleándose. -->
+		<configuracion-agente></configuracion-agente>
 	</div>
 </template>
 
 <script>
 import AsistenteIaPanel from '@/components/asistente-ia/Panel'
+import FichaArticuloPopover from '@/components/asistente-ia/FichaArticuloPopover'
+import CuentaCorrienteDeMencion from '@/components/asistente-ia/CuentaCorrienteDeMencion'
+import mostrador_acceso from '@/mixins/mostrador_acceso'
 
 export default {
+	/*
+		mostrador_acceso: el MISMO gate que ya usan el menú (check_is_owner en
+		common-vue/mixins/nav.js), la ruta /ia, DepositButtons y las notificaciones de
+		sugerencias. Acá decide si el botón flotante se dibuja. Ver `should_show`.
+	*/
+	mixins: [mostrador_acceso],
 	components: {
 		AsistenteIaPanel,
+		FichaArticuloPopover,
+		CuentaCorrienteDeMencion,
+		ConfiguracionAgente: () => import('@/components/asistente-ia/ConfiguracionAgente'),
 	},
 	data() {
 		return {
@@ -79,10 +114,26 @@ export default {
 	},
 	computed: {
 		/**
-		 * Muestra el asistente sólo con sesión autenticada y la extensión habilitada (D28).
+		 * Muestra el asistente sólo con sesión autenticada, la extensión habilitada (D28)
+		 * y a quien el servidor va a dejar entrar.
+		 *
+		 * 🔴 POR QUÉ NO ALCANZA CON `hasExtencion('asistente_ia')` (arreglo del 16/9/2026).
+		 * `hasExtencion()` (src/mixins/generals.js:509) mira las extensiones del DUEÑO de
+		 * la cuenta, no las de la persona autenticada: a un empleado le daba `true` y veía el
+		 * botón. Al abrirlo se comía el 403 de `SoloElDuenoIa` ("Solo el dueño puede usar el
+		 * asistente de IA") con el panel vacío. La interfaz no puede ofrecer lo que el
+		 * servidor va a rechazar.
+		 *
+		 * `puede_entrar_al_mostrador` (mixins/mostrador_acceso.js) ya es exactamente ese par
+		 * —extensión `asistente_ia` + dueño o `admin_access`— y es el mismo que resuelve
+		 * `MostradorHelper::puede_ver()` del lado del servidor. Se reusa en vez de escribir
+		 * otra regla, por el mismo motivo que lo hace el middleware: dos reglas separadas para
+		 * la misma pregunta se despegan sola la primera vez que una se corrige.
+		 *
+		 * ⚠️ Esto NO reemplaza el gate del servidor, que se queda: es defensa en profundidad.
 		 */
 		should_show() {
-			return this.authenticated && this.hasExtencion('asistente_ia')
+			return this.authenticated && this.puede_entrar_al_mostrador
 		},
 		panel_abierto() {
 			return this.$store.state.ai_chat.panel_abierto

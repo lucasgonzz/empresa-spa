@@ -61,6 +61,33 @@
             llevándose el listener puesto. Tampoco se suscribe por su cuenta.
         -->
         <aviso-descripciones-automaticas></aviso-descripciones-automaticas>
+        <!--
+            Aviso de "tu sesión se cerró en este dispositivo" (candado de sesión única, botón
+            "Cerrar la otra sesión e ingresar acá" del login). El listener del canal privado vive
+            en src/mixins/broadcast.js (mixin de este mismo componente); acá solo el modal, SIEMPRE
+            montado -a diferencia de los dos avisos de arriba, este puede llegar en cualquier
+            pantalla del sistema, no solo desde el listado de artículos.
+        -->
+        <sesion-cerrada-otro-dispositivo-modal></sesion-cerrada-otro-dispositivo-modal>
+        <!--
+            Candado de sesión por pestaña (misión candado-sesion-por-pestana, 19/9/2026): abrir
+            una pestaña nueva del mismo navegador ya logueado no pasa por LoginForm.vue -la
+            cookie ya autentica-, así que este aviso no puede vivir ahí. Mismo criterio que el
+            modal de arriba: SIEMPRE montado, porque el 403 puede llegar apenas arranca la SPA,
+            antes de que cualquier vista privada monte nada.
+        -->
+        <misma-sesion-otra-pestana-modal></misma-sesion-otra-pestana-modal>
+
+        <!--
+            Procesos en segundo plano (misión procesos-en-segundo-plano, 18/9/2026): la píldora de
+            arriba a la derecha con cuántos hay corriendo, y el modal con el detalle de todos. Van
+            gateados por `authenticated` y no por v-show: la píldora es quien pide el listado en su
+            created() (encadenado detrás del arranque de sesión), así que cada login lo vuelve a
+            pedir y cada logout lo desmonta con sus timers. El canal de broadcast lo suscribe
+            listenChannels() (common-vue/mixins/broadcast.js), no estos componentes.
+        -->
+        <procesos-tarjeta v-if="authenticated"></procesos-tarjeta>
+        <procesos-modal v-if="authenticated"></procesos-modal>
 
         <!--
             Panel de tutoriales de la demo (misión 51, corregido por la 52). El v-if es la guarda
@@ -117,6 +144,15 @@ import { apply_dark_mode_class, store_dark_mode } from '@/utils/dark_mode'
  */
 const RUTA_INGRESO_DEMO = '/demo/ingreso'
 
+/**
+ * Prefijo de la ruta pública del informe compartido (`/informe/:token`), tal como está
+ * declarada en `router/index.js` (misión asistente-por-whatsapp, 16/9/2026).
+ *
+ * El literal se deja también allá: acá se necesita el path y allá el nombre. Es un PREFIJO y no
+ * un path exacto porque la ruta lleva el token adentro.
+ */
+const RUTA_INFORME_COMPARTIDO = '/informe/'
+
 export default {
     mixins: [app, start_methods, broadcast, check_version, offline],
     components: {
@@ -137,6 +173,11 @@ export default {
         CotizacionDolarModal: () => import('@/components/common/cotizacion-dolar/Modal'),
         AvisoImagenesAutomaticas: () => import('@/components/common/AvisoImagenesAutomaticas'),
         AvisoDescripcionesAutomaticas: () => import('@/components/common/AvisoDescripcionesAutomaticas'),
+        SesionCerradaOtroDispositivoModal: () => import('@/components/common/SesionCerradaOtroDispositivoModal'),
+        MismaSesionOtraPestanaModal: () => import('@/components/common/MismaSesionOtraPestanaModal'),
+        // Procesos en segundo plano: píldora y modal (ver el comentario en el template).
+        ProcesosTarjeta: () => import('@/components/common/procesos-en-segundo-plano/Tarjeta'),
+        ProcesosModal: () => import('@/components/common/procesos-en-segundo-plano/Modal'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
     },
@@ -163,7 +204,14 @@ export default {
         // auth/me de arranque, resuelve "no autenticado" y el watcher de abajo manda a login
         // antes de que el token de la demo llegue a canjearse.
         // 🔴 La guarda NO puede preguntar por `$route.name` acá: ver `es_ingreso_a_la_demo()`.
-        if (this.es_ingreso_a_la_demo()) {
+        //
+        // El informe compartido (misión asistente-por-whatsapp) entra por el mismo portón y por
+        // el mismo motivo: no tiene sesión y NO la va a tener nunca. Sin esta guarda, el
+        // `auth/me` de arranque resuelve "no autenticado", `authenticated` pasa de null a false
+        // y el watch de abajo hace `router.replace({name: 'login'})` — el dueño toca el link del
+        // informe desde el teléfono y aterriza en la pantalla de login, con el informe que nunca
+        // llegó a ver. Es exactamente lo que le pasaba al lead con el link de la demo.
+        if (this.es_ingreso_a_la_demo() || this.es_informe_compartido()) {
             return
         }
         /**
@@ -225,6 +273,31 @@ export default {
 
             return pathname.slice(-RUTA_INGRESO_DEMO.length) === RUTA_INGRESO_DEMO
         },
+        /**
+         * ¿Este arranque es el informe del mostrador abierto por link (`/informe/<token>`)?
+         *
+         * Misma mecánica —y el mismo 🔴— que `es_ingreso_a_la_demo()`: en el `created()` de
+         * App.vue la navegación inicial todavía no resolvió (todas las rutas son lazy), así que
+         * `$route.name` es null y hay que mirar `window.location.pathname`.
+         *
+         * La diferencia con la demo es que acá NUNCA va a haber sesión: la demo canjea un token
+         * por una sesión iniciada, y esta vista lee un informe de solo lectura contra una ruta
+         * pública del API y se queda sin sesión para siempre. Por eso alcanza con no arrancar el
+         * `auth/me`: sin ese dispatch, `authenticated` se queda en null, el watch no dispara y
+         * nadie manda a login.
+         *
+         * Se busca el prefijo en cualquier parte del pathname, y no por sufijo como la demo,
+         * porque el token va DESPUÉS del prefijo.
+         *
+         * @returns {Boolean}
+         */
+        es_informe_compartido() {
+            if (this.$route.name === 'informeCompartido') {
+                return true
+            }
+
+            return window.location.pathname.indexOf(RUTA_INFORME_COMPARTIDO) !== -1
+        },
     },
     watch: {
         /**
@@ -260,17 +333,76 @@ export default {
                     this.$router.replace({name: 'login'}).catch(() => {})
                 }
             } else {
+                /**
+                 * 🔴 Primero se corta, después se arranca. Si este frente no es el que le
+                 * corresponde al usuario (`default_version` apunta a otro subdominio), lo
+                 * único que se hace es transferir la sesión e irse: ni permisos, ni
+                 * `callMethods`, ni `startMethods`, ni sincronización offline, ni cheques.
+                 *
+                 * El porqué está medido: esas ~15-18 llamadas salían en el MISMO tick que la
+                 * redirección, contra la API del frente viejo. Los dos frentes de un cliente
+                 * comparten la cookie de sesión (mismo nombre, mismo dominio) pero no el
+                 * almacén, así que cada respuesta tardía del viejo le pisaba al frente nuevo
+                 * la sesión recién iniciada — y el usuario aterrizaba con ~15 avisos de
+                 * "Unauthenticated.".
+                 *
+                 * `debe_cambiar_de_version()` es sincrónico a propósito: para cuando
+                 * `check_version()` decidía, las otras llamadas ya habían salido.
+                 */
+                if (this.debe_cambiar_de_version()) {
+                    this.ir_a_la_version_correcta()
+                    return
+                }
                 // this.check_online()
-                this.check_version()
+
+                /*
+                    🔴 Encadenadas, una atras de otra, y no las ~15 juntas en paralelo contra la
+                    API recien autenticada: esa rafaga es la causa raiz del toast
+                    "Unauthenticated." apilado que reporto golonorte el 11/9/2026, al rebotar de
+                    sesion entre dos frentes del VPS (mismo mecanismo que debe_cambiar_de_version
+                    de aca arriba, pero para el caso en que NO hay que cambiar de frente). Cada
+                    eslabon atrapa su propio error para que uno que falle no le tape el turno al
+                    que sigue, y la promesa completa SIEMPRE resuelve -- nunca rechaza.
+
+                    Se guarda en auth/arranque_en_curso ANTES de checkPermissionForCurrentRoute():
+                    esa es la que puede navegar a /reportes en este mismo tick si esa pantalla es
+                    el aterrizaje por defecto, y los widgets de Reportes -- en su propio created()
+                    -- deciden si encadenan su fetch detras de esta señal o lo disparan ya mismo
+                    mirando si esto esta seteado (store/reportes/index.js).
+                */
+                let arranque = this.callMethods()
+                .catch(err => console.log(err))
+                .then(() => this.startMethods())
+                .catch(err => console.log(err))
+                .then(() => this.sincronizar_offline())
+                .catch(err => console.log(err))
+                .then(() => this.$store.dispatch('cheque/getModels'))
+                .catch(err => console.log(err))
+                .then(() => {
+                    // Uso normal del dia (fuera de un login): una navegacion posterior a
+                    // Reportes no tiene que encontrarse con la señal de un arranque que ya
+                    // termino hace rato. Se limpian las dos juntas: si solo se resetea
+                    // arranque_en_curso y se deja cadena_widgets colgada, un segundo arranque
+                    // en el mismo runtime (ej. checkUserAppUrl reautenticando antes del
+                    // location.replace) encuentra la cola vieja ya resuelta y dispara el
+                    // fetch de Reportes antes de tiempo -- la misma rafaga que esto vino a
+                    // evitar, solo que del lado de Reportes.
+                    if (this.$store.state.auth.arranque_en_curso === arranque) {
+                        this.$store.commit('auth/set_arranque_en_curso', null)
+                        this.$store.commit('reportes/setCadenaWidgets', null)
+                    }
+                })
+                .catch(err => console.log(err))
+
+                this.$store.commit('auth/set_arranque_en_curso', arranque)
+
+                // La navegacion es inmediata: el usuario no tiene que mirar una pantalla en
+                // blanco mientras esperan las llamadas de arriba.
                 this.checkPermissionForCurrentRoute()
-                this.callMethods()
+
+                // Setup de listeners, no son fetches: no bloquean ni forman parte de la cadena.
                 this.listenChannels()
                 this.listenChannelsLocal()
-                this.startMethods()
-
-                this.sincronizar_offline()
-                
-                this.$store.dispatch('cheque/getModels')
 
             }
         }

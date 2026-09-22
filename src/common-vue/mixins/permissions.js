@@ -66,6 +66,18 @@ export default {
 			for (var i = 0; i < routes.length; i++) {
 				route = routes[i]
 				// console.log('viendo permiso para la ruta '+this.getRouteName(route)+', permission_slug: '+route.can) 
+				/*
+					Bloque ADITIVO (misión "modulo-ia-mostrador", 14/9/2026): una ruta marcada con
+					`no_aterrizar` nunca es la pantalla por defecto después del login, aunque sea la
+					primera del array con permiso. Hacía falta porque este recorrido no mira
+					extensiones: el módulo IA va primero en el menú (pedido de Lucas) y sin esta
+					marca un dueño sin la extensión aterrizaba en un módulo que el menú le esconde.
+					Ninguna ruta preexistente lleva la marca, así que el comportamiento de todas
+					las demás queda igual.
+				*/
+				if (route.no_aterrizar) {
+					continue
+				}
 				if (route.check_is_owner && (this.is_owner || this.user.admin_access)) {
 					route_to_redirect = route
 					break

@@ -76,6 +76,29 @@ export default {
 	created() {
 		this.iniciar_dolar()
 	},
+	watch: {
+		/*
+			El input es una copia local del valor del store y solo se sincronizaba al montarse
+			(iniciar_dolar). Desde que limpiar_vender restaura la cotizacion del dueño al terminar
+			cada comprobante, el store cambia sin que este componente se vuelva a montar, y el
+			input seguia mostrando la cotizacion de la venta anterior (o la de la venta editada)
+			mientras el store --que es lo que viaja en el POST-- ya tenia la del dueño.
+
+			Se compara por valor numerico y no por igualdad a secas para no pisar lo que el
+			vendedor esta tipeando: cada keyup manda Number(input) al store, y si el store
+			devolviera "1250" sobre un "1250." a medio escribir, le comeria el punto.
+		*/
+		valor_dolar(valor) {
+			if (valor === null || typeof valor === 'undefined') {
+				this.iniciar_dolar()
+				return
+			}
+
+			if (Number(this.input_dolar_valor) !== Number(valor)) {
+				this.input_dolar_valor = valor
+			}
+		},
+	},
 	methods: {
 		iniciar_dolar() {
 

@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 import previus_sales from '@/store/vender/previus_sales'
 import mixin_vender from '@/mixins/vender'
 export default {
@@ -129,6 +130,35 @@ export default {
 				omitir_en_cuenta_corriente: info.omitir_en_cuenta_corriente,
 				sub_total: info.sub_total,
 				total: info.total,
+				/*
+					🔴 EL TOTAL FORZADO TIENE QUE VIAJAR EN EL PUT, Y TAMBIEN EN NULL.
+
+					`total` de aca arriba ya viaja CON el ajuste aplicado --lo hace
+					mixins/vender_set_total.js al final de setTotal()-- y `sub_total` viaja sin el.
+					Pero el monto es su propia columna, y SaleController@update la reescribe con lo
+					que venga en el request: si el campo no llega, la venta se guarda con el total
+					correcto y el ajuste en null, o sea que el comprobante pierde el renglon que lo
+					explica y AfipItemCalculator se queda sin la base contra la cual prorratear.
+
+					Va tambien en null cuando no hay forzado --no es un campo opcional que se pueda
+					omitir--: es lo que le dice al servidor que esta edicion saco el ajuste.
+				*/
+				forzar_total_monto: info.forzar_total_monto,
+				/*
+					🔴 LA LISTA DE PRECIOS VIAJA EN EL PUT, Y TAMBIEN EN NULL.
+
+					Se lee del store y no de `info` para que ningun llamador pueda olvidarla: es
+					lo que quedo en vender/price_type despues de abrir la venta (la guardada, la
+					del cliente o la por defecto, ver previus_sale/index.js) o de lo que el
+					vendedor eligio si pudo cambiarla.
+
+					Va tambien en null a proposito. SaleController@update mira si la clave EXISTE:
+					ausente, preserva lo guardado (es lo que manda una SPA vieja); presente y en
+					null en una cuenta que vende con listas, contesta 422 y la venta queda como
+					estaba. Omitirla "porque es null" seria justamente esconderle al back que esta
+					edicion no tiene lista.
+				*/
+				price_type_id: rootState.vender.price_type ? rootState.vender.price_type.id : null,
 				seller_id: info.seller_id,
 				fecha_entrega: info.fecha_entrega,
 				valor_dolar: info.valor_dolar,
@@ -169,6 +199,14 @@ export default {
 			descuento_puntos: info.descuento_puntos,
 			// Auditoría de acciones realizadas en vender durante la edición de la venta.
 			log: rootState.vender.sale_log,
+		}, {
+			/*
+				El aviso global del interceptor de main.js se apaga para este PUT: el rechazo
+				(409 de venta facturada o cerrada, 422 sin lista de precios) lo muestra el catch
+				de updateSale() en previus_sale/index.js, con el mensaje del back. Sin esto el
+				mismo mensaje salia dos veces.
+			*/
+			skip_global_error_event: true,
 		})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})
@@ -199,8 +237,17 @@ export default {
 					},
 					diff: null,
 				}, { root: true })
-				alert('Error al actualizar venta')
-				console.log(err)
+
+				/*
+					🔴 SE RELANZA. Hasta esta mision este catch se tragaba el error con un alert: la
+					promesa RESOLVIA, y en previus_sale/index.js corria el .then de updateSale()
+					--toast "Venta actualizada", subida de adjuntos y cancelPreviusSale()-- encima
+					de un 409 (venta facturada o cerrada) o del 422 nuevo de la lista de precios. O
+					sea: el back rechazaba, el vendedor leia que se actualizo, y la edicion se
+					limpiaba con lo que habia corregido adentro. El catch del mixin, que muestra el
+					mensaje del back y deja la edicion abierta, nunca llegaba a correr.
+				*/
+				return Promise.reject(err)
 			})
 		},
 	},

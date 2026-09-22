@@ -410,6 +410,32 @@ export default {
             return contenido
         },
 
+        /**
+         * Pide al backend los bytes ESC/POS (GS v 0) del logo del negocio para el header del
+         * Ticket 2.0, y los agrega a this.content si hay logo cargado.
+         *
+         * Se resuelve en el backend porque el navegador no puede leer los pixeles de una imagen
+         * de otro origen sin CORS habilitado, y ese es el unico camino para armar el bitmap.
+         *
+         * Si falla (red, sin logo, error del server) no corta la impresion: el ticket sale sin
+         * logo, igual que se banco siempre hasta ahora.
+         */
+        async agregar_logo_ticket() {
+            let self = this
+
+            try {
+                let response = await self.$api.get('sale/' + self.sale_to_print.id + '/ticket-2-logo', {
+                    params: { ancho_mm: self.ancho_impresora },
+                })
+
+                if (response.data && response.data.has_logo && response.data.raster_base64) {
+                    self.content.push(atob(response.data.raster_base64))
+                }
+            } catch (error) {
+                console.error('No se pudo obtener el logo para el Ticket 2.0:', error)
+            }
+        },
+
         async getQRBase64(url) {
           const response = await fetch(url);
           const blob = await response.blob();
@@ -430,6 +456,8 @@ export default {
             // let charWidth = this.tamano_letra; // Estimado, puede ajustarse según la impresora
 
             this.reset_impresora()
+
+            await this.agregar_logo_ticket()
 
             this.afip_information()
 

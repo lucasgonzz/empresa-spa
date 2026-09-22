@@ -170,7 +170,13 @@ async function venta_del_presupuesto(page, presupuesto_id) {
 		expect(respuesta.ok(), 'el listado de ventas del dia no cargo').toBeTruthy()
 
 		const cuerpo = await respuesta.json()
-		const ventas = cuerpo.models || cuerpo.sales || []
+		// Desde el 14/9/2026 el listado del dia viene PAGINADO cuando la SPA manda `per_page`:
+		// `models` es el paginador de Laravel y las filas estan en `models.data`. Con una API
+		// vieja (o sin `per_page`) sigue siendo el array de siempre; se aceptan las dos formas.
+		const modelos = cuerpo.models
+		const ventas = Array.isArray(modelos)
+			? modelos
+			: ((modelos && Array.isArray(modelos.data)) ? modelos.data : (cuerpo.sales || []))
 
 		encontrada = ventas.find(venta => String(venta.budget_id) === String(presupuesto_id))
 

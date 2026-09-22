@@ -526,12 +526,22 @@ export default {
 	font-size: 0.78rem
 	color: var(--color-text-secondary, #6c757d)
 
+// Puntito de estado de un equipo DESCONECTADO. Antes era var(--color-border-tertiary, #adb5bd), y
+// como ese token SÍ existe en los dos modos el fallback no entraba nunca: en claro salía #dee2e6
+// (casi blanco sobre el panel #f1f3f5) y en oscuro rgba(255,255,255,.14) (invisible). Va el
+// literal que se quería, con su contraparte oscura abajo. El --activo (verde) no se toca.
 .impresora-config-modal__punto
 	flex: 0 0 auto
 	width: 8px
 	height: 8px
 	border-radius: 50%
-	background: var(--color-border-tertiary, #adb5bd)
+	background: #adb5bd
+
+// El :not() no es adorno: --activo va en el MISMO span que __punto, y html.dark-mode .__punto
+// tiene más especificidad que .__punto--activo a secas. Sin el :not(), en oscuro el gris le
+// ganaría al verde y un equipo conectado se vería desconectado.
+html.dark-mode .impresora-config-modal__punto:not(.impresora-config-modal__punto--activo)
+	background: #6b7280
 
 .impresora-config-modal__punto--activo
 	background: #2ea44f

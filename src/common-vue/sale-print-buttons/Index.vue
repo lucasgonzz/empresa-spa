@@ -105,6 +105,7 @@ import SectionFacturasA4 from './SectionFacturasA4.vue'
 import ImpresoraConfigModal from './ImpresoraConfigModal.vue'
 import InstalarAgenteModal from './InstalarAgenteModal.vue'
 import { guardar_preferencias_del_puesto, guardar_ancho_del_puesto } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
+import { env } from '@/runtime_config'
 
 export default {
 	components: {
@@ -431,10 +432,14 @@ export default {
 		 */
 		async load_pdf_column_options_catalog() {
 			try {
+				// Catálogo de opciones PDF: dato decorativo, la pantalla arma igual sin él. No
+				// hace falta el cartel global de conexión por esto (config
+				// `skip_global_error_event` del interceptor de `main.js`).
 				const res = await this.$api.get('pdf-column-options', {
 					params: {
 						model_name: this.model_name,
 					},
+					skip_global_error_event: true,
 				})
 				this.pdf_column_options_catalog = (res.data && res.data.models) || []
 			} catch (error) {
@@ -992,7 +997,7 @@ export default {
 		 * @param {number|null} afip_ticket_id
 		 */
 		salePdf(sale_id, profile_id = null, afip_ticket_id = null) {
-			let link = process.env.VUE_APP_API_URL + '/sale/pdf/' + sale_id
+			let link = env('VUE_APP_API_URL') + '/sale/pdf/' + sale_id
 			const _profile_id = profile_id || this.selected_profile_id
 			const query_params = []
 			if (_profile_id) {
@@ -1016,14 +1021,14 @@ export default {
 		 * Imprime ticket venta no AFIP.
 		 */
 		ticketPdf(sale) {
-			let link = process.env.VUE_APP_API_URL + '/sale/sale-ticket-pdf/' + sale.id
+			let link = env('VUE_APP_API_URL') + '/sale/sale-ticket-pdf/' + sale.id
 			window.open(link)
 		},
 		/**
 		 * Imprime ticket AFIP (formato ticket).
 		 */
 		facturaTicketPdf(afip_ticket_id) {
-			let link = process.env.VUE_APP_API_URL + '/sale/afip-ticket-pdf/' + afip_ticket_id
+			let link = env('VUE_APP_API_URL') + '/sale/afip-ticket-pdf/' + afip_ticket_id
 			window.open(link)
 		},
 		/**
