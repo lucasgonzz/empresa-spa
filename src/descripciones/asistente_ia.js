@@ -17,6 +17,11 @@
  * pantalla (un proveedor, un cliente, un rubro, un articulo...) y hacer una venta por el mismo
  * camino que Vender -- siempre con tarjeta para confirmar, nunca solo.
  *
+ * Desde la mision asistente-ventas-y-fotos (21/9/2026) tambien le pone a un ARTICULO una foto que
+ * el dueño le mando por WhatsApp. Esa tarjeta NUNCA se confirma sola, ni con la confianza del
+ * asistente en "resuelto": el articulo se deduce del nombre que dijo la persona, que puede venir
+ * inexacto, y la foto se publica en la tienda online.
+ *
  * Cada afirmacion sale del contrato de la seccion 2 y de las reglas por tipo de la seccion 3.4
  * del plan de la mision (el API registra por el mismo camino que la pantalla); no inventar aca.
  */
@@ -33,6 +38,7 @@ export default {
 			'Una búsqueda de imágenes (para categorías o para artículos por filtro) o una actualización masiva por filtro se manda a procesar en segundo plano y aparece en la píldora de procesos; un cambio en un diseño de PDF se aplica en el momento. En una tarjeta de imagen de categoría el botón dice "Usar esta imagen" y deja esa foto como imagen de la categoría en el sistema y en la tienda.',
 			'Un alta, una edición o una baja de lo que se carga desde una pantalla (un proveedor, un cliente, un rubro, un artículo...) se registra por el mismo camino que esa pantalla: la tarjeta muestra los datos exactos y, en una edición, cada campo con el valor anterior y el nuevo. Una baja avisa qué se borra, y si el registro cambió después de armarse la tarjeta, no se toca.',
 			'Una venta se registra por el mismo camino que Vender: queda en Ventas, descuenta stock cuando corresponde y, si es al contado, entra en la caja del método de pago elegido; si es a cuenta corriente, suma a la cuenta del cliente.',
+			'Una foto de artículo se suma a las imágenes de ese artículo, igual que si se hubiera cargado desde su ficha: se ve en el listado, se publica en la tienda online (Tienda Nube y Mercado Libre) y, si el negocio le sirve el catálogo a otro comercio, también le llega a él. Para sacarla, se saca desde la ficha del artículo.',
 			'Si algo cambió desde que se armó la tarjeta (una caja sin apertura, un permiso, una tarea editada o ya hecha), no se registra nada y la tarjeta muestra el motivo.',
 			'Un segundo clic no duplica la carga.',
 		],
