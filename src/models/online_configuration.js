@@ -239,6 +239,12 @@ export default {
 			description: 'Si se desactiva, la pagina del articulo deja de mostrar "Stock disponible" y la cantidad de unidades disponibles. El control de stock al agregar al carrito sigue aplicando igual.',
 		},
 		{
+			text: 'Ignorar el stock en la Tienda',
+			key: 'ignorar_stock',
+			type: 'checkbox',
+			description: 'Si se activa, la tienda deja de tener en cuenta el stock de los articulos: ningun producto se muestra como agotado y se puede pedir cualquier cantidad, sin importar el stock cargado. No modifica el stock real de los articulos: el comercio puede terminar vendiendo mas de lo que tiene fisicamente si lo activa.',
+		},
+		{
 			text: 'Mostrar articulos sin imagenes en la Tienda',
 			key: 'show_articles_without_images',
 			type: 'checkbox',
