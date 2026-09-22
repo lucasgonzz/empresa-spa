@@ -32,25 +32,37 @@
 		v-if="permitir_endoso && endosando">
 			<b-col
 			cols="12">
-				<b-input-group
-				prepend="Cheque">
-					<b-form-select
-					:data-testid="'cheque-a-endosar-'+index"
-					:value="cheque_id_actual"
-					:options="opciones_de_cheques"
-					:disabled="disabled_inputs"
-					@change="set_cheque_a_endosar"></b-form-select>
-				</b-input-group>
+				<!--
+					Cartera de cheques (misión cartera-cheques-modal, 22/9/2026): reemplaza al
+					<select> de antes. El botón sigue visible con un cheque ya elegido A PROPÓSITO
+					-es lo que permite reabrir la cartera y cambiar de cheque-; lo único que cambia
+					es que abajo, con `mostrar_campos`, aparecen los datos ya poblados.
+				-->
+				<b-button
+				:data-testid="'cheque-abrir-cartera-'+index"
+				variant="outline-primary"
+				class="check__btn-cartera"
+				:disabled="disabled_inputs || !hay_cheques_para_endosar"
+				v-b-modal="'cartera-cheques-'+index">
+					<i class="bi bi-wallet2 m-r-5"></i>
+					Seleccionar de mi cartera de cheques
+				</b-button>
 
 				<small
 				v-if="cheque_id_actual"
 				class="text-muted check__leyenda">
 					Se endosa entero: el monto de la fila es el del cheque y no se puede cambiar.
 				</small>
+
+				<cartera-cheques
+				:id="'cartera-cheques-'+index"
+				:cheques="cheques_disponibles"
+				@elegir="set_cheque_a_endosar"></cartera-cheques>
 			</b-col>
 		</b-form-row>
 
 		<b-form-row
+		v-if="mostrar_campos"
 		v-for="prop in props"
 		:key="prop.key">
 			<b-col
@@ -181,6 +193,9 @@ import moment from 'moment'
  * PaymentMethodsStep y baja por prop, ya sin los cheques que eligieron las otras filas.
  */
 export default {
+	components: {
+		CarteraCheques: () => import('@/components/common/payment-methods/cartera-cheques/Index'),
+	},
 	props: {
 		payment_method: {
 			type: Object,
@@ -329,6 +344,21 @@ export default {
 		hay_cheques_para_endosar() {
 			return this.cheques_disponibles.length > 0 || this.cheque_id_actual > 0
 		},
+		/**
+		 * Los campos del cheque (numero, banco, fechas, es_echeq, notas) se ocultan mientras se
+		 * está endosando y todavía no hay ningún cheque elegido de la cartera (misión
+		 * cartera-cheques-modal, 22/9/2026): mostrarlos vacíos y editables no tenía sentido, ya
+		 * que al elegir un cheque su contenido se pisa entero con `set_cheque_a_endosar`.
+		 *
+		 * Fuera del endoso (cheque nuevo, o `permitir_endoso` en falso: Vender, agenda,
+		 * comisiones) `endosando` ya es `false`, así que acá siempre da `true` sin necesidad de
+		 * repetir esa condición.
+		 *
+		 * @returns {Boolean}
+		 */
+		mostrar_campos() {
+			return !this.endosando || this.cheque_id_actual > 0
+		},
 		origen_options() {
 			return [
 				{
@@ -341,29 +371,6 @@ export default {
 					disabled: !this.hay_cheques_para_endosar,
 				},
 			]
-		},
-		/**
-		 * Una opción por cheque disponible: `N° 123 · Banco Nación · $45.000 · pago 30/09 ·
-		 * Pérez SRL`. La fecha es la de PAGO (desde ahí se puede cobrar), y se rotula así y no
-		 * "vence": en el módulo de Cheques "vencido" es fecha_pago + 30 días, y un rótulo que
-		 * dijera "vence" con la fecha de pago se leería con ese otro significado.
-		 *
-		 * @returns {Array}
-		 */
-		opciones_de_cheques() {
-			let options = [{
-				value: 0,
-				text: 'Elegí el cheque a endosar',
-			}]
-
-			this.cheques_disponibles.forEach(cheque => {
-				options.push({
-					value: cheque.id,
-					text: this.texto_de_cheque(cheque),
-				})
-			})
-
-			return options
 		},
 	},
 	watch: {
@@ -569,29 +576,6 @@ export default {
 			let m = moment(fecha)
 			return m.isValid() ? m.format('YYYY-MM-DD') : ''
 		},
-		texto_de_cheque(cheque) {
-			let partes = []
-
-			partes.push('N° ' + (cheque.numero || 's/n'))
-
-			let banco = this.cheque_banco_texto(cheque)
-			if (banco) {
-				partes.push(banco)
-			}
-
-			// price() ya devuelve el simbolo (numeral con '$0,0.00'): un '$ ' delante lo duplica.
-			partes.push(this.price(cheque.amount))
-
-			if (cheque.fecha_pago) {
-				partes.push('pago ' + moment(cheque.fecha_pago).format('DD/MM'))
-			}
-
-			if (cheque.client && cheque.client.name) {
-				partes.push(cheque.client.name)
-			}
-
-			return partes.join(' · ')
-		},
     }
 }
 </script>
@@ -615,6 +599,12 @@ export default {
 
 		.custom-control-inline
 			margin-right: 1rem
+
+	// El botón que abre la cartera de cheques ocupa todo el ancho de la fila, igual que el
+	// <select> que reemplazó (misión cartera-cheques-modal, 22/9/2026).
+	.check__btn-cartera
+		display: block
+		width: 100%
 
 	// El alta inline del banco: el input se estira y los dos botones miden lo suyo.
 	.check__nuevo-banco
