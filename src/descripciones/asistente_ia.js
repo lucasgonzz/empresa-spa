@@ -78,4 +78,15 @@ export default {
 		],
 		nota_interna: 'Los adjuntos viajan en message.adjuntos ({ tipo, url, texto, articulo_id }, tope 6, contrato seccion 1 de asistente-omnisciente); los pinta AdjuntosDeMensaje.vue debajo del texto y arriba de las tarjetas, solo los de tipo imagen con url. El visor es un b-modal propio con el z-index fijado en 1065 por id, como el modal de cuenta corriente (el porque esta en el componente). Sin la clave (API viejo) no se pinta nada.',
 	},
+
+	'asistente-bajar-al-ultimo-mensaje': {
+		titulo: 'Ir al último mensaje',
+		que_hace: 'Baja la conversación hasta abajo de todo, al mensaje más reciente.',
+		repercute: [
+			'No registra ni cambia nada: solo mueve la vista.',
+			'Aparece solo cuando estás leyendo más arriba y el último mensaje quedó fuera de la vista; estando abajo de todo, no se muestra.',
+			'Mientras el botón está a la vista, un mensaje nuevo del asistente ya NO te arrastra al fondo: te deja donde estabas leyendo. Si estás abajo de todo, la conversación sigue bajando sola como siempre.',
+		],
+		nota_interna: 'Conversation.vue. La condicion es scrollHeight - scrollTop - clientHeight > TOLERANCIA_FINAL (120px), recalculada en on_scroll, en mounted y en los watch de messages.length / hay_respuesta_en_curso / loading_more, porque el evento scroll no avisa cuando cambia el ALTO. El mismo umbral decide si un mensaje nuevo arrastra el scroll: son la misma condicion a proposito. El boton vive en un marco no scrolleable que envuelve al scroller (un hijo absoluto del scroller se iria con el scroll). El deslizamiento respeta prefers-reduced-motion desde JS, no por media query.',
+	},
 }

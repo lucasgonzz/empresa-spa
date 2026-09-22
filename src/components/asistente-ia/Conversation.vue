@@ -1,84 +1,112 @@
 <template>
-	<div
-	class="asistente-ia-conversacion"
-	ref="container"
-	@scroll="on_scroll">
-		<p
-		v-if="loading"
-		class="asistente-ia-conversacion__aviso">
-			Cargando la conversación...
-		</p>
+	<!-- 🔴 ESTE div ES EL ROOT Y NO SCROLLEA, Y NO ES DECORACION: es lo unico que
+	puede alojar el boton flotante. El que scrollea es `.asistente-ia-conversacion`,
+	asi que un hijo `position: absolute` suyo se va con el scroll --no queda flotando--
+	por mas `position: relative` que se le ponga al scroller. Por eso el boton es HERMANO
+	del scroller y no hijo.
 
-		<!-- Bienvenida de conversación en blanco: refleja lo que el asistente
-		puede consultar de verdad (las tools de lectura, D15) y, desde la misión
-		asistente-ia-acciones (15/9/2026), lo que puede proponer cargar con una
-		tarjeta que la persona confirma. -->
+	🔴 Y por eso `flex: 1` + `min-height: 0` estan en los DOS (ver el <style>): ese par es
+	lo unico que le da altura al hilo adentro del flex column que lo aloja
+	(`.asistente-ia-panel__cuerpo` y `.sidebar-conversacion`). Si se queda solo en el
+	scroller, el marco crece con el contenido, el hilo deja de scrollear y el composer se
+	va afuera del panel. -->
+	<div class="asistente-ia-conversacion-marco">
 		<div
-		v-else-if="!messages.length"
-		class="asistente-ia-conversacion__bienvenida">
-			<span class="asistente-ia-conversacion__bienvenida-avatar">
-				<img
-				v-if="logo_url"
-				:src="logo_url"
-				alt="">
-				<i
-				v-else
-				class="bi bi-robot"></i>
-			</span>
-			<h5>¿En qué te puedo ayudar?</h5>
-			<p>
-				Preguntame por el stock o el precio de un artículo, el saldo de un
-				cliente o qué se está vendiendo más.
+		class="asistente-ia-conversacion"
+		ref="container"
+		@scroll="on_scroll">
+			<p
+			v-if="loading"
+			class="asistente-ia-conversacion__aviso">
+				Cargando la conversación...
 			</p>
-			<p>
-				También puedo cargar gastos, pagos y tareas de la agenda: te dejo una
-				tarjeta para que confirmes.
-			</p>
+
+			<!-- Bienvenida de conversación en blanco: refleja lo que el asistente
+			puede consultar de verdad (las tools de lectura, D15) y, desde la misión
+			asistente-ia-acciones (15/9/2026), lo que puede proponer cargar con una
+			tarjeta que la persona confirma. -->
+			<div
+			v-else-if="!messages.length"
+			class="asistente-ia-conversacion__bienvenida">
+				<span class="asistente-ia-conversacion__bienvenida-avatar">
+					<img
+					v-if="logo_url"
+					:src="logo_url"
+					alt="">
+					<i
+					v-else
+					class="bi bi-robot"></i>
+				</span>
+				<h5>¿En qué te puedo ayudar?</h5>
+				<p>
+					Preguntame por el stock o el precio de un artículo, el saldo de un
+					cliente o qué se está vendiendo más.
+				</p>
+				<p>
+					También puedo cargar gastos, pagos y tareas de la agenda: te dejo una
+					tarjeta para que confirmes.
+				</p>
+			</div>
+
+			<div
+			v-else
+			class="asistente-ia-conversacion__mensajes">
+				<p
+				v-if="loading_more"
+				class="asistente-ia-conversacion__aviso asistente-ia-conversacion__aviso--chico">
+					Cargando mensajes anteriores...
+				</p>
+				<template v-for="(message, index) in mensajes_visibles">
+					<!-- local_id primero: un globo que nació optimista conserva su key al
+					confirmarse y Vue no re-monta el nodo (la entrada no parpadea). -->
+					<message-bubble
+					:key="message.local_id || message.id"
+					:message="message"
+					@retry="reintentar"></message-bubble>
+					<!-- Puente al submódulo que originó la conversación, debajo del primer
+					mensaje del asistente (D24): sin markdown no hay links en el texto, el
+					botón es de la SPA. -->
+					<div
+					v-if="mostrar_boton_de_origen(message, index)"
+					:key="'origen-' + (message.id || message.local_id)"
+					class="asistente-ia-conversacion__origen">
+						<b-button
+						size="sm"
+						variant="outline-primary"
+						@click="ir_al_origen">
+							<i class="bi bi-box-arrow-up-right"></i>
+							{{ texto_boton_de_origen }}
+						</b-button>
+					</div>
+				</template>
+
+				<pensando-indicator
+				v-if="hay_respuesta_en_curso"></pensando-indicator>
+
+				<!-- Aviso de demora (R8: la cola es compartida con las importaciones). -->
+				<p
+				v-if="hay_respuesta_en_curso && respuesta_demorada"
+				class="asistente-ia-conversacion__demora">
+					La respuesta está tardando más de lo normal. Puede haber una importación
+					en curso ocupando el servidor.
+				</p>
+			</div>
 		</div>
 
-		<div
-		v-else
-		class="asistente-ia-conversacion__mensajes">
-			<p
-			v-if="loading_more"
-			class="asistente-ia-conversacion__aviso asistente-ia-conversacion__aviso--chico">
-				Cargando mensajes anteriores...
-			</p>
-			<template v-for="(message, index) in mensajes_visibles">
-				<!-- local_id primero: un globo que nació optimista conserva su key al
-				confirmarse y Vue no re-monta el nodo (la entrada no parpadea). -->
-				<message-bubble
-				:key="message.local_id || message.id"
-				:message="message"
-				@retry="reintentar"></message-bubble>
-				<!-- Puente al submódulo que originó la conversación, debajo del primer
-				mensaje del asistente (D24): sin markdown no hay links en el texto, el
-				botón es de la SPA. -->
-				<div
-				v-if="mostrar_boton_de_origen(message, index)"
-				:key="'origen-' + (message.id || message.local_id)"
-				class="asistente-ia-conversacion__origen">
-					<b-button
-					size="sm"
-					variant="outline-primary"
-					@click="ir_al_origen">
-						<i class="bi bi-box-arrow-up-right"></i>
-						{{ texto_boton_de_origen }}
-					</b-button>
-				</div>
-			</template>
-
-			<pensando-indicator
-			v-if="hay_respuesta_en_curso"></pensando-indicator>
-
-			<!-- Aviso de demora (R8: la cola es compartida con las importaciones). -->
-			<p
-			v-if="hay_respuesta_en_curso && respuesta_demorada"
-			class="asistente-ia-conversacion__demora">
-				La respuesta está tardando más de lo normal. Puede haber una importación
-				en curso ocupando el servidor.
-			</p>
-		</div>
+		<!-- "Ir al ultimo mensaje" (pedido de Lucas, 22/9/2026). Sale solo cuando la persona
+		no esta abajo de todo; el umbral de tolerancia esta en TOLERANCIA_FINAL. -->
+		<button
+		v-if="lejos_del_final"
+		type="button"
+		class="asistente-ia-conversacion-marco__ir-al-final"
+		title="Ir al último mensaje"
+		aria-label="Ir al último mensaje"
+		data-testid="asistente-bajar-al-ultimo-mensaje"
+		@click="ir_al_final">
+			<i
+			class="bi bi-arrow-down"
+			aria-hidden="true"></i>
+		</button>
 	</div>
 </template>
 
@@ -115,6 +143,41 @@ const ETIQUETA_POR_ORIGEN = {
 	mostrador_reporte: 'Ver el informe',
 }
 
+/**
+ * Cuántos píxeles de distancia al fondo se toleran antes de dar por hecho que la persona
+ * "no está abajo de todo" (botón de ir al último mensaje, pedido de Lucas del 22/9/2026).
+ *
+ * ⚠️ En este módulo "el botón flotante" a secas es OTRO: `FloatingButton.vue`, el que abre
+ * el chat (así lo nombra el comentario de `logo_url` acá abajo). Éste es el de la esquina de
+ * la conversación.
+ *
+ * 🔴 No es 0 y no puede serlo: el alto de un contenedor que scrollea es fraccionario (zoom
+ * del navegador, densidad de pantalla), así que `scrollHeight - scrollTop - clientHeight`
+ * casi nunca da exactamente 0 estando abajo de todo. Con el umbral pegado a 0 el botón
+ * aparecería y desaparecería solo, sin que nadie haya tocado nada.
+ *
+ * 120px es poco más de un renglón de viñeta: alcanza para no parpadear y no es tanto como
+ * para esconder el botón cuando ya hay un mensaje entero fuera de la vista.
+ *
+ * 🔴 El MISMO número decide si un mensaje nuevo arrastra el scroll (ver los watch). Tienen
+ * que ser la misma condición: con dos umbrales distintos queda una franja donde el hilo
+ * baja solo Y el botón igual se ve, o peor, donde no baja y el botón tampoco está.
+ */
+const TOLERANCIA_FINAL = 120
+
+/**
+ * Milisegundos durante los que, después de tocar el botón, un evento `scroll` no vuelve a
+ * mostrarlo. El deslizamiento suave dispara `scroll` en cada cuadro, así que sin esta
+ * ventana el botón reaparecería a mitad de camino y se volvería a ir al llegar abajo.
+ *
+ * Es un VENCIMIENTO y no un temporizador, a propósito: si la persona cancela el
+ * deslizamiento con la rueda (el navegador aborta el scroll programático en cuanto la
+ * tocás), no queda ningún timer colgado ni nada que limpiar en beforeDestroy — vencida la
+ * ventana, el próximo `scroll` vuelve a mandar. 700ms cubre de sobra el tope de animación
+ * de Chrome, que no pasa de ~500ms por lejos que estés.
+ */
+const VENTANA_BAJADA = 700
+
 export default {
 	components: {
 		MessageBubble,
@@ -137,6 +200,14 @@ export default {
 			// Alto del contenedor antes de anteponer una página vieja, para restaurar
 			// el scroll exactamente donde estaba (si no, saltaría al tope).
 			scroll_height_before_prepend: 0,
+			// true cuando el último mensaje quedó a más de TOLERANCIA_FINAL de la vista:
+			// es lo único que muestra el botón flotante. Arranca en false porque una
+			// conversación recién abierta arranca abajo de todo (mounted).
+			lejos_del_final: false,
+			// Date.now() hasta el que se ignora el recálculo del botón: la ventana del
+			// deslizamiento que disparó el propio botón (ver VENTANA_BAJADA). 0 = nada
+			// en curso.
+			bajada_hasta: 0,
 		}
 	},
 	computed: {
@@ -228,21 +299,53 @@ export default {
 		},
 		'messages.length'(new_length, old_length) {
 			let self = this
-			// Mensaje nuevo al final (no una página vieja anteponiéndose): se sigue
-			// el scroll con la conversación.
+			// Mensaje nuevo al final (no una página vieja anteponiéndose).
 			if (new_length > old_length && !this.loading_more) {
+				// 🔴 ACÁ ESTÁ EL CAMBIO DE COMPORTAMIENTO DEL 22/9/2026, Y ES A PROPÓSITO.
+				// Hasta el botón flotante esto era un `scrollToBottom()` pelado: entraba un
+				// mensaje y te llevaba al fondo estuvieras donde estuvieras. Con el botón
+				// puesto eso deja de tener sentido y pasa a molestar: si estás leyendo un
+				// mensaje de más arriba, la respuesta del asistente te sacaba del renglón.
+				//
+				// Ahora: si estabas abajo de todo, baja solo como siempre; si no, NO te mueve
+				// nada y aparece el botón, que es el pedido textual de Lucas ("mostrarlo solo
+				// cuando no estoy con el scroll en el último mensaje").
+				//
+				// 🔴 SI ALGUIEN LO "SIMPLIFICA" DE VUELTA a un scrollToBottom() incondicional,
+				// deshace el pedido entero: el botón no llegaría a verse nunca, porque el hilo
+				// se autocorregiría al fondo en cada mensaje.
+				//
+				// `lejos_del_final` se lee ANTES del $nextTick a propósito: en este punto
+				// todavía vale lo que valía antes de pintar el mensaje nuevo, o sea "¿dónde
+				// estaba parada la persona cuando esto llegó?", que es la pregunta correcta.
+				let seguia_el_final = !this.lejos_del_final
 				this.$nextTick(function () {
-					self.scrollToBottom()
+					if (seguia_el_final) {
+						self.scrollToBottom()
+						return
+					}
+					// No se mueve el scroll, pero el contenido creció: hay que recalcular,
+					// porque ningún evento `scroll` va a avisar de un cambio de alto.
+					self.recalcular_lejos_del_final()
 				})
 			}
 		},
 		hay_respuesta_en_curso(en_curso) {
 			let self = this
 			// Cuando la respuesta llega, el pendiente se convierte en texto (patch,
-			// sin cambiar el largo): también hay que bajar a leerla.
+			// sin cambiar el largo): también hay que bajar a leerla. Mismo criterio que
+			// arriba: solo si la persona estaba abajo de todo.
 			if (!en_curso) {
+				let seguia_el_final = !this.lejos_del_final
 				this.$nextTick(function () {
-					self.scrollToBottom()
+					if (seguia_el_final) {
+						self.scrollToBottom()
+						return
+					}
+					// Acá el recálculo no es un detalle: al irse el indicador de pensando el
+					// contenido puede ENCOGER, y encoger no dispara `scroll`. Sin esto el
+					// botón quedaría pegado a la vista con la conversación ya abajo.
+					self.recalcular_lejos_del_final()
 				})
 			}
 		},
@@ -256,20 +359,106 @@ export default {
 					if (self.$refs.container) {
 						self.$refs.container.scrollTop = self.$refs.container.scrollHeight - self.scroll_height_before_prepend
 					}
+					// 🔴 Ese `scrollTop =` dispara el evento `scroll`, así que `on_scroll`
+					// reentra. No pasa nada y no hace falta ninguna bandera: `loading_more` ya
+					// está en false, y la página siguiente la sigue frenando la misma guarda de
+					// siempre (`scrollTop < 80`, que después de anteponer una página entera
+					// queda muy por encima de 80). Es el comportamiento de antes del botón, sin
+					// cambios. Y el botón no parpadea: quedás arriba de todo, o sea lejos del
+					// final, antes y después de reentrar.
+					//
+					// Este recálculo explícito está igual porque la reentrada NO alcanza: si el
+					// contenedor ya estaba en scrollTop 0, asignarle 0 otra vez no dispara nada.
+					self.recalcular_lejos_del_final()
 				})
 			}
 		},
 	},
 	methods: {
-		scrollToBottom() {
-			if (this.$refs.container) {
-				this.$refs.container.scrollTop = this.$refs.container.scrollHeight
+		/**
+		 * Baja al último mensaje.
+		 *
+		 * `suave` lo pasa SOLO el botón flotante: todo lo demás (abrir una conversación,
+		 * seguir un mensaje que entra) tiene que ser instantáneo, si no la conversación se
+		 * vería deslizándose sola cada vez que el asistente contesta.
+		 *
+		 * @param {Boolean} [suave] true para deslizar en lugar de saltar.
+		 * @returns {void}
+		 */
+		scrollToBottom(suave) {
+			if (!this.$refs.container) {
+				return
 			}
+			let container = this.$refs.container
+			if (suave && !this.prefiere_menos_movimiento() && typeof container.scrollTo == 'function') {
+				container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+			} else {
+				container.scrollTop = container.scrollHeight
+			}
+			// El evento `scroll` va a llegar igual y recalcular, pero llega después; con el
+			// salto instantáneo esto deja el botón resuelto en el mismo tick.
+			this.recalcular_lejos_del_final()
 		},
 		/**
-		 * Scroll infinito hacia arriba: cerca del tope pide la página anterior.
+		 * ¿La persona pidió menos movimiento en el sistema operativo? Es la misma pregunta que
+		 * contesta el `@media (prefers-reduced-motion: reduce)` del <style>, pero desde JS: un
+		 * scroll suave se dispara por código y ningún media query puede frenarlo.
+		 *
+		 * @returns {Boolean}
+		 */
+		prefiere_menos_movimiento() {
+			if (typeof window.matchMedia != 'function') {
+				return false
+			}
+			return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+		},
+		/**
+		 * Recalcula si el último mensaje quedó fuera de la vista, que es lo único que decide
+		 * si el botón flotante se ve.
+		 *
+		 * 🔴 Se llama a mano desde `mounted`, desde `scrollToBottom` y desde los tres watch
+		 * además de desde `on_scroll`, y no es por las dudas: el evento `scroll` avisa cuando
+		 * cambia `scrollTop`, pero NO cuando cambia `scrollHeight`. Un mensaje que entra, una
+		 * página vieja que se antepone o el indicador de pensando que se va cambian el alto
+		 * sin mover el scroll, y sin estas llamadas el botón se quedaría en el estado anterior.
+		 *
+		 * @returns {void}
+		 */
+		recalcular_lejos_del_final() {
+			let container = this.$refs.container
+			if (!container) {
+				return
+			}
+			let distancia = container.scrollHeight - container.scrollTop - container.clientHeight
+			let llego = distancia <= TOLERANCIA_FINAL
+			if (!llego && Date.now() < this.bajada_hasta) {
+				// El deslizamiento que disparó el propio botón sigue en camino (ver
+				// VENTANA_BAJADA): sus eventos `scroll` no tienen que volver a mostrarlo.
+				return
+			}
+			this.bajada_hasta = 0
+			this.lejos_del_final = !llego
+		},
+		/**
+		 * Clic en el botón flotante: al último mensaje, deslizando.
+		 *
+		 * El botón se esconde en el acto y no al llegar: si esperara al final del
+		 * deslizamiento, se vería el cartelito quieto mientras la conversación se mueve
+		 * debajo.
+		 *
+		 * @returns {void}
+		 */
+		ir_al_final() {
+			this.lejos_del_final = false
+			this.bajada_hasta = Date.now() + VENTANA_BAJADA
+			this.scrollToBottom(true)
+		},
+		/**
+		 * Scroll infinito hacia arriba: cerca del tope pide la página anterior. Y, desde el
+		 * 22/9/2026, el recálculo del botón flotante.
 		 */
 		on_scroll(event) {
+			this.recalcular_lejos_del_final()
 			if (event.target.scrollTop < 80 && this.has_more_pages && !this.loading_more && !this.loading) {
 				this.$store.dispatch('ai_chat/getMessages', {
 					conversation_id: this.selected_conversation_id,
@@ -319,6 +508,79 @@ export default {
 </script>
 
 <style lang="sass">
+// ─── El marco quieto, y el botón flotante que cuelga de él ──────────────────────────────
+//
+// 🔴 ESTE BLOQUE NO ES DECORACIÓN Y NO SE PUEDE COLAPSAR CON EL DE ABAJO. El elemento que
+// scrollea es `.asistente-ia-conversacion`; ponerle `position: relative` a ÉL y colgarle el
+// botón adentro NO funciona --el botón se iría con el scroll, que es justo lo contrario de
+// "flotante"--. Por eso hay dos cajas: ésta, que no se mueve y hace de ancla, y la de abajo,
+// que scrollea adentro.
+//
+// 🔴 `flex: 1` + `min-height: 0` van acá ADEMÁS de en el scroller. Ese par es lo único que le
+// da altura al hilo adentro del flex column que lo aloja --`.asistente-ia-panel__cuerpo` en el
+// panel flotante y `.sidebar-conversacion` en el informe del mostrador--. Si se queda solo en
+// el scroller, este marco crece con el contenido, el hilo deja de scrollear y el composer se va
+// abajo de todo, fuera del panel.
+.asistente-ia-conversacion-marco
+	flex: 1
+	min-height: 0
+	// El ancla del botón: la única caja de acá adentro que se queda quieta.
+	position: relative
+	// Para que el scroller ocupe el marco entero: su `flex: 1` + `min-height: 0` se resuelven
+	// contra esta columna.
+	display: flex
+	flex-direction: column
+
+	// "Ir al último mensaje" (pedido de Lucas, 22/9/2026). Una píldora chica, del color de una
+	// tarjeta, pegada a la esquina de abajo a la derecha: justo arriba del input de escribir.
+	&__ir-al-final
+		position: absolute
+		// 🔴 22px de separación del borde derecho, y NO los 12 de costumbre. La franja de la
+		// derecha ya está ocupada por dos cosas:
+		//   · el `scrollbar-gutter: stable` del scroller (ver abajo) reserva el ancho de la
+		//     barra --~15-17px en Windows-- contra el borde derecho de ESTE marco, así que un
+		//     botón a 12px queda debajo del thumb y el clic se lo lleva la barra;
+		//   · en el panel flotante, los 6px de `padding-right` de `.asistente-ia-panel__main`
+		//     son la franja de la manija de resize (`.asistente-ia-resizer`, `width: 6px;
+		//     right: 0`). Esos 6px quedan FUERA de este marco, porque el padding es del
+		//     abuelo: el botón no puede pisar la manija --agarrarla redimensionaría el
+		//     modal--, pero son la razón de que el borde derecho ya venga justo.
+		// 22 deja ~5px de aire entre el botón y la barra en Windows. Donde la barra se
+		// superpone (macOS, teléfonos) el gutter no reserva nada y el botón queda apenas más
+		// adentro, que se ve igual de bien.
+		right: 22px
+		bottom: 12px
+		z-index: 1
+		width: 34px
+		height: 34px
+		padding: 0
+		display: flex
+		align-items: center
+		justify-content: center
+		border: 1px solid var(--color-border, #dee2e6)
+		border-radius: 999px
+		background: var(--bg-card, #fff)
+		color: var(--color-text-secondary, #6c757d)
+		font-size: 15px
+		line-height: 1
+		cursor: pointer
+		// 🔴 Explícito y no heredado: `common-vue/sass/_inputs.sass` le pone a TODO <button>
+		// del sistema una sombra diagonal (`1.95px 1.95px`), que es chasis de formulario. Acá
+		// hace falta una sombra pareja alrededor, como la de cualquier píldora flotante del
+		// repo. Gana por especificidad (0,2,0 contra 0,0,1), así que no depende del orden en
+		// que quede la hoja final.
+		box-shadow: 0 2px 8px var(--shadow-color, rgba(99, 99, 99, .2))
+		transition: background .12s ease, border-color .12s ease, color .12s ease
+
+		&:hover
+			background: var(--bg-hover, #f1f3f5)
+			border-color: var(--color-primary, #007bff)
+			color: var(--color-primary, #007bff)
+
+		&:focus-visible
+			outline: 2px solid var(--color-primary, #007bff)
+			outline-offset: 2px
+
 .asistente-ia-conversacion
 	flex: 1
 	min-height: 0
@@ -412,4 +674,11 @@ export default {
 		color: var(--color-text-secondary, #6c757d)
 		margin: 0 0 12px 0
 		padding: 0 2px
+
+// El deslizamiento del botón se apaga en JS y no acá (ningún media query puede frenar un
+// `scrollTo({behavior: 'smooth'})`): lo mira `prefiere_menos_movimiento()`. Esto cubre lo que sí
+// es CSS, que es el tinte del hover.
+@media (prefers-reduced-motion: reduce)
+	.asistente-ia-conversacion-marco__ir-al-final
+		transition: none
 </style>
