@@ -2,6 +2,7 @@
 // import vender from '@/mixins/vender'
 
 
+import moment from 'moment'
 import vender_set_total from '@/mixins/vender_set_total'
 import limpiar_vender from '@/mixins/vender/limpiar_vender'
 import limpiar_actualizandose_por from '@/mixins/vender/previus_sale/limpiar_actualizandose_por'
@@ -403,6 +404,15 @@ export default {
 			this.$store.commit('vender/setSaleTypeId', model.sale_type_id ? model.sale_type_id : 0)
 			this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra ? model.numero_orden_de_compra : '')
 			this.$store.commit('vender/set_fecha_entrega', model.fecha_entrega ? model.fecha_entrega.split('T')[0] : null)
+			/*
+				Fecha de la venta. Viene del back como ISO ('2026-09-22T14:31:07.000000Z'), y al campo
+				de la etapa 1 --un <input type="date">-- hay que darle solo el 'YYYY-MM-DD': si le
+				llega el ISO entero no muestra nada. Se corta por la T y no se parsea con moment a
+				proposito: reinterpretar ese ISO con Z corre la fecha tres horas.
+
+				Si la venta no trajera created_at, se cae a hoy (nunca a null: el campo quedaria vacio).
+			*/
+			this.$store.commit('vender/set_created_at', model.created_at ? model.created_at.split('T')[0] : moment().format('YYYY-MM-DD'))
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 
 			this.$store.commit('vender/setObservations', model.observations)
@@ -579,6 +589,12 @@ export default {
 				*/
 				forzar_total_monto: this.$store.state.vender.forzar_total_monto,
 				fecha_entrega: this.fecha_entrega,
+				/*
+					Fecha de la venta ('YYYY-MM-DD'). Del store y no de un computed, igual que el total
+					forzado y el canje de puntos: es lo que dejo set_datos_para_actualizar_en_vender() al
+					abrir la venta, o lo que el vendedor eligio si la cambio.
+				*/
+				created_at: this.$store.state.vender.created_at,
 				valor_dolar: this.valor_dolar,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
