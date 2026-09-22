@@ -6,6 +6,22 @@ export default {
     methods: {
         /**
          * Guarda una venta localmente en IndexedDB
+         *
+         * 🔴 En esta tabla conviven DOS fechas distintas y es facil confundirlas:
+         *
+         *  - `created_at`: cuando se CAPTURO la venta estando sin internet. Es un campo LOCAL de
+         *    Dexie (esta indexado en offline/db.js), lo escribe esta funcion y nunca viaja al
+         *    backend: sync_pending_sales() lo borra antes del POST. Se usa para ordenar y para
+         *    mostrarle al usuario de cuando era la venta (`fecha_original` del modal de ventas
+         *    sincronizadas y los toasts de error de abajo).
+         *
+         *  - `created_at_elegido`: el dia 'YYYY-MM-DD' que el VENDEDOR eligio en la etapa 1 de
+         *    Vender. Es el que el backend tiene que persistir como `created_at` de la venta, y
+         *    sync_pending_sales() lo manda con ese nombre en el cuerpo del POST.
+         *
+         * Por eso la fecha elegida entra con nombre propio y no como `created_at`: si usara el
+         * mismo nombre, el spread de aca abajo la pisaria con el momento de la captura.
+         *
          * @param {Object} sale_data - Información completa de la venta
          */
         async save_sale_offline(sale_data) {
@@ -70,6 +86,26 @@ export default {
                             }
                             delete sale_to_sync.id
                             delete sale_to_sync.created_at
+                            delete sale_to_sync.created_at_elegido
+
+                            /*
+                                🔴 Las dos fechas de esta tabla, en el unico lugar donde se cruzan
+                                (el detalle esta en el comentario de save_sale_offline()):
+
+                                 - `sale.created_at` es LOCAL --cuando se capturo la venta offline--
+                                   y por eso se borra arriba: no tiene nada que hacer en el POST.
+                                 - `sale.created_at_elegido` es el dia que eligio el vendedor, y es
+                                   justamente el que el backend espera bajo el nombre `created_at`
+                                   (SaleHelper::resolver_created_at() le suma la hora actual).
+
+                                La clave solo se manda si esta: una venta guardada en IndexedDB
+                                ANTES de esta version no la tiene, y mandar `created_at: undefined`
+                                --o null-- seria peor que no mandarla, porque el back ya sabe caer a
+                                now() cuando la clave no viaja.
+                            */
+                            if (sale.created_at_elegido) {
+                                sale_to_sync.created_at = sale.created_at_elegido
+                            }
 
                             /*
                                 Los dos avisos globales del interceptor de main.js se apagan para
@@ -110,6 +146,12 @@ export default {
                                             forma_de_pago: sale.forma_de_pago,
                                             permiso_existente: sale.permiso_existente,
                                         },
+                                        /*
+                                            La de la CAPTURA offline, no la que eligio el vendedor:
+                                            el modal de ventas sincronizadas muestra de cuando es la
+                                            venta que quedo esperando conexion. Ver el comentario de
+                                            save_sale_offline().
+                                        */
                                         fecha_original: sale.created_at,
                                     })
                                 } else {
