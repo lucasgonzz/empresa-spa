@@ -293,7 +293,10 @@ export default {
 
 	legend
 		font-size: 0.75rem
-		color: #6e6e73
+		// Token de _dark_theme.sass (mision dark-mode-buscador-filtro, 22/9/2026): el hex fijo
+		// (#6e6e73) no tiene contraparte oscura -- contra el --bg-card del modal en modo oscuro
+		// queda con contraste insuficiente, que es lo que reporto Lucas.
+		color: var(--color-text-secondary)
 		font-weight: normal
 		margin-bottom: 4px
 
@@ -315,7 +318,10 @@ export default {
 
 	.filter-toggle-row__label
 		font-size: 0.9rem
-		color: #1d1d1f
+		// Token de _dark_theme.sass (mision dark-mode-buscador-filtro, 22/9/2026): el hex fijo
+		// (#1d1d1f, casi negro) quedaba practicamente invisible sobre el --bg-card oscuro del
+		// modal -- es el "En blanco" / "Que no esta en blanco" que reporto Lucas.
+		color: var(--color-text-primary)
 
 	// Toggle tipo iPhone: mismos valores exactos que .model-form__toggle
 	// (common-vue/components/model/ModelForm.vue) y su copia bg-toggle del
