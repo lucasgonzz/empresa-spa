@@ -71,19 +71,40 @@ export default {
 		 * se lee como agil (el default del sistema), asi una respuesta sin la clave no rompe el
 		 * footer.
 		 *
+		 * Misión proveedores-ia-deepseek: si el consumo trae `proveedor` (el que efectivamente
+		 * corre), se le suma el nombre de la inteligencia: "Pensando ágil · DeepSeek" /
+		 * "Pensando a fondo · Claude". Sin la clave (API viejo) queda el texto de siempre.
+		 *
 		 * @returns {String}
 		 */
 		texto_pensamiento() {
 			if (!this.consumo) {
 				return 'Pensando ágil'
 			}
+			let texto = 'Pensando ágil'
 			if (this.consumo.pensamiento == 'profundo') {
-				return 'Pensando a fondo'
+				texto = 'Pensando a fondo'
 			}
 			if (this.consumo.pensamiento == 'equilibrado') {
-				return 'Pensando equilibrado'
+				texto = 'Pensando equilibrado'
 			}
-			return 'Pensando ágil'
+			if (this.nombre_proveedor) {
+				texto += ' · ' + this.nombre_proveedor
+			}
+			return texto
+		},
+		/**
+		 * El nombre de la inteligencia que corre, a partir de `consumo.proveedor`: 'deepseek' es
+		 * DeepSeek y cualquier otro valor no vacio es Claude (el proveedor de siempre). Vacio si
+		 * la clave no viene.
+		 *
+		 * @returns {String}
+		 */
+		nombre_proveedor() {
+			if (!this.consumo || !this.consumo.proveedor) {
+				return ''
+			}
+			return this.consumo.proveedor == 'deepseek' ? 'DeepSeek' : 'Claude'
 		},
 		icono_pensamiento() {
 			if (this.consumo && this.consumo.pensamiento == 'profundo') {

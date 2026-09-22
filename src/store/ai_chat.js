@@ -285,14 +285,23 @@ export default {
 
 		// Consumo de IA del mes del dueño para el footer del panel (S2, misión
 		// foto-sucursal-y-asistente-configurable): GET api/mi-consumo-ia. Trae
-		// { consumo_mes, plan, cerca, supero, pensamiento, confianza }. null = todavía no se
-		// pidió, o el endpoint no está (API viejo, 404): ahí el footer no se muestra.
-		// pensamiento: 'agil'|'equilibrado'|'profundo'.
+		// { consumo_mes, plan, cerca, supero, pensamiento, confianza, proveedor, modelo }. null =
+		// todavía no se pidió, o el endpoint no está (API viejo, 404): ahí el footer no se muestra.
+		// pensamiento: 'agil'|'equilibrado'|'profundo' (el que efectivamente corre: con DeepSeek
+		// nunca es 'equilibrado'). proveedor: 'anthropic'|'deepseek', el que EFECTIVAMENTE corre
+		// (misión proveedores-ia-deepseek; si el elegido no tiene clave en la instalación, acá viene
+		// el que lo reemplazó). modelo: el id del modelo con el que corre el chat. Las dos últimas
+		// pueden no venir contra un API viejo: el footer las trata como opcionales.
 		mi_consumo: null,
 
 		// Config del agente del dueño (S3): { confianza:'cauteloso'|'resuelto',
-		// pensamiento:'agil'|'equilibrado'|'profundo' }. GET/PUT api/user/asistente-config. null =
-		// todavía no se pidió (o API viejo): el modal de configuración cae a los defaults del sistema.
+		// pensamiento:'agil'|'equilibrado'|'profundo', proveedor:'anthropic'|'deepseek' (el ELEGIDO),
+		// proveedores_disponibles:['anthropic', 'deepseek'] (los que tienen clave en la instalación),
+		// pensamientos_por_proveedor:{anthropic:[...], deepseek:[...]},
+		// modelo:{proveedor, modelo, pensamiento} (con qué corre efectivamente) }.
+		// GET/PUT api/user/asistente-config. null = todavía no se pidió (o API viejo): el modal de
+		// configuración cae a los defaults del sistema. Contra un API viejo las claves nuevas no
+		// vienen y el modal asume solo Claude con sus tres modos.
 		asistente_config: null,
 	},
 	getters: {
@@ -1317,7 +1326,10 @@ export default {
 		 * toast genérico del interceptor). Refleja en el store lo que devuelve el API, o el
 		 * payload enviado si la respuesta no trae los campos.
 		 *
-		 * @param {Object} payload { confianza, pensamiento }
+		 * El payload viaja ENTERO, sin filtrar claves: `proveedor` (misión proveedores-ia-deepseek)
+		 * llega al API tal como lo manda el modal, y una clave que el API no conozca la ignora.
+		 *
+		 * @param {Object} payload { confianza, pensamiento, proveedor }
 		 * @returns {Promise}
 		 */
 		guardarAsistenteConfig({ commit }, payload) {
