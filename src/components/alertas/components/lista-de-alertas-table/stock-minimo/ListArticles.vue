@@ -15,16 +15,23 @@
 		<div
 		v-if="inventory_performance"
 		class="stock-minimo-actualizacion m-b-10">
-			<span class="stock-minimo-actualizacion__texto">
-				Actualizado {{ inventory_performance_actualizado_hace }}
+			<span
+			class="stock-minimo-actualizacion__texto"
+			data-testid="stock-minimo-actualizacion-texto">
+				Calculado el {{ date(inventory_performance.created_at) }} a las {{ hour(inventory_performance.created_at) }} ({{ inventory_performance_actualizado_hace }}).
+				Es una foto del stock a esa hora: si después cargaste o moviste stock, tocá Actualizar para recalcularla. Se hace en segundo plano y podés seguir trabajando.
 			</span>
 			<b-button
 			class="stock-minimo-actualizacion__boton"
 			size="sm"
+			data-testid="stock-minimo-actualizar"
 			:disabled="inventory_performance_generating"
 			@click="actualizar_inventory_performance()">
-				<i class="bi bi-arrow-repeat m-r-5" aria-hidden="true"></i>
-				Actualizar
+				<i
+				class="bi bi-arrow-repeat m-r-5"
+				:class="{ 'stock-minimo-actualizacion__icono--girando': inventory_performance_generating }"
+				aria-hidden="true"></i>
+				{{ inventory_performance_generating ? 'Actualizando...' : 'Actualizar' }}
 			</b-button>
 		</div>
 
@@ -544,6 +551,12 @@ export default {
 		i
 			color: var(--color-text-secondary)
 
+	// Mientras el reporte se recalcula en segundo plano, el icono del boton gira: mismo movimiento
+	// que el del aviso de abajo, asi se ve que hay algo en curso sin abrir otra cosa.
+	&__icono--girando
+		display: inline-block
+		animation: stock-minimo-aviso-girar 1.6s linear infinite
+
 // --- Resumen en chips -------------------------------------------------------------------------
 // Antes era una `custom-card` con las cuatro filas apiladas. Ahora es una fila de chips que
 // envuelve sola: en telefono se acomodan en dos o cuatro renglones sin desbordar.
@@ -644,6 +657,7 @@ export default {
 // Quien pidio menos movimiento en su sistema operativo ve la nota quieta: el aviso no depende de
 // la animacion para entenderse.
 @media (prefers-reduced-motion: reduce)
-	.stock-minimo-aviso__icono
+	.stock-minimo-aviso__icono,
+	.stock-minimo-actualizacion__icono--girando
 		animation: none
 </style>
