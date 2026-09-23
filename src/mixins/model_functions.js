@@ -708,6 +708,56 @@ export default {
         mostrar_order_envio_resumen(prop, model) {
             return !!model && Number(model.deliver) === 1
         },
+        /**
+         * "Descuentos y recargos del cliente" del formulario del pedido (misión
+         * descuentos-recargos-por-cliente, 23/9/2026): "Descuento Mayorista 10% · Recargo Flete 5%.
+         * Los precios del pedido ya los incluyen."
+         *
+         * El porcentaje sale del PIVOT del pedido (la foto que sacó la tienda al crearlo), no del
+         * descuento de hoy: si el dueño lo cambió después, el pedido se cobró con el viejo.
+         *
+         * 🔴 La aclaración de que los precios ya los incluyen no es decorativa: sin ella, quien
+         * mira el pedido tiende a restar el descuento otra vez del total. Al confirmar, la venta
+         * recibe estos mismos ajustes con los renglones a precio sin ajustar.
+         *
+         * @param {object} order
+         * @returns {string}
+         */
+        getOrderAjustesDelCliente(order) {
+            let self = this
+            let porcentaje = function (model) {
+                let valor = model.pivot && model.pivot.percentage != null ? model.pivot.percentage : model.percentage
+                return self.porcentaje_es(valor) + '%'
+            }
+            let partes = []
+            ;(order.discounts || []).forEach(function (discount) {
+                partes.push('Descuento ' + discount.name + ' ' + porcentaje(discount))
+            })
+            ;(order.surchages || []).forEach(function (surchage) {
+                partes.push('Recargo ' + surchage.name + ' ' + porcentaje(surchage))
+            })
+            if (!partes.length) {
+                return ''
+            }
+            return partes.join(' · ') + '. Los precios del pedido ya los incluyen.'
+        },
+        /**
+         * `v_if_function` de "Descuentos y recargos del cliente": solo si el pedido tiene alguno.
+         * Un pedido de una tienda vieja, o de un comprador sin cliente, no los tiene (y en un
+         * cliente sin las tablas, el back ni siquiera manda las relaciones).
+         *
+         * @param {object} prop
+         * @param {object} model
+         * @returns {boolean}
+         */
+        mostrar_order_ajustes_del_cliente(prop, model) {
+            if (!model) {
+                return false
+            }
+            let discounts = Array.isArray(model.discounts) ? model.discounts.length : 0
+            let surchages = Array.isArray(model.surchages) ? model.surchages.length : 0
+            return discounts + surchages > 0
+        },
         currentAcountStatus(current_acount) {
             if (current_acount.status == 'sin_pagar') {
                 return 'Sin pagar'

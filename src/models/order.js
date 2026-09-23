@@ -146,6 +146,19 @@ export default {
 		// 	not_show: true,
 		// },
 		{
+			// Descuentos y recargos del cliente con los que la tienda calculó los precios del pedido
+			// (misión descuentos-recargos-por-cliente, 23/9/2026; `discount_order` /
+			// `order_surchage`). `v_if_function` y no `v_if`, por lo mismo que "Envío elegido":
+			// el `v_if` de array no filtra nada. La key no es la de la relación (`discounts`) a
+			// propósito: así el form no la trata como belongs_to_many ni la manda de vuelta.
+			text: 'Descuentos y recargos del cliente',
+			key: 'ajustes_del_cliente_resumen',
+			function: 'getOrderAjustesDelCliente',
+			only_show: true,
+			not_show: true,
+			v_if_function: 'mostrar_order_ajustes_del_cliente',
+		},
+		{
 			text: 'Notas',
 			key: 'description',
 			type: '',
