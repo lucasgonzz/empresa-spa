@@ -20,8 +20,15 @@
 			<!--
 				El texto se esconde abajo de 768px: en la fila de una compra ya conviven
 				Ex excel, Importar excel y Dif. Con dos textos más, a 360px se desborda.
+
+				🔴 La separación con el ícono va en el <span> y NO en el <i>. Entre dos
+				elementos hermanos el compilador de Vue quita el espacio en blanco cuando
+				hay un salto de línea de por medio, así que ícono y texto quedaban pegados
+				(a diferencia de "Importar excel", donde el texto es un nodo suelto y el
+				espacio sobrevive). Si el margen estuviera en el <i>, en teléfono —donde
+				el texto no se ve— el ícono quedaría corrido del centro del botón.
 			-->
-			<span class="d-none d-md-inline">Escanear</span>
+			<span class="btn-scan-invoice__texto d-none d-md-inline">Escanear</span>
 		</b-button>
 
 		<!--
@@ -40,7 +47,7 @@
 		title="Hay un escaneo listo para revisar"
 		@click.stop="abrir_revision">
 			<i class="bi bi-exclamation-triangle"></i>
-			<span class="d-none d-md-inline">Revisar escaneo</span>
+			<span class="btn-scan-invoice__texto d-none d-md-inline">Revisar escaneo</span>
 			<b-badge
 			v-if="escaneo_pendiente.cantidad_articulos"
 			variant="light"
@@ -49,16 +56,42 @@
 			</b-badge>
 		</b-button>
 
+		<!--
+			Historial: todos los escaneos que tuvo la compra, no solo el pendiente de
+			revisar (misión historial-escaneos-compra). Aparece únicamente si la compra
+			tiene alguno. El texto se muestra recién desde 992px: con Escanear y el botón
+			rojo ya en la fila, en tablet (768–1024px) el texto de un sexto botón la
+			desborda; ahí queda el ícono con la cantidad, y el `title` dice qué es.
+		-->
+		<b-button
+		data-tour="compras.boton_historial_escaneos"
+		v-if="tiene_historial"
+		class="m-l-15"
+		size="sm"
+		variant="outline-secondary"
+		title="Ver todos los escaneos de esta compra"
+		@click.stop="abrir_historial">
+			<i class="bi bi-clock-history"></i>
+			<span class="btn-scan-invoice__texto d-none d-lg-inline">Historial</span>
+			<b-badge
+			v-if="cantidad_escaneos"
+			variant="secondary"
+			class="ml-1">
+				{{ cantidad_escaneos }}
+			</b-badge>
+		</b-button>
+
 	</div>
 </template>
 <script>
 /*
- * Los dos botones de escaneo de la fila de una compra (misión escaneo-factura-compra).
+ * Los botones de escaneo de la fila de una compra: Escanear, Revisar escaneo (el
+ * rojo, si hay uno pendiente) e Historial (misión historial-escaneos-compra).
  *
  * Molde de estilo: BtnImport.vue (m-l-15, size sm, ícono del set propio) y
  * BtnViewReceivedDiff.vue (visibilidad por computed).
  *
- * El @click.stop de los dos no es decorativo: la fila de la tabla tiene su propio
+ * El @click.stop de los tres no es decorativo: la fila de la tabla tiene su propio
  * click que abre la compra, igual que en los botones hermanos.
  */
 export default {
@@ -80,6 +113,41 @@ export default {
 				return null
 			}
 			return this.$store.getters['provider_order_scan/pendiente_de'](this.model.id)
+		},
+		/*
+		 * Cuántos escaneos tuvo la compra, según el backend (`provider_order_scans_count`
+		 * viaja con cada compra). Con un backend anterior a esta función el campo no
+		 * existe y da 0: el botón de historial simplemente no aparece.
+		 *
+		 * @return {Number}
+		 */
+		cantidad_escaneos() {
+			if (!this.model) {
+				return 0
+			}
+			let cantidad = parseInt(this.model.provider_order_scans_count)
+			return isNaN(cantidad) ? 0 : cantidad
+		},
+		/*
+		 * ¿La compra tiene algún escaneo? Además del contador del backend se mira el
+		 * escaneo pendiente y la corrida de esta sesión: la fila del listado no se
+		 * vuelve a pedir cuando se manda un escaneo, así que su contador puede estar
+		 * en 0 aunque el escaneo recién se haya creado.
+		 *
+		 * @return {Boolean}
+		 */
+		tiene_historial() {
+			if (!this.model || !this.model.id) {
+				return false
+			}
+
+			if (this.cantidad_escaneos > 0 || this.escaneo_pendiente) {
+				return true
+			}
+
+			let corrida = this.$store.state.provider_order_scan.corrida
+
+			return !!(corrida && corrida.provider_order_id == this.model.id)
 		},
 	},
 	methods: {
@@ -109,6 +177,14 @@ export default {
 			this.$store.dispatch('provider_order_scan/abrir_revision', this.escaneo_pendiente.uuid)
 			this.$bvModal.show('scan-invoice-review')
 		},
+		/*
+		 * Abre el historial de escaneos de esta compra. El modal lee la compra del
+		 * store (como los demás) y pide el listado al abrirse.
+		 */
+		abrir_historial() {
+			this.$store.commit('provider_order_scan/set_compra', this.model)
+			this.$bvModal.show('scan-invoice-history')
+		},
 	},
 }
 </script>
@@ -121,4 +197,9 @@ export default {
 	// no desalinearlos respecto de Ex excel / Importar excel / Dif, que son hermanos
 	// directos de la celda.
 	flex-wrap: nowrap
+
+	// Separación entre el ícono y el texto de cada botón. Va en el texto y no en el
+	// ícono a propósito: ver el comentario del <span> de "Escanear".
+	&__texto
+		margin-left: 0.4rem
 </style>

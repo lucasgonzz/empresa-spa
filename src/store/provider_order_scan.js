@@ -32,6 +32,7 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * Endpoints (fijados en el plan de la misión, §4):
  * - GET  provider-order-scan/pendientes            -> { models: [ {provider_order_id, uuid, cantidad_articulos, created_at} ] }
  * - GET  provider-order-scan/en-curso              -> { run: {...} | null }
+ * - GET  provider-order-scan/historial/{compra}    -> { models: [ {uuid, estado_visible, created_at, usuario, imagenes, articulos, aplicado, factura, ...} ] }
  * - GET  provider-order-scan/{uuid}                -> { uuid, provider_order_id, estado, ..., imagenes, resultado }
  * - POST provider-order-scan/{uuid}/visto          -> 200
  * - POST provider-order-scan/{uuid}/descartar      -> 200
@@ -79,6 +80,17 @@ export default {
 		 * listado y apretar el botón rojo.
 		 */
 		abrir_en: null,
+
+		/*
+		 * Historial de escaneos de la compra abierta en el modal de historial
+		 * (misión historial-escaneos-compra): todos los escaneos que tuvo, en cualquier
+		 * estado, el más nuevo primero. Se pide al abrir el modal; no se mantiene al día
+		 * por broadcast porque se consulta puntualmente.
+		 */
+		historial: [],
+
+		/* True mientras se pide el historial. */
+		cargando_historial: false,
 	},
 	getters: {
 		/*
@@ -128,6 +140,12 @@ export default {
 		},
 		set_cargando_detalle(state, value) {
 			state.cargando_detalle = !!value
+		},
+		set_historial(state, value) {
+			state.historial = value || []
+		},
+		set_cargando_historial(state, value) {
+			state.cargando_historial = !!value
 		},
 		/*
 		 * Deja (o limpia, con null) la orden de "abrí la revisión de este escaneo".
@@ -186,6 +204,29 @@ export default {
 					 */
 					console.log(err)
 					return []
+				})
+		},
+		/*
+		 * Trae todos los escaneos que tuvo una compra (misión historial-escaneos-compra).
+		 * Alimenta el modal de historial. Devuelve el listado, o null si falló, para que
+		 * el modal distinga "esta compra no tiene escaneos" de "no se pudo cargar".
+		 *
+		 * @param {Number|String} provider_order_id
+		 */
+		get_historial({ commit }, provider_order_id) {
+			commit('set_cargando_historial', true)
+			commit('set_historial', [])
+
+			return axios.get('/api/provider-order-scan/historial/' + provider_order_id)
+				.then(res => {
+					commit('set_historial', res.data.models)
+					commit('set_cargando_historial', false)
+					return res.data.models
+				})
+				.catch(err => {
+					console.log(err)
+					commit('set_cargando_historial', false)
+					return null
 				})
 		},
 		/*

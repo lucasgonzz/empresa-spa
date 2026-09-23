@@ -8,6 +8,8 @@
 		porque los dos trabajan sobre la compra que dejo seleccionada la fila. -->
 		<scan-invoice></scan-invoice>
 		<scan-invoice-review></scan-invoice-review>
+		<!-- Historial de escaneos de la compra (mision historial-escaneos-compra). -->
+		<scan-invoice-history></scan-invoice-history>
 
 		<price-description></price-description>
 
@@ -120,6 +122,7 @@ export default {
 		BtnScanInvoice: () => import('@/components/provider/components/orders/BtnScanInvoice'),
 		ScanInvoice: () => import('@/components/provider/modals/orders/ScanInvoice'),
 		ScanInvoiceReview: () => import('@/components/provider/modals/orders/ScanInvoiceReview'),
+		ScanInvoiceHistory: () => import('@/components/provider/modals/orders/ScanInvoiceHistory'),
 		IvaBreakdown: () => import('@/components/provider/components/orders/IvaBreakdown'),
 		NavComponent: () => import('@/components/provider/components/orders/nav/Index'),
 		Total: () => import('@/components/provider/components/orders/Total'),
