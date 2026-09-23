@@ -167,7 +167,7 @@ export default {
 		toRoute(route) {
 			// console.log(route)
 			let route_name = this.getRouteName(route)
-			if (route_name == this.route_name) {
+			if (route_name == this.route_name && !this.debeIrAParamsDeLaRuta(route)) {
 				return
 			}
 			if (route.params) {
@@ -176,6 +176,27 @@ export default {
 				// console.log('llamando a '+route_name)
 				this.$router.push({name: route_name})
 			}
+		},
+		/**
+		 * True si el usuario ya esta en la ruta de este item del menu pero en OTRA vista, y el item
+		 * pide volver a la suya (route.volver_a_params). Sin esto toRoute() corta por tener el mismo
+		 * name y, en Tienda Online, hacer clic en el padre estando en Clientes/Cupones no llevaba a
+		 * Pedidos: todas las vistas comparten el name 'online' y solo cambia params.view.
+		 *
+		 * Es opt-in a proposito: este mixin lo comparten todos los modulos y los que tienen su propia
+		 * navegacion interna (Alertas, Ventas, Reportes) no deben saltar de vista al tocar el item.
+		 *
+		 * @param {Object} route Item del menu (router/routes.js).
+		 * @returns {Boolean}
+		 */
+		debeIrAParamsDeLaRuta(route) {
+			if (!route.volver_a_params || !route.params) {
+				return false
+			}
+			let params_actuales = this.$route.params
+			return Object.keys(route.params).some(key => {
+				return params_actuales[key] != route.params[key]
+			})
 		},
 		isActiveRoute(route) {
 			if (this.route_name == this.getRouteName(route)) {
