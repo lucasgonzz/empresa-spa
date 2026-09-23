@@ -1,6 +1,11 @@
 <template>
+	<!--
+		Sin el permiso `sale.discount_surchage.aplicar`, el panel aparece solo si el cliente tiene
+		recargos vinculados, y con SOLO ese grupo: mismo motivo que en Discounts.vue (se prenden
+		solos y el vendedor tiene que poder apagarlos).
+	-->
 	<div
-	v-if="puede_usar_discount_surchages"
+	v-if="puede_usar_discount_surchages || client_surchages.length"
 	class="vender-rate-panel vender-rate-panel--surcharge">
 
 		<surchages
@@ -15,6 +20,7 @@
 					<span class="vender-rate-panel__subtitle">Seleccionar recargos a aplicar</span>
 				</div>
 				<b-button
+				v-if="puede_usar_discount_surchages"
 				size="sm"
 				variant="outline-primary"
 				v-b-modal="'surchages'">
@@ -45,63 +51,40 @@
 						Del cliente {{ client.name }}
 					</span>
 					<div class="vender-client-block__checkbox-list">
-						<vender-toggle
+						<toggle-de-ajuste-de-venta
 						v-for="surchage in client_surchages"
 						:key="surchage.id"
-						mode="array"
-						:option_value="surchage.id"
+						:ajuste="surchage"
+						tipo="recargo"
+						id_prefix="surchage_"
 						:disabled="desactivar_recargos"
-						v-model="sale_surchages">
-							{{ surchage.name }} {{ porcentaje_es(surchage.percentage) }}%
-						</vender-toggle>
+						v-model="sale_surchages"></toggle-de-ajuste-de-venta>
 					</div>
 				</div>
 
 				<!-- Listado de recargos disponibles -->
 				<div
-				v-if="otros_surchages.length"
+				v-if="puede_usar_discount_surchages && otros_surchages.length"
 				class="vender-rate-panel__section">
 					<span class="vender-rate-panel__section-label">
 						Disponibles
 					</span>
 					<div class="vender-client-block__checkbox-list">
-						<vender-toggle
+						<toggle-de-ajuste-de-venta
 						v-for="surchage in otros_surchages"
 						:key="surchage.id"
-						mode="array"
-						:option_value="surchage.id"
+						:ajuste="surchage"
+						tipo="recargo"
+						id_prefix="surchage_"
 						:disabled="desactivar_recargos"
-						row_class="vender-toggle-row--multiline"
-						v-model="sale_surchages">
-
-							<div
-							class="vender-client-block__item-detail"
-							:id="'surchage_'+surchage.id">
-
-								{{ surchage.name }} {{ porcentaje_es(surchage.percentage) }}%
-
-								<span
-								v-if="surchage.deleted_at">
-									(actualmente eliminado)
-								</span>
-
-								<span
-								v-else-if="surchage.updated_percentage">
-									({{ porcentaje_es(surchage.updated_percentage) }}% en este momento)
-								</span>
-
-								<p
-								class="text-muted"
-								v-if="!surchage.deleted_at && surchage.updated_percentage">
-									En caso de querer usar el valor actual del recargo ({{ porcentaje_es(surchage.updated_percentage) }}%), desmarcar para quitar el recargo, guardar la venta sin el recargo, y editar la venta para agregarle el recargo con el valor actualizado.
-								</p>
-							</div>
-						</vender-toggle>
+						v-model="sale_surchages"></toggle-de-ajuste-de-venta>
 					</div>
 				</div>
 
 				<!-- Recargos en servicios -->
-				<div class="vender-rate-panel__section">
+				<div
+				v-if="puede_usar_discount_surchages"
+				class="vender-rate-panel__section">
 					<span class="vender-rate-panel__section-label">
 						Servicios
 					</span>
@@ -114,7 +97,9 @@
 				</div>
 
 				<!-- Recargos directos en precios de artículos -->
-				<div class="vender-rate-panel__section vender-rate-panel__section--footer">
+				<div
+				v-if="puede_usar_discount_surchages"
+				class="vender-rate-panel__section vender-rate-panel__section--footer">
 					<span class="vender-rate-panel__section-label">
 						Precios de artículos
 					</span>
@@ -150,6 +135,7 @@
 <script>
 import Surchages from '@/components/vender/modals/clients/Surchages'
 import VenderToggle from '@/components/vender/components/VenderToggle'
+import ToggleDeAjusteDeVenta from './ToggleDeAjusteDeVenta'
 import vender from '@/mixins/vender'
 import vender_set_total from '@/mixins/vender_set_total'
 import discount_surchage_permissions from '@/mixins/vender/discount_surchage_permissions'
@@ -158,6 +144,7 @@ export default {
 	components: {
 		Surchages,
 		VenderToggle,
+		ToggleDeAjusteDeVenta,
 	},
 	computed: {
 		desactivar_recargos() {
