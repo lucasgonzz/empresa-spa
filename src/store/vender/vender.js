@@ -329,6 +329,25 @@ export default {
 
 		discounts_id: [],
 		surchages_id: [],
+
+		/*
+			Qué descuentos y recargos prendió SOLO el cliente elegido (misión
+			descuentos-recargos-por-cliente, 23/9/2026), para apagar exactamente esos al cambiar o
+			sacar el cliente y dejar los que el vendedor prendió a mano. Lo escribe
+			`mixins/vender/ajustes_del_cliente.js` y lo resetea `limpiar_vender`.
+		*/
+		ajustes_auto_del_cliente: {
+			discounts_id: [],
+			surchages_id: [],
+		},
+
+		/*
+			Descuentos y recargos del cliente que no se pudieron prender porque el store de
+			`discount` / `surchage` todavía no había cargado: `{ client_id, discounts_id, surchages_id }`
+			o null. Los prende el watcher de `mixins/vender/ajustes_del_cliente.js` cuando cargan.
+		*/
+		ajustes_pendientes_del_cliente: null,
+
 		to_check: 0,
 		checked: 0,
 		confirmed: 0,
@@ -757,6 +776,12 @@ export default {
 		},
 		addSurchageId(state, value) {
 			state.surchages_id.push(value)
+		},
+		set_ajustes_auto_del_cliente(state, value) {
+			state.ajustes_auto_del_cliente = value || { discounts_id: [], surchages_id: [] }
+		},
+		set_ajustes_pendientes_del_cliente(state, value) {
+			state.ajustes_pendientes_del_cliente = value || null
 		},
 		setToCheck(state, value) {
 			state.to_check = value
