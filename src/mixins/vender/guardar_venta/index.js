@@ -344,6 +344,22 @@ export default {
 				*/
 				forzar_total_monto: this.$store.state.vender.forzar_total_monto,
 				fecha_entrega: this.$store.state.vender.fecha_entrega,
+				/*
+					Fecha elegida para la venta ('YYYY-MM-DD'). Tiene que viajar tambien por el camino
+					offline: esta venta se guarda --y eventualmente se factura-- sola cuando vuelve la
+					conexion, con lo que haya quedado en IndexedDB y nada mas. Sin esto, una venta
+					fechada al mes pasado en un dia sin internet se subiria con la fecha del dia en que
+					volvio la conexion.
+
+					🔴 Va con el nombre `created_at_elegido` y NO `created_at` a proposito: la tabla
+					`sales` de IndexedDB ya tiene un `created_at` propio --y hasta indexado-- que
+					significa otra cosa (cuando se CAPTURO la venta estando sin internet, ver
+					offline/sync_sales.js). Si esta fecha viajara como `created_at`, save_sale_offline()
+					la pisaria con el momento de la captura y sync_pending_sales() la borraria antes del
+					POST. sync_pending_sales() se encarga de mapearla a `created_at` en el cuerpo del
+					POST, que es el nombre que espera SaleController::store().
+				*/
+				created_at_elegido: this.$store.state.vender.created_at,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,
 
@@ -358,6 +374,11 @@ export default {
 					con el total YA neteado por el front --el cliente cobraba el descuento y
 					conservaba los puntos--; sale_status_id, price_description, send_mail y el log
 					se perdian. Si se agrega una clave al POST online, va tambien aca.
+
+					La fecha elegida para la venta se sumo el 22/9/2026 y esta mas arriba, al lado de
+					fecha_entrega, para no separarla de la otra fecha. Viaja como
+					`created_at_elegido` y sync_pending_sales() la renombra a `created_at` en el POST:
+					el motivo esta explicado alla arriba.
 				*/
 				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
 				puntos_canjeados: this.$store.state.vender.puntos_canjeados,

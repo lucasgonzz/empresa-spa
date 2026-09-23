@@ -294,7 +294,7 @@ export default {
 		// pueden no venir contra un API viejo: el footer las trata como opcionales.
 		mi_consumo: null,
 
-		// Config del agente del dueño (S3): { confianza:'cauteloso'|'resuelto',
+		// Config del agente del dueño (S3): { confianza:'cauteloso'|'resuelto'|'directo',
 		// pensamiento:'agil'|'equilibrado'|'profundo', proveedor:'anthropic'|'deepseek' (el ELEGIDO),
 		// proveedores_disponibles:['anthropic', 'deepseek'] (los que tienen clave en la instalación),
 		// pensamientos_por_proveedor:{anthropic:[...], deepseek:[...]},
@@ -303,6 +303,27 @@ export default {
 		// configuración cae a los defaults del sistema. Contra un API viejo las claves nuevas no
 		// vienen y el modal asume solo Claude con sus tres modos.
 		asistente_config: null,
+
+		// La conexión MCP del dueño (misión asistente-mcp, 22/9/2026): con una clave de conexión,
+		// Claude Desktop, Claude Code o cualquier cliente MCP usa el asistente con los datos del
+		// negocio. GET/POST/DELETE api/mcp/conexion (mismo gate que la config: dueño o admin, con la
+		// extensión asistente_ia). Acá vive la FICHA de la conexión:
+		// { activa: bool, nombre: 'mcp', creada_at: ISO|null, ultimo_uso_at: ISO|null,
+		//   url: 'https://…/api/mcp' }.
+		// null = todavía no se pidió.
+		//
+		// 🔴 La clave (el `token` que devuelve el POST) NUNCA se guarda acá. Viaja UNA sola vez,
+		// en la respuesta del POST, y después el GET no la trae más: el API guarda solo el hash. Si
+		// quedara en el store, quedaría viva en memoria del navegador mientras dure la pestaña (y
+		// en cualquier devtools de Vuex) mucho después de que el dueño la copió. La muestra el
+		// modal, desde su estado local, y la tira al cerrarse. Lo mismo para los `ejemplos` del
+		// POST: llevan la clave adentro, así que corren la misma suerte.
+		mcp_conexion: null,
+
+		// true cuando el API es viejo y no tiene la ruta (404/405 en el GET): el modal muestra
+		// "Tu sistema todavía no tiene esta función" en vez del botón de generar, y el resto del
+		// modal sigue andando. Los dos repos no llegan a producción a la vez.
+		mcp_conexion_no_disponible: false,
 	},
 	getters: {
 		/**
@@ -526,6 +547,12 @@ export default {
 		},
 		setAsistenteConfig(state, value) {
 			state.asistente_config = value || null
+		},
+		setMcpConexion(state, value) {
+			state.mcp_conexion = value || null
+		},
+		setMcpConexionNoDisponible(state, value) {
+			state.mcp_conexion_no_disponible = Boolean(value)
 		},
 	},
 	actions: {
@@ -1340,6 +1367,105 @@ export default {
 					let data = res.data && res.data.confianza ? res.data : payload
 					commit('setAsistenteConfig', data)
 					return data
+				})
+		},
+		/**
+		 * Trae la ficha de la conexión MCP del dueño (misión asistente-mcp): si hay una clave
+		 * activa, desde cuándo, cuándo se usó por última vez y la URL del servidor. La dispara el
+		 * modal de configuración al abrirse.
+		 *
+		 * 🔴 skip_global_error_event: contra un API viejo la ruta no existe y el GET da 404 (o 405,
+		 * según cómo esté armado el grupo de rutas). Eso NO es un error para mostrar: se marca
+		 * `mcp_conexion_no_disponible` y se RESUELVE, así el modal muestra "Tu sistema todavía no
+		 * tiene esta función" y sigue andando. Cualquier otro fallo (403, 500, corte de red) sí se
+		 * propaga, para que el modal lo distinga de "no está la función".
+		 *
+		 * @returns {Promise} resuelve con la ficha (o null si el API no tiene la función).
+		 */
+		fetchMcpConexion({ commit }) {
+			return axios.get('/api/mcp/conexion', {
+				skip_global_error_event: true,
+				// `skip_navigation_cancel`: el modal vive en AsistenteIaFloatingButton, que es global
+				// (App.vue), así que el interceptor de request de main.js le colgaría el CancelToken
+				// de navegación y cambiar de pantalla con el pedido en vuelo lo cancelaría. Acá se
+				// vería como un "No pudimos consultar" falso; en el POST es peor: el API ya creó la
+				// clave pero la respuesta —la ÚNICA vez que viaja— se pierde y el dueño no la ve.
+				skip_navigation_cancel: true,
+			})
+				.then(res => {
+					commit('setMcpConexionNoDisponible', false)
+					commit('setMcpConexion', res.data)
+					return res.data
+				})
+				.catch(err => {
+					let status = err && err.response ? err.response.status : 0
+					if (status == 404 || status == 405) {
+						commit('setMcpConexionNoDisponible', true)
+						commit('setMcpConexion', null)
+						return null
+					}
+					console.log(err)
+					return Promise.reject(err)
+				})
+		},
+		/**
+		 * Genera una clave de conexión nueva (POST). El API revoca las anteriores de la persona y
+		 * devuelve 201 { token, url, activa: true, creada_at, ultimo_uso_at: null, ejemplos:
+		 * { claude_code, claude_desktop, anthropic_api } }.
+		 *
+		 * 🔴 Al store va la ficha SIN `token` ni `ejemplos` (ver el comentario de `mcp_conexion`):
+		 * la clave se muestra una sola vez y no se persiste en ningún lado del navegador. La
+		 * respuesta COMPLETA se devuelve al modal, que es el único que la ve, la muestra desde su
+		 * estado local y la tira al cerrarse.
+		 *
+		 * El error se propaga para que el modal avise con un toast propio (por eso
+		 * skip_global_error_event: no queremos ADEMÁS el toast genérico del interceptor).
+		 *
+		 * @returns {Promise} resuelve con la respuesta completa del API (con el token).
+		 */
+		crearMcpConexion({ commit }) {
+			return axios.post('/api/mcp/conexion', {}, {
+				skip_global_error_event: true,
+				// `skip_navigation_cancel`: si el dueño navega con el POST en vuelo, el API ya creó
+				// la clave (y revocó la anterior) pero la respuesta se cancelaría acá, y la clave,
+				// que viaja UNA sola vez, no se mostraría nunca. Ver fetchMcpConexion.
+				skip_navigation_cancel: true,
+			})
+				.then(res => {
+					let data = res.data || {}
+					let ficha = {}
+					Object.keys(data).forEach(clave => {
+						if (clave != 'token' && clave != 'ejemplos') {
+							ficha[clave] = data[clave]
+						}
+					})
+					commit('setMcpConexionNoDisponible', false)
+					commit('setMcpConexion', ficha)
+					return data
+				})
+		},
+		/**
+		 * Revoca la conexión (DELETE): la clave deja de autenticar en el acto y las apps que la
+		 * tenían configurada dejan de funcionar. El API devuelve 200 { activa: false, nombre: 'mcp',
+		 * creada_at: null, ultimo_uso_at: null, url }, que pasa a ser la ficha. El error se propaga
+		 * para que el modal avise con un toast propio.
+		 *
+		 * @returns {Promise} resuelve con la ficha ya revocada.
+		 */
+		revocarMcpConexion({ commit }) {
+			return axios.delete('/api/mcp/conexion', {
+				skip_global_error_event: true,
+				// `skip_navigation_cancel`: la revocación ya ocurrió en el API aunque el dueño
+				// navegue; la ficha del store tiene que enterarse igual. Ver fetchMcpConexion.
+				skip_navigation_cancel: true,
+			})
+				.then(res => {
+					let ficha = res.data && typeof res.data == 'object' ? res.data : {}
+					if (typeof ficha.activa == 'undefined') {
+						ficha.activa = false
+					}
+					commit('setMcpConexion', ficha)
+					return ficha
 				})
 		},
 	},

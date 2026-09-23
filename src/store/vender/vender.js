@@ -1,5 +1,6 @@
 // import Vue from 'vue'
 import axios from 'axios'
+import moment from 'moment'
 import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = env('VUE_APP_API_URL')
@@ -400,6 +401,33 @@ export default {
 
 		fecha_entrega: null,
 
+		/*
+			Mision fecha-creacion-editable (22/9/2026): la fecha con la que se registra la venta.
+			Arranca en HOY y no en null a proposito -- el campo de la etapa 1 es un
+			<input type="date"> y con null se veria vacio. Viaja como string 'YYYY-MM-DD' en el
+			POST, en el PUT y en el camino offline.
+
+			limpiar_vender lo devuelve a HOY (no a null) despues de guardar, asi la venta
+			siguiente arranca con el campo puesto.
+
+			🔴 ESTE VALOR ES SOLO LA SEMILLA DEL ARRANQUE, NO EL DEFAULT DE CADA VENTA, y no
+			alcanza solo. `state` es un objeto literal, no una funcion: Vuex lo evalua UNA vez,
+			al importar el modulo --o sea cuando se carga la pestaña-- y de ahi en mas este
+			moment() queda congelado en ese dia.
+
+			Una pestaña abierta desde la tarde le pone a la venta de las 00:05 el dia de AYER;
+			el back guarda "dia elegido + hora actual" (SaleHelper::resolver_created_at), asi
+			que la venta queda fechada casi 24 horas atras, fuera del listado del dia y fuera
+			del arqueo del turno, sin un solo error en el camino.
+
+			Los dos lugares que lo vuelven a calcular FRESCO son los que mandan:
+			  - views/Vender.vue, en el created(), al arrancar una venta nueva;
+			  - mixins/vender/limpiar_vender.js, al guardar / cancelar / limpiar.
+			Si alguno de los dos se "simplifica" a un literal o se borra por redundante,
+			vuelve el bug de la medianoche.
+		*/
+		created_at: moment().format('YYYY-MM-DD'),
+
 		aplicar_recargos_directo_a_items: 0,
 
 		total_description: [],
@@ -552,6 +580,14 @@ export default {
 			state.fecha_entrega = value
 			console.log('se seteo fecha_entrega con:')
 			console.log(state.fecha_entrega)
+		},
+		/*
+			Fecha de la venta (mision fecha-creacion-editable, 22/9/2026). El valor que llega es
+			siempre 'YYYY-MM-DD': lo manda el <input type="date"> de FechaVenta.vue, o la precarga
+			de una venta que se esta actualizando, que ya le saco la parte horaria del ISO.
+		*/
+		set_created_at(state, value) {
+			state.created_at = value
 		},
 		set_payment_method_discount_percentage(state, value) {
 			state.discount_percentage = value
@@ -1223,6 +1259,12 @@ export default {
 				puntos_canjeados: state.puntos_canjeados,
 				descuento_puntos: state.descuento_puntos,
 				fecha_entrega: state.fecha_entrega,
+				/*
+					Fecha elegida para la venta, 'YYYY-MM-DD'. El back la resuelve con
+					SaleHelper::resolver_created_at(): el dia elegido + la hora actual. Si no viaja
+					--una SPA vieja-- el back cae a now(), que es el comportamiento de siempre.
+				*/
+				created_at: state.created_at,
 				incoterms: state.incoterms,
 				observations_ocultas: state.observations_ocultas,
 				aplicar_recargos_directo_a_items: state.aplicar_recargos_directo_a_items,

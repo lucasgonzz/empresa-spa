@@ -161,6 +161,20 @@ export default {
 				price_type_id: rootState.vender.price_type ? rootState.vender.price_type.id : null,
 				seller_id: info.seller_id,
 				fecha_entrega: info.fecha_entrega,
+				/*
+					🔴 LA FECHA DE LA VENTA VIAJA SIEMPRE EN EL PUT (mision fecha-creacion-editable,
+					22/9/2026).
+
+					Es un campo INDEPENDIENTE, de los que SaleController@update lee con
+					$request->exists('created_at'): ausente, preserva lo guardado --que es lo que manda
+					una SPA vieja, y por eso el cambio es compatible hacia atras--; presente, el back
+					compara el DIA contra el guardado y, si cambio, reescribe created_at conservando la
+					hora original de la venta.
+
+					Por eso mandarla siempre que se este editando no pisa nada: si el vendedor no toco el
+					campo, el dia es el mismo que ya tenia la venta y el back no la toca.
+				*/
+				created_at: info.created_at,
 				valor_dolar: info.valor_dolar,
 				observations_ocultas: info.observations_ocultas,
 				aplicar_recargos_directo_a_items: info.aplicar_recargos_directo_a_items,

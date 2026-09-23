@@ -22,18 +22,28 @@ export default {
 		nota_interna: 'La prop es permitir_endoso, y la pasan solo current-acounts/pago/PaymentMethods.vue (!es_cobro_a_cliente) y expenses/modals/payment-methods/Index.vue. Vender, la agenda y las comisiones no la pasan: una venta cobrada con cheque es un cheque recibido.',
 	},
 
-	'cheque-a-endosar-*': {
-		titulo: 'Cheque a endosar',
-		que_hace: 'El cheque recibido que se le entrega al proveedor (o con el que se paga el gasto). Cada opción muestra número, banco, monto, fecha de pago y el cliente que lo entregó.',
+	'cheque-abrir-cartera-*': {
+		titulo: 'Seleccionar de mi cartera de cheques',
+		que_hace: 'Abre "Tu cartera de cheques": los cheques recibidos que todavía están disponibles para endosar, como tarjetas con el diseño de un cheque (banco, número, monto, fecha de pago y el cliente que lo entregó). Se filtra por banco (horizontal nav) o se busca por cliente, banco o número.',
 		repercute: [
+			'Un clic sobre una tarjeta elige ese cheque y cierra la cartera: la fila queda con sus datos, de solo lectura.',
 			'El cheque recibido sale de cartera: pasa a Tesorería > Cheques > Recibidos > Endosados, con el proveedor o el gasto al que fue.',
 			'Aparece una copia en Emitidos, con el mismo número, banco, monto y fechas, y desde qué cliente vino.',
 			'El proveedor queda pagado (o el gasto registrado) por el monto del cheque: el monto de la fila se fija en ese valor y no se puede cambiar. Se endosa entero, no hay endoso parcial.',
 			'No mueve ninguna caja: la plata nunca entró ni salió del comercio, cambió de mano el papel.',
-			'Si el mismo pago tiene varias filas, un cheque elegido en una fila desaparece de la lista de las otras.',
+			'Si el mismo pago tiene varias filas, un cheque elegido en una fila desaparece de la cartera de las otras. El botón sigue disponible después de elegir uno, para poder reabrir la cartera y cambiarlo.',
 		],
-		requiere: 'Al confirmar, la API vuelve a verificar que el cheque siga disponible. Si mientras tanto se cobró, se rechazó, venció o alguien lo endosó, el pago no se registra y se muestra el motivo.',
-		nota_interna: 'La lista sale de GET cheque/disponibles-para-endosar, pedida una vez por apertura del modal en PaymentMethodsStep. La fila viaja con cheque_id; ChequeHelper::crear_cheque llama a endosar() en vez de crear. La prevalidación es problemas_de_endoso_en_payload (422 con message antes de escribir nada).',
+		requiere: 'Al confirmar el pago, la API vuelve a verificar que el cheque siga disponible. Si mientras tanto se cobró, se rechazó, venció o alguien lo endosó, el pago no se registra y se muestra el motivo.',
+		nota_interna: 'Misión cartera-cheques-modal (22/9/2026): reemplaza al <select> "cheque-a-endosar-*" (testid viejo, ya no existe). La cartera es components/common/payment-methods/cartera-cheques/Index.vue, que recibe por prop el mismo array que ya pedía PaymentMethodsStep (GET cheque/disponibles-para-endosar, una vez por apertura del modal) y emite el cheque_id elegido a CheckInfo.set_cheque_a_endosar, sin tocar esa función: sigue siendo ChequeHelper::endosar() del lado de la API, con la misma prevalidación problemas_de_endoso_en_payload (422 antes de escribir nada).',
+	},
+
+	'tarjeta-cheque-*': {
+		titulo: 'Cheque de la cartera',
+		que_hace: 'Una tarjeta de solo lectura con los datos de un cheque disponible para endosar, adentro de "Tu cartera de cheques".',
+		repercute: [
+			'Un clic sobre la tarjeta elige ese cheque y cierra la cartera.',
+		],
+		nota_interna: 'components/common/payment-methods/cartera-cheques/TarjetaCheque.vue, presentacional puro. El testid lleva el id del cheque.',
 	},
 
 	'cheque-banco-*': {

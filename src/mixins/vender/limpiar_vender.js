@@ -1,3 +1,4 @@
+import moment from 'moment'
 import start_methods from '@/mixins/start_methods'
 import vender_set_total from '@/mixins/vender_set_total'
 import set_price_type from '@/mixins/vender/price_types'
@@ -116,6 +117,21 @@ export default {
 			this.$store.commit('vender/setSellerId', 0)
 
 			this.$store.commit('vender/set_fecha_entrega', null)
+
+			/*
+				La fecha de la venta vuelve a HOY, no a null: si quedara en null, la venta siguiente
+				arrancaria con el campo de fecha vacio (es un <input type="date">) y el vendedor
+				tendria que completarlo a mano en cada venta. El default del state es el mismo.
+
+				🔴 El moment() va ACA, en vivo, y NO se puede reemplazar por el valor del state ni
+				por una constante del modulo. El default de state.created_at se evalua una sola vez
+				--cuando se importa el modulo, o sea cuando se carga la pestaña-- y en un comercio
+				que vende pasada la medianoche eso significa arrancar la venta siguiente con el dia
+				de AYER: el back la guarda con "dia elegido + hora actual" y queda fechada casi 24
+				horas atras, fuera del listado del dia y fuera del arqueo del turno, sin un error
+				que lo denuncie.
+			*/
+			this.$store.commit('vender/set_created_at', moment().format('YYYY-MM-DD'))
 
 			this.$store.commit('vender/set_moneda_id', 1)
 

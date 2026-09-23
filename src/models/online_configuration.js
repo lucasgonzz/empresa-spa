@@ -15,6 +15,12 @@ export default {
 			type: 'checkbox',
 			description: 'Si se activa, se mostrara el enlace Catalogo en el navbar de la tienda online.',
 		},
+		{
+			text: 'Al tocar una categoría del sidebar, mostrar sus subcategorías en vez de sus artículos',
+			key: 'mostrar_subcategorias_al_click_categoria',
+			type: 'checkbox',
+			description: 'Si se activa, tocar el nombre de una categoría en el panel lateral de la tienda se comporta igual que tocar la flecha: despliega sus subcategorías, con la opción "Todos" primero, en vez de mostrar directamente todos sus artículos. Si se desactiva (comportamiento actual), tocar el nombre muestra directo los artículos de la categoría.',
+		},
 
 		{
 			group_title: 'Precios'

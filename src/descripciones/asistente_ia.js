@@ -22,6 +22,11 @@
  * asistente en "resuelto": el articulo se deduce del nombre que dijo la persona, que puede venir
  * inexacto, y la foto se publica en la tienda online.
  *
+ * Desde la mision asistente-capacidades-y-hilos (22/9/2026) las fotos que el dueño le manda por
+ * WhatsApp se ven en el chat del sistema, adentro de su propio mensaje y arriba de su texto
+ * (antes llegaban y se guardaban, pero la SPA no las pintaba nunca). Y la conversacion tiene un
+ * boton para bajar al ultimo mensaje, que aparece solo cuando estas leyendo mas arriba.
+ *
  * Cada afirmacion sale del contrato de la seccion 2 y de las reglas por tipo de la seccion 3.4
  * del plan de la mision (el API registra por el mismo camino que la pantalla); no inventar aca.
  */
@@ -71,11 +76,25 @@ export default {
 
 	'asistente-adjunto-imagen': {
 		titulo: 'Ver la imagen completa',
-		que_hace: 'Abre a tamaño natural la foto que el asistente adjuntó a su respuesta: hoy, la foto de un artículo cuando se la pedís.',
+		que_hace: 'Abre a tamaño natural una foto de la conversación: la que el asistente adjuntó a su respuesta (hoy, la foto de un artículo cuando se la pedís) o la que vos le mandaste por WhatsApp.',
 		repercute: [
 			'No registra ni cambia nada: es solo un visor. Se cierra con la cruz, con Escape o tocando fuera de la foto, y cerrarlo no cierra el chat.',
-			'La foto es la misma que tiene el artículo en el sistema y en la tienda. Si no carga, en su lugar queda la línea "No se pudo cargar la imagen" y el mensaje sigue entero.',
+			'La foto que adjunta el asistente es la misma que tiene el artículo en el sistema y en la tienda. Si no carga, en su lugar queda la línea "No se pudo cargar la imagen" y el mensaje sigue entero.',
+			'Las fotos que le mandás por WhatsApp se ven arriba de tu propio texto, en tu mensaje. Un mensaje que es solo una foto, sin texto, se ve igual de bien.',
 		],
-		nota_interna: 'Los adjuntos viajan en message.adjuntos ({ tipo, url, texto, articulo_id }, tope 6, contrato seccion 1 de asistente-omnisciente); los pinta AdjuntosDeMensaje.vue debajo del texto y arriba de las tarjetas, solo los de tipo imagen con url. El visor es un b-modal propio con el z-index fijado en 1065 por id, como el modal de cuenta corriente (el porque esta en el componente). Sin la clave (API viejo) no se pinta nada.',
+		nota_interna: 'Los adjuntos del asistente viajan en message.adjuntos ({ tipo, url, texto, articulo_id }, tope 6, contrato seccion 1 de asistente-omnisciente) y se pintan debajo del texto y arriba de las tarjetas. Desde la mision asistente-capacidades-y-hilos (22/9/2026) el MISMO AdjuntosDeMensaje.vue pinta las fotos del dueño, que viajan en message.imagenes ({ id, orden, url }, contrato 1) y van ARRIBA del texto; MessageBubble.vue las traduce a la forma de los adjuntos antes de pasarlas. En los dos casos solo se pinta tipo imagen con url. La url de una foto del dueño es un endpoint AUTENTICADO de empresa-api (disco privado): el <img> la pide con la cookie de sesion porque no lleva crossorigin -- ponerle crossorigin="anonymous" la romperia. El visor es un b-modal propio con el z-index fijado en 1065 por id, como el modal de cuenta corriente (el porque esta en el componente). Sin la clave (API viejo) no se pinta nada.',
+	},
+
+	'asistente-bajar-al-ultimo-mensaje': {
+		titulo: 'Ir al último mensaje',
+		que_hace: 'Baja la conversación hasta abajo de todo, al mensaje más reciente.',
+		repercute: [
+			'No registra ni cambia nada: solo mueve la vista.',
+			'Aparece solo cuando estás leyendo más arriba y el último mensaje quedó fuera de la vista; estando abajo de todo, no se muestra.',
+			'Mientras el botón está a la vista, un mensaje nuevo del asistente ya NO te arrastra al fondo: te deja donde estabas leyendo. Si estás abajo de todo, la conversación sigue bajando sola como siempre.',
+			'Lo que mandás vos sí te baja siempre, estés donde estés: nunca te quedás sin ver salir tu propio mensaje.',
+			'Una foto que termina de cargar, confirmar una tarjeta o agrandar el panel cambian el alto de la conversación, y el botón se entera: si venías siguiendo el final te quedás pegado abajo, y si estabas leyendo más arriba aparece el botón.',
+		],
+		nota_interna: 'Conversation.vue. La condicion es scrollHeight - scrollTop - clientHeight > TOLERANCIA_FINAL (120px). El boton vive en un marco no scrolleable que envuelve al scroller (un hijo absoluto del scroller se iria con el scroll). Baja de un SALTO y no deslizando, a proposito: el scroll suave dispara scroll en cada cuadro y el boton reaparecia a mitad de camino; taparlo pedia una ventana de tiempo que se rompia si la persona cancelaba con la rueda y se quedaba quieta. La bandera lejos_del_final es un cache de una medicion del DOM: los watch de messages.length y hay_respuesta_en_curso MIDEN primero (los watchers de usuario corren antes que el de render, asi que ahi el DOM todavia es el de antes del mensaje nuevo) en vez de leerla guardada. Los cambios de alto que no disparan scroll --foto que decodifica, resize del panel, AccionCard que cambia-- los cubre un ResizeObserver sobre el scroller y sobre el div de los mensajes. Una pagina vieja que se antepone se distingue por la clave del ULTIMO mensaje, no por loading_more (que cuando corre el watcher ya vale false: el store lo apaga sincronicamente justo despues del prepend).',
 	},
 }
