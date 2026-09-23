@@ -336,7 +336,7 @@ export default [
 		/*
 			Las secciones se navegan desde acá porque Online.vue ya no monta su nav
 			horizontal (misión "chat IA", 15/8/2026). Los hijos van con `function:` y
-			NO con name 'online' + params: toRoute() (common-vue/mixins/nav.js:141-146)
+			NO con name 'online' + params: toRoute() (common-vue/mixins/nav.js)
 			corta con `if (route_name == this.route_name) return`, así que un hijo
 			llamado 'online' no navegaría nunca estando ya adentro de /online — que es
 			justo el caso de uso. Costo conocido y cosmético: los hijos no se pintan
