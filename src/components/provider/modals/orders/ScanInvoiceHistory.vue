@@ -157,7 +157,8 @@
 							<table class="scan-history__tabla">
 								<thead>
 									<tr>
-										<th>Código</th>
+										<!-- En teléfono el código pasa debajo del nombre y esta columna se esconde. -->
+										<th class="d-none d-sm-table-cell">Código</th>
 										<th>Artículo</th>
 										<th class="scan-history__num">Cant.</th>
 										<th class="scan-history__num">Costo</th>
@@ -167,8 +168,15 @@
 									<tr
 									v-for="(articulo, indice) in escaneo.articulos"
 									:key="'art-' + escaneo.uuid + '-' + indice">
-										<td>{{ articulo.codigo_proveedor || articulo.bar_code || '—' }}</td>
-										<td>{{ articulo.nombre || '—' }}</td>
+										<td class="d-none d-sm-table-cell">{{ articulo.codigo_proveedor || articulo.bar_code || '—' }}</td>
+										<td>
+											{{ articulo.nombre || '—' }}
+											<div
+											v-if="articulo.codigo_proveedor || articulo.bar_code"
+											class="scan-history__codigo-movil d-sm-none">
+												{{ articulo.codigo_proveedor || articulo.bar_code }}
+											</div>
+										</td>
 										<td class="scan-history__num">{{ articulo.cantidad !== null ? articulo.cantidad : '—' }}</td>
 										<td class="scan-history__num">
 											{{ articulo.costo_unitario !== null ? price(articulo.costo_unitario) : '—' }}
@@ -270,6 +278,10 @@ export default {
 
 			this.$store.dispatch('provider_order_scan/get_historial', this.compra.id)
 			.then(models => {
+				// undefined = la respuesta llegó tarde y otro pedido ya tomó la lista.
+				if (models === undefined) {
+					return
+				}
 				if (models === null) {
 					self.fallo = true
 					return
@@ -482,6 +494,8 @@ export default {
 				object-fit: cover
 				display: block
 
+		// Colores fijos a propósito: es un número superpuesto sobre una FOTO, y necesita el
+		// mismo contraste en modo claro y oscuro (el fondo lo pone la imagen, no el tema).
 		&__foto-numero
 			position: absolute
 			top: 4px
@@ -498,8 +512,7 @@ export default {
 			align-items: center
 			justify-content: center
 
-		// Scroll horizontal propio: en teléfono la tabla no entra y no tiene que
-		// ensanchar el modal.
+		// Scroll propio por si aun así no entra: no tiene que ensanchar el modal.
 		&__tabla-contenedor
 			overflow-x: auto
 			max-height: 260px
@@ -509,22 +522,35 @@ export default {
 
 		&__tabla
 			width: 100%
-			min-width: 420px
 			font-size: 0.85rem
 			th, td
 				padding: 6px 10px
 				border-bottom: 1px solid var(--color-border-secondary)
 				text-align: left
+				// Hay una regla global que deja los td en `nowrap`: sin esto un nombre largo de
+				// artículo ensancha toda la tabla y empuja la columna del costo fuera de la vista.
+				white-space: normal
+				word-break: break-word
 			th
 				position: sticky
 				top: 0
 				background: var(--bg-section)
 				color: var(--color-text-secondary)
 				font-weight: 600
+				white-space: nowrap
+			// El código no se parte ("A-" / "100"): es corto y se lee de corrido. El que
+			// se ajusta de línea es el nombre, que puede ser largo.
+			td:first-child
+				white-space: nowrap
+
+		// El código bajo el nombre, solo en teléfono.
+		&__codigo-movil
+			font-size: 0.75rem
+			color: var(--color-text-secondary)
 
 		&__num
 			text-align: right !important
-			white-space: nowrap
+			white-space: nowrap !important
 
 		&__acciones
 			margin-top: 12px

@@ -129,10 +129,11 @@ export default {
 			return isNaN(cantidad) ? 0 : cantidad
 		},
 		/*
-		 * ¿La compra tiene algún escaneo? Además del contador del backend se mira el
-		 * escaneo pendiente y la corrida de esta sesión: la fila del listado no se
-		 * vuelve a pedir cuando se manda un escaneo, así que su contador puede estar
-		 * en 0 aunque el escaneo recién se haya creado.
+		 * ¿La compra tiene algún escaneo? Además del contador del backend se mira lo
+		 * que esta sesión ya vio (`compras_con_escaneos`, que anota la corrida, los
+		 * pendientes y los escaneos gestionados): la fila del listado no se vuelve a
+		 * pedir cuando se manda o se descarta un escaneo, así que su contador puede
+		 * estar en 0 aunque el escaneo exista.
 		 *
 		 * @return {Boolean}
 		 */
@@ -145,9 +146,11 @@ export default {
 				return true
 			}
 
-			let corrida = this.$store.state.provider_order_scan.corrida
+			let model_id = this.model.id
 
-			return !!(corrida && corrida.provider_order_id == this.model.id)
+			return this.$store.state.provider_order_scan.compras_con_escaneos.some(id => {
+				return id == model_id
+			})
 		},
 	},
 	methods: {
