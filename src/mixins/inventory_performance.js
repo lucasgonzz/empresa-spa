@@ -105,6 +105,9 @@ export default {
 
 			.listen('.InventoryPerformanceGenerated', (payload) => {
 
+				// Llego el aviso: el sondeo de respaldo ya no hace falta (y no debe repetir el callback).
+				this.detener_sondeo_inventory_performance()
+
 				this.$store.dispatch('inventory_performance/get_models_con_estado')
 				.then(() => {
 					if (typeof callback == 'function') {
@@ -114,6 +117,67 @@ export default {
 
 				this.Echo.leaveChannel(channel_name)
 			})
+
+			// Respaldo por si el aviso nunca llega (socket caido, plan de Pusher al tope): ver abajo.
+			this.sondear_inventory_performance(callback)
 		},
+		/**
+		 * Respaldo del broadcast: mientras el reporte se esta generando, pregunta cada 15 segundos
+		 * si ya termino, y cuando `generating` vuelve a false deja de preguntar. Sin esto, si el
+		 * evento de Pusher se pierde, el boton queda en "Actualizando..." hasta recargar la pagina.
+		 *
+		 * Cada pregunta es el mismo GET liviano que ya hace la pantalla al entrar (solo los
+		 * contadores, sin articulos). Tiene tope de 30 minutos: pasado eso deja de insistir (el
+		 * candado del backend se libera solo) y el usuario recupera el boton con recargar.
+		 *
+		 * Es una sola espera por componente: si ya hay una en curso, no arma otra. Se corta sola
+		 * al destruirse el componente (beforeDestroy de abajo).
+		 *
+		 * @param {Function} [callback] Se ejecuta cuando el sondeo detecta que el reporte termino.
+		 */
+		sondear_inventory_performance(callback) {
+
+			if (this.inventory_performance_sondeo) {
+				return
+			}
+
+			let self = this
+			let intentos_maximos = 120
+
+			this.inventory_performance_intentos = 0
+
+			this.inventory_performance_sondeo = setInterval(function () {
+
+				self.inventory_performance_intentos++
+
+				if (self.inventory_performance_intentos > intentos_maximos) {
+					self.detener_sondeo_inventory_performance()
+					return
+				}
+
+				self.$store.dispatch('inventory_performance/get_models_con_estado')
+				.then(function () {
+					if (!self.inventory_performance_generating) {
+						self.detener_sondeo_inventory_performance()
+						if (typeof callback == 'function') {
+							callback()
+						}
+					}
+				})
+
+			}, 15000)
+		},
+		/**
+		 * Corta el sondeo de respaldo, si hay uno en curso.
+		 */
+		detener_sondeo_inventory_performance() {
+			if (this.inventory_performance_sondeo) {
+				clearInterval(this.inventory_performance_sondeo)
+				this.inventory_performance_sondeo = null
+			}
+		},
+	},
+	beforeDestroy() {
+		this.detener_sondeo_inventory_performance()
 	},
 }
