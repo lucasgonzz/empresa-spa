@@ -110,6 +110,62 @@ export default {
 		},
 
 
+		/*
+			Condiciones comerciales del cliente (misión descuentos-recargos-por-cliente, 23/9/2026).
+			Se guardan en `client_discount` / `client_surchage`: Vender los prende solos al elegir
+			el cliente, y la tienda ajusta con ellos los precios del comprador vinculado.
+			`not_show` para que no ocupen columnas en el listado; igual el listado genérico los lee
+			(`model[prop.key].length`), por eso el back los manda en el withAll del cliente.
+		*/
+		{
+			group_title: 'Descuentos y recargos',
+		},
+		{
+			text: 'Descuentos para vender',
+			key: 'discounts',
+			type: 'search',
+			store: 'discount',
+			search_on_models_by: 'name',
+			not_show: true,
+			description: 'Se aplican solos en Vender al elegir este cliente (se pueden sacar en esa venta), y en la tienda online los precios de su comprador aparecen con estos descuentos.',
+			belongs_to_many: {
+				model_name: 'discount',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
+					{
+						text: 'Porcentaje',
+						key: 'percentage',
+					},
+				],
+			}
+		},
+		{
+			text: 'Recargos para vender',
+			key: 'surchages',
+			type: 'search',
+			store: 'surchage',
+			search_on_models_by: 'name',
+			not_show: true,
+			description: 'Se aplican solos en Vender al elegir este cliente (se pueden sacar en esa venta), y en la tienda online los precios de su comprador aparecen con estos recargos.',
+			belongs_to_many: {
+				model_name: 'surchage',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
+					{
+						text: 'Porcentaje',
+						key: 'percentage',
+					},
+				],
+			}
+		},
+
+
 		{
 			group_title: 'Datos de contacto',
 		},

@@ -32,10 +32,39 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * Endpoints (fijados en el plan de la misión, §4):
  * - GET  provider-order-scan/pendientes            -> { models: [ {provider_order_id, uuid, cantidad_articulos, created_at} ] }
  * - GET  provider-order-scan/en-curso              -> { run: {...} | null }
+ * - GET  provider-order-scan/historial/{compra}    -> { models: [ {uuid, estado_visible, created_at, usuario, imagenes, articulos, aplicado, factura, ...} ] }
  * - GET  provider-order-scan/{uuid}                -> { uuid, provider_order_id, estado, ..., imagenes, resultado }
  * - POST provider-order-scan/{uuid}/visto          -> 200
  * - POST provider-order-scan/{uuid}/descartar      -> 200
  */
+/*
+ * Número del último pedido de historial. Sirve para descartar la respuesta de un pedido
+ * viejo: si el usuario abre el historial de la compra A, lo cierra y abre el de la B
+ * antes de que A responda, la respuesta de A no puede pisar la lista de B.
+ */
+let ultimo_pedido_historial = 0
+
+/*
+ * Anota que una compra tiene al menos un escaneo (ver `compras_con_escaneos`).
+ * Función suelta y no mutación porque la llaman otras mutaciones del mismo módulo.
+ *
+ * @param {Object} state
+ * @param {Number|String} provider_order_id
+ */
+function marcar_compra_con_escaneos(state, provider_order_id) {
+	if (!provider_order_id) {
+		return
+	}
+
+	let ya_esta = state.compras_con_escaneos.some(id => {
+		return id == provider_order_id
+	})
+
+	if (!ya_esta) {
+		state.compras_con_escaneos.push(provider_order_id)
+	}
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -79,6 +108,30 @@ export default {
 		 * listado y apretar el botón rojo.
 		 */
 		abrir_en: null,
+
+		/*
+		 * Historial de escaneos de la compra abierta en el modal de historial
+		 * (misión historial-escaneos-compra): todos los escaneos que tuvo, en cualquier
+		 * estado, el más nuevo primero. Se pide al abrir el modal; no se mantiene al día
+		 * por broadcast porque se consulta puntualmente.
+		 */
+		historial: [],
+
+		/* True mientras se pide el historial. */
+		cargando_historial: false,
+
+		/*
+		 * Ids de las compras que esta sesión SABE que tienen al menos un escaneo.
+		 *
+		 * 🔴 Existe porque el contador `provider_order_scans_count` viaja con la fila del
+		 * listado y la fila no se vuelve a pedir cuando se manda o se descarta un escaneo.
+		 * Sin esto, en una compra que no tenía escaneos al cargar el listado, el botón
+		 * "Historial" aparecía al escanear y desaparecía al descartar (la corrida se
+		 * limpia y el pendiente se quita), aunque el escaneo descartado existe y se ve
+		 * en el historial. Se alimenta en los tres puntos por donde se entera la SPA de
+		 * un escaneo: la corrida, la lista de pendientes y el gesto de gestionar.
+		 */
+		compras_con_escaneos: [],
 	},
 	getters: {
 		/*
@@ -116,9 +169,17 @@ export default {
 	mutations: {
 		set_corrida(state, value) {
 			state.corrida = value || null
+
+			if (value && value.provider_order_id) {
+				marcar_compra_con_escaneos(state, value.provider_order_id)
+			}
 		},
 		set_pendientes(state, value) {
 			state.pendientes = value || []
+
+			state.pendientes.forEach(pendiente => {
+				marcar_compra_con_escaneos(state, pendiente.provider_order_id)
+			})
 		},
 		set_detalle(state, value) {
 			state.detalle = value || null
@@ -128,6 +189,12 @@ export default {
 		},
 		set_cargando_detalle(state, value) {
 			state.cargando_detalle = !!value
+		},
+		set_historial(state, value) {
+			state.historial = value || []
+		},
+		set_cargando_historial(state, value) {
+			state.cargando_historial = !!value
 		},
 		/*
 		 * Deja (o limpia, con null) la orden de "abrí la revisión de este escaneo".
@@ -147,6 +214,9 @@ export default {
 		 * @param {Number|String} provider_order_id
 		 */
 		quitar_pendiente(state, provider_order_id) {
+			// Se anota ANTES de quitarlo: gestionar un escaneo no lo borra, sigue en el historial.
+			marcar_compra_con_escaneos(state, provider_order_id)
+
 			state.pendientes = state.pendientes.filter(pendiente => {
 				return pendiente.provider_order_id != provider_order_id
 			})
@@ -186,6 +256,39 @@ export default {
 					 */
 					console.log(err)
 					return []
+				})
+		},
+		/*
+		 * Trae todos los escaneos que tuvo una compra (misión historial-escaneos-compra).
+		 * Alimenta el modal de historial. Devuelve el listado, null si falló (para que
+		 * el modal distinga "esta compra no tiene escaneos" de "no se pudo cargar") o
+		 * undefined si la respuesta llegó tarde y otro pedido ya tomó la lista.
+		 *
+		 * @param {Number|String} provider_order_id
+		 */
+		get_historial({ commit }, provider_order_id) {
+			let pedido = ++ultimo_pedido_historial
+
+			commit('set_cargando_historial', true)
+			commit('set_historial', [])
+
+			return axios.get('/api/provider-order-scan/historial/' + provider_order_id)
+				.then(res => {
+					// Llegó tarde: ya hay un pedido más nuevo, que es el dueño de la lista.
+					if (pedido !== ultimo_pedido_historial) {
+						return undefined
+					}
+					commit('set_historial', res.data.models)
+					commit('set_cargando_historial', false)
+					return res.data.models
+				})
+				.catch(err => {
+					console.log(err)
+					if (pedido !== ultimo_pedido_historial) {
+						return undefined
+					}
+					commit('set_cargando_historial', false)
+					return null
 				})
 		},
 		/*

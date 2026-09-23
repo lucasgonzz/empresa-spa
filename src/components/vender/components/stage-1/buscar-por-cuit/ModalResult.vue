@@ -53,8 +53,9 @@
 <script>
 import price_types from '@/mixins/vender/price_types'
 import vender from '@/mixins/vender'
+import ajustes_del_cliente from '@/mixins/vender/ajustes_del_cliente'
 export default {
-	mixins: [price_types, vender],
+	mixins: [price_types, vender, ajustes_del_cliente],
 	props: {
 		title: String,
 		afip_data: Object,
@@ -190,6 +191,8 @@ export default {
 		useClient() {
 			this.$store.commit('vender/setClient', this.client_model)
 			this.setPriceType()
+			// Mismo gesto que elegirlo en el buscador: se prenden sus descuentos y recargos.
+			this.aplicar_ajustes_del_cliente(this.client_model)
 			this.cerrar()
 		},
 		cerrar() {

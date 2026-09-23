@@ -65,6 +65,9 @@ export default {
 
 			this.$store.commit('vender/setDiscountsId', [])
 			this.$store.commit('vender/setSurchagesId', [])
+			// Los que había prendido solo el cliente: la venta siguiente arranca sin cliente.
+			this.$store.commit('vender/set_ajustes_auto_del_cliente', null)
+			this.$store.commit('vender/set_ajustes_pendientes_del_cliente', null)
 
 			this.$store.commit('vender/setClient', null)
 			this.$store.commit('vender/setReturnedItems', [])
