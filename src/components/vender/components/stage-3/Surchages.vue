@@ -37,14 +37,36 @@
 					</p>
 				</div>
 
+				<!-- Recargos vinculados al cliente desde su ficha (mismo grupo que en Discounts.vue) -->
+				<div
+				v-if="client_surchages.length"
+				class="vender-rate-panel__section">
+					<span class="vender-rate-panel__section-label">
+						Del cliente {{ client.name }}
+					</span>
+					<div class="vender-client-block__checkbox-list">
+						<vender-toggle
+						v-for="surchage in client_surchages"
+						:key="surchage.id"
+						mode="array"
+						:option_value="surchage.id"
+						:disabled="desactivar_recargos"
+						v-model="sale_surchages">
+							{{ surchage.name }} {{ porcentaje_es(surchage.percentage) }}%
+						</vender-toggle>
+					</div>
+				</div>
+
 				<!-- Listado de recargos disponibles -->
-				<div class="vender-rate-panel__section">
+				<div
+				v-if="otros_surchages.length"
+				class="vender-rate-panel__section">
 					<span class="vender-rate-panel__section-label">
 						Disponibles
 					</span>
 					<div class="vender-client-block__checkbox-list">
 						<vender-toggle
-						v-for="surchage in surchages"
+						v-for="surchage in otros_surchages"
 						:key="surchage.id"
 						mode="array"
 						:option_value="surchage.id"
@@ -207,6 +229,27 @@ export default {
 		},
 		surchages() {
 			return this.$store.state.surchage.models
+		},
+		/*
+			Ids de los recargos vinculados al cliente desde su ficha (`client.surchages`, misión
+			descuentos-recargos-por-cliente, 23/9/2026). Se muestran en su propio grupo, como los
+			descuentos del cliente en Discounts.vue.
+		*/
+		ids_de_recargos_del_cliente() {
+			if (!this.client || !Array.isArray(this.client.surchages)) {
+				return []
+			}
+			return this.client.surchages.map(surchage => surchage.id)
+		},
+		client_surchages() {
+			return this.surchages.filter(surchage => {
+				return this.ids_de_recargos_del_cliente.indexOf(surchage.id) != -1
+			})
+		},
+		otros_surchages() {
+			return this.surchages.filter(surchage => {
+				return this.ids_de_recargos_del_cliente.indexOf(surchage.id) == -1
+			})
 		},
 		sale_surchages: {
 			get() {

@@ -56,8 +56,9 @@ import price_types from '@/mixins/vender/price_types'
 import computed from '@/mixins/vender/computed'
 import default_payment_method from '@/mixins/vender/default_payment_method'
 import set_afip_tipo_comprobante from '@/mixins/vender/set_afip_tipo_comprobante'
+import ajustes_del_cliente from '@/mixins/vender/ajustes_del_cliente'
 export default {
-	mixins: [price_types, vender_set_total, computed, default_payment_method, set_afip_tipo_comprobante],
+	mixins: [price_types, vender_set_total, computed, default_payment_method, set_afip_tipo_comprobante, ajustes_del_cliente],
 	// mixins: [vender, vender_set_total],
 	components: {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
@@ -208,6 +209,10 @@ export default {
 				this.setPriceType()
 			}
 
+			// Descuentos y recargos vinculados al cliente. Acá y no en `vender/setClient`: ver el
+			// porqué en mixins/vender/ajustes_del_cliente.js (en edición no hace nada).
+			this.aplicar_ajustes_del_cliente(client)
+
 			this.set_afip_tipo_comprobante()
 		},
 		// Devuelve true si se está editando un comprobante ya guardado (presupuesto o venta previa),
@@ -248,6 +253,8 @@ export default {
 			*/
 			this.setPriceType(true)
 			this.habilitar_metodo_de_pago()
+			// Apaga los descuentos y recargos que había prendido solo el cliente que se sacó.
+			this.aplicar_ajustes_del_cliente(null)
 			this.set_afip_tipo_comprobante()
 		},
 	}

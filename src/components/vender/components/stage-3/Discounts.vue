@@ -116,18 +116,46 @@ export default {
 		Discounts,
 		VenderToggle,
 	},
+	methods: {
+		es_descuento_del_cliente(discount) {
+			if (!this.client) {
+				return false
+			}
+			return discount.client_id == this.client.id
+				|| this.ids_de_descuentos_del_cliente.indexOf(discount.id) != -1
+		},
+	},
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
 		},
+		/*
+			Ids de los descuentos vinculados al cliente desde su ficha (`client.discounts`, misión
+			descuentos-recargos-por-cliente, 23/9/2026).
+		*/
+		ids_de_descuentos_del_cliente() {
+			if (!this.client || !Array.isArray(this.client.discounts)) {
+				return []
+			}
+			return this.client.discounts.map(discount => discount.id)
+		},
+		/*
+			"Del cliente" = vinculado desde la ficha O con la columna vieja `discounts.client_id`
+			apuntando a este cliente. La columna vieja ya no la escribe nadie, pero hay descuentos
+			guardados así y se siguen mostrando en este grupo.
+		*/
 		client_discounts() {
 			return this.discounts.filter(discount => {
-				return this.client && (discount.client_id == this.client.id)
+				return this.es_descuento_del_cliente(discount)
 			})
 		},
+		/*
+			Los comunes excluyen a los del cliente: el mismo descuento en los dos grupos serían dos
+			toggles con el mismo `input_id`.
+		*/
 		common_discounts() {
 			return this.discounts.filter(discount => {
-				return !discount.client_id
+				return !discount.client_id && !this.es_descuento_del_cliente(discount)
 			})
 		},
 		sale_discounts: {
