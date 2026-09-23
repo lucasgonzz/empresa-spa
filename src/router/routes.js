@@ -317,6 +317,12 @@ export default [
 		params: {
 			view: 'pedidos',
 		},
+		/*
+			Clic en el padre estando en Clientes/Cupones/Promociones vuelve a Pedidos. Sin este
+			flag toRoute() corta por tener el mismo name 'online' (ver debeIrAParamsDeLaRuta en
+			common-vue/mixins/nav.js).
+		*/
+		volver_a_params: true,
 		if_has_extencion: 'online',
 		can: [
 			'order.index',
