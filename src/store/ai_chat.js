@@ -1385,6 +1385,12 @@ export default {
 		fetchMcpConexion({ commit }) {
 			return axios.get('/api/mcp/conexion', {
 				skip_global_error_event: true,
+				// `skip_navigation_cancel`: el modal vive en AsistenteIaFloatingButton, que es global
+				// (App.vue), así que el interceptor de request de main.js le colgaría el CancelToken
+				// de navegación y cambiar de pantalla con el pedido en vuelo lo cancelaría. Acá se
+				// vería como un "No pudimos consultar" falso; en el POST es peor: el API ya creó la
+				// clave pero la respuesta —la ÚNICA vez que viaja— se pierde y el dueño no la ve.
+				skip_navigation_cancel: true,
 			})
 				.then(res => {
 					commit('setMcpConexionNoDisponible', false)
@@ -1420,6 +1426,10 @@ export default {
 		crearMcpConexion({ commit }) {
 			return axios.post('/api/mcp/conexion', {}, {
 				skip_global_error_event: true,
+				// `skip_navigation_cancel`: si el dueño navega con el POST en vuelo, el API ya creó
+				// la clave (y revocó la anterior) pero la respuesta se cancelaría acá, y la clave,
+				// que viaja UNA sola vez, no se mostraría nunca. Ver fetchMcpConexion.
+				skip_navigation_cancel: true,
 			})
 				.then(res => {
 					let data = res.data || {}
@@ -1445,6 +1455,9 @@ export default {
 		revocarMcpConexion({ commit }) {
 			return axios.delete('/api/mcp/conexion', {
 				skip_global_error_event: true,
+				// `skip_navigation_cancel`: la revocación ya ocurrió en el API aunque el dueño
+				// navegue; la ficha del store tiene que enterarse igual. Ver fetchMcpConexion.
+				skip_navigation_cancel: true,
 			})
 				.then(res => {
 					let ficha = res.data && typeof res.data == 'object' ? res.data : {}

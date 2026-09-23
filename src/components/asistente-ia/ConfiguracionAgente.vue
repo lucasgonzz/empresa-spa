@@ -258,6 +258,12 @@
 								:visible="ejemplo_abierto == ejemplo.clave">
 									<div class="config-agente__conexion__ejemplo-cuerpo">
 										<pre class="config-agente__conexion__codigo">{{ ejemplo.texto }}</pre>
+										<!-- Ayuda del bloque (hoy: el header anthropic-beta del ejemplo de la API), solo si el API la mandó. -->
+										<p
+										v-if="ejemplo.nota"
+										class="config-agente__conexion__ayuda">
+											{{ ejemplo.nota }}
+										</p>
 										<b-button
 										size="sm"
 										variant="outline-secondary"
@@ -446,7 +452,9 @@ export default {
 			guardando: false,
 
 			// Conexión MCP (misión asistente-mcp, 22/9/2026): estado local de la cuarta sección.
-			mcp_cargando: false,
+			// "Cargando" no tiene bandera propia: `mcp_estado` lo deriva de que todavía no haya
+			// ficha en el store (con una ficha de una apertura anterior se muestra esa mientras se
+			// refresca por detrás).
 			mcp_error_de_carga: false,
 			mcp_generando: false,
 			mcp_revocando: false,
@@ -603,7 +611,7 @@ export default {
 		 * dueño. Solo los que el API mandó como texto: si un API futuro suma o saca uno, acá no
 		 * se rompe nada.
 		 *
-		 * @returns {Array} [{ clave, titulo, texto }]
+		 * @returns {Array} [{ clave, titulo, texto, nota }] (nota: string o null)
 		 */
 		ejemplos() {
 			let self = this
@@ -616,7 +624,17 @@ export default {
 			bloques.forEach(function (bloque) {
 				let texto = self.mcp_ejemplos ? self.mcp_ejemplos[bloque.clave] : null
 				if (typeof texto == 'string' && texto != '') {
-					lista.push({ clave: bloque.clave, titulo: bloque.titulo, texto: texto })
+					// La nota de un bloque (hoy solo `anthropic_api_nota`: el aviso del header
+					// `anthropic-beta`, porque ese ejemplo es JSON puro y el header no entra ahí) va
+					// como texto de ayuda debajo del snippet, y SOLO si el API la mandó como string
+					// no vacío. Un API viejo no la manda y no cambia nada.
+					let nota = self.mcp_ejemplos[bloque.clave + '_nota']
+					lista.push({
+						clave: bloque.clave,
+						titulo: bloque.titulo,
+						texto: texto,
+						nota: typeof nota == 'string' && nota != '' ? nota : null,
+					})
 				}
 			})
 			return lista
@@ -689,13 +707,8 @@ export default {
 		cargar_conexion() {
 			let self = this
 			this.mcp_error_de_carga = false
-			this.mcp_cargando = true
 			this.$store.dispatch('ai_chat/fetchMcpConexion')
-				.then(function () {
-					self.mcp_cargando = false
-				})
 				.catch(function (err) {
-					self.mcp_cargando = false
 					self.mcp_error_de_carga = true
 					console.log(err)
 				})
@@ -829,15 +842,21 @@ export default {
 			contenedor.removeChild(textarea)
 		},
 		/**
-		 * El mensaje del API si lo mandó (403 del gate, 422, etc.), o el genérico.
+		 * El mensaje del API si lo mandó (403 del gate, 422, etc.), o el genérico. Un 401 se
+		 * traduce: Laravel manda "Unauthenticated." crudo, y lo que el dueño puede hacer con eso
+		 * es volver a entrar (con la sesión caída, el resto del modal tampoco va a andar).
 		 *
 		 * @param {Object} err
 		 * @param {String} generico
 		 * @returns {String}
 		 */
 		mensaje_del_api(err, generico) {
-			return err && err.response && err.response.data && err.response.data.message
-				? err.response.data.message
+			let response = err && err.response ? err.response : null
+			if (response && response.status == 401) {
+				return 'Tu sesión venció. Volvé a entrar y probá de nuevo.'
+			}
+			return response && response.data && response.data.message
+				? response.data.message
 				: generico
 		},
 		/**
