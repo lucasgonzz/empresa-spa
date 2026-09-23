@@ -341,6 +341,13 @@ export default {
 			surchages_id: [],
 		},
 
+		/*
+			Descuentos y recargos del cliente que no se pudieron prender porque el store de
+			`discount` / `surchage` todavía no había cargado: `{ client_id, discounts_id, surchages_id }`
+			o null. Los prende el watcher de `mixins/vender/ajustes_del_cliente.js` cuando cargan.
+		*/
+		ajustes_pendientes_del_cliente: null,
+
 		to_check: 0,
 		checked: 0,
 		confirmed: 0,
@@ -772,6 +779,9 @@ export default {
 		},
 		set_ajustes_auto_del_cliente(state, value) {
 			state.ajustes_auto_del_cliente = value || { discounts_id: [], surchages_id: [] }
+		},
+		set_ajustes_pendientes_del_cliente(state, value) {
+			state.ajustes_pendientes_del_cliente = value || null
 		},
 		setToCheck(state, value) {
 			state.to_check = value
