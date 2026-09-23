@@ -657,6 +657,7 @@ export default {
 // Quien pidio menos movimiento en su sistema operativo ve la nota quieta: el aviso no depende de
 // la animacion para entenderse.
 @media (prefers-reduced-motion: reduce)
-	.stock-minimo-aviso__icono
+	.stock-minimo-aviso__icono,
+	.stock-minimo-actualizacion__icono--girando
 		animation: none
 </style>

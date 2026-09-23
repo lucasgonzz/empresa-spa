@@ -105,21 +105,20 @@ export default {
 
 			.listen('.InventoryPerformanceGenerated', (payload) => {
 
-				// Llego el aviso: el sondeo de respaldo ya no hace falta (y no debe repetir el callback).
-				this.detener_sondeo_inventory_performance()
-
+				// Llego el aviso: se confirma contra el backend antes de dar por terminada la espera.
+				// El evento sale del job un instante ANTES de que se libere el candado, asi que un GET
+				// que caiga justo ahi todavia contesta `generating: true`; en ese caso no se corta
+				// nada y el sondeo de respaldo lo levanta en su proxima vuelta.
 				this.$store.dispatch('inventory_performance/get_models_con_estado')
 				.then(() => {
-					if (typeof callback == 'function') {
-						callback()
+					if (!this.inventory_performance_generating) {
+						this.terminar_espera_inventory_performance(channel_name, callback)
 					}
 				})
-
-				this.Echo.leaveChannel(channel_name)
 			})
 
 			// Respaldo por si el aviso nunca llega (socket caido, plan de Pusher al tope): ver abajo.
-			this.sondear_inventory_performance(callback)
+			this.sondear_inventory_performance(channel_name, callback)
 		},
 		/**
 		 * Respaldo del broadcast: mientras el reporte se esta generando, pregunta cada 15 segundos
@@ -133,9 +132,10 @@ export default {
 		 * Es una sola espera por componente: si ya hay una en curso, no arma otra. Se corta sola
 		 * al destruirse el componente (beforeDestroy de abajo).
 		 *
-		 * @param {Function} [callback] Se ejecuta cuando el sondeo detecta que el reporte termino.
+		 * @param {String}   channel_name Canal del owner, para abandonarlo al terminar.
+		 * @param {Function} [callback]   Se ejecuta cuando el reporte termino (una sola vez).
 		 */
-		sondear_inventory_performance(callback) {
+		sondear_inventory_performance(channel_name, callback) {
 
 			if (this.inventory_performance_sondeo) {
 				return
@@ -152,20 +152,40 @@ export default {
 
 				if (self.inventory_performance_intentos > intentos_maximos) {
 					self.detener_sondeo_inventory_performance()
+					self.Echo.leaveChannel(channel_name)
 					return
 				}
 
 				self.$store.dispatch('inventory_performance/get_models_con_estado')
 				.then(function () {
 					if (!self.inventory_performance_generating) {
-						self.detener_sondeo_inventory_performance()
-						if (typeof callback == 'function') {
-							callback()
-						}
+						self.terminar_espera_inventory_performance(channel_name, callback)
 					}
 				})
 
 			}, 15000)
+		},
+		/**
+		 * Cierra la espera del reporte (la termine el aviso de Pusher o el sondeo, lo que llegue
+		 * primero): corta el sondeo, abandona el canal y ejecuta el `callback` UNA sola vez. Si la
+		 * otra via ya la cerro, no hace nada.
+		 *
+		 * @param {String}   channel_name Canal del owner del que hay que salir.
+		 * @param {Function} [callback]
+		 */
+		terminar_espera_inventory_performance(channel_name, callback) {
+
+			if (!this.inventory_performance_sondeo) {
+				return
+			}
+
+			this.detener_sondeo_inventory_performance()
+
+			this.Echo.leaveChannel(channel_name)
+
+			if (typeof callback == 'function') {
+				callback()
+			}
 		},
 		/**
 		 * Corta el sondeo de respaldo, si hay uno en curso.
