@@ -225,9 +225,9 @@ export default {
 		campos() {
 			let campos = [
 				{key: 'detalle', label: 'Detalle'},
-				{key: 'fecha_venta', label: 'Fecha venta'},
+				{key: 'fecha_venta', label: 'Fecha venta', class: 'text-center'},
 				{key: 'importe', label: 'Importe', class: 'text-right'},
-				{key: 'saldada', label: this.label_fecha_liquidacion},
+				{key: 'saldada', label: this.label_fecha_liquidacion, class: 'text-center'},
 				{key: 'porcentaje', label: '%', class: 'text-right'},
 				{key: 'monto', label: 'Monto', class: 'text-right'},
 			]
