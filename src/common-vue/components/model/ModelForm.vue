@@ -237,6 +237,17 @@
 									@input="$set(model, prop.key, $event)"
 									@input-change="setChange(prop)"></field-select-input>
 
+									<!--
+										OJO: desde aca hasta el </template> de mas abajo (despues del editor de perfil de
+										PDF) es una SEGUNDA cadena v-if/v-else-if, porque el aviso del select abre un v-if
+										propio y corta la primera. Sin esta guarda, una prop only_show / from_pre_view
+										pasaba por las dos: el chip de la primera cadena y ademas la rama de esta que le
+										tocara (function, checkbox...) --asi la "Hora" de la venta salia repetida--.
+										La guarda es solo para esas props: el resto sigue recorriendo esta cadena igual
+										que antes (hay props con type text + function que dependen de ella).
+									-->
+									<template v-if="!(prop.only_show || prop.from_pre_view)">
+
 									<!-- Aviso debajo del select cuando queda deshabilitado por falta de datos
 									     relacionados (ej: sucursal sin afip_information cargados, prompt 440) -->
 									<small
@@ -351,6 +362,8 @@
 									v-else-if="prop.type == 'display' && prop.key == 'pdf_column_profile_editor' && model_name == 'pdf_column_profile'"
 									:key="'pdf-column-profile-editor-' + (model.id || 'new') + '-' + (model.model_name || '')"
 									:model="model"></pdf-column-profile-editor>
+
+									</template>
 
 									<!-- en pivot_parent_model le paso el model padre, para que por ejemplo en el model Sale, en la tabla de articles, tenga acceso al Sale model (el parent_model) -->
 								<belongs-to-many-table
