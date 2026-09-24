@@ -16,6 +16,12 @@ export default {
 			description: 'Si se activa, se mostrara el enlace Catalogo en el navbar de la tienda online.',
 		},
 		{
+			text: 'Mostrar "Marca" en la barra de navegacion de la tienda',
+			key: 'mostrar_marca_en_nav',
+			type: 'checkbox',
+			description: 'Si se desactiva, la barra de navegacion de la tienda (escritorio y celular) deja de mostrar el item "Marca".',
+		},
+		{
 			text: 'Al tocar una categoría del sidebar, mostrar sus subcategorías en vez de sus artículos',
 			key: 'mostrar_subcategorias_al_click_categoria',
 			type: 'checkbox',
@@ -198,6 +204,12 @@ export default {
 			text: 'Scroll infinito en el Inicio',
 			key: 'scroll_infinito_en_home',
 			type: 'checkbox',
+		},
+		{
+			text: 'Mostrar la seccion "Novedades" en el home de la tienda',
+			key: 'mostrar_novedades_en_home',
+			type: 'checkbox',
+			description: 'Si se desactiva, el home de la tienda deja de mostrar la seccion "Novedades".',
 		},
 		{
 			text: 'Auto scroll en Home (px/segundo)',
