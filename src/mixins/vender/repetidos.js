@@ -73,6 +73,15 @@ export default {
 					
 					repetido = this.check_price_range(repetido)
 
+					/*
+						Aca NO va el aviso de ofertas por cantidad, a proposito. Este es el camino
+						del articulo que YA ESTA en el remito y al que se le suma cantidad: el
+						vendedor ya vio el cartel cuando lo agrego por primera vez, y un comercio
+						que pasa diez unidades de a una por el lector se comeria diez toasts
+						seguidos. Si algun dia se quiere avisar justo cuando la cantidad CRUZA un
+						tramo, hay que comparar el tramo de antes contra el de despues, no
+						anunciar las ofertas de nuevo.
+					*/
 					this.$store.commit('vender/updateItem', repetido)
 
 					/*
