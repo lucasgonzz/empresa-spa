@@ -5,9 +5,24 @@ export default {
 			.then(res => {
             	this.content.push(`TRANSPARENCIA FISCAL AL CONSUMIDOR LEY 27743\n`);
             	this.content.push(`Iva contenido: ${this.price(res.data.importes.gravado)}\n`);
+            	this.print_leyenda_isib_caba(res.data.leyenda_isib_caba)
             	this.linea()
             	// this.qr('https://google.com.ar')
             	this.qr(res.data.afip_qr_link)
+			})
+		},
+		// Leyenda ISIB CABA (Res. 169/AGIP/2026). La arma el backend (LeyendaIsibCabaHelper) y viaja
+		// en get-importes: un renglon por parte, [] si el comprobante no la lleva. Con una API
+		// vieja la clave no viene y no se imprime nada.
+		print_leyenda_isib_caba(partes) {
+			if (!partes || !partes.length) {
+				return
+			}
+			let self = this
+			partes.forEach(parte => {
+				self.wrapText(parte, self.TICKET_WIDTH).forEach(renglon => {
+					self.content.push(renglon + '\n')
+				})
 			})
 		},
 		qr(link) {
