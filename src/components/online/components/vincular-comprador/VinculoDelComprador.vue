@@ -28,7 +28,7 @@
 				Cliente del sistema
 			</label>
 			<p class="vinculo-comprador__ayuda">
-				Este comprador de la tienda todavía no está asociado a ningún cliente del sistema.
+				Este comprador de la tienda todavía no está vinculado a ningún cliente del sistema.
 			</p>
 			<b-button
 			variant="outline-primary"

@@ -27,7 +27,9 @@
 
 		<span class="vincular-fila__cuerpo">
 			<span class="vincular-fila__titulo">
-				<span class="vincular-fila__nombre">
+				<span
+				class="vincular-fila__nombre"
+				:title="nombre">
 					{{ nombre }}
 				</span>
 				<span
@@ -192,6 +194,9 @@ export default {
 	position: relative
 	display: flex
 	align-items: flex-start
+	// La fila no se achica: la lista que la contiene es una columna flex con alto máximo, y sin esto
+	// una lista larga aplastaría las filas en vez de scrollear.
+	flex: 0 0 auto
 	gap: 12px
 	width: 100%
 	// bootstrap le pone `margin-bottom: .5rem` y `display: inline-block` a todo <label>.

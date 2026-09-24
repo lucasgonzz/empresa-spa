@@ -73,7 +73,9 @@
 				v-if="slotProps.model.buyer"
 				class="pedido-comprador"
 				:class="{ 'pedido-comprador--pendiente': comprador_sin_vincular(slotProps.model.buyer) }">
-					<span class="pedido-comprador__nombre">
+					<span
+					class="pedido-comprador__nombre"
+					:title="slotProps.model.buyer.name">
 						{{ slotProps.model.buyer.name }}
 					</span>
 					<badge-sin-vincular
