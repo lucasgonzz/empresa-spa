@@ -19,7 +19,9 @@
 		<template v-if="!loading">
 
 			<!-- ============ Pesos ============ -->
-			<div class="totales-chip totales-chip--principal">
+			<explicacion-de-numero
+			class="totales-chip totales-chip--principal"
+			:explicacion="explicaciones.total">
 				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-cash-stack"
@@ -33,8 +35,18 @@
 					v-if="total_selected_payment_method > 0">
 						{{ price(total_selected_payment_method) }} en {{ selected_payment_method }}
 					</span>
+					<!--
+						El Total lleva el IVA de lo facturado y la Ganancia no: sin este renglón, la cuenta
+						Total − Costos = Ganancia no cierra a la vista y parece un error. Solo aparece cuando
+						la API mandó el dato y cuando de verdad hay IVA que descontar.
+					-->
+					<span
+					class="totales-chip__meta"
+					v-if="mostrar_total_sin_iva">
+						sin IVA: {{ price(total_sin_iva) }}
+					</span>
 				</div>
-			</div>
+			</explicacion-de-numero>
 
 			<!--
 				El `d-none d-lg-block` viene de refractor y se conserva: los dos <p> de Costos y
@@ -45,9 +57,10 @@
 				`d-lg-flex` y no `d-lg-block`: el chip es un contenedor flex y con `display: block` se
 				le desarma la fila de ícono + cuerpo.
 			-->
-			<div
+			<explicacion-de-numero
 			class="totales-chip d-none d-lg-flex"
-			v-if="is_admin">
+			v-if="is_admin"
+			:explicacion="explicaciones.costos">
 				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-tag"
@@ -56,12 +69,18 @@
 				<div class="totales-chip__body">
 					<span class="totales-chip__label">Costos</span>
 					<span class="totales-chip__value">{{ price(total_cost) }}</span>
+					<span
+					class="totales-chip__meta"
+					v-if="mostrar_costos_sin_iva">
+						sin IVA: {{ price(costos_sin_iva) }}
+					</span>
 				</div>
-			</div>
+			</explicacion-de-numero>
 
-			<div
+			<explicacion-de-numero
 			class="totales-chip totales-chip--positivo d-none d-lg-flex"
-			v-if="is_admin">
+			v-if="is_admin"
+			:explicacion="explicaciones.ganancia">
 				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-graph-up-arrow"
@@ -71,7 +90,7 @@
 					<span class="totales-chip__label">Ganancia</span>
 					<span class="totales-chip__value">{{ price(total_ganancia) }}</span>
 				</div>
-			</div>
+			</explicacion-de-numero>
 
 			<!--
 				Este chip tambien perdió su guarda, y va declarado igual que el de dólares aunque la
@@ -82,7 +101,9 @@
 				aquella condición ocultaba (un NaN por un ítem sin precio, un saldo negativo real) son
 				MÁS frecuentes de este lado, que es donde está el volumen y las notas de crédito.
 			-->
-			<div class="totales-chip">
+			<explicacion-de-numero
+			class="totales-chip"
+			:explicacion="explicaciones.cuenta_corriente">
 				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-person-lines-fill"
@@ -92,7 +113,7 @@
 					<span class="totales-chip__label">Cuenta corriente</span>
 					<span class="totales-chip__value">{{ price(total_cuenta_corriente_pesos) }}</span>
 				</div>
-			</div>
+			</explicacion-de-numero>
 
 			<!-- ============ Dólares ============ -->
 			<!--
@@ -118,7 +139,9 @@
 				conservar.
 			-->
 			<template v-if="hasExtencion('ventas_en_dolares')">
-				<div class="totales-chip totales-chip--usd">
+				<explicacion-de-numero
+				class="totales-chip totales-chip--usd"
+				:explicacion="explicaciones.total_usd">
 					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-currency-exchange"
@@ -128,11 +151,12 @@
 						<span class="totales-chip__label">Total USD</span>
 						<span class="totales-chip__value">{{ price(total_usd) }}</span>
 					</div>
-				</div>
+				</explicacion-de-numero>
 
-				<div
+				<explicacion-de-numero
 				class="totales-chip totales-chip--usd"
-				v-if="is_admin">
+				v-if="is_admin"
+				:explicacion="explicaciones.costos_usd">
 					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-tag"
@@ -142,11 +166,12 @@
 						<span class="totales-chip__label">Costos USD</span>
 						<span class="totales-chip__value">{{ price(total_cost_usd) }}</span>
 					</div>
-				</div>
+				</explicacion-de-numero>
 
-				<div
+				<explicacion-de-numero
 				class="totales-chip totales-chip--usd"
-				v-if="is_admin">
+				v-if="is_admin"
+				:explicacion="explicaciones.ganancia_usd">
 					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-graph-up-arrow"
@@ -156,9 +181,11 @@
 						<span class="totales-chip__label">Ganancia USD</span>
 						<span class="totales-chip__value">{{ price(total_ganancia_usd) }}</span>
 					</div>
-				</div>
+				</explicacion-de-numero>
 
-				<div class="totales-chip totales-chip--usd">
+				<explicacion-de-numero
+				class="totales-chip totales-chip--usd"
+				:explicacion="explicaciones.cuenta_corriente_usd">
 					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-person-lines-fill"
@@ -168,12 +195,14 @@
 						<span class="totales-chip__label">Cuenta corriente USD</span>
 						<span class="totales-chip__value">{{ price(total_cuenta_corriente_dolar) }}</span>
 					</div>
-				</div>
+				</explicacion-de-numero>
 			</template>
 
 			<!-- ============ Contador y acciones, a la derecha ============ -->
 			<div class="ventas-totales__derecha">
-				<div class="totales-chip">
+				<explicacion-de-numero
+				class="totales-chip"
+				:explicacion="explicaciones.ventas">
 					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-receipt-cutoff"
@@ -183,7 +212,7 @@
 						<span class="totales-chip__label">Ventas</span>
 						<span class="totales-chip__value">{{ numero_es(cantidad_ventas) }}</span>
 					</div>
-				</div>
+				</explicacion-de-numero>
 
 				<b-button
 				v-if="is_admin"
@@ -213,8 +242,16 @@
 </template>
 <script>
 import sale from '@/mixins/sale'
+import explicacion_de_tarjeta from '@/components/ventas/components/explicaciones_totales'
+// Import ESTATICO a proposito: este componente es la RAIZ de cada tarjeta de totales. Si fuera un
+// chunk perezoso, hasta que bajara (o si fallara la descarga tras un deploy) desapareceria el
+// Total mismo y no solo su explicacion.
+import ExplicacionDeNumero from '@/components/common/ExplicacionDeNumero'
 export default {
 	mixins: [sale],
+	components: {
+		ExplicacionDeNumero,
+	},
 	computed: {
 		loading() {
 			return this.$store.state.sale.loading
@@ -379,6 +416,66 @@ export default {
 			})
 			return total
 		},
+		/**
+		 * `total_sin_iva` y `costos_sin_iva`: claves NUEVAS y OPCIONALES de `totales.pesos` (24/9/2026).
+		 * Con una API vieja no vienen, y con el buscador o un filtro de columna tampoco hay totales del
+		 * servidor: en los dos casos valen null y la pantalla se ve exactamente como antes, sin
+		 * renglón "sin IVA".
+		 */
+		total_sin_iva() {
+			return this.total_opcional_del_servidor('pesos', 'total_sin_iva')
+		},
+		costos_sin_iva() {
+			return this.total_opcional_del_servidor('pesos', 'costos_sin_iva')
+		},
+		/* Cantidad de ventas con comprobante autorizado y el IVA sin medir; null con API vieja. */
+		ventas_con_iva_sin_medir() {
+			return this.total_opcional_del_servidor('pesos', 'ventas_con_iva_sin_medir')
+		},
+		/*
+		 * El renglón "sin IVA" solo aparece si hay algo que mostrar: si la venta no tiene IVA
+		 * declarado, "sin IVA: $X" repetiría el número de arriba y agregaría ruido a cada tarjeta.
+		 * La tolerancia de un peso es el redondeo de los centavos.
+		 */
+		mostrar_total_sin_iva() {
+			return this.total_sin_iva !== null && (this.total - this.total_sin_iva) > 1
+		},
+		mostrar_costos_sin_iva() {
+			return this.costos_sin_iva !== null && (this.total_cost - this.costos_sin_iva) > 1
+		},
+		/**
+		 * Las explicaciones de cada tarjeta. Un solo computed con todas, para que dependan del mismo
+		 * contexto y se recalculen juntas cuando cambian los totales, no en cada render.
+		 */
+		explicaciones() {
+			let metodo_de_pago = null
+			if (this.total_selected_payment_method > 0) {
+				metodo_de_pago = {
+					nombre: this.selected_payment_method,
+					total: this.total_selected_payment_method,
+				}
+			}
+			let contexto = {
+				formatear: this.price,
+				usa_totales_del_servidor: !!this.totales_del_dia,
+				total: this.total,
+				costos: this.total_cost,
+				ganancia: this.total_ganancia,
+				total_sin_iva: this.total_sin_iva,
+				costos_sin_iva: this.costos_sin_iva,
+				sin_medir: this.ventas_con_iva_sin_medir,
+				mostrar_consolidadas: !!this.$store.state.sale.mostrar_consolidadas,
+				desde: this.from_date,
+				tiene_dolares: this.hasExtencion('ventas_en_dolares'),
+				metodo_de_pago: metodo_de_pago,
+			}
+			let tarjetas = ['total', 'costos', 'ganancia', 'cuenta_corriente', 'ventas', 'total_usd', 'costos_usd', 'ganancia_usd', 'cuenta_corriente_usd']
+			let explicaciones = {}
+			tarjetas.forEach(tarjeta => {
+				explicaciones[tarjeta] = explicacion_de_tarjeta(tarjeta, contexto)
+			})
+			return explicaciones
+		},
 		from_date() {
 			return this.$store.state.sale.from_date
 		},
@@ -432,6 +529,30 @@ export default {
 				return 0
 			}
 			return Number(grupo_de_totales[clave]) || 0
+		},
+		/**
+		 * Igual que `total_del_servidor`, pero para claves OPCIONALES: devuelve null cuando la clave no
+		 * vino (API vieja, o no hay totales del servidor), y no 0. La diferencia importa: un 0 se
+		 * dibujaría como "sin IVA: -" y afirmaría que no hay ventas sin IVA, cuando en realidad el
+		 * dato no existe.
+		 *
+		 * @param {string} grupo
+		 * @param {string} clave
+		 * @returns {number|null}
+		 */
+		total_opcional_del_servidor(grupo, clave) {
+			if (!this.totales_del_dia) {
+				return null
+			}
+			let grupo_de_totales = this.totales_del_dia[grupo]
+			if (!grupo_de_totales) {
+				return null
+			}
+			let valor = grupo_de_totales[clave]
+			if (valor === null || typeof valor == 'undefined' || valor === '' || isNaN(Number(valor))) {
+				return null
+			}
+			return Number(valor)
 		},
 		/**
 		 * POST autenticado al endpoint de export; descarga el .xlsx desde la respuesta (blob).

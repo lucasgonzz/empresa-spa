@@ -991,6 +991,76 @@
 
 			</div>
 
+			<!-- ====================================================================== -->
+			<!-- Bloque de lectura de numeros con coma, espacio de miles, etc.           -->
+			<!-- Muestra, columna por columna, como se van a leer los numeros de texto   -->
+			<!-- que traen coma decimal o separadores de miles. La regla es fija (la     -->
+			<!-- coma es el decimal), por eso no lleva selector.                         -->
+			<!-- ====================================================================== -->
+			<div v-if="lecturas_numericas.length > 0" class="ai-import-numeric-lecturas m-b-15">
+
+				<div
+				v-for="(lectura, idx_lectura) in lecturas_numericas"
+				:key="'numlec-' + (lectura.campo || idx_lectura)"
+				class="ai-import-numeric-lecturas__column m-b-15">
+
+					<p class="font-weight-bold m-b-5 small">
+						Cómo vamos a leer los números de la columna {{ lectura.nombre_columna_excel }}
+					</p>
+
+					<p v-if="!lectura.solo_no_interpretable" class="text-muted small m-b-8">
+						La coma es el separador de decimales. Si el número trae coma y punto, el que está más a la derecha es el decimal y el otro separa miles.
+					</p>
+
+					<div v-if="!lectura.solo_no_interpretable && lectura.ejemplos.length > 0" class="ai-import-preview-table-wrapper">
+						<table class="ai-import-preview-table">
+							<thead>
+								<tr>
+									<th>Fila</th>
+									<th>En el Excel</th>
+									<th>Se lee como</th>
+									<th>Queda como</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr
+								v-for="(ejemplo, idx) in lectura.ejemplos"
+								:key="'numlec-ej-' + (lectura.campo || idx_lectura) + '-' + idx">
+									<td>{{ ejemplo.fila }}</td>
+									<td>{{ ejemplo.original }}</td>
+									<td>{{ etiqueta_tipo_lectura(ejemplo.tipo) }}</td>
+									<td>
+										{{ resultado_lectura_es(ejemplo) }}
+										<small v-if="ejemplo.interpretable === false" class="text-muted d-block">
+											Esa celda queda como conflicto y no pisa el valor que ya tiene el artículo.
+										</small>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<small
+					v-if="!lectura.solo_no_interpretable && lectura.total_valores > lectura.ejemplos.length"
+					class="text-muted d-block m-t-5">
+						Mostramos {{ numero_es(lectura.ejemplos.length) }} de {{ numero_es(lectura.total_valores) }} valores
+					</small>
+
+					<b-alert
+					v-if="lectura.cantidad_no_interpretable > 0"
+					show
+					variant="warning"
+					class="ai-import-numeric-lecturas__alert m-t-8 m-b-0">
+						<i class="icon-alert-triangle m-r-5"></i>
+						{{ numero_es(lectura.cantidad_no_interpretable) }}
+						{{ lectura.cantidad_no_interpretable === 1 ? 'valor no se puede leer' : 'valores no se pueden leer' }}
+						como número. Esas celdas quedan como conflicto y no pisan el valor que ya tiene el artículo.
+					</b-alert>
+
+				</div>
+
+			</div>
+
 			<!-- Explicación del comportamiento con bar_codes repetidos -->
 			<b-alert
 			v-if="bar_codes_detail.length > 0 || (duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > 0)"
@@ -2108,6 +2178,55 @@ export default {
 			})
 
 			return columnas
+		},
+
+		/*
+		 * Lecturas de los números que traen coma, espacio de miles, etc. (`formatos_numericos.lecturas`),
+		 * listas para renderizar en el paso 3. Es lo que itera el template: nunca se recorre el
+		 * objeto crudo. Es defensivo a propósito: devuelve [] si no hay análisis (null), si la API
+		 * es vieja y no manda `lecturas`, o si no es un array; y cada lectura tolera que falten
+		 * `por_tipo` o `ejemplos`.
+		 *
+		 * Cada elemento trae, además de los datos de la API, lo ya resuelto para el template:
+		 * - ejemplos:                lista (nunca undefined).
+		 * - total_valores:           suma de `por_tipo` (0 si no vino).
+		 * - cantidad_no_interpretable: `por_tipo.no_interpretable` (0 si no vino).
+		 */
+		lecturas_numericas() {
+			if (
+				!this.formatos_numericos
+				|| !Array.isArray(this.formatos_numericos.lecturas)
+			) {
+				return []
+			}
+
+			let lecturas = []
+
+			this.formatos_numericos.lecturas.forEach(function(lectura) {
+				if (!lectura) {
+					return
+				}
+
+				let por_tipo = lectura.por_tipo && typeof lectura.por_tipo === 'object' ? lectura.por_tipo : {}
+				let ejemplos = Array.isArray(lectura.ejemplos) ? lectura.ejemplos : []
+
+				let total_valores = 0
+				Object.keys(por_tipo).forEach(function(tipo) {
+					total_valores += Number(por_tipo[tipo]) || 0
+				})
+
+				lecturas.push({
+					campo:                     lectura.campo,
+					nombre_columna_excel:      lectura.nombre_columna_excel,
+					ejemplos:                  ejemplos,
+					total_valores:             total_valores,
+					cantidad_no_interpretable: Number(por_tipo.no_interpretable) || 0,
+					/* Columna con solo guiones / "N/A" / texto: no hay coma ni miles que explicar, alcanza con el aviso. */
+					solo_no_interpretable:     total_valores > 0 && total_valores === (Number(por_tipo.no_interpretable) || 0),
+				})
+			})
+
+			return lecturas
 		},
 
 		/*
@@ -4375,6 +4494,44 @@ export default {
 		},
 
 		/*
+		 * Cómo se lee cada tipo de número que trae coma, espacio de miles, etc. Es el texto de
+		 * la columna "Se lee como" del bloque "Cómo vamos a leer los números". Si la API manda
+		 * un tipo que este front no conoce (API más nueva), se muestra tal cual en vez de romper.
+		 *
+		 * @param {String} tipo - Clave `tipo` del ejemplo (formatos_numericos.lecturas[].ejemplos[]).
+		 * @returns {String}
+		 */
+		etiqueta_tipo_lectura(tipo) {
+			let etiquetas = {
+				coma_decimal:              'decimal con coma',
+				miles_coma:                'separador de miles (coma)',
+				miles_punto_decimal_coma:  'miles con punto y decimal con coma',
+				miles_coma_decimal_punto:  'miles con coma y decimal con punto',
+				miles_espacio:             'miles con espacio',
+				no_interpretable:          'no se puede leer',
+			}
+
+			return etiquetas[tipo] !== undefined ? etiquetas[tipo] : String(tipo)
+		},
+
+		/*
+		 * Cómo queda un ejemplo de `lecturas`, en es-AR (1234.56 -> "1.234,56"). El `resultado`
+		 * viaja como string "de máquina" (punto decimal, sin miles): se formatea con el helper
+		 * de separadores y NO con numeral, que con locale español multiplica por 100. Los
+		 * decimales salen tal cual vienen, sin redondear ni agregar ceros.
+		 *
+		 * @param {Object} ejemplo - Ejemplo de la lectura.
+		 * @returns {String} - "No se puede leer" si la celda no es interpretable.
+		 */
+		resultado_lectura_es(ejemplo) {
+			if (ejemplo.interpretable === false || ejemplo.resultado === null || ejemplo.resultado === undefined) {
+				return 'No se puede leer'
+			}
+
+			return this.numero_es(ejemplo.resultado)
+		},
+
+		/*
 		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): aplica en JS, sobre el cliente,
 		 * la misma regla que usa el backend (ImportHelper::parseNumericValue) para recalcular como
 		 * queda un valor con punto segun la opcion elegida en interpretacion_punto:
@@ -5926,4 +6083,18 @@ export default {
 .ai-import-numeric-interpretacion__preview
 	&:not(:last-child)
 		margin-bottom: 10px
+
+/* Bloque de lectura de números con coma / miles del paso 3: mismo aspecto que el de números con punto */
+.ai-import-numeric-lecturas
+	display: block
+
+/* Separación entre columnas cuando hay más de una con lecturas */
+.ai-import-numeric-lecturas__column
+	&:not(:last-child)
+		border-bottom: 1px solid rgba(0, 0, 0, 0.06)
+		padding-bottom: 12px
+
+/* Aviso de celdas que no se pueden leer */
+.ai-import-numeric-lecturas__alert
+	font-size: 12px
 </style>

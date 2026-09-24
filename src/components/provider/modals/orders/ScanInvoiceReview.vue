@@ -59,190 +59,201 @@
 					</ul>
 				</div>
 
-				<!-- ─── 2. Datos del comprobante ───────────────────────────────────── -->
-				<div class="scan-review__bloque">
-					<h6 class="scan-review__titulo">
-						Comprobante
-						<b-button
-						size="sm"
-						variant="link"
-						class="scan-review__toggle"
-						@click="mostrar_factura = !mostrar_factura">
-							{{ mostrar_factura ? 'Ocultar' : 'Mostrar' }}
-						</b-button>
-					</h6>
+				<b-alert
+				v-if="!es_factura_afip"
+				show
+				variant="secondary"
+				class="scan-review__aviso">
+					No se detectaron datos de factura AFIP. Si querés guardar el comprobante igual
+					—un remito, por ejemplo—, cargá el número y la fecha a mano en el comprobante de
+					abajo y dejá tildado «guardar». Si no, se cargan solo los artículos.
+				</b-alert>
 
-					<b-alert
-					v-if="!es_factura_afip"
-					show
-					variant="secondary"
-					class="scan-review__aviso">
-						No se detectaron datos de factura AFIP. Si querés guardar el comprobante igual
-						—un remito, por ejemplo—, cargá el número y la fecha a mano acá abajo y dejá
-						tildado «guardar». Si no, se cargan solo los artículos.
-					</b-alert>
+				<!--
+					🔴 La trampa del modo de facturación. Si la compra está en "sin
+					factura" o en "automático", guardar la factura acá no serviría de
+					nada: el helper de facturación la borra o le pisa los totales en el
+					mismo request. Cambiarle la configuración a la compra por nuestra
+					cuenta sería peor que no guardarla, así que se le pregunta.
 
-					<div v-if="mostrar_factura">
+					Va condicionado a `guardar_factura`: si el usuario no va a guardar el
+					comprobante, ofrecerle "pasarla a manual y guardar la factura" no
+					tiene sentido — y encima el backend le cambia el modo_facturacion a la
+					compra con solo recibir ese flag en true, así que un tilde olvidado
+					ahí le reconfiguraba la compra sin guardar nada a cambio.
+				-->
+				<b-alert
+				v-if="factura_bloqueada_por_modo && guardar_factura"
+				show
+				variant="warning"
+				class="scan-review__aviso">
+					<p class="m-b-10">
+						Esta compra está configurada como «{{ modo_facturacion }}». Para guardar los
+						datos de la factura hay que pasarla a facturación manual.
+					</p>
+					<b-form-checkbox v-model="pasar_a_manual">
+						Pasarla a manual y guardar la factura.
+					</b-form-checkbox>
+					<p
+					v-if="!pasar_a_manual"
+					class="scan-review__nota m-t-10 m-b-0">
+						Sin tildar esto se cargan solo los artículos: los datos del comprobante no
+						se guardan.
+					</p>
+				</b-alert>
 
-						<!--
-							🔴 La casilla va PRIMERO, y de ella cuelga todo lo demás del panel.
-							Antes estaba abajo del aviso del modo de facturación y, peor, el
-							request se armaba con `guardar_factura && es_factura_afip`: si el
-							documento era un remito y el usuario cargaba a mano el número y la
-							fecha y tildaba esta casilla, el tilde se ignoraba y no se guardaba
-							nada, sin un solo mensaje. Ahora el tilde se respeta siempre, y lo
-							único que lo apaga es no tener ningún dato del comprobante que
-							guardar — y en ese caso la casilla se deshabilita y se dice por qué,
-							en vez de quedar prendida sin hacer nada.
-						-->
-						<b-form-checkbox
-						v-model="guardar_factura"
-						:disabled="!hay_datos_de_comprobante"
-						class="m-b-5">
-							Guardar los datos del comprobante en la compra
-						</b-form-checkbox>
+				<!-- ─── 2. El comprobante, dibujado como una factura de ARCA ──────── -->
+				<!--
+					Un solo marco con las divisiones del papel: franja de título, cabecera en
+					dos mitades con la letra en el medio, receptor, renglones y totales. Cuando
+					la casilla de guardar está destildada, cabecera y totales se atenúan (lo
+					que no se guarda se ve apagado), pero siguen editables: destildar no
+					debería castigar al que después cambia de idea.
+				-->
+				<div
+				class="scan-review__comprobante"
+				:class="{ 'scan-review__comprobante--sin-guardar': !va_a_guardar_factura }">
 
-						<p
-						v-if="!hay_datos_de_comprobante"
-						class="scan-review__nota m-b-15">
-							Cargá al menos el número, la fecha o el total del comprobante para poder guardarlo.
-						</p>
+					<!-- Franja superior: título y casilla de guardar -->
+					<div class="scan-review__franja-titulo">
+						<span class="scan-review__franja-texto">Comprobante escaneado</span>
 
-						<!--
-							🔴 La trampa del modo de facturación. Si la compra está en "sin
-							factura" o en "automático", guardar la factura acá no serviría de
-							nada: el helper de facturación la borra o le pisa los totales en el
-							mismo request. Cambiarle la configuración a la compra por nuestra
-							cuenta sería peor que no guardarla, así que se le pregunta.
-
-							Va condicionado a `guardar_factura`: si el usuario no va a guardar el
-							comprobante, ofrecerle "pasarla a manual y guardar la factura" no
-							tiene sentido — y encima el backend le cambia el modo_facturacion a la
-							compra con solo recibir ese flag en true, así que un tilde olvidado
-							ahí le reconfiguraba la compra sin guardar nada a cambio.
-						-->
-						<b-alert
-						v-if="factura_bloqueada_por_modo && guardar_factura"
-						show
-						variant="warning"
-						class="scan-review__aviso">
-							<p class="m-b-10">
-								Esta compra está configurada como «{{ modo_facturacion }}». Para guardar los
-								datos de la factura hay que pasarla a facturación manual.
-							</p>
-							<b-form-checkbox v-model="pasar_a_manual">
-								Pasarla a manual y guardar la factura.
+						<div class="scan-review__guardar">
+							<!--
+								🔴 La casilla va PRIMERO, y de ella cuelga todo lo demás del panel.
+								Antes estaba abajo del aviso del modo de facturación y, peor, el
+								request se armaba con `guardar_factura && es_factura_afip`: si el
+								documento era un remito y el usuario cargaba a mano el número y la
+								fecha y tildaba esta casilla, el tilde se ignoraba y no se guardaba
+								nada, sin un solo mensaje. Ahora el tilde se respeta siempre, y lo
+								único que lo apaga es no tener ningún dato del comprobante que
+								guardar — y en ese caso la casilla se deshabilita y se dice por qué,
+								en vez de quedar prendida sin hacer nada.
+							-->
+							<b-form-checkbox
+							v-model="guardar_factura"
+							:disabled="!hay_datos_de_comprobante">
+								Guardar los datos del comprobante en la compra
 							</b-form-checkbox>
-							<p
-							v-if="!pasar_a_manual"
-							class="scan-review__nota m-t-10 m-b-0">
-								Sin tildar esto se cargan solo los artículos: los datos del comprobante no
-								se guardan.
-							</p>
-						</b-alert>
 
-						<div class="scan-review__factura">
+							<p
+							v-if="!hay_datos_de_comprobante"
+							class="scan-review__nota m-b-0">
+								Cargá al menos el número, la fecha o el total del comprobante para poder guardarlo.
+							</p>
+						</div>
+					</div>
+
+					<!-- Cabecera: emisor | letra | datos del comprobante -->
+					<div class="scan-review__encabezado scan-review__atenuable">
+
+						<div class="scan-review__mitad scan-review__mitad--emisor">
 							<div
-							v-for="campo in campos_factura"
-							:key="campo.clave"
-							class="scan-review__factura-campo">
-								<label class="scan-review__label">{{ campo.etiqueta }}</label>
+							class="scan-review__emisor-nombre"
+							:class="{ 'scan-review__emisor-nombre--vacio': !factura.emisor_razon_social }">
+								{{ factura.emisor_razon_social || 'Emisor sin identificar' }}
+							</div>
+							<div class="scan-review__dato">
+								<span class="scan-review__dato-label">Razón Social:</span>
 								<editable-cell
-								:value="factura[campo.clave]"
-								:tipo="campo.tipo"
-								:dudoso="campo_dudoso(factura, campo.clave)"
-								@input="set_campo_factura(campo.clave, $event)"></editable-cell>
+								:value="factura.emisor_razon_social"
+								:dudoso="campo_dudoso(factura, 'emisor_razon_social')"
+								@input="set_campo_factura('emisor_razon_social', $event)"></editable-cell>
 							</div>
 						</div>
 
-						<p class="scan-review__leido">
-							Leído del comprobante: neto gravado {{ mostrar_numero(resultado_factura.neto_gravado) }} ·
-							total IVA {{ mostrar_numero(resultado_factura.total_iva) }} ·
-							certeza {{ porcentaje(resultado_factura.confianza) }}
-						</p>
-
-						<h6 class="scan-review__subtitulo">IVA discriminado</h6>
-						<p
-						v-if="!ivas.length"
-						class="scan-review__vacio">
-							No se detectaron alícuotas de IVA.
-						</p>
-
 						<!--
-							🔴 La alícuota es un SELECTOR, no un texto. Antes era un <span> de
-							solo lectura con un badge "sin identificar" al lado: el usuario veía
-							el problema y no lo podía arreglar. Y del otro lado el backend saltea
-							toda fila de IVA con `iva_id` en null, así que ese renglón del
-							desglose se perdía en silencio y el total de IVA se recalculaba
-							sumando solo las filas que sobrevivieron. Un "10,5" leído mal, o una
-							alícuota que no matchea contra la tabla `ivas`, alcanzaba para que la
-							factura entrara con el IVA cambiado.
+							El recuadro de la letra cuelga de la franja de título y de él baja la
+							línea que parte la cabecera en dos, como en el papel. Es una columna
+							propia de la grilla (y no un absoluto encima del borde) para que las
+							dos mitades nunca le pasen por debajo con un nombre largo.
 						-->
-						<div
-						v-for="(iva, index) in ivas"
-						:key="'iva-' + index"
-						class="scan-review__iva"
-						:class="{ 'scan-review__iva--sin-identificar': !iva.iva_id }">
-							<div class="scan-review__iva-campo">
-								<label class="scan-review__label">Alícuota</label>
-								<b-form-select
-								size="sm"
-								:value="iva.iva_id"
-								:options="opciones_ivas"
-								@change="$set(ivas[index], 'iva_id', $event)"></b-form-select>
+						<div class="scan-review__letra-columna">
+							<div
+							class="scan-review__letra"
+							:class="{ 'scan-review__letra--sin-letra': !letra_comprobante }"
+							:title="letra_comprobante ? 'Letra del comprobante (solo lectura)' : 'La IA no identificó la letra del comprobante'">
+								<span class="scan-review__letra-valor">{{ letra_comprobante || 'X' }}</span>
 								<span
-								class="scan-review__iva-leido"
-								title="El porcentaje que la IA leyó en la factura">
-									Leído: {{ mostrar_numero(iva.porcentaje) }}
+								v-if="codigo_letra"
+								class="scan-review__letra-cod">
+									COD. {{ codigo_letra }}
 								</span>
 							</div>
-							<div class="scan-review__iva-campo">
-								<label class="scan-review__label">Neto</label>
-								<editable-cell
-								:value="iva.neto"
-								tipo="numero"
-								@input="$set(ivas[index], 'neto', $event)"></editable-cell>
-							</div>
-							<div class="scan-review__iva-campo">
-								<label class="scan-review__label">IVA</label>
-								<editable-cell
-								:value="iva.importe"
-								tipo="numero"
-								@input="$set(ivas[index], 'importe', $event)"></editable-cell>
-							</div>
+							<div class="scan-review__letra-linea"></div>
 						</div>
 
-						<p
-						v-if="ivas_sin_identificar"
-						class="scan-review__alerta-inline">
-							Hay {{ ivas_sin_identificar }} fila(s) del desglose sin alícuota elegida. No se
-							guardan y su importe no suma al IVA de la factura: elegí la alícuota, o dejalas
-							así a sabiendas.
-						</p>
+						<div class="scan-review__mitad scan-review__mitad--comprobante">
+							<div class="scan-review__tipo">{{ titulo_comprobante }}</div>
 
+							<div class="scan-review__dato-fila">
+								<div class="scan-review__dato">
+									<span class="scan-review__dato-label">Punto de Venta:</span>
+									<editable-cell
+									:value="factura.punto_venta"
+									:dudoso="campo_dudoso(factura, 'punto_venta') || campo_dudoso(factura, 'code')"
+									@input="set_numeracion('punto_venta', $event)"></editable-cell>
+								</div>
+								<div class="scan-review__dato">
+									<span class="scan-review__dato-label">Comp. Nro:</span>
+									<editable-cell
+									:value="factura.numero"
+									:dudoso="campo_dudoso(factura, 'numero') || campo_dudoso(factura, 'code')"
+									@input="set_numeracion('numero', $event)"></editable-cell>
+								</div>
+							</div>
+
+							<div class="scan-review__dato">
+								<span class="scan-review__dato-label">Fecha de Emisión:</span>
+								<editable-cell
+								:value="factura.issued_at"
+								tipo="fecha"
+								:dudoso="campo_dudoso(factura, 'issued_at')"
+								@input="set_campo_factura('issued_at', $event)"></editable-cell>
+							</div>
+
+							<div class="scan-review__dato">
+								<span class="scan-review__dato-label">CUIT:</span>
+								<editable-cell
+								:value="factura.emisor_cuit"
+								:dudoso="campo_dudoso(factura, 'emisor_cuit')"
+								@input="set_campo_factura('emisor_cuit', $event)"></editable-cell>
+							</div>
+						</div>
 					</div>
-				</div>
 
-				<!-- ─── 3. La tabla de artículos ───────────────────────────────────── -->
-				<div class="scan-review__bloque">
-					<h6 class="scan-review__titulo">
-						Artículos
-						<span class="scan-review__contadores">
-							{{ contadores.total }} artículos ·
-							{{ contadores.encontrados }} encontrados ·
-							{{ contadores.nuevos }} nuevos ·
-							{{ contadores.excluidos }} excluidos
-							<span
-							v-if="contadores.se_descartan"
-							class="scan-review__contadores-alerta">
-								· {{ contadores.se_descartan }} se descartan
-							</span>
+					<!--
+						Receptor: el propio comercio. Solo lectura e informativo — el CUIT es el
+						que leyó la IA, y sirve para darse cuenta de una factura que en realidad
+						no está hecha a nombre de este negocio.
+					-->
+					<div class="scan-review__receptor scan-review__atenuable">
+						<div class="scan-review__dato">
+							<span class="scan-review__dato-label">CUIT:</span>
+							<span class="scan-review__dato-valor">{{ formatear_cuit(resultado_factura.receptor_cuit) }}</span>
+						</div>
+						<div class="scan-review__dato">
+							<span class="scan-review__dato-label">Apellido y Nombre / Razón Social:</span>
+							<span class="scan-review__dato-valor">{{ nombre_receptor }}</span>
+						</div>
+					</div>
+
+					<!-- ─── 3. Los renglones (los artículos) ──────────────────────────── -->
+					<div class="scan-review__renglones-resumen">
+						{{ contadores.total }} artículos ·
+						{{ contadores.encontrados }} encontrados ·
+						{{ contadores.nuevos }} nuevos ·
+						{{ contadores.excluidos }} excluidos
+						<span
+						v-if="contadores.se_descartan"
+						class="scan-review__contadores-alerta">
+							· {{ contadores.se_descartan }} se descartan
 						</span>
-					</h6>
+					</div>
 
 					<p
 					v-if="!articulos.length"
-					class="scan-review__vacio">
+					class="scan-review__vacio scan-review__vacio--renglones">
 						La IA no pudo leer ningún artículo de estas fotos.
 					</p>
 
@@ -253,15 +264,13 @@
 
 						<div class="scan-review__fila scan-review__cabecera">
 							<div class="scan-review__celda scan-review__celda--check">&nbsp;</div>
-							<div class="scan-review__celda">Cód. proveedor</div>
-							<div class="scan-review__celda scan-review__celda--secundaria">Cód. barras</div>
-							<div class="scan-review__celda">Nombre</div>
-							<div class="scan-review__celda">Cant.</div>
-							<div class="scan-review__celda">Costo unit.</div>
-							<div class="scan-review__celda">Desc. %</div>
-							<div class="scan-review__celda scan-review__celda--secundaria">IVA</div>
-							<div class="scan-review__celda">Estado</div>
-							<div class="scan-review__celda scan-review__celda--secundaria">Notas</div>
+							<div class="scan-review__celda">Código</div>
+							<div class="scan-review__celda">Producto / Servicio</div>
+							<div class="scan-review__celda scan-review__celda--numero">Cantidad</div>
+							<div class="scan-review__celda scan-review__celda--numero">Precio Unit.</div>
+							<div class="scan-review__celda scan-review__celda--numero">% Bonif</div>
+							<div class="scan-review__celda scan-review__celda--numero">Subtotal</div>
+							<div class="scan-review__celda scan-review__celda--alicuota">Alícuota IVA</div>
 							<div class="scan-review__celda scan-review__celda--mas">&nbsp;</div>
 						</div>
 
@@ -283,7 +292,7 @@
 
 							<div
 							class="scan-review__celda"
-							data-label="Cód. proveedor">
+							data-label="Código">
 								<editable-cell
 								:value="articulo.codigo_proveedor"
 								:dudoso="campo_dudoso(articulo, 'codigo_proveedor')"
@@ -291,17 +300,8 @@
 							</div>
 
 							<div
-							class="scan-review__celda scan-review__celda--secundaria"
-							data-label="Cód. barras">
-								<editable-cell
-								:value="articulo.bar_code"
-								:dudoso="campo_dudoso(articulo, 'bar_code')"
-								@input="$set(articulo, 'bar_code', $event)"></editable-cell>
-							</div>
-
-							<div
 							class="scan-review__celda"
-							data-label="Nombre">
+							data-label="Producto / Servicio">
 								<editable-cell
 								:value="articulo.nombre"
 								:dudoso="campo_dudoso(articulo, 'nombre')"
@@ -309,7 +309,7 @@
 							</div>
 
 							<div
-							class="scan-review__celda"
+							class="scan-review__celda scan-review__celda--numero"
 							data-label="Cantidad">
 								<editable-cell
 								:value="articulo.cantidad"
@@ -319,34 +319,18 @@
 							</div>
 
 							<div
-							class="scan-review__celda"
-							data-label="Costo unitario">
+							class="scan-review__celda scan-review__celda--numero"
+							data-label="Precio Unit.">
 								<editable-cell
 								:value="articulo.costo_unitario"
 								tipo="numero"
 								:dudoso="campo_dudoso(articulo, 'costo_unitario')"
 								@input="$set(articulo, 'costo_unitario', $event)"></editable-cell>
-
-								<!--
-									El total de la línea calculado con lo que hay en la fila
-									(cantidad × costo − descuento), contra el importe que la IA
-									leyó de la factura. Es el control de magnitud: si los dos
-									números no coinciden, hay algo mal leído o una bonificación
-									que no se cargó, y se ve ACÁ y no cuando la deuda del
-									proveedor ya quedó $2.940 más alta.
-								-->
-								<span
-								v-if="subtotal_texto(articulo)"
-								class="scan-review__subtotal"
-								:class="{ 'scan-review__subtotal--difiere': subtotal_difiere(articulo) }"
-								:title="subtotal_title(articulo)">
-									{{ subtotal_texto(articulo) }}
-								</span>
 							</div>
 
 							<div
-							class="scan-review__celda"
-							data-label="Descuento %">
+							class="scan-review__celda scan-review__celda--numero"
+							data-label="% Bonif">
 								<editable-cell
 								:value="articulo.descuento_porcentaje"
 								tipo="numero"
@@ -355,9 +339,37 @@
 								@input="$set(articulo, 'descuento_porcentaje', $event)"></editable-cell>
 							</div>
 
+							<!--
+								El total de la línea calculado con lo que hay en la fila
+								(cantidad × costo − descuento), contra el importe que la IA
+								leyó de la factura. Es el control de magnitud: si los dos
+								números no coinciden, hay algo mal leído o una bonificación
+								que no se cargó, y se ve ACÁ y no cuando la deuda del
+								proveedor ya quedó $2.940 más alta.
+
+								Valor y marca van en una sola caja: en tarjeta la celda es una
+								grilla de dos columnas (etiqueta | valor), y un tercer hijo suelto
+								caería abajo de la etiqueta como si fuera otra.
+							-->
 							<div
-							class="scan-review__celda scan-review__celda--secundaria"
-							data-label="IVA">
+							class="scan-review__celda scan-review__celda--numero"
+							data-label="Subtotal">
+								<span
+								class="scan-review__subtotal"
+								:class="{ 'scan-review__subtotal--difiere': subtotal_difiere(articulo) }"
+								:title="subtotal_title(articulo)">
+									<span class="scan-review__subtotal-valor">{{ subtotal_texto(articulo) || '—' }}</span>
+									<span
+									v-if="subtotal_leido_texto(articulo)"
+									class="scan-review__subtotal-leido">
+										{{ subtotal_leido_texto(articulo) }}
+									</span>
+								</span>
+							</div>
+
+							<div
+							class="scan-review__celda scan-review__celda--alicuota"
+							data-label="Alícuota IVA">
 								<b-form-select
 								size="sm"
 								:value="articulo.iva_id"
@@ -365,9 +377,23 @@
 								@change="$set(articulo, 'iva_id', $event)"></b-form-select>
 							</div>
 
-							<div
-							class="scan-review__celda scan-review__celda--estado"
-							data-label="Estado">
+							<div class="scan-review__celda scan-review__celda--mas">
+								<b-button
+								size="sm"
+								variant="outline-secondary"
+								:class="{ 'scan-review__mas--dudoso': extra_dudoso(articulo) }"
+								:title="extra_dudoso(articulo) ? 'Hay un dato dudoso en el código de barras o en las notas: revisalo' : (articulo.expandida ? 'Ocultar más datos del renglón' : 'Ver más datos del renglón')"
+								@click="$set(articulo, 'expandida', !articulo.expandida)">
+									{{ articulo.expandida ? '−' : '+' }}
+								</b-button>
+							</div>
+
+							<!--
+								El estado del matcheo va en una sub-línea debajo del renglón, desde
+								la columna Producto hasta el final, y no como columna: la tabla
+								tiene que leerse como la factura, y el estado no está en el papel.
+							-->
+							<div class="scan-review__estado">
 								<template v-if="!es_nuevo(articulo)">
 									<b-badge variant="success">
 										{{ articulo.match.nombre_en_catalogo || 'En el catálogo' }}
@@ -406,38 +432,16 @@
 								</template>
 							</div>
 
-							<div
-							class="scan-review__celda scan-review__celda--secundaria"
-							data-label="Notas">
-								<editable-cell
-								:value="articulo.notas"
-								:dudoso="campo_dudoso(articulo, 'notas')"
-								@input="$set(articulo, 'notas', $event)"></editable-cell>
-							</div>
-
-							<div class="scan-review__celda scan-review__celda--mas">
-								<b-button
-								size="sm"
-								variant="outline-secondary"
-								:title="articulo.expandida ? 'Ocultar código de barras y notas' : 'Ver código de barras y notas'"
-								@click="$set(articulo, 'expandida', !articulo.expandida)">
-									{{ articulo.expandida ? '−' : '+' }}
-								</b-button>
-							</div>
-
 							<!--
-								Copia de las TRES columnas que se ocultan entre 768 y 1199px
-								(código de barras, IVA y notas). Vive en su propio bloque, después
-								de todas las celdas, y no reusa las de arriba: si a una celda del
-								medio de la grilla se le da ancho completo, empuja a las que vienen
-								después a otra fila y la tabla se desarma. En los otros dos anchos
-								está en display:none.
+								Lo que no es columna de una factura: código de barras y notas, en
+								todos los anchos de escritorio, más la alícuota entre 768 y 991px,
+								donde ya no entra como columna. Vive en su propio bloque, después de
+								todas las celdas, y no reusa las de arriba: si a una celda del medio
+								de la grilla se le da ancho completo, empuja a las que vienen
+								después a otra fila y la tabla se desarma.
 
-								El IVA cayó acá y no entre las columnas principales del ancho
-								intermedio porque a 768px ya hay ocho columnas peleando: un select
-								más las deja a todas abajo del ancho con el que un dedo acierta.
-								A ≥1200px sí es una columna propia, y a <768px se ve como una
-								etiqueta más de la tarjeta.
+								En teléfono este bloque se ve siempre, como parte de la tarjeta, y
+								el "+" desaparece: ahí no hay columnas que ahorrar.
 							-->
 							<div class="scan-review__extra">
 								<div class="scan-review__extra-campo">
@@ -447,8 +451,8 @@
 									:dudoso="campo_dudoso(articulo, 'bar_code')"
 									@input="$set(articulo, 'bar_code', $event)"></editable-cell>
 								</div>
-								<div class="scan-review__extra-campo">
-									<label class="scan-review__label">IVA</label>
+								<div class="scan-review__extra-campo scan-review__extra-campo--alicuota">
+									<label class="scan-review__label">Alícuota IVA</label>
 									<b-form-select
 									size="sm"
 									:value="articulo.iva_id"
@@ -466,9 +470,124 @@
 
 						</div>
 					</div>
+
+					<!-- ─── 4. Totales, abajo a la derecha como en el papel ──────────── -->
+					<div class="scan-review__pie-factura">
+						<div class="scan-review__totales scan-review__atenuable">
+
+							<div class="scan-review__total-linea">
+								<span class="scan-review__total-label">Importe Neto Gravado:&nbsp;$</span>
+								<span class="scan-review__total-valor">{{ mostrar_importe(neto_gravado_desglose) }}</span>
+							</div>
+
+							<p
+							v-if="!ivas.length"
+							class="scan-review__vacio scan-review__vacio--totales">
+								No se detectaron alícuotas de IVA.
+							</p>
+
+							<!--
+								🔴 La alícuota es un SELECTOR, no un texto. Antes era un <span> de
+								solo lectura con un badge "sin identificar" al lado: el usuario veía
+								el problema y no lo podía arreglar. Y del otro lado el backend saltea
+								toda fila de IVA con `iva_id` en null, así que ese renglón del
+								desglose se perdía en silencio y el total de IVA se recalculaba
+								sumando solo las filas que sobrevivieron. Un "10,5" leído mal, o una
+								alícuota que no matchea contra la tabla `ivas`, alcanzaba para que la
+								factura entrara con el IVA cambiado.
+							-->
+							<div
+							v-for="(iva, index) in ivas"
+							:key="'iva-' + index"
+							class="scan-review__iva"
+							:class="{ 'scan-review__iva--sin-identificar': !iva.iva_id }">
+								<div class="scan-review__iva-campo scan-review__iva-campo--alicuota">
+									<span class="scan-review__total-label">IVA</span>
+									<div class="scan-review__iva-selector">
+										<b-form-select
+										size="sm"
+										:value="iva.iva_id"
+										:options="opciones_ivas"
+										@change="$set(ivas[index], 'iva_id', $event)"></b-form-select>
+										<span
+										class="scan-review__iva-leido"
+										title="El porcentaje que la IA leyó en la factura">
+											Leído: {{ mostrar_numero(iva.porcentaje) }}
+										</span>
+									</div>
+								</div>
+								<div class="scan-review__iva-campo">
+									<span class="scan-review__total-label scan-review__total-label--chica">Neto:&nbsp;$</span>
+									<editable-cell
+									:value="iva.neto"
+									tipo="numero"
+									@input="$set(ivas[index], 'neto', $event)"></editable-cell>
+								</div>
+								<div class="scan-review__iva-campo">
+									<span class="scan-review__total-label scan-review__total-label--chica">IVA:&nbsp;$</span>
+									<editable-cell
+									:value="iva.importe"
+									tipo="numero"
+									@input="$set(ivas[index], 'importe', $event)"></editable-cell>
+								</div>
+							</div>
+
+							<p
+							v-if="ivas_sin_identificar"
+							class="scan-review__alerta-inline">
+								Hay {{ ivas_sin_identificar }} fila(s) del desglose sin alícuota elegida. No se
+								guardan y su importe no suma al IVA de la factura: elegí la alícuota, o dejalas
+								así a sabiendas.
+							</p>
+
+							<div class="scan-review__total-linea">
+								<span class="scan-review__total-label">Percepción IIBB:&nbsp;$</span>
+								<editable-cell
+								:value="factura.percepcion_iibb"
+								tipo="numero"
+								:dudoso="campo_dudoso(factura, 'percepcion_iibb')"
+								@input="set_campo_factura('percepcion_iibb', $event)"></editable-cell>
+							</div>
+
+							<div class="scan-review__total-linea">
+								<span class="scan-review__total-label">Percepción IVA:&nbsp;$</span>
+								<editable-cell
+								:value="factura.percepcion_iva"
+								tipo="numero"
+								:dudoso="campo_dudoso(factura, 'percepcion_iva')"
+								@input="set_campo_factura('percepcion_iva', $event)"></editable-cell>
+							</div>
+
+							<div class="scan-review__total-linea scan-review__total-linea--total">
+								<span class="scan-review__total-label">Importe Total:&nbsp;$</span>
+								<editable-cell
+								:value="factura.total"
+								tipo="numero"
+								:dudoso="campo_dudoso(factura, 'total')"
+								@input="set_campo_factura('total', $event)"></editable-cell>
+							</div>
+
+							<!--
+								🔴 Lo que el backend hace con el total y la pantalla no decía: con
+								desglose, el total que se guarda es Σ(neto + IVA) + percepciones, y
+								el impreso se ignora. Si no coinciden, se dice acá cuál entra.
+							-->
+							<p
+							v-if="total_guardado_difiere"
+							class="scan-review__total-guardado">
+								El total que se va a guardar sale del desglose: $ {{ mostrar_importe(total_que_se_guarda) }}
+							</p>
+						</div>
+
+						<p class="scan-review__leido">
+							Leído en el papel: neto $ {{ mostrar_importe(resultado_factura.neto_gravado) }} ·
+							IVA $ {{ mostrar_importe(resultado_factura.total_iva) }} ·
+							certeza {{ porcentaje(resultado_factura.confianza) }}
+						</p>
+					</div>
 				</div>
 
-				<!-- ─── 4. Las fotos, para cotejar mientras se corrige ─────────────── -->
+				<!-- ─── 5. Las fotos, para cotejar mientras se corrige ─────────────── -->
 				<div class="scan-review__bloque">
 					<h6 class="scan-review__titulo">
 						Fotos escaneadas ({{ imagenes.length }})
@@ -501,7 +620,7 @@
 					</div>
 				</div>
 
-				<!-- ─── 5. Lo que se va a perder si confirma así ───────────────────── -->
+				<!-- ─── 6. Lo que se va a perder si confirma así ───────────────────── -->
 				<!--
 					🔴 Este bloque es lo que faltaba: el resumen de lo que la confirmación va
 					a tirar, ANTES de confirmar. El backend saltea sin avisar toda fila sin
@@ -539,7 +658,7 @@
 					</b-button>
 				</b-alert>
 
-				<!-- ─── 6. Pie ─────────────────────────────────────────────────────── -->
+				<!-- ─── 7. Pie ─────────────────────────────────────────────────────── -->
 				<div class="scan-review__pie">
 					<b-button
 					variant="primary"
@@ -585,14 +704,23 @@ import { env } from '@/runtime_config'
  * El backend saltea las dos cosas en silencio, y un resumen posterior no sirve de nada
  * cuando la compra ya quedó asentada.
  *
+ * El comprobante se dibuja como una factura de ARCA/AFIP (misión
+ * factura-escaneada-diseno-afip, 24/9/2026): marco, franja de título, cabecera en dos
+ * mitades con el recuadro de la letra en el medio, franja del receptor, renglones y
+ * recuadro de totales abajo a la derecha. No es decoración: el usuario tiene el papel al
+ * lado y encuentra cada dato donde lo busca en el papel, en vez de leer una grilla de
+ * campos sueltos y adivinar cuál es cuál.
+ *
  * Responsive (es la parte más frágil de la pantalla, y el ancho del medio es donde se
  * esconden los defectos):
- *  - ≥1200px: la tabla completa, diez columnas.
- *  - 768–1199px: se ocultan código de barras, IVA y notas; se editan desde el "+" de la
- *    fila. El descuento se queda arriba: es plata del renglón, no un dato de referencia.
- *  - <768px: la tabla se vuelve tarjetas apiladas. Una tabla de diez columnas a 360px no
- *    se puede editar con el dedo, y un scroll horizontal no resuelve nada: esconde
- *    justamente la columna que se está por tocar.
+ *  - ≥992px: la tabla con las siete columnas de la factura (Código, Producto, Cantidad,
+ *    Precio Unit., % Bonif, Subtotal, Alícuota IVA). Código de barras y notas no son
+ *    columnas de una factura: viven en el "+" de la fila en todos los anchos de escritorio.
+ *  - 768–991px: la alícuota tampoco entra y se suma al "+". El descuento se queda arriba:
+ *    es plata del renglón, no un dato de referencia.
+ *  - <768px: la cabecera se apila y la tabla se vuelve tarjetas. Una tabla de siete
+ *    columnas a 360px no se puede editar con el dedo, y un scroll horizontal no resuelve
+ *    nada: esconde justamente la columna que se está por tocar.
  */
 
 /* Etiquetas legibles de las claves fijas del contrato del resultado. */
@@ -626,6 +754,31 @@ const TOPE_DESCARTES_LISTADOS = 8
 const TOLERANCIA_TOTAL_LINEA = 0.01
 const TOLERANCIA_TOTAL_LINEA_MINIMA = 0.5
 
+/*
+ * Cuánto puede diferir el total que se va a guardar (el que sale del desglose) del total
+ * impreso antes de avisarlo. Medio peso: menos que eso es redondeo del papel.
+ */
+const TOLERANCIA_TOTAL_COMPROBANTE = 0.5
+
+/*
+ * El código de ARCA que acompaña a la letra en el recuadro del medio, por clase de
+ * comprobante. Solo A, B y C, que son los que un comercio recibe de un proveedor; para
+ * cualquier otra letra, o un comprobante que no se sabe qué es, el recuadro muestra la
+ * letra sola, sin inventarle un código: "COD. 01" en una nota de crédito sería decirle
+ * al usuario que tiene una factura en la mano.
+ */
+const CODIGOS_POR_CLASE = {
+	factura: { A: '01', B: '06', C: '11' },
+	nota_debito: { A: '02', B: '07', C: '12' },
+	nota_credito: { A: '03', B: '08', C: '13' },
+}
+
+const TITULOS_POR_CLASE = {
+	factura: 'FACTURA',
+	nota_debito: 'NOTA DE DÉBITO',
+	nota_credito: 'NOTA DE CRÉDITO',
+}
+
 export default {
 	components: {
 		EditableCell: () => import('@/components/provider/modals/orders/scan-invoice/EditableCell'),
@@ -640,33 +793,16 @@ export default {
 			ivas: [],
 			guardar_factura: true,
 			pasar_a_manual: false,
-			mostrar_factura: true,
 			mostrar_fotos: false,
 			confirmando: false,
 			descartando: false,
-			/* Los campos del comprobante que viajan en el request de confirmación. */
-			campos_factura: [
-				{ clave: 'code', etiqueta: 'Número', tipo: 'texto' },
-				{ clave: 'issued_at', etiqueta: 'Fecha', tipo: 'fecha' },
-				{ clave: 'emisor_cuit', etiqueta: 'CUIT del emisor', tipo: 'texto' },
-				{ clave: 'emisor_razon_social', etiqueta: 'Razón social del emisor', tipo: 'texto' },
-				{ clave: 'total', etiqueta: 'Total', tipo: 'numero' },
-				{ clave: 'percepcion_iibb', etiqueta: 'Percepción IIBB', tipo: 'numero' },
-				{ clave: 'percepcion_iva', etiqueta: 'Percepción IVA', tipo: 'numero' },
-				/*
-				 * 🔴 Acá vivían `retencion_iibb`, `retencion_iva` y `retencion_ganancias` (misión
-				 * `compras-factura-manual-alicuotas`, 17/9/2026). Se fueron porque una factura de
-				 * COMPRA no trae retenciones: quien retiene es tu cliente cuando te paga, no el
-				 * proveedor cuando te factura, así que se cargan al registrar un cobro en la cuenta
-				 * corriente de un cliente.
-				 *
-				 * La API ya hizo su mitad: el escaneo dejó de pedírselas a la IA
-				 * (`EscaneoFacturaCompraService::CAMPOS_NUMERICOS_FACTURA`) y la confirmación dejó
-				 * de escribirlas (`ProviderOrderScanController`). Dejarlas acá era pedirle a la
-				 * persona que revisara y corrigiera tres números que ya no viajan a ningún lado, y
-				 * eso es peor que no mostrarlos: la pantalla prometía un guardado que no existe.
-				 */
-			],
+			/*
+			 * El toggle "Mostrar/Ocultar" del comprobante (`mostrar_factura`) y la lista
+			 * `campos_factura` que alimentaba una grilla de campos sueltos se fueron con el
+			 * rediseño: el comprobante ES la pantalla, y cada campo vive en el template en el
+			 * lugar donde está en el papel. El comentario de las retenciones que colgaba de
+			 * esa lista se mudó a `construir()`, donde se arma la copia de la factura.
+			 */
 		}
 	},
 	computed: {
@@ -852,6 +988,180 @@ export default {
 			})
 			return hay_articulos || this.va_a_guardar_factura
 		},
+		/*
+		 * Qué comprobante es, leído de `tipo_comprobante`: la clase (factura, nota de
+		 * crédito, nota de débito o null si no se sabe) y la letra.
+		 *
+		 * La IA devuelve casi siempre la letra sola ("A"), a veces con el nombre
+		 * adelante ("Factura A", "Nota de Crédito B", "NC A"). Solo se afirma que es una
+		 * FACTURA cuando dice eso o es la letra sola; cualquier otro texto se queda sin
+		 * clase: el título dice "COMPROBANTE" y el recuadro, la letra sin código. La
+		 * letra es la última palabra si es una letra sola; si no hay, null, y el recuadro
+		 * muestra la X gris de "no la identificó" — mejor eso que una letra inventada,
+		 * que es justo lo que el usuario usaría para decidir si le sirve el crédito fiscal.
+		 *
+		 * Todo esto es solo lectura y no viaja: el contrato de la confirmación no tiene
+		 * dónde guardarlo.
+		 *
+		 * @return {Object}  { clase: String|null, letra: String|null }
+		 */
+		clase_comprobante() {
+			let tipo = this.resultado_factura.tipo_comprobante
+
+			if (tipo === null || typeof tipo === 'undefined' || String(tipo).trim() === '') {
+				return { clase: null, letra: null }
+			}
+
+			/* Sin tildes, en mayúsculas y con los espacios colapsados: "Nota de Crédito  a". */
+			let texto = String(tipo)
+				.normalize('NFD')
+				.replace(/[̀-ͯ]/g, '')
+				.toUpperCase()
+				.replace(/\s+/g, ' ')
+				.trim()
+
+			let coincidencia = texto.match(/(?:^|[\s.-])([A-Z])$/)
+			let letra = coincidencia ? coincidencia[1] : null
+
+			if (/^[A-Z]$/.test(texto) || /^FACTURA [A-Z]$/.test(texto)) {
+				return { clase: 'factura', letra: letra }
+			}
+			if (/NOTA (DE )?CREDITO|^N\/?C\b/.test(texto)) {
+				return { clase: 'nota_credito', letra: letra }
+			}
+			if (/NOTA (DE )?DEBITO|^N\/?D\b/.test(texto)) {
+				return { clase: 'nota_debito', letra: letra }
+			}
+
+			return { clase: null, letra: letra }
+		},
+		letra_comprobante() {
+			return this.clase_comprobante.letra
+		},
+		/* "COD. 01" abajo de la A, como en el papel. Null sin clase o para una letra sin código. */
+		codigo_letra() {
+			let clase = this.clase_comprobante.clase
+
+			if (!clase || !this.letra_comprobante) {
+				return null
+			}
+			return CODIGOS_POR_CLASE[clase][this.letra_comprobante] || null
+		},
+		/* El título de la mitad derecha: "FACTURA", "NOTA DE CRÉDITO"… o "COMPROBANTE". */
+		titulo_comprobante() {
+			let clase = this.clase_comprobante.clase
+			return clase ? TITULOS_POR_CLASE[clase] : 'COMPROBANTE'
+		},
+		/*
+		 * La razón social del receptor, que es el propio comercio. Mismo criterio que
+		 * `asistente-ia/FloatingButton.vue` (el nombre del dueño, y si no, el del
+		 * usuario): un empleado ve el nombre del negocio, no el suyo.
+		 *
+		 * @return {String}
+		 */
+		nombre_receptor() {
+			if (this.owner && this.owner.company_name) {
+				return this.owner.company_name
+			}
+			if (this.user && this.user.company_name) {
+				return this.user.company_name
+			}
+			return '—'
+		},
+		/*
+		 * El "Importe Neto Gravado" del recuadro de totales: la suma de los netos del
+		 * desglose tal como está en pantalla (se recalcula al editar un neto).
+		 *
+		 * Solo las filas CON alícuota elegida, igual que `total_que_se_guarda`: son las
+		 * únicas que el backend crea. Sumando todas, el neto de arriba más el IVA no
+		 * cuadraba con el total que se guarda, y el recuadro se contradecía solo justo
+		 * en el caso en que hay una fila que se va a perder. Null si no queda ninguna,
+		 * para mostrar "—" en vez de un cero que parece un dato.
+		 *
+		 * @return {Number|null}
+		 */
+		neto_gravado_desglose() {
+			let filas = this.ivas.filter(iva => {
+				return !!iva.iva_id
+			})
+
+			if (!filas.length) {
+				return null
+			}
+
+			return filas.reduce((suma, iva) => {
+				let neto = Number(iva.neto)
+				return suma + (isNaN(neto) ? 0 : neto)
+			}, 0)
+		},
+		/*
+		 * El total que el backend va a guardar de verdad, calculado igual que él
+		 * (`FacturaDeCompraHelper::guardar_totales`): con desglose, Σ(neto + IVA) de las
+		 * filas + percepciones, y el total impreso se ignora. Solo cuentan las filas con
+		 * alícuota elegida, porque las otras el backend ni las crea.
+		 *
+		 * Null cuando no hay ninguna fila que sobreviva: ahí manda el total impreso y no
+		 * hay nada que avisar.
+		 *
+		 * @return {Number|null}
+		 */
+		total_que_se_guarda() {
+			let filas = this.ivas.filter(iva => {
+				return !!iva.iva_id
+			})
+
+			if (!filas.length) {
+				return null
+			}
+
+			let total = filas.reduce((suma, iva) => {
+				let neto = Number(iva.neto)
+				let importe = Number(iva.importe)
+				return suma + (isNaN(neto) ? 0 : neto) + (isNaN(importe) ? 0 : importe)
+			}, 0)
+
+			let percepcion_iibb = Number(this.factura.percepcion_iibb)
+			let percepcion_iva = Number(this.factura.percepcion_iva)
+
+			total += isNaN(percepcion_iibb) ? 0 : percepcion_iibb
+			total += isNaN(percepcion_iva) ? 0 : percepcion_iva
+
+			return Math.round(total * 100) / 100
+		},
+		/*
+		 * 🔴 True cuando lo que se va a guardar no es el total que el usuario ve impreso.
+		 * La pantalla mostraba el total del papel como si fuera el que entraba, y el
+		 * backend lo pisaba con la suma del desglose sin decir nada: un neto mal leído
+		 * movía la deuda con el proveedor con el total "correcto" a la vista. También
+		 * avisa si el total impreso está vacío, porque ahí lo que entra es la suma.
+		 *
+		 * Solo cuando la factura se va a guardar de verdad: con la casilla destildada, o
+		 * con la compra en un modo que la descarta y sin "pasar a manual", no se guarda
+		 * ningún total, y avisar cuál "se va a guardar" sería mentir.
+		 *
+		 * @return {Boolean}
+		 */
+		total_guardado_difiere() {
+			if (!this.va_a_guardar_factura) {
+				return false
+			}
+
+			if (this.factura_bloqueada_por_modo && !this.pasar_a_manual) {
+				return false
+			}
+
+			if (this.total_que_se_guarda === null) {
+				return false
+			}
+
+			let impreso = Number(this.factura.total)
+
+			if (this.factura.total === null || typeof this.factura.total === 'undefined' || this.factura.total === '' || isNaN(impreso)) {
+				return true
+			}
+
+			return Math.abs(this.total_que_se_guarda - impreso) > TOLERANCIA_TOTAL_COMPROBANTE
+		},
 	},
 	/*
 	 * Este componente se monta con el listado de compras, mucho antes de que alguien
@@ -1027,15 +1337,61 @@ export default {
 
 			let factura = resultado.factura || {}
 
+			/*
+			 * Punto de venta y número se editan por separado, como están en el papel, y
+			 * `code` se recompone con los dos (ver `set_numeracion`). Un escaneo viejo, de
+			 * antes de que el resultado trajera las dos mitades, tiene `code` y no
+			 * `numero`. Si ese `code` tiene la forma "0003-00012345" se parte en sus dos
+			 * mitades: dejarlo entero en "Comp. Nro" hacía que cargar el punto de venta lo
+			 * duplicara ("0003-0003-00012345"). Si no tiene esa forma, se muestra entero en
+			 * "Comp. Nro" con el punto de venta vacío. En los dos casos recomponerlo da el
+			 * mismo `code` que vino.
+			 */
+			let punto_venta = factura.punto_venta || null
+			let numero = factura.numero || null
+
+			if (!numero && factura.code) {
+				let partes = String(factura.code).match(/^(\d+)-(\d+)$/)
+
+				if (partes) {
+					punto_venta = partes[1]
+					numero = partes[2]
+				} else {
+					numero = factura.code
+					punto_venta = null
+				}
+			}
+
 			this.factura = {
+				/*
+				 * `code` arranca EXACTAMENTE como vino del backend, y así viaja mientras el
+				 * usuario no toque el punto de venta ni el número.
+				 */
 				code: factura.code || null,
+				/* Solo de pantalla: no viajan, alimentan `code`. */
+				punto_venta: punto_venta,
+				numero: numero,
 				issued_at: factura.issued_at || null,
 				emisor_cuit: factura.emisor_cuit || null,
 				emisor_razon_social: factura.emisor_razon_social || null,
 				total: typeof factura.total === 'undefined' ? null : factura.total,
 				percepcion_iibb: typeof factura.percepcion_iibb === 'undefined' ? null : factura.percepcion_iibb,
 				percepcion_iva: typeof factura.percepcion_iva === 'undefined' ? null : factura.percepcion_iva,
-				/* Sin `retencion_*`: ver el comentario de `campos_factura`. */
+				/*
+				 * 🔴 Acá no van `retencion_iibb`, `retencion_iva` ni `retencion_ganancias`
+				 * (misión `compras-factura-manual-alicuotas`, 17/9/2026). Se fueron porque una
+				 * factura de COMPRA no trae retenciones: quien retiene es tu cliente cuando te
+				 * paga, no el proveedor cuando te factura, así que se cargan al registrar un
+				 * cobro en la cuenta corriente de un cliente.
+				 *
+				 * La API ya hizo su mitad: el escaneo dejó de pedírselas a la IA
+				 * (`EscaneoFacturaCompraService::CAMPOS_NUMERICOS_FACTURA`) y la confirmación
+				 * dejó de escribirlas (`ProviderOrderScanController`). Mostrarlas era pedirle a
+				 * la persona que revisara y corrigiera tres números que ya no viajan a ningún
+				 * lado, y eso es peor que no mostrarlos: la pantalla prometía un guardado que no
+				 * existe. (Este comentario vivía en la lista `campos_factura`, que se fue con el
+				 * rediseño del 24/9/2026.)
+				 */
 				campos_dudosos: factura.campos_dudosos || [],
 			}
 
@@ -1073,6 +1429,97 @@ export default {
 		},
 		set_campo_factura(clave, valor) {
 			this.$set(this.factura, clave, valor)
+		},
+		/*
+		 * Edición del punto de venta o del número. Recompone `code`, que es lo único de
+		 * la numeración que viaja.
+		 *
+		 * 🔴 Si el valor no cambió, no se toca nada. EditableCell emite al perder el
+		 * foco aunque el usuario solo haya hecho clic y salido, y recomponer ahí
+		 * cambiaría el `code` de un escaneo cuyo `code` el backend armó distinto (uno
+		 * viejo, por ejemplo) sin que nadie lo haya editado. "Mientras no lo toque, viaja
+		 * como vino" tiene que ser literal.
+		 *
+		 * @param {String} clave  'punto_venta' | 'numero'
+		 * @param {String|null} valor
+		 */
+		set_numeracion(clave, valor) {
+			if (this.factura[clave] === valor) {
+				return
+			}
+
+			this.$set(this.factura, clave, valor)
+			this.$set(this.factura, 'code', this.componer_code(this.factura.punto_venta, this.factura.numero))
+		},
+		/*
+		 * Arma `code` igual que el backend (`EscaneoFacturaCompraService::normalizar_factura`):
+		 * "pv-numero" con las dos mitades, el número solo si falta el punto de venta, y null
+		 * sin número — un punto de venta suelto no identifica ningún comprobante.
+		 *
+		 * @param {String|null} punto_venta
+		 * @param {String|null} numero
+		 * @return {String|null}
+		 */
+		componer_code(punto_venta, numero) {
+			let pv = punto_venta === null || typeof punto_venta === 'undefined' ? '' : String(punto_venta).trim()
+			let nro = numero === null || typeof numero === 'undefined' ? '' : String(numero).trim()
+
+			if (pv !== '' && nro !== '') {
+				return pv + '-' + nro
+			}
+			if (nro !== '') {
+				return nro
+			}
+			return null
+		},
+		/*
+		 * Importe con separadores argentinos, sin el "$": en el recuadro de totales el
+		 * signo ya está en la etiqueta ("Importe Total: $"), como en el papel. Mismo
+		 * formato que EditableCell en reposo (mínimo 2 decimales, máximo 4, que nunca
+		 * esconda precisión), para que todo el comprobante se lea igual.
+		 *
+		 * @param {Number|null} valor
+		 * @return {String}
+		 */
+		mostrar_importe(valor) {
+			let numero = Number(valor)
+
+			if (valor === null || typeof valor === 'undefined' || valor === '' || isNaN(numero)) {
+				return '—'
+			}
+
+			return numero.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+		},
+		/*
+		 * CUIT con guiones (30-71727742-9) cuando son once dígitos; si no, tal cual vino.
+		 * Solo para mostrar el del receptor, que no se edita.
+		 *
+		 * @param {String|null} cuit
+		 * @return {String}
+		 */
+		formatear_cuit(cuit) {
+			if (!cuit) {
+				return '—'
+			}
+
+			let digitos = String(cuit).replace(/\D/g, '')
+
+			if (digitos.length !== 11) {
+				return String(cuit)
+			}
+
+			return digitos.slice(0, 2) + '-' + digitos.slice(2, 10) + '-' + digitos.slice(10)
+		},
+		/*
+		 * True si alguno de los dos campos escondidos en el "+" (código de barras o notas)
+		 * la IA lo leyó con dificultad. El "+" se pinta ámbar: un dato dudoso que no se ve
+		 * es un dato dudoso que nadie revisa.
+		 *
+		 * @param {Object} articulo
+		 * @return {Boolean}
+		 */
+		extra_dudoso(articulo) {
+			return this.campo_dudoso(articulo, 'bar_code') || this.campo_dudoso(articulo, 'notas')
 		},
 		/*
 		 * Umbrales de color de la certeza de una columna: ≥0,85 verde; 0,6–0,85
@@ -1236,6 +1683,9 @@ export default {
 			return Math.abs(calculado - leido) > tolerancia
 		},
 		/*
+		 * El valor de la columna Subtotal. Desde que el subtotal es su propia columna (y no
+		 * una línea abajo del costo) va sin el "= " adelante: el encabezado ya dice qué es.
+		 *
 		 * @param {Object} articulo
 		 * @return {String}
 		 */
@@ -1246,13 +1696,21 @@ export default {
 				return ''
 			}
 
-			let texto = '= ' + this.price(calculado)
-
-			if (this.subtotal_difiere(articulo)) {
-				texto = texto + ' ≠ ' + this.price(articulo.total_linea)
+			return this.price(calculado)
+		},
+		/*
+		 * La marca roja de abajo del subtotal cuando no da lo que dice el papel. Vacía
+		 * si coinciden (misma tolerancia de `subtotal_difiere`, sin tocar).
+		 *
+		 * @param {Object} articulo
+		 * @return {String}
+		 */
+		subtotal_leido_texto(articulo) {
+			if (!this.subtotal_difiere(articulo)) {
+				return ''
 			}
 
-			return texto
+			return '≠ leído ' + this.price(articulo.total_linea)
 		},
 		/*
 		 * @param {Object} articulo
@@ -1437,7 +1895,7 @@ export default {
 					total: this.factura.total,
 					percepcion_iibb: this.factura.percepcion_iibb,
 					percepcion_iva: this.factura.percepcion_iva,
-					/* Sin `retencion_*`: ver el comentario de `campos_factura`. */
+					/* Sin `retencion_*`: ver el comentario 🔴 de `construir()`. */
 					ivas: this.ivas.map(iva => {
 						return {
 							iva_id: iva.iva_id,
@@ -1559,6 +2017,11 @@ export default {
 <style lang="sass">
 .scan-review
 	font-size: 0.9rem
+	// El trazo de la "hoja": marco, franjas, recuadro de la letra y encabezado de la
+	// tabla. Más oscuro que --color-border a propósito: en el papel esas líneas son
+	// negras, y con el gris clarito de los separadores la factura no se reconoce como
+	// factura. En oscuro se redefine abajo.
+	--scan-linea: var(--color-text-secondary)
 
 	&__cargando
 		padding: 24px
@@ -1577,19 +2040,9 @@ export default {
 		font-weight: 700
 		margin-bottom: 10px
 
-	&__subtitulo
-		font-weight: 600
-		font-size: 0.85rem
-		margin: 14px 0 8px 0
-
 	&__toggle
 		padding: 0
 		font-size: 0.8rem
-
-	&__contadores
-		font-weight: 400
-		font-size: 0.8rem
-		color: #64748b
 
 	&__contadores-alerta
 		color: #b91c1c
@@ -1605,7 +2058,7 @@ export default {
 	// Aviso de que algo se va a perder, adentro de su bloque. Es distinto de un
 	// b-alert entero: no interrumpe la lectura, pero se ve.
 	&__alerta-inline
-		margin: 10px 0 0 0
+		margin: 8px 0
 		padding: 8px 10px
 		border-radius: 8px
 		font-size: 0.8rem
@@ -1622,6 +2075,13 @@ export default {
 		color: #94a3b8
 		font-size: 0.85rem
 		margin: 0
+
+		&--renglones
+			padding: 14px 12px
+
+		&--totales
+			padding: 4px 0
+			text-align: right
 
 	&__aviso
 		font-size: 0.85rem
@@ -1682,75 +2142,210 @@ export default {
 		font-size: 0.8rem
 		color: #64748b
 
-	// --- Comprobante -------------------------------------------------------------
-	&__factura
-		display: grid
-		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr))
-		gap: 10px
+	// --- El comprobante: la "hoja" -----------------------------------------------
+	&__comprobante
+		margin-bottom: 22px
+		border: 1px solid var(--scan-linea)
+		border-radius: 4px
+		background: var(--bg-card)
+		color: var(--color-text-primary)
+		// Sin overflow hidden a propósito: los select y el input de fecha de adentro
+		// tienen que poder desplegarse fuera del marco.
 
-	&__leido
-		margin: 10px 0 0 0
+	// Lo que no se va a guardar se ve apagado, pero sigue siendo editable: la
+	// opacidad no bloquea clics, y así el que cambia de idea no tiene que re-tildar
+	// para poder corregir.
+	&__comprobante--sin-guardar &__atenuable
+		opacity: 0.5
+
+	&__franja-titulo
+		display: flex
+		flex-direction: row
+		flex-wrap: wrap
+		align-items: center
+		justify-content: space-between
+		gap: 8px 16px
+		padding: 8px 14px
+		border-bottom: 1px solid var(--scan-linea)
+
+	&__franja-texto
+		font-weight: 800
+		font-size: 0.82rem
+		text-transform: uppercase
+		letter-spacing: 0.12em
+
+	&__guardar
+		font-size: 0.85rem
+
+	// Cabecera: emisor | recuadro de la letra | datos del comprobante. La letra es una
+	// columna `auto` de la grilla, así las dos mitades se reparten lo que sobra y
+	// nunca le pasan por debajo.
+	&__encabezado
+		display: grid
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)
+		border-bottom: 1px solid var(--scan-linea)
+
+	&__mitad
+		min-width: 0
+		padding: 14px 16px 16px 16px
+		display: flex
+		flex-direction: column
+		gap: 6px
+
+	&__emisor-nombre
+		font-size: 1.35rem
+		font-weight: 800
+		line-height: 1.2
+		margin: 4px 0 8px 0
+		overflow-wrap: anywhere
+
+		&--vacio
+			color: var(--color-text-secondary)
+			font-weight: 600
+			font-style: italic
+
+	&__tipo
+		font-size: 1.35rem
+		font-weight: 800
+		letter-spacing: 0.04em
+		margin: 4px 0 8px 0
+
+	// La columna del medio: el recuadro arriba, colgado del borde de la franja, y la
+	// línea vertical que baja de él hasta el borde de abajo de la cabecera.
+	&__letra-columna
+		display: flex
+		flex-direction: column
+		align-items: center
+
+	&__letra
+		display: flex
+		flex-direction: column
+		align-items: center
+		justify-content: center
+		width: 66px
+		min-height: 62px
+		padding: 4px 0
+		border: 1px solid var(--scan-linea)
+		border-top: 0
+		background: var(--bg-card)
+
+		&--sin-letra .scan-review__letra-valor
+			color: var(--color-text-secondary)
+			opacity: 0.6
+
+	&__letra-valor
+		font-size: 2.3rem
+		font-weight: 800
+		line-height: 1
+
+	&__letra-cod
+		margin-top: 2px
+		font-size: 0.62rem
+		font-weight: 700
+		letter-spacing: 0.02em
+		white-space: nowrap
+
+	&__letra-linea
+		flex: 1 1 auto
+		width: 1px
+		min-height: 12px
+		background: var(--scan-linea)
+
+	// Un dato de la factura: etiqueta en negrita a la izquierda del valor, como en el
+	// papel ("Razón Social: DISTRIBUIDORA DEL SUR").
+	&__dato
+		display: flex
+		flex-direction: row
+		align-items: center
+		gap: 6px
+		min-width: 0
+
+		// `width: auto` pisa el 100% de EditableCell: con el 100% como base, en
+		// teléfono (donde el dato envuelve) el valor saltaba SIEMPRE abajo de su
+		// etiqueta, aunque hubiera lugar al lado.
+		.editable-cell
+			flex: 1 1 120px
+			width: auto
+
+	&__dato-label
+		flex: 0 0 auto
+		font-weight: 700
+		white-space: nowrap
+
+	&__dato-valor
+		min-width: 0
+		overflow-wrap: anywhere
+
+	// Punto de venta y número en la misma línea, como en el papel; envuelven si no
+	// entran en vez de apretar el valor hasta cero.
+	&__dato-fila
+		display: flex
+		flex-direction: row
+		flex-wrap: wrap
+		gap: 6px 14px
+
+		.scan-review__dato
+			flex: 1 1 150px
+
+	&__receptor
+		display: flex
+		flex-direction: row
+		flex-wrap: wrap
+		gap: 6px 28px
+		padding: 10px 16px
+		border-bottom: 1px solid var(--scan-linea)
+
+		.scan-review__dato
+			min-height: 28px
+
+	&__renglones-resumen
+		padding: 8px 14px
 		font-size: 0.78rem
 		color: #64748b
+		text-align: right
 
-	&__iva
-		display: grid
-		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))
-		gap: 10px
-		padding: 8px 0
-		border-bottom: 1px solid rgba(100, 116, 139, 0.15)
-
-		// La fila sin alícuota elegida es la que el backend va a saltear: se marca
-		// entera, no solo el selector, porque lo que se pierde es el renglón completo.
-		&--sin-identificar
-			background: rgba(217, 119, 6, 0.1)
-			border-left: 3px solid rgba(217, 119, 6, 0.6)
-			padding-left: 8px
-
-	// Lo que la IA leyó en el papel, abajo del selector. Sirve para decidir sin volver
-	// a la foto cuando el porcentaje leído no matcheó contra ninguna alícuota.
-	&__iva-leido
-		display: block
-		margin-top: 3px
-		font-size: 0.72rem
-		color: #64748b
-
-	// --- Tabla de artículos ------------------------------------------------------
+	// --- Tabla de renglones ------------------------------------------------------
 	&__tabla
 		display: flex
 		flex-direction: column
-		gap: 4px
 
 	&__fila
 		display: grid
-		// 6px y no 8px: desde que la tabla tiene diez columnas (entraron descuento e
-		// IVA), dos píxeles por hueco son catorce píxeles de nombre de artículo.
-		gap: 6px
-		align-items: start
-		padding: 6px 8px
-		border-radius: 8px
-		border: 1px solid rgba(100, 116, 139, 0.18)
-		// Diez columnas de datos + la del "+", que solo se ve en el ancho intermedio.
-		// Orden: check, cód. proveedor, cód. barras, nombre, cantidad, costo, descuento,
-		// IVA, estado, notas.
-		grid-template-columns: 34px 1fr 1fr 1.9fr 0.6fr 1.05fr 0.6fr 0.95fr 1.6fr 0.95fr
+		gap: 0 6px
+		align-items: center
+		// Renglones MÁS separados que el PDF (pedido de Lucas): en el papel las líneas van
+		// pegadas porque nadie las edita; acá cada una se toca con el mouse o el dedo.
+		padding: 10px 10px
+		border-bottom: 1px solid var(--color-border)
+		// Siete columnas de la factura entre el check y el "+". `minmax(0, …)` y no
+		// `Nfr` pelado: el mínimo `auto` de un `fr` es el min-content del contenido, y un
+		// código largo sin espacios ensanchaba su columna y sacaba la fila del modal.
+		// Orden: check, código, producto, cantidad, precio unit., bonif., subtotal,
+		// alícuota, "+".
+		grid-template-columns: 30px minmax(0, 0.95fr) minmax(0, 2.4fr) minmax(0, 0.7fr) minmax(0, 1fr) minmax(0, 0.6fr) minmax(0, 1.1fr) minmax(0, 1.1fr) 38px
 
 		&--nueva
 			background: rgba(220, 38, 38, 0.06)
-			border-color: rgba(220, 38, 38, 0.28)
+			// La marca del borde izquierdo reemplaza al borde rojo de la tarjeta de antes:
+			// ahora el renglón es una línea de la factura, y un marco entero la rompería.
+			box-shadow: inset 3px 0 0 rgba(220, 38, 38, 0.55)
 
 		&--excluida
 			opacity: 0.5
 
+		&:last-child
+			border-bottom: 0
+
+	// El encabezado gris de la tabla del PDF, con su trazo arriba y abajo.
 	&__cabecera
-		border: 0
-		background: transparent
-		font-size: 0.72rem
-		text-transform: uppercase
-		letter-spacing: 0.02em
-		color: #64748b
-		font-weight: 600
-		padding-bottom: 0
+		padding-top: 7px
+		padding-bottom: 7px
+		background: rgba(100, 116, 139, 0.16)
+		border-top: 1px solid var(--scan-linea)
+		border-bottom: 1px solid var(--scan-linea)
+		font-size: 0.78rem
+		font-weight: 700
+		color: var(--color-text-primary)
 
 	&__celda
 		min-width: 0
@@ -1762,68 +2357,212 @@ export default {
 			padding-left: 6px
 			padding-right: 18px
 
-		// El "+" del ancho intermedio: apagado en los otros dos anchos.
+		// Los importes y cantidades se alinean a la derecha, como en cualquier factura:
+		// así se comparan de un vistazo las magnitudes de una columna.
+		&--numero
+			text-align: right
+
+			.editable-cell__texto
+				text-align: right
+
 		&--mas
-			display: none
+			text-align: center
 
-		// La celda de estado apila badge, casilla y selector, así que necesita el
-		// ancho completo de su columna y no puede alinearse al centro.
-		&--estado
-			min-width: 0
+	// El "+" con un dato dudoso adentro: ámbar, el mismo tono que las celdas dudosas.
+	&__mas--dudoso
+		background: rgba(245, 158, 11, 0.18)
+		border-color: rgba(217, 119, 6, 0.7)
+		color: #b45309
 
-			// 🔴 El `.badge` de Bootstrap trae `white-space: nowrap`, y en una grilla las
-			// pistas `fr` son `minmax(auto, Nfr)`: el mínimo `auto` es el min-content del
-			// contenido, así que un badge que no envuelve ENSANCHA su columna y empuja la
-			// fila entera más allá del modal. Con un nombre de catálogo largo
-			// ("Martillo acero galvanizado 500g mango de fibra") pasa de una. Es el mismo
-			// defecto que ya se comió una corrida en este proyecto, y aparece justo en el
-			// ancho del medio, donde la columna es la mitad de ancha que a 1200px.
-			.badge
-				white-space: normal
-				overflow-wrap: anywhere
-				text-align: left
+	// Sub-línea del estado del matcheo, desde la columna Producto hasta el final.
+	&__estado
+		grid-column: 3 / -1
+		display: flex
+		flex-direction: row
+		flex-wrap: wrap
+		align-items: center
+		gap: 4px 10px
+		min-width: 0
+		margin-top: 6px
+		font-size: 0.8rem
 
-	// Total de la línea calculado, abajo del costo. El estado "difiere" es lo único
+		// 🔴 El `.badge` de Bootstrap trae `white-space: nowrap`, y en una grilla un
+		// ítem que no envuelve ENSANCHA su pista: el mínimo `auto` es el min-content del
+		// contenido, así que un nombre de catálogo largo ("Martillo acero galvanizado
+		// 500g mango de fibra") empuja la fila entera más allá del modal. Es el mismo
+		// defecto que ya se comió una corrida en este proyecto, y aparece justo en el
+		// ancho del medio. Antes vivía en la celda de estado; la sub-línea hereda el
+		// problema y el arreglo.
+		.badge
+			max-width: 100%
+			white-space: normal
+			overflow-wrap: anywhere
+			text-align: left
+
+		.custom-select
+			width: auto
+			max-width: 100%
+			font-size: 0.78rem
+
+	// Total de la línea calculado, en su propia columna. El estado "difiere" es lo único
 	// que grita: significa que lo que se va a asentar no es lo que dice el papel.
 	&__subtotal
 		display: block
-		margin-top: 2px
-		font-size: 0.72rem
-		color: #64748b
 		overflow-wrap: anywhere
 
 		&--difiere
 			color: #b91c1c
 			font-weight: 700
 
+	&__subtotal-valor
+		display: block
+
+	&__subtotal-leido
+		display: block
+		font-size: 0.72rem
+
 	// Marca de que confirmar así tira esta fila.
 	&__descarte
-		display: block
-		margin-top: 4px
 		font-size: 0.72rem
 		font-weight: 700
 		color: #b91c1c
 
 	&__criterio
-		display: block
 		font-size: 0.72rem
 		color: #64748b
-		margin-top: 2px
 
 	&__crear
-		margin-top: 4px
 		font-size: 0.78rem
 
 	&__candidatos
-		margin-top: 4px
 		font-size: 0.78rem
 
-	// El bloque de las dos columnas escondidas: apagado salvo en el ancho intermedio.
+	// El bloque de lo que no es columna de la factura: apagado hasta que se abre el "+".
 	&__extra
 		display: none
 
 	&__extra-campo
 		min-width: 0
+
+		// La alícuota solo cae acá entre 768 y 991px.
+		&--alicuota
+			display: none
+
+	// --- Totales -------------------------------------------------------------------
+	&__pie-factura
+		padding: 14px 16px
+		border-top: 1px solid var(--scan-linea)
+
+	// El recuadro de totales abajo a la derecha, como en el papel.
+	&__totales
+		display: flex
+		flex-direction: column
+		gap: 4px
+		width: 100%
+		max-width: 540px
+		margin-left: auto
+		padding: 10px 12px
+		border: 1px solid var(--scan-linea)
+
+	&__total-linea
+		display: grid
+		grid-template-columns: minmax(0, 1fr) minmax(120px, 170px)
+		align-items: center
+		gap: 8px
+
+		.editable-cell__texto
+			text-align: right
+
+		&--total
+			margin-top: 4px
+			padding-top: 6px
+			border-top: 1px solid var(--color-border)
+			font-size: 1.05rem
+
+			.scan-review__total-label,
+			.editable-cell__texto
+				font-size: 1.05rem
+				font-weight: 800
+
+	&__total-label
+		font-weight: 700
+		text-align: right
+		white-space: nowrap
+
+		&--chica
+			font-size: 0.8rem
+
+	&__total-valor
+		padding: 4px 6px
+		text-align: right
+		font-weight: 600
+
+	// Una línea por alícuota del desglose: selector, neto e importe.
+	&__iva
+		display: grid
+		grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr)
+		align-items: start
+		gap: 8px
+		padding: 6px 0
+		border-bottom: 1px dashed var(--color-border)
+
+		.editable-cell__texto
+			text-align: right
+
+		.custom-select
+			font-size: 0.78rem
+			padding-left: 6px
+			padding-right: 18px
+
+		// La fila sin alícuota elegida es la que el backend va a saltear: se marca
+		// entera, no solo el selector, porque lo que se pierde es el renglón completo.
+		&--sin-identificar
+			background: rgba(217, 119, 6, 0.1)
+			border-left: 3px solid rgba(217, 119, 6, 0.6)
+			padding-left: 8px
+
+	&__iva-campo
+		display: flex
+		flex-direction: row
+		align-items: center
+		gap: 6px
+		min-width: 0
+
+		.editable-cell
+			flex: 1 1 auto
+
+		&--alicuota
+			align-items: flex-start
+
+			.scan-review__total-label
+				padding-top: 5px
+
+	&__iva-selector
+		flex: 1 1 auto
+		min-width: 0
+
+	// Lo que la IA leyó en el papel, abajo del selector. Sirve para decidir sin volver
+	// a la foto cuando el porcentaje leído no matcheó contra ninguna alícuota.
+	&__iva-leido
+		display: block
+		margin-top: 3px
+		font-size: 0.72rem
+		color: #64748b
+
+	// Lo que el backend va a guardar cuando no es lo impreso. Rojo: es plata que entra
+	// distinta de lo que el usuario ve en el papel.
+	&__total-guardado
+		margin: 6px 0 0 0
+		text-align: right
+		font-size: 0.8rem
+		font-weight: 700
+		color: #b91c1c
+
+	&__leido
+		margin: 8px 0 0 0
+		font-size: 0.78rem
+		color: #64748b
+		text-align: right
 
 	// --- Fotos --------------------------------------------------------------------
 	&__fotos
@@ -1857,46 +2596,106 @@ export default {
 		padding-top: 12px
 		border-top: 1px solid rgba(100, 116, 139, 0.2)
 
-// ─── Ancho intermedio (768–1199px) ───────────────────────────────────────────────
-// Acá es donde se esconden los defectos: se prueba en 1366 y en 375 y nadie mira el
-// medio. Se sacan las TRES columnas menos usadas (código de barras, IVA y notas) y se
-// ofrecen desde el "+" de la fila. El descuento se queda arriba a propósito: es plata
-// del renglón, no un dato de referencia.
-@media (min-width: 768px) and (max-width: 1199.98px)
-	.scan-review__fila
-		// check, cód. proveedor, nombre, cantidad, costo, descuento, estado, "+".
-		grid-template-columns: 34px 1fr 2.1fr 0.65fr 1fr 0.6fr 1.7fr 40px
-
-	.scan-review__celda--secundaria
-		display: none
-
-	.scan-review__celda--mas
-		display: block
-
+// ─── Escritorio y tablet (≥768px): el "+" abre lo que no es columna ──────────────
+@media (min-width: 768px)
 	.scan-review__fila--expandida .scan-review__extra
 		display: grid
-		grid-column: 1 / -1
-		// auto-fit y no dos columnas fijas: los campos escondidos pasaron de dos a
-		// tres, y con `repeat(2, ...)` el tercero quedaba solo, estirado a media fila.
+		// Desde Producto hasta el final, alineado con la sub-línea del estado.
+		grid-column: 3 / -1
 		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr))
 		gap: 10px
-		margin-top: 6px
-		padding-top: 6px
-		border-top: 1px dashed rgba(100, 116, 139, 0.3)
+		margin-top: 8px
+		padding-top: 8px
+		border-top: 1px dashed var(--color-border)
+
+// ─── Ancho intermedio alto (992–1199px) ──────────────────────────────────────────
+// Las mismas nueve pistas, más apretadas: a 992px el modal (90% del ancho) deja unos
+// 850px de tabla, y la alícuota todavía entra como columna.
+//
+// 🔴 El Código lleva un piso de 124px, sacado de Producto. Con fracciones puras, a
+// 1024px quedaba en ~90px y un código de proveedor de doce caracteres
+// ("ICF1910332/4") se partía a la mitad: justo el dato que el usuario coteja letra por
+// letra contra el papel. 124px es lo que ocupa uno de ~12 caracteres en una línea;
+// uno más largo puede envolver. Producto es el que cede porque es texto que se lee
+// igual en dos renglones.
+@media (min-width: 992px) and (max-width: 1199.98px)
+	.scan-review__fila
+		grid-template-columns: 28px minmax(124px, 1.2fr) minmax(0, 1.7fr) minmax(0, 0.65fr) minmax(0, 0.95fr) minmax(0, 0.6fr) minmax(0, 1fr) minmax(0, 1.15fr) 36px
+		padding-left: 8px
+		padding-right: 8px
+
+// ─── Ancho intermedio bajo (768–991px) ───────────────────────────────────────────
+// Acá es donde se esconden los defectos: se prueba en 1366 y en 375 y nadie mira el
+// medio. A 768px el modal deja unos 660px de tabla: con el select de la alícuota como
+// columna, todas quedan abajo del ancho con el que un dedo acierta. La alícuota se va
+// al "+", junto al código de barras y las notas. El descuento se queda arriba a
+// propósito: es plata del renglón, no un dato de referencia.
+@media (min-width: 768px) and (max-width: 991.98px)
+	.scan-review__fila
+		// check, código, producto, cantidad, precio, bonif., subtotal, "+". El Código con
+		// el mismo piso de 124px que en el tramo de arriba, y por el mismo motivo.
+		grid-template-columns: 28px minmax(124px, 1.3fr) minmax(0, 1.6fr) minmax(0, 0.7fr) minmax(0, 1fr) minmax(0, 0.65fr) minmax(0, 1.05fr) 36px
+		padding-left: 8px
+		padding-right: 8px
+
+	.scan-review__celda--alicuota
+		display: none
+
+	.scan-review__extra-campo--alicuota
+		display: block
+
+	.scan-review__mitad
+		padding-left: 12px
+		padding-right: 12px
+
+	.scan-review__emisor-nombre,
+	.scan-review__tipo
+		font-size: 1.15rem
 
 // ─── Teléfono (<768px) ───────────────────────────────────────────────────────────
-// La tabla deja de ser una tabla: cada artículo es una tarjeta con las etiquetas a la
-// izquierda y el valor editable a la derecha. Ocho columnas a 360px no se editan con
-// el dedo, y un scroll horizontal esconde justo la columna que se está por tocar.
+// La cabecera se apila (emisor, letra, comprobante) y la tabla deja de ser una tabla:
+// cada artículo es una tarjeta con las etiquetas a la izquierda y el valor editable a
+// la derecha. Siete columnas a 360px no se editan con el dedo, y un scroll horizontal
+// esconde justo la columna que se está por tocar.
 @media (max-width: 767.98px)
+	.scan-review__encabezado
+		grid-template-columns: minmax(0, 1fr)
+
+	.scan-review__mitad
+		padding: 12px
+
+	.scan-review__mitad--comprobante
+		border-top: 1px solid var(--scan-linea)
+
+	// La letra queda centrada entre las dos mitades apiladas, con su recuadro completo:
+	// sin la franja de arriba pegada ya no "cuelga" de nada.
+	.scan-review__letra-columna
+		padding-bottom: 12px
+
+	.scan-review__letra
+		border-top: 1px solid var(--scan-linea)
+
+	.scan-review__letra-linea
+		display: none
+
+	.scan-review__emisor-nombre,
+	.scan-review__tipo
+		font-size: 1.1rem
+
+	.scan-review__dato
+		flex-wrap: wrap
+
+	.scan-review__receptor
+		flex-direction: column
+		padding: 10px 12px
+
 	.scan-review__cabecera
 		display: none
 
 	.scan-review__fila
 		grid-template-columns: minmax(0, 1fr)
 		gap: 4px
-		padding: 10px
-		border-color: rgba(100, 116, 139, 0.3)
+		padding: 12px
 
 	.scan-review__celda
 		display: grid
@@ -1912,27 +2711,78 @@ export default {
 			letter-spacing: 0.02em
 			color: #64748b
 
-	.scan-review__celda--estado
-		grid-template-columns: minmax(0, 1fr)
-
-		&::before
-			margin-bottom: 4px
-
-	// 🔴 En tarjeta, la celda del costo tiene TRES hijos (la etiqueta del ::before, el
-	// valor editable y el total de la línea) adentro de una grilla de dos columnas. Sin
-	// esto, el tercero cae solo en la columna de la etiqueta y el total aparece a la
-	// izquierda, abajo del rótulo "Costo unitario", como si fuera otra etiqueta.
-	// Mandándolo a la columna 2 queda debajo del valor, que es donde se lo busca.
-	.scan-review__subtotal
-		grid-column: 2
+	// En tarjeta los números van a la izquierda como el resto de los valores: alineados
+	// a la derecha quedarían lejos de su etiqueta.
+	.scan-review__celda--numero,
+	.scan-review__celda--numero .editable-cell__texto
+		text-align: left
 
 	// 🔴 Esta línea no es redundante. La regla de arriba le pone `display: grid` a
-	// TODA celda y empata en especificidad con el `display: none` del "+" declarado
-	// afuera del @media, así que gana por venir después: sin esto, el botón de
-	// "ver código de barras y notas" reaparece justo en el ancho donde esas dos
-	// columnas ya se ven enteras, y abre un colapso vacío.
+	// TODA celda y le ganaría al "+" por venir después: sin esto, el botón de "ver
+	// código de barras y notas" aparece justo en el ancho donde esos campos ya se ven
+	// enteros en la tarjeta, y abre un colapso vacío.
 	.scan-review__celda--mas
 		display: none
+
+	.scan-review__estado
+		grid-column: 1
+		margin-top: 4px
+
+	// En tarjeta el código de barras y las notas se ven siempre, como filas más de la
+	// tarjeta. La alícuota no: ya tiene su celda propia arriba.
+	.scan-review__extra
+		display: grid
+		grid-template-columns: minmax(0, 1fr)
+		gap: 4px
+
+	.scan-review__extra-campo
+		display: grid
+		grid-template-columns: 40% minmax(0, 60%)
+		align-items: center
+		gap: 8px
+
+		.scan-review__label
+			margin-bottom: 0
+
+	.scan-review__extra-campo--alicuota
+		display: none
+
+	.scan-review__pie-factura
+		padding: 12px
+
+	.scan-review__totales
+		max-width: none
+
+	// Rótulos a la izquierda: alineados a la derecha, al envolver en dos renglones
+	// quedaban flotando en el medio del recuadro, como centrados. El "$" va pegado al
+	// rótulo con un &nbsp; en el template, así nunca queda solo en un renglón.
+	.scan-review__total-linea
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)
+
+	.scan-review__total-label
+		white-space: normal
+		text-align: left
+
+	// El desglose, una línea abajo de la otra: el selector de alícuota ocupando todo el
+	// ancho, y abajo "Neto: $" e "IVA: $" como filas rótulo | valor. Lado a lado no
+	// entraban en 360px y cada rótulo se partía en dos.
+	.scan-review__iva
+		grid-template-columns: minmax(0, 1fr)
+		gap: 4px
+
+	.scan-review__iva-campo
+		justify-content: space-between
+
+		.scan-review__total-label
+			white-space: nowrap
+
+		.editable-cell
+			flex: 0 1 60%
+
+	.scan-review__iva-campo--alicuota
+		.editable-cell,
+		.scan-review__iva-selector
+			flex: 1 1 auto
 
 	.scan-review__pie
 		flex-direction: column-reverse
@@ -1949,26 +2799,50 @@ export default {
 	font-size: 0.88rem
 
 html.dark-mode .scan-review
+	// El trazo de la hoja en oscuro: el gris medio del modo claro sobre --bg-card
+	// quedaría demasiado brillante, y --color-border (14% de blanco) demasiado tenue
+	// para que se lea como el marco de una factura.
+	--scan-linea: rgba(255, 255, 255, 0.3)
+
 	&__label,
-	&__contadores,
 	&__criterio,
 	&__leido,
 	&__nota,
-	&__subtotal,
 	&__iva-leido,
-	&__avisos
+	&__avisos,
+	&__renglones-resumen
 		color: #94a3b8
 
 	// Los tres rojos y el ámbar se aclaran: el #b91c1c del modo claro sobre fondo
 	// oscuro queda ilegible, que es justo lo contrario de lo que estas marcas hacen.
 	&__subtotal--difiere,
 	&__descarte,
-	&__contadores-alerta
+	&__contadores-alerta,
+	&__total-guardado
 		color: #f87171
 
 	&__alerta-inline
 		color: #fbbf24
 
-	&__fila
-		border-color: var(--color-border)
+	// 🔴 El "+" con dato dudoso necesita más especificidad que `html.dark-mode
+	// .btn-outline-secondary` (_dark_theme.sass), que le pisaba el borde ámbar con el
+	// gris de siempre: en oscuro el aviso de "hay algo escondido para revisar"
+	// desaparecía. Con el `.btn` encadenado le gana sin !important.
+	.btn.scan-review__mas--dudoso
+		background: rgba(245, 158, 11, 0.18)
+		border-color: rgba(251, 191, 36, 0.75)
+		color: #fbbf24
+
+	&__cabecera
+		background: var(--bg-section)
+		color: var(--color-text-primary)
+
+	&__comprobante,
+	&__letra
+		background: var(--bg-card)
+		color: var(--color-text-primary)
+
+@media (max-width: 767.98px)
+	html.dark-mode .scan-review__celda::before
+		color: #94a3b8
 </style>
