@@ -57,6 +57,28 @@ export default {
 		nota_interna: 'Los valores de sucursal viajan como address_{id}_amount/min/max y los de lista como price_type_{id}_final_price/_percentage/_setear (build_columns los traduce a las claves planas de ProcessRow). Si se mapean a la vez "Stock actual" y columnas de sucursal, el global se ignora sin aviso (ProcessRow::obtener_stock, líneas 3006-3035).',
 	},
 
+	'ai-import-mapeo-guardado-*': {
+		titulo: 'Columna con configuración guardada',
+		que_hace: 'Avisa que la propiedad de esta columna sale de lo que confirmaste la última vez que importaste de este proveedor, no de lo que propuso la IA esta vez.',
+		repercute: [
+			'Si dice "corregiste", la última vez cambiaste a mano lo que la IA había propuesto (típico: la columna "Precio" del proveedor es tu costo) y el sistema ya la deja así.',
+			'Si dice "confirmaste", la IA propuso lo mismo que vos dejaste la última vez.',
+			'Podés cambiar el select igual: lo que confirmes ahora es lo que se guarda para la próxima importación de este proveedor.',
+		],
+		nota_interna: 'Viene en resultado.column_mapping[i].mapeo_guardado ({system_property, origen, guardado_en, proveedor}) del análisis; lo arma ProviderImportMappingHelper::aplicar() de empresa-api a partir de provider_import_mappings (una fila por dueño + proveedor, escrita al confirmar el paso 2 en POST get-recomendacion, misión importacion-excel-motor-rapido 24/9/2026). El formato se reconoce por la firma sha1 de los encabezados normalizados; si no coincide, se usa la configuración del proveedor que infirió la IA. Un depósito o lista de precio que ya no existe no se aplica. normalize_column_mapping() conserva la clave a propósito.',
+	},
+
+	'ai-import-aplicar-mapeo-guardado': {
+		titulo: 'Aplicar la configuración guardada del proveedor',
+		que_hace: 'Cambia las columnas de la tabla a lo que confirmaste la última vez que importaste de este proveedor.',
+		repercute: [
+			'Sólo toca las columnas que quedarían distintas; las que ya coinciden no cambian.',
+			'Nunca se aplica sola: si cambiás el proveedor y hay una configuración guardada distinta, aparece este aviso y decidís vos.',
+		],
+		requiere: 'Aparece sólo si el proveedor elegido tiene una configuración guardada que difiere de la tabla, y sólo si el archivo tiene una columna de código de proveedor (es el request refresh-provider-stats el que la trae).',
+		nota_interna: 'refresh_provider_stats() lee mapeo_guardado_del_proveedor ([{excel_column_index, excel_column, system_property, origen}] | null) y ofrecer_mapeo_guardado() lo compara contra column_mapping por excel_column_index. El watch de selected_provider_id sólo dispara el request si hay provider_code_column_index: sin columna de código de proveedor el aviso no aparece (limitación heredada del request, no de esta misión).',
+	},
+
 	'ai-import-btn-confirmar-mapeo': {
 		titulo: 'Confirmar y configurar importación',
 		que_hace: 'Da por bueno el mapeo y pasa al paso de duplicados, donde Claude recomienda una configuración.',

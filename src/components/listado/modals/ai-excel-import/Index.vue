@@ -354,6 +354,32 @@
 				Si elegís un proveedor global, pisará el valor de la columna para todos los artículos.
 			</b-alert>
 
+			<!--
+				Configuración guardada para el proveedor elegido (misión importacion-excel-motor-rapido,
+				24/9/2026). Llega en refresh-provider-stats cuando el usuario cambia el proveedor y se
+				OFRECE: aplicarla sola pisaría correcciones que el usuario ya hizo en la tabla. Sólo
+				aparece cuando difiere de lo que hay en pantalla.
+			-->
+			<b-alert
+			v-if="mapeo_guardado_pendiente"
+			show
+			variant="info"
+			class="m-t-10 m-b-0 ai-import-mapeo-guardado-aviso">
+				<i class="icon-info m-r-5"></i>
+				Hay una configuración guardada para <strong>{{ mapeo_guardado_pendiente.proveedor }}</strong>:
+				la última vez que importaste de este proveedor dejaste
+				{{ mapeo_guardado_pendiente.columnas.length }} {{ mapeo_guardado_pendiente.columnas.length === 1 ? 'columna distinta' : 'columnas distintas' }}
+				de como {{ mapeo_guardado_pendiente.columnas.length === 1 ? 'está' : 'están' }} ahora en la tabla.
+				<b-button
+				variant="info"
+				size="sm"
+				class="m-l-10"
+				data-testid="ai-import-aplicar-mapeo-guardado"
+				@click="aplicar_mapeo_guardado_pendiente">
+					Aplicar
+				</b-button>
+			</b-alert>
+
 		</div>
 
 		<hr
@@ -367,6 +393,7 @@
 				<span class="text-warning">Las filas en amarillo tienen baja confianza.</span>
 				<span class="ai-import-mapping-legend-interpretation"> Las filas en celeste son interpretaciones de la IA que conviene validar.</span>
 				<span class="ai-import-mapping-legend-ignored"> Las filas en violeta se ignoran en la importación.</span>
+				<span class="ai-import-mapping-legend-interpretation"> Las columnas marcadas «Guardado» vienen de la configuración que confirmaste la última vez para este proveedor.</span>
 			</p>
 
 			<!-- Notas de asistencia globales de Claude (consejos generales sobre el archivo) -->
@@ -458,8 +485,19 @@
 							:title="column_confidence_title(item.confidence)">
 								{{ format_column_confidence(item.confidence) }}
 							</span>
+							<!--
+								"Guardado" va primero: una columna que el usuario ya confirmó (o corrigió)
+								la última vez para este proveedor no es una columna a "Revisar", por más
+								baja que haya sido la confianza de la IA esta vez.
+							-->
 							<small
-							v-if="column_confidence_is_low(item.confidence)"
+							v-if="column_has_mapeo_guardado(item)"
+							class="ai-import-mapping-confidence-hint text-info"
+							:title="'Viene de la configuración que confirmaste la última vez para ' + (item.mapeo_guardado.proveedor || 'este proveedor')">
+								Guardado
+							</small>
+							<small
+							v-else-if="column_confidence_is_low(item.confidence)"
 							class="ai-import-mapping-confidence-hint text-warning">
 								Revisar
 							</small>
@@ -477,6 +515,15 @@
 					class="ai-import-mapping-interpretation-note small m-b-0">
 						<i class="icon-info m-r-5"></i>
 						{{ item.interpretation_note }}
+					</p>
+
+					<!-- Qué dejó el usuario en esta columna la última vez que importó de este proveedor. -->
+					<p
+					v-if="column_has_mapeo_guardado(item)"
+					:data-testid="'ai-import-mapeo-guardado-' + index"
+					class="ai-import-mapping-interpretation-note small m-b-0">
+						<i class="icon-info m-r-5"></i>
+						{{ texto_de_mapeo_guardado(item) }}
 					</p>
 
 				</div>
@@ -1214,7 +1261,7 @@
 		class="text-muted small m-b-15">
 			Rango efectivo: filas {{ start_row }} a {{ finish_row }}
 			<span v-if="model === 'article'">
-				({{ numero_es(excel_rows_to_import_count) }} filas, aprox. {{ numero_es(estimated_chunks_count) }} chunks de 50 filas).
+				({{ numero_es(excel_rows_to_import_count) }} filas, aprox. {{ numero_es(estimated_chunks_count) }} chunks de 1000 filas).
 			</span>
 			<span v-else>
 				({{ numero_es(excel_rows_to_import_count) }} filas).
@@ -1535,6 +1582,16 @@ export default {
 			 * del proveedor ANTERIOR y no se puede decidir la política de colisión con ellos.
 			 */
 			provider_stats_desactualizados: false,
+
+			/*
+			 * Misión importacion-excel-motor-rapido (24/9/2026): configuración de columnas
+			 * guardada para el proveedor elegido en el select del paso 2, cuando difiere de lo
+			 * que hay en la tabla. La trae refresh-provider-stats (mapeo_guardado_del_proveedor)
+			 * y se OFRECE con el botón "Aplicar": nunca se aplica sola, porque pisaría
+			 * correcciones que el usuario ya hizo en esta pantalla. Null = nada que ofrecer.
+			 * Forma: { proveedor: String, columnas: [{ excel_column_index, excel_column, system_property, origen }] }.
+			 */
+			mapeo_guardado_pendiente: null,
 
 			/*
 			 * Prompt 03 (grupo 239 - alerta-formatos-numericos-import): estadisticas de
@@ -1997,6 +2054,9 @@ export default {
 
 		/*
 		 * Estimación de chunks según ARTICLE_EXCEL_CHUNK_SIZE del backend (referencia UX).
+		 * Desde la misión importacion-excel-motor-rapido (24/9/2026) el lote por defecto es
+		 * de 1000 filas; un .env que lo fije en otro valor sigue mandando en el backend, esto
+		 * es sólo el texto del paso 4.
 		 */
 		estimated_chunks_count() {
 			let rows = this.excel_rows_to_import_count
@@ -2004,7 +2064,7 @@ export default {
 				return 0
 			}
 
-			let chunk_size = 50
+			let chunk_size = 1000
 			return Math.ceil(rows / chunk_size)
 		},
 
@@ -2768,6 +2828,11 @@ export default {
 				this.actualizar_articulos_de_otro_proveedor = 0
 				this.actualizar_proveedor = 0
 			}
+			/*
+			 * La configuración ofrecida era del proveedor anterior: se descarta acá, y no en la
+			 * respuesta del request, porque el request no siempre sale (ver la condición de abajo).
+			 */
+			this.mapeo_guardado_pendiente = null
 			/* Recalcular stats de existentes en BD con el proveedor real seleccionado en paso 2. */
 			if (this.excel_path && this.provider_code_column_index !== null) {
 				this.refresh_provider_stats()
@@ -4088,6 +4153,8 @@ export default {
 			this.duplicate_stats = resultado.duplicate_stats || null
 			/* Stats frescas del analisis: dejan de estar marcadas como del proveedor anterior. */
 			this.provider_stats_desactualizados = false
+			/* Análisis nuevo: si había una configuración guardada ofrecida, era de otro archivo. */
+			this.mapeo_guardado_pendiente = null
 			this.preview_rows    = resultado.preview_rows || []
 
 			/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
@@ -4339,6 +4406,13 @@ export default {
 				}
 				/* Recálculo exitoso: los conteos vuelven a ser de este proveedor. */
 				self.provider_stats_desactualizados = false
+
+				/*
+				 * Misión importacion-excel-motor-rapido (24/9/2026): configuración de columnas
+				 * guardada para el proveedor elegido. Clave opcional: una API vieja no la manda
+				 * y no pasa nada. Se ofrece, no se aplica.
+				 */
+				self.ofrecer_mapeo_guardado(res.data.mapeo_guardado_del_proveedor)
 			})
 			.catch(function(err) {
 				console.warn('refresh_provider_stats: error al recalcular stats', err)
@@ -4353,12 +4427,154 @@ export default {
 				 * Se marcan como no confiables (lo dibuja el paso 3) y se avisa.
 				 */
 				self.provider_stats_desactualizados = true
+				/* Sin respuesta no se sabe si este proveedor tiene configuración: no se ofrece nada. */
+				self.mapeo_guardado_pendiente = null
 
 				self.$toast.warning(
 					'No pudimos recalcular cuántos códigos ya existen para este proveedor. Los números que ves son del proveedor anterior: no decidas con ellos.',
 					{ duration: 10000 }
 				)
 			})
+		},
+
+		/*
+		 * Misión importacion-excel-motor-rapido (24/9/2026): decide si hay algo que ofrecer con la
+		 * configuración guardada del proveedor que devolvió refresh-provider-stats.
+		 *
+		 * Se compara contra la tabla por excel_column_index: sólo cuentan las columnas cuya
+		 * propiedad quedaría distinta. Si todo ya coincide (el caso normal, porque el análisis ya
+		 * aplicó la configuración del proveedor inferido), no se muestra nada.
+		 *
+		 * @param {Array|null} mapeo_guardado_del_proveedor - [{excel_column_index, excel_column, system_property, origen}] o null.
+		 */
+		ofrecer_mapeo_guardado(mapeo_guardado_del_proveedor) {
+			if (!Array.isArray(mapeo_guardado_del_proveedor) || mapeo_guardado_del_proveedor.length === 0) {
+				this.mapeo_guardado_pendiente = null
+				return
+			}
+
+			let columnas = mapeo_guardado_del_proveedor.filter(guardada => {
+				let item = this.column_mapping.find(col => col.excel_column_index === guardada.excel_column_index)
+				if (!item) {
+					return false
+				}
+				return this.normalize_system_property_key(guardada.system_property) !== item.system_property
+			})
+
+			if (columnas.length === 0) {
+				this.mapeo_guardado_pendiente = null
+				return
+			}
+
+			this.mapeo_guardado_pendiente = {
+				proveedor: this.nombre_del_proveedor_seleccionado(),
+				columnas:  columnas,
+			}
+		},
+
+		/*
+		 * Aplica la configuración ofrecida: setea system_property en las columnas que difieren y
+		 * las marca con mapeo_guardado para que la tabla muestre de dónde salió cada una.
+		 * Corre sólo por el botón "Aplicar": el usuario lo pide, nunca pasa solo.
+		 */
+		aplicar_mapeo_guardado_pendiente() {
+			if (!this.mapeo_guardado_pendiente) {
+				return
+			}
+
+			let proveedor = this.mapeo_guardado_pendiente.proveedor
+
+			this.mapeo_guardado_pendiente.columnas.forEach(guardada => {
+				let item = this.column_mapping.find(col => col.excel_column_index === guardada.excel_column_index)
+				if (!item) {
+					return
+				}
+
+				item.system_property = this.normalize_system_property_key(guardada.system_property)
+				item.mapeo_guardado  = {
+					system_property: item.system_property,
+					origen:          guardada.origen === 'corregido_por_el_usuario' ? 'corregido_por_el_usuario' : 'confirmado',
+					guardado_en:     null,
+					proveedor:       proveedor,
+				}
+			})
+
+			this.mapeo_guardado_pendiente = null
+		},
+
+		/*
+		 * Nombre del proveedor elegido en el select del paso 2, para los textos del aviso.
+		 *
+		 * @returns {String}
+		 */
+		nombre_del_proveedor_seleccionado() {
+			let opcion = this.provider_options.find(option => option.value === this.selected_provider_id)
+			if (!opcion || opcion.value === null) {
+				return 'este proveedor'
+			}
+			return opcion.text
+		},
+
+		/*
+		 * True si la propiedad de esta columna salió de la configuración guardada del proveedor
+		 * (clave mapeo_guardado del análisis, o aplicada con el botón "Aplicar").
+		 *
+		 * @param {Object} item - Ítem de column_mapping.
+		 * @returns {Boolean}
+		 */
+		column_has_mapeo_guardado(item) {
+			if (!item || !item.mapeo_guardado || typeof item.mapeo_guardado !== 'object') {
+				return false
+			}
+			return !!item.mapeo_guardado.system_property
+		},
+
+		/*
+		 * Línea bajo la fila: qué dejó el usuario en esta columna la última vez que importó de
+		 * este proveedor. "corregiste" cuando cambió a mano lo que la IA había propuesto;
+		 * "confirmaste" cuando lo dejó como estaba.
+		 *
+		 * @param {Object} item - Ítem de column_mapping con mapeo_guardado.
+		 * @returns {String}
+		 */
+		texto_de_mapeo_guardado(item) {
+			if (!this.column_has_mapeo_guardado(item)) {
+				return ''
+			}
+
+			let proveedor = item.mapeo_guardado.proveedor || 'este proveedor'
+			let etiqueta  = this.get_property_label(item.mapeo_guardado.system_property)
+
+			if (item.mapeo_guardado.origen === 'corregido_por_el_usuario') {
+				return 'La última vez que importaste de ' + proveedor + ' corregiste esta columna a «' + etiqueta + '».'
+			}
+
+			return 'La última vez que importaste de ' + proveedor + ' confirmaste esta columna como «' + etiqueta + '».'
+		},
+
+		/*
+		 * Asegura la forma de mapeo_guardado de un ítem del análisis: objeto con las cuatro claves
+		 * del contrato, o null. Sin esto la clave muere en normalize_column_mapping().
+		 *
+		 * @param {Object|null} mapeo_guardado - Lo que vino del backend.
+		 * @returns {Object|null}
+		 */
+		normalize_mapeo_guardado(mapeo_guardado) {
+			if (!mapeo_guardado || typeof mapeo_guardado !== 'object') {
+				return null
+			}
+
+			let system_property = this.normalize_system_property_key(mapeo_guardado.system_property)
+			if (system_property === null) {
+				return null
+			}
+
+			return {
+				system_property: system_property,
+				origen:          mapeo_guardado.origen === 'corregido_por_el_usuario' ? 'corregido_por_el_usuario' : 'confirmado',
+				guardado_en:     mapeo_guardado.guardado_en || null,
+				proveedor:       mapeo_guardado.proveedor || '',
+			}
 		},
 
 		/*
@@ -4829,6 +5045,12 @@ export default {
 					interpretation_note: interpretation_note,
 					excel_column_index:  excel_column_index,
 					excel_column_letter: item.excel_column_letter || this.number_to_excel_column(excel_column_index + 1),
+					/*
+					 * Misión importacion-excel-motor-rapido (24/9/2026): de dónde salió esta
+					 * propiedad cuando viene de la configuración guardada del proveedor. Se
+					 * conserva acá a propósito: toda clave que no esté en esta lista muere.
+					 */
+					mapeo_guardado:      this.normalize_mapeo_guardado(item.mapeo_guardado),
 				})
 			})
 
@@ -4914,6 +5136,18 @@ export default {
 			if (this.column_has_interpretation_note(item)) {
 				return {
 					'ai-import-mapping-block--interpretation': true,
+				}
+			}
+
+			/*
+			 * Columna que viene de la configuración guardada del proveedor: nunca en amarillo (el
+			 * usuario ya la confirmó una vez), y en celeste sólo si la última vez la corrigió a
+			 * mano, que es la que vale la pena mirar porque difiere de lo que la IA diría sola.
+			 * Se reusa el celeste de las interpretaciones: un cuarto color no se lee.
+			 */
+			if (this.column_has_mapeo_guardado(item)) {
+				return {
+					'ai-import-mapping-block--interpretation': item.mapeo_guardado.origen === 'corregido_por_el_usuario',
 				}
 			}
 
@@ -5465,6 +5699,7 @@ export default {
 			this.encabezado_del_backend      = null
 			this.duplicate_stats             = null
 			this.provider_stats_desactualizados = false
+			this.mapeo_guardado_pendiente    = null
 			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
 			this.loading_recomendacion       = false
