@@ -49,7 +49,7 @@
 		container="body"
 		custom-class="explicacion-de-numero-popover"
 		@shown="permitir_scroll_si_hace_falta"
-		@hidden="visible = false">
+		@hidden="ocultar_ya">
 
 			<div
 			class="explicacion-popover__inner"

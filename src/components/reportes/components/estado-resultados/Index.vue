@@ -229,6 +229,9 @@
 import detalle_drilldown from '@/mixins/reportes/detalle_drilldown'
 import explicacion_de_fila from '@/components/reportes/components/estado-resultados/explicaciones'
 import hay_hover from '@/utils/hay_hover'
+// Import ESTATICO a proposito: este componente es la RAIZ de cada fila de la cascada. Como chunk
+// perezoso, las filas no se dibujarian hasta que bajara (y desaparecerian si la descarga falla).
+import ExplicacionDeNumero from '@/components/common/ExplicacionDeNumero'
 
 /*
 	Filas del Estado de Resultados que se explican al pasar el mouse o tocar, en el orden de la
@@ -262,7 +265,7 @@ export default {
 		}
 	},
 	components: {
-		ExplicacionDeNumero: () => import('@/components/common/ExplicacionDeNumero'),
+		ExplicacionDeNumero,
 		Composicion: () => import('@/components/reportes/components/estado-resultados/composicion/Index'),
 		GastosCategorias: () => import('@/components/reportes/components/estado-resultados/gastos-categorias/Index'),
 		SkeletonCascada: () => import('@/components/reportes/components/SkeletonCascada'),

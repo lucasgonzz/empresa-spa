@@ -243,10 +243,14 @@
 <script>
 import sale from '@/mixins/sale'
 import explicacion_de_tarjeta from '@/components/ventas/components/explicaciones_totales'
+// Import ESTATICO a proposito: este componente es la RAIZ de cada tarjeta de totales. Si fuera un
+// chunk perezoso, hasta que bajara (o si fallara la descarga tras un deploy) desapareceria el
+// Total mismo y no solo su explicacion.
+import ExplicacionDeNumero from '@/components/common/ExplicacionDeNumero'
 export default {
 	mixins: [sale],
 	components: {
-		ExplicacionDeNumero: () => import('@/components/common/ExplicacionDeNumero'),
+		ExplicacionDeNumero,
 	},
 	computed: {
 		loading() {
