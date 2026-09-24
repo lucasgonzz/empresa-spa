@@ -33,10 +33,14 @@
 			@click="abrir(adjunto)"
 			@keydown.enter.prevent="abrir(adjunto)"
 			@keydown.space.prevent="abrir(adjunto)">
+				<!-- `referrerpolicy="origin"`: sin él, las fotos del dueño (ruta autenticada del
+				API) llegan sin Referer y Sanctum no levanta la sesión. El porqué entero está en
+				el docblock del <script>. -->
 				<img
 				:src="adjunto.url"
 				:alt="adjunto.alt"
 				loading="lazy"
+				referrerpolicy="origin"
 				@error="marcar_rota(adjunto)">
 			</div>
 			<!-- La URL no cargó (el storage no responde, la foto se borró después de la
@@ -90,6 +94,7 @@
 				v-if="visor"
 				:src="visor.url"
 				:alt="visor.alt"
+				referrerpolicy="origin"
 				class="asistente-ia-visor__imagen"
 				:class="{ 'asistente-ia-visor__imagen--con-epigrafe': visor.texto }">
 				<p
@@ -118,13 +123,21 @@
  * se saltea sin error, que es lo que el contrato pide para poder sumar tipos después.
  * `articulo_id` no se usa: la ficha del artículo ya sale por la mención en el texto.
  *
- * 🔴 LA URL PUEDE SER DE UN ENDPOINT AUTENTICADO Y ESO NO PIDE NADA ESPECIAL ACÁ. Las fotos del
- * dueño viven en el disco privado de `empresa-api` y se sirven por una ruta con sesión (son
- * fotos del negocio, no van a una URL pública). Un `<img :src>` sin el atributo `crossorigin`
- * pide en modo no-cors CON credenciales, y la cookie de Sanctum es del dominio padre
- * (`SESSION_DOMAIN`, que cubre `<cliente>.comerciocity.com` y `api-<cliente>.comerciocity.com`),
- * así que viaja sola. Es exactamente lo que ya hace el módulo de WhatsApp con `media_src` ("la
- * ruta autenticada propia si el archivo es nuestro", whatsapp/conversation/MessageBubble.vue).
+ * 🔴 LA URL PUEDE SER DE UN ENDPOINT AUTENTICADO, Y PARA ESO LA COOKIE SOLA NO ALCANZA. Las
+ * fotos del dueño viven en el disco privado de `empresa-api` y se sirven por una ruta con
+ * `auth:sanctum` (son fotos del negocio, no van a una URL pública). Un `<img :src>` sin
+ * `crossorigin` pide en modo no-cors CON la cookie (es del dominio padre, `SESSION_DOMAIN`), pero
+ * eso no basta: Sanctum 2 levanta la sesión de la cookie SOLO si el request trae `Referer` u
+ * `Origin` de un dominio stateful (EnsureFrontendRequestsAreStateful de empresa-api). Un <img>
+ * no-cors nunca manda `Origin`, y el nginx del VPS sirve la SPA con `Referrer-Policy:
+ * same-origin`, que le saca el `Referer` a todo request hacia `api-<cliente>.comerciocity.com`
+ * (otro origen). Resultado medido el 24/9/2026: la ruta contestaba 401/500, saltaba el @error y
+ * el chat mostraba "No se pudo cargar la imagen" con la foto perfectamente guardada. Por eso
+ * cada <img> de acá lleva `referrerpolicy="origin"`: pisa la política de la página solo para
+ * esa imagen y manda el origen pelado (`https://<cliente>.comerciocity.com`, sin ruta), que es
+ * justo lo que Sanctum mira. A una URL pública (la foto del artículo, en storage) no le cambia
+ * nada. Es lo mismo que necesita el módulo de WhatsApp con `media_src`
+ * (whatsapp/conversation/MessageBubble.vue).
  * 🔴 NO agregarle `crossorigin` a estos <img>: `anonymous` justamente SACA las credenciales y
  * las fotos del dueño dejarían de verse. Si el endpoint contesta 401 o 403, salta el @error y
  * queda la línea de "No se pudo cargar la imagen", que es la degradación correcta.
