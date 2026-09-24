@@ -301,12 +301,18 @@ export default {
 	},
 	methods: {
 		/**
-		* Marca que el usuario comenzó a interactuar manualmente con el área de recorte.
+		* Marca que el usuario comenzó a interactuar manualmente con el área de recorte (agarró
+		* la imagen o el marco con el mouse o con el dedo) y cancela el autoguardado en el acto.
+		*
+		* Se cancela acá y no esperando al @change de la librería: llega con 500 ms de debounce y
+		* recién después de que el gesto termina, o sea que un arrastre largo podía seguir corriendo
+		* cuando vencía el timer y guardar a medio ajustar.
 		*
 		* @return {void}
 		*/
 		onCropperPointerDown() {
 			this.has_manual_crop_interaction = true
+			this.cancel_auto_save()
 		},
 		/**
 		* Cancela el autoguardado en el acto: apaga el flag, vuelve la barra a 0 y frena el timer.
@@ -517,8 +523,13 @@ export default {
 				return
 			}
 			this.cropper_root_element = cropper_component.$el
-			this.cropper_root_element.addEventListener('mousedown', this.onCropperPointerDown)
-			this.cropper_root_element.addEventListener('touchstart', this.onCropperPointerDown, { passive: true })
+			/*
+			* mousedown y touchstart van en fase de CAPTURA (true): la librería frena la propagación de
+			* esos eventos en el elemento que arrastra (la imagen o el marco), así que en fase de burbuja
+			* nunca llegaban al root y arrastrar no cancelaba el autoguardado. La captura corre antes.
+			*/
+			this.cropper_root_element.addEventListener('mousedown', this.onCropperPointerDown, true)
+			this.cropper_root_element.addEventListener('touchstart', this.onCropperPointerDown, { passive: true, capture: true })
 			/* La rueda va NO pasiva: en marco fijo hace falta preventDefault() para que no scrollee el modal. */
 			this.cropper_root_element.addEventListener('wheel', this.on_cropper_wheel, { passive: false })
 		},
@@ -531,8 +542,9 @@ export default {
 			if (!this.cropper_root_element) {
 				return
 			}
-			this.cropper_root_element.removeEventListener('mousedown', this.onCropperPointerDown)
-			this.cropper_root_element.removeEventListener('touchstart', this.onCropperPointerDown)
+			/* Mismo flag de captura (true) con el que se registraron: si no coincide, el listener no se saca. */
+			this.cropper_root_element.removeEventListener('mousedown', this.onCropperPointerDown, true)
+			this.cropper_root_element.removeEventListener('touchstart', this.onCropperPointerDown, true)
 			this.cropper_root_element.removeEventListener('wheel', this.on_cropper_wheel)
 			this.cropper_root_element = null
 		},
