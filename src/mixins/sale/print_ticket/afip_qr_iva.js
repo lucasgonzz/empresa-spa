@@ -14,13 +14,18 @@ export default {
 		// Leyenda ISIB CABA (Res. 169/AGIP/2026). La arma el backend (LeyendaIsibCabaHelper) y viaja
 		// en get-importes: un renglon por parte, [] si el comprobante no la lleva. Con una API
 		// vieja la clave no viene y no se imprime nada.
+		//
+		// 🔴 Va SIN tilde ("ALICUOTA"): reset_impresora() manda ESC t 2, que en Epson y sus clones
+		// es la tabla PC850, y contenido_a_base64() manda Latin-1. La Í de Latin-1 (0xCD) en PC850
+		// es "═": el renglon legal saldria "AL═CUOTA". Sin tilde se lee igual en cualquier tabla.
 		print_leyenda_isib_caba(partes) {
 			if (!partes || !partes.length) {
 				return
 			}
 			let self = this
 			partes.forEach(parte => {
-				self.wrapText(parte, self.TICKET_WIDTH).forEach(renglon => {
+				let sin_tildes = parte.normalize('NFD').replace(/[̀-ͯ]/g, '')
+				self.wrapText(sin_tildes, self.TICKET_WIDTH).forEach(renglon => {
 					self.content.push(renglon + '\n')
 				})
 			})
