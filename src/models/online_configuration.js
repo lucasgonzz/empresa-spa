@@ -245,6 +245,18 @@ export default {
 			description: 'Si se desactiva, la pagina del articulo deja de mostrar "Stock disponible" y la cantidad de unidades disponibles. El control de stock al agregar al carrito sigue aplicando igual.',
 		},
 		{
+			text: 'Mostrar la seccion "Novedades" en el home de la tienda',
+			key: 'mostrar_novedades_en_home',
+			type: 'checkbox',
+			description: 'Si se desactiva, el home de la tienda deja de mostrar la seccion "Novedades".',
+		},
+		{
+			text: 'Mostrar "Marca" en la barra de navegacion de la tienda',
+			key: 'mostrar_marca_en_nav',
+			type: 'checkbox',
+			description: 'Si se desactiva, la barra de navegacion de la tienda (escritorio y celular) deja de mostrar el item "Marca".',
+		},
+		{
 			text: 'Ignorar el stock en la Tienda',
 			key: 'ignorar_stock',
 			type: 'checkbox',
