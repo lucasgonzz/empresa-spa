@@ -85,27 +85,44 @@ function nota_de_moneda(model) {
 		return 'Vista en dólares: solo lo hecho en dólares, expresado en dólares.'
 	}
 	if (model.moneda == 'consolidado') {
-		return 'Vista consolidada: lo hecho en dólares se pasa a pesos con la cotización de hoy (una estimación, no la de cada operación) y se suma a lo hecho en pesos.'
+		return 'Vista consolidada: lo hecho en dólares se pasa a pesos con la cotización actual del sistema (una estimación, no la de cada operación) y se suma a lo hecho en pesos.'
 	}
 	return null
 }
 
 /**
- * Aviso de las ventas facturadas cuyo IVA todavía no se pudo medir. Con ese dato faltante la venta
- * entra completa (con su IVA adentro), y por eso todo lo que sale de ventas puede quedar algo alto.
+ * Aviso de las ventas facturadas cuyo IVA todavía no está registrado en el sistema (en la API:
+ * `ventas_con_iva_sin_medir`; "medido" es jerga nuestra). Con ese dato faltante la venta entra completa
+ * (con su IVA adentro), y por eso todo lo que sale de ventas puede quedar algo alto.
+ *
+ * 🔴 En la vista en DÓLARES no se avisa: el conteo de la API no filtra por moneda, así que cuenta ventas
+ * en pesos que no forman parte de ese reporte. En pesos y en consolidado sí.
  *
  * @param {Object} model
  * @returns {string|null}
  */
 function aviso_de_iva_sin_medir(model) {
+	if (model.moneda == 'dolares') {
+		return null
+	}
 	let cantidad = Number(model.ventas_con_iva_sin_medir) || 0
 	if (cantidad <= 0) {
 		return null
 	}
 	if (cantidad == 1) {
-		return '1 venta tiene factura autorizada con el IVA sin medir: entra completa, con su IVA adentro, así que este número puede estar algo alto.'
+		return '1 venta tiene factura autorizada cuyo IVA todavía no está registrado en el sistema: entra completa, con su IVA adentro, así que este número puede estar algo alto.'
 	}
-	return cantidad + ' ventas tienen factura autorizada con el IVA sin medir: entran completas, con su IVA adentro, así que este número puede estar algo alto.'
+	return cantidad + ' ventas tienen factura autorizada cuyo IVA todavía no está registrado en el sistema: entran completas, con su IVA adentro, así que este número puede estar algo alto.'
+}
+
+/**
+ * La aclaración central de "Sin IVA": la duda de fondo de quien mira estos números es qué pasa con lo
+ * que se vende sin factura, y la respuesta es que ahí no hay IVA declarado que separar.
+ *
+ * @returns {string}
+ */
+function frase_de_sin_iva() {
+	return '"Sin IVA" significa sin el IVA que discriminó una factura. Si vendés sin factura, ese IVA queda adentro del número.'
 }
 
 /**
@@ -153,16 +170,17 @@ function ventas_brutas(model) {
 		resumen: 'Todo lo vendido ' + periodo(model) + ', sin el IVA de las facturas.',
 		iva: {
 			tono: 'no',
-			etiqueta: 'Sin IVA',
+			etiqueta: 'Sin el IVA facturado',
 			detalle: 'A cada venta con factura se le resta el IVA de su comprobante. Las ventas sin factura no declararon IVA y entran completas.',
 		},
 		secciones: [
 			{
 				titulo: 'De dónde sale',
 				items: [
-					'Suma el total de cada venta terminada, por su fecha de carga (no la de emisión de la factura).',
+					'Suma el total de cada venta terminada, por su fecha de carga (no la de emisión de la factura). Si tu comercio fecha las ventas por pedido, acá igual se usa la fecha de carga.',
 					'Si varias ventas se facturaron juntas, su IVA se reparte entre ellas. Las facturas de exportación no tienen IVA.',
-					'No incluye las ventas sin terminar ni las "contenedoras" de facturación (así nada se cuenta dos veces). Las devoluciones se restan en la fila de abajo.',
+					'No incluye las ventas sin terminar ni las ventas agrupadoras que se crean al facturar varias juntas (así nada se cuenta dos veces). Las devoluciones se restan en la fila de abajo.',
+					frase_de_sin_iva(),
 					'El Total del módulo de Ventas incluye el IVA de las facturas y no mide exactamente el mismo conjunto de ventas (deja afuera las que están en revisión o con estado), así que no coincide con este número.',
 				],
 			},
@@ -171,35 +189,42 @@ function ventas_brutas(model) {
 }
 
 function devoluciones(model) {
-	return {
+	return con_avisos({
 		titulo: 'Devoluciones',
-		resumen: 'Lo devuelto a los clientes con notas de crédito ' + periodo(model) + ', sin IVA.',
+		resumen: 'Las notas de crédito emitidas ' + periodo(model) + ', sin el IVA que declararon.',
 		iva: {
 			tono: 'no',
-			etiqueta: 'Sin IVA',
-			detalle: 'Cada nota cuenta por su importe menos el IVA que declaró. Una nota sin el IVA medido (las anteriores al 1/9/2026) entra completa.',
+			etiqueta: 'Sin el IVA facturado',
+			detalle: 'Cada nota cuenta por su importe menos el IVA que declaró ante ARCA. Si la nota no tiene comprobante electrónico, o es anterior a la actualización que empezó a registrar ese IVA, entra completa.',
 		},
 		secciones: [
 			{
 				titulo: 'De dónde sale',
 				items: [
-					'Suma las notas de crédito emitidas en el período, por la fecha de la nota (no la de la venta que devuelve).',
+					'Suma las notas de crédito emitidas en el período, por la fecha de la nota (no la de la venta que anulan).',
 					'Se restan de las Ventas brutas para dar las Ventas netas.',
 					frase_del_porcentaje(),
 				],
 			},
 		].concat(seccion_de_moneda(model)),
-	}
+	}, [
+		/*
+			Una nota sin IVA registrado entra COMPLETA y anula una venta que sí se neteó: la resta mezcla
+			bases y las Ventas netas quedan algo más bajas de lo real. No se afirma cuánto ni cuándo pasa:
+			depende de cada nota.
+		*/
+		'Una nota que entra completa le resta a las ventas más de lo que corresponde, porque las ventas sí van sin su IVA: en ese caso las Ventas netas pueden quedar algo más bajas de lo real.',
+	])
 }
 
 function ventas_netas(model, formatear) {
-	return {
+	return con_avisos({
 		titulo: 'Ventas netas',
-		resumen: 'Lo que efectivamente vendiste ' + periodo(model) + ': sin IVA y sin lo devuelto.',
+		resumen: 'Lo que efectivamente vendiste ' + periodo(model) + ': sin el IVA facturado y sin las notas de crédito.',
 		iva: {
 			tono: 'no',
-			etiqueta: 'Sin IVA',
-			detalle: 'Las dos filas que la forman están sin IVA.',
+			etiqueta: 'Sin el IVA facturado',
+			detalle: 'Las dos filas que la forman están sin el IVA que declararon sus comprobantes.',
 		},
 		secciones: [
 			{
@@ -207,6 +232,7 @@ function ventas_netas(model, formatear) {
 				items: [
 					'Es Ventas brutas menos Devoluciones.',
 					'Es la base de los porcentajes y márgenes de toda la pantalla.',
+					frase_de_sin_iva(),
 				],
 			},
 		].concat(seccion_de_moneda(model)),
@@ -218,7 +244,7 @@ function ventas_netas(model, formatear) {
 				{ etiqueta: '= Ventas netas', valor: dinero(formatear, model.ventas_netas), tipo: 'total' },
 			],
 		},
-	}
+	}, [aviso_de_iva_sin_medir(model)])
 }
 
 function costo_mercaderia_vendida(model) {
@@ -290,7 +316,7 @@ function resultado_bruto(model, formatear) {
 		resumen: 'Lo que queda de las ventas después de pagar la mercadería, antes de los gastos.',
 		iva: {
 			tono: 'no',
-			etiqueta: 'Sin IVA',
+			etiqueta: 'Sin el IVA facturado',
 			detalle: 'Las ventas van sin el IVA de las facturas y el costo sin el IVA de compra recuperable: la resta se hace en la misma base.',
 		},
 		secciones: [
@@ -348,7 +374,7 @@ function gastos_operativos(model, formatear) {
 }
 
 function resultado_operativo(model, formatear) {
-	return {
+	return con_avisos({
 		titulo: 'Resultado operativo',
 		resumen: 'Lo que queda después de pagar la mercadería y los gastos del negocio.',
 		iva: {
@@ -373,7 +399,7 @@ function resultado_operativo(model, formatear) {
 				{ etiqueta: '= Resultado operativo', valor: dinero(formatear, model.resultado_operativo), tipo: 'total' },
 			],
 		},
-	}
+	}, [aviso_de_iva_sin_medir(model)])
 }
 
 function comisiones_de_cobro(model) {
@@ -402,7 +428,8 @@ function iibb_determinado(model) {
 	let items = [
 		'Por cada impuesto sobre ventas activo: precio sin IVA por cantidad de las líneas vendidas en el período a las que aplica (a todas, o solo a los artículos que lo tienen asignado), por su porcentaje. Sin impuestos activos, da cero.',
 		'Usa el porcentaje de hoy: si lo cambiaste durante el período, puede no coincidir con lo trasladado en ventas viejas.',
-		'Se calcula siempre en pesos y sobre todas las ventas del período, sea cual sea la moneda elegida arriba.',
+		'No baja por las devoluciones: se calcula sobre lo vendido.',
+		'No depende de la moneda que elijas arriba: es un único número para todo el período.',
 		frase_del_porcentaje(),
 	]
 	if (model.moneda == 'dolares') {
@@ -427,6 +454,7 @@ function iibb_determinado(model) {
 }
 
 function resultado_neto(model, formatear) {
+	let en_dolares = model.moneda == 'dolares'
 	let filas = [
 		{ etiqueta: 'Resultado operativo', valor: dinero(formatear, model.resultado_operativo) },
 	]
@@ -437,18 +465,25 @@ function resultado_neto(model, formatear) {
 	filas.push({ etiqueta: '= Resultado neto', valor: dinero(formatear, model.resultado_neto), tipo: 'total' })
 
 	let items = [
-		'Es Resultado operativo menos el IIBB determinado y las comisiones de cobro. El porcentaje entre paréntesis es el margen neto sobre las ventas netas.',
+		en_dolares
+			? 'Es Resultado operativo menos las comisiones de cobro. El porcentaje entre paréntesis es el margen neto sobre las ventas netas.'
+			: 'Es Resultado operativo menos el IIBB determinado y las comisiones de cobro. El porcentaje entre paréntesis es el margen neto sobre las ventas netas.',
 	]
-	if (model.moneda == 'dolares') {
-		items.push('En dólares no se descuenta el IIBB, porque se calcula siempre en pesos y no se puede atribuir a una moneda.')
+	if (en_dolares) {
+		/* En dólares el IIBB no se descuenta: no se puede atribuir a una moneda. */
+		items.push('En dólares no se descuenta Ingresos Brutos, porque se calcula sin distinguir moneda.')
 	}
 	if (Number(model.resultado_neto) < 0) {
-		items.push('Es negativo: lo vendido no alcanzó a cubrir la mercadería, los gastos, Ingresos Brutos y las comisiones de cobro.')
+		items.push(en_dolares
+			? 'Es negativo: lo vendido no alcanzó a cubrir la mercadería, los gastos y las comisiones de cobro.'
+			: 'Es negativo: lo vendido no alcanzó a cubrir la mercadería, los gastos, Ingresos Brutos y las comisiones de cobro.')
 	}
 
-	return {
+	return con_avisos({
 		titulo: 'Resultado neto',
-		resumen: 'Lo que le queda al negocio ' + periodo(model) + ', después de la mercadería, los gastos, Ingresos Brutos y las comisiones de cobro.',
+		resumen: en_dolares
+			? 'Lo que le queda al negocio ' + periodo(model) + ', después de la mercadería, los gastos y las comisiones de cobro.'
+			: 'Lo que le queda al negocio ' + periodo(model) + ', después de la mercadería, los gastos, Ingresos Brutos y las comisiones de cobro.',
 		iva: {
 			tono: 'parcial',
 			etiqueta: 'Depende de los gastos',
@@ -461,7 +496,7 @@ function resultado_neto(model, formatear) {
 			titulo: 'Con los números de este período',
 			filas: filas,
 		},
-	}
+	}, [aviso_de_iva_sin_medir(model)])
 }
 
 /**

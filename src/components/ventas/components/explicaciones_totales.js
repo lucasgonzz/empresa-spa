@@ -30,7 +30,7 @@
  * Lenguaje de comerciante: sin nombres de clases, tablas ni columnas.
  */
 
-/** Primer día en que la ganancia guardada de cada venta descuenta el IVA (misión saneo-ganancia-ventas). */
+/** Primer día posible en que la ganancia guardada de cada venta descuenta el IVA (misión saneo-ganancia-ventas). Un comercio la recibe cuando actualiza. */
 const FECHA_DESDE_LA_QUE_LA_GANANCIA_DESCUENTA_IVA = '2026-09-17'
 
 /** Diferencia (en pesos) por debajo de la cual dos números "coinciden": es el redondeo de los centavos. */
@@ -62,8 +62,10 @@ function dinero(formatear, valor) {
 }
 
 /**
- * Aviso de las ventas con comprobante autorizado cuyo IVA todavía no está medido. `null` si no hay
- * ninguna o si la API vieja no mandó el dato (con `undefined` no se afirma nada).
+ * Aviso de las ventas con comprobante autorizado cuyo IVA todavía no está registrado en el sistema
+ * (en la API: `ventas_con_iva_sin_medir`). `null` si no hay ninguna o si la API vieja no mandó el dato
+ * (con `undefined` no se afirma nada). "Medido" es jerga nuestra: al comerciante se le dice
+ * "todavía no registrado en el sistema".
  *
  * @param {number|null} cantidad
  * @returns {string|null}
@@ -72,8 +74,20 @@ function aviso_de_iva_sin_medir(cantidad) {
 	if (!vino(cantidad) || Number(cantidad) <= 0) {
 		return null
 	}
-	let ventas = Number(cantidad) == 1 ? '1 venta tiene' : Number(cantidad) + ' ventas tienen'
-	return ventas + ' factura autorizada con el IVA sin medir.'
+	if (Number(cantidad) == 1) {
+		return '1 venta tiene factura autorizada cuyo IVA todavía no está registrado en el sistema.'
+	}
+	return Number(cantidad) + ' ventas tienen factura autorizada cuyo IVA todavía no está registrado en el sistema.'
+}
+
+/**
+ * La aclaración central de "Sin IVA": la duda de fondo de quien mira estos números es qué pasa con
+ * lo que se vende sin factura, y la respuesta es que ahí no hay IVA declarado que separar.
+ *
+ * @returns {string}
+ */
+function frase_de_sin_iva() {
+	return '"Sin IVA" significa sin el IVA que discriminó una factura. Si vendés sin factura, ese IVA queda adentro del número.'
 }
 
 /**
@@ -83,10 +97,20 @@ function aviso_de_iva_sin_medir(cantidad) {
  * @returns {string}
  */
 function frase_de_que_ventas(c) {
+	let frase
 	if (c.usa_totales_del_servidor) {
-		return 'Suma las ventas terminadas que ves, con los filtros elegidos (fechas, sucursal, vendedor, cobradas, factura, método de pago).'
+		frase = 'Suma las ventas terminadas que ves, con los filtros elegidos (fechas, sucursal, vendedor, cobradas, factura, método de pago).'
+	} else {
+		/*
+			Con el buscador o un filtro de columna la pantalla suma lo filtrado en TODAS las fechas, no el
+			período elegido: por eso acá no se habla de fechas.
+		*/
+		frase = 'Con el buscador o un filtro de columna activo, suma solo las ventas que quedaron a la vista, de cualquier fecha.'
 	}
-	return 'Con el buscador o un filtro de columna activo, suma solo las ventas que quedaron a la vista.'
+	if (c.mostrar_consolidadas) {
+		frase += ' Como tenés prendido "ver consolidadas", también entran las ventas agrupadoras, que repiten el importe.'
+	}
+	return frase
 }
 
 /**
@@ -108,9 +132,11 @@ function frase_de_fechas() {
  */
 function total(c) {
 	let items = [
-		frase_de_que_ventas(c) + ' ' + frase_de_fechas(),
+		/* Sin totales del servidor no hay período elegido: la frase de fechas no aplica (ver frase_de_que_ventas). */
+		frase_de_que_ventas(c) + (c.usa_totales_del_servidor ? ' ' + frase_de_fechas() : ''),
 		'Las notas de crédito no lo bajan: una venta devuelta sigue por su importe completo.',
 		'Usa el mismo criterio de IVA que "Ventas brutas" del Estado de Resultados, pero no mide exactamente las mismas ventas: acá quedan afuera las que están en revisión o con estado.',
+		frase_de_sin_iva(),
 	]
 
 	if (c.tiene_dolares) {
@@ -127,7 +153,7 @@ function total(c) {
 		iva: {
 			tono: 'parcial',
 			etiqueta: 'Lleva IVA en lo facturado',
-			detalle: 'Las ventas con factura suman con el IVA del comprobante incluido; las ventas sin factura suman lo que se cobró.',
+			detalle: 'Las ventas con factura suman con el IVA que discrimina el comprobante. Las ventas sin factura suman su total tal cual: ahí no se declaró IVA, así que no se separa.',
 		},
 		secciones: [
 			{ titulo: 'De dónde sale', items: items },
@@ -148,7 +174,7 @@ function total(c) {
 
 	if (c.usa_totales_del_servidor && aviso_de_iva_sin_medir(c.sin_medir)) {
 		explicacion.avisos = [
-			aviso_de_iva_sin_medir(c.sin_medir) + ' Esas ventas entran completas en el "Total sin IVA", con su IVA adentro.',
+			aviso_de_iva_sin_medir(c.sin_medir) + ' Entran completas en el "Total sin IVA", con su IVA adentro, así que ese número puede estar algo alto.',
 		]
 	}
 
@@ -197,6 +223,15 @@ function costos(c) {
 		}
 	}
 
+	let items_de_costos = [
+		'Por cada artículo (y promoción) vendido: el costo que tenía guardado al momento de la venta, por la cantidad. Cuenta las mismas ventas que el Total.',
+	]
+	if (cuenta) {
+		/* La línea "sin IVA" de la tarjeta aparece bajo esta misma condición (Total.vue: mostrar_costos_sin_iva). */
+		items_de_costos.push('El número grande no descuenta el IVA de compra; la línea "sin IVA" de abajo, sí.')
+	}
+	items_de_costos.push('No baja por lo devuelto con notas de crédito. El "Costo de mercadería vendida" del Estado de Resultados usa el mismo criterio de IVA de compra, pero mide un conjunto de ventas algo distinto.')
+
 	let explicacion = {
 		titulo: 'Costos',
 		resumen: 'Lo que te costó la mercadería de las ventas en pesos que estás viendo.',
@@ -204,10 +239,7 @@ function costos(c) {
 		secciones: [
 			{
 				titulo: 'De dónde sale',
-				items: [
-					'Por cada artículo vendido: el costo que tenía guardado al momento de la venta, por la cantidad. Cuenta las mismas ventas que el Total.',
-					'No baja por lo devuelto con notas de crédito. El "Costo de mercadería vendida" del Estado de Resultados usa el mismo criterio de IVA de compra, pero mide un conjunto de ventas algo distinto.',
-				],
+				items: items_de_costos,
 			},
 		],
 	}
@@ -233,15 +265,15 @@ function ganancia(c) {
 		resumen: 'Lo que ganaste en las ventas en pesos que estás viendo.',
 		iva: {
 			tono: 'no',
-			etiqueta: 'No lleva IVA',
-			detalle: 'Ya está sin IVA: se descontó el IVA de las facturas y, si tu cuenta guarda los costos con IVA, el IVA de compra que se recupera.',
+			etiqueta: 'Sin el IVA facturado',
+			detalle: 'Ya está sin el IVA de las facturas y, si tu cuenta guarda los costos con IVA, sin el IVA de compra que se recupera. Las ventas sin factura no declararon IVA: entran por su total.',
 		},
 		secciones: [
 			{
 				titulo: 'Cómo se calcula',
 				items: [
-					'En cada venta: el total, menos el IVA de su factura, menos el costo sin IVA de compra recuperable. Esa ganancia queda guardada en la venta y acá se suman todas.',
-					'Una venta sin factura no declaró IVA: entra por el total completo. Si el IVA de una factura todavía no está medido, esa venta no tiene ganancia calculada y no suma.',
+					'En cada venta: el total, menos el IVA de su factura, menos su costo (sin el IVA de compra que recuperás). Esa ganancia queda guardada en la venta y acá se suman todas.',
+					'Si el IVA de una factura todavía no está registrado en el sistema, esa venta no tiene ganancia calculada y no suma.',
 					'No descuenta devoluciones. El "Resultado bruto" del Estado de Resultados usa el mismo criterio de IVA, pero sí las descuenta y mide un conjunto de ventas algo distinto.',
 				],
 			},
@@ -277,8 +309,13 @@ function ganancia(c) {
 		}
 	}
 
-	if (typeof c.desde == 'string' && /^\d{4}-\d{2}-\d{2}/.test(c.desde) && c.desde.substr(0, 10) < FECHA_DESDE_LA_QUE_LA_GANANCIA_DESCUENTA_IVA) {
-		avisos.push('Las ventas anteriores al 17/9/2026 pueden tener la ganancia guardada con el criterio anterior, que no descontaba el IVA de las facturas, hasta que se recalculen.')
+	/*
+		La fecha NO es la misma para todos: depende de cuándo actualizó cada comercio a la versión que
+		descuenta el IVA. Por eso se dice "según cuándo actualizaste" y no se afirma un corte. Sin totales
+		del servidor no hay período elegido (el buscador suma de cualquier fecha), así que no se avisa.
+	*/
+	if (c.usa_totales_del_servidor && typeof c.desde == 'string' && /^\d{4}-\d{2}-\d{2}/.test(c.desde) && c.desde.substr(0, 10) < FECHA_DESDE_LA_QUE_LA_GANANCIA_DESCUENTA_IVA) {
+		avisos.push('Las ventas hechas antes de que tu sistema se actualizara a la versión que descuenta el IVA de las facturas (desde el 17/9/2026, según cuándo actualizaste) pueden tener la ganancia guardada con el criterio anterior, hasta que se recalculen.')
 	}
 
 	if (avisos.length) {
@@ -367,6 +404,11 @@ function en_dolares(c, cual) {
 			titulo: 'Ganancia USD',
 			resumen: 'Lo que ganaste en las ventas en dólares que estás viendo.',
 			que_suma: 'Suma la ganancia guardada en cada venta hecha en dólares.',
+			/*
+				`set_sale_ganancia` resta el IVA declarado del comprobante sin mirar la moneda de la venta, y
+				ese IVA está en pesos: en una venta en dólares con factura la resta mezcla monedas.
+			*/
+			iva_detalle: 'La ganancia de cada venta en dólares está guardada tal cual. Si la venta tiene factura, el IVA declarado (que ARCA informa en pesos) ya está restado, así que este número puede no ser exacto. Acá no se separa el IVA.',
 		},
 		cuenta_corriente: {
 			titulo: 'Cuenta corriente USD',
@@ -381,7 +423,7 @@ function en_dolares(c, cual) {
 		iva: {
 			tono: 'neutro',
 			etiqueta: 'Sin desglose de IVA',
-			detalle: 'Acá no se separa el IVA de las ventas en dólares: el número es el que quedó guardado en cada venta.',
+			detalle: datos.iva_detalle || 'Acá no se separa el IVA de las ventas en dólares: el número es el que quedó guardado en cada venta.',
 		},
 		secciones: [
 			{
@@ -405,7 +447,8 @@ function en_dolares(c, cual) {
  *   total, costos, ganancia   los tres importes en pesos que muestra la pantalla
  *   total_sin_iva             opcional, de la API
  *   costos_sin_iva            opcional, de la API
- *   sin_medir                 opcional, de la API: ventas con factura autorizada sin el IVA medido
+ *   sin_medir                 opcional, de la API: ventas con factura autorizada cuyo IVA no está registrado
+ *   mostrar_consolidadas      true si está prendido "ver consolidadas" (entran las ventas agrupadoras)
  *   desde                     primer día del período (AAAA-MM-DD), para avisar de ventas viejas
  *   tiene_dolares             true si el comercio vende en dólares
  *   metodo_de_pago            { nombre, total } del método elegido en el filtro, o null

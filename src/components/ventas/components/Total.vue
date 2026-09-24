@@ -464,6 +464,7 @@ export default {
 				total_sin_iva: this.total_sin_iva,
 				costos_sin_iva: this.costos_sin_iva,
 				sin_medir: this.ventas_con_iva_sin_medir,
+				mostrar_consolidadas: !!this.$store.state.sale.mostrar_consolidadas,
 				desde: this.from_date,
 				tiene_dolares: this.hasExtencion('ventas_en_dolares'),
 				metodo_de_pago: metodo_de_pago,
