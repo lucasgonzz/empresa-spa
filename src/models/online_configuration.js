@@ -16,6 +16,12 @@ export default {
 			description: 'Si se activa, se mostrara el enlace Catalogo en el navbar de la tienda online.',
 		},
 		{
+			text: 'Mostrar "Marca" en la barra de navegacion de la tienda',
+			key: 'mostrar_marca_en_nav',
+			type: 'checkbox',
+			description: 'Si se desactiva, la barra de navegacion de la tienda (escritorio y celular) deja de mostrar el item "Marca".',
+		},
+		{
 			text: 'Al tocar una categoría del sidebar, mostrar sus subcategorías en vez de sus artículos',
 			key: 'mostrar_subcategorias_al_click_categoria',
 			type: 'checkbox',
@@ -200,6 +206,12 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Mostrar la seccion "Novedades" en el home de la tienda',
+			key: 'mostrar_novedades_en_home',
+			type: 'checkbox',
+			description: 'Si se desactiva, el home de la tienda deja de mostrar la seccion "Novedades".',
+		},
+		{
 			text: 'Auto scroll en Home (px/segundo)',
 			key: 'auto_scroll_home',
 			type: 'number',
@@ -243,18 +255,6 @@ export default {
 			key: 'mostrar_stock_disponible',
 			type: 'checkbox',
 			description: 'Si se desactiva, la pagina del articulo deja de mostrar "Stock disponible" y la cantidad de unidades disponibles. El control de stock al agregar al carrito sigue aplicando igual.',
-		},
-		{
-			text: 'Mostrar la seccion "Novedades" en el home de la tienda',
-			key: 'mostrar_novedades_en_home',
-			type: 'checkbox',
-			description: 'Si se desactiva, el home de la tienda deja de mostrar la seccion "Novedades".',
-		},
-		{
-			text: 'Mostrar "Marca" en la barra de navegacion de la tienda',
-			key: 'mostrar_marca_en_nav',
-			type: 'checkbox',
-			description: 'Si se desactiva, la barra de navegacion de la tienda (escritorio y celular) deja de mostrar el item "Marca".',
 		},
 		{
 			text: 'Ignorar el stock en la Tienda',
