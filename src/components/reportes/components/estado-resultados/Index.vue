@@ -17,9 +17,11 @@
 			<composicion></composicion>
 
 			<!-- Ventas brutas -->
-			<div
+			<explicacion-de-numero
 			class="cascada-renglon apretable"
-			@click="abrirDetalle('ventas_brutas')">
+			:explicacion="explicaciones.ventas_brutas"
+			:accion="acciones.ventas_brutas"
+			@click.native="al_tocar_fila('ventas_brutas')">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-ventas">
 						<i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
@@ -27,12 +29,14 @@
 					Ventas brutas
 				</span>
 				<span class="cascada-renglon__monto">{{ formatear(model.ventas_brutas) }}</span>
-			</div>
+			</explicacion-de-numero>
 
 			<!-- Devoluciones: resta, tono suave -->
-			<div
+			<explicacion-de-numero
 			class="cascada-renglon cascada-renglon--resta apretable"
-			@click="abrirDetalle('devoluciones')">
+			:explicacion="explicaciones.devoluciones"
+			:accion="acciones.devoluciones"
+			@click.native="al_tocar_fila('devoluciones')">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-gastos">
 						<i class="bi bi-arrow-return-left" aria-hidden="true"></i>
@@ -43,10 +47,12 @@
 					{{ formatear(model.devoluciones) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.devoluciones) }}</span>
 				</span>
-			</div>
+			</explicacion-de-numero>
 
 			<!-- Ventas netas: subtotal destacado -->
-			<div class="cascada-renglon cascada-renglon--subtotal">
+			<explicacion-de-numero
+			class="cascada-renglon cascada-renglon--subtotal"
+			:explicacion="explicaciones.ventas_netas">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-ventas">
 						<i class="bi bi-cash-coin" aria-hidden="true"></i>
@@ -54,12 +60,14 @@
 					Ventas netas
 				</span>
 				<span class="cascada-renglon__monto">{{ formatear(model.ventas_netas) }}</span>
-			</div>
+			</explicacion-de-numero>
 
 			<!-- Costo de mercaderia vendida: resta -->
-			<div
+			<explicacion-de-numero
 			class="cascada-renglon cascada-renglon--resta apretable"
-			@click="abrirDetalle('costo_mercaderia_vendida')">
+			:explicacion="explicaciones.costo_mercaderia_vendida"
+			:accion="acciones.costo_mercaderia_vendida"
+			@click.native="al_tocar_fila('costo_mercaderia_vendida')">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-egresos">
 						<i class="bi bi-box-seam" aria-hidden="true"></i>
@@ -70,12 +78,13 @@
 					{{ formatear(model.costo_mercaderia_vendida) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.costo_mercaderia_vendida) }}</span>
 				</span>
-			</div>
+			</explicacion-de-numero>
 
 			<!-- Costo de mercaderia devuelta: se resta del costo de mercaderia vendida, solo se muestra si hay algo -->
-			<div
+			<explicacion-de-numero
 			v-if="model.costo_mercaderia_devuelta"
-			class="cascada-renglon cascada-renglon--resta">
+			class="cascada-renglon cascada-renglon--resta"
+			:explicacion="explicaciones.costo_mercaderia_devuelta">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-egresos">
 						<i class="bi bi-box-arrow-in-left" aria-hidden="true"></i>
@@ -86,12 +95,13 @@
 					{{ formatear(model.costo_mercaderia_devuelta) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.costo_mercaderia_devuelta) }}</span>
 				</span>
-			</div>
+			</explicacion-de-numero>
 
 			<!-- Resultado bruto: subtotal destacado, con margen al lado. Rojo con perdida (tarea 02), verde queda reservado para el neto -->
-			<div
+			<explicacion-de-numero
 			class="cascada-renglon cascada-renglon--subtotal"
-			:class="clase_resultado(model.resultado_bruto)">
+			:class="clase_resultado(model.resultado_bruto)"
+			:explicacion="explicaciones.resultado_bruto">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-dinero">
 						<i class="bi bi-bar-chart-line" aria-hidden="true"></i>
@@ -100,12 +110,14 @@
 					<span class="cascada-renglon__margen">({{ margen(model.margen_bruto_porcentaje) }})</span>
 				</span>
 				<span class="cascada-renglon__monto">{{ formatear(model.resultado_bruto) }}</span>
-			</div>
+			</explicacion-de-numero>
 
 			<!-- Gastos operativos: resta, con desglose por categoria en tono suave debajo -->
-			<div
+			<explicacion-de-numero
 			class="cascada-renglon cascada-renglon--resta apretable"
-			@click="abrirDetalle('gastos')">
+			:explicacion="explicaciones.gastos_operativos"
+			:accion="acciones.gastos_operativos"
+			@click.native="al_tocar_fila('gastos')">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-gastos">
 						<i class="bi bi-cash-stack" aria-hidden="true"></i>
@@ -116,7 +128,7 @@
 					{{ formatear(model.gastos_operativos) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.gastos_operativos) }}</span>
 				</span>
-			</div>
+			</explicacion-de-numero>
 			<!-- Anillo de gastos por categoria (tarea 04): reemplaza al desglose de texto cuando
 			hay 2 o mas categorias con gasto, no se muestran los dos juntos (misma info
 			duplicada). Con 0 o 1 categoria el anillo no aporta nada, se sigue mostrando el
@@ -138,9 +150,10 @@
 			</div>
 
 			<!-- Resultado operativo: subtotal destacado. Unica linea de resultado sin proporcion propia del backend, se le agrega aca -->
-			<div
+			<explicacion-de-numero
 			class="cascada-renglon cascada-renglon--subtotal"
-			:class="clase_resultado(model.resultado_operativo)">
+			:class="clase_resultado(model.resultado_operativo)"
+			:explicacion="explicaciones.resultado_operativo">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-dinero">
 						<i class="bi bi-clipboard-data" aria-hidden="true"></i>
@@ -151,10 +164,12 @@
 					{{ formatear(model.resultado_operativo) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.resultado_operativo) }}</span>
 				</span>
-			</div>
+			</explicacion-de-numero>
 
 			<!-- Comisiones de cobro: resta, no tiene concepto propio en la whitelist de detalle -->
-			<div class="cascada-renglon cascada-renglon--resta">
+			<explicacion-de-numero
+			class="cascada-renglon cascada-renglon--resta"
+			:explicacion="explicaciones.comisiones_de_cobro">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-deudas">
 						<i class="bi bi-percent" aria-hidden="true"></i>
@@ -165,10 +180,12 @@
 					{{ formatear(model.comisiones_de_cobro) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.comisiones_de_cobro) }}</span>
 				</span>
-			</div>
+			</explicacion-de-numero>
 
 			<!-- IIBB determinado: solo aplica cuando la moneda no es dolares (backend manda null en ese caso) -->
-			<div class="cascada-renglon cascada-renglon--resta">
+			<explicacion-de-numero
+			class="cascada-renglon cascada-renglon--resta"
+			:explicacion="explicaciones.iibb_determinado">
 				<span class="cascada-renglon__label">
 					<span class="cascada-renglon__icono acento-fiscal">
 						<i class="bi bi-bank" aria-hidden="true"></i>
@@ -179,7 +196,7 @@
 					{{ model.iibb_determinado === null ? '—' : formatear(model.iibb_determinado) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.iibb_determinado) }}</span>
 				</span>
-			</div>
+			</explicacion-de-numero>
 			<p
 			v-if="no_atribuible('iibb_determinado')"
 			class="cascada-nota">
@@ -187,9 +204,10 @@
 			</p>
 
 			<!-- Resultado neto: subtotal final, el mas destacado. Color por signo (tarea 02): antes quedaba verde fijo aunque hubiera perdida -->
-			<div
+			<explicacion-de-numero
 			class="cascada-renglon cascada-renglon--subtotal cascada-renglon--final"
-			:class="clase_resultado(model.resultado_neto)">
+			:class="clase_resultado(model.resultado_neto)"
+			:explicacion="explicaciones.resultado_neto">
 				<span class="cascada-renglon__label">
 					<span
 					class="cascada-renglon__icono"
@@ -202,17 +220,49 @@
 					<span class="cascada-renglon__margen">({{ margen(model.margen_neto_porcentaje) }})</span>
 				</span>
 				<span class="cascada-renglon__monto">{{ formatear(model.resultado_neto) }}</span>
-			</div>
+			</explicacion-de-numero>
 
 		</div>
 	</div>
 </template>
 <script>
 import detalle_drilldown from '@/mixins/reportes/detalle_drilldown'
+import explicacion_de_fila from '@/components/reportes/components/estado-resultados/explicaciones'
+import hay_hover from '@/utils/hay_hover'
+
+/*
+	Filas del Estado de Resultados que se explican al pasar el mouse o tocar, en el orden de la
+	cascada. Cada clave es la que entiende `explicaciones.js`. Que una fila NO tenga detalle propio
+	(Ventas netas, Resultado bruto...) no cambia nada: la explicación es de todas.
+*/
+const FILAS_EXPLICADAS = [
+	'ventas_brutas',
+	'devoluciones',
+	'ventas_netas',
+	'costo_mercaderia_vendida',
+	'costo_mercaderia_devuelta',
+	'resultado_bruto',
+	'gastos_operativos',
+	'resultado_operativo',
+	'comisiones_de_cobro',
+	'iibb_determinado',
+	'resultado_neto',
+]
 
 export default {
 	mixins: [detalle_drilldown],
+	data() {
+		return {
+			/*
+				Sin hover (tablet, teléfono) un toque en la fila abre la explicación en vez del detalle:
+				el acceso al detalle pasa a ser un botón adentro de la explicación (ver `acciones`).
+				Con hover, el clic sigue abriendo el detalle como siempre.
+			*/
+			sin_hover: !hay_hover(),
+		}
+	},
 	components: {
+		ExplicacionDeNumero: () => import('@/components/common/ExplicacionDeNumero'),
 		Composicion: () => import('@/components/reportes/components/estado-resultados/composicion/Index'),
 		GastosCategorias: () => import('@/components/reportes/components/estado-resultados/gastos-categorias/Index'),
 		SkeletonCascada: () => import('@/components/reportes/components/SkeletonCascada'),
@@ -236,8 +286,55 @@ export default {
 		loading() {
 			return this.$store.state.reportes.estado_resultados_loading
 		},
+		/**
+		 * Las explicaciones de todas las filas, calculadas juntas: dependen del mismo modelo y se
+		 * rehacen solo cuando llega uno nuevo, no en cada render.
+		 */
+		explicaciones() {
+			let explicaciones = {}
+			FILAS_EXPLICADAS.forEach(concepto => {
+				explicaciones[concepto] = explicacion_de_fila(concepto, this.model, this.formatear)
+			})
+			return explicaciones
+		},
+		/**
+		 * Botón de "ver el detalle" que se ofrece adentro de la explicación de las filas que tienen
+		 * detalle (las que ya eran clicables). Es null para el resto. Solo se dibuja sin hover: con
+		 * mouse el detalle se abre con el clic en la fila.
+		 */
+		acciones() {
+			let detalles = {
+				ventas_brutas: 'ventas_brutas',
+				devoluciones: 'devoluciones',
+				costo_mercaderia_vendida: 'costo_mercaderia_vendida',
+				gastos_operativos: 'gastos',
+			}
+			let acciones = {}
+			FILAS_EXPLICADAS.forEach(fila => {
+				acciones[fila] = null
+				if (detalles[fila]) {
+					acciones[fila] = {
+						texto: 'Ver el detalle',
+						ejecutar: () => this.abrirDetalle(detalles[fila]),
+					}
+				}
+			})
+			return acciones
+		},
 	},
 	methods: {
+		/**
+		 * Clic (o toque) en una fila con detalle. Con mouse abre el detalle, como siempre. Sin hover
+		 * no hace nada acá: el toque lo consume la explicación, que trae el botón de detalle.
+		 *
+		 * @param {string} concepto Concepto del detalle (whitelist de api/reportes/detalle).
+		 */
+		al_tocar_fila(concepto) {
+			if (this.sin_hover) {
+				return
+			}
+			this.abrirDetalle(concepto)
+		},
 		/* Formatea un monto en la moneda del reporte; sin decimales salvo que no sean ",00" (mismo criterio que IconCards) */
 		formatear(valor) {
 			return this.price(valor, false, false)
