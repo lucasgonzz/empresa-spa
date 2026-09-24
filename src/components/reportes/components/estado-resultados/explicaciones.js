@@ -102,8 +102,10 @@ function aviso_de_iva_sin_medir(model) {
 	if (cantidad <= 0) {
 		return null
 	}
-	let ventas = cantidad == 1 ? '1 venta tiene' : cantidad + ' ventas tienen'
-	return ventas + ' factura autorizada con el IVA sin medir: entra completa, con su IVA adentro, así que este número puede estar algo alto.'
+	if (cantidad == 1) {
+		return '1 venta tiene factura autorizada con el IVA sin medir: entra completa, con su IVA adentro, así que este número puede estar algo alto.'
+	}
+	return cantidad + ' ventas tienen factura autorizada con el IVA sin medir: entran completas, con su IVA adentro, así que este número puede estar algo alto.'
 }
 
 /**
