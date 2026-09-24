@@ -69,6 +69,39 @@
 					abajo y dejá tildado «guardar». Si no, se cargan solo los artículos.
 				</b-alert>
 
+				<!--
+					🔴 La trampa del modo de facturación. Si la compra está en "sin
+					factura" o en "automático", guardar la factura acá no serviría de
+					nada: el helper de facturación la borra o le pisa los totales en el
+					mismo request. Cambiarle la configuración a la compra por nuestra
+					cuenta sería peor que no guardarla, así que se le pregunta.
+
+					Va condicionado a `guardar_factura`: si el usuario no va a guardar el
+					comprobante, ofrecerle "pasarla a manual y guardar la factura" no
+					tiene sentido — y encima el backend le cambia el modo_facturacion a la
+					compra con solo recibir ese flag en true, así que un tilde olvidado
+					ahí le reconfiguraba la compra sin guardar nada a cambio.
+				-->
+				<b-alert
+				v-if="factura_bloqueada_por_modo && guardar_factura"
+				show
+				variant="warning"
+				class="scan-review__aviso">
+					<p class="m-b-10">
+						Esta compra está configurada como «{{ modo_facturacion }}». Para guardar los
+						datos de la factura hay que pasarla a facturación manual.
+					</p>
+					<b-form-checkbox v-model="pasar_a_manual">
+						Pasarla a manual y guardar la factura.
+					</b-form-checkbox>
+					<p
+					v-if="!pasar_a_manual"
+					class="scan-review__nota m-t-10 m-b-0">
+						Sin tildar esto se cargan solo los artículos: los datos del comprobante no
+						se guardan.
+					</p>
+				</b-alert>
+
 				<!-- ─── 2. El comprobante, dibujado como una factura de ARCA ──────── -->
 				<!--
 					Un solo marco con las divisiones del papel: franja de título, cabecera en
@@ -111,39 +144,6 @@
 						</div>
 					</div>
 
-					<!--
-						🔴 La trampa del modo de facturación. Si la compra está en "sin
-						factura" o en "automático", guardar la factura acá no serviría de
-						nada: el helper de facturación la borra o le pisa los totales en el
-						mismo request. Cambiarle la configuración a la compra por nuestra
-						cuenta sería peor que no guardarla, así que se le pregunta.
-
-						Va condicionado a `guardar_factura`: si el usuario no va a guardar el
-						comprobante, ofrecerle "pasarla a manual y guardar la factura" no
-						tiene sentido — y encima el backend le cambia el modo_facturacion a la
-						compra con solo recibir ese flag en true, así que un tilde olvidado
-						ahí le reconfiguraba la compra sin guardar nada a cambio.
-					-->
-					<b-alert
-					v-if="factura_bloqueada_por_modo && guardar_factura"
-					show
-					variant="warning"
-					class="scan-review__aviso scan-review__aviso-modo">
-						<p class="m-b-10">
-							Esta compra está configurada como «{{ modo_facturacion }}». Para guardar los
-							datos de la factura hay que pasarla a facturación manual.
-						</p>
-						<b-form-checkbox v-model="pasar_a_manual">
-							Pasarla a manual y guardar la factura.
-						</b-form-checkbox>
-						<p
-						v-if="!pasar_a_manual"
-						class="scan-review__nota m-t-10 m-b-0">
-							Sin tildar esto se cargan solo los artículos: los datos del comprobante no
-							se guardan.
-						</p>
-					</b-alert>
-
 					<!-- Cabecera: emisor | letra | datos del comprobante -->
 					<div class="scan-review__encabezado scan-review__atenuable">
 
@@ -184,7 +184,7 @@
 						</div>
 
 						<div class="scan-review__mitad scan-review__mitad--comprobante">
-							<div class="scan-review__tipo">{{ es_factura_afip ? 'FACTURA' : 'COMPROBANTE' }}</div>
+							<div class="scan-review__tipo">{{ titulo_comprobante }}</div>
 
 							<div class="scan-review__dato-fila">
 								<div class="scan-review__dato">
@@ -382,7 +382,7 @@
 								size="sm"
 								variant="outline-secondary"
 								:class="{ 'scan-review__mas--dudoso': extra_dudoso(articulo) }"
-								:title="extra_dudoso(articulo) ? 'Hay un dato dudoso en el código de barras o en las notas: revisalo' : (articulo.expandida ? 'Ocultar código de barras y notas' : 'Ver código de barras y notas')"
+								:title="extra_dudoso(articulo) ? 'Hay un dato dudoso en el código de barras o en las notas: revisalo' : (articulo.expandida ? 'Ocultar más datos del renglón' : 'Ver más datos del renglón')"
 								@click="$set(articulo, 'expandida', !articulo.expandida)">
 									{{ articulo.expandida ? '−' : '+' }}
 								</b-button>
@@ -476,7 +476,7 @@
 						<div class="scan-review__totales scan-review__atenuable">
 
 							<div class="scan-review__total-linea">
-								<span class="scan-review__total-label">Importe Neto Gravado: $</span>
+								<span class="scan-review__total-label">Importe Neto Gravado:&nbsp;$</span>
 								<span class="scan-review__total-valor">{{ mostrar_importe(neto_gravado_desglose) }}</span>
 							</div>
 
@@ -517,14 +517,14 @@
 									</div>
 								</div>
 								<div class="scan-review__iva-campo">
-									<span class="scan-review__total-label scan-review__total-label--chica">Neto: $</span>
+									<span class="scan-review__total-label scan-review__total-label--chica">Neto:&nbsp;$</span>
 									<editable-cell
 									:value="iva.neto"
 									tipo="numero"
 									@input="$set(ivas[index], 'neto', $event)"></editable-cell>
 								</div>
 								<div class="scan-review__iva-campo">
-									<span class="scan-review__total-label scan-review__total-label--chica">IVA: $</span>
+									<span class="scan-review__total-label scan-review__total-label--chica">IVA:&nbsp;$</span>
 									<editable-cell
 									:value="iva.importe"
 									tipo="numero"
@@ -541,7 +541,7 @@
 							</p>
 
 							<div class="scan-review__total-linea">
-								<span class="scan-review__total-label">Percepción IIBB: $</span>
+								<span class="scan-review__total-label">Percepción IIBB:&nbsp;$</span>
 								<editable-cell
 								:value="factura.percepcion_iibb"
 								tipo="numero"
@@ -550,7 +550,7 @@
 							</div>
 
 							<div class="scan-review__total-linea">
-								<span class="scan-review__total-label">Percepción IVA: $</span>
+								<span class="scan-review__total-label">Percepción IVA:&nbsp;$</span>
 								<editable-cell
 								:value="factura.percepcion_iva"
 								tipo="numero"
@@ -559,7 +559,7 @@
 							</div>
 
 							<div class="scan-review__total-linea scan-review__total-linea--total">
-								<span class="scan-review__total-label">Importe Total: $</span>
+								<span class="scan-review__total-label">Importe Total:&nbsp;$</span>
 								<editable-cell
 								:value="factura.total"
 								tipo="numero"
@@ -580,8 +580,8 @@
 						</div>
 
 						<p class="scan-review__leido">
-							Leído en el papel: neto {{ mostrar_numero(resultado_factura.neto_gravado) }} ·
-							IVA {{ mostrar_numero(resultado_factura.total_iva) }} ·
+							Leído en el papel: neto $ {{ mostrar_importe(resultado_factura.neto_gravado) }} ·
+							IVA $ {{ mostrar_importe(resultado_factura.total_iva) }} ·
 							certeza {{ porcentaje(resultado_factura.confianza) }}
 						</p>
 					</div>
@@ -758,14 +758,22 @@ const TOLERANCIA_TOTAL_LINEA_MINIMA = 0.5
 const TOLERANCIA_TOTAL_COMPROBANTE = 0.5
 
 /*
- * El código de ARCA que acompaña a la letra en el recuadro del medio. Solo las tres
- * facturas que un comercio recibe de un proveedor; para cualquier otra letra el recuadro
- * muestra la letra sola, sin inventarle un código.
+ * El código de ARCA que acompaña a la letra en el recuadro del medio, por clase de
+ * comprobante. Solo A, B y C, que son los que un comercio recibe de un proveedor; para
+ * cualquier otra letra, o un comprobante que no se sabe qué es, el recuadro muestra la
+ * letra sola, sin inventarle un código: "COD. 01" en una nota de crédito sería decirle
+ * al usuario que tiene una factura en la mano.
  */
-const CODIGOS_POR_LETRA = {
-	A: '01',
-	B: '06',
-	C: '11',
+const CODIGOS_POR_CLASE = {
+	factura: { A: '01', B: '06', C: '11' },
+	nota_debito: { A: '02', B: '07', C: '12' },
+	nota_credito: { A: '03', B: '08', C: '13' },
+}
+
+const TITULOS_POR_CLASE = {
+	factura: 'FACTURA',
+	nota_debito: 'NOTA DE DÉBITO',
+	nota_credito: 'NOTA DE CRÉDITO',
 }
 
 export default {
@@ -978,35 +986,68 @@ export default {
 			return hay_articulos || this.va_a_guardar_factura
 		},
 		/*
-		 * La letra del comprobante para el recuadro del medio. La IA la devuelve casi
-		 * siempre sola ("A"), pero a veces con el nombre adelante ("Factura A"): se toma
-		 * la última palabra si es una letra sola. Cualquier otra cosa es null, y el
-		 * recuadro muestra la X gris de "no la identificó" — mejor eso que una letra
-		 * inventada, que es justo lo que el usuario usaría para decidir si le sirve el
-		 * crédito fiscal.
+		 * Qué comprobante es, leído de `tipo_comprobante`: la clase (factura, nota de
+		 * crédito, nota de débito o null si no se sabe) y la letra.
 		 *
-		 * Es solo lectura y no viaja: el contrato de la confirmación no tiene dónde
-		 * guardarla.
+		 * La IA devuelve casi siempre la letra sola ("A"), a veces con el nombre
+		 * adelante ("Factura A", "Nota de Crédito B", "NC A"). Solo se afirma que es una
+		 * FACTURA cuando dice eso o es la letra sola; cualquier otro texto se queda sin
+		 * clase: el título dice "COMPROBANTE" y el recuadro, la letra sin código. La
+		 * letra es la última palabra si es una letra sola; si no hay, null, y el recuadro
+		 * muestra la X gris de "no la identificó" — mejor eso que una letra inventada,
+		 * que es justo lo que el usuario usaría para decidir si le sirve el crédito fiscal.
 		 *
-		 * @return {String|null}
+		 * Todo esto es solo lectura y no viaja: el contrato de la confirmación no tiene
+		 * dónde guardarlo.
+		 *
+		 * @return {Object}  { clase: String|null, letra: String|null }
 		 */
-		letra_comprobante() {
+		clase_comprobante() {
 			let tipo = this.resultado_factura.tipo_comprobante
 
-			if (tipo === null || typeof tipo === 'undefined') {
-				return null
+			if (tipo === null || typeof tipo === 'undefined' || String(tipo).trim() === '') {
+				return { clase: null, letra: null }
 			}
 
-			let coincidencia = String(tipo).trim().toUpperCase().match(/(?:^|\s)([A-Z])$/)
+			/* Sin tildes, en mayúsculas y con los espacios colapsados: "Nota de Crédito  a". */
+			let texto = String(tipo)
+				.normalize('NFD')
+				.replace(/[̀-ͯ]/g, '')
+				.toUpperCase()
+				.replace(/\s+/g, ' ')
+				.trim()
 
-			return coincidencia ? coincidencia[1] : null
+			let coincidencia = texto.match(/(?:^|[\s.-])([A-Z])$/)
+			let letra = coincidencia ? coincidencia[1] : null
+
+			if (/^[A-Z]$/.test(texto) || /^FACTURA [A-Z]$/.test(texto)) {
+				return { clase: 'factura', letra: letra }
+			}
+			if (/NOTA (DE )?CREDITO|^N\/?C\b/.test(texto)) {
+				return { clase: 'nota_credito', letra: letra }
+			}
+			if (/NOTA (DE )?DEBITO|^N\/?D\b/.test(texto)) {
+				return { clase: 'nota_debito', letra: letra }
+			}
+
+			return { clase: null, letra: letra }
 		},
-		/* "COD. 01" abajo de la A, como en el papel. Null para una letra sin código conocido. */
+		letra_comprobante() {
+			return this.clase_comprobante.letra
+		},
+		/* "COD. 01" abajo de la A, como en el papel. Null sin clase o para una letra sin código. */
 		codigo_letra() {
-			if (!this.letra_comprobante) {
+			let clase = this.clase_comprobante.clase
+
+			if (!clase || !this.letra_comprobante) {
 				return null
 			}
-			return CODIGOS_POR_LETRA[this.letra_comprobante] || null
+			return CODIGOS_POR_CLASE[clase][this.letra_comprobante] || null
+		},
+		/* El título de la mitad derecha: "FACTURA", "NOTA DE CRÉDITO"… o "COMPROBANTE". */
+		titulo_comprobante() {
+			let clase = this.clase_comprobante.clase
+			return clase ? TITULOS_POR_CLASE[clase] : 'COMPROBANTE'
 		},
 		/*
 		 * La razón social del receptor, que es el propio comercio. Mismo criterio que
@@ -1026,17 +1067,26 @@ export default {
 		},
 		/*
 		 * El "Importe Neto Gravado" del recuadro de totales: la suma de los netos del
-		 * desglose tal como está en pantalla (se recalcula al editar un neto). Null sin
-		 * desglose, para mostrar "—" en vez de un cero que parece un dato.
+		 * desglose tal como está en pantalla (se recalcula al editar un neto).
+		 *
+		 * Solo las filas CON alícuota elegida, igual que `total_que_se_guarda`: son las
+		 * únicas que el backend crea. Sumando todas, el neto de arriba más el IVA no
+		 * cuadraba con el total que se guarda, y el recuadro se contradecía solo justo
+		 * en el caso en que hay una fila que se va a perder. Null si no queda ninguna,
+		 * para mostrar "—" en vez de un cero que parece un dato.
 		 *
 		 * @return {Number|null}
 		 */
 		neto_gravado_desglose() {
-			if (!this.ivas.length) {
+			let filas = this.ivas.filter(iva => {
+				return !!iva.iva_id
+			})
+
+			if (!filas.length) {
 				return null
 			}
 
-			return this.ivas.reduce((suma, iva) => {
+			return filas.reduce((suma, iva) => {
 				let neto = Number(iva.neto)
 				return suma + (isNaN(neto) ? 0 : neto)
 			}, 0)
@@ -1082,9 +1132,21 @@ export default {
 		 * movía la deuda con el proveedor con el total "correcto" a la vista. También
 		 * avisa si el total impreso está vacío, porque ahí lo que entra es la suma.
 		 *
+		 * Solo cuando la factura se va a guardar de verdad: con la casilla destildada, o
+		 * con la compra en un modo que la descarta y sin "pasar a manual", no se guarda
+		 * ningún total, y avisar cuál "se va a guardar" sería mentir.
+		 *
 		 * @return {Boolean}
 		 */
 		total_guardado_difiere() {
+			if (!this.va_a_guardar_factura) {
+				return false
+			}
+
+			if (this.factura_bloqueada_por_modo && !this.pasar_a_manual) {
+				return false
+			}
+
 			if (this.total_que_se_guarda === null) {
 				return false
 			}
@@ -1276,15 +1338,25 @@ export default {
 			 * Punto de venta y número se editan por separado, como están en el papel, y
 			 * `code` se recompone con los dos (ver `set_numeracion`). Un escaneo viejo, de
 			 * antes de que el resultado trajera las dos mitades, tiene `code` y no
-			 * `numero`: se muestra el `code` entero en "Comp. Nro" y el punto de venta
-			 * vacío, así recomponerlo da el mismo `code` que vino.
+			 * `numero`. Si ese `code` tiene la forma "0003-00012345" se parte en sus dos
+			 * mitades: dejarlo entero en "Comp. Nro" hacía que cargar el punto de venta lo
+			 * duplicara ("0003-0003-00012345"). Si no tiene esa forma, se muestra entero en
+			 * "Comp. Nro" con el punto de venta vacío. En los dos casos recomponerlo da el
+			 * mismo `code` que vino.
 			 */
 			let punto_venta = factura.punto_venta || null
 			let numero = factura.numero || null
 
 			if (!numero && factura.code) {
-				numero = factura.code
-				punto_venta = null
+				let partes = String(factura.code).match(/^(\d+)-(\d+)$/)
+
+				if (partes) {
+					punto_venta = partes[1]
+					numero = partes[2]
+				} else {
+					numero = factura.code
+					punto_venta = null
+				}
 			}
 
 			this.factura = {
@@ -1398,8 +1470,10 @@ export default {
 			return null
 		},
 		/*
-		 * Importe con separadores argentinos y dos decimales, sin el "$": en el recuadro
-		 * de totales el signo ya está en la etiqueta ("Importe Total: $"), como en el papel.
+		 * Importe con separadores argentinos, sin el "$": en el recuadro de totales el
+		 * signo ya está en la etiqueta ("Importe Total: $"), como en el papel. Mismo
+		 * formato que EditableCell en reposo (mínimo 2 decimales, máximo 4, que nunca
+		 * esconda precisión), para que todo el comprobante se lea igual.
 		 *
 		 * @param {Number|null} valor
 		 * @return {String}
@@ -1411,7 +1485,7 @@ export default {
 				return '—'
 			}
 
-			return numero.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+			return numero.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
 		},
 		/*
 		 * CUIT con guiones (30-71727742-9) cuando son once dígitos; si no, tal cual vino.
@@ -2100,9 +2174,6 @@ export default {
 	&__guardar
 		font-size: 0.85rem
 
-	&__aviso-modo
-		margin: 10px 14px
-
 	// Cabecera: emisor | recuadro de la letra | datos del comprobante. La letra es una
 	// columna `auto` de la grilla, así las dos mitades se reparten lo que sobra y
 	// nunca le pasan por debajo.
@@ -2537,9 +2608,16 @@ export default {
 // ─── Ancho intermedio alto (992–1199px) ──────────────────────────────────────────
 // Las mismas nueve pistas, más apretadas: a 992px el modal (90% del ancho) deja unos
 // 850px de tabla, y la alícuota todavía entra como columna.
+//
+// 🔴 El Código lleva un piso de 124px, sacado de Producto. Con fracciones puras, a
+// 1024px quedaba en ~90px y un código de proveedor de doce caracteres
+// ("ICF1910332/4") se partía a la mitad: justo el dato que el usuario coteja letra por
+// letra contra el papel. 124px es lo que ocupa uno de ~12 caracteres en una línea;
+// uno más largo puede envolver. Producto es el que cede porque es texto que se lee
+// igual en dos renglones.
 @media (min-width: 992px) and (max-width: 1199.98px)
 	.scan-review__fila
-		grid-template-columns: 28px minmax(0, 0.9fr) minmax(0, 2fr) minmax(0, 0.65fr) minmax(0, 0.95fr) minmax(0, 0.6fr) minmax(0, 1fr) minmax(0, 1.15fr) 36px
+		grid-template-columns: 28px minmax(124px, 1.2fr) minmax(0, 1.7fr) minmax(0, 0.65fr) minmax(0, 0.95fr) minmax(0, 0.6fr) minmax(0, 1fr) minmax(0, 1.15fr) 36px
 		padding-left: 8px
 		padding-right: 8px
 
@@ -2551,8 +2629,9 @@ export default {
 // propósito: es plata del renglón, no un dato de referencia.
 @media (min-width: 768px) and (max-width: 991.98px)
 	.scan-review__fila
-		// check, código, producto, cantidad, precio, bonif., subtotal, "+".
-		grid-template-columns: 28px minmax(0, 0.9fr) minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 1fr) minmax(0, 0.65fr) minmax(0, 1.05fr) 36px
+		// check, código, producto, cantidad, precio, bonif., subtotal, "+". El Código con
+		// el mismo piso de 124px que en el tramo de arriba, y por el mismo motivo.
+		grid-template-columns: 28px minmax(124px, 1.3fr) minmax(0, 1.6fr) minmax(0, 0.7fr) minmax(0, 1fr) minmax(0, 0.65fr) minmax(0, 1.05fr) 36px
 		padding-left: 8px
 		padding-right: 8px
 
@@ -2671,18 +2750,36 @@ export default {
 	.scan-review__totales
 		max-width: none
 
+	// Rótulos a la izquierda: alineados a la derecha, al envolver en dos renglones
+	// quedaban flotando en el medio del recuadro, como centrados. El "$" va pegado al
+	// rótulo con un &nbsp; en el template, así nunca queda solo en un renglón.
 	.scan-review__total-linea
 		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)
 
 	.scan-review__total-label
 		white-space: normal
+		text-align: left
 
-	// El desglose: el selector ocupa toda la línea y abajo neto e importe, lado a lado.
+	// El desglose, una línea abajo de la otra: el selector de alícuota ocupando todo el
+	// ancho, y abajo "Neto: $" e "IVA: $" como filas rótulo | valor. Lado a lado no
+	// entraban en 360px y cada rótulo se partía en dos.
 	.scan-review__iva
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)
+		grid-template-columns: minmax(0, 1fr)
+		gap: 4px
+
+	.scan-review__iva-campo
+		justify-content: space-between
+
+		.scan-review__total-label
+			white-space: nowrap
+
+		.editable-cell
+			flex: 0 1 60%
 
 	.scan-review__iva-campo--alicuota
-		grid-column: 1 / -1
+		.editable-cell,
+		.scan-review__iva-selector
+			flex: 1 1 auto
 
 	.scan-review__pie
 		flex-direction: column-reverse
@@ -2721,8 +2818,16 @@ html.dark-mode .scan-review
 	&__total-guardado
 		color: #f87171
 
-	&__alerta-inline,
-	&__mas--dudoso
+	&__alerta-inline
+		color: #fbbf24
+
+	// 🔴 El "+" con dato dudoso necesita más especificidad que `html.dark-mode
+	// .btn-outline-secondary` (_dark_theme.sass), que le pisaba el borde ámbar con el
+	// gris de siempre: en oscuro el aviso de "hay algo escondido para revisar"
+	// desaparecía. Con el `.btn` encadenado le gana sin !important.
+	.btn.scan-review__mas--dudoso
+		background: rgba(245, 158, 11, 0.18)
+		border-color: rgba(251, 191, 36, 0.75)
 		color: #fbbf24
 
 	&__cabecera
