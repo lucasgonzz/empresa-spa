@@ -1,0 +1,47 @@
+// Tokens de color del flujo "vincular un comprador de la tienda con un cliente del sistema".
+//
+// Viven acá, al lado de los componentes que los usan, y no en _dark_theme.sass: esa hoja es del
+// tema de TODO el sistema y este flujo necesita tres matices que el tema no tiene (el ámbar de
+// "pendiente", la tinta de la fila elegida y el azul de las pistas fuertes). Cada componente que
+// dibuja algo con ellos hace `@import` de este archivo, así que se cargan juntos y ninguno depende
+// de que otro haya sido cargado antes; lo único que se repite es este bloque de custom properties.
+//
+// 🔴 Van en :root (claro) y en html.dark-mode (oscuro), nunca en un contenedor: los b-modal de
+// bootstrap-vue cuelgan de <body>, FUERA de #app, y un token declarado en #app no llegaría al
+// modal. Y sin `var(--x, #hex)` de respaldo: un respaldo tapa un token faltante y deja el modo
+// oscuro roto sin que nadie se entere.
+//
+// Contrastes medidos con la fórmula WCAG (texto de 12 px sobre el fondo de cada token, en el peor
+// caso de cada modo):
+//   - pendiente: 6,2:1 en claro y 4,7:1 en oscuro (badge en hover sobre una fila en hover).
+//   - pista fuerte: 5,3:1 en claro (sobre la fila elegida) y 5,1:1 en oscuro (sobre la fila en
+//     hover o elegida).
+
+:root
+	// "Pendiente": el badge "Sin vincular" y el aviso "Ya tiene usuario en la tienda". Ámbar
+	// suave a propósito: se lee como "esto quedó por hacer" sin gritar como un rojo de error.
+	--vincular-pendiente-fondo: #fff4dc
+	--vincular-pendiente-fondo-hover: #ffe9bd
+	--vincular-pendiente-borde: #efcf8f
+	--vincular-pendiente-texto: #7d5200
+
+	// Fila de coincidencia elegida: una tinta del azul de acción, apenas por encima del fondo de
+	// la tarjeta. El borde y el círculo son los que marcan la elección; esto solo la acompaña.
+	--vincular-elegida-fondo: rgba(0, 123, 255, 0.06)
+
+	// Pistas fuertes de una coincidencia ("Mismo email", "Mismo teléfono", "Mismo nombre").
+	--vincular-pista-fondo: rgba(0, 123, 255, 0.1)
+	--vincular-pista-texto: #0a58ca
+
+html.dark-mode
+	// Los fondos van en rgba sobre el acento, igual que los estados de Cajas en _dark_theme.sass:
+	// así se apoyan sobre --bg-card y sobre --bg-hover sin pelearse con ninguno de los dos.
+	--vincular-pendiente-fondo: rgba(245, 166, 35, 0.16)
+	--vincular-pendiente-fondo-hover: rgba(245, 166, 35, 0.24)
+	--vincular-pendiente-borde: rgba(245, 166, 35, 0.42)
+	--vincular-pendiente-texto: #f7d08a
+
+	--vincular-elegida-fondo: rgba(77, 163, 255, 0.12)
+
+	--vincular-pista-fondo: rgba(77, 163, 255, 0.18)
+	--vincular-pista-texto: #a8d2ff
