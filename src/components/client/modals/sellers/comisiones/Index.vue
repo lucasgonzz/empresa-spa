@@ -13,6 +13,7 @@ title="Comisiones de vendedor"
 hide-footer
 size="xl"
 body-class="comision-modal__body"
+@hidden="alCerrar"
 id="Comisiones de vendedor">
 
 	<div
@@ -181,6 +182,13 @@ export default {
 		},
 	},
 	methods: {
+		/*
+			Al cerrar el modal se descarta el rango y el filtro: la próxima vez que se abra —aunque
+			sea el mismo vendedor— arranca con el histórico completo, que es el estado por defecto.
+		*/
+		alCerrar() {
+			this.$store.commit('seller_commission/resetPanel')
+		},
 		// Copia al borrador el rango que está aplicado en el store.
 		sincronizarRango() {
 			this.desde = this.panel_desde || ''

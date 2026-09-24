@@ -375,14 +375,21 @@ export default {
 			commit('setPendientesPage', 1)
 			return dispatch('getPanel')
 		},
-		// Pide las tres partes del panel en paralelo: tarjetas, liquidadas y pendientes.
-		getPanel({ commit, dispatch }) {
+		/*
+			Pide las partes del panel en paralelo: tarjetas, liquidadas y pendientes. La tabla de
+			pendientes solo se muestra si el vendedor liquida al saldar la venta: si no, no se pide
+			(no tendría dónde verse).
+		*/
+		getPanel({ commit, dispatch, state }) {
 			commit('setLoading', true)
-			return Promise.all([
+			let pedidos = [
 				dispatch('getResumen'),
 				dispatch('getLiquidadas'),
-				dispatch('getPendientes'),
-			])
+			]
+			if (state.selected_model && state.selected_model.commission_after_pay_sale) {
+				pedidos.push(dispatch('getPendientes'))
+			}
+			return Promise.all(pedidos)
 			.then(() => {
 				commit('setLoading', false)
 			})
