@@ -1008,11 +1008,11 @@
 						Cómo vamos a leer los números de la columna {{ lectura.nombre_columna_excel }}
 					</p>
 
-					<p class="text-muted small m-b-8">
+					<p v-if="!lectura.solo_no_interpretable" class="text-muted small m-b-8">
 						La coma es el separador de decimales. Si el número trae coma y punto, el que está más a la derecha es el decimal y el otro separa miles.
 					</p>
 
-					<div v-if="lectura.ejemplos.length > 0" class="ai-import-preview-table-wrapper">
+					<div v-if="!lectura.solo_no_interpretable && lectura.ejemplos.length > 0" class="ai-import-preview-table-wrapper">
 						<table class="ai-import-preview-table">
 							<thead>
 								<tr>
@@ -1041,9 +1041,9 @@
 					</div>
 
 					<small
-					v-if="lectura.total_valores > lectura.ejemplos.length"
+					v-if="!lectura.solo_no_interpretable && lectura.total_valores > lectura.ejemplos.length"
 					class="text-muted d-block m-t-5">
-						Mostramos {{ numero_es(lectura.ejemplos.length) }} de {{ numero_es(lectura.total_valores) }} valores con coma
+						Mostramos {{ numero_es(lectura.ejemplos.length) }} de {{ numero_es(lectura.total_valores) }} valores
 					</small>
 
 					<b-alert
@@ -2221,6 +2221,8 @@ export default {
 					ejemplos:                  ejemplos,
 					total_valores:             total_valores,
 					cantidad_no_interpretable: Number(por_tipo.no_interpretable) || 0,
+					/* Columna con solo guiones / "N/A" / texto: no hay coma ni miles que explicar, alcanza con el aviso. */
+					solo_no_interpretable:     total_valores > 0 && total_valores === (Number(por_tipo.no_interpretable) || 0),
 				})
 			})
 
