@@ -24,7 +24,7 @@ export default {
 			}
 			let self = this
 			partes.forEach(parte => {
-				let sin_tildes = parte.normalize('NFD').replace(/[̀-ͯ]/g, '')
+				let sin_tildes = parte.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 				self.wrapText(sin_tildes, self.TICKET_WIDTH).forEach(renglon => {
 					self.content.push(renglon + '\n')
 				})
