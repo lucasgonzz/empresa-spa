@@ -75,8 +75,8 @@ export default {
 			'Sólo toca las columnas que quedarían distintas; las que ya coinciden no cambian.',
 			'Nunca se aplica sola: si cambiás el proveedor y hay una configuración guardada distinta, aparece este aviso y decidís vos.',
 		],
-		requiere: 'Aparece sólo si el proveedor elegido tiene una configuración guardada que difiere de la tabla, y sólo si el archivo tiene una columna de código de proveedor (es el request refresh-provider-stats el que la trae).',
-		nota_interna: 'refresh_provider_stats() lee mapeo_guardado_del_proveedor ([{excel_column_index, excel_column, system_property, origen}] | null) y ofrecer_mapeo_guardado() lo compara contra column_mapping por excel_column_index. El watch de selected_provider_id sólo dispara el request si hay provider_code_column_index: sin columna de código de proveedor el aviso no aparece (limitación heredada del request, no de esta misión).',
+		requiere: 'Aparece sólo si el proveedor elegido tiene una configuración guardada que difiere de la tabla.',
+		nota_interna: 'refresh_provider_stats() lee mapeo_guardado_del_proveedor ([{excel_column_index, excel_column, system_property, origen}] | null) y ofrecer_mapeo_guardado() lo compara contra column_mapping por excel_column_index. El watch de selected_provider_id dispara el request siempre que haya excel_path, tenga o no el archivo columna de código de proveedor (sin esa columna el backend devuelve los conteos en cero sin leer el archivo).',
 	},
 
 	'ai-import-btn-confirmar-mapeo': {
