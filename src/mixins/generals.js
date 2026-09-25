@@ -1,5 +1,7 @@
 import moment from 'moment'
 import { env } from '@/runtime_config'
+/* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
+import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/utils/criterio_de_oferta_por_cantidad'
 export default {
     computed: {
         has_online() {
@@ -834,6 +836,35 @@ export default {
             price = this.check_moneda(item, price, from_pivot, price_desde_pivot)
             if (Number(price) !== Number(price_before_moneda)) {
                 item_des.push('Cotizacion moneda: ' + this.price(price_before_moneda) + ' -> ' + this.price(price))
+            }
+
+            /*
+                Oferta por cantidad en PORCENTAJE (check_price_range la deja marcada en el item).
+
+                🔴 Va al final de todo, cuando el precio ya esta completo -lista de precios,
+                metodo de pago, recargos, cuotas, IVA y moneda adentro del numero-, porque el
+                pedido es que la oferta siga al precio: si el comercio cambia el precio del
+                articulo, el precio de la oferta cambia solo. Un absoluto escrito antes, como hace
+                el modo de precio fijo, lo congelaria.
+
+                🔴 Y NO se aplica si el precio salio del pivot: el precio de una venta ya guardada
+                YA TIENE el descuento adentro, asi que aplicarlo de nuevo lo descontaria dos veces
+                al editar una venta previa.
+
+                Tampoco se aplica sobre un precio personalizado. Ese campo es el MISMO que usa el
+                modo de precio fijo de la oferta (check_price_range lo escribe), asi que cuando la
+                oferta gana por precio fijo el porcentaje ya viene en null y no hay conflicto; si
+                el numero lo escribio el vendedor a mano (o lo puso la balanza), manda el, igual
+                que manda el precio fijo sobre el porcentaje en el criterio unico.
+            */
+            if (!price_desde_pivot && !item.price_vender_personalizado) {
+
+                let price_con_oferta = precio_de_oferta_por_cantidad(null, item.porcentaje_oferta_por_cantidad, price)
+
+                if (price_con_oferta !== null) {
+                    item_des.push('Oferta por cantidad (' + porcentaje_legible(item.porcentaje_oferta_por_cantidad) + '%): ' + this.price(price) + ' -> ' + this.price(price_con_oferta))
+                    price = price_con_oferta
+                }
             }
 
             // Precio final del item después de todas las transformaciones

@@ -9,16 +9,17 @@
 		<view-component
 		show_filter_modal
 		model_name="buyer">
+			<!--
+				Vínculo del comprador con un cliente del sistema (misión vincular-comprador-desde-pedidos,
+				24/9/2026). Reemplaza al campo "Ingrese el nombre del cliente tal como figura en el
+				sistema" (`ComercioCityUser`, que buscaba por igualdad exacta y tomaba el primero de varios
+				homónimos): el botón abre el modal de vincular, montado una sola vez en views/Online.vue,
+				donde se ven todas las coincidencias y se elige por id.
+			-->
 			<template
 			v-slot:modal_buttons="slotProps">
-	    		<comercio-city-user
-	    		model_name_to_attach="client"
-	    		prop_to_find_model="name"
-	    		prop_to_set="comercio_city_client"
-	    		text="Asignar a un cliente ya cargado en el sistema"
-	    		:placeholder="'Ingrese el nombre del cliente '+slotProps.model.name+' tal como figura en el sistema'"
-	    		:model="slotProps.model"
-	    		model_name="buyer"></comercio-city-user>
+				<vinculo-del-comprador
+				:model="slotProps.model"></vinculo-del-comprador>
 			</template>
 
 			<!--
@@ -38,10 +39,14 @@
 	</div>
 </template>
 <script>
+// Import estático: es un bloque de unas pocas líneas dentro del modal, y con uno diferido aparecería
+// un instante después de abrirse el formulario.
+import VinculoDelComprador from '@/components/online/components/vincular-comprador/VinculoDelComprador'
+
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
-		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
+		VinculoDelComprador,
 		BtnActividadCliente: () => import('@/components/common/BtnActividadCliente'),
 		ActividadClienteModal: () => import('@/components/actividad-cliente/Modal'),
 	},

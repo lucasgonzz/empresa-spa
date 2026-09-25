@@ -606,9 +606,12 @@
 						v-for="imagen in imagenes"
 						:key="'img-' + imagen.orden"
 						class="scan-review__foto">
+							<!-- `referrerpolicy="origin"`: la foto sale de una ruta con auth:sanctum
+							(ver `url_imagen`) y sin Referer Sanctum no levanta la sesión. -->
 							<img
 							:src="url_imagen(imagen.orden)"
-							:alt="'Página ' + imagen.orden">
+							:alt="'Página ' + imagen.orden"
+							referrerpolicy="origin">
 							<figcaption>
 								Página {{ imagen.orden }}
 								<span v-if="imagen.nombre_original">— {{ imagen.nombre_original }}</span>
