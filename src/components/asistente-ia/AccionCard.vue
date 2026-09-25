@@ -20,6 +20,7 @@
 			<img
 			:src="imagen_url"
 			:alt="presentacion.titulo"
+			referrerpolicy="origin"
 			loading="lazy"
 			data-testid="asistente-accion-imagen"
 			@error="imagen_rota = true">

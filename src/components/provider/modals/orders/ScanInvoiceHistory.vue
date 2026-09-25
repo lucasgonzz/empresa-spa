@@ -134,12 +134,18 @@
 							:href="url_imagen(escaneo.uuid, imagen.orden)"
 							target="_blank"
 							rel="noopener"
+							referrerpolicy="origin"
 							class="scan-history__foto"
 							:title="'Página ' + imagen.orden + ' — abrir en una pestaña nueva'">
+								<!-- `referrerpolicy="origin"` en la miniatura Y en el link: las dos
+								van a una ruta con auth:sanctum (ver `url_imagen`), y sin Referer
+								Sanctum no levanta la sesión de la cookie. En el link, además, la
+								pestaña nueva abría la foto con un 401. -->
 								<img
 								:src="url_imagen(escaneo.uuid, imagen.orden)"
 								:alt="'Página ' + imagen.orden"
-								loading="lazy">
+								loading="lazy"
+								referrerpolicy="origin">
 								<span class="scan-history__foto-numero">
 									{{ imagen.orden }}
 								</span>

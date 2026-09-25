@@ -39,9 +39,13 @@ class="item-attachments">
 				class="attachment-row">
 
 					<!-- Miniatura si es imagen -->
+					<!-- `referrerpolicy="origin"`: `file_url` es una ruta con auth:sanctum y sin
+					Referer Sanctum no levanta la sesión de la cookie (el nginx del VPS sirve la
+					SPA con `Referrer-Policy: same-origin`). Ver asistente-ia/AdjuntosDeMensaje.vue. -->
 					<img
 					v-if="isImage(att.original_name)"
 					:src="file_url(att.id)"
+					referrerpolicy="origin"
 					class="attachment-thumb"
 					:alt="att.original_name" />
 

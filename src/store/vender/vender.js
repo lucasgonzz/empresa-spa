@@ -128,6 +128,9 @@ function get_article_log_model(article) {
 		amount: article.amount || null,
 		price_vender: article.price_vender || null,
 		price_vender_personalizado: article.price_vender_personalizado || null,
+		// La otra mitad de la oferta por cantidad: el modo porcentaje no escribe un precio
+		// absoluto, deja marcado el porcentaje y lo aplica getPriceVender() al final.
+		porcentaje_oferta_por_cantidad: article.porcentaje_oferta_por_cantidad || null,
 		discount: article.discount || null,
 		price_type_id: article.price_type_id || null,
 		total: article.total || null,
