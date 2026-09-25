@@ -5,6 +5,7 @@ import router from './router'
 import store from './store'
 import { apply_dark_mode_class, read_stored_dark_mode } from '@/utils/dark_mode'
 import { get_tab_id } from '@/utils/tab_id'
+import { registrar_llegada_por_redireccion } from '@/utils/version_de_direccion'
 import { env } from '@/runtime_config'
 
 // Vue Scrool
@@ -507,8 +508,76 @@ Vue.config.productionTip = false
 // vuelta y después un salto a oscuro. App.vue corrige este recuerdo apenas llega el usuario real.
 apply_dark_mode_class(read_stored_dark_mode())
 
-new Vue({
-  router,
-  store,
-  render: h => h(App)
-}).$mount('#app')
+/**
+ * Si se llegó por una redirección previa al login (`?cc_vr=1`), la marca se saca de la barra de
+ * direcciones ANTES de que el router lea la URL inicial (eso pasa en `new Vue({router})`, acá
+ * abajo): si no, se colaría en el `?redirect=` que arma la guarda de navegación. El valor queda
+ * guardado para `check_version.js`, que ya no lo puede leer de la URL.
+ */
+registrar_llegada_por_redireccion()
+
+/**
+ * Monta la aplicación.
+ *
+ * Se llama UNA sola vez, desde el bloque de abajo.
+ */
+function montar_aplicacion() {
+    new Vue({
+      router,
+      store,
+      render: h => h(App)
+    }).$mount('#app')
+}
+
+/**
+ * Arranque condicionado (misión redireccion-version-antes-del-login, 24/9/2026).
+ *
+ * El script inline de `public/index.html` deja `window.__CC_ARRANQUE__` con una promesa `listo`
+ * que resuelve cuando ya sabe si hay una versión nueva del sistema esperando:
+ *
+ * - 'normal': no hay (o no se pudo saber a tiempo) → se monta como siempre.
+ * - 'actualizando': hay una y ese mismo script está mostrando la pantalla de descarga y va a
+ *   recargar solo → NO se monta nada. Es el punto de todo esto: sin Vue montado no hay `auth/me`,
+ *   ni pantalla de login, ni las ~15 llamadas de arranque que hasta ahora corrían contra la API
+ *   con una versión que se iba a descartar. Solo si esa actualización se abandona (descarga
+ *   lenta o fallida) se monta igual, para no dejar a nadie mirando una pantalla vacía.
+ *
+ * Si el objeto no existe (un index.html sin el script, o un navegador sin Promise) se monta directo.
+ */
+var arranque_de_version = window.__CC_ARRANQUE__
+
+if (arranque_de_version && arranque_de_version.listo && typeof arranque_de_version.listo.then === 'function') {
+    var ya_montada = false
+
+    var montar_una_vez = function () {
+        if (!ya_montada) {
+            ya_montada = true
+            montar_aplicacion()
+        }
+    }
+
+    /**
+     * Defensa propia, independiente de la del script de arranque: si `listo` no resuelve nunca, la
+     * aplicación se monta a los 4 s. Se cancela apenas `listo` resuelve, porque una actualización
+     * en curso puede tardar más que esto y ahí NO se tiene que montar.
+     */
+    var defensa_de_montaje = window.setTimeout(montar_una_vez, 4000)
+
+    arranque_de_version.listo.then(function (estado) {
+        window.clearTimeout(defensa_de_montaje)
+
+        if (estado === 'actualizando') {
+            if (arranque_de_version.abandonada && typeof arranque_de_version.abandonada.then === 'function') {
+                arranque_de_version.abandonada.then(montar_una_vez)
+            }
+            return
+        }
+
+        montar_una_vez()
+    }, function () {
+        window.clearTimeout(defensa_de_montaje)
+        montar_una_vez()
+    })
+} else {
+    montar_aplicacion()
+}
