@@ -59,6 +59,8 @@ export default {
 			text: 'Alícuota Ingresos Brutos CABA (%)',
 			key: 'isib_caba_alicuota',
 			type: 'number',
+			// Paso 0.01: sin esto el input queda en paso 1 y el navegador marca 3,5 como invalido.
+			variable_decimals: { min: 2, max: 2 },
 			descriptions: [
 				'Resolución AGIP 169/2026: si facturás a consumidores finales en la Ciudad de Buenos Aires, cargá acá la alícuota de Ingresos Brutos que te corresponde (por ejemplo 3). Se imprime "ALÍCUOTA ISIB CABA 3,00%" en las facturas y tickets a consumidor final de este punto de venta.',
 				'Dejalo vacío si no te corresponde (por ejemplo, si estás en el Régimen Simplificado). Solo se imprime en los comprobantes que se le informan a ARCA como emitidos a consumidor final: nunca en facturas A.',
