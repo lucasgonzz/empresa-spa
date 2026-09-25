@@ -20,9 +20,12 @@
 			<i class="bi bi-x-lg"></i>
 		</button>
 
+		<!-- `referrerpolicy="origin"`: la imagen suele ser la ruta autenticada de un medio de
+		WhatsApp, y sin Referer Sanctum no levanta la sesión (ver MessageBubble.vue). -->
 		<img
 		v-if="image_url"
 		:src="image_url"
+		referrerpolicy="origin"
 		class="whatsapp-lightbox__img"
 		alt="Imagen ampliada"
 		@click.stop>

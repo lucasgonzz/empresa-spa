@@ -1,5 +1,24 @@
 <template>
-	<div class="asistente-ia-overlay">
+	<!-- Click en el fondo oscuro (afuera del panel) cierra el chat, igual que la cruz y Escape.
+
+	🔴 NO ALCANZA CON `@click.self`: un click se dispara sobre el ancestro común de donde bajó
+	y donde subió el botón. Arrastrar una manija de PanelResizer (o seleccionar texto del hilo)
+	y soltar afuera del panel termina en un click cuyo target es el overlay, y el chat se
+	cerraba en la cara de quien lo estaba estirando. Por eso se cierra SOLO si el mousedown
+	también arrancó en el overlay: `al_mousedown_overlay` prende la bandera únicamente cuando
+	el target es el overlay mismo y la apaga con cualquier otro mousedown. Va en fase de
+	CAPTURA (`.capture`) para enterarse de TODO mousedown del panel aunque un hijo corte la
+	propagación.
+
+	🔴 Y NO ES UN "click afuera" ESCUCHADO EN `document`: los b-popover y b-modal de
+	BootstrapVue que abre el chat (la ficha del artículo, la cuenta corriente, el visor de
+	fotos) se montan colgados de <body>, fuera de este árbol, y un click adentro de ellos
+	contaría como "afuera del panel" y cerraría el chat. Un click en esos elementos nunca
+	tiene como target al overlay, así que acá no molestan. -->
+	<div
+	class="asistente-ia-overlay"
+	@mousedown.capture="al_mousedown_overlay"
+	@click.self="al_click_overlay">
 		<div
 		class="asistente-ia-panel"
 		:style="panel_inline_style">
@@ -110,6 +129,9 @@ export default {
 			sidebar_movil_abierta: false,
 			// Ancho del viewport, para decidir el modo cajón bajo 768px.
 			viewport_width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+			// true si el último mousedown arrancó en el overlay (el fondo, afuera del panel).
+			// Es la guarda del cierre por click afuera: ver el comentario del <template>.
+			mousedown_en_overlay: false,
 		}
 	},
 	computed: {
@@ -337,6 +359,25 @@ export default {
 		 */
 		on_conversation_selected() {
 			this.sidebar_movil_abierta = false
+		},
+		/**
+		 * Anota si el mousedown arrancó en el overlay mismo. Corre en captura, así que ve
+		 * todos los mousedown del árbol: uno sobre el panel (una manija, el texto, un botón)
+		 * apaga la bandera, y solo uno sobre el fondo la prende.
+		 */
+		al_mousedown_overlay(event) {
+			this.mousedown_en_overlay = event.target === event.currentTarget
+		},
+		/**
+		 * Click con target en el overlay: cierra solo si el mousedown también fue ahí. Si
+		 * no, era un arrastre o una selección que se soltó afuera del panel, y no se cierra.
+		 */
+		al_click_overlay() {
+			let cerrar = this.mousedown_en_overlay
+			this.mousedown_en_overlay = false
+			if (cerrar) {
+				this.cerrar()
+			}
 		},
 		cerrar() {
 			this.$store.commit('ai_chat/setPanelAbierto', false)
