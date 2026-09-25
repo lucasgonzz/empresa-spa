@@ -5,6 +5,13 @@
         
         <error-modal></error-modal>
         <logo-loading></logo-loading>
+        <!--
+            Bloqueo de la app instalada (PWA) que quedó en una dirección vieja (misión
+            redireccion-version-antes-del-login, 24/9/2026). Tapa todo, sin botón de cerrar. Se
+            gatea solo con el estado del store (`auth.version_bloqueada`), igual que los avisos
+            de sesión de más abajo.
+        -->
+        <app-instalada-vieja></app-instalada-vieja>
         <nav-component></nav-component>
         <btn-scroll-top></btn-scroll-top>
         <support-chat-floating-button></support-chat-floating-button>
@@ -95,11 +102,13 @@
             se ejecuta una línea suya y no se hace ninguna llamada. Es v-if y no v-show a propósito.
 
             🔴 Lo que NO hace la guarda, y conviene que esté escrito para que nadie lo prometa de
-            nuevo: el chunk igual se DESCARGA. Vue CLI registra el plugin `prefetch` por defecto y
-            este repo no lo borra en vue.config.js, así que el navegador se baja todos los chunks
-            async con <link rel="prefetch"> (medido: 861 en el dist del 12/8). Es descarga de baja
-            prioridad después del load, no ejecución — pero no es cero, y decir que sí lo era fue
-            una afirmación falsa en la misión 51.
+            nuevo: el chunk igual se DESCARGA. Hasta el 24/9/2026 era porque Vue CLI registra el
+            plugin `prefetch` por defecto y este repo no lo borraba: el navegador se bajaba todos los
+            chunks async con <link rel="prefetch"> (medido: 861 en el dist del 12/8). Desde esa
+            fecha `vue.config.js` lo borra, pero el chunk se sigue descargando igual: el service
+            worker precachea todos los archivos del build (`precacheAndRoute`). Es descarga de baja
+            prioridad, no ejecución — pero no es cero, y decir que sí lo era fue una afirmación
+            falsa en la misión 51.
 
             🔴 El getter es `panel_visible` y NO `demo/activa`, y la diferencia importa (pedido de
             Lucas, 25/8/2026): `panel_visible` mira solo el marcador en memoria que prende
@@ -113,12 +122,17 @@
         -->
         <panel-demo v-if="$store.getters['demo/panel_visible']"></panel-demo>
 
+        <!--
+            El v-if esconde la vista entera mientras hay bloqueo de app instalada: el login no se
+            puede ver ni tocar por detrás de esa pantalla (ni con el teclado).
+        -->
         <b-container
+        v-if="!version_bloqueada"
         fluid>
             <payment-expire></payment-expire>
             <router-view/>
-            
-        </b-container> 
+
+        </b-container>
     </div>
 </template>
 <script>
@@ -130,6 +144,7 @@ import SupportChatFloatingButton from '@/common-vue/components/support-chat/Floa
 import AsistenteIaFloatingButton from '@/components/asistente-ia/FloatingButton'
 import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
 import DescripcionDeControl from '@/common-vue/components/ayuda/DescripcionDeControl'
+import AppInstaladaVieja from '@/components/common/AppInstaladaVieja'
 
 import app from '@/common-vue/mixins/app'
 import start_methods from '@/mixins/start_methods'
@@ -164,6 +179,7 @@ export default {
         AsistenteIaFloatingButton,
         WhatsappSidebarHost,
         DescripcionDeControl,
+        AppInstaladaVieja,
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
@@ -185,6 +201,13 @@ export default {
         uiSizeClass() {
             const slug = this.$store.state.auth.user?.inputs_size?.slug
             return slug ? `ui-${slug}` : ''
+        },
+        /**
+         * Bloqueo de una app instalada (PWA) que quedó en una dirección vieja: `null` si no hay
+         * ninguno, `{direccion, motivo}` si lo hay. Ver `store/auth.js` y `check_version.js`.
+         */
+        version_bloqueada() {
+            return this.$store.state.auth.version_bloqueada
         },
         /**
          * Preferencia de modo oscuro del usuario autenticado. `null` mientras no se sepa quién
@@ -215,6 +238,14 @@ export default {
             return
         }
         /**
+         * "¿Esta es la dirección activa de este sistema?": la consulta sale YA, en paralelo con
+         * `auth/me` y no detrás (misión redireccion-version-antes-del-login, 24/9/2026). Solo se
+         * usa si `auth/me` dice que no hay sesión; para entonces la respuesta ya llegó y no suma
+         * ni un pedido al camino. Es una propiedad común y no del `data`: no necesita ser
+         * reactiva y es una promesa que nunca rechaza.
+         */
+        this.consulta_version_activa = this.iniciar_consulta_de_version_activa()
+        /**
          * Si se llegó desde otra versión con token de transferencia, iniciar sesión aquí
          * antes de `auth/me` para que la versión correcta ya quede autenticada.
          */
@@ -223,6 +254,11 @@ export default {
                 if (user_from_transfer) {
                     self.$store.commit('auth/setUser', user_from_transfer)
                     self.$store.commit('auth/setAuthenticated', true)
+                    return
+                }
+                // Una app instalada vieja ya quedó bloqueada (llegó con token): no se arranca
+                // nada por detrás de esa pantalla, ni siquiera `auth/me`.
+                if (self.$store.state.auth.version_bloqueada) {
                     return
                 }
                 self.$store.dispatch('auth/me')
@@ -298,6 +334,20 @@ export default {
 
             return window.location.pathname.indexOf(RUTA_INFORME_COMPARTIDO) !== -1
         },
+        /**
+         * Manda a la pantalla de login si todavía no se está en ella.
+         *
+         * Es lo que hacía el watch de `authenticated` en línea; se sacó a un método para poder
+         * esperar la decisión previa al login (`resolver_version_antes_del_login`) antes de
+         * navegar.
+         *
+         * @returns {void}
+         */
+        ir_a_login() {
+            if (this.$route.name !== 'login') {
+                this.$router.replace({name: 'login'}).catch(() => {})
+            }
+        },
     },
     watch: {
         /**
@@ -326,13 +376,44 @@ export default {
             console.log('watch de authenticateds')
             if (!this.authenticated) {
                 /**
+                 * Hay una pantalla de bloqueo de app instalada vieja: no se navega al login (el
+                 * bloqueo es justamente no dejarla usar). Tiene que ir ANTES de todo lo demás.
+                 */
+                if (this.version_bloqueada) {
+                    return
+                }
+
+                /**
+                 * 🔴 Antes de mostrar el login por PRIMERA vez en este arranque se pregunta si esta
+                 * es la dirección activa de su sistema (misión
+                 * redireccion-version-antes-del-login, 24/9/2026): si no lo es, se lo manda a la
+                 * que sí, o se bloquea la app instalada, ANTES de que escriba el documento y la
+                 * clave en un frente en desuso. Hasta ahora eso pasaba recién después del login.
+                 *
+                 * Solo la primera vez: después de un logout o de una sesión caída ya no es un
+                 * arranque. La promesa siempre resuelve (con un techo de tiempo adentro); si dice
+                 * que se puede seguir, se navega al login como siempre.
+                 */
+                if (!this.version_previa_al_login_resuelta) {
+                    this.version_previa_al_login_resuelta = true
+                    this.resolver_version_antes_del_login(this.consulta_version_activa)
+                        .then((puede_seguir) => {
+                            if (puede_seguir) {
+                                this.ir_a_login()
+                            }
+                        })
+                    return
+                }
+
+                /**
                  * Redirección de seguridad: si se pierde la sesión, volver a `login`.
                  * Evita quedar en vistas privadas sin autorización o en rutas inexistentes.
                  */
-                if (this.$route.name !== 'login') {
-                    this.$router.replace({name: 'login'}).catch(() => {})
-                }
+                this.ir_a_login()
             } else {
+                // Arrancó con sesión: la pregunta previa al login ya no aplica en esta carga.
+                this.version_previa_al_login_resuelta = true
+
                 /**
                  * 🔴 Primero se corta, después se arranca. Si este frente no es el que le
                  * corresponde al usuario (`default_version` apunta a otro subdominio), lo
