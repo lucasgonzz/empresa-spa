@@ -1261,7 +1261,7 @@
 		class="text-muted small m-b-15">
 			Rango efectivo: filas {{ start_row }} a {{ finish_row }}
 			<span v-if="model === 'article'">
-				({{ numero_es(excel_rows_to_import_count) }} filas, aprox. {{ numero_es(estimated_chunks_count) }} chunks de 1000 filas).
+				({{ numero_es(excel_rows_to_import_count) }} filas, aprox. {{ numero_es(estimated_chunks_count) }} chunks de {{ numero_es(tamanio_de_lote) }} filas).
 			</span>
 			<span v-else>
 				({{ numero_es(excel_rows_to_import_count) }} filas).
@@ -1680,6 +1680,13 @@ export default {
 			/* Filas de muestra del Excel (máx. 5) para la preview del paso 2. */
 			preview_rows: [],
 
+			/*
+			 * Tamaño de lote con el que corre la importación en el backend (ARTICLE_EXCEL_CHUNK_SIZE),
+			 * informado por el análisis (clave tamanio_de_lote). Sólo para el texto del paso 4; un
+			 * resultado que no la trae (análisis viejo) deja el default de 1000.
+			 */
+			tamanio_de_lote: 1000,
+
 			/* Notas globales de asistencia generadas por Claude durante el análisis. */
 			assistant_notes: [],
 
@@ -2053,10 +2060,9 @@ export default {
 		},
 
 		/*
-		 * Estimación de chunks según ARTICLE_EXCEL_CHUNK_SIZE del backend (referencia UX).
-		 * Desde la misión importacion-excel-motor-rapido (24/9/2026) el lote por defecto es
-		 * de 1000 filas; un .env que lo fije en otro valor sigue mandando en el backend, esto
-		 * es sólo el texto del paso 4.
+		 * Estimación de chunks según ARTICLE_EXCEL_CHUNK_SIZE del backend (referencia UX). El
+		 * tamaño lo informa el análisis (tamanio_de_lote): 1000 por defecto desde la misión
+		 * importacion-excel-motor-rapido (24/9/2026), o lo que fije el .env del cliente.
 		 */
 		estimated_chunks_count() {
 			let rows = this.excel_rows_to_import_count
@@ -2064,7 +2070,7 @@ export default {
 				return 0
 			}
 
-			let chunk_size = 1000
+			let chunk_size = this.tamanio_de_lote > 0 ? this.tamanio_de_lote : 1000
 			return Math.ceil(rows / chunk_size)
 		},
 
@@ -4156,6 +4162,7 @@ export default {
 			/* Análisis nuevo: si había una configuración guardada ofrecida, era de otro archivo. */
 			this.mapeo_guardado_pendiente = null
 			this.preview_rows    = resultado.preview_rows || []
+			this.tamanio_de_lote = parseInt(resultado.tamanio_de_lote) > 0 ? parseInt(resultado.tamanio_de_lote) : 1000
 
 			/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
 			this.formatos_numericos = resultado.formatos_numericos || null
@@ -4517,7 +4524,10 @@ export default {
 
 		/*
 		 * True si la propiedad de esta columna salió de la configuración guardada del proveedor
-		 * (clave mapeo_guardado del análisis, o aplicada con el botón "Aplicar").
+		 * (clave mapeo_guardado del análisis, o aplicada con el botón "Aplicar") y el usuario no la
+		 * cambió después. Si cambia el select, la columna deja de mostrarse como «Guardado» (y deja
+		 * de decir "la última vez la corregiste a…", que contradiría el select); si la vuelve a
+		 * poner como estaba, la marca vuelve. Chequeo 3 de la misión, 24/9/2026.
 		 *
 		 * @param {Object} item - Ítem de column_mapping.
 		 * @returns {Boolean}
@@ -4526,7 +4536,10 @@ export default {
 			if (!item || !item.mapeo_guardado || typeof item.mapeo_guardado !== 'object') {
 				return false
 			}
-			return !!item.mapeo_guardado.system_property
+			if (!item.mapeo_guardado.system_property) {
+				return false
+			}
+			return this.normalize_system_property_key(item.system_property) === item.mapeo_guardado.system_property
 		},
 
 		/*
