@@ -22,6 +22,29 @@ module.exports = {
             }
             return options
         })
+
+        /**
+         * Sin `<link rel="prefetch">` de los chunks (misión redireccion-version-antes-del-login,
+         * 24/9/2026). Vue CLI agrega uno por cada chunk async (~1100 en el `index.html` de hoy:
+         * ~860 de JS y ~200 de CSS) y este repo no lo sacaba nunca.
+         *
+         * Es redundante: el service worker ya precachea TODOS esos archivos (`precacheAndRoute`,
+         * 1218 entradas), así que para el que ya tiene la app instalada cada prefetch es un
+         * pedido que el service worker contesta desde su caché, y para el que entra por primera
+         * vez es una segunda descarga de lo mismo que el service worker baja en paralelo.
+         *
+         * Y sale caro justo cuando más importa: al detectar una versión nueva, el service worker
+         * viejo tiene que atender esa cola entera antes de dejar paso al nuevo. Medido con el
+         * build real y el service worker real (Chromium, DevTools Protocol): con los prefetch, el
+         * worker nuevo queda `installed` a 1,1 s y recién se activa a 5,3 s (el viejo tarda ~3 s
+         * en terminar su cola); sin ellos, `installed` a 0,5 s y activo a 1,6 s. Es la diferencia
+         * entre una pantalla de actualización de ~5 s y una de ~2 s. También la primera
+         * instalación del service worker pasó de 38 s a 17 s.
+         *
+         * El plugin `preload` (lo que necesita la ruta inicial) NO se toca. Para volverlo atrás
+         * alcanza con borrar esta línea.
+         */
+        config.plugins.delete('prefetch')
     },
 	devServer: {
     	host: 'empresa.local',
