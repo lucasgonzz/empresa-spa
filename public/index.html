@@ -29,13 +29,17 @@
      *
      * 2. Si hay un service worker registrado, le pide YA que busque una versión nueva
      *    (registration.update()). Antes esa consulta salía 10 segundos después de cargar
-     *    (src/registerServiceWorker.js) y el navegador no la hace solo en cada navegación (la spec
-     *    solo la exige cada 24 horas): el usuario llegaba a loguearse y a disparar las ~15
-     *    llamadas de arranque contra la API con una versión que ya era vieja.
+     *    (src/registerServiceWorker.js) y la aplicación no esperaba su resultado: el usuario
+     *    llegaba a loguearse y a disparar las ~15 llamadas de arranque contra la API con una
+     *    versión que ya era vieja, y la pantalla de actualización salía recién cuando el service
+     *    worker había bajado todo. Acá el arranque de la aplicación SÍ espera la respuesta (con un
+     *    techo corto), que es lo que evita ese trabajo tirado.
      *
      * 3. Si hay versión nueva: pantalla de "Descargando la versión nueva" (HTML puro: Vue todavía
      *    no existe), barra hasta ~92 % en ~3 s, espera a que el worker nuevo esté ACTIVADO y recién
      *    ahí recarga. Recargar antes serviría el index.html viejo y volvería a este mismo lugar.
+     *    Si el worker nuevo se queda en `installed` más de lo normal se le da un empujón (ver
+     *    empujar_activacion), y si en 15 s no se activa se abandona: la aplicación arranca igual.
      *
      * 4. Si no hay versión nueva, no hay service worker, no hay red, o el servidor tarda más de
      *    TECHO_CHEQUEO_MS en contestar: 'normal', la aplicación arranca como siempre. Un chequeo
@@ -51,7 +55,10 @@
     (function () {
       var TECHO_CHEQUEO_MS = 1500;
       var TECHO_CONSULTA_MS = 5000;
-      var TECHO_DESCARGA_MS = 20000;
+      var TECHO_DESCARGA_MS = 15000;
+      var ESPERA_ACTIVACION_MS = 1200;
+      var ENTRE_EMPUJONES_MS = 2000;
+      var MAX_EMPUJONES = 3;
       var DURACION_ANIMACION_MS = 3000;
       var MINIMO_VISIBLE_MS = 1500;
       var LIMITE_ACTUALIZACIONES = 2;
@@ -81,10 +88,11 @@
        * Consulta anticipada: "¿cuál es la dirección activa de este sistema?", sin sesión. Solo le
        * sirve a quien NO tiene sesión (App.vue la usa después de auth/me, y solo si dio 401) para
        * mandarlo al frente correcto ANTES del login. Sale acá, apenas carga el documento, por dos
-       * motivos: se superpone con la descarga del bundle, y el temporizador de su techo no corre
-       * en el hilo que arranca Vue (en un celular lento, un arranque de varios segundos hacía
-       * vencer el temporizador aunque la respuesta ya estuviera llegando). Es una promesa que
-       * NUNCA rechaza: cualquier cosa que no sea un 200 con un objeto JSON es null ("no sé").
+       * motivos: se superpone con la descarga del bundle, y para cuando Vue arranca ya está
+       * resuelta, así que un arranque largo de la aplicación (un celular lento) no puede hacer
+       * vencer su techo con la respuesta ya en la red: si la consulta saliera recién desde Vue,
+       * el temporizador de su techo competiría con ese arranque por el mismo hilo. Es una promesa
+       * que NUNCA rechaza: cualquier cosa que no sea un 200 con un objeto JSON es null ("no sé").
        * Misma lógica y mismo techo que consultar_version_activa() de src/utils/version_de_direccion.js,
        * que se usa cuando este script no pudo (desarrollo sin config.js).
        */
@@ -184,6 +192,17 @@
       var partes = { barra: null, valor: null, mensaje: null };
 
       function crear_pantalla() {
+        /*
+         * 🔴 Puede llamarse tarde: si el <body> todavía no existía, se engancha a DOMContentLoaded
+         * (el <head> puede estar esperando el CSS de Google Fonts o un script síncrono de un CDN).
+         * Si para entonces la actualización ya se abandonó, NO hay nada que mostrar: crearla igual
+         * dejaría una pantalla encima de la aplicación ya montada, sin ningún temporizador que la
+         * saque.
+         */
+        if (!arranque.actualizando) {
+          return;
+        }
+
         if (document.getElementById('cc-actualizacion')) {
           return;
         }
@@ -254,6 +273,40 @@
       }
 
       /*
+       * 🔴 Empujón de activación. Con `skipWaiting`, el worker nuevo pasa de `installed` a
+       * `activating` en unos 30 ms. Medido en Chromium: si justo en esa ventana el worker VIEJO
+       * recibe un pedido de la página (para atenderlo se lo reinicia), la activación queda
+       * abortada y el nuevo se queda en `installed` sin que nada la reintente hasta la próxima
+       * navegación: la pantalla esperaría los 15 s del techo para nada (pasó en 1 de cada 6
+       * ciclos cuando las peticiones de la página pasan por la interceptación de Playwright, que
+       * las demora unos milisegundos). Una navegación de un iframe oculto a la URL del propio
+       * worker (un archivo de ~1 KB que no es de la aplicación y está dentro del scope) hace que
+       * el navegador reintente la activación: destrabó 5 de 5 veces en 60 a 75 ms, SIN recargar
+       * esta página (recargar antes de la activación serviría el index.html viejo). El iframe se
+       * saca a los 2 s.
+       */
+      function empujar_activacion(worker) {
+        try {
+          if (!worker || !worker.scriptURL || !document.body) {
+            return;
+          }
+
+          var marco = document.createElement('iframe');
+          marco.setAttribute('aria-hidden', 'true');
+          marco.setAttribute('tabindex', '-1');
+          marco.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden';
+          marco.src = worker.scriptURL;
+          document.body.appendChild(marco);
+
+          window.setTimeout(function () {
+            if (marco.parentNode) {
+              marco.parentNode.removeChild(marco);
+            }
+          }, 2000);
+        } catch (e) { /* un empujón que no sale no rompe nada: queda el techo de espera */ }
+      }
+
+      /*
        * Corre la pantalla hasta que el worker nuevo está activado y recarga. `worker` puede ser
        * null (ya estaba activado cuando se detectó): en ese caso solo cuenta el tiempo mínimo.
        */
@@ -271,6 +324,8 @@
         var fallo = false;
         var progreso = 0;
         var temporizador = null;
+        var instalado_desde = null;
+        var empujones = 0;
         var mensaje_actual = 'Descargando la versión nueva';
 
         function mensaje_segun(estado) {
@@ -294,25 +349,68 @@
           worker.addEventListener('statechange', seguir_worker);
         }
 
-        function abandonar() {
+        /*
+         * Suelta la pantalla y deja arrancar la aplicación. `por_falla` distingue los dos motivos:
+         * el worker nuevo quedó `redundant` (la instalación falló: no hay nada que esperar) o pasó
+         * el techo de espera (descarga lenta: la instalación sigue en curso).
+         *
+         * 🔴 En el segundo caso la actualización NO se pierde. Con el worker nuevo ya activo, el
+         * bundle viejo que quedó corriendo pediría chunks que la versión nueva no tiene y las
+         * pantallas que se cargan a demanda fallarían; y `register-service-worker` no avisa este
+         * caso (su `updatefound` ocurrió antes de que se registrara). Por eso se queda escuchando al
+         * worker y, cuando termina de activarse, se vuelve a mostrar la pantalla y se recarga.
+         */
+        function abandonar(por_falla) {
           window.clearInterval(temporizador);
           quitar_pantalla();
           arranque.actualizando = false;
           liberar('normal');
           resolver_abandonada();
+
+          if (!por_falla && worker) {
+            var retomar = function () {
+              if (worker.state === 'activated') {
+                worker.removeEventListener('statechange', retomar);
+                if (!arranque.actualizando && guarda_permite()) {
+                  iniciar_actualizacion(worker);
+                }
+              } else if (worker.state === 'redundant') {
+                worker.removeEventListener('statechange', retomar);
+              }
+            };
+
+            worker.addEventListener('statechange', retomar);
+            retomar();
+          }
         }
 
         function paso() {
           var transcurrido = new Date().getTime() - inicio;
 
           if (fallo) {
-            abandonar();
+            abandonar(true);
             return;
           }
 
           if (!activado && transcurrido >= TECHO_DESCARGA_MS) {
-            abandonar();
+            abandonar(false);
             return;
+          }
+
+          /* Un worker que se queda en `installed` más de lo normal (ver empujar_activacion) recibe un empujón. */
+          if (worker && !activado && worker.state === 'installed') {
+            var ahora = new Date().getTime();
+
+            if (instalado_desde === null) {
+              instalado_desde = ahora;
+            }
+
+            if (empujones < MAX_EMPUJONES && (ahora - instalado_desde) >= ESPERA_ACTIVACION_MS + empujones * ENTRE_EMPUJONES_MS) {
+              empujones++;
+              empujar_activacion(worker);
+            }
+          } else {
+            instalado_desde = null;
           }
 
           var objetivo;
@@ -386,7 +484,19 @@
             }
 
             liberar('actualizando');
-            iniciar_actualizacion(worker);
+
+            /*
+             * main.js ya sabe que NO tiene que montar la aplicación. Si la pantalla no pudiera
+             * arrancar (una excepción adentro), nadie más va a soltar el arranque: se suelta acá,
+             * para que la aplicación monte igual y no quede una página en blanco.
+             */
+            try {
+              iniciar_actualizacion(worker);
+            } catch (e) {
+              arranque.actualizando = false;
+              quitar_pantalla();
+              resolver_abandonada();
+            }
           });
         }).catch(function () {
           /* Sin red o el servidor no entregó el service worker: se arranca como siempre. */

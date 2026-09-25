@@ -1,12 +1,15 @@
 import axios from 'axios'
 import { env } from '@/runtime_config'
 import {
+	comparten_dominio_padre,
 	consultar_version_activa,
 	decidir_version_previa_al_login,
 	es_app_instalada,
 	llego_por_redireccion,
+	marcar_ventana_como_bloqueada,
 	mismo_sitio,
 	parsear_direccion_http,
+	ventana_esta_marcada_como_bloqueada,
 } from '@/utils/version_de_direccion'
 
 /**
@@ -331,6 +334,22 @@ export default {
 			var plain_token = params.get(VERSION_SESSION_TOKEN_PARAM)
 
 			if (!plain_token) {
+				/**
+				 * 🔴 Una ventana de app instalada que ya fue bloqueada por llegar redirigida (el caso
+				 * B3, más abajo) SIGUE bloqueada después de un F5. El token se saca de la barra, y sin
+				 * este recuerdo la recarga mostraba el login adentro de la app vieja: se podía seguir
+				 * usando. El recuerdo es por VENTANA (`sessionStorage`): al cerrarla y volver a abrir la
+				 * app se arranca de cero, en su dirección de instalación, donde los tres bloqueos
+				 * vuelven a decidir. Con `forceStable` (levantar un frente a propósito) no aplica.
+				 */
+				if (
+					es_app_instalada()
+					&& ventana_esta_marcada_como_bloqueada()
+					&& !params.has('forceStable')
+				) {
+					this.bloquear_app_instalada(window.location.origin, 'redirigida_dentro_de_la_app')
+				}
+
 				return Promise.resolve(null)
 			}
 
@@ -369,6 +388,9 @@ export default {
 				} else {
 					sacar_token_de_la_barra()
 				}
+
+				// Se recuerda en esta ventana: el F5 ya no trae el token (ver más arriba).
+				marcar_ventana_como_bloqueada()
 
 				this.bloquear_app_instalada(window.location.origin, 'redirigida_dentro_de_la_app')
 
@@ -471,6 +493,18 @@ export default {
 			var force_stable = params.has('forceStable')
 
 			if (force_stable) {
+				return false
+			}
+
+			/**
+			 * 🔴 El destino tiene que ser un frente del MISMO dominio que este (ver
+			 * `comparten_dominio_padre`). `default_version` lo escribe `PUT
+			 * admin-sync/update-default-version`, que hoy acepta pedidos anónimos, y de este valor
+			 * sale el redirect CON un token de transferencia de sesión en la URL: quien pudiera
+			 * escribirlo se llevaría un token que se canjea contra la API real por una sesión.
+			 * Un destino ajeno se ignora y el usuario se queda en este frente, que funciona.
+			 */
+			if (!comparten_dominio_padre(default_version_raw, window.location.origin, window.location.protocol)) {
 				return false
 			}
 
@@ -618,8 +652,8 @@ export default {
 			/**
 			 * Si el script inline de `public/index.html` ya la disparó (lo hace apenas carga,
 			 * antes de que se descargue y evalúe el bundle), se toma esa promesa: la respuesta ya
-			 * llegó o está por llegar. 🔴 Es lo que la hace inmune a un celular lento: si la
-			 * consulta saliera recién acá, el temporizador de su techo correría en el mismo hilo
+			 * llegó o está por llegar. 🔴 Es lo que la hace mucho menos sensible a un celular lento:
+			 * si la consulta saliera recién acá, el temporizador de su techo correría en el mismo hilo
 			 * que el arranque de Vue, y un arranque de varios segundos podía hacer que el
 			 * temporizador venciera aunque la respuesta ya estuviera en la red. Sin ese script
 			 * (desarrollo sin `config.js`, un index.html anterior) se hace acá, como antes.

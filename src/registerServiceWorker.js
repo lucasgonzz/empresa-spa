@@ -9,6 +9,15 @@ if (process.env.NODE_ENV === 'production') {
         },
         registered (registration) {
             console.log('Service worker registrado.')
+            /**
+             * La búsqueda de una versión nueva a los 10 s solo queda de respaldo. Desde el
+             * 24/9/2026 el script de arranque de `public/index.html` (`window.__CC_ARRANQUE__`) la
+             * hace apenas carga el documento, así que repetirla acá sería un segundo pedido del
+             * service worker en cada carga de cada usuario, sin nada nuevo que encontrar.
+             */
+            if (window.__CC_ARRANQUE__) {
+                return
+            }
             setTimeout(() => {
                 console.log('Buscando actualizacion')
                 registration.update()

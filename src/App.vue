@@ -102,11 +102,13 @@
             se ejecuta una línea suya y no se hace ninguna llamada. Es v-if y no v-show a propósito.
 
             🔴 Lo que NO hace la guarda, y conviene que esté escrito para que nadie lo prometa de
-            nuevo: el chunk igual se DESCARGA. Vue CLI registra el plugin `prefetch` por defecto y
-            este repo no lo borra en vue.config.js, así que el navegador se baja todos los chunks
-            async con <link rel="prefetch"> (medido: 861 en el dist del 12/8). Es descarga de baja
-            prioridad después del load, no ejecución — pero no es cero, y decir que sí lo era fue
-            una afirmación falsa en la misión 51.
+            nuevo: el chunk igual se DESCARGA. Hasta el 24/9/2026 era porque Vue CLI registra el
+            plugin `prefetch` por defecto y este repo no lo borraba: el navegador se bajaba todos los
+            chunks async con <link rel="prefetch"> (medido: 861 en el dist del 12/8). Desde esa
+            fecha `vue.config.js` lo borra, pero el chunk se sigue descargando igual: el service
+            worker precachea todos los archivos del build (`precacheAndRoute`). Es descarga de baja
+            prioridad, no ejecución — pero no es cero, y decir que sí lo era fue una afirmación
+            falsa en la misión 51.
 
             🔴 El getter es `panel_visible` y NO `demo/activa`, y la diferencia importa (pedido de
             Lucas, 25/8/2026): `panel_visible` mira solo el marcador en memoria que prende

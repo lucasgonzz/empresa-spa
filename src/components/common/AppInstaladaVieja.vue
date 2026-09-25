@@ -116,15 +116,30 @@ export default {
 		 */
 		bloqueo(nuevo) {
 			if (nuevo) {
-				this.$nextTick(() => {
-					if (this.$refs.boton_copiar) {
-						this.$refs.boton_copiar.focus()
-					}
-				})
+				this.enfocar_boton_de_copiar()
 			}
 		},
 	},
+	mounted() {
+		// El bloqueo del caso "llegó redirigida con token" se prende en el created() de App.vue,
+		// ANTES de que exista este componente: el watch de arriba no dispara (no es immediate).
+		if (this.bloqueo) {
+			this.enfocar_boton_de_copiar()
+		}
+	},
 	methods: {
+		/**
+		 * Manda el foco al botón de copiar cuando ya está dibujado.
+		 *
+		 * @returns {void}
+		 */
+		enfocar_boton_de_copiar() {
+			this.$nextTick(() => {
+				if (this.$refs.boton_copiar) {
+					this.$refs.boton_copiar.focus()
+				}
+			})
+		},
 		/**
 		 * Copia la dirección al portapapeles. Usa la API moderna si existe (exige https o
 		 * localhost) y, si no, el método viejo con un textarea temporal.
