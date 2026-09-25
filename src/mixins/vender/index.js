@@ -127,6 +127,9 @@ export default {
 		 *        por defecto (default_articles.js), que entra por aca salteandose add_item_vender:
 		 *        esos articulos los pone el sistema, no el vendedor, y no tienen por que disparar
 		 *        la pregunta de combos apenas se abre VENDER.
+		 *        🔴 Desde el 24/9/2026 gobierna TAMBIEN el aviso de ofertas por cantidad, por el
+		 *        mismo motivo: es el unico discriminador "sistema vs vendedor" que existe en esta
+		 *        funcion. El nombre quedo como estaba a proposito, para no tocar a los llamadores.
 		 */
 		add_item_to_sale(permitir_deteccion_de_combos = true) {
 
@@ -147,6 +150,26 @@ export default {
 			item = this.check_price_type_ranges(item)
 			
 			item = this.check_price_range(item)
+
+			/*
+				Aviso de ofertas por cantidad: sale SIEMPRE que el articulo tenga ofertas, alcance
+				o no el tramo la cantidad que se acaba de cargar, asi el vendedor se la puede
+				ofrecer al cliente.
+
+				Va con el mismo interruptor que la deteccion de combos porque los articulos por
+				defecto (default_articles.js) los pone el sistema al abrir VENDER: tostar ahi
+				serian varios carteles apenas se entra a la pantalla.
+			*/
+			if (permitir_deteccion_de_combos) {
+
+				let texto_de_ofertas = this.texto_de_ofertas_por_cantidad(item)
+
+				if (texto_de_ofertas) {
+					this.$toast.info(texto_de_ofertas, {
+						duration: 6000,
+					})
+				}
+			}
 
 			this.$store.commit('vender/addItem', item)
 

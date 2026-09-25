@@ -38,9 +38,17 @@
 		class="whatsapp-bubble__image-btn"
 		title="Ver la imagen completa"
 		@click="abrir_lightbox">
+			<!-- 🔴 `referrerpolicy="origin"` no es decorativo. Si `media_src` es la ruta autenticada
+			propia (`whatsapp-chats/{chat}/media/{mensaje}`, auth:sanctum), la cookie sola no
+			alcanza: Sanctum 2 levanta la sesión solo si el request trae `Referer` u `Origin` de
+			un dominio stateful, un <img> no manda `Origin`, y el nginx del VPS sirve la SPA con
+			`Referrer-Policy: same-origin`, que le saca el `Referer` al ir a `api-<cliente>`. Sin
+			esto la ruta contesta 401 y la foto no se ve. El detalle, en el docblock de
+			asistente-ia/AdjuntosDeMensaje.vue. -->
 			<img
 			:src="message.media_src"
 			class="whatsapp-bubble__image"
+			referrerpolicy="origin"
 			alt="Imagen del mensaje">
 		</button>
 
