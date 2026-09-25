@@ -56,7 +56,7 @@ export default {
 			type: 'checkbox',
 		},
 		{
-			text: 'Alícuota Ingresos Brutos CABA (%)',
+			text: 'Alícuota IIBB CABA (%)',
 			key: 'isib_caba_alicuota',
 			type: 'number',
 			// Paso 0.01: sin esto el input queda en paso 1 y el navegador marca 3,5 como invalido.
@@ -67,7 +67,7 @@ export default {
 			],
 		},
 		{
-			text: 'Ingresos Brutos por Convenio Multilateral',
+			text: 'IIBB por Convenio Multilateral',
 			key: 'isib_caba_convenio_multilateral',
 			type: 'checkbox',
 			value: 0,
