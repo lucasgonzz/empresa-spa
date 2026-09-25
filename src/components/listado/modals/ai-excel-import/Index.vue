@@ -2839,8 +2839,14 @@ export default {
 			 * respuesta del request, porque el request no siempre sale (ver la condición de abajo).
 			 */
 			this.mapeo_guardado_pendiente = null
-			/* Recalcular stats de existentes en BD con el proveedor real seleccionado en paso 2. */
-			if (this.excel_path && this.provider_code_column_index !== null) {
+			/*
+			 * Recalcular stats de existentes en BD con el proveedor real seleccionado en paso 2, y
+			 * de paso saber si ese proveedor tiene configuración de columnas guardada. Sale aunque el
+			 * archivo no tenga columna de código de proveedor: antes no salía y a un archivo así nunca
+			 * se le ofrecía la configuración guardada (chequeo 1 de la misión, 24/9/2026). Sin columna,
+			 * el backend devuelve los conteos en cero sin leer el archivo.
+			 */
+			if (this.excel_path) {
 				this.refresh_provider_stats()
 			}
 		},
