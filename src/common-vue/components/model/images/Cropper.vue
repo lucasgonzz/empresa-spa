@@ -1,5 +1,6 @@
 <template>
 	<b-modal
+	ref="modal"
 	title="Recortar Imagen"
 	hide-footer
 	size="lg"
@@ -315,11 +316,41 @@ export default {
 		* recién después de que el gesto termina, o sea que un arrastre largo podía seguir corriendo
 		* cuando vencía el timer y guardar a medio ajustar.
 		*
+		* Con el mouse, además, evita que soltar el arrastre sobre el fondo oscuro cierre el modal
+		* (ver keep_modal_open_on_drag_release).
+		*
+		* @param {MouseEvent|TouchEvent} event Evento que empezó el gesto (mousedown o touchstart).
 		* @return {void}
 		*/
-		onCropperPointerDown() {
+		onCropperPointerDown(event) {
 			this.has_manual_crop_interaction = true
 			this.cancel_auto_save()
+			/* Con el dedo no hay "soltar afuera" que cerrar el modal: el evento que lo cierra es del mouse. */
+			if (event && event.type === 'mousedown') {
+				this.keep_modal_open_on_drag_release()
+			}
+		},
+		/**
+		* Evita que soltar un arrastre sobre el fondo oscuro (afuera del diálogo) cierre el modal y se
+		* pierda el encuadre.
+		*
+		* BootstrapVue se entera de que un clic empezó ADENTRO del diálogo por el mousedown que llega al
+		* `.modal-dialog`; si el mouseup cae sobre el fondo, ignora el clic que sigue y no cierra. Pero
+		* la librería de recorte frena la propagación del mousedown en el elemento que se arrastra
+		* (la imagen o el marco), así que BootstrapVue nunca lo ve y el clic que genera soltar afuera
+		* cerraba el modal en silencio (medido el 24/9/2026). Acá se le avisa a mano, con el mismo
+		* método que él usaría. Un clic simple sobre el fondo sigue cerrando el modal, como siempre.
+		*
+		* Si una versión futura de BootstrapVue no trae ese método, no se hace nada (queda como antes).
+		*
+		* @return {void}
+		*/
+		keep_modal_open_on_drag_release() {
+			/* Instancia del b-modal de este componente. */
+			const modal = this.$refs.modal
+			if (modal && typeof modal.onDialogMousedown === 'function') {
+				modal.onDialogMousedown()
+			}
 		},
 		/**
 		* Cancela el autoguardado en el acto: apaga el flag, vuelve la barra a 0 y frena el timer.
