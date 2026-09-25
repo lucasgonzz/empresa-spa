@@ -979,15 +979,15 @@ export default {
 			group_title: 'Descuentos y Recargos'
 		},
 		{
-			text: 'Ofertas para VENDER',
+			text: 'Ofertas por cantidad para VENDER',
 			key: 'article_price_ranges',
 			has_many: {
-				text: 'Rango de precio',
+				text: 'Oferta por cantidad',
 				model_name: 'article_price_range',
 			},
 			// mid_full_cols: true,
 			not_show: true,
-			description: 'Cree ofertas para el articulo dependiendo de la cantidad que se este vendiendo',
+			description: 'Cree ofertas para el articulo segun la cantidad que se este vendiendo: un precio fijo por unidad, o un porcentaje de descuento sobre el precio de la linea',
 		},
 
 		{

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import Vue from 'vue'
 import generals from '@/common-vue/mixins/generals'
 import __base_store from '@/store/__base_store'
 import { env } from '@/runtime_config'
@@ -30,6 +31,45 @@ export default __base_store({
 		 */
 		setUnconfirmedModels(state, value) {
 			state.unconfirmed_models = value
+		},
+		/**
+		 * Refleja en los pedidos ya cargados el vínculo que se acaba de hacer entre un comprador de
+		 * la tienda y un cliente del sistema, para que el badge "Sin vincular" de la tabla de
+		 * Pedidos desaparezca sin tener que recargar el listado.
+		 *
+		 * Recorre las tres listas en las que puede estar un pedido —`models` (el listado del día),
+		 * `filtered` (el resultado de una búsqueda) y `unconfirmed_models` (el polling de pedidos
+		 * sin confirmar)— y les parchea SOLO los dos campos del vínculo al comprador embebido de
+		 * cada pedido de ese comprador. No se reemplaza el comprador entero: con parchear los dos
+		 * campos alcanza, y así no se le cambia la forma a nada de lo que ya se lee del pedido.
+		 *
+		 * 🔴 Va con `Vue.set` y no con una asignación directa: contra una API que todavía no carga
+		 * `buyer.comercio_city_client` la clave ni existe en el objeto, y en Vue 2 una propiedad
+		 * agregada por asignación no es reactiva, así que el badge no se enteraría.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Object} payload
+		 * @param {Number} payload.buyer_id Id del comprador que se vinculó.
+		 * @param {Object|null} payload.client Cliente del sistema con el que quedó vinculado.
+		 * @returns {void}
+		 */
+		actualizar_vinculo_del_comprador(state, payload) {
+			/** Cliente vinculado, o null si se desvinculó. */
+			let client = payload && payload.client ? payload.client : null
+			/** Las tres listas donde puede vivir un pedido (una lista ausente se saltea). */
+			let listas = [state.models, state.filtered, state.unconfirmed_models]
+
+			listas.forEach(lista => {
+				if (!Array.isArray(lista)) {
+					return
+				}
+				lista.forEach(order => {
+					if (order && order.buyer && order.buyer.id == payload.buyer_id) {
+						Vue.set(order.buyer, 'comercio_city_client_id', client ? client.id : null)
+						Vue.set(order.buyer, 'comercio_city_client', client)
+					}
+				})
+			})
 		},
 	},
 	actions: {

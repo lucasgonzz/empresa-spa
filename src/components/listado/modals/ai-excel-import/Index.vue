@@ -354,6 +354,32 @@
 				Si elegís un proveedor global, pisará el valor de la columna para todos los artículos.
 			</b-alert>
 
+			<!--
+				Configuración guardada para el proveedor elegido (misión importacion-excel-motor-rapido,
+				24/9/2026). Llega en refresh-provider-stats cuando el usuario cambia el proveedor y se
+				OFRECE: aplicarla sola pisaría correcciones que el usuario ya hizo en la tabla. Sólo
+				aparece cuando difiere de lo que hay en pantalla.
+			-->
+			<b-alert
+			v-if="mapeo_guardado_pendiente"
+			show
+			variant="info"
+			class="m-t-10 m-b-0 ai-import-mapeo-guardado-aviso">
+				<i class="icon-info m-r-5"></i>
+				Hay una configuración guardada para <strong>{{ mapeo_guardado_pendiente.proveedor }}</strong>:
+				la última vez que importaste de este proveedor dejaste
+				{{ mapeo_guardado_pendiente.columnas.length }} {{ mapeo_guardado_pendiente.columnas.length === 1 ? 'columna distinta' : 'columnas distintas' }}
+				de como {{ mapeo_guardado_pendiente.columnas.length === 1 ? 'está' : 'están' }} ahora en la tabla.
+				<b-button
+				variant="info"
+				size="sm"
+				class="m-l-10"
+				data-testid="ai-import-aplicar-mapeo-guardado"
+				@click="aplicar_mapeo_guardado_pendiente">
+					Aplicar
+				</b-button>
+			</b-alert>
+
 		</div>
 
 		<hr
@@ -367,6 +393,7 @@
 				<span class="text-warning">Las filas en amarillo tienen baja confianza.</span>
 				<span class="ai-import-mapping-legend-interpretation"> Las filas en celeste son interpretaciones de la IA que conviene validar.</span>
 				<span class="ai-import-mapping-legend-ignored"> Las filas en violeta se ignoran en la importación.</span>
+				<span class="ai-import-mapping-legend-interpretation"> Las columnas marcadas «Guardado» vienen de la configuración que confirmaste la última vez para este proveedor.</span>
 			</p>
 
 			<!-- Notas de asistencia globales de Claude (consejos generales sobre el archivo) -->
@@ -458,8 +485,19 @@
 							:title="column_confidence_title(item.confidence)">
 								{{ format_column_confidence(item.confidence) }}
 							</span>
+							<!--
+								"Guardado" va primero: una columna que el usuario ya confirmó (o corrigió)
+								la última vez para este proveedor no es una columna a "Revisar", por más
+								baja que haya sido la confianza de la IA esta vez.
+							-->
 							<small
-							v-if="column_confidence_is_low(item.confidence)"
+							v-if="column_has_mapeo_guardado(item)"
+							class="ai-import-mapping-confidence-hint text-info"
+							:title="'Viene de la configuración que confirmaste la última vez para ' + (item.mapeo_guardado.proveedor || 'este proveedor')">
+								Guardado
+							</small>
+							<small
+							v-else-if="column_confidence_is_low(item.confidence)"
 							class="ai-import-mapping-confidence-hint text-warning">
 								Revisar
 							</small>
@@ -477,6 +515,15 @@
 					class="ai-import-mapping-interpretation-note small m-b-0">
 						<i class="icon-info m-r-5"></i>
 						{{ item.interpretation_note }}
+					</p>
+
+					<!-- Qué dejó el usuario en esta columna la última vez que importó de este proveedor. -->
+					<p
+					v-if="column_has_mapeo_guardado(item)"
+					:data-testid="'ai-import-mapeo-guardado-' + index"
+					class="ai-import-mapping-interpretation-note small m-b-0">
+						<i class="icon-info m-r-5"></i>
+						{{ texto_de_mapeo_guardado(item) }}
 					</p>
 
 				</div>
@@ -991,6 +1038,76 @@
 
 			</div>
 
+			<!-- ====================================================================== -->
+			<!-- Bloque de lectura de numeros con coma, espacio de miles, etc.           -->
+			<!-- Muestra, columna por columna, como se van a leer los numeros de texto   -->
+			<!-- que traen coma decimal o separadores de miles. La regla es fija (la     -->
+			<!-- coma es el decimal), por eso no lleva selector.                         -->
+			<!-- ====================================================================== -->
+			<div v-if="lecturas_numericas.length > 0" class="ai-import-numeric-lecturas m-b-15">
+
+				<div
+				v-for="(lectura, idx_lectura) in lecturas_numericas"
+				:key="'numlec-' + (lectura.campo || idx_lectura)"
+				class="ai-import-numeric-lecturas__column m-b-15">
+
+					<p class="font-weight-bold m-b-5 small">
+						Cómo vamos a leer los números de la columna {{ lectura.nombre_columna_excel }}
+					</p>
+
+					<p v-if="!lectura.solo_no_interpretable" class="text-muted small m-b-8">
+						La coma es el separador de decimales. Si el número trae coma y punto, el que está más a la derecha es el decimal y el otro separa miles.
+					</p>
+
+					<div v-if="!lectura.solo_no_interpretable && lectura.ejemplos.length > 0" class="ai-import-preview-table-wrapper">
+						<table class="ai-import-preview-table">
+							<thead>
+								<tr>
+									<th>Fila</th>
+									<th>En el Excel</th>
+									<th>Se lee como</th>
+									<th>Queda como</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr
+								v-for="(ejemplo, idx) in lectura.ejemplos"
+								:key="'numlec-ej-' + (lectura.campo || idx_lectura) + '-' + idx">
+									<td>{{ ejemplo.fila }}</td>
+									<td>{{ ejemplo.original }}</td>
+									<td>{{ etiqueta_tipo_lectura(ejemplo.tipo) }}</td>
+									<td>
+										{{ resultado_lectura_es(ejemplo) }}
+										<small v-if="ejemplo.interpretable === false" class="text-muted d-block">
+											Esa celda queda como conflicto y no pisa el valor que ya tiene el artículo.
+										</small>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<small
+					v-if="!lectura.solo_no_interpretable && lectura.total_valores > lectura.ejemplos.length"
+					class="text-muted d-block m-t-5">
+						Mostramos {{ numero_es(lectura.ejemplos.length) }} de {{ numero_es(lectura.total_valores) }} valores
+					</small>
+
+					<b-alert
+					v-if="lectura.cantidad_no_interpretable > 0"
+					show
+					variant="warning"
+					class="ai-import-numeric-lecturas__alert m-t-8 m-b-0">
+						<i class="icon-alert-triangle m-r-5"></i>
+						{{ numero_es(lectura.cantidad_no_interpretable) }}
+						{{ lectura.cantidad_no_interpretable === 1 ? 'valor no se puede leer' : 'valores no se pueden leer' }}
+						como número. Esas celdas quedan como conflicto y no pisan el valor que ya tiene el artículo.
+					</b-alert>
+
+				</div>
+
+			</div>
+
 			<!-- Explicación del comportamiento con bar_codes repetidos -->
 			<b-alert
 			v-if="bar_codes_detail.length > 0 || (duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > 0)"
@@ -1214,7 +1331,7 @@
 		class="text-muted small m-b-15">
 			Rango efectivo: filas {{ start_row }} a {{ finish_row }}
 			<span v-if="model === 'article'">
-				({{ numero_es(excel_rows_to_import_count) }} filas, aprox. {{ numero_es(estimated_chunks_count) }} chunks de 50 filas).
+				({{ numero_es(excel_rows_to_import_count) }} filas, aprox. {{ numero_es(estimated_chunks_count) }} chunks de {{ numero_es(tamanio_de_lote) }} filas).
 			</span>
 			<span v-else>
 				({{ numero_es(excel_rows_to_import_count) }} filas).
@@ -1537,6 +1654,16 @@ export default {
 			provider_stats_desactualizados: false,
 
 			/*
+			 * Misión importacion-excel-motor-rapido (24/9/2026): configuración de columnas
+			 * guardada para el proveedor elegido en el select del paso 2, cuando difiere de lo
+			 * que hay en la tabla. La trae refresh-provider-stats (mapeo_guardado_del_proveedor)
+			 * y se OFRECE con el botón "Aplicar": nunca se aplica sola, porque pisaría
+			 * correcciones que el usuario ya hizo en esta pantalla. Null = nada que ofrecer.
+			 * Forma: { proveedor: String, columnas: [{ excel_column_index, excel_column, system_property, origen }] }.
+			 */
+			mapeo_guardado_pendiente: null,
+
+			/*
 			 * Prompt 03 (grupo 239 - alerta-formatos-numericos-import): estadisticas de
 			 * numeros con punto ambiguos por columna, devueltas por /analyze y recalculadas
 			 * por /get-recomendacion tras corregir el mapeo en el paso 2.
@@ -1622,6 +1749,13 @@ export default {
 
 			/* Filas de muestra del Excel (máx. 5) para la preview del paso 2. */
 			preview_rows: [],
+
+			/*
+			 * Tamaño de lote con el que corre la importación en el backend (ARTICLE_EXCEL_CHUNK_SIZE),
+			 * informado por el análisis (clave tamanio_de_lote). Sólo para el texto del paso 4; un
+			 * resultado que no la trae (análisis viejo) deja el default de 1000.
+			 */
+			tamanio_de_lote: 1000,
 
 			/* Notas globales de asistencia generadas por Claude durante el análisis. */
 			assistant_notes: [],
@@ -1996,7 +2130,9 @@ export default {
 		},
 
 		/*
-		 * Estimación de chunks según ARTICLE_EXCEL_CHUNK_SIZE del backend (referencia UX).
+		 * Estimación de chunks según ARTICLE_EXCEL_CHUNK_SIZE del backend (referencia UX). El
+		 * tamaño lo informa el análisis (tamanio_de_lote): 1000 por defecto desde la misión
+		 * importacion-excel-motor-rapido (24/9/2026), o lo que fije el .env del cliente.
 		 */
 		estimated_chunks_count() {
 			let rows = this.excel_rows_to_import_count
@@ -2004,7 +2140,7 @@ export default {
 				return 0
 			}
 
-			let chunk_size = 50
+			let chunk_size = this.tamanio_de_lote > 0 ? this.tamanio_de_lote : 1000
 			return Math.ceil(rows / chunk_size)
 		},
 
@@ -2108,6 +2244,55 @@ export default {
 			})
 
 			return columnas
+		},
+
+		/*
+		 * Lecturas de los números que traen coma, espacio de miles, etc. (`formatos_numericos.lecturas`),
+		 * listas para renderizar en el paso 3. Es lo que itera el template: nunca se recorre el
+		 * objeto crudo. Es defensivo a propósito: devuelve [] si no hay análisis (null), si la API
+		 * es vieja y no manda `lecturas`, o si no es un array; y cada lectura tolera que falten
+		 * `por_tipo` o `ejemplos`.
+		 *
+		 * Cada elemento trae, además de los datos de la API, lo ya resuelto para el template:
+		 * - ejemplos:                lista (nunca undefined).
+		 * - total_valores:           suma de `por_tipo` (0 si no vino).
+		 * - cantidad_no_interpretable: `por_tipo.no_interpretable` (0 si no vino).
+		 */
+		lecturas_numericas() {
+			if (
+				!this.formatos_numericos
+				|| !Array.isArray(this.formatos_numericos.lecturas)
+			) {
+				return []
+			}
+
+			let lecturas = []
+
+			this.formatos_numericos.lecturas.forEach(function(lectura) {
+				if (!lectura) {
+					return
+				}
+
+				let por_tipo = lectura.por_tipo && typeof lectura.por_tipo === 'object' ? lectura.por_tipo : {}
+				let ejemplos = Array.isArray(lectura.ejemplos) ? lectura.ejemplos : []
+
+				let total_valores = 0
+				Object.keys(por_tipo).forEach(function(tipo) {
+					total_valores += Number(por_tipo[tipo]) || 0
+				})
+
+				lecturas.push({
+					campo:                     lectura.campo,
+					nombre_columna_excel:      lectura.nombre_columna_excel,
+					ejemplos:                  ejemplos,
+					total_valores:             total_valores,
+					cantidad_no_interpretable: Number(por_tipo.no_interpretable) || 0,
+					/* Columna con solo guiones / "N/A" / texto: no hay coma ni miles que explicar, alcanza con el aviso. */
+					solo_no_interpretable:     total_valores > 0 && total_valores === (Number(por_tipo.no_interpretable) || 0),
+				})
+			})
+
+			return lecturas
 		},
 
 		/*
@@ -2768,8 +2953,19 @@ export default {
 				this.actualizar_articulos_de_otro_proveedor = 0
 				this.actualizar_proveedor = 0
 			}
-			/* Recalcular stats de existentes en BD con el proveedor real seleccionado en paso 2. */
-			if (this.excel_path && this.provider_code_column_index !== null) {
+			/*
+			 * La configuración ofrecida era del proveedor anterior: se descarta acá, y no en la
+			 * respuesta del request, porque el request no siempre sale (ver la condición de abajo).
+			 */
+			this.mapeo_guardado_pendiente = null
+			/*
+			 * Recalcular stats de existentes en BD con el proveedor real seleccionado en paso 2, y
+			 * de paso saber si ese proveedor tiene configuración de columnas guardada. Sale aunque el
+			 * archivo no tenga columna de código de proveedor: antes no salía y a un archivo así nunca
+			 * se le ofrecía la configuración guardada (chequeo 1 de la misión, 24/9/2026). Sin columna,
+			 * el backend devuelve los conteos en cero sin leer el archivo.
+			 */
+			if (this.excel_path) {
 				this.refresh_provider_stats()
 			}
 		},
@@ -4088,7 +4284,10 @@ export default {
 			this.duplicate_stats = resultado.duplicate_stats || null
 			/* Stats frescas del analisis: dejan de estar marcadas como del proveedor anterior. */
 			this.provider_stats_desactualizados = false
+			/* Análisis nuevo: si había una configuración guardada ofrecida, era de otro archivo. */
+			this.mapeo_guardado_pendiente = null
 			this.preview_rows    = resultado.preview_rows || []
+			this.tamanio_de_lote = parseInt(resultado.tamanio_de_lote) > 0 ? parseInt(resultado.tamanio_de_lote) : 1000
 
 			/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
 			this.formatos_numericos = resultado.formatos_numericos || null
@@ -4339,6 +4538,13 @@ export default {
 				}
 				/* Recálculo exitoso: los conteos vuelven a ser de este proveedor. */
 				self.provider_stats_desactualizados = false
+
+				/*
+				 * Misión importacion-excel-motor-rapido (24/9/2026): configuración de columnas
+				 * guardada para el proveedor elegido. Clave opcional: una API vieja no la manda
+				 * y no pasa nada. Se ofrece, no se aplica.
+				 */
+				self.ofrecer_mapeo_guardado(res.data.mapeo_guardado_del_proveedor)
 			})
 			.catch(function(err) {
 				console.warn('refresh_provider_stats: error al recalcular stats', err)
@@ -4353,12 +4559,160 @@ export default {
 				 * Se marcan como no confiables (lo dibuja el paso 3) y se avisa.
 				 */
 				self.provider_stats_desactualizados = true
+				/* Sin respuesta no se sabe si este proveedor tiene configuración: no se ofrece nada. */
+				self.mapeo_guardado_pendiente = null
 
 				self.$toast.warning(
 					'No pudimos recalcular cuántos códigos ya existen para este proveedor. Los números que ves son del proveedor anterior: no decidas con ellos.',
 					{ duration: 10000 }
 				)
 			})
+		},
+
+		/*
+		 * Misión importacion-excel-motor-rapido (24/9/2026): decide si hay algo que ofrecer con la
+		 * configuración guardada del proveedor que devolvió refresh-provider-stats.
+		 *
+		 * Se compara contra la tabla por excel_column_index: sólo cuentan las columnas cuya
+		 * propiedad quedaría distinta. Si todo ya coincide (el caso normal, porque el análisis ya
+		 * aplicó la configuración del proveedor inferido), no se muestra nada.
+		 *
+		 * @param {Array|null} mapeo_guardado_del_proveedor - [{excel_column_index, excel_column, system_property, origen}] o null.
+		 */
+		ofrecer_mapeo_guardado(mapeo_guardado_del_proveedor) {
+			if (!Array.isArray(mapeo_guardado_del_proveedor) || mapeo_guardado_del_proveedor.length === 0) {
+				this.mapeo_guardado_pendiente = null
+				return
+			}
+
+			let columnas = mapeo_guardado_del_proveedor.filter(guardada => {
+				let item = this.column_mapping.find(col => col.excel_column_index === guardada.excel_column_index)
+				if (!item) {
+					return false
+				}
+				return this.normalize_system_property_key(guardada.system_property) !== item.system_property
+			})
+
+			if (columnas.length === 0) {
+				this.mapeo_guardado_pendiente = null
+				return
+			}
+
+			this.mapeo_guardado_pendiente = {
+				proveedor: this.nombre_del_proveedor_seleccionado(),
+				columnas:  columnas,
+			}
+		},
+
+		/*
+		 * Aplica la configuración ofrecida: setea system_property en las columnas que difieren y
+		 * las marca con mapeo_guardado para que la tabla muestre de dónde salió cada una.
+		 * Corre sólo por el botón "Aplicar": el usuario lo pide, nunca pasa solo.
+		 */
+		aplicar_mapeo_guardado_pendiente() {
+			if (!this.mapeo_guardado_pendiente) {
+				return
+			}
+
+			let proveedor = this.mapeo_guardado_pendiente.proveedor
+
+			this.mapeo_guardado_pendiente.columnas.forEach(guardada => {
+				let item = this.column_mapping.find(col => col.excel_column_index === guardada.excel_column_index)
+				if (!item) {
+					return
+				}
+
+				item.system_property = this.normalize_system_property_key(guardada.system_property)
+				item.mapeo_guardado  = {
+					system_property: item.system_property,
+					origen:          guardada.origen === 'corregido_por_el_usuario' ? 'corregido_por_el_usuario' : 'confirmado',
+					guardado_en:     null,
+					proveedor:       proveedor,
+				}
+			})
+
+			this.mapeo_guardado_pendiente = null
+		},
+
+		/*
+		 * Nombre del proveedor elegido en el select del paso 2, para los textos del aviso.
+		 *
+		 * @returns {String}
+		 */
+		nombre_del_proveedor_seleccionado() {
+			let opcion = this.provider_options.find(option => option.value === this.selected_provider_id)
+			if (!opcion || opcion.value === null) {
+				return 'este proveedor'
+			}
+			return opcion.text
+		},
+
+		/*
+		 * True si la propiedad de esta columna salió de la configuración guardada del proveedor
+		 * (clave mapeo_guardado del análisis, o aplicada con el botón "Aplicar") y el usuario no la
+		 * cambió después. Si cambia el select, la columna deja de mostrarse como «Guardado» (y deja
+		 * de decir "la última vez la corregiste a…", que contradiría el select); si la vuelve a
+		 * poner como estaba, la marca vuelve. Chequeo 3 de la misión, 24/9/2026.
+		 *
+		 * @param {Object} item - Ítem de column_mapping.
+		 * @returns {Boolean}
+		 */
+		column_has_mapeo_guardado(item) {
+			if (!item || !item.mapeo_guardado || typeof item.mapeo_guardado !== 'object') {
+				return false
+			}
+			if (!item.mapeo_guardado.system_property) {
+				return false
+			}
+			return this.normalize_system_property_key(item.system_property) === item.mapeo_guardado.system_property
+		},
+
+		/*
+		 * Línea bajo la fila: qué dejó el usuario en esta columna la última vez que importó de
+		 * este proveedor. "corregiste" cuando cambió a mano lo que la IA había propuesto;
+		 * "confirmaste" cuando lo dejó como estaba.
+		 *
+		 * @param {Object} item - Ítem de column_mapping con mapeo_guardado.
+		 * @returns {String}
+		 */
+		texto_de_mapeo_guardado(item) {
+			if (!this.column_has_mapeo_guardado(item)) {
+				return ''
+			}
+
+			let proveedor = item.mapeo_guardado.proveedor || 'este proveedor'
+			let etiqueta  = this.get_property_label(item.mapeo_guardado.system_property)
+
+			if (item.mapeo_guardado.origen === 'corregido_por_el_usuario') {
+				return 'La última vez que importaste de ' + proveedor + ' corregiste esta columna a «' + etiqueta + '».'
+			}
+
+			return 'La última vez que importaste de ' + proveedor + ' confirmaste esta columna como «' + etiqueta + '».'
+		},
+
+		/*
+		 * Asegura la forma de mapeo_guardado de un ítem del análisis: objeto con las cuatro claves
+		 * del contrato, o null. Sin esto la clave muere en normalize_column_mapping().
+		 *
+		 * @param {Object|null} mapeo_guardado - Lo que vino del backend.
+		 * @returns {Object|null}
+		 */
+		normalize_mapeo_guardado(mapeo_guardado) {
+			if (!mapeo_guardado || typeof mapeo_guardado !== 'object') {
+				return null
+			}
+
+			let system_property = this.normalize_system_property_key(mapeo_guardado.system_property)
+			if (system_property === null) {
+				return null
+			}
+
+			return {
+				system_property: system_property,
+				origen:          mapeo_guardado.origen === 'corregido_por_el_usuario' ? 'corregido_por_el_usuario' : 'confirmado',
+				guardado_en:     mapeo_guardado.guardado_en || null,
+				proveedor:       mapeo_guardado.proveedor || '',
+			}
 		},
 
 		/*
@@ -4372,6 +4726,44 @@ export default {
 		valor_tiene_coma_y_punto(valor) {
 			let texto = String(valor)
 			return texto.indexOf(',') !== -1 && texto.indexOf('.') !== -1
+		},
+
+		/*
+		 * Cómo se lee cada tipo de número que trae coma, espacio de miles, etc. Es el texto de
+		 * la columna "Se lee como" del bloque "Cómo vamos a leer los números". Si la API manda
+		 * un tipo que este front no conoce (API más nueva), se muestra tal cual en vez de romper.
+		 *
+		 * @param {String} tipo - Clave `tipo` del ejemplo (formatos_numericos.lecturas[].ejemplos[]).
+		 * @returns {String}
+		 */
+		etiqueta_tipo_lectura(tipo) {
+			let etiquetas = {
+				coma_decimal:              'decimal con coma',
+				miles_coma:                'separador de miles (coma)',
+				miles_punto_decimal_coma:  'miles con punto y decimal con coma',
+				miles_coma_decimal_punto:  'miles con coma y decimal con punto',
+				miles_espacio:             'miles con espacio',
+				no_interpretable:          'no se puede leer',
+			}
+
+			return etiquetas[tipo] !== undefined ? etiquetas[tipo] : String(tipo)
+		},
+
+		/*
+		 * Cómo queda un ejemplo de `lecturas`, en es-AR (1234.56 -> "1.234,56"). El `resultado`
+		 * viaja como string "de máquina" (punto decimal, sin miles): se formatea con el helper
+		 * de separadores y NO con numeral, que con locale español multiplica por 100. Los
+		 * decimales salen tal cual vienen, sin redondear ni agregar ceros.
+		 *
+		 * @param {Object} ejemplo - Ejemplo de la lectura.
+		 * @returns {String} - "No se puede leer" si la celda no es interpretable.
+		 */
+		resultado_lectura_es(ejemplo) {
+			if (ejemplo.interpretable === false || ejemplo.resultado === null || ejemplo.resultado === undefined) {
+				return 'No se puede leer'
+			}
+
+			return this.numero_es(ejemplo.resultado)
 		},
 
 		/*
@@ -4829,6 +5221,12 @@ export default {
 					interpretation_note: interpretation_note,
 					excel_column_index:  excel_column_index,
 					excel_column_letter: item.excel_column_letter || this.number_to_excel_column(excel_column_index + 1),
+					/*
+					 * Misión importacion-excel-motor-rapido (24/9/2026): de dónde salió esta
+					 * propiedad cuando viene de la configuración guardada del proveedor. Se
+					 * conserva acá a propósito: toda clave que no esté en esta lista muere.
+					 */
+					mapeo_guardado:      this.normalize_mapeo_guardado(item.mapeo_guardado),
 				})
 			})
 
@@ -4914,6 +5312,18 @@ export default {
 			if (this.column_has_interpretation_note(item)) {
 				return {
 					'ai-import-mapping-block--interpretation': true,
+				}
+			}
+
+			/*
+			 * Columna que viene de la configuración guardada del proveedor: nunca en amarillo (el
+			 * usuario ya la confirmó una vez), y en celeste sólo si la última vez la corrigió a
+			 * mano, que es la que vale la pena mirar porque difiere de lo que la IA diría sola.
+			 * Se reusa el celeste de las interpretaciones: un cuarto color no se lee.
+			 */
+			if (this.column_has_mapeo_guardado(item)) {
+				return {
+					'ai-import-mapping-block--interpretation': item.mapeo_guardado.origen === 'corregido_por_el_usuario',
 				}
 			}
 
@@ -5465,6 +5875,7 @@ export default {
 			this.encabezado_del_backend      = null
 			this.duplicate_stats             = null
 			this.provider_stats_desactualizados = false
+			this.mapeo_guardado_pendiente    = null
 			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
 			this.loading_recomendacion       = false
@@ -5926,4 +6337,18 @@ export default {
 .ai-import-numeric-interpretacion__preview
 	&:not(:last-child)
 		margin-bottom: 10px
+
+/* Bloque de lectura de números con coma / miles del paso 3: mismo aspecto que el de números con punto */
+.ai-import-numeric-lecturas
+	display: block
+
+/* Separación entre columnas cuando hay más de una con lecturas */
+.ai-import-numeric-lecturas__column
+	&:not(:last-child)
+		border-bottom: 1px solid rgba(0, 0, 0, 0.06)
+		padding-bottom: 12px
+
+/* Aviso de celdas que no se pueden leer */
+.ai-import-numeric-lecturas__alert
+	font-size: 12px
 </style>

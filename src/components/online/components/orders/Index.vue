@@ -52,10 +52,46 @@
 				<envio-btn
 				:order="slotProps.model"></envio-btn>
 			</template>
+
+			<!--
+				Columna "Cliente": el nombre del comprador y, al lado, el badge "Sin vincular" si ese
+				comprador todavía no está asociado a ningún cliente del sistema (misión
+				vincular-comprador-desde-pedidos, 24/9/2026). El badge abre el modal de
+				vincular/crear cliente, que está montado UNA sola vez en views/Online.vue.
+
+				El texto es `buyer.name` tal cual: es exactamente lo que hasta ahora dibujaba la celda
+				por defecto (`propertyText` de una relación `buyer_id`), así que un comprador ya
+				vinculado se ve igual que siempre. Un pedido de invitado no tiene comprador
+				(`slotProps.model.buyer` en null): sin el v-if el slot devolvería un nodo vacío y la
+				celda queda vacía, como hoy.
+
+				Mismo mecanismo que `#table-prop-client_id` de views/Ventas.vue: la tabla genérica
+				reenvía cada `#table-prop-<key>` hasta la celda de esa columna.
+			-->
+			<template #table-prop-buyer_id="slotProps">
+				<div
+				v-if="slotProps.model.buyer"
+				class="pedido-comprador"
+				:class="{ 'pedido-comprador--pendiente': comprador_sin_vincular(slotProps.model.buyer) }">
+					<span
+					class="pedido-comprador__nombre"
+					:title="slotProps.model.buyer.name">
+						{{ slotProps.model.buyer.name }}
+					</span>
+					<badge-sin-vincular
+					:buyer="slotProps.model.buyer"></badge-sin-vincular>
+				</div>
+			</template>
 		</view-component>
 	</div>
 </template>
 <script>
+// El badge va con import estático y no lazy como el resto: es una píldora de unas pocas líneas, y
+// con un import diferido cada fila dibujaría primero el nombre y después "empujaría" la columna
+// cuando llegara el chunk del badge.
+import BadgeSinVincular from '@/components/online/components/vincular-comprador/BadgeSinVincular'
+import sin_vincular from '@/components/online/components/vincular-comprador/sin_vincular'
+
 /*
 	Pedidos online.
 
@@ -76,6 +112,7 @@ export default {
 		LimiteCreditoPedido: () => import('@/components/online/modals/orders/LimiteCreditoPedido'),
 		BtnWhatsappChat: () => import('@/components/common/BtnWhatsappChat'),
 		EnvioBtn: () => import('@/components/online/components/orders/envio/EnvioBtn'),
+		BadgeSinVincular,
 	},
 	data() {
 		return {
@@ -144,6 +181,45 @@ export default {
 		confirmar_igual() {
 			this.$root.$emit('order:save-retry', { ignorar_limite_credito: true })
 		},
+		/**
+		 * true si el comprador del pedido todavía no está vinculado a ningún cliente del sistema
+		 * (regla única de vincular-comprador/sin_vincular.js). La celda de "Cliente" la usa para
+		 * reservarle lugar al badge; el badge decide por su cuenta si se dibuja, con la misma regla.
+		 *
+		 * @param {Object|null} buyer Comprador embebido en el pedido (`order.buyer`).
+		 * @returns {Boolean}
+		 */
+		comprador_sin_vincular(buyer) {
+			return sin_vincular(buyer)
+		},
 	}
 }
 </script>
+<style lang="sass">
+// Celda "Cliente" de la tabla de Pedidos: el nombre del comprador y, si corresponde, el badge
+// "Sin vincular" a su lado. Sin `scoped`: el contenido del slot se dibuja adentro de la tabla
+// genérica, y el prefijo `pedido-comprador` es propio de esta pantalla.
+.pedido-comprador
+	display: flex
+	align-items: center
+	gap: 8px
+	// Sin `min-width: 0` el nombre no puede achicarse por debajo de su ancho natural, y un
+	// nombre largo empujaría al badge fuera de la celda en vez de recortarse con puntos.
+	min-width: 0
+	max-width: 100%
+
+// El nombre es el ÚNICO que se recorta; el badge (flex-shrink: 0) siempre se ve entero.
+.pedido-comprador__nombre
+	min-width: 0
+	overflow: hidden
+	text-overflow: ellipsis
+	white-space: nowrap
+
+// 🔴 El respiro de la derecha es de 26 px a propósito. Toda celda de esta tabla difumina sus últimos
+// 26 px con una máscara (`.cell-nowrap` de display/table/Tr.vue, para avisar que el texto se
+// cortó). Si la columna tiene el ancho justo del contenido, esa máscara se comería el borde
+// derecho del badge; con este respiro el badge queda siempre fuera de la zona difuminada. Solo
+// se agrega cuando hay badge: un comprador ya vinculado no cambia en nada respecto de hoy.
+.pedido-comprador--pendiente
+	padding-right: 26px
+</style>

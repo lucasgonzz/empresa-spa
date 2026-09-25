@@ -102,10 +102,12 @@ export default {
 		/**
 		 * Arma URL del PDF y abre en nueva pestaña.
 		 *
-		 * El PDF respeta el orden que el usuario ve en la tabla (misión catalogo-pdf-encabezado,
-		 * 18/9/2026): con origen filtrados viajan también los filtros de solo orden; con origen
-		 * seleccionados, los ids van en el orden de la tabla y no en el de los clics. Del lado
-		 * de la API, ArticleTablePdfHelper conserva ese orden en vez de pisarlo con created_at.
+		 * El PDF respeta el orden que el usuario eligió (misión catalogo-pdf-encabezado, 18/9/2026,
+		 * ajustada el 25/9/2026): con origen filtrados viajan también los filtros de solo orden;
+		 * con origen seleccionados, los ids van en el orden en que se tildaron (pedido explícito de
+		 * Lucas, 25/9/2026 — hasta acá salían en el orden de la tabla). Del lado de la API,
+		 * ArticleTablePdfHelper conserva el orden que reciba en vez de pisarlo con created_at, así
+		 * que no hizo falta tocar nada ahí.
 		 *
 		 * @param {Object}      profile        Perfil con id y name.
 		 * @param {number|null} price_type_id  Lista de precios; query `price_type_id` si aplica.
@@ -143,8 +145,8 @@ export default {
 				let json_data = JSON.stringify(filters_to_send)
 				query += '&filters=' + encodeURIComponent(json_data)
 			} else {
-				/* En el orden de la tabla visible, no en el orden en que se tildaron */
-				let ids = this.resolve_article_ids_in_table_order()
+				/* En el orden en que se tildaron, igual que los demás PDFs de artículos */
+				let ids = this.resolve_article_ids()
 				if (!ids.length) {
 					this.$toast.error('Seleccioná al menos un artículo', { duration: 4000 })
 					return

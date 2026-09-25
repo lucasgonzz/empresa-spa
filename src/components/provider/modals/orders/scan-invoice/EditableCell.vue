@@ -44,7 +44,7 @@
 		@click="empezar"
 		@keyup.enter="empezar"
 		@keyup.space.prevent="empezar">
-			{{ texto || placeholder }}
+			{{ texto_visible || placeholder }}
 		</span>
 
 	</div>
@@ -98,6 +98,33 @@ export default {
 				return ''
 			}
 			return String(this.value)
+		},
+		/*
+		 * Lo que se lee en reposo: el valor con el formato de una factura argentina
+		 * ("34.000,00", "14/08/2026"), para que el comprobante escaneado se lea igual que
+		 * el papel que el usuario tiene al lado.
+		 *
+		 * 🔴 Es SOLO para mostrar. `texto` sigue crudo porque `empezar()` arranca el
+		 * borrador desde ahí: el input date exige AAAA-MM-DD, y un "34.000,00" en el
+		 * borrador de un número pasaría por `normalizar_numero()` en cada edición sin
+		 * necesidad. Lo que se edita y lo que se emite no cambian.
+		 *
+		 * @return {String}
+		 */
+		texto_visible() {
+			if (this.texto === '') {
+				return ''
+			}
+
+			if (this.tipo === 'numero') {
+				return this.formatear_numero(this.value)
+			}
+
+			if (this.tipo === 'fecha') {
+				return this.formatear_fecha(this.texto)
+			}
+
+			return this.texto
 		},
 		/*
 		 * 'fecha' es lo único que sigue siendo un input nativo especializado. Todo lo
@@ -180,6 +207,40 @@ export default {
 		},
 		cancelar() {
 			this.editando = false
+		},
+		/*
+		 * Número con separadores es-AR, mínimo 2 y máximo 4 decimales: 34000 →
+		 * "34.000,00", 2450.5 → "2.450,50", 0.1234 → "0,1234". El máximo es 4 y no 2 a
+		 * propósito: un costo unitario de 12,3456 redondeado a "12,35" le mentiría al
+		 * usuario sobre lo que se va a guardar. Si el valor no es un número, tal cual.
+		 *
+		 * @param {String|Number} valor
+		 * @return {String}
+		 */
+		formatear_numero(valor) {
+			let numero = Number(valor)
+
+			if (isNaN(numero)) {
+				return String(valor)
+			}
+
+			return numero.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+		},
+		/*
+		 * AAAA-MM-DD → DD/MM/AAAA. Cualquier otra cosa se muestra como vino: mejor ver
+		 * el valor raro que un formateo inventado encima.
+		 *
+		 * @param {String} valor
+		 * @return {String}
+		 */
+		formatear_fecha(valor) {
+			let partes = String(valor).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+
+			if (!partes) {
+				return String(valor)
+			}
+
+			return partes[3] + '/' + partes[2] + '/' + partes[1]
 		},
 		/*
 		 * Vacío siempre vuelve null (no '' ni 0): null es lo que el backend interpreta

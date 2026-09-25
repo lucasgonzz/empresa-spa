@@ -1,5 +1,16 @@
 import axios from 'axios'
 import { env } from '@/runtime_config'
+import {
+	comparten_dominio_padre,
+	consultar_version_activa,
+	decidir_version_previa_al_login,
+	es_app_instalada,
+	llego_por_redireccion,
+	marcar_ventana_como_bloqueada,
+	mismo_sitio,
+	parsear_direccion_http,
+	ventana_esta_marcada_como_bloqueada,
+} from '@/utils/version_de_direccion'
 
 /**
  * Alinea axios con la misma configuración que el store de auth (cookies / API base).
@@ -23,16 +34,6 @@ var VERSION_SESSION_TOKEN_PARAM = 'version_session_token'
  * hoy.
  */
 var LIMPIEZA_PWA_TIMEOUT_MS = 3000
-
-/**
- * Cuánto dura el aviso de que la dirección de la aplicación cambió.
- *
- * Treinta segundos: es un aviso que hay que leer entero y que pide hacer algo (reinstalar la
- * app desde la dirección nueva), no un "guardado con éxito". Los toasts de este repo duran 10 s
- * y con ese plazo el aviso se pierde. Igual se puede cerrar tocándolo, y termina yéndose solo:
- * un toast que no se va nunca tapa la pantalla de alguien que está vendiendo.
- */
-var AVISO_DIRECCION_NUEVA_MS = 30000
 
 /**
  * Techo de tiempo para los pedidos que hay que esperar ANTES de redirigir al otro frente.
@@ -157,52 +158,6 @@ function strip_version_session_token_from_url() {
 		+ (new_search ? '?' + new_search : '')
 		+ window.location.hash
 	window.history.replaceState({}, '', new_url)
-}
-
-/**
- * ¿La aplicación está corriendo como app instalada (PWA) y no adentro de una pestaña del
- * navegador?
- *
- * Importa porque una PWA es POR ORIGEN y no se puede mudar: la que el cliente instaló desde
- * `galvan.comerciocity.com` no puede pasar sola a `galvan2.comerciocity.com` — para el sistema
- * operativo son dos aplicaciones distintas. Al que entra por el navegador no le pasa nada de
- * esto, así que no se le avisa nada.
- *
- * @returns {boolean}
- */
-function corriendo_como_app_instalada() {
-	/**
-	 * 🔴 No alcanza con `standalone`, y este es el detalle que decide si el aviso se ve o no
-	 * se ve nunca. El aviso se muestra en el frente DESTINO, al que se llega navegando fuera
-	 * del `scope` de la app instalada (el manifest no declara `scope`, así que el scope es el
-	 * origen viejo y el destino siempre queda afuera). Chrome y Edge en Windows atienden esa
-	 * navegación con la barra de "in-app browsing" puesta, y en ese estado el modo de
-	 * presentación puede reportarse como `minimal-ui` en vez de `standalone`.
-	 *
-	 * Preguntar por los cuatro modos de app cubre las dos variantes sin ningún riesgo de falso
-	 * positivo: una pestaña común de navegador reporta `browser`, que no está en la lista.
-	 */
-	var modos_de_app_instalada = [
-		'standalone',
-		'minimal-ui',
-		'fullscreen',
-		'window-controls-overlay',
-	]
-
-	try {
-		if (typeof window.matchMedia === 'function') {
-			for (var i = 0; i < modos_de_app_instalada.length; i++) {
-				if (window.matchMedia('(display-mode: ' + modos_de_app_instalada[i] + ')').matches) {
-					return true
-				}
-			}
-		}
-	} catch (e) {
-		/* Un navegador sin matchMedia no puede tener la app instalada: se sigue con iOS. */
-	}
-
-	// iOS no implementa `display-mode` y marca la app instalada con esta bandera propia.
-	return Boolean(window.navigator && window.navigator.standalone === true)
 }
 
 /**
@@ -349,6 +304,24 @@ function redirigir_a(href) {
 }
 
 export default {
+	data() {
+		return {
+			/**
+			 * ¿Ya se resolvió la pregunta "¿esta es la dirección activa?" para el arranque SIN
+			 * sesión? Es una sola vez por carga: `App.vue` la usa para no volver a hacerla cada
+			 * vez que la sesión se cae o el usuario cierra sesión (ahí ya no es un arranque).
+			 */
+			version_previa_al_login_resuelta: false,
+
+			/**
+			 * ¿Esta carga llegó con un token de transferencia de sesión en la URL? Se guarda acá
+			 * porque `consume_version_session_token_if_present()` lo saca de la barra de
+			 * direcciones, y la decisión previa al login, que corre después, necesita saberlo:
+			 * a quien ya lo mandó otra dirección no se lo manda otra vez.
+			 */
+			llego_con_token_de_transferencia: false,
+		}
+	},
 	methods: {
 		/**
 		 * Si la URL trae un token de transferencia, inicia sesión en esta versión (API destino)
@@ -361,6 +334,66 @@ export default {
 			var plain_token = params.get(VERSION_SESSION_TOKEN_PARAM)
 
 			if (!plain_token) {
+				/**
+				 * 🔴 Una ventana de app instalada que ya fue bloqueada por llegar redirigida (el caso
+				 * B3, más abajo) SIGUE bloqueada después de un F5. El token se saca de la barra, y sin
+				 * este recuerdo la recarga mostraba el login adentro de la app vieja: se podía seguir
+				 * usando. El recuerdo es por VENTANA (`sessionStorage`): al cerrarla y volver a abrir la
+				 * app se arranca de cero, en su dirección de instalación, donde los tres bloqueos
+				 * vuelven a decidir. Con `forceStable` (levantar un frente a propósito) no aplica.
+				 */
+				if (
+					es_app_instalada()
+					&& ventana_esta_marcada_como_bloqueada()
+					&& !params.has('forceStable')
+				) {
+					this.bloquear_app_instalada(window.location.origin, 'redirigida_dentro_de_la_app')
+				}
+
+				return Promise.resolve(null)
+			}
+
+			this.llego_con_token_de_transferencia = true
+
+			/**
+			 * 🔴 Llegar con un token corriendo como app instalada quiere decir que una PWA de la
+			 * dirección VIEJA fue redirigida hasta acá por código anterior a esta misión (el código
+			 * nuevo nunca redirige una app instalada: la bloquea). Adentro de esa app el frente
+			 * nuevo es "otra aplicación", y no se quiere que se use ahí.
+			 *
+			 * No se consume el token: sería dejar una sesión iniciada (con su candado de sesión
+			 * única tomado) en una ventana que se está bloqueando. Vence solo a los 5 minutos, y
+			 * el usuario entra a mano desde el navegador, donde `create_version_session_token()`
+			 * ya le liberó el candado del frente viejo.
+			 *
+			 * Riesgo conocido y aceptado: una PWA legítima de ESTE origen que recibiera un token
+			 * (una navegación capturada desde una pestaña) también se bloquearía. Una redirección
+			 * por JavaScript no es un link capturable, así que se considera improbable.
+			 */
+			if (es_app_instalada()) {
+				/**
+				 * El token se saca de la barra recién cuando el router terminó su navegación
+				 * inicial, no acá. Medido en el build real: la ruta `/` redirige a `login` CONSERVANDO
+				 * la query (`redirect: {name: 'login'}` hereda `?version_session_token=...`) y el
+				 * router reescribe la URL cuando resuelve el componente lazy — después de este
+				 * `created()`. Sacarlo antes lo dejaba de vuelta en la barra, con el token todavía
+				 * vigente 5 minutos, junto a una pantalla que le pide al usuario copiar direcciones.
+				 */
+				var sacar_token_de_la_barra = function () {
+					strip_version_session_token_from_url()
+				}
+
+				if (this.$router && typeof this.$router.onReady === 'function') {
+					this.$router.onReady(sacar_token_de_la_barra, sacar_token_de_la_barra)
+				} else {
+					sacar_token_de_la_barra()
+				}
+
+				// Se recuerda en esta ventana: el F5 ya no trae el token (ver más arriba).
+				marcar_ventana_como_bloqueada()
+
+				this.bloquear_app_instalada(window.location.origin, 'redirigida_dentro_de_la_app')
+
 				return Promise.resolve(null)
 			}
 
@@ -375,21 +408,6 @@ export default {
 				})
 				.then(function (res) {
 					strip_version_session_token_from_url()
-
-					/**
-					 * 🔴 El aviso va acá arriba, ANTES de mirar si el login salió, y no adentro
-					 * del camino feliz. Haber llegado con un token en la URL ya es prueba de que
-					 * esto fue una transferencia de frente: si el usuario viene de la app
-					 * instalada, la que tiene instalada apunta a la dirección VIEJA y va a
-					 * seguir entrando por ahí en cada arranque, salga o no salga el login.
-					 *
-					 * Y el caso donde MÁS hace falta es justamente el que fallaba: si el login
-					 * automático no entra, el usuario tiene que loguearse a mano acá, en una
-					 * dirección que no conoce y que su app no tiene. Sin el aviso vuelve a abrir
-					 * la PWA vieja y repite el ciclo sin enterarse nunca de que la dirección
-					 * cambió.
-					 */
-					self.avisar_cambio_de_direccion_si_es_pwa()
 
 					if (res.data.login && res.data.user) {
 						return res.data.user
@@ -414,46 +432,9 @@ export default {
 				.catch(function () {
 					strip_version_session_token_from_url()
 
-					// También se llegó por transferencia: mismo motivo que arriba.
-					self.avisar_cambio_de_direccion_si_es_pwa()
-
 					self.$toast.error('Error al validar el acceso a esta versión')
 					return null
 				})
-		},
-
-		/**
-		 * Avisa —solo si la aplicación corre como app instalada— que la dirección cambió y que
-		 * conviene instalarla de nuevo desde la nueva.
-		 *
-		 * Es lo único que se puede hacer hoy por el cliente que tiene la PWA vieja: una app
-		 * instalada no se puede mudar de origen por código. Al que entra por el navegador no se
-		 * le muestra nada, porque a él no le pasa.
-		 *
-		 * 🔴 Blindado entero: esto es una cortesía y corre en el camino crítico del login por
-		 * transferencia. Si tirara, se lo comería el `.catch()` de
-		 * `consume_version_session_token_if_present()` y un login que SÍ funcionó le saldría al
-		 * usuario como "Error al validar el acceso a esta versión".
-		 *
-		 * @returns {void}
-		 */
-		avisar_cambio_de_direccion_si_es_pwa() {
-			try {
-				if (!corriendo_como_app_instalada()) {
-					return
-				}
-
-				this.$toast.info(
-					'La dirección de tu sistema cambió a '
-					+ window.location.host
-					+ '. La aplicación que tenés instalada sigue apuntando a la anterior: abrí esta'
-					+ ' dirección en el navegador e instalala de nuevo desde ahí para entrar'
-					+ ' directo.',
-					{ duration: AVISO_DIRECCION_NUEVA_MS }
-				)
-			} catch (e) {
-				/* un aviso que no se puede mostrar no puede romper el login */
-			}
 		},
 
 		/**
@@ -502,18 +483,43 @@ export default {
 				return false
 			}
 
-			var default_origin = normalize_app_origin(default_version_raw)
-			var current_host = window.location.origin
+			// Un valor que no se puede interpretar como dirección http(s) no manda a ningún lado.
+			if (!parsear_direccion_http(default_version_raw, window.location.protocol)) {
+				return false
+			}
 
 			// `forceStable` es el escape para levantar la SPA de un slot sin que se autoexpulse.
 			var params = new URLSearchParams(window.location.search)
 			var force_stable = params.has('forceStable')
 
-			if (force_stable || !default_origin || current_host === default_origin) {
+			if (force_stable) {
 				return false
 			}
 
-			return true
+			/**
+			 * 🔴 El destino tiene que ser un frente del MISMO dominio que este (ver
+			 * `comparten_dominio_padre`). `default_version` lo escribe `PUT
+			 * admin-sync/update-default-version`, que hoy acepta pedidos anónimos, y de este valor
+			 * sale el redirect CON un token de transferencia de sesión en la URL: quien pudiera
+			 * escribirlo se llevaría un token que se canjea contra la API real por una sesión.
+			 * Un destino ajeno se ignora y el usuario se queda en este frente, que funciona.
+			 */
+			if (!comparten_dominio_padre(default_version_raw, window.location.origin, window.location.protocol)) {
+				return false
+			}
+
+			/**
+			 * Se compara el SITIO (host y puerto) y no el `origin` entero. Con `origin`, un
+			 * `default_version` guardado con `http://` no coincide nunca con la página servida
+			 * por `https://`: se redirige, el servidor devuelve a https, y se vuelve a redirigir
+			 * — un bucle (hallazgo 10 del informe del 10/9/2026; ya pasó con `http://` en las
+			 * `client_apis` de Golonorte). Ver `mismo_sitio()`.
+			 */
+			return !mismo_sitio(
+				default_version_raw,
+				window.location.origin,
+				window.location.protocol
+			)
 		},
 
 		/**
@@ -526,6 +532,26 @@ export default {
 		 */
 		ir_a_la_version_correcta() {
 			var self = this
+
+			/**
+			 * 🔴 Una app instalada (PWA) NO se redirige: es POR ORIGEN y el frente nuevo es "otra
+			 * aplicación" para el sistema operativo, así que redirigirla adentro da error. Se le
+			 * cierra la sesión de este frente (libera el candado de sesión única) y se la
+			 * bloquea con la dirección a la que tiene que entrar desde el navegador. No se genera
+			 * token: no hay a dónde transferirlo.
+			 */
+			if (es_app_instalada()) {
+				var destino_bloqueo = parsear_direccion_http(
+					this.default_version_configurada(),
+					window.location.protocol
+				)
+
+				this.bloquear_app_instalada_y_cerrar_sesion(
+					destino_bloqueo ? destino_bloqueo.origin : window.location.origin
+				)
+
+				return
+			}
 
 			var redirect_href = resolve_default_version_href(
 				this.default_version_configurada()
@@ -611,6 +637,147 @@ export default {
 				'auth/setMessage',
 				'Te estamos llevando a la versión actual de tu sistema...'
 			)
+		},
+
+		/**
+		 * Dispara YA la consulta "¿cuál es la dirección activa de este sistema?", sin sesión.
+		 *
+		 * Se llama desde `created()` de App.vue, en paralelo con `auth/me`: solo se usa si
+		 * `auth/me` dice que no hay sesión, y para entonces la respuesta ya llegó. Devuelve una
+		 * promesa que NUNCA rechaza (ver `consultar_version_activa`).
+		 *
+		 * @returns {Promise<object|null>}
+		 */
+		iniciar_consulta_de_version_activa() {
+			/**
+			 * Si el script inline de `public/index.html` ya la disparó (lo hace apenas carga,
+			 * antes de que se descargue y evalúe el bundle), se toma esa promesa: la respuesta ya
+			 * llegó o está por llegar. 🔴 Es lo que la hace mucho menos sensible a un celular lento:
+			 * si la consulta saliera recién acá, el temporizador de su techo correría en el mismo hilo
+			 * que el arranque de Vue, y un arranque de varios segundos podía hacer que el
+			 * temporizador venciera aunque la respuesta ya estuviera en la red. Sin ese script
+			 * (desarrollo sin `config.js`, un index.html anterior) se hace acá, como antes.
+			 */
+			var arranque = window.__CC_ARRANQUE__
+
+			if (arranque && arranque.version_activa && typeof arranque.version_activa.then === 'function') {
+				return arranque.version_activa
+			}
+
+			return consultar_version_activa(env('VUE_APP_API_URL'))
+		},
+
+		/**
+		 * Antes de mostrar el login a alguien SIN sesión: si esta no es la dirección activa de su
+		 * sistema, lo manda a la que sí lo es (o bloquea la app instalada). Misión
+		 * redireccion-version-antes-del-login, 24/9/2026.
+		 *
+		 * Sin sesión no hay nada que transferir, así que a diferencia de
+		 * `ir_a_la_version_correcta()` acá no hay token ni logout: alcanza con redirigir. Quien
+		 * ya tiene sesión en este frente sigue por el camino de siempre (transferencia).
+		 *
+		 * 🔴 NUNCA rechaza y siempre resuelve: si algo falla, el usuario tiene que llegar al
+		 * login. La decisión en sí está en `decidir_version_previa_al_login()`, que es pura y tiene
+		 * la tabla completa de casos.
+		 *
+		 * @param {Promise<object|null>} consulta Lo que devolvió `iniciar_consulta_de_version_activa`.
+		 * @returns {Promise<boolean>} `true` si se puede mostrar el login; `false` si ya se
+		 *          redirigió o se bloqueó y NO hay que navegar al login.
+		 */
+		resolver_version_antes_del_login(consulta) {
+			var self = this
+
+			/**
+			 * Mientras se espera la respuesta el login no se puede tocar: overlay neutro (sin
+			 * mensaje, igual que el de `auth/me`). Casi siempre la consulta ya llegó y esto se
+			 * prende y se apaga en el mismo turno, sin que el navegador llegue a pintarlo; solo se
+			 * ve si la API tarda más que `auth/me`, y ahí evita que alguien empiece a escribir el
+			 * documento en un formulario que está por reemplazarse.
+			 */
+			this.$store.commit('auth/setLoading', true)
+			this.$store.commit('auth/setMessage', '')
+
+			return Promise.resolve(consulta)
+				.then(function (info) {
+					var decision = decidir_version_previa_al_login({
+						default_version: info && info.default_version ? info.default_version : null,
+						ubicacion: window.location,
+						es_app_instalada: es_app_instalada(),
+						vino_por_redireccion: llego_por_redireccion() || self.llego_con_token_de_transferencia,
+					})
+
+					if (decision.accion === 'redirigir') {
+						// Mismo overlay y misma salida que el cambio de versión posterior al login:
+						// `redirigir_a` limpia el service worker y las cachés de este origen viejo.
+						self.mostrar_overlay_de_transferencia()
+						redirigir_a(decision.destino)
+
+						return false
+					}
+
+					if (decision.accion === 'bloquear') {
+						// Apaga el overlay de carga: la pantalla de bloqueo tiene que quedar sola.
+						self.bloquear_app_instalada(decision.direccion, 'sin_sesion')
+
+						return false
+					}
+
+					self.$store.commit('auth/setLoading', false)
+
+					return true
+				})
+				.catch(function () {
+					self.$store.commit('auth/setLoading', false)
+
+					return true
+				})
+		},
+
+		/**
+		 * Prende la pantalla de bloqueo de la app instalada (PWA) con la dirección a la que hay
+		 * que entrar desde el navegador. Apaga el overlay de carga: tiene que quedar sola.
+		 *
+		 * @param {string} direccion Dirección a mostrar (origen).
+		 * @param {string} motivo Por qué se bloqueó (`sin_sesion`, `con_sesion`,
+		 *        `redirigida_dentro_de_la_app`); hoy solo sirve para diagnosticar.
+		 * @returns {void}
+		 */
+		bloquear_app_instalada(direccion, motivo) {
+			this.$store.commit('auth/setLoading', false)
+			this.$store.commit('auth/setMessage', '')
+			this.$store.commit('auth/setVersionBloqueada', {
+				direccion: direccion,
+				motivo: motivo,
+			})
+		},
+
+		/**
+		 * Igual que `bloquear_app_instalada`, para quien YA tiene sesión en este frente viejo:
+		 * además cierra esa sesión, para liberar el candado de sesión única y no dejar una
+		 * sesión viva adentro de una app que ya no se puede usar.
+		 *
+		 * Primero se prende el bloqueo y después se cierra la sesión, en ese orden: el watch de
+		 * `authenticated` de App.vue, al ver `false`, mira si hay bloqueo antes de mandar al
+		 * login. El logout va con techo de tiempo y sin avisos (mismo config que la
+		 * transferencia): si falla, el bloqueo queda igual.
+		 *
+		 * @param {string} direccion Dirección a mostrar (origen).
+		 * @returns {void}
+		 */
+		bloquear_app_instalada_y_cerrar_sesion(direccion) {
+			var self = this
+
+			this.bloquear_app_instalada(direccion, 'con_sesion')
+
+			axios
+				.post('/logout', null, config_de_pedido_de_transferencia())
+				.catch(function () {
+					/* ignorar: el bloqueo ya está puesto */
+				})
+				.finally(function () {
+					self.$store.commit('auth/setAuthenticated', false)
+					self.$store.commit('auth/setUser', null)
+				})
 		},
 	},
 }

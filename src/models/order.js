@@ -22,6 +22,12 @@ export default {
 			only_show: true,
 			value: '',
 			is_title: true,
+			// Ancho propio de la columna (mision vincular-comprador-desde-pedidos, 24/9/2026). Todas
+			// las columnas de la tabla miden 200px (170 de contenido, sin el relleno de la celda) y el
+			// badge "Sin vincular" ocupa ~104px + su respiro: en 200px al nombre le quedaban 32px y se
+			// leia "L...". Con 320px le quedan ~150px: entran sin recorte nombres de ~20 caracteres.
+			// `table_width` numerico lo respetan la celda (`Tr.vue::column_style`) y el encabezado.
+			table_width: 320,
 		},
 		{
 			text: 'Total',

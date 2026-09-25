@@ -34,6 +34,19 @@ export default {
 		 * mismo patrón que `SesionCerradaOtroDispositivoModal.vue`) para mostrarse solo.
 		 */
 		misma_sesion_otra_pestana: false,
+
+		/**
+		 * Bloqueo de una app instalada (PWA) que quedó en una dirección vieja (misión
+		 * redireccion-version-antes-del-login, 24/9/2026). `null` mientras no haya ninguno;
+		 * cuando lo hay es `{direccion, motivo}` -la dirección a la que hay que entrar por el
+		 * navegador y por qué se bloqueó- y lo mira `AppInstaladaVieja.vue`, montado en
+		 * App.vue, que tapa toda la aplicación y no tiene botón de cerrar.
+		 *
+		 * Una PWA es por origen y no se puede mudar: redirigirla al frente nuevo da error
+		 * adentro de la app instalada, así que en vez de redirigir se bloquea. Ver
+		 * `src/utils/version_de_direccion.js` y `src/mixins/check_version.js`.
+		 */
+		version_bloqueada: null,
 	},
 	getters: {
 		authenticated(state) {
@@ -59,6 +72,15 @@ export default {
 		 */
 		setMismaSesionOtraPestana(state, value) {
 			state.misma_sesion_otra_pestana = value
+		},
+		/**
+		 * Ver el comentario de `version_bloqueada` en el state.
+		 *
+		 * @param {object} state
+		 * @param {{direccion: string, motivo: string}|null} value
+		 */
+		setVersionBloqueada(state, value) {
+			state.version_bloqueada = value
 		},
 		setUser(state, user) {
 			if (user && user.owner_id) {

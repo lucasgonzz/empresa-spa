@@ -70,10 +70,15 @@ export function es_positivo(valor) {
  * Convierte a numero solo si TODO el valor es numerico, con el mismo criterio que
  * is_numeric() de PHP. Devuelve null si no lo es.
  *
+ * Se exporta —y por eso deja de ser privada— porque `criterio_de_oferta_por_cantidad.js`
+ * necesita EL MISMO is_numeric() para el precio base y para comparar el porcentaje contra
+ * 100. Copiar la expresion regular alla seria abrir de nuevo el hueco entre dos criterios
+ * que esta mision viene a evitar.
+ *
  * @param {*} valor
  * @returns {Number|null}
  */
-function a_numero(valor) {
+export function a_numero(valor) {
 	if (valor === null || typeof valor == 'undefined' || typeof valor == 'boolean') {
 		return null
 	}

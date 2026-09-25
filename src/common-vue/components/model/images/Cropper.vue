@@ -1,20 +1,41 @@
 <template>
 	<b-modal
+	ref="modal"
 	title="Recortar Imagen"
 	hide-footer
 	size="lg"
 	@shown="onModalShown"
 	@hidden="onModalHidden"
 	:id="'cropper-'+model.id+'-'+model.nombre+'-'+prop.key">
+		<!--
+			Las props que van después de :stencil-props solo se activan con marco fijo
+			(use_fixed_stencil): con proporción libre valen undefined y el cropper usa sus
+			valores por defecto, o sea que el modal queda igual que antes.
+		-->
 		<cropper
 		ref="cropper"
 		class="cropper"
+		:class="{ 'cropper--fijo': use_fixed_stencil }"
 		:canvas="false"
 		:src="image_url"
 		:stencil-props="stencil_props"
+		:image-restriction="use_fixed_stencil ? 'none' : undefined"
+		:stencil-size="use_fixed_stencil ? fixed_stencil_size : undefined"
+		:min-width="crop_limits.min_width"
+		:min-height="crop_limits.min_height"
+		:max-width="crop_limits.max_width"
+		:max-height="crop_limits.max_height"
+		:resize-image="resize_image_config"
+		:area-restrictions-algorithm="use_fixed_stencil ? restrict_visible_area : undefined"
 		@ready="onCropperReady"
 		@error="on_cropper_image_error"
 		@change="change"/>
+
+		<p
+		class="text-center text-muted small m-t-5 m-b-0"
+		v-if="use_fixed_stencil">
+			Rueda del mouse o pellizco para acercar y alejar. Arrastrá la imagen para encuadrarla; el espacio vacío se guarda en blanco.
+		</p>
 
 		<b-progress
 	    class="m-t-15 m-b-10"
@@ -61,6 +82,42 @@
 import { Cropper } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'
 
+/*
+* ---------------------------------------------------------------------------
+* Constantes del modo "marco fijo" (proporción del recorte mayor a 0).
+* Las medidas en "px de la imagen" son sobre la imagen ORIGINAL, no sobre la pantalla.
+* ---------------------------------------------------------------------------
+*/
+
+/* Fracción del ancho/alto disponible del cropper que ocupa el marco fijo (el resto es aire alrededor). */
+const FIXED_STENCIL_SCREEN_RATIO = 0.9
+/* Piso del lado menor del recorte, en px de la imagen: evita acercar hasta recortes de unos pocos píxeles. */
+const MIN_CROP_SIDE_PX = 32
+/* El recorte mínimo (máximo acercamiento) es 1/N del "cover", con el piso de MIN_CROP_SIDE_PX. */
+const MIN_CROP_COVER_DIVISOR = 16
+/* El recorte máximo (máximo alejamiento) es N veces el "contain": la imagen entera más aire alrededor. */
+const MAX_CROP_CONTAIN_MULTIPLIER = 2
+/* Opciones de zoom de la librería en modo fijo: rueda de la librería APAGADA (la maneja on_cropper_wheel) y pellizco táctil prendido. */
+const FIXED_RESIZE_IMAGE_OPTIONS = { touch: true, wheel: false, adjustStencil: false }
+/* Selector del contenedor interno del cropper que define el área donde se dibujan la imagen y el marco. */
+const CROPPER_BOUNDARIES_SELECTOR = '.vue-advanced-cropper__boundaries'
+
+/* Sensibilidad de la rueda del mouse: exponente de zoom por cada píxel de deltaY (una muesca de 100 px = x1,14). */
+const WHEEL_ZOOM_SENSITIVITY = 0.0013
+/* Sensibilidad del pellizco de un trackpad, que el navegador entrega como rueda con ctrlKey y deltas chicos. */
+const WHEEL_ZOOM_SENSITIVITY_PINCH = 0.01
+/* Valor de deltaMode cuando el navegador informa la rueda en líneas (Firefox): WheelEvent.DOM_DELTA_LINE. */
+const WHEEL_DELTA_MODE_LINE = 1
+/* Valor de deltaMode cuando el navegador informa la rueda en páginas: WheelEvent.DOM_DELTA_PAGE. */
+const WHEEL_DELTA_MODE_PAGE = 2
+/* deltaMode 1 (líneas, Firefox): píxeles que equivale una línea. */
+const WHEEL_LINE_MODE_PIXELS = 33
+/* deltaMode 2 (páginas): píxeles que equivale una página. */
+const WHEEL_PAGE_MODE_PIXELS = 800
+/* Factor de zoom mínimo y máximo permitido por UN solo evento de rueda (evita saltos enormes). */
+const WHEEL_ZOOM_FACTOR_MIN = 0.7
+const WHEEL_ZOOM_FACTOR_MAX = 1.4
+
 export default {
 	props: {
 		prop: Object,
@@ -79,23 +136,114 @@ export default {
 		Cropper,
 	},
 	computed: {
-		stencil_props() {
+		/**
+		* Proporción (ancho / alto) del marco de recorte. 0 significa proporción libre.
+		*
+		* Misma lógica que tenía `stencil_props`: proporción deshabilitada por entorno = 0; la
+		* que declara la propiedad del modelo (`crop_aspect_ratio`, incluido el 0); y 1 si no dice nada.
+		*
+		* @return {Number}
+		*/
+		stencil_aspect_ratio() {
 			if (this.aspect_ratio_disabled) {
-				return {
-					aspectRatio: 0,
-				}
+				return 0
 			}
 			if (
 				this.prop.crop_aspect_ratio
 				|| this.prop.crop_aspect_ratio == 0
 			) {
+				/* Number() por si la propiedad declara la proporción como texto; lo no numérico cae a libre. */
+				return Number(this.prop.crop_aspect_ratio) || 0
+			}
+			return 1
+		},
+		/**
+		* Indica si el recorte usa marco FIJO: solo cuando la proporción es mayor a 0.
+		*
+		* Con marco fijo el marco no se mueve ni se redimensiona: se mueve y se acerca/aleja la
+		* imagen. Con proporción libre el modal queda exactamente como antes (marco con manijas).
+		*
+		* @return {Boolean}
+		*/
+		use_fixed_stencil() {
+			return this.stencil_aspect_ratio > 0
+		},
+		/**
+		* Props del marco (stencil) del cropper.
+		*
+		* Proporción libre: solo la proporción (marco con manijas, movible y redimensionable, como
+		* siempre). Marco fijo: además se lo deja quieto y sin manijas ni líneas guía.
+		*
+		* @return {Object}
+		*/
+		stencil_props() {
+			/* Proporción libre: solo se le pasa la proporción, igual que antes de existir el marco fijo. */
+			if (!this.use_fixed_stencil) {
 				return {
-					aspectRatio: this.prop.crop_aspect_ratio
-				}	
+					aspectRatio: this.stencil_aspect_ratio,
+				}
 			}
+			/* Marco fijo: sin mover, sin redimensionar, y sin manijas ni líneas guía que sugieran que se puede. */
 			return {
-				aspectRatio: 1
+				aspectRatio: this.stencil_aspect_ratio,
+				movable: false,
+				resizable: false,
+				handlers: {},
+				lines: {},
 			}
+		},
+		/**
+		* Límites de tamaño del recorte (props min/max-width/height del cropper), en px de la imagen.
+		*
+		* Con W x H = tamaño de la imagen y A = proporción del marco:
+		* - `cover` = el rectángulo más grande de proporción A que entra en la imagen sin dejar vacío.
+		* - `contain` = el rectángulo más chico de proporción A que contiene la imagen entera.
+		* - Máximo (alejar) = 2 x contain; mínimo (acercar) = 1/16 del cover, con piso de 32 px.
+		*
+		* Sin marco fijo, o antes de conocer el tamaño de la imagen, no se limita nada (todo undefined).
+		*
+		* @return {Object} { min_width, min_height, max_width, max_height }
+		*/
+		crop_limits() {
+			if (!this.use_fixed_stencil || !this.image_size) {
+				return {
+					min_width: undefined,
+					min_height: undefined,
+					max_width: undefined,
+					max_height: undefined,
+				}
+			}
+			/* Proporción (ancho / alto) del marco. */
+			const aspect_ratio = this.stencil_aspect_ratio
+			/* Tamaño de la imagen en el espacio de coordenadas del cropper (ya enderezada por su EXIF). */
+			const image_width = this.image_size.width
+			const image_height = this.image_size.height
+			/* Ancho del recorte más grande que entra dentro de la imagen sin vacío. */
+			const cover_width = Math.min(image_width, image_height * aspect_ratio)
+			/* Ancho del recorte que contiene la imagen entera. */
+			const contain_width = Math.max(image_width, image_height * aspect_ratio)
+			/* Ancho máximo del recorte (máximo alejamiento). */
+			const max_width = contain_width * MAX_CROP_CONTAIN_MULTIPLIER
+			/* El mínimo nunca supera al cover, así los límites no se cruzan en imágenes diminutas. */
+			const min_width = Math.min(
+				cover_width,
+				Math.max(MIN_CROP_SIDE_PX, cover_width / MIN_CROP_COVER_DIVISOR)
+			)
+			return {
+				min_width: Math.round(min_width),
+				min_height: Math.round(min_width / aspect_ratio),
+				max_width: Math.round(max_width),
+				max_height: Math.round(max_width / aspect_ratio),
+			}
+		},
+		/**
+		* Opciones de zoom del cropper (prop `resize-image`): en marco fijo se apaga la rueda de la
+		* librería (la maneja `on_cropper_wheel`); con proporción libre queda el valor por defecto.
+		*
+		* @return {Object|undefined}
+		*/
+		resize_image_config() {
+			return this.use_fixed_stencil ? FIXED_RESIZE_IMAGE_OPTIONS : undefined
 		},
 		auto_crop_seconds_left() {
 	        const remaining = Math.ceil(
@@ -150,6 +298,9 @@ export default {
 	        has_manual_crop_interaction: false,
 	        /* Referencia al elemento raíz del cropper para registrar/remover listeners. */
 	        cropper_root_element: null,
+	        /* Tamaño real { width, height } en px de la imagen cargada en el cropper. Se llena en
+	        onCropperReady y se limpia al cerrar el modal; de acá salen los límites de zoom (crop_limits). */
+	        image_size: null,
 		}
 	},
 	beforeDestroy() {
@@ -158,12 +309,298 @@ export default {
 	},
 	methods: {
 		/**
-		* Marca que el usuario comenzó a interactuar manualmente con el área de recorte.
+		* Marca que el usuario comenzó a interactuar manualmente con el área de recorte (agarró
+		* la imagen o el marco con el mouse o con el dedo) y cancela el autoguardado en el acto.
+		*
+		* Se cancela acá y no esperando al @change de la librería: llega con 500 ms de debounce y
+		* recién después de que el gesto termina, o sea que un arrastre largo podía seguir corriendo
+		* cuando vencía el timer y guardar a medio ajustar.
+		*
+		* Con el mouse, además, evita que soltar el arrastre sobre el fondo oscuro cierre el modal
+		* (ver keep_modal_open_on_drag_release).
+		*
+		* @param {MouseEvent|TouchEvent} event Evento que empezó el gesto (mousedown o touchstart).
+		* @return {void}
+		*/
+		onCropperPointerDown(event) {
+			this.has_manual_crop_interaction = true
+			this.cancel_auto_save()
+			/* Con el dedo no hay "soltar afuera" que cerrar el modal: el evento que lo cierra es del mouse. */
+			if (event && event.type === 'mousedown') {
+				this.keep_modal_open_on_drag_release()
+			}
+		},
+		/**
+		* Evita que soltar un arrastre sobre el fondo oscuro (afuera del diálogo) cierre el modal y se
+		* pierda el encuadre.
+		*
+		* BootstrapVue se entera de que un clic empezó ADENTRO del diálogo por el mousedown que llega al
+		* `.modal-dialog`; si el mouseup cae sobre el fondo, ignora el clic que sigue y no cierra. Pero
+		* la librería de recorte frena la propagación del mousedown en el elemento que se arrastra
+		* (la imagen o el marco), así que BootstrapVue nunca lo ve y el clic que genera soltar afuera
+		* cerraba el modal en silencio (medido el 24/9/2026). Acá se le avisa a mano, con el mismo
+		* método que él usaría. Un clic simple sobre el fondo sigue cerrando el modal, como siempre.
+		*
+		* Si una versión futura de BootstrapVue no trae ese método, no se hace nada (queda como antes).
 		*
 		* @return {void}
 		*/
-		onCropperPointerDown() {
+		keep_modal_open_on_drag_release() {
+			/* Instancia del b-modal de este componente. */
+			const modal = this.$refs.modal
+			if (modal && typeof modal.onDialogMousedown === 'function') {
+				modal.onDialogMousedown()
+			}
+		},
+		/**
+		* Cancela el autoguardado en el acto: apaga el flag, vuelve la barra a 0 y frena el timer.
+		*
+		* Es lo mismo que hace `change` cuando detecta una interacción manual, pero sin esperar al
+		* @change de la librería, que llega con 500 ms de debounce (o no llega si el gesto no
+		* cambió nada). Lo usa la rueda: un usuario que scrollea no quiere que se le guarde a medio ajustar.
+		*
+		* @return {void}
+		*/
+		cancel_auto_save() {
+			this.auto_save_enabled = false
+			this.auto_crop_progress = 0
+			this.clearAutoCropRuntime()
+		},
+		/**
+		* Tamaño del marco fijo en píxeles de PANTALLA, para la prop `stencil-size` del cropper.
+		*
+		* Es el 90 % del lado disponible, respetando la proporción del marco: el marco queda centrado,
+		* con aire alrededor, y no cambia mientras se hace zoom (lo que se mueve es la imagen).
+		*
+		* @param {Object} params Lo que manda la librería; de ahí se desestructura `boundaries`: { width, height } del cropper en pantalla.
+		* @return {Object} { width, height } en px de pantalla.
+		*/
+		fixed_stencil_size({ boundaries }) {
+			/* Proporción (ancho / alto) del marco. */
+			const aspect_ratio = this.stencil_aspect_ratio
+			/* Ancho y alto disponibles para el marco: el 90 % del cropper en cada eje. */
+			const max_width = boundaries.width * FIXED_STENCIL_SCREEN_RATIO
+			const max_height = boundaries.height * FIXED_STENCIL_SCREEN_RATIO
+			/* El ancho es el menor entre el disponible y el que permite el alto disponible con esta proporción. */
+			const width = Math.min(max_width, max_height * aspect_ratio)
+			return {
+				width: width,
+				height: width / aspect_ratio,
+			}
+		},
+		/**
+		* Límite del arrastre de la imagen en modo marco fijo ("contener o cubrir, eje por eje").
+		*
+		* Para la prop `area-restrictions-algorithm` del cropper. Devuelve, en px de la imagen, el
+		* rectángulo dentro del cual puede moverse el área visible:
+		* - Si el marco es más chico que la imagen en un eje, no puede salirse de la imagen (cubre).
+		* - Si es más grande, la imagen no puede salirse del marco (contiene).
+		* Solo restringe el movimiento (`type === 'move'`); en cualquier otro caso, o si falta algún
+		* dato, no restringe nada (devuelve {}).
+		*
+		* @param {Object} params Lo que manda la librería: { type, visibleArea, boundaries, imageSize }.
+		* @return {Object} { left, right, top, bottom } en px de la imagen, o {}.
+		*/
+		restrict_visible_area(params) {
+			if (
+				params.type !== 'move'
+				|| !params.visibleArea
+				|| !params.boundaries
+				|| !params.boundaries.width
+				|| !params.boundaries.height
+				|| !params.imageSize
+			) {
+				return {}
+			}
+			/* Tamaño del marco en px de pantalla. */
+			const stencil_screen_size = this.fixed_stencil_size({ boundaries: params.boundaries })
+			/* Qué fracción de la pantalla ocupa el marco en cada eje. */
+			const stencil_fraction_x = stencil_screen_size.width / params.boundaries.width
+			const stencil_fraction_y = stencil_screen_size.height / params.boundaries.height
+			/* Tamaño (en px de la imagen) del área visible que se está evaluando. */
+			const visible_width = params.visibleArea.width
+			const visible_height = params.visibleArea.height
+			/* Tamaño del marco en px de la imagen para el zoom actual. */
+			const stencil_width = stencil_fraction_x * visible_width
+			const stencil_height = stencil_fraction_y * visible_height
+			/* Aire (en px de la imagen) entre el borde del área visible y el marco. */
+			const margin_x = (visible_width - stencil_width) / 2
+			const margin_y = (visible_height - stencil_height) / 2
+			/* Tamaño de la imagen en el espacio de coordenadas del cropper (ya enderezada por su EXIF). */
+			const image_width = params.imageSize.width
+			const image_height = params.imageSize.height
+			/*
+			* Por eje: si el marco es más chico que la imagen, el borde del marco tiene que quedar entre 0 y
+			* el tamaño de la imagen (cubre); si es más grande, entre (imagen - marco) y el marco (contiene).
+			* Los límites son del área visible, así que se le suma el aire que rodea al marco.
+			*/
+			return {
+				left: Math.min(0, image_width - stencil_width) - margin_x,
+				right: Math.max(image_width, stencil_width) + margin_x,
+				top: Math.min(0, image_height - stencil_height) - margin_y,
+				bottom: Math.max(image_height, stencil_height) + margin_y,
+			}
+		},
+		/**
+		* Tamaño de la imagen en el ESPACIO DE COORDENADAS del cropper, en px.
+		*
+		* Es el tamaño de la imagen ya enderezada según su etiqueta EXIF: una foto vertical de celular
+		* (guardada de costado, por ejemplo 4032 x 3024 con orientación 6) se muestra y se recorta como
+		* 3024 x 4032, y en ese espacio vienen las coordenadas (y el servidor endereza la foto antes de
+		* recortar). `getResult().image` informa el tamaño CRUDO (4032 x 3024), que con esas fotos no
+		* coincide: por eso se lee `imageSize` del propio cropper. Sin EXIF los dos son iguales.
+		*
+		* @return {Object|null} { width, height } o null si el cropper todavía no cargó la imagen.
+		*/
+		get_cropper_image_size() {
+			const cropper = this.$refs.cropper
+			if (!cropper) {
+				return null
+			}
+			/* Girado por EXIF: el coseno de 90 grados no es exactamente 0 y puede quedar un decimal de más, se redondea. */
+			const rotated_size = cropper.imageSize
+			if (rotated_size && rotated_size.width && rotated_size.height) {
+				return {
+					width: Math.round(rotated_size.width),
+					height: Math.round(rotated_size.height),
+				}
+			}
+			/* Respaldo: el tamaño crudo que informa getResult(). */
+			const result = cropper.getResult()
+			if (result && result.image && result.image.width && result.image.height) {
+				return {
+					width: result.image.width,
+					height: result.image.height,
+				}
+			}
+			return null
+		},
+		/**
+		* Recorte "cover": el rectángulo más grande, centrado, con la proporción del marco, que entra
+		* en la imagen sin dejar vacío. Es el recorte inicial en modo marco fijo.
+		*
+		* Con proporción 1 es exactamente el cuadrado máximo centrado de siempre, así que el
+		* autoguardado del flujo automático guarda lo mismo que antes.
+		*
+		* @param {Number} image_width Ancho real de la imagen en px.
+		* @param {Number} image_height Alto real de la imagen en px.
+		* @return {Object} { width, height, left, top } en px de la imagen.
+		*/
+		get_cover_coordinates(image_width, image_height) {
+			/* Ancho del rectángulo más grande de esa proporción que entra en la imagen. */
+			const width = Math.min(image_width, image_height * this.stencil_aspect_ratio)
+			/* Alto que le corresponde por la proporción del marco. */
+			const height = width / this.stencil_aspect_ratio
+			return {
+				width: width,
+				height: height,
+				left: (image_width - width) / 2,
+				top: (image_height - height) / 2,
+			}
+		},
+		/**
+		* Zoom con la rueda del mouse (y pellizco de trackpad) en modo marco fijo.
+		*
+		* Acerca o aleja la IMAGEN, proporcional a cuánto se scrolleó (no un porcentaje fijo por
+		* evento, que con un trackpad —decenas de eventos chicos por gesto— dispara el zoom a los
+		* topes). Scroll hacia arriba acerca, hacia abajo aleja. El zoom pivotea sobre el puntero,
+		* recogido dentro del marco, para que el contenido no se corra si el puntero cae afuera.
+		*
+		* Cuenta como interacción manual y cancela el autoguardado. Con proporción libre no hace nada
+		* más que eso: la rueda la resuelve la propia librería (que además corta la propagación del
+		* evento, así que en la práctica este handler solo corre con marco fijo; el guard de abajo
+		* evita un doble zoom si alguna versión de la librería dejara de cortarla).
+		*
+		* @param {WheelEvent} event Evento de rueda sobre el root del cropper.
+		* @return {void}
+		*/
+		on_cropper_wheel(event) {
 			this.has_manual_crop_interaction = true
+			this.cancel_auto_save()
+
+			if (!this.use_fixed_stencil) {
+				return
+			}
+
+			/* Que el modal no scrollee (ni el navegador haga zoom de página con el pellizco). */
+			event.preventDefault()
+			event.stopPropagation()
+
+			/* Instancia del cropper (todavía no existe si el modal se está armando). */
+			const cropper = this.$refs.cropper
+			if (!cropper) {
+				return
+			}
+			/* Estado actual del cropper: de acá salen el área visible y la escala de pantalla a imagen. */
+			const result = cropper.getResult()
+			/* Elemento que la librería toma como "área del cropper": donde se dibujan la imagen y el marco. */
+			const boundaries_element = cropper.$el.querySelector(CROPPER_BOUNDARIES_SELECTOR)
+			if (!result || !result.visibleArea || !boundaries_element) {
+				return
+			}
+
+			/* Se normaliza el delta a píxeles según la unidad que informe el navegador. */
+			let delta_y = event.deltaY
+			if (event.deltaMode === WHEEL_DELTA_MODE_LINE) {
+				delta_y *= WHEEL_LINE_MODE_PIXELS
+			} else if (event.deltaMode === WHEEL_DELTA_MODE_PAGE) {
+				delta_y *= WHEEL_PAGE_MODE_PIXELS
+			}
+			/* Factor de zoom (> 1 acerca, < 1 aleja), exponencial en lo scrolleado y acotado por evento. */
+			const sensitivity = event.ctrlKey ? WHEEL_ZOOM_SENSITIVITY_PINCH : WHEEL_ZOOM_SENSITIVITY
+			const zoom_factor = Math.max(
+				WHEEL_ZOOM_FACTOR_MIN,
+				Math.min(WHEEL_ZOOM_FACTOR_MAX, Math.exp(-delta_y * sensitivity))
+			)
+
+			/* Posición del marco dentro del área del cropper, en px de pantalla. */
+			const boundaries_rect = boundaries_element.getBoundingClientRect()
+			if (!boundaries_rect.width || !boundaries_rect.height) {
+				return
+			}
+			const stencil_screen_size = this.fixed_stencil_size({
+				boundaries: {
+					width: boundaries_rect.width,
+					height: boundaries_rect.height,
+				},
+			})
+			const stencil_left = (boundaries_rect.width - stencil_screen_size.width) / 2
+			const stencil_top = (boundaries_rect.height - stencil_screen_size.height) / 2
+			/* Pivote: el puntero, recogido dentro del rectángulo del marco. */
+			const pivot_x = Math.max(stencil_left, Math.min(stencil_left + stencil_screen_size.width, event.clientX - boundaries_rect.left))
+			const pivot_y = Math.max(stencil_top, Math.min(stencil_top + stencil_screen_size.height, event.clientY - boundaries_rect.top))
+			/* Se pasa el pivote de px de pantalla a px de la imagen (lo que espera cropper.zoom). */
+			const coefficient = result.visibleArea.width / boundaries_rect.width
+			const zoom_center = {
+				left: result.visibleArea.left + pivot_x * coefficient,
+				top: result.visibleArea.top + pivot_y * coefficient,
+			}
+
+			cropper.zoom(zoom_factor, zoom_center, { transitions: false })
+		},
+		/**
+		* Coordenadas de recorte vigentes, leídas del cropper en este mismo instante.
+		*
+		* El @change de la librería llega con 500 ms de debounce: un click en "Guardar" justo
+		* después de mover o hacer zoom mandaba las coordenadas de antes. `this.coordinates` queda
+		* solo de respaldo por si el cropper no está disponible o todavía no cargó la imagen.
+		*
+		* Con la imagen sin cargar el cropper devuelve un recorte todo en 0: eso no es un recorte, y
+		* mandarlo hacía que el servidor respondiera 422 en vez de guardar la imagen entera como antes.
+		*
+		* @return {Object|null} { left, top, width, height } en px de la imagen (enderezada por EXIF), o null si todavía no hay recorte.
+		*/
+		get_current_coordinates() {
+			/* Instancia del cropper. */
+			const cropper = this.$refs.cropper
+			if (cropper) {
+				/* Estado actual del cropper. */
+				const result = cropper.getResult()
+				if (result && result.coordinates && result.coordinates.width > 0 && result.coordinates.height > 0) {
+					return result.coordinates
+				}
+			}
+			return this.coordinates
 		},
 		/**
 		* Registra listeners de interacción manual sobre el root del cropper.
@@ -178,8 +615,15 @@ export default {
 				return
 			}
 			this.cropper_root_element = cropper_component.$el
-			this.cropper_root_element.addEventListener('mousedown', this.onCropperPointerDown)
-			this.cropper_root_element.addEventListener('touchstart', this.onCropperPointerDown, { passive: true })
+			/*
+			* mousedown y touchstart van en fase de CAPTURA (true): la librería frena la propagación de
+			* esos eventos en el elemento que arrastra (la imagen o el marco), así que en fase de burbuja
+			* nunca llegaban al root y arrastrar no cancelaba el autoguardado. La captura corre antes.
+			*/
+			this.cropper_root_element.addEventListener('mousedown', this.onCropperPointerDown, true)
+			this.cropper_root_element.addEventListener('touchstart', this.onCropperPointerDown, { passive: true, capture: true })
+			/* La rueda va NO pasiva: en marco fijo hace falta preventDefault() para que no scrollee el modal. */
+			this.cropper_root_element.addEventListener('wheel', this.on_cropper_wheel, { passive: false })
 		},
 		/**
 		* Remueve listeners de interacción manual para evitar duplicaciones/memory leaks.
@@ -190,8 +634,10 @@ export default {
 			if (!this.cropper_root_element) {
 				return
 			}
-			this.cropper_root_element.removeEventListener('mousedown', this.onCropperPointerDown)
-			this.cropper_root_element.removeEventListener('touchstart', this.onCropperPointerDown)
+			/* Mismo flag de captura (true) con el que se registraron: si no coincide, el listener no se saca. */
+			this.cropper_root_element.removeEventListener('mousedown', this.onCropperPointerDown, true)
+			this.cropper_root_element.removeEventListener('touchstart', this.onCropperPointerDown, true)
+			this.cropper_root_element.removeEventListener('wheel', this.on_cropper_wheel)
 			this.cropper_root_element = null
 		},
 		/**
@@ -244,16 +690,25 @@ export default {
 	    	this.auto_save_enabled = true
 	    	this.auto_crop_progress = 0
 	    	this.has_manual_crop_interaction = false
+	    	/* El tamaño de la imagen es de la carga anterior: se limpia para no reusarlo con otra imagen. */
+	    	this.image_size = null
+	    	/* Y el último recorte que informó el cropper es de la imagen anterior: que no se cuele como respaldo al guardar otra. */
+	    	this.coordinates = null
 	    	this.detachCropperInteractionListeners()
 	    	this.clearAutoCropRuntime()
 	    },
 	    /**
 	    * Se dispara cuando el cropper terminó de montar y cargar la imagen.
 	    *
+	    * Además de marcar el cropper como listo, guarda el tamaño real de la imagen: de ahí salen
+	    * los límites de zoom del modo marco fijo (`crop_limits`).
+	    *
 	    * @return {void}
 	    */
 	    onCropperReady() {
 	    	this.cropper_is_ready = true
+	    	/* Tamaño en el espacio de coordenadas del cropper (ya enderezado por EXIF); null si todavía no se puede leer. */
+	    	this.image_size = this.get_cropper_image_size()
 	    	this.tryInitializeCropper()
 	    },
 	    /**
@@ -361,15 +816,29 @@ export default {
 	            return
 	        }
 
-	        // 🔥 CUADRADO MÁXIMO POSIBLE
-	        const size = Math.min(width, height)
+	        if (this.use_fixed_stencil) {
+	            /*
+	            * Marco fijo: se arranca en el "cover" de la proporción del marco (con proporción 1 es
+	            * el mismo cuadrado máximo de abajo). Sin transiciones: con una transición activa la
+	            * librería ignora los gestos del usuario durante ~350 ms.
+	            *
+	            * El "cover" se calcula sobre el tamaño en el espacio de coordenadas del cropper (la
+	            * foto ya enderezada por su EXIF) y no sobre el crudo: con una foto vertical de celular
+	            * no coinciden y el marco quedaba corrido y saliéndose de la imagen.
+	            */
+	            const cover_image_size = this.get_cropper_image_size() || { width: width, height: height }
+	            cropper.setCoordinates(this.get_cover_coordinates(cover_image_size.width, cover_image_size.height), { transitions: false })
+	        } else {
+	            // 🔥 CUADRADO MÁXIMO POSIBLE
+	            const size = Math.min(width, height)
 
-	        cropper.setCoordinates({
-	            width: size,
-	            height: size,
-	            left: (width - size) / 2,
-	            top: (height - size) / 2,
-	        })
+	            cropper.setCoordinates({
+	                width: size,
+	                height: size,
+	                left: (width - size) / 2,
+	                top: (height - size) / 2,
+	            })
+	        }
 
 
 		    /*
@@ -389,10 +858,7 @@ export default {
 			* Cambios programáticos (setCoordinates / ajustes internos del cropper) no deben cancelarlo.
 			*/
 		    if (!this.is_setting_coordinates && this.has_manual_crop_interaction) {
-		        this.auto_save_enabled = false
-		        this.auto_crop_progress = 0
-
-		        this.clearAutoCropRuntime()
+		        this.cancel_auto_save()
 		    }
 
 		    this.is_setting_coordinates = false
@@ -409,8 +875,9 @@ export default {
 			let params = {}
 			if (cropped) {
 				this.loading_cropp = true
+				/* Coordenadas leídas del cropper ahora mismo, no las del último @change (llega con debounce). */
 				params = {
-					...this.coordinates,
+					...this.get_current_coordinates(),
 				}
 			} else {
 				this.loading_not_cropp = true
@@ -492,5 +959,30 @@ export default {
 	width: 100%
 	height: 600px
 	background: #DDD
+
+// Modo marco fijo (proporción mayor a 0): lo que la imagen no cubre se ve BLANCO, igual que el
+// relleno que le pone el servidor al guardar. Sin esto quedaría negro (fondo por defecto de la librería).
+.cropper.cropper--fijo
+	// Alto tope: el resto del modal (título, márgenes, línea de ayuda, barra de autoguardado y
+	// botones) ocupa unos 310 px, así que restarle 340 px al alto de la pantalla deja el modal
+	// ENTERO adentro de la pantalla (en una notebook de 768 px de alto el cropper mide 428 px; con
+	// 60vh sobraba 1 px y aparecía una barra de scroll casi sin recorrido). En pantallas altas
+	// (tablet en vertical, monitor) el tope no llega a aplicar y queda el alto de siempre (600 px).
+	max-height: calc(100vh - 340px)
+	// Piso: en pantallas muy bajas (teléfono acostado) el cropper no se achica más que esto y el
+	// modal pasa a scrollear. min-height le gana a max-height.
+	min-height: 260px
+
+	// Fondo del área de recorte: afuera del marco queda blanco oscurecido por la capa de sombra.
+	.vue-advanced-cropper__background
+		background: #fff
+
+	// Adentro del marco: la vista previa lleva su propio fondo blanco debajo de la imagen.
+	.vue-rectangle-stencil__preview
+		background: #fff
+
+	// Contorno fino de dos tonos para que el marco se distinga tanto sobre la imagen como sobre lo blanco.
+	.vue-bounding-box
+		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 0 2px rgba(0, 0, 0, 0.35)
 
 </style>
