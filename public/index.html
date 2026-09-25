@@ -4,6 +4,18 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <!--
+      Política de Referer de la SPA, fijada acá y no en el servidor (24/9/2026).
+      El nginx de los clientes del VPS manda "Referrer-Policy: same-origin", y con eso un <img>,
+      un <audio> o un window.open hacia api-<cliente> sale SIN Referer ni Origin. Sanctum (modo
+      stateful, por cookie) sólo levanta la sesión si uno de esos dos headers viene de un dominio
+      conocido: sin ellos la ruta autenticada contesta 401 y la foto del chat del asistente, el audio
+      de WhatsApp o la descarga de un adjunto no cargan ("No se pudo cargar la imagen").
+      El meta pisa el header del documento. strict-origin-when-cross-origin es el default de los
+      navegadores: a un dominio ajeno sólo le llega el origen, nunca la ruta. No sacarlo aunque el
+      servidor "ya lo configure": cada hosting manda otra cosa.
+    -->
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <link rel="preload" rel="icon" href="<%= BASE_URL %>favicon.ico">
     <title><%= htmlWebpackPlugin.options.title %></title>
 

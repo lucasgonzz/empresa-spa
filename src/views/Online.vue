@@ -17,6 +17,15 @@
 			para el puente del chat.
 		-->
 		<promociones></promociones>
+
+		<!--
+			Modal de "Vincular con un cliente del sistema" (misión vincular-comprador-desde-pedidos,
+			24/9/2026). Se monta UNA sola vez, acá y no dentro de Pedidos ni de Clientes: las dos
+			pestañas están montadas a la vez, y dos instancias escuchando el mismo evento
+			(`vincular-comprador:abrir`) se abrirían juntas. Lo abren el badge "Sin vincular" de la
+			tabla de Pedidos y el bloque del modal del comprador en Clientes.
+		-->
+		<vincular-comprador></vincular-comprador>
 	</div>
 </template>
 <script>
@@ -26,6 +35,7 @@ export default {
 		Buyers: () => import('@/components/online/components/buyer/Index'),
 		Cupons: () => import('@/components/online/components/cupons/Index'),
 		Promociones: () => import('@/components/online/components/promociones/Index'),
+		VincularComprador: () => import('@/components/online/components/vincular-comprador/Index'),
 	},
 	created() {
 		// Sin NavComponent nadie selecciona sección: /online pelado (URL directa

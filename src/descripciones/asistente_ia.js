@@ -27,6 +27,11 @@
  * (antes llegaban y se guardaban, pero la SPA no las pintaba nunca). Y la conversacion tiene un
  * boton para bajar al ultimo mensaje, que aparece solo cuando estas leyendo mas arriba.
  *
+ * Desde la mision asistente-fotos-barras-y-compras (24/9/2026) busca un producto por su codigo de
+ * barras (leido de una foto o dictado) en bases publicas y en internet, y propone el alta del
+ * articulo en UNA sola tarjeta con nombre, descripcion y foto. La busqueda en internet tiene un tope
+ * diario por negocio (30 por defecto, configurable desde el admin).
+ *
  * Cada afirmacion sale del contrato de la seccion 2 y de las reglas por tipo de la seccion 3.4
  * del plan de la mision (el API registra por el mismo camino que la pantalla); no inventar aca.
  */
@@ -43,6 +48,7 @@ export default {
 			'Una búsqueda de imágenes (para categorías o para artículos por filtro) o una actualización masiva por filtro se manda a procesar en segundo plano y aparece en la píldora de procesos; un cambio en un diseño de PDF se aplica en el momento. En una tarjeta de imagen de categoría el botón dice "Usar esta imagen" y deja esa foto como imagen de la categoría en el sistema y en la tienda.',
 			'Un alta, una edición o una baja de lo que se carga desde una pantalla (un proveedor, un cliente, un rubro, un artículo...) se registra por el mismo camino que esa pantalla: la tarjeta muestra los datos exactos y, en una edición, cada campo con el valor anterior y el nuevo. Una baja avisa qué se borra, y si el registro cambió después de armarse la tarjeta, no se toca.',
 			'Una venta se registra por el mismo camino que Vender: queda en Ventas, descuenta stock cuando corresponde y, si es al contado, entra en la caja del método de pago elegido; si es a cuenta corriente, suma a la cuenta del cliente.',
+			'Mandale la foto de un producto con el código de barras a la vista y lo busca en internet para darlo de alta con nombre, descripción y foto: la tarjeta del alta muestra la foto encontrada y la descripción, y al confirmar el artículo queda con las dos, igual que si se hubieran cargado desde su ficha. Si ese código ya está cargado en el sistema, te muestra el artículo que lo tiene en vez de buscarlo. Las búsquedas en internet tienen un tope por día.',
 			'Una foto de artículo se suma a las imágenes de ese artículo, igual que si se hubiera cargado desde su ficha: se ve en el listado, se publica en la tienda online (Tienda Nube y Mercado Libre) y, si el negocio le sirve el catálogo a otro comercio, también le llega a él. Para sacarla, se saca desde la ficha del artículo.',
 			'Si algo cambió desde que se armó la tarjeta (una caja sin apertura, un permiso, una tarea editada o ya hecha), no se registra nada y la tarjeta muestra el motivo.',
 			'Un segundo clic no duplica la carga.',
@@ -82,7 +88,7 @@ export default {
 			'La foto que adjunta el asistente es la misma que tiene el artículo en el sistema y en la tienda. Si no carga, en su lugar queda la línea "No se pudo cargar la imagen" y el mensaje sigue entero.',
 			'Las fotos que le mandás por WhatsApp se ven arriba de tu propio texto, en tu mensaje. Un mensaje que es solo una foto, sin texto, se ve igual de bien.',
 		],
-		nota_interna: 'Los adjuntos del asistente viajan en message.adjuntos ({ tipo, url, texto, articulo_id }, tope 6, contrato seccion 1 de asistente-omnisciente) y se pintan debajo del texto y arriba de las tarjetas. Desde la mision asistente-capacidades-y-hilos (22/9/2026) el MISMO AdjuntosDeMensaje.vue pinta las fotos del dueño, que viajan en message.imagenes ({ id, orden, url }, contrato 1) y van ARRIBA del texto; MessageBubble.vue las traduce a la forma de los adjuntos antes de pasarlas. En los dos casos solo se pinta tipo imagen con url. La url de una foto del dueño es un endpoint AUTENTICADO de empresa-api (disco privado): el <img> la pide con la cookie de sesion porque no lleva crossorigin -- ponerle crossorigin="anonymous" la romperia. El visor es un b-modal propio con el z-index fijado en 1065 por id, como el modal de cuenta corriente (el porque esta en el componente). Sin la clave (API viejo) no se pinta nada.',
+		nota_interna: 'Los adjuntos del asistente viajan en message.adjuntos ({ tipo, url, texto, articulo_id }, tope 6, contrato seccion 1 de asistente-omnisciente) y se pintan debajo del texto y arriba de las tarjetas. Desde la mision asistente-capacidades-y-hilos (22/9/2026) el MISMO AdjuntosDeMensaje.vue pinta las fotos del dueño, que viajan en message.imagenes ({ id, orden, url }, contrato 1) y van ARRIBA del texto; MessageBubble.vue las traduce a la forma de los adjuntos antes de pasarlas. En los dos casos solo se pinta tipo imagen con url. La url de una foto del dueño es un endpoint AUTENTICADO de empresa-api (disco privado): el <img> la pide con la cookie de sesion porque no lleva crossorigin -- ponerle crossorigin="anonymous" la romperia --, y ademas lleva referrerpolicy="origin", porque Sanctum solo levanta la sesion de la cookie si el request trae Referer u Origin de un dominio stateful y el nginx del VPS sirve la SPA con Referrer-Policy: same-origin (sin el atributo, la foto daba "No se pudo cargar la imagen"; mision asistente-fotos-barras-y-compras, 24/9/2026). El visor es un b-modal propio con el z-index fijado en 1065 por id, como el modal de cuenta corriente (el porque esta en el componente). Sin la clave (API viejo) no se pinta nada.',
 	},
 
 	'asistente-bajar-al-ultimo-mensaje': {

@@ -69,6 +69,16 @@ export function motivo_de_exclusion(item) {
 		return 'precio personalizado'
 	}
 
+	/*
+		Oferta por cantidad en modo PORCENTAJE. Es la misma exclusion de arriba vista por su otra
+		cara: cuando la oferta gana por precio fijo, check_price_range escribe
+		price_vender_personalizado y la linea ya quedaba afuera; en modo porcentaje no hay numero
+		escrito, solo la marca, y el combo tampoco puede representar ese precio.
+	*/
+	if (Number(item.porcentaje_oferta_por_cantidad || 0) !== 0) {
+		return 'oferta por cantidad en porcentaje'
+	}
+
 	/* "Varios precios": la linea es en realidad varias, con precios distintos adentro */
 	if (Number(item.calculated_price_vender || 0) !== 0) {
 		return 'varios precios'
