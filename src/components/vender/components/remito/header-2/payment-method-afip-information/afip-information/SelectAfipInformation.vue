@@ -30,6 +30,29 @@
 
 		</b-input-group>
 
+		<!--
+			Recuperacion del catalogo de puntos de venta AFIP (mision resiliencia-recursos-
+			iniciales, 25/9/2026): si el pedido individual del arranque fallo, el select de arriba
+			se dibuja igual pero vacio -- esto avisa que falta algo, en vez de quedarse asi para
+			siempre sin que nadie lo note.
+		-->
+		<p
+		v-if="afip_information_recovery_state.reintentando"
+		class="afip-information-recuperacion text-muted w-100 m-t-5"
+		data-testid="venta-punto-venta-reintentando">
+			<b-spinner small></b-spinner>
+			Cargando puntos de venta…
+		</p>
+		<b-button
+		v-else-if="afip_information_recovery_state.agotado"
+		size="sm"
+		variant="outline-danger"
+		class="afip-information-recuperacion w-100 m-t-5"
+		data-testid="venta-punto-venta-reintentar"
+		@click="reintentar_puntos_de_venta_afip_ahora">
+			No pudimos traer los puntos de venta. Reintentar
+		</b-button>
+
 	</div>
 
 </template>
@@ -40,9 +63,12 @@ import vender from '@/mixins/vender'
 
 import set_afip_tipo_comprobante from '@/mixins/vender/set_afip_tipo_comprobante'
 
+/* Estado (y boton manual) de la recuperacion de este catalogo si su pedido del arranque fallo. */
+import afip_information_recovery from '@/mixins/vender/afip_information_recovery'
+
 export default {
 
-	mixins: [vender, set_afip_tipo_comprobante],
+	mixins: [vender, set_afip_tipo_comprobante, afip_information_recovery],
 
 	methods: {
 
@@ -291,6 +317,11 @@ export default {
 	::v-deep select.select-afip-information__select:disabled
 
 		background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='4' height='5' viewBox='0 0 4 5'%3e%3cpath fill='%236c757d' d='M2 0L0 2h4zm0 5L0 3h4z'/%3e%3c/svg%3e") !important
+
+/* Recuperacion del catalogo de puntos de venta AFIP (mision resiliencia-recursos-iniciales, 25/9/2026) */
+.afip-information-recuperacion
+	margin-bottom: 0
+	font-size: 0.9em
 
 </style>
 

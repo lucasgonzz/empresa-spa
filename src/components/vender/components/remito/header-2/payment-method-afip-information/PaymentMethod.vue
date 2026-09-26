@@ -57,6 +57,30 @@
 	</b-input-group>
 
 	<!--
+		Recuperacion de metodos de pago (mision resiliencia-recursos-iniciales, 25/9/2026): si el
+		pedido individual del arranque fallo (corte de red, ver informe del incidente de Trama del
+		25/9), el select de arriba se dibuja igual pero vacio -- esto es lo unico que avisa que
+		falta algo, en vez de quedarse asi para siempre sin que nadie lo note hasta que alguien
+		recargue la pagina a mano.
+	-->
+	<p
+	v-if="payment_method_recovery_state.reintentando"
+	class="metodos-pago-recuperacion text-muted m-t-5"
+	data-testid="venta-metodos-pago-reintentando">
+		<b-spinner small></b-spinner>
+		Cargando formas de pago…
+	</p>
+	<b-button
+	v-else-if="payment_method_recovery_state.agotado"
+	size="sm"
+	variant="outline-danger"
+	class="metodos-pago-recuperacion m-t-5"
+	data-testid="venta-metodos-pago-reintentar"
+	@click="reintentar_metodos_de_pago_ahora">
+		No pudimos traer las formas de pago. Reintentar
+	</b-button>
+
+	<!--
 		Prompt 266 (Fase 2, Capa 3): con el flag `precio_base_incluye_tarjeta` activo, el precio
 		mostrado en el carrito ya es el de etiqueta (incluye la tarjeta mas cara). Al elegir un
 		metodo de pago, se muestra el precio final equivalente para ese metodo y su descuento
@@ -82,8 +106,10 @@
 <script>
 // import vender from '@/mixins/vender'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
+/* Estado (y boton manual) de la recuperacion de este catalogo si su pedido del arranque fallo. */
+import payment_methods_recovery from '@/mixins/vender/payment_methods_recovery'
 export default {
-	mixins: [select_payment_methods],
+	mixins: [select_payment_methods, payment_methods_recovery],
 	components: {
 		TotalInfo: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/total-info/Index'),
 		Cuotas: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Cuotas'),
@@ -499,6 +525,11 @@ export default {
 
 /* Prompt 266 (Fase 2, Capa 3): precio equivalente del metodo de pago elegido cuando el flag precio_base_incluye_tarjeta esta activo */
 .precio-metodo-pago-seleccionado
+	margin-bottom: 0
+	font-size: 0.9em
+
+/* Recuperacion de metodos de pago (mision resiliencia-recursos-iniciales, 25/9/2026) */
+.metodos-pago-recuperacion
 	margin-bottom: 0
 	font-size: 0.9em
 </style>
