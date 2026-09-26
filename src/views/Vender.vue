@@ -39,6 +39,13 @@ import omitir_en_cuenta_corriente from '@/mixins/vender/omitir_en_cuenta_corrien
 import previus_sale from '@/mixins/vender/previus_sale/index'
 import cajas from '@/mixins/vender/cajas'
 import keyboard_shortcuts from '@/mixins/vender/keyboard_shortcuts'
+/*
+	Recuperacion de catalogos criticos sin mecanismo propio (mision resiliencia-recursos-
+	iniciales, 25/9/2026): a diferencia de price_type, current_acount_payment_method y
+	afip_information quedaban vacios para siempre si su pedido individual del arranque fallaba.
+*/
+import payment_methods_recovery from '@/mixins/vender/payment_methods_recovery'
+import afip_information_recovery from '@/mixins/vender/afip_information_recovery'
 
 export default {
 	mixins: [
@@ -49,6 +56,8 @@ export default {
 		previus_sale,
 		cajas,
 		keyboard_shortcuts,
+		payment_methods_recovery,
+		afip_information_recovery,
 	],
 	components: {
 		/* Modales globales del módulo vender */
@@ -148,6 +157,17 @@ export default {
 				*/
 				this.recuperar_catalogo_de_listas_si_falta()
 			}
+
+			/*
+				Recuperacion de metodos de pago y puntos de venta AFIP (mision resiliencia-
+				recursos-iniciales, 25/9/2026), al lado de recuperar_catalogo_de_listas_si_falta()
+				de arriba y con el mismo criterio: van AFUERA del if/else de edicion porque hace
+				falta el catalogo este editando o no (para elegir un metodo nuevo, o para que el
+				chequeo del guardado tenga opciones reales contra las que comparar), y son pasivas
+				--si el catalogo ya llego por el arranque, no disparan ningun pedido de mas.
+			*/
+			this.iniciar_recuperacion_de_metodos_de_pago()
+			this.iniciar_recuperacion_de_puntos_de_venta_afip()
 
 			/*
 				Explicito ademas de las mutaciones que la prenden solas: un negocio que no
