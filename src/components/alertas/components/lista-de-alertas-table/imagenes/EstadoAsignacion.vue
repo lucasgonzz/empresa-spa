@@ -159,8 +159,11 @@ export default {
 	background: currentColor
 	opacity: .7
 
+// Celeste de "en curso": el token del hover de las pestañas (_dark_theme.sass) ya es este mismo
+// par, #e7f1ff en claro (el primario al 10 % sobre blanco) y rgba(77, 163, 255, .16) en oscuro,
+// asi que no hace falta una regla aparte para el modo oscuro.
 .img-asig-chip--en_proceso
-	background: rgba(0, 123, 255, .1)
+	background: var(--bg-nav-hover, #e7f1ff)
 	color: var(--color-primary, #007bff)
 
 	// El punto respira mientras busca: es el unico movimiento del chip.
@@ -191,7 +194,4 @@ export default {
 	.img-asig-chip--en_proceso .img-asig-chip__punto
 		animation: none
 
-html.dark-mode
-	.img-asig-chip--en_proceso
-		background: rgba(77, 163, 255, .16)
 </style>

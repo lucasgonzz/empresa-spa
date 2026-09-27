@@ -171,13 +171,17 @@ export default {
 	border-radius: 999px
 	font-size: 0.8125rem
 	font-weight: 500
-	background: rgba(0, 123, 255, .1)
+	// Mismo celeste que el chip de "en curso" (--bg-nav-hover ya trae su variante oscura). El hover
+	// no oscurece el fondo (no hay token para ese escalon): marca el borde con el color del texto.
+	background: var(--bg-nav-hover, #e7f1ff)
 	color: var(--color-primary, #007bff)
 	box-shadow: none
 	cursor: pointer
 
-	&:hover
-		background: rgba(0, 123, 255, .16)
+	&:hover,
+	&:focus-visible
+		outline: none
+		box-shadow: inset 0 0 0 1px currentColor
 
 .img-det-barra__lote
 	display: flex
@@ -190,13 +194,6 @@ export default {
 	margin-right: 4px
 	font-size: 0.875rem
 	color: var(--color-text-primary, #212529)
-
-html.dark-mode
-	.img-det-barra__novedades
-		background: rgba(77, 163, 255, .16)
-
-		&:hover
-			background: rgba(77, 163, 255, .24)
 
 // Telefono: el buscador y el lote a lo ancho, uno debajo del otro.
 @media (max-width: 575px)

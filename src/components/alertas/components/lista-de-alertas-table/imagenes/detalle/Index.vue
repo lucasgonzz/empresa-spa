@@ -1457,8 +1457,9 @@ export default {
 	align-self: center
 	gap: 8px
 
+// Fila tildada: el celeste de siempre (--bg-nav-hover, con su variante oscura en el token).
 .img-det-fila--seleccionada
-	background: rgba(0, 123, 255, .05)
+	background: var(--bg-nav-hover, #e7f1ff)
 
 .img-det-fila--procesando
 	opacity: .55
@@ -1504,10 +1505,6 @@ export default {
 .img-det-etiqueta--ok
 	background: var(--caja-abierta-fondo, #f2f7f4)
 	color: var(--caja-abierta-texto, #1e6047)
-
-html.dark-mode
-	.img-det-fila--seleccionada
-		background: rgba(77, 163, 255, .08)
 
 @media (prefers-reduced-motion: reduce)
 	.img-det-fila-leave-active,
