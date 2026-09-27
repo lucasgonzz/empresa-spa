@@ -490,7 +490,7 @@ export default {
 
 .image-preview-modal
 	position: relative
-	background: #fff
+	background: var(--bg-card, #fff)
 	padding: .75rem
 	border-radius: .5rem
 	max-width: 100%

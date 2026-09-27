@@ -225,7 +225,7 @@ export default {
 	align-items: center
 	justify-content: center
 	min-height: 100vh
-	background: #ffffff
+	background: var(--bg-card, #ffffff)
 
 .demo-ingreso__pantalla
 	display: flex
@@ -238,7 +238,7 @@ export default {
 .demo-ingreso__texto
 	font-size: 1rem
 	font-weight: 500
-	color: #111827
+	color: var(--color-text-primary, #111827)
 	margin: 0
 
 .demo-ingreso__texto--error
@@ -248,6 +248,6 @@ export default {
 
 .demo-ingreso__subtexto
 	font-size: 0.9375rem
-	color: #6b7280
+	color: var(--color-text-secondary, #6b7280)
 	margin: 0
 </style>

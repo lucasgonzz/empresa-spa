@@ -350,13 +350,13 @@ export default {
 	transform: translateX(-50%)
 	z-index: 1050
 	max-width: min(560px, calc(100vw - 32px))
-	background: #fff
-	border: 1px solid #e2e4e7
+	background: var(--bg-card, #fff)
+	border: 1px solid var(--color-border, #e2e4e7)
 	border-radius: 14px
 	padding: 12px 16px
 	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 12px 0px
 	font-size: 0.85rem
-	color: #1d1d1f
+	color: var(--color-text-primary, #1d1d1f)
 
 	.notificacion-coincidencias__cerrar
 		position: absolute
@@ -370,20 +370,20 @@ export default {
 		border: none
 		background: transparent
 		border-radius: 50%
-		color: #86868b
+		color: var(--color-text-secondary, #86868b)
 		cursor: pointer
 		box-shadow: none
 
 		&:hover
-			background: #f2f3f4
-			color: #1d1d1f
+			background: var(--bg-hover, #f2f3f4)
+			color: var(--color-text-primary, #1d1d1f)
 
 		i
 			font-size: 0.7rem
 
 	.notificacion-coincidencias__linea1
 		margin: 0 22px 4px 0
-		color: #1d1d1f
+		color: var(--color-text-primary, #1d1d1f)
 
 	.notificacion-coincidencias__linea2
 		margin: 0 22px 0 0
@@ -399,8 +399,8 @@ export default {
 		display: inline-flex
 		align-items: center
 		gap: 4px
-		background: #f2f3f4
-		color: #1d1d1f
+		background: var(--bg-section, #f2f3f4)
+		color: var(--color-text-primary, #1d1d1f)
 		border-radius: 12px
 		padding: 2px 8px
 		font-size: 0.8rem
@@ -410,6 +410,6 @@ export default {
 
 	.notificacion-coincidencias__aclaracion
 		margin: 6px 22px 0 0
-		color: #86868b
+		color: var(--color-text-secondary, #86868b)
 		font-size: 0.75rem
 </style>

@@ -30,9 +30,9 @@ export default {
 
 <style lang="sass">
 .trusted_section
-	background: white
-	border-top: 1px solid #E6ECF6
-	border-bottom: 1px solid #E6ECF6
+	background: var(--bg-card, white)
+	border-top: 1px solid var(--color-border-secondary, #E6ECF6)
+	border-bottom: 1px solid var(--color-border-secondary, #E6ECF6)
 	padding: 30px 0
 
 .trusted_container
@@ -52,9 +52,9 @@ export default {
 		width: 100%
 		height: 64px
 		object-fit: contain
-		border: 1px solid #E6ECF6
+		border: 1px solid var(--color-border-secondary, #E6ECF6)
 		border-radius: 10px
-		background: #FAFCFF
+		background: var(--bg-card, #FAFCFF)
 
 @media screen and (max-width: 992px)
 	.logos_grid

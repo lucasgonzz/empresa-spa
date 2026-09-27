@@ -216,10 +216,6 @@ export default {
 <style lang="sass">
 $as-accent: #2563eb
 $as-accent-secondary: #0891b2
-$as-border: #e2e8f0
-$as-text: #0f172a
-$as-muted: #64748b
-$as-bg: #f8fafc
 
 /* Bloque de estadísticas del modal */
 .article-sales-stats
@@ -233,8 +229,8 @@ $as-bg: #f8fafc
 	align-items: center
 	gap: 16px
 	padding: 18px 20px
-	background: #fff
-	border: 1px solid $as-border
+	background: var(--bg-card, #fff)
+	border: 1px solid var(--color-border, #e2e8f0)
 	border-radius: 12px
 	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
 	position: relative
@@ -273,7 +269,7 @@ $as-bg: #f8fafc
 .article-sales-stats__hero-label
 	font-size: 0.8rem
 	font-weight: 600
-	color: $as-muted
+	color: var(--color-text-secondary, #64748b)
 	text-transform: uppercase
 	letter-spacing: 0.04em
 	margin: 0 0 4px
@@ -281,13 +277,13 @@ $as-bg: #f8fafc
 .article-sales-stats__hero-value
 	font-size: 2rem
 	font-weight: 700
-	color: $as-text
+	color: var(--color-text-primary, #0f172a)
 	line-height: 1.1
 	margin: 0
 
 .article-sales-stats__hero-meta
 	font-size: 0.85rem
-	color: $as-muted
+	color: var(--color-text-secondary, #64748b)
 	margin: 6px 0 0
 
 /* Grilla de desglose por sucursal / empleado */
@@ -297,8 +293,8 @@ $as-bg: #f8fafc
 	gap: 12px
 
 .article-sales-stats__group
-	background: #fff
-	border: 1px solid $as-border
+	background: var(--bg-card, #fff)
+	border: 1px solid var(--color-border, #e2e8f0)
 	border-radius: 12px
 	padding: 14px 16px
 	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04)
@@ -306,12 +302,12 @@ $as-bg: #f8fafc
 .article-sales-stats__group-title
 	font-size: 0.75rem
 	font-weight: 700
-	color: $as-muted
+	color: var(--color-text-secondary, #64748b)
 	text-transform: uppercase
 	letter-spacing: 0.05em
 	margin: 0 0 12px
 	padding-bottom: 8px
-	border-bottom: 1px solid #f1f5f9
+	border-bottom: 1px solid var(--color-border-secondary, #f1f5f9)
 
 .article-sales-stats__list
 	display: flex
@@ -325,11 +321,11 @@ $as-bg: #f8fafc
 	gap: 12px
 	padding: 8px 10px
 	border-radius: 8px
-	background: $as-bg
+	background: var(--bg-section, #f8fafc)
 
 .article-sales-stats__item-name
 	font-size: 0.88rem
-	color: $as-text
+	color: var(--color-text-primary, #0f172a)
 	line-height: 1.3
 	min-width: 0
 	word-break: break-word

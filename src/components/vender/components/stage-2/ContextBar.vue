@@ -817,7 +817,7 @@ export default {
 	border: 0
 	padding: 0
 	margin-left: 4px
-	color: #198754
+	color: var(--color-text-success-strong, #198754)
 	font-size: 1rem
 	line-height: 1
 	cursor: pointer
@@ -831,10 +831,10 @@ export default {
 	max-width: 100%
 	height: 34px
 	padding: 2px 8px
-	border: 1px solid #198754
+	border: 1px solid var(--color-text-success-strong, #198754)
 	border-radius: 6px
 	background: var(--bg-card, #ffffff)
-	color: #198754
+	color: var(--color-text-success-strong, #198754)
 	font-size: 1.4rem
 	font-weight: 700
 	line-height: 1.1
@@ -877,7 +877,7 @@ export default {
 .vender-context-bar__total-value
 	font-size: 1.85rem
 	font-weight: 700
-	color: #198754
+	color: var(--color-text-success-strong, #198754)
 	letter-spacing: -0.01em
 	line-height: 1.1
 	white-space: nowrap
