@@ -2,6 +2,7 @@
 	<batch-images-summary-modal
 	:visible.sync="batch_summary_visible"
 	:batch_result="batch_result"
+	:asignacion="asignacion_terminada"
 	@confirmed="on_batch_summary_confirmed"></batch-images-summary-modal>
 </template>
 <script>
@@ -30,6 +31,11 @@ import actualizar_lista_de_articulos from '@/mixins/listado/actualizar_lista_de_
  * suscribiera siempre —que es lo que hace, por ejemplo, `escuchar_embeddings_generados()` en
  * `mixins/broadcast.js`—, un lote que largó el dueño le abriría un modal `size="xl"` en la cara
  * a la cajera que está en Vender. Hoy eso no pasa y no puede empezar a pasar.
+ *
+ * Desde la misión imagenes-catalogo-completo (27/9/2026) el modal es un resumen corto que lleva a
+ * Alertas → Imágenes, y este anfitrión también mantiene al día el número rojo de esa solapa cuando
+ * termina CUALQUIER búsqueda de imágenes (mirando el store de procesos en segundo plano, sin
+ * suscribirse a nada nuevo): es el único componente de imágenes que está vivo en toda la app.
  */
 
 /** Evento del bus de `$root` con el que el disparador avisa que encoló un lote. */
@@ -93,16 +99,21 @@ export default {
 			/* Controla visibilidad del modal resumen al recibir el evento Pusher. */
 			batch_summary_visible: false,
 			/*
-			Resumen del procesamiento que termina mostrando el modal. El evento de Pusher solo
-			trae contadores + batch_uuid (el detalle no cabe en el límite de Pusher con lotes
-			grandes); esto se llena con la respuesta de article-image-search-attempts/summary,
-			o con el payload liviano de Pusher tal cual si ese pedido falla.
+			Payload liviano de Pusher (solo contadores + batch_uuid: el detalle no cabe en el
+			límite de Pusher con lotes grandes). Desde la misión imagenes-catalogo-completo es
+			el camino de RESPALDO del modal: se usa solo si no se pudo traer la asignación.
 			*/
 			batch_result: null,
 			/*
-			batch_uuid de la corrida cuyo fetch a /summary está en vuelo. Sirve para descartar
-			la respuesta si mientras tanto se disparó otra corrida (dos clics en "Asignar
-			imágenes automáticamente" antes de que la primera termine).
+			La asignación que terminó (RunPayload de image-assignment-runs/por-uuid/{uuid}):
+			trae los conteos, las búsquedas usadas y el id para "Revisar en Alertas". Null si
+			ese pedido falló y el modal se arma con el payload de Pusher.
+			*/
+			asignacion_terminada: null,
+			/*
+			batch_uuid de la corrida cuyo pedido de la asignación está en vuelo. Sirve para
+			descartar la respuesta si mientras tanto se disparó otra corrida (dos clics en
+			"Asignar imágenes automáticamente" antes de que la primera termine).
 			*/
 			pending_batch_uuid: null,
 		}
@@ -110,6 +121,29 @@ export default {
 	created() {
 		this.$root.$on(EVENTO_LOTE_INICIADO, this.on_lote_iniciado)
 		this.restaurar_lote_en_vuelo()
+	},
+	computed: {
+		/**
+		 * Ids de los procesos en segundo plano de imágenes automáticas que ya terminaron (bien o
+		 * mal), tal como los tiene el store de procesos (broadcast + polling de respaldo).
+		 *
+		 * Es la forma de enterarse de que terminó una búsqueda de imágenes que NO largó esta
+		 * pestaña —la del asistente, la de todo el catálogo, la de otra computadora— sin
+		 * suscribirse a nada nuevo: la píldora de procesos ya escucha ese canal para todos.
+		 *
+		 * @returns {Array}
+		 */
+		procesos_de_imagenes_terminados() {
+			let estado = this.$store.state.background_processes
+			let procesos = estado && Array.isArray(estado.models) ? estado.models : []
+			let ids = []
+			procesos.forEach(proceso => {
+				if (proceso.tipo === 'imagenes_automaticas' && (proceso.status === 'completado' || proceso.status === 'fallo')) {
+					ids.push(proceso.id)
+				}
+			})
+			return ids
+		},
 	},
 	beforeDestroy() {
 		// El bus de `$root` es global: sin el `$off`, un remontaje de este anfitrión dejaría dos
@@ -134,6 +168,22 @@ export default {
 		 */
 		owner_id() {
 			this.sincronizar_suscripcion()
+		},
+		/**
+		 * Terminó una búsqueda de imágenes (cualquiera, no solo las de esta pestaña): el número
+		 * rojo de Alertas → Imágenes puede haber cambiado (búsqueda nueva sin abrir, imágenes
+		 * para revisar). Solo se pide cuando aparece un id que antes no estaba: que se cierre un
+		 * proceso de la lista no cambia nada.
+		 *
+		 * @param {Array} nuevos
+		 * @param {Array} anteriores
+		 */
+		procesos_de_imagenes_terminados(nuevos, anteriores) {
+			let antes = Array.isArray(anteriores) ? anteriores : []
+			let hay_uno_nuevo = nuevos.some(id => antes.indexOf(id) === -1)
+			if (hay_uno_nuevo && this.owner_id) {
+				this.$store.dispatch('image_assignment/get_resumen')
+			}
 		},
 	},
 	methods: {
@@ -306,47 +356,61 @@ export default {
 			this.sincronizar_suscripcion()
 		},
 		/**
-		* El payload de Pusher solo trae contadores y el batch_uuid (no el detalle por artículo,
-		* que puede superar el límite de Pusher con lotes grandes). Antes de abrir el modal se
-		* pide el resumen completo por HTTP, mismo endpoint que ya usa el modal de historial.
+		* El payload de Pusher solo trae contadores y el batch_uuid. Antes de abrir el modal se
+		* pide la asignación por ese uuid (misión imagenes-catalogo-completo, 27/9/2026): el
+		* `batch_uuid` que devuelve `google/batch-assign-images` ES el uuid de la asignación, y
+		* ella trae los conteos, las búsquedas usadas y el id para ir a Alertas → Imágenes.
+		*
+		* Si ese pedido falla, el modal se arma con el payload de Pusher, igual que antes, sin
+		* cartel de error: los números principales están igual y lo único que falta son las
+		* búsquedas y el link directo.
+		*
+		* Del lado de la API, traer la asignación la marca como vista: por eso después se vuelve
+		* a pedir el resumen del número rojo de Alertas (en los dos caminos, porque la búsqueda
+		* que terminó puede haber dejado imágenes para revisar).
 		*
 		* @param {Object} payload Payload liviano recibido por Pusher.
 		* @return {void}
 		*/
 		load_full_summary(payload) {
 			if (!payload || !payload.batch_uuid) {
-				this.open_summary(payload)
+				this.open_summary(payload, null)
+				this.$store.dispatch('image_assignment/get_resumen')
 				return
 			}
 
 			this.pending_batch_uuid = payload.batch_uuid
 
-			this.$api.get('article-image-search-attempts/summary/' + payload.batch_uuid)
-			.then((res) => {
+			this.$store.dispatch('image_assignment/get_asignacion_por_uuid', payload.batch_uuid)
+			.then((asignacion) => {
 				// Si mientras tanto se disparó otra corrida, esta respuesta ya no es la vigente:
 				// no pisar lo que esté mostrando (o por mostrarse) la corrida más nueva.
 				if (this.pending_batch_uuid !== payload.batch_uuid) {
 					return
 				}
-				this.open_summary(res.data)
+				this.open_summary(payload, asignacion || null)
 			})
 			.catch(() => {
 				if (this.pending_batch_uuid !== payload.batch_uuid) {
 					return
 				}
-				this.$toast.error('No se pudo cargar el detalle del resumen de imágenes')
-				this.open_summary(payload)
+				this.open_summary(payload, null)
+			})
+			.then(() => {
+				this.$store.dispatch('image_assignment/get_resumen')
 			})
 		},
 		/**
-		* Setea el resultado del batch y recién entonces muestra el modal, para que se monte ya
-		* con los datos definitivos.
+		* Setea el resultado y recién entonces muestra el modal, para que se monte ya con los
+		* datos definitivos.
 		*
-		* @param {Object} batch_result Resumen completo (o el payload liviano, si el detalle no se pudo cargar).
+		* @param {Object} batch_result Payload liviano de Pusher (respaldo).
+		* @param {Object|null} asignacion RunPayload de la asignación, si se pudo traer.
 		* @return {void}
 		*/
-		open_summary(batch_result) {
+		open_summary(batch_result, asignacion) {
 			this.batch_result = batch_result
+			this.asignacion_terminada = asignacion || null
 			this.batch_summary_visible = true
 		},
 		/**
