@@ -2026,7 +2026,7 @@ export default {
 	&__cargando
 		padding: 24px
 		text-align: center
-		color: #64748b
+		color: var(--color-text-secondary, #64748b)
 
 	&__bloque
 		margin-bottom: 22px
@@ -2118,17 +2118,17 @@ export default {
 		&--alta
 			background: rgba(5, 150, 105, 0.12)
 			border-color: rgba(5, 150, 105, 0.4)
-			color: #047857
+			color: var(--color-text-success-strong, #047857)
 
 		&--media
 			background: rgba(217, 119, 6, 0.12)
 			border-color: rgba(217, 119, 6, 0.4)
-			color: #b45309
+			color: var(--color-text-warning-strong, #b45309)
 
 		&--baja
 			background: rgba(220, 38, 38, 0.12)
 			border-color: rgba(220, 38, 38, 0.4)
-			color: #b91c1c
+			color: var(--color-text-danger-strong, #b91c1c)
 
 	&__chip-flecha
 		opacity: 0.6
@@ -2583,7 +2583,7 @@ export default {
 
 		figcaption
 			font-size: 0.75rem
-			color: #64748b
+			color: var(--color-text-secondary, #64748b)
 			margin-top: 4px
 
 	// --- Pie ----------------------------------------------------------------------

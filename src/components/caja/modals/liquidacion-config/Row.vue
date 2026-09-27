@@ -229,6 +229,6 @@ export default {
 </script>
 <style scoped lang="sass">
 .liquidacion-config-row
-	border: 1px solid #e2e8f0
+	border: 1px solid var(--color-border, #e2e8f0)
 	border-radius: 8px
 </style>

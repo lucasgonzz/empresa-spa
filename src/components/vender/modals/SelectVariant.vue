@@ -109,12 +109,12 @@ export default {
 		align-items: center
 		justify-content: center
 		font-size: 2em
-		color: rgba(0, 0, 0, .25)
-		background: #F0F0F3
+		color: var(--color-text-secondary, rgba(0, 0, 0, .25))
+		background: var(--bg-section, #F0F0F3)
 
 	.name
 		padding: 10px
 		margin-bottom: 0
 		font-weight: 500
-		color: #1d1d1f
+		color: var(--color-text-primary, #1d1d1f)
 </style>

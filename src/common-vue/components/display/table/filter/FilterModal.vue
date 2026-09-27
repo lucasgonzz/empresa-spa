@@ -244,16 +244,16 @@ export default {
 	.custom-select
 		height: 38px
 		border-radius: 10px
-		border: 1px solid #e2e4e7
-		background: #fff
+		border: 1px solid var(--color-border, #e2e4e7)
+		background: var(--bg-section, #fff)
 		box-shadow: none
 		font-size: 0.9rem
 
 		&:focus
-			border: 1px solid #007bff
+			border: 1px solid var(--color-primary, #007bff)
 			box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15)
 			outline: none
-			background: #fff
+			background: var(--bg-section, #fff)
 
 	// El campo de una relación belongs-to-many (search/Index.vue) dibuja su borde en el
 	// CONTENEDOR (.search-field) y no en el input. Esto NO es lo que arregla el "alto de
@@ -303,7 +303,7 @@ export default {
 	// ─── Toggles "En blanco" / "Que no esté en blanco" (EnBlanco.vue) ─────
 	// Reemplaza el <hr> de antes: borde superior suave + espaciado.
 	.filter-toggles
-		border-top: 1px solid #e5e7eb
+		border-top: 1px solid var(--color-border-secondary, #e5e7eb)
 		margin-top: 14px
 		padding-top: 14px
 
@@ -395,15 +395,15 @@ export default {
 		box-shadow: none
 
 .filter-modal-btn--secondary
-	background: #fff
-	border-color: #e2e4e7
-	color: #1d1d1f
+	background: var(--bg-card, #fff)
+	border-color: var(--color-border, #e2e4e7)
+	color: var(--color-text-primary, #1d1d1f)
 
 	&:hover
-		background: #f2f3f4
+		background: var(--bg-hover, #f2f3f4)
 
 	&:focus-visible
-		border-color: #007bff
-		background: #f2f8ff
+		border-color: var(--color-primary, #007bff)
+		background: var(--bg-hover, #f2f8ff)
 		box-shadow: none
 </style>

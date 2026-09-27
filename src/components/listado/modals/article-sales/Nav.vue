@@ -64,9 +64,9 @@ export default {
 </script>
 <style lang="sass">
 $as-accent: #2563eb
-$as-border: #e2e8f0
-$as-muted: #64748b
-$as-bg: #f8fafc
+$as-border: var(--color-border, #e2e8f0)
+$as-muted: var(--color-text-secondary, #64748b)
+$as-bg: var(--bg-section, #f8fafc)
 
 /* Panel de filtros del modal de ventas */
 .article-sales-nav

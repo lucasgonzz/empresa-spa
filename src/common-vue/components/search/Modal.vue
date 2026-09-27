@@ -1700,21 +1700,21 @@ export default {
 			height: 40px
 			padding: 0 14px
 			margin-left: 10px
-			border: 1px solid #e2e4e7
+			border: 1px solid var(--color-border, #e2e4e7)
 			border-radius: 22px
-			background: #fff
-			color: #86868b
+			background: var(--bg-card, #fff)
+			color: var(--color-text-secondary, #86868b)
 			cursor: pointer
 			transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease
 			box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 
 			&:hover
-				background: #f7f8f9
-				color: #1d1d1f
+				background: var(--bg-hover, #f7f8f9)
+				color: var(--color-text-primary, #1d1d1f)
 
 			&:focus
 				outline: none
-				border-color: #007bff
+				border-color: var(--color-primary, #007bff)
 				box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
 
 			i
@@ -1789,8 +1789,8 @@ export default {
 			width: 56px
 			height: 56px
 			border-radius: 50%
-			background: #f5f6f7
-			color: #86868b
+			background: var(--bg-section, #f5f6f7)
+			color: var(--color-text-secondary, #86868b)
 			margin-bottom: 14px
 
 			i
@@ -1800,13 +1800,13 @@ export default {
 			margin: 0
 			font-size: 1rem
 			font-weight: 500
-			color: #1d1d1f
+			color: var(--color-text-primary, #1d1d1f)
 
 		.search-modal-estado__detalle
 			margin: 6px 0 0
 			max-width: 420px
 			font-size: 0.85rem
-			color: #86868b
+			color: var(--color-text-secondary, #86868b)
 
 		.search-modal-estado__hint
 			display: flex
@@ -1814,14 +1814,14 @@ export default {
 			gap: 8px
 			margin-top: 18px
 			font-size: 0.85rem
-			color: #6e6e73
+			color: var(--color-text-secondary, #6e6e73)
 
 			.search-modal-estado__tecla
-				border: 1px solid #e2e4e7
+				border: 1px solid var(--color-border, #e2e4e7)
 				border-radius: 6px
 				padding: 2px 8px
 				font-size: 0.75rem
-				background: #fff
+				background: var(--bg-card, #fff)
 				box-shadow: none
 
 .props-to-show-modal .modal-content

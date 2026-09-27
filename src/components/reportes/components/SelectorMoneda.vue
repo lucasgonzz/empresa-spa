@@ -108,7 +108,7 @@ export default {
 
 .selector-moneda__aviso
 	font-size: 0.78rem
-	color: #94a3b8
+	color: var(--color-text-secondary, #94a3b8)
 	font-style: italic
 	margin: 0
 </style>

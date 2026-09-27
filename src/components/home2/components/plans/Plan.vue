@@ -70,7 +70,7 @@ export default {
 .plan 
 	
 	border-radius: 7px
-	background: #FFF
+	background: var(--bg-card, #FFF)
 	@media screen and (max-width: 992px)
 		border: 2px solid lighten($blue, 30)
 		padding: 25px
