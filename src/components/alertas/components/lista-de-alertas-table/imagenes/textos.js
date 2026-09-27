@@ -12,6 +12,12 @@ import { separadores_es_desde_dato, numero_es as numero_con_decimales } from '@/
  *
  * 🔴 Estos textos los lee un cliente: van con acentos, sin jerga ("búsquedas", "a revisar",
  * "fondo no blanco") y sin emojis. Los comentarios pueden ser técnicos; las etiquetas, no.
+ *
+ * 🔴 Dos palabras, dos cosas (pedido de Lucas: que las búsquedas "estén bien claras"). La corrida
+ * entera —una fila de la tabla, con su detalle— es una ASIGNACIÓN ("asignación de imágenes",
+ * "4 asignaciones", "la asignación se detuvo"). BÚSQUEDA es solo cada consulta al buscador de
+ * imágenes, que es lo que se cuenta y se cobra ("1.830 búsquedas · 1,46 por artículo"). Un texto
+ * nuevo que diga "la búsqueda" hablando de la corrida vuelve a mezclar las dos.
  */
 
 /** De dónde salió la asignación. */
@@ -21,10 +27,13 @@ export const ORIGENES = {
 	asistente: 'Pedido al asistente',
 }
 
-/** Estado de la asignación entera. */
+/**
+ * Estado de la asignación entera. `en_proceso` dice "En curso" y no "Buscando": el chip es de la
+ * asignación, y "Buscando" la volvía a presentar como una búsqueda (ver la nota de arriba).
+ */
 export const ESTADOS = {
 	pendiente: 'En espera',
-	en_proceso: 'Buscando',
+	en_proceso: 'En curso',
 	terminada: 'Terminada',
 	detenida: 'Detenida',
 	fallida: 'Se cortó',
@@ -53,13 +62,13 @@ export const MOTIVOS = {
 	articulo_borrado: 'Artículo borrado',
 	rechazada: 'Imagen rechazada',
 	quitada: 'Imagen quitada',
-	// Solo en las búsquedas de todo el catálogo: cuando le tocó el turno, el artículo ya tenía
-	// imagen (se la cargaron a mano, u otra búsqueda se la puso mientras tanto), así que no se
+	// Solo en las asignaciones de todo el catálogo: cuando le tocó el turno, el artículo ya tenía
+	// imagen (se la cargaron a mano, u otra asignación se la puso mientras tanto), así que no se
 	// buscó nada (0 búsquedas). No es una falla: la fila lo muestra en gris, no en ámbar.
 	ya_tenia_imagen: 'Ya tenía imagen',
 	// También solo en las de todo el catálogo: el artículo ya tiene una imagen esperando revisión
-	// en OTRA búsqueda, así que en esta no se buscó (0 búsquedas). Tampoco es una falla: va en gris.
-	en_otra_asignacion: 'Esperando revisión en otra búsqueda',
+	// en OTRA asignación, así que en esta no se buscó (0 búsquedas). Tampoco es una falla: va en gris.
+	en_otra_asignacion: 'Esperando revisión en otra asignación',
 	// A revisar
 	ia_dudosa: 'La IA no está segura',
 	// La IA la marcó borrosa: una imagen así nunca se asigna sola (plan §13).

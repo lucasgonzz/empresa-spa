@@ -22,14 +22,14 @@
 				<b-spinner
 				small
 				variant="primary"></b-spinner>
-				<span>Cargando la búsqueda…</span>
+				<span>Cargando la asignación…</span>
 			</div>
 
 			<empty-state
 			v-else-if="error_asignacion && !asignacion"
 			data-testid="imagenes-detalle-error"
 			icon_class="bi bi-exclamation-circle"
-			title="No pudimos abrir esta búsqueda"
+			title="No pudimos abrir esta asignación"
 			hint="Puede que ya no exista, o que se haya cortado la conexión. Cerrá y volvé a intentar."></empty-state>
 
 			<template v-else-if="asignacion">
@@ -325,15 +325,16 @@ export default {
 	},
 	computed: {
 		/**
-		 * "Búsqueda de imágenes del 27/09/26 a las 14:05".
+		 * "Asignación de imágenes del 27/09/26 a las 14:05" (la corrida es una asignación; las
+		 * búsquedas son las consultas que se cuentan adentro, ver la nota de textos.js).
 		 *
 		 * @returns {String}
 		 */
 		titulo() {
 			if (!this.asignacion || !this.asignacion.created_at) {
-				return 'Búsqueda de imágenes'
+				return 'Asignación de imágenes'
 			}
-			return 'Búsqueda de imágenes del ' + this.date(this.asignacion.created_at) + ' a las ' + this.hour(this.asignacion.created_at)
+			return 'Asignación de imágenes del ' + this.date(this.asignacion.created_at) + ' a las ' + this.hour(this.asignacion.created_at)
 		},
 		/**
 		 * Items del horizontal-nav: "No asignadas (12)". `route_value` es el valor de la solapa
@@ -388,9 +389,11 @@ export default {
 		vacio() {
 			let corriendo = esta_activa(this.asignacion)
 			if (this.buscar) {
+				// Lo escrito entre comillas y no "la búsqueda": en esta pantalla "búsqueda" es cada
+				// consulta al buscador de imágenes (ver la nota de textos.js).
 				return {
 					icono: 'bi bi-search',
-					titulo: 'Ningún artículo coincide con la búsqueda',
+					titulo: 'Ningún artículo coincide con «' + this.buscar + '»',
 					pista: 'Probá con otra parte del nombre o con el código de barras.',
 				}
 			}
@@ -399,7 +402,7 @@ export default {
 					icono: 'bi bi-check2-all',
 					titulo: 'No hay imágenes para revisar',
 					pista: corriendo
-						? 'La búsqueda sigue: si aparece una imagen dudosa, va a quedar acá para que decidas.'
+						? 'La asignación sigue: si aparece una imagen dudosa, va a quedar acá para que decidas.'
 						: 'Cuando la IA no está segura de una imagen, la deja acá para que la apruebes o la rechaces.',
 				}
 			}
@@ -408,15 +411,15 @@ export default {
 					icono: 'bi bi-image',
 					titulo: 'Todavía no se asignó ninguna imagen',
 					pista: corriendo
-						? 'La búsqueda sigue: las imágenes van apareciendo acá a medida que se encuentran.'
-						: 'Esta búsqueda no le puso imagen a ningún artículo.',
+						? 'La asignación sigue: las imágenes van apareciendo acá a medida que se encuentran.'
+						: 'Esta asignación no le puso imagen a ningún artículo.',
 				}
 			}
 			return {
 				icono: 'bi bi-check2-circle',
 				titulo: 'No quedó ningún artículo sin imagen',
 				pista: corriendo
-					? 'La búsqueda sigue: si algún artículo no encuentra imagen, va a aparecer acá con el motivo.'
+					? 'La asignación sigue: si algún artículo no encuentra imagen, va a aparecer acá con el motivo.'
 					: 'Todo lo que se buscó tiene imagen asignada o esperando revisión.',
 			}
 		},
@@ -521,7 +524,7 @@ export default {
 		},
 		/**
 		 * El pedido de la asignación que hace `abrir`. Una cancelación no es un error ("No
-		 * pudimos abrir esta búsqueda" sería mentira): se vuelve a pedir una vez.
+		 * pudimos abrir esta asignación" sería mentira): se vuelve a pedir una vez.
 		 *
 		 * @param {Number} id
 		 * @param {Boolean} es_reintento
@@ -1083,8 +1086,8 @@ export default {
 				return
 			}
 			let id_de_la_asignacion = self.asignacion.id
-			self.confirmar('¿Detener la búsqueda? Lo que ya se procesó queda como está y los artículos que faltan no se buscan. Se puede reanudar después.', {
-				title: 'Detener la búsqueda',
+			self.confirmar('¿Detener la asignación? Lo que ya se procesó queda como está y los artículos que faltan no se buscan. Se puede reanudar después.', {
+				title: 'Detener la asignación',
 				okTitle: 'Detener',
 				okVariant: 'danger',
 				cancelTitle: 'No',
@@ -1099,7 +1102,7 @@ export default {
 				return self.$store.dispatch('image_assignment/detener', id_de_la_asignacion)
 				.then(asignacion => {
 					self.operando_asignacion = false
-					self.$toast.success('La búsqueda se detuvo')
+					self.$toast.success('La asignación se detuvo')
 					if (!self.sigue_siendo(id_de_la_asignacion, null)) {
 						self.refrescar_en_segundo_plano(id_de_la_asignacion)
 						return
@@ -1134,7 +1137,7 @@ export default {
 			self.$store.dispatch('image_assignment/reanudar', id_de_la_asignacion)
 			.then(asignacion => {
 				self.operando_asignacion = false
-				self.$toast.success('La búsqueda sigue desde donde quedó')
+				self.$toast.success('La asignación sigue desde donde quedó')
 				// Si mientras viajaba se abrió otra búsqueda, esta respuesta no es la que se ve (su
 				// fila en la tabla ya la actualizó el store).
 				if (!self.sigue_siendo(id_de_la_asignacion, null)) {

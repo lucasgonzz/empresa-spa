@@ -71,8 +71,10 @@ export default {
 			})
 			.then(res => {
 				// Dice dónde queda el resultado: el aviso de fin solo le llega a esta pestaña, pero
-				// la búsqueda (con lo que quedó para revisar) queda siempre en Alertas → Imágenes.
-				this.$toast.success('Buscando imágenes en segundo plano. El resultado va a quedar en Alertas → Imágenes.', {
+				// la asignación (con lo que quedó para revisar) queda siempre en Alertas → Imágenes.
+				// "Asignando" y no "Buscando": es la palabra de la opción del menú y la de la fila
+				// que va a encontrar en Alertas (búsqueda es cada consulta al buscador).
+				this.$toast.success('Asignando imágenes en segundo plano. El resultado va a quedar en Alertas → Imágenes.', {
 					duration: 6000,
 				})
 				/*

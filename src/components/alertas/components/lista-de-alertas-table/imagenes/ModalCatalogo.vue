@@ -4,7 +4,7 @@ id="imagenes-catalogo"
 size="md"
 centered
 scrollable
-title="Buscar imágenes para todo el catálogo"
+title="Asignar imágenes a todo el catálogo"
 @show="al_abrir"
 @hidden="al_cerrar">
 
@@ -25,7 +25,7 @@ title="Buscar imágenes para todo el catálogo"
 		v-else-if="error"
 		class="img-cat__aviso img-cat__aviso--mal"
 		data-testid="imagenes-catalogo-error">
-			<span>No pudimos calcular la búsqueda.</span>
+			<span>No pudimos calcular qué artículos se buscarían.</span>
 			<button
 			type="button"
 			class="img-cat__link"
@@ -45,14 +45,14 @@ title="Buscar imágenes para todo el catálogo"
 			class="img-cat__aviso img-cat__aviso--info"
 			data-testid="imagenes-catalogo-activa">
 				<span>
-					Ya hay una búsqueda de todo el catálogo en curso ({{ avance_de_la_activa }}). Esperá a que termine, o detenela desde su detalle.
+					Ya hay una asignación de todo el catálogo en curso ({{ avance_de_la_activa }}). Esperá a que termine, o detenela desde su detalle.
 				</span>
 				<button
 				type="button"
 				class="img-cat__link"
 				data-testid="imagenes-catalogo-ver-activa"
 				@click="ver_corrida_activa">
-					Ver la búsqueda en curso
+					Ver la asignación en curso
 				</button>
 			</div>
 
@@ -65,7 +65,7 @@ title="Buscar imágenes para todo el catálogo"
 			v-else-if="!previa.proveedor_configurado"
 			class="img-cat__aviso img-cat__aviso--mal"
 			data-testid="imagenes-catalogo-sin-proveedor">
-				Falta cargar la clave de Serper (SERPER_API_KEY) en el servidor de este cliente. Sin esa clave no se puede buscar todo el catálogo; la búsqueda desde el listado sigue andando como siempre.
+				Falta cargar la clave de Serper (SERPER_API_KEY) en el servidor de este cliente. Sin esa clave no se pueden asignar imágenes a todo el catálogo; la asignación desde el listado sigue andando como siempre.
 			</div>
 
 			<!--
@@ -123,20 +123,20 @@ title="Buscar imágenes para todo el catálogo"
 					<template v-if="Number(previa.excluidos_ya_buscados) === 1">no se busca: ya se buscó sin éxito en los últimos 90 días.</template>
 					<template v-else>no se buscan: ya se buscaron sin éxito en los últimos 90 días.</template>
 				</li>
-				<!-- Pendientes o procesándose en otra búsqueda que todavía corre (plan §13). -->
+				<!-- Pendientes o procesándose en otra asignación que todavía corre (plan §13). -->
 				<li
 				v-if="Number(previa.excluidos_en_otra_asignacion) > 0"
 				data-testid="imagenes-catalogo-excluidos-en-otra">
 					<strong>{{ entero(previa.excluidos_en_otra_asignacion) }}</strong>
-					<template v-if="Number(previa.excluidos_en_otra_asignacion) === 1">no se busca ahora: ya está en otra búsqueda en curso.</template>
-					<template v-else>no se buscan ahora: ya están en otra búsqueda en curso.</template>
+					<template v-if="Number(previa.excluidos_en_otra_asignacion) === 1">no se busca ahora: ya está en otra asignación en curso.</template>
+					<template v-else>no se buscan ahora: ya están en otra asignación en curso.</template>
 				</li>
 				<li v-if="Number(previa.quedan_para_otra_corrida) > 0">
 					<strong>{{ entero(previa.quedan_para_otra_corrida) }}</strong>
-					quedan para otra búsqueda: el tope es de {{ entero(previa.tope) }} artículos por vez. Cuando termine, lanzala de nuevo y sigue con los que faltan.
+					quedan para otra asignación: el tope es de {{ entero(previa.tope) }} artículos por vez. Cuando termine, lanzala de nuevo y sigue con los que faltan.
 				</li>
 				<li v-else-if="Number(previa.tope) > 0 && !sin_nada_para_buscar">
-					El tope es de <strong>{{ entero(previa.tope) }}</strong> artículos por búsqueda: esta vez entran todos.
+					El tope es de <strong>{{ entero(previa.tope) }}</strong> artículos por asignación: esta vez entran todos.
 				</li>
 				<li v-if="!sin_nada_para_buscar">
 					Van primero los publicados en la tienda, después los que tienen stock y después el resto.
@@ -194,7 +194,7 @@ title="Buscar imágenes para todo el catálogo"
 			v-if="lanzando"
 			small
 			class="m-r-5"></b-spinner>
-			Lanzar búsqueda
+			Lanzar asignación
 		</b-button>
 	</template>
 
@@ -206,7 +206,7 @@ import { numero_es as numero_con_decimales } from '@/common-vue/helpers/formato_
 import { es_cancelacion } from '@/store/image_assignment'
 
 /**
- * Confirmación de "Buscar imágenes para todo el catálogo" (solo acceso maestro; la solapa ni
+ * Confirmación de "Asignar imágenes a todo el catálogo" (solo acceso maestro; la solapa ni
  * siquiera monta este modal para nadie más).
  *
  * Al abrirse pide la previa (contrato §5.4): cuántos artículos hay sin imagen, cuántos se buscan
@@ -276,7 +276,7 @@ export default {
 			return motivo || 'La validación con IA no está configurada: sin ella todas las imágenes quedarían para revisar a mano.'
 		},
 		/**
-		 * "1.250 de 5.000" de la búsqueda de catálogo que ya está corriendo.
+		 * "1.250 de 5.000" de la asignación de catálogo que ya está corriendo.
 		 *
 		 * @returns {String}
 		 */
@@ -301,7 +301,7 @@ export default {
 		/**
 		 * Por qué no hay nada para buscar, armado con los números de la previa: todos los
 		 * artículos activos ya tienen imagen, o los que no tienen quedaron afuera porque esperan
-		 * revisión, porque ya se buscaron sin éxito hace poco o porque ya están en otra búsqueda
+		 * revisión, porque ya se buscaron sin éxito hace poco o porque ya están en otra asignación
 		 * en curso (`excluidos_en_otra_asignacion`, plan §13).
 		 *
 		 * Con una sola razón que alcanza a todos, se dice de todos juntos (con una pista de qué
@@ -331,22 +331,22 @@ export default {
 				razones.push({ cantidad: ya_buscados, texto: ya_buscados === 1 ? 'ya se buscó sin éxito en los últimos 90 días' : 'ya se buscaron sin éxito en los últimos 90 días' })
 			}
 			if (en_otra) {
-				razones.push({ cantidad: en_otra, texto: en_otra === 1 ? 'ya está en otra búsqueda en curso' : 'ya están en otra búsqueda en curso' })
+				razones.push({ cantidad: en_otra, texto: en_otra === 1 ? 'ya está en otra asignación en curso' : 'ya están en otra asignación en curso' })
 			}
 
 			let inicio = 'No hay artículos para buscar: '
 			let de_los = sin_imagen === 1 ? 'el único artículo sin imagen' : 'los ' + entero_es(sin_imagen) + ' artículos sin imagen'
 
 			if (!razones.length) {
-				return inicio + 'los que no tienen imagen quedaron afuera de esta búsqueda.'
+				return inicio + 'los que no tienen imagen quedaron afuera de esta asignación.'
 			}
 
 			if (razones.length === 1 && razones[0].cantidad === sin_imagen) {
 				let pista = ''
 				if (pendientes) {
-					pista = sin_imagen === 1 ? ' Aprobala o rechazala desde el detalle de su búsqueda.' : ' Aprobalas o rechazalas desde el detalle de cada búsqueda.'
+					pista = sin_imagen === 1 ? ' Aprobala o rechazala desde el detalle de su asignación.' : ' Aprobalas o rechazalas desde el detalle de cada asignación.'
 				} else if (en_otra) {
-					pista = ' Esperá a que termine esa búsqueda.'
+					pista = ' Esperá a que termine esa asignación.'
 				}
 				return inicio + de_los + ' ' + razones[0].texto + '.' + pista
 			}
@@ -402,7 +402,7 @@ export default {
 			})
 		},
 		/**
-		 * Lanza la búsqueda de todo el catálogo. Con el indicador global de carga: es el único
+		 * Lanza la asignación de todo el catálogo. Con el indicador global de carga: es el único
 		 * clic de esta pantalla que pone a trabajar al servidor por horas, y no tiene que poder
 		 * repetirse mientras viaja.
 		 *
@@ -415,7 +415,7 @@ export default {
 			}
 			let self = this
 			self.lanzando = true
-			self.$store.commit('auth/setMessage', 'Lanzando la búsqueda de imágenes')
+			self.$store.commit('auth/setMessage', 'Lanzando la asignación de imágenes')
 			self.$store.commit('auth/setLoading', true)
 
 			self.$store.dispatch('image_assignment/lanzar_catalogo')
@@ -423,7 +423,7 @@ export default {
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
 				self.lanzando = false
-				self.$toast.success('Listo: la búsqueda arrancó. Va a tardar un rato largo y el avance se ve en esta pestaña.', {
+				self.$toast.success('Listo: la asignación arrancó. Va a tardar un rato largo y el avance se ve en esta pestaña.', {
 					duration: 6000,
 				})
 				self.$emit('lanzada', asignacion)
@@ -437,7 +437,7 @@ export default {
 				self.cargar()
 			})
 		},
-		/** Cierra y pide abrir el detalle de la búsqueda de catálogo que ya estaba corriendo. */
+		/** Cierra y pide abrir el detalle de la asignación de catálogo que ya estaba corriendo. */
 		ver_corrida_activa() {
 			if (!this.previa || !this.previa.corrida_activa) {
 				return

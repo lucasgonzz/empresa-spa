@@ -4,13 +4,17 @@ class="alertas-imagenes"
 data-testid="alertas-imagenes">
 
 	<!--
-		Una linea que dice que es esta pestaña, y a la derecha el unico boton: buscar para todo el
-		catalogo, que es solo del acceso maestro (Lucas al entregar el sistema). El dueño sigue
-		pidiendo imagenes desde el listado, con su tope diario.
+		Una linea que dice que es esta pestaña, y a la derecha el unico boton: asignar imagenes a
+		todo el catalogo, que es solo del acceso maestro (Lucas al entregar el sistema). El dueño
+		sigue pidiendo imagenes desde el listado, con su tope diario.
+
+		La ultima oracion de la intro dice que es una "busqueda" en esta pantalla: cada fila es
+		una asignacion y la columna Busquedas cuenta consultas al buscador (ver la nota de
+		textos.js). Es el unico lugar donde se define la palabra para quien lee la tabla.
 	-->
 	<div class="alertas-imagenes__barra m-b-15">
 		<p class="alertas-imagenes__intro">
-			Cada búsqueda automática de imágenes queda acá. Abrí una para ver qué se asignó, qué quedó para revisar y por qué no se encontró el resto.
+			Cada asignación automática de imágenes queda acá. Abrí una para ver qué se asignó, qué quedó para revisar y por qué no se encontró el resto. Las búsquedas son las consultas al buscador de imágenes que gastó cada una.
 		</p>
 		<b-button
 		v-if="es_acceso_maestro"
@@ -19,7 +23,7 @@ data-testid="alertas-imagenes">
 		data-testid="imagenes-catalogo-abrir"
 		@click="abrir_modal_catalogo">
 			<i class="bi bi-images m-r-5"></i>
-			Buscar imágenes para todo el catálogo
+			Asignar imágenes a todo el catálogo
 		</b-button>
 	</div>
 
@@ -190,7 +194,7 @@ export default {
 			this.abierta_por_url = true
 		},
 		/**
-		 * Abre el detalle de una asignación (clic en la fila, "Ver", o "Ver la búsqueda en curso"
+		 * Abre el detalle de una asignación (clic en la fila, "Ver", o "Ver la asignación en curso"
 		 * del modal de catálogo).
 		 *
 		 * @param {Object} asignacion RunPayload.

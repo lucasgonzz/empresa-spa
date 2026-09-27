@@ -130,9 +130,9 @@
 import { conteo, entero_es, promedio_es } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
 
 /**
- * Resumen corto que aparece al terminar una búsqueda de imágenes que lanzó esta pestaña (lo abre
+ * Resumen corto que aparece al terminar una asignación de imágenes que lanzó esta pestaña (lo abre
  * `components/common/AvisoImagenesAutomaticas.vue`): con imagen, para revisar, sin imagen y las
- * búsquedas usadas, más "Revisar en Alertas", que lleva al detalle completo de esa búsqueda.
+ * búsquedas usadas, más "Revisar en Alertas", que lleva al detalle completo de esa asignación.
  *
  * Recibe los números por dos caminos y prefiere el primero:
  *  - `asignacion`: el RunPayload que devolvió `image-assignment-runs/por-uuid/{uuid}`.
@@ -212,12 +212,12 @@ export default {
 		titulo() {
 			let status = this.asignacion ? this.asignacion.status : null
 			if (status === 'detenida') {
-				return 'Búsqueda de imágenes detenida'
+				return 'Asignación de imágenes detenida'
 			}
 			if (status === 'fallida') {
-				return 'La búsqueda de imágenes se cortó'
+				return 'La asignación de imágenes se cortó'
 			}
-			return 'Búsqueda de imágenes terminada'
+			return 'Asignación de imágenes terminada'
 		},
 		/**
 		 * "Se buscaron imágenes para 50 artículos." (o "para 45 de 50" si no se llegó a todos).
@@ -231,10 +231,10 @@ export default {
 				let cuantos = procesados < total ? entero_es(procesados) + ' de ' + entero_es(total) : entero_es(total)
 				let palabra = total === 1 ? ' artículo' : ' artículos'
 				if (this.asignacion.status === 'detenida') {
-					return 'La búsqueda se detuvo después de procesar ' + cuantos + palabra + '.'
+					return 'La asignación se detuvo después de procesar ' + cuantos + palabra + '.'
 				}
 				if (this.asignacion.status === 'fallida') {
-					return 'La búsqueda se cortó después de procesar ' + cuantos + palabra + '.'
+					return 'La asignación se cortó después de procesar ' + cuantos + palabra + '.'
 				}
 				return 'Se buscaron imágenes para ' + cuantos + palabra + '.'
 			}
@@ -275,7 +275,7 @@ export default {
 			this.visible_proxy = false
 		},
 		/**
-		 * Cierra y lleva a Alertas → Imágenes con esta búsqueda abierta. Con `solapa`, abre el
+		 * Cierra y lleva a Alertas → Imágenes con esta asignación abierta. Con `solapa`, abre el
 		 * detalle en esa solapa (el botón "Sin imagen" pide la de no asignadas). Sin asignación
 		 * (camino de respaldo) no hay id: lleva a la solapa y listo.
 		 *

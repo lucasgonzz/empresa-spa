@@ -11,7 +11,7 @@ data-testid="imagenes-listado-asignaciones">
 		<b-spinner
 		small
 		variant="primary"></b-spinner>
-		<span>Cargando las búsquedas de imágenes…</span>
+		<span>Cargando las asignaciones de imágenes…</span>
 	</div>
 
 	<!-- El listado fallo y no hay nada viejo para mostrar: se ofrece reintentar. -->
@@ -19,7 +19,7 @@ data-testid="imagenes-listado-asignaciones">
 	v-else-if="error && !asignaciones.length"
 	data-testid="imagenes-asignaciones-error"
 	icon_class="bi bi-cloud-slash"
-	title="No pudimos traer las búsquedas de imágenes"
+	title="No pudimos traer las asignaciones de imágenes"
 	hint="Revisá la conexión y volvé a intentar.">
 		<b-button
 		class="btn-modulo"
@@ -30,22 +30,22 @@ data-testid="imagenes-listado-asignaciones">
 	</empty-state>
 
 	<!--
-		Todavia no hubo ninguna busqueda: el estado vacio explica que es esta pestaña y de donde
+		Todavia no hubo ninguna asignacion: el estado vacio explica que es esta pestaña y de donde
 		se llena, para que nadie crea que esta rota.
 	-->
 	<empty-state
 	v-else-if="!asignaciones.length"
 	data-testid="imagenes-asignaciones-vacio"
 	icon_class="bi bi-images"
-	title="Todavía no hay búsquedas de imágenes"
-	hint="Cuando pidas imágenes automáticas desde el listado de artículos, cada búsqueda queda acá: qué imagen se asignó, cuáles quedaron para revisar y por qué no se encontró el resto.">
+	title="Todavía no hay asignaciones de imágenes"
+	hint="Cuando pidas imágenes automáticas desde el listado de artículos, cada asignación queda acá: qué imagen se asignó, cuáles quedaron para revisar y por qué no se encontró el resto.">
 		<!--
-			Una linea aparte, mas chica: quien ya habia buscado imagenes antes de esta version va
-			a extrañar sus busquedas, y no estan porque se guardaban en otro lado (el historial
+			Una linea aparte, mas chica: quien ya habia pedido imagenes antes de esta version va
+			a extrañar sus asignaciones, y no estan porque se guardaban en otro lado (el historial
 			viejo del listado), no porque se hayan perdido las imagenes.
 		-->
 		<p class="img-asig-tabla__nota-vacio">
-			Las búsquedas anteriores a esta versión no aparecen acá.
+			Las asignaciones anteriores a esta versión no aparecen acá.
 		</p>
 	</empty-state>
 
@@ -74,7 +74,7 @@ data-testid="imagenes-listado-asignaciones">
 
 				<template #cell(fecha)="data">
 					<div class="img-asig-tabla__fecha">
-						<!-- Punto azul: la busqueda termino y nadie la abrio todavia (suma al numero rojo). -->
+						<!-- Punto azul: la asignacion termino y nadie la abrio todavia (suma al numero rojo). -->
 						<span
 						v-if="es_nueva(data.item)"
 						class="img-asig-tabla__nueva"
@@ -156,10 +156,14 @@ data-testid="imagenes-listado-asignaciones">
 		-->
 		<div class="paginacion-modulo m-t-15">
 			<div class="paginacion-modulo__barra">
+				<!--
+					Cuenta FILAS, o sea asignaciones: "búsquedas" es otra cosa (las consultas al
+					buscador, la columna de la tabla) y acá las dos palabras se leen juntas.
+				-->
 				<span
 				class="paginacion-modulo__meta"
 				data-testid="imagenes-asignaciones-total">
-					{{ entero(total) }} {{ total == 1 ? 'búsqueda' : 'búsquedas' }}
+					{{ entero(total) }} {{ total == 1 ? 'asignación' : 'asignaciones' }}
 				</span>
 				<template v-if="total > por_pagina">
 					<span
@@ -198,7 +202,7 @@ import {
 } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
 
 /**
- * Tabla de las asignaciones de imágenes del comercio (una fila por búsqueda), paginada en el
+ * Tabla de las asignaciones de imágenes del comercio (una fila por asignación), paginada en el
  * servidor de a 25. Lee todo del store `image_assignment`: la solapa decide cuándo pedir y este
  * componente solo dibuja, pagina y avisa qué fila se quiere abrir (evento `abrir`).
  */
@@ -275,7 +279,7 @@ export default {
 			this.$store.dispatch('image_assignment/get_asignaciones')
 		},
 		/**
-		 * True si la búsqueda terminó y nadie la abrió todavía. Una que sigue corriendo no se
+		 * True si la asignación terminó y nadie la abrió todavía. Una que sigue corriendo no se
 		 * marca: todavía no hay nada nuevo que ver.
 		 *
 		 * @param {Object} asignacion

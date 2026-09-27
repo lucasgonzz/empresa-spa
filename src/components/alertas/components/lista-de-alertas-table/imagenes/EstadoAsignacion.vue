@@ -43,7 +43,7 @@ class="img-asig-estado"
 import { ESTADOS, texto_de, esta_activa, porcentaje_de, entero_es } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
 
 /**
- * Estado de una asignación de imágenes: el chip ("Buscando", "Terminada", "Se cortó"...), el
+ * Estado de una asignación de imágenes: el chip ("En curso", "Terminada", "Se cortó"...), el
  * aviso de "Parece trabada" y, mientras corre, la barra de avance con "1.250 de 5.000".
  *
  * Lo usan la tabla de la solapa (compacto) y el encabezado del detalle. La barra es la misma de
