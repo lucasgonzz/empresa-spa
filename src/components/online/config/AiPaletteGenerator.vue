@@ -309,7 +309,7 @@ export default {
 	width: 100%
 	&__notice
 		font-size: 13px
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 		margin-bottom: 10px
 	&__summary
 		&-text
@@ -320,7 +320,7 @@ export default {
 			gap: 10px
 			flex-wrap: wrap
 	&__card
-		border: 1px solid #e2e2e2
+		border: 1px solid var(--color-border, #e2e2e2)
 		border-radius: 12px
 		padding: 15px
 		height: 100%
@@ -348,7 +348,7 @@ export default {
 			border: 1px solid rgba(0,0,0,.08)
 		&-label
 			font-size: 10px
-			color: #6c757d
+			color: var(--color-text-secondary, #6c757d)
 			margin-top: 3px
 			text-align: center
 	&__preview
@@ -386,14 +386,14 @@ export default {
 				border-radius: 4px
 	&__warnings
 		font-size: 11px
-		color: #b8860b
+		color: var(--color-text-warning-strong, #b8860b)
 		padding-left: 16px
 		margin-bottom: 0
 	&__dark-bg-alert
 		margin-top: 10px
 		padding: 10px 12px
 		border-radius: 8px
-		background: #fff3cd
-		color: #856404
+		background: var(--bg-warning-soft, #fff3cd)
+		color: var(--color-text-warning-strong, #856404)
 		font-size: 13px
 </style>

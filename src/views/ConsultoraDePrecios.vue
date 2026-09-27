@@ -40,7 +40,7 @@ export default {
 	position: absolute
 	left: 0
 	top: 0
-	background: #EEEEEE
-	// background: #e3e3e3 
+	background: var(--bg-section, #EEEEEE)
+	// background: #e3e3e3
 	z-index: 1000
 </style>

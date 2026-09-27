@@ -955,10 +955,10 @@ export default {
 }
 </script>
 <style lang="sass">
-.cropper 
+.cropper
 	width: 100%
 	height: 600px
-	background: #DDD
+	background: var(--bg-section, #DDD)
 
 // Modo marco fijo (proporción mayor a 0): lo que la imagen no cubre se ve BLANCO, igual que el
 // relleno que le pone el servidor al guardar. Sin esto quedaría negro (fondo por defecto de la librería).

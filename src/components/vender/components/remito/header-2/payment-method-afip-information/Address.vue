@@ -83,7 +83,7 @@ export default {
 
 	&:hover
 		color: var(--color-primary, #007bff)
-		background: #e9ecef
+		background: var(--bg-hover, #e9ecef)
 
 	i
 		font-size: 0.95rem

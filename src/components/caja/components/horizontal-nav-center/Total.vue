@@ -293,8 +293,8 @@ $accent-usd: #0891b2
 		gap: 10px
 		padding: 8px 12px
 		border-radius: 10px
-		border: 1px solid #e2e8f0
-		background: #fff
+		border: 1px solid var(--color-border, #e2e8f0)
+		background: var(--bg-card, #fff)
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
 		transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease
 		min-width: 0
@@ -302,7 +302,7 @@ $accent-usd: #0891b2
 		&:hover
 			transform: translateY(-1px)
 			box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08)
-			border-color: #cbd5e1
+			border-color: var(--color-border, #cbd5e1)
 
 		&--ars
 			.caja-totales__icon-wrap

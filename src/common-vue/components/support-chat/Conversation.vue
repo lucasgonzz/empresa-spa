@@ -421,7 +421,7 @@ export default {
 
 .support-conversation-title {
 	padding: 10px 12px;
-	border-bottom: 1px solid #f1f1f1;
+	border-bottom: 1px solid var(--color-border-secondary, #f1f1f1);
 	font-weight: 600;
 }
 
@@ -429,7 +429,7 @@ export default {
 	flex: 1;
 	overflow-y: auto;
 	padding: 12px;
-	background: #f7f9fb;
+	background: var(--bg-section, #f7f9fb);
 	position: relative;
 }
 
@@ -438,7 +438,7 @@ export default {
 	inset: 0;
 	z-index: 2;
 	min-height: 8rem;
-	background: rgba(247, 249, 251, 0.92);
+	background: var(--bg-section, rgba(247, 249, 251, 0.92));
 }
 
 .support-conversation-new-ticket-panel {
@@ -446,7 +446,7 @@ export default {
 	margin-top: 16px;
 	margin-bottom: 8px;
 	padding: 12px;
-	background: #e8f4fc;
+	background: var(--bg-info-soft, #e8f4fc);
 	border: 1px solid #b8daff;
 	border-radius: 8px;
 }
@@ -455,7 +455,7 @@ export default {
 	margin: 0 0 10px;
 	font-size: 13px;
 	line-height: 1.4;
-	color: #1a4a6e;
+	color: var(--color-text-info-strong, #1a4a6e);
 }
 
 .support-conversation-new-ticket-btn {
@@ -496,8 +496,8 @@ export default {
 	max-width: 100%;
 	padding: 8px 10px;
 	border-radius: 10px;
-	background: #fff;
-	border: 1px solid #ececec;
+	background: var(--bg-card, #fff);
+	border: 1px solid var(--color-border-secondary, #ececec);
 	cursor: help;
 }
 
@@ -507,7 +507,7 @@ export default {
 
 .support-message-meta {
 	font-size: 11px;
-	color: #6b7280;
+	color: var(--color-text-secondary, #6b7280);
 	margin-top: 2px;
 	padding-right: 2px;
 	line-height: 1.2;
@@ -533,17 +533,17 @@ export default {
 }
 
 .support-meta-delivery {
-	color: #9ca3af;
+	color: var(--color-text-secondary, #9ca3af);
 	font-weight: 600;
 	white-space: nowrap;
 }
 
 .support-tick-single {
-	color: #9ca3af;
+	color: var(--color-text-secondary, #9ca3af);
 }
 
 .support-tick-double {
-	color: #6b7280;
+	color: var(--color-text-secondary, #6b7280);
 	letter-spacing: -2px;
 }
 
@@ -578,7 +578,7 @@ export default {
 }
 
 .support-message-error-text {
-	color: #c53030;
+	color: var(--color-text-danger-strong, #c53030);
 	font-weight: 600;
 }
 

@@ -350,7 +350,7 @@ export default {
 
 	&__article-name
 		font-weight: 600
-		color: #343a40
+		color: var(--color-text-primary, #343a40)
 
 	&__type-badge
 		margin-left: 8px
@@ -359,7 +359,7 @@ export default {
 
 	&__sold-price
 		font-weight: 600
-		color: #495057
+		color: var(--color-text-primary, #495057)
 		white-space: nowrap
 
 	&__price-cell
@@ -384,10 +384,10 @@ export default {
 		white-space: nowrap
 
 	&__diff--increase
-		color: #c82333
+		color: var(--color-text-danger-strong, #c82333)
 
 	&__diff--decrease
-		color: #1e7e34
+		color: var(--color-text-success-strong, #1e7e34)
 
 	&__diff--unchanged
 		font-weight: 500
@@ -397,5 +397,5 @@ export default {
 		justify-content: flex-end
 		padding-top: 16px
 		margin-top: 8px
-		border-top: 1px solid #e9ecef
+		border-top: 1px solid var(--color-border-secondary, #e9ecef)
 </style>

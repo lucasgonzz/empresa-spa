@@ -434,11 +434,11 @@ export default {
 
 	&__zona-icono
 		font-size: 1.8rem
-		color: #64748b
+		color: var(--color-text-secondary, #64748b)
 
 	&__zona-texto
 		margin: 8px 0 12px 0
-		color: #475569
+		color: var(--color-text-secondary, #475569)
 		font-size: 0.9rem
 
 	&__zona-botones
@@ -531,7 +531,7 @@ export default {
 		display: block
 		margin-top: 4px
 		font-size: 0.7rem
-		color: #64748b
+		color: var(--color-text-secondary, #64748b)
 		white-space: nowrap
 		overflow: hidden
 		text-overflow: ellipsis
@@ -540,13 +540,13 @@ export default {
 		margin: 10px 0 0 0
 		font-size: 0.85rem
 		font-weight: 600
-		color: #475569
+		color: var(--color-text-secondary, #475569)
 		text-align: right
 
 	&__explicacion
 		margin: 6px 0 18px 0
 		font-size: 0.85rem
-		color: #64748b
+		color: var(--color-text-secondary, #64748b)
 
 	@media (max-width: 575.98px)
 		&__pagina

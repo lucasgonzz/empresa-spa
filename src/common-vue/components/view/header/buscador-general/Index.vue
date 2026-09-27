@@ -1744,9 +1744,9 @@ export default {
 		align-items: center
 		flex: 1 1 auto
 		min-width: 0
-		// Los hexadecimales de estas dos lineas pasaron a tokens de _dark_theme.sass (mision 13):
-		// el resto del bloque todavia usa hex fijos y queda blanco en modo oscuro, lo que esta
-		// registrado como hallazgo aparte. Se convirtio lo que esta mision tocaba igual.
+		// Los hexadecimales de estas dos lineas pasaron a tokens de _dark_theme.sass (mision 13).
+		// El resto del bloque (texto del input, iconos, hover) se convirtio despues, en el barrido
+		// integral del 26/9/2026: ya no queda ningun hex fijo suelto en este componente.
 		background: var(--bg-card)
 		border: 1px solid var(--color-border)
 		// Radio = altura / 2: el campo es una capsula. Los botones de al lado van a 10px a
@@ -1775,7 +1775,7 @@ export default {
 		// Anillo azul al enfocar el input (color $blue de _custom.scss): se suma a la
 		// sombra base, no la reemplaza
 		&:focus-within
-			border-color: #007bff
+			border-color: var(--color-primary, #007bff)
 			box-shadow: var(--shadow-color) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
 
 	// El desplegable de propiedades se integra al pill (ver PropertiesDropdown.vue)
@@ -1795,9 +1795,8 @@ export default {
 		font-size: 0.9rem
 		// Token de _dark_theme.sass (mision dark-mode-buscador-filtro, 22/9/2026): el pill ya
 		// usa --bg-card (mision 13, ver arriba) pero el texto seguia en hex fijo (#1d1d1f, casi
-		// negro) -- invisible sobre el pill oscuro. El resto del bloque (iconos, hover) queda
-		// con hex fijo a proposito: es el hallazgo aparte que ya registraba el comentario de
-		// .buscador-general__pill, mas arriba.
+		// negro) -- invisible sobre el pill oscuro. Los iconos y el hover de mas abajo se
+		// convirtieron en el barrido integral del 26/9/2026 (ver comentario de .buscador-general__pill).
 		color: var(--color-text-primary)
 		// Anula la sombra global de input en _inputs.sass: la sombra la da el pill contenedor
 		box-shadow: none
@@ -1815,21 +1814,21 @@ export default {
 		border: none
 		background: transparent
 		border-radius: 50%
-		color: #86868b
+		color: var(--color-text-secondary, #86868b)
 		cursor: pointer
 		transition: background 0.15s ease, color 0.15s ease
 		// Blinda los botones de icono (lupa, limpiar) contra cualquier sombra heredada
 		box-shadow: none
 
 		&:hover
-			background: #f2f3f4
-			color: #1d1d1f
+			background: var(--bg-hover, #f2f3f4)
+			color: var(--color-text-primary, #1d1d1f)
 
 		i
 			font-size: 0.95rem
 
 	.buscador-general__search
-		color: #6e6e73
+		color: var(--color-text-secondary, #6e6e73)
 
 	// Contenedor de filtros del modulo; si el slot esta vacio colapsa sin dejar hueco
 	.buscador-general__extra

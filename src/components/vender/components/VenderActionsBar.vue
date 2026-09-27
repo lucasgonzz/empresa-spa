@@ -347,7 +347,7 @@ export default {
 		&:focus:not(:disabled)
 			color: var(--color-primary, #007bff)
 			border-color: #b8daff
-			background: #f0f7ff
+			background: var(--bg-hover, #f0f7ff)
 
 	/* WhatsApp: acento verde suave, no bloque sólido */
 	::v-deep .btn-success

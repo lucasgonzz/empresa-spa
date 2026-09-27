@@ -136,7 +136,7 @@ export default {
 	position: absolute;
 	inset: 0;
 	z-index: 2;
-	background: rgba(255, 255, 255, 0.85);
+	background: var(--bg-card, rgba(255, 255, 255, 0.85));
 }
 
 .support-ticket-item {
@@ -144,12 +144,12 @@ export default {
 	align-items: center;
 	gap: 8px;
 	padding: 10px;
-	border-bottom: 1px solid #f1f1f1;
+	border-bottom: 1px solid var(--color-border-secondary, #f1f1f1);
 	cursor: pointer;
 }
 
 .support-ticket-item.active {
-	background: #f5faff;
+	background: var(--bg-hover, #f5faff);
 }
 
 .support-ticket-status {

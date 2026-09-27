@@ -141,6 +141,30 @@ html.dark-mode
 	// mismo motivo por el que .bg-light/.bg-white se mandan a --bg-section mas abajo.
 	--bg-card-secondary: var(--bg-section)
 
+	// Texto de estado sobre superficies con tinte de color (chips y filas resaltadas), reusables
+	// en todo el barrido del 26/9/2026. Mismo truco que los tokens de arriba: se declaran SOLO
+	// aca, asi que en claro cada componente se queda con su literal exacto vía fallback y estos
+	// dos nombres no existen en :root. En oscuro los literales originales (marrones/violetas
+	// oscuros pensados para texto sobre fondo CLARO) quedan casi invisibles sobre --bg-card
+	// (#2e333a) o sobre su propio tinte semitransparente encima de --bg-card -- son la misma
+	// familia de bug que --texto-seccion-reportes: el matiz es correcto pero la luminancia esta
+	// invertida. Los valores nuevos mantienen el matiz (ambar / violeta) subiendo la luminancia
+	// a algo legible.
+	--color-text-warning-strong: #f0c674
+	--color-text-purple-strong: #b794f4
+	--color-text-info-strong: #6cc3d5
+	--color-text-success-strong: #6fcf8f
+	--color-text-danger-strong: #f28b8b
+
+	// Fondos SOLIDOS de alerta escritos a mano (no un rgba semitransparente que se apoya en lo
+	// de abajo, sino un color propio tipo #fff3cd/#fff8f8/#e8f4fc). Aparecieron repetidos en el
+	// barrido del 26/9/2026 en al menos tres componentes -- no es un caso unico. Mismo criterio
+	// que los 5 de arriba: solo en html.dark-mode, en rgba sobre el acento para apoyarse en
+	// --bg-card en vez de competir con ella (mismo patron que --caja-abierta-fondo).
+	--bg-warning-soft: rgba(240, 198, 116, 0.16)
+	--bg-info-soft: rgba(108, 195, 213, 0.14)
+	--bg-danger-soft: rgba(242, 139, 139, 0.14)
+
 	// Contraparte oscura de los estados de Cajas (grupo 371). Los fondos van en rgba sobre el
 	// acento en vez de un color plano: asi se apoyan sobre --bg-card sin pelearse con el.
 	--caja-abierta-fondo: rgba(47, 125, 93, 0.16)

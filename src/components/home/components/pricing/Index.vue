@@ -44,7 +44,7 @@ export default {
 	h2
 		font-size: 34px
 	p
-		color: #5E708A
+		color: var(--color-text-secondary, #5E708A)
 		margin: 8px 0 20px
 
 .cards_grid
@@ -53,8 +53,8 @@ export default {
 	gap: 12px
 
 .pricing_card
-	background: white
-	border: 1px solid #DFE8F4
+	background: var(--bg-card, white)
+	border: 1px solid var(--color-border, #DFE8F4)
 	border-radius: 12px
 	padding: 18px
 	h3
@@ -64,7 +64,7 @@ export default {
 		font-size: 30px
 		margin-bottom: 6px
 	span
-		color: #60728C
+		color: var(--color-text-secondary, #60728C)
 
 @media screen and (max-width: 992px)
 	.cards_grid

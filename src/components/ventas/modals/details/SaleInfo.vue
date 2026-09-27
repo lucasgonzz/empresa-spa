@@ -320,16 +320,16 @@ export default {
 			line-height: 1.5
 
 		::v-deep .dropdown .btn-danger
-			color: #6c757d
+			color: var(--color-text-secondary, #6c757d)
 			background-color: transparent
-			border-color: #6c757d
+			border-color: var(--color-text-secondary, #6c757d)
 
 			&:hover,
 			&:focus,
 			&.show
 				color: #fff
-				background-color: #6c757d
-				border-color: #6c757d
+				background-color: var(--color-text-secondary, #6c757d)
+				border-color: var(--color-text-secondary, #6c757d)
 
 		::v-deep .btn-success
 			color: #198754

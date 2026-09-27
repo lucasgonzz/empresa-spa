@@ -514,7 +514,7 @@ $acento-fiscal: #0891b2
 				color: $acento-fiscal
 
 		&--resta
-			color: #94a3b8
+			color: var(--color-text-secondary, #94a3b8)
 			font-size: 0.88rem
 
 		&--subtotal
@@ -545,7 +545,7 @@ $acento-fiscal: #0891b2
 
 		&__porcentaje
 			font-size: 0.85em
-			color: #94a3b8
+			color: var(--color-text-secondary, #94a3b8)
 			margin-left: 6px
 
 	.cascada-desglose
@@ -555,12 +555,12 @@ $acento-fiscal: #0891b2
 			display: flex
 			justify-content: space-between
 			font-size: 0.8rem
-			color: #94a3b8
+			color: var(--color-text-secondary, #94a3b8)
 			padding: 6px 0
 
 	.cascada-nota
 		font-size: 0.78rem
-		color: #94a3b8
+		color: var(--color-text-secondary, #94a3b8)
 		font-style: italic
 		margin: 0 0 10px
 

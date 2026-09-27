@@ -316,13 +316,13 @@ export default {
 
 $as-accent: #2563eb
 
-$as-border: #e2e8f0
+$as-border: var(--color-border, #e2e8f0)
 
-$as-text: #0f172a
+$as-text: var(--color-text-primary, #0f172a)
 
 $as-muted: #64748b
 
-$as-bg: #f8fafc
+$as-bg: var(--bg-section, #f8fafc)
 
 
 
@@ -354,7 +354,7 @@ $as-bg: #f8fafc
 
 	font-weight: 600
 
-	color: $as-muted
+	color: var(--color-text-secondary, #64748b)
 
 	text-transform: uppercase
 
@@ -472,7 +472,7 @@ $as-bg: #f8fafc
 
 	background: rgba($as-muted, 0.12)
 
-	color: $as-muted
+	color: var(--color-text-secondary, #64748b)
 
 
 
@@ -492,7 +492,7 @@ $as-bg: #f8fafc
 
 	font-size: 0.9rem
 
-	color: $as-muted
+	color: var(--color-text-secondary, #64748b)
 
 	margin: 0
 
@@ -506,7 +506,7 @@ $as-bg: #f8fafc
 
 	font-size: 0.9rem
 
-	color: $as-muted
+	color: var(--color-text-secondary, #64748b)
 
 	margin: 0
 

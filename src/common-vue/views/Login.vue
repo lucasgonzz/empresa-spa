@@ -163,14 +163,14 @@ $mobile_breakpoint: 900px
 .login-page__mobile-title
   font-size: 1.375rem
   font-weight: 700
-  color: $text_dark
+  color: var(--color-text-primary, $text_dark)
   margin: 0 0 0.45rem
   letter-spacing: -0.02em
 
 .login-page__mobile-tagline
   font-size: 0.875rem
   font-weight: 400
-  color: $text_muted
+  color: var(--color-text-secondary, $text_muted)
   line-height: 1.5
   margin: 0
 
@@ -243,7 +243,7 @@ $mobile_breakpoint: 900px
 .login-page__brand-name
   font-size: 1.0625rem
   font-weight: 600
-  color: $text_dark
+  color: var(--color-text-primary, $text_dark)
   letter-spacing: -0.02em
 
 .login-page__hero
@@ -260,18 +260,18 @@ $mobile_breakpoint: 900px
   font-size: 2.75rem
   font-weight: 800
   line-height: 1.12
-  color: $text_dark
+  color: var(--color-text-primary, $text_dark)
   margin: 0 0 1.25rem
   letter-spacing: -0.035em
 
 .login-page__hero-highlight
-  color: $brand
+  color: var(--color-primary, $brand)
 
 .login-page__hero-subtitle
   font-size: 1.0625rem
   font-weight: 400
   text-align: left
-  color: $text_muted
+  color: var(--color-text-secondary, $text_muted)
   line-height: 1.65
   margin: 0 0 2rem
   max-width: 460px
@@ -287,7 +287,7 @@ $mobile_breakpoint: 900px
 .login-page__bullet
   font-size: 1rem
   font-weight: 400
-  color: #374151
+  color: var(--color-text-primary, #374151)
   display: flex
   align-items: center
   gap: 0.65rem
@@ -298,7 +298,7 @@ $mobile_breakpoint: 900px
     width: 7px
     height: 7px
     border-radius: 50%
-    background: $brand
+    background: var(--color-primary, $brand)
     flex-shrink: 0
 
 // ─── Nota de seguridad ───

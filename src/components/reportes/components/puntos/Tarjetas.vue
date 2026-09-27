@@ -314,7 +314,7 @@ $puntos-ajustes: #0891b2
 			small
 				font-size: 0.9rem
 				font-weight: 600
-				color: #94a3b8
+				color: var(--color-text-secondary, #94a3b8)
 
 		&__pesos
 			font-size: 1.2rem
@@ -341,7 +341,7 @@ $puntos-ajustes: #0891b2
 		&__valor
 			margin: 8px 0 0
 			font-size: 0.78rem
-			color: #94a3b8
+			color: var(--color-text-secondary, #94a3b8)
 
 	// --- Los cinco flujos del periodo ---------------------------------------------------
 	.puntos-seccion
@@ -377,11 +377,11 @@ $puntos-ajustes: #0891b2
 		transition: border-color 0.15s ease, box-shadow 0.15s ease
 
 		&:hover
-			border-color: #cbd5e1
+			border-color: var(--color-border, #cbd5e1)
 			box-shadow: 0 2px 8px rgba(15, 23, 42, 0.09)
 
 		&--activa
-			border-color: #0d6efd
+			border-color: var(--color-primary, #0d6efd)
 			box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12)
 
 		&__cabecera
@@ -442,7 +442,7 @@ $puntos-ajustes: #0891b2
 			margin: 10px 0 0
 			font-size: 0.75rem
 			line-height: 1.4
-			color: #94a3b8
+			color: var(--color-text-secondary, #94a3b8)
 			// Empuja el "Ver detalle" al piso para que las cinco tarjetas lo tengan a la misma
 			// altura aunque sus ayudas ocupen distinta cantidad de renglones
 			flex: 1
@@ -451,7 +451,7 @@ $puntos-ajustes: #0891b2
 			margin-top: 10px
 			font-size: 0.75rem
 			font-weight: 600
-			color: #0d6efd
+			color: var(--color-primary, #0d6efd)
 
 		// Un acento por tarjeta, solo sobre la cajita del icono
 		&.acento-emitidos .puntos-tarjeta__icono

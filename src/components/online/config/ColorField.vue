@@ -188,7 +188,7 @@ export default {
 		width: 40px
 		height: 40px
 		padding: 2px
-		border: 1px solid #d9d9d9
+		border: 1px solid var(--color-border, #d9d9d9)
 		border-radius: 8px
 		background: transparent
 		cursor: pointer

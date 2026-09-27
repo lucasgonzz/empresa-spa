@@ -210,7 +210,7 @@ export default {
 
 	&__titulo
 		font-size: 0.8rem
-		color: #94a3b8
+		color: var(--color-text-secondary, #94a3b8)
 		margin: 0 0 8px
 
 	&__zona
@@ -299,7 +299,9 @@ export default {
 
 	&__perdida
 		font-size: 0.8rem
-		color: #DC2626
+		color: var(--color-text-danger-strong, #DC2626)
+		// Tinte semitransparente de fila/estado: se apoya en lo que hay debajo y anda en los
+		// dos modos, no se toca.
 		background: rgba(220, 38, 38, 0.08)
 		border-radius: 6px
 		padding: 8px 12px

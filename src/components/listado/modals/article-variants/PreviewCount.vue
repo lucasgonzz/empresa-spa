@@ -53,11 +53,11 @@ export default {
 		gap: 8px
 		font-size: 0.9em
 		font-weight: 500
-		color: rgba(0, 0, 0, .5)
-		background: #F0F0F3
+		color: var(--color-text-secondary, rgba(0, 0, 0, .5))
+		background: var(--bg-section, #F0F0F3)
 		padding: 8px 16px
 		border-radius: 999px
 		&--active
-			color: #1c7c3c
+			color: var(--color-text-success-strong, #1c7c3c)
 			background: rgba(52, 199, 89, .12)
 </style>

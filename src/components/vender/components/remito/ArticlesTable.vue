@@ -852,11 +852,11 @@ export default {
 	width: 125px
 	.prepend
 		width: 40px
-		background: #e9ecef
+		background: var(--bg-section, #e9ecef)
 		display: flex 
 		align-items: center 
 		justify-content: center
-		border: 1px solid #ced4da
+		border: 1px solid var(--color-border, #ced4da)
 		border-radius: .25rem 0 0 .25rem
 
 .input-checked-amount-danger

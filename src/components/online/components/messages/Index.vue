@@ -43,8 +43,8 @@ $online_nav_margin: 1em
 	margin-bottom: 0 !important
 .col-messages
 	height: calc(100vh - 70px)
-	border-left: 1px solid rgba(0, 0, 0, .3)
-	background: #F3F2F2
+	border-left: 1px solid var(--color-border, rgba(0, 0, 0, .3))
+	background: var(--bg-section, #F3F2F2)
 	
 .col-chats
 	padding-bottom: 1em

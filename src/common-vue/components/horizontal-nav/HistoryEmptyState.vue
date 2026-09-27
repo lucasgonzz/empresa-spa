@@ -47,9 +47,9 @@ export default {
 	justify-content: center
 	gap: 6px
 	padding: 2.5rem 1.5rem
-	border: 1px dashed #dee2e6
+	border: 1px dashed var(--color-border, #dee2e6)
 	border-radius: 8px
-	background: #fafbfc
+	background: var(--bg-card, #fafbfc)
 	text-align: center
 
 .nav-history-empty-state__icon
@@ -60,20 +60,20 @@ export default {
 	height: 52px
 	margin-bottom: 4px
 	border-radius: 50%
-	background: #f0f2f5
-	color: #6c757d
+	background: var(--bg-section, #f0f2f5)
+	color: var(--color-text-secondary, #6c757d)
 	font-size: 1.4rem
 
 .nav-history-empty-state__title
 	margin: 0
 	font-size: 1rem
 	font-weight: 600
-	color: #343a40
+	color: var(--color-text-primary, #343a40)
 
 .nav-history-empty-state__hint
 	margin: 0
 	max-width: 320px
 	font-size: 0.85rem
 	line-height: 1.45
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 </style>

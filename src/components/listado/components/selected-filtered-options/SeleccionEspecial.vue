@@ -734,7 +734,7 @@ export default {
 
 
 
-		background: linear-gradient(145deg, #f8f9fb 0%, #f1f3f6 100%)
+		background: linear-gradient(145deg, var(--bg-section, #f8f9fb) 0%, var(--bg-hover, #f1f3f6) 100%)
 
 
 
@@ -762,7 +762,7 @@ export default {
 
 
 
-		background: #fff
+		background: var(--bg-card, #fff)
 
 
 

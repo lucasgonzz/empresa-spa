@@ -138,8 +138,8 @@ export default {
 .check-sale
 	margin: 25px 0
 	.cont-checkbox
-		background: #FFF
-		border: 2px solid #DDDDDD
+		background: var(--bg-card, #FFF)
+		border: 2px solid var(--color-border, #DDDDDD)
 		padding: 25px
 		border-radius: 10px
 		width: 100%

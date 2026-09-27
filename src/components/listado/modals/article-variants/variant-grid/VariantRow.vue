@@ -185,7 +185,7 @@ export default {
 		width: 44px
 		height: 44px
 		border-radius: 10px
-		background: #F0F0F3
+		background: var(--bg-section, #F0F0F3)
 		display: flex
 		align-items: center
 		justify-content: center
@@ -199,11 +199,11 @@ export default {
 			height: 100%
 			object-fit: cover
 	&__thumb-icon
-		color: rgba(0, 0, 0, .3)
+		color: var(--color-text-secondary, rgba(0, 0, 0, .3))
 		font-size: 1.1em
 	&__description
 		font-weight: 500
-		color: #1d1d1f
+		color: var(--color-text-primary, #1d1d1f)
 	&__available-cell
 		text-align: center
 	&__price-cell

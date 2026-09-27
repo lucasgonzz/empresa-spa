@@ -344,7 +344,7 @@ export default {
 	align-items: center
 	justify-content: space-between
 	padding: 8px 0
-	border-bottom: 1px solid #eee
+	border-bottom: 1px solid var(--color-border-secondary, #eee)
 	gap: 8px
 
 	&:last-child
@@ -356,7 +356,7 @@ export default {
 		object-fit: cover
 		border-radius: 4px
 		flex-shrink: 0
-		border: 1px solid #dee2e6
+		border: 1px solid var(--color-border, #dee2e6)
 
 	.attachment-info
 		flex: 1

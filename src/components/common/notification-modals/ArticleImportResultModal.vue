@@ -1031,7 +1031,7 @@ export default {
 		grid-template-columns: 1fr
 
 .article-import-result-modal__stat-card
-	background: #f8f9fb
+	background: var(--bg-section, #f8f9fb)
 	border-radius: 12px
 	padding: 14px 16px
 	border-left: 4px solid var(--stat-color, #007bff)
@@ -1039,17 +1039,17 @@ export default {
 .article-import-result-modal__stat-value
 	font-size: 28px
 	font-weight: 800
-	color: #212529
+	color: var(--color-text-primary, #212529)
 	line-height: 1.1
 
 .article-import-result-modal__stat-label
 	font-size: 13px
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 	margin-top: 4px
 
 .article-import-result-modal__stat-bar-track
 	height: 6px
-	background: rgba(0, 0, 0, 0.06)
+	background: var(--color-border-secondary, rgba(0, 0, 0, 0.06))
 	border-radius: 4px
 	overflow: hidden
 
@@ -1060,15 +1060,15 @@ export default {
 	transition: width 0.4s ease
 
 .article-import-result-modal__chart
-	background: #fff
-	border: 1px solid rgba(0, 0, 0, 0.06)
+	background: var(--bg-card, #fff)
+	border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.06))
 	border-radius: 12px
 	padding: 14px 16px
 
 .article-import-result-modal__chart-title
 	font-size: 13px
 	font-weight: 600
-	color: #495057
+	color: var(--color-text-primary, #495057)
 	margin: 0 0 12px
 
 .article-import-result-modal__chart-row
@@ -1083,11 +1083,11 @@ export default {
 
 .article-import-result-modal__chart-label
 	font-size: 12px
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 
 .article-import-result-modal__chart-track
 	height: 10px
-	background: #eef1f5
+	background: var(--bg-section, #eef1f5)
 	border-radius: 6px
 	overflow: hidden
 
@@ -1101,27 +1101,27 @@ export default {
 	font-size: 12px
 	font-weight: 700
 	text-align: right
-	color: #343a40
+	color: var(--color-text-primary, #343a40)
 
 // Sobrescrituras dentro del propio archivo (prompt 06, grupo 265): dato informativo,
 // mismo tono neutro que la configuración utilizada — a propósito, no es un error.
 .article-import-result-modal__overwrites
-	background: #f8f9fb
-	border: 1px solid rgba(0, 0, 0, 0.06)
+	background: var(--bg-section, #f8f9fb)
+	border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.06))
 	border-radius: 12px
 	padding: 14px 16px
 
 .article-import-result-modal__overwrites-title
 	font-size: 14px
 	font-weight: 700
-	color: #343a40
+	color: var(--color-text-primary, #343a40)
 	margin: 0 0 8px
 
 .article-import-result-modal__overwrites-list
 	list-style: none
 	padding: 0
 	margin: 0
-	color: #495057
+	color: var(--color-text-primary, #495057)
 
 	li
 		padding: 3px 0
@@ -1129,47 +1129,47 @@ export default {
 // Columnas de precio que no se aplicaron (misión 44): mismo tono neutro que las
 // sobrescrituras — es información, no un error.
 .article-import-result-modal__skipped-prices
-	background: #f8f9fb
-	border: 1px solid rgba(0, 0, 0, 0.06)
+	background: var(--bg-section, #f8f9fb)
+	border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.06))
 	border-radius: 12px
 	padding: 14px 16px
 
 .article-import-result-modal__skipped-prices-title
 	font-size: 14px
 	font-weight: 700
-	color: #343a40
+	color: var(--color-text-primary, #343a40)
 	margin: 0 0 8px
 
 .article-import-result-modal__skipped-prices-text
 	font-size: 13px
-	color: #495057
+	color: var(--color-text-primary, #495057)
 	margin: 0 0 8px
 
 .article-import-result-modal__skipped-prices-list
 	list-style: none
 	padding: 0
 	margin: 0
-	color: #495057
+	color: var(--color-text-primary, #495057)
 
 	li
 		padding: 3px 0
 
 .article-import-result-modal__config
-	background: #f8f9fb
-	border: 1px solid rgba(0, 0, 0, 0.06)
+	background: var(--bg-section, #f8f9fb)
+	border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.06))
 	border-radius: 12px
 	padding: 14px 16px
 
 .article-import-result-modal__config-title
 	font-size: 14px
 	font-weight: 700
-	color: #343a40
+	color: var(--color-text-primary, #343a40)
 	margin: 0 0 12px
 
 .article-import-result-modal__config-subtitle
 	font-size: 12px
 	font-weight: 600
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 	margin: 0 0 8px
 	text-transform: uppercase
 	letter-spacing: 0.04em
@@ -1186,12 +1186,12 @@ export default {
 
 .article-import-result-modal__config-label
 	font-size: 12px
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 
 .article-import-result-modal__config-value
 	font-size: 14px
 	font-weight: 600
-	color: #212529
+	color: var(--color-text-primary, #212529)
 
 .article-import-result-modal__config-list
 	list-style: none
@@ -1204,7 +1204,7 @@ export default {
 	align-items: flex-start
 	gap: 12px
 	padding: 6px 0
-	border-bottom: 1px solid rgba(0, 0, 0, 0.05)
+	border-bottom: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.05))
 	font-size: 13px
 
 	&:last-child
@@ -1212,7 +1212,7 @@ export default {
 		padding-bottom: 0
 
 .article-import-result-modal__config-list-label
-	color: #495057
+	color: var(--color-text-primary, #495057)
 	flex: 1
 
 .article-import-result-modal__config-list-value
@@ -1220,13 +1220,13 @@ export default {
 	flex-shrink: 0
 
 	&--yes
-		color: #28a745
+		color: var(--color-text-success-strong, #28a745)
 
 	&--no
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 
 .article-import-result-modal__detail-block
-	background: #fff8f8
+	background: var(--bg-danger-soft, #fff8f8)
 	border: 1px solid rgba(220, 53, 69, 0.15)
 	border-radius: 10px
 	padding: 12px 14px
@@ -1235,12 +1235,12 @@ export default {
 .article-import-result-modal__detail-title
 	font-weight: 600
 	margin: 0 0 6px
-	color: #343a40
+	color: var(--color-text-primary, #343a40)
 
 .article-import-result-modal__detail-text
 	margin: 0 0 4px
 	font-size: 14px
-	color: #495057
+	color: var(--color-text-primary, #495057)
 
 	&--mono
 		font-family: monospace
@@ -1263,7 +1263,7 @@ export default {
 
 	li
 		padding: 3px 0
-		border-bottom: 1px solid rgba(0, 0, 0, 0.05)
+		border-bottom: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.05))
 
 		&:last-child
 			border-bottom: none

@@ -265,13 +265,9 @@ export default {
 	// La lupa va absoluta adentro de la pastilla y sin eventos: es un indicador, no un boton --el
 	// buscador filtra mientras se escribe--.
 	//
-	// 🔴 El color es el mismo gris literal que el placeholder de este pill y NO
-	// var(--color-text-secondary), aunque el token sea lo que corresponderia en cualquier otro lado.
-	// Motivo: este pill todavia tiene su fondo clavado a mano en #fff --junto con el borde y el
-	// texto, todos preexistentes--, asi que en html.dark-mode el token resolveria a #aab2bd sobre
-	// blanco, o sea gris claro sobre blanco: 2,1:1, practicamente invisible. Un token de texto solo
-	// sirve si el fondo tambien es un token. Cuando alguien tokenice el pill entero, esta linea se
-	// cambia por --color-text-secondary y recien ahi vale.
+	// 🔴 Pill tokenizado entero (barrido dark-mode-barrido-integral, 26/9/2026): fondo, borde,
+	// texto y placeholder van todos por token, así que la lupa (mismo gris que el placeholder)
+	// ahora sí puede sumarse a --color-text-secondary sin quedar gris claro sobre blanco.
 	.abm-search-lupa
 		position: absolute
 		left: 14px
@@ -279,36 +275,36 @@ export default {
 		transform: translateY(-50%)
 		font-size: 0.95rem
 		line-height: 1
-		color: #9aa0a6
+		color: var(--color-text-secondary, #9aa0a6)
 		pointer-events: none
 
 	.abm-search-input
 		width: 100%
 		height: 40px
-		border: 1px solid #e2e4e7
+		border: 1px solid var(--color-border, #e2e4e7)
 		border-radius: 22px
 		// El padding de la izquierda le deja lugar a la lupa.
 		padding: 0 16px 0 38px
 		font-size: 0.9rem
-		color: #1d1d1f
-		background: #fff
+		color: var(--color-text-primary, #1d1d1f)
+		background: var(--bg-section, #fff)
 		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 		transition: border-color 0.15s ease, box-shadow 0.15s ease
 
 		&:focus
-			border-color: #c7cacf
+			border-color: var(--color-border, #c7cacf)
 			box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 0, 0, 0.04)
 			outline: none
 
 		&::placeholder
-			color: #9aa0a6
+			color: var(--color-text-secondary, #9aa0a6)
 	.abm-search-resultados
 		position: absolute
 		top: calc(100% + 4px)
 		left: 0
 		right: 0
-		background: #fff
-		border: 1px solid #e0e0e0
+		background: var(--bg-card, #fff)
+		border: 1px solid var(--color-border, #e0e0e0)
 		border-radius: 10px
 		box-shadow: 0 8px 24px rgba(0, 0, 0, .08)
 		z-index: 1000
@@ -318,11 +314,11 @@ export default {
 	.abm-search-item
 		padding: 10px 14px
 		cursor: pointer
-		border-bottom: 1px solid #f2f2f2
+		border-bottom: 1px solid var(--color-border-secondary, #f2f2f2)
 		&:last-child
 			border-bottom: none
 		&.seleccionado
-			background: #f5f6f7
+			background: var(--bg-hover, #f5f6f7)
 	.abm-search-item-encabezado
 		display: flex
 		justify-content: space-between
@@ -331,16 +327,16 @@ export default {
 	.abm-search-item-nombre
 		font-weight: 600
 		font-size: 14px
-		color: #1d1d1f
+		color: var(--color-text-primary, #1d1d1f)
 	.abm-search-item-grupo
 		font-size: 11px
-		color: #86868b
+		color: var(--color-text-secondary, #86868b)
 		text-transform: capitalize
 		white-space: nowrap
 	.abm-search-item-descripcion
 		margin: 3px 0 0 0
 		font-size: 12px
-		color: #6e6e73
+		color: var(--color-text-secondary, #6e6e73)
 		line-height: 1.35
 		display: -webkit-box
 		-webkit-line-clamp: 2
@@ -349,6 +345,6 @@ export default {
 	.abm-search-vacio
 		padding: 14px
 		font-size: 13px
-		color: #86868b
+		color: var(--color-text-secondary, #86868b)
 		text-align: center
 </style>

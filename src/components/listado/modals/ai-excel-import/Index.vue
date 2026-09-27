@@ -5956,14 +5956,14 @@ export default {
 	width: 28px
 	height: 28px
 	border-radius: 50%
-	background: #e9ecef
-	color: #6c757d
+	background: var(--bg-section, #e9ecef)
+	color: var(--color-text-secondary, #6c757d)
 	font-weight: 600
 	font-size: 13px
 	transition: background 0.2s, color 0.2s
 
 	&--active
-		background: #007bff
+		background: var(--color-primary, #007bff)
 		color: #fff
 
 /* Contenedor de notas de asistencia globales de Claude (paso 2) */
@@ -5982,7 +5982,7 @@ export default {
 	background: rgba(255, 193, 7, 0.12)
 	border-left: 4px solid #ffc107
 	font-size: 13px
-	color: #6c5200
+	color: var(--color-text-warning-strong, #6c5200)
 
 .assistant-note-icon
 	flex-shrink: 0
@@ -5993,12 +5993,12 @@ export default {
 
 /* Tabla de mapeo de columnas */
 .ai-import-mapping-table
-	border: 1px solid rgba(0,0,0,.1)
+	border: 1px solid var(--color-border, rgba(0,0,0,.1))
 	border-radius: 8px
 	overflow: hidden
 
 .ai-import-mapping-block
-	border-bottom: 1px solid rgba(0,0,0,.06)
+	border-bottom: 1px solid var(--color-border-secondary, rgba(0,0,0,.06))
 
 	&:last-child
 		border-bottom: none
@@ -6017,7 +6017,7 @@ export default {
 		padding-left: 8px
 
 		.ai-import-mapping-excel-header
-			color: #5a32a3
+			color: var(--color-text-purple-strong, #5a32a3)
 			font-style: italic
 
 		.ai-import-mapping-confidence-value
@@ -6031,22 +6031,22 @@ export default {
 	padding: 8px 12px
 
 	&--header
-		background: #f8f9fa
+		background: var(--bg-section, #f8f9fa)
 		font-weight: 600
 		font-size: 13px
-		color: #495057
-		border-bottom: 1px solid rgba(0,0,0,.06)
+		color: var(--color-text-primary, #495057)
+		border-bottom: 1px solid var(--color-border-secondary, rgba(0,0,0,.06))
 
 .ai-import-mapping-interpretation-note
 	padding: 0 12px 8px 12px
-	color: #0c5460
+	color: var(--color-text-info-strong, #0c5460)
 
 .ai-import-mapping-legend-interpretation
-	color: #17a2b8
+	color: var(--color-text-info-strong, #17a2b8)
 	font-weight: 600
 
 .ai-import-mapping-legend-ignored
-	color: #6f42c1
+	color: var(--color-text-purple-strong, #6f42c1)
 	font-weight: 600
 
 .ai-import-mapping-excel-col
@@ -6055,12 +6055,12 @@ export default {
 	gap: 8px
 	min-width: 0
 	font-size: 13px
-	color: #343a40
+	color: var(--color-text-primary, #343a40)
 
 .ai-import-mapping-excel-letter
 	flex-shrink: 0
 	font-weight: 700
-	color: #007bff
+	color: var(--color-primary, #007bff)
 	font-size: 12px
 	min-width: 1.5em
 
@@ -6077,7 +6077,7 @@ export default {
 	align-self: center
 	font-size: 12px
 	line-height: 1
-	color: #b28704
+	color: var(--color-text-warning-strong, #b28704)
 	cursor: help
 
 .ai-import-mapping-confidence
@@ -6191,17 +6191,17 @@ export default {
 	&--warning
 		background: rgba(255, 193, 7, 0.14)
 		border-color: rgba(255, 193, 7, 0.5)
-		color: #856404
+		color: var(--color-text-warning-strong, #856404)
 
 	/* Variante informativa: fondo verde suave */
 	&--info
 		background: rgba(40, 167, 69, 0.08)
 		border-color: rgba(40, 167, 69, 0.25)
-		color: #155724
+		color: var(--color-text-success-strong, #155724)
 
 /* Card de recomendación de Claude en el paso 3 */
 .ai-import-recomendacion-card
-	background: #f8f9fa
+	background: var(--bg-section, #f8f9fa)
 	border: 1px solid rgba(0, 123, 255, 0.2)
 	border-left: 4px solid #007bff
 	border-radius: 6px
@@ -6213,14 +6213,14 @@ export default {
 	align-items: center
 	gap: 4px
 	font-size: 13px
-	color: #155724
+	color: var(--color-text-success-strong, #155724)
 	background: rgba(40, 167, 69, 0.1)
 	border: 1px solid rgba(40, 167, 69, 0.25)
 	border-radius: 4px
 	padding: 4px 10px
 
 	i
-		color: #28a745
+		color: var(--color-text-success-strong, #28a745)
 
 /* Tabla de duplicados del paso 3 */
 .ai-import-duplicates-table
@@ -6235,10 +6235,10 @@ export default {
 	grid-template-columns: 1fr 100px 1fr
 	gap: 8px
 	padding: 7px 12px
-	background: #f8f9fa
+	background: var(--bg-section, #f8f9fa)
 	font-weight: 600
-	color: #495057
-	border-bottom: 1px solid rgba(0, 0, 0, 0.08)
+	color: var(--color-text-primary, #495057)
+	border-bottom: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.08))
 
 /* Fila de dato de la tabla de duplicados */
 .ai-import-duplicates-table__row
@@ -6266,14 +6266,14 @@ export default {
 	font-size: 11px
 	font-weight: 700
 	background: rgba(255, 193, 7, 0.25)
-	color: #856404
+	color: var(--color-text-warning-strong, #856404)
 	border: 1px solid rgba(255, 193, 7, 0.4)
 
 /* Títulos de las preguntas de decisión en el paso 3 */
 .ai-import-decision-title
 	font-size: 14px
 	font-weight: 700
-	color: #343a40
+	color: var(--color-text-primary, #343a40)
 	margin-bottom: 10px
 	display: block
 
@@ -6291,19 +6291,19 @@ export default {
 	white-space: nowrap
 
 	thead tr
-		background: #f8f9fa
-		border-bottom: 2px solid rgba(0, 0, 0, 0.08)
+		background: var(--bg-section, #f8f9fa)
+		border-bottom: 2px solid var(--color-border-secondary, rgba(0, 0, 0, 0.08))
 
 	th
 		padding: 7px 12px
 		font-weight: 600
-		color: #495057
+		color: var(--color-text-primary, #495057)
 		text-align: left
 
 	td
 		padding: 6px 12px
-		border-bottom: 1px solid rgba(0, 0, 0, 0.05)
-		color: #343a40
+		border-bottom: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.05))
+		color: var(--color-text-primary, #343a40)
 		max-width: 200px
 		overflow: hidden
 		text-overflow: ellipsis

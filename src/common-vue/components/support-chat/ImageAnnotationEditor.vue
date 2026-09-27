@@ -621,7 +621,7 @@ export default {
 }
 
 .image-annotation-toolbar {
-	border-bottom: 1px solid #e9ecef;
+	border-bottom: 1px solid var(--color-border-secondary, #e9ecef);
 	padding-bottom: 8px;
 }
 
@@ -629,12 +629,12 @@ export default {
 	width: 28px;
 	height: 28px;
 	padding: 0;
-	border: 2px solid #dee2e6;
+	border: 2px solid var(--color-border, #dee2e6);
 	border-radius: 50%;
 }
 
 .image-annotation-color-btn.active {
-	border-color: #007bff;
+	border-color: var(--color-primary, #007bff);
 	box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.35);
 }
 

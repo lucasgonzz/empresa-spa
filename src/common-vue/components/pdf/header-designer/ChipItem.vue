@@ -51,7 +51,7 @@ export default {
 	gap: 6px
 	padding: 4px 8px
 	margin-bottom: 6px
-	background: #fff
+	background: var(--bg-section, #fff)
 	border: 1px solid rgba(0, 0, 0, .15)
 	border-radius: 4px
 	font-size: 12px
@@ -66,7 +66,7 @@ export default {
 	border-color: rgba(255, 193, 7, .5)
 
 .header-designer-chip__handle
-	color: rgba(0, 0, 0, .35)
+	color: var(--color-text-secondary, rgba(0, 0, 0, .35))
 
 .header-designer-chip__label
 	flex: 1 1 auto

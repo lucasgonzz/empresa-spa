@@ -294,11 +294,11 @@ export default {
 
 	::v-deep select.select-afip-information__select:disabled
 
-		background-color: #e9ecef !important
+		background-color: var(--bg-section, #e9ecef) !important
 
-		border-color: #ced4da !important
+		border-color: var(--color-border, #ced4da) !important
 
-		color: #6c757d !important
+		color: var(--color-text-secondary, #6c757d) !important
 
 		font-weight: 400
 
@@ -306,7 +306,7 @@ export default {
 
 		cursor: not-allowed
 
-		-webkit-text-fill-color: #6c757d
+		-webkit-text-fill-color: var(--color-text-secondary, #6c757d)
 
 
 

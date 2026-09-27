@@ -197,10 +197,10 @@ export default {
 }
 </script>
 <style lang="sass" scoped>
-// Ámbar del aviso "te estás acercando al límite". Es un color de ESTADO, igual en los dos
-// temas (como los acentos de reportes en flujo-caja/Index.vue), y el sistema no tiene un
-// token de warning: por eso va como literal documentado y no como var(). El rojo de "llegaste
-// al límite" y el azul normal sí salen de tokens del sistema.
+// Ámbar del aviso "te estás acercando al límite". Hasta hoy el sistema no tenía token de
+// warning y este color iba como literal documentado; ahora sale de --color-text-warning-strong
+// (agregado a _dark_theme.sass en este mismo barrido), con este literal como fallback de modo
+// claro. El rojo de "llegaste al límite" y el azul normal ya salían de tokens del sistema.
 $aviso-cerca: #d97706
 
 .asistente-ia-footer
@@ -253,7 +253,7 @@ $aviso-cerca: #d97706
 		transition: width .3s ease
 
 		&.es-cerca
-			background: $aviso-cerca
+			background: var(--color-text-warning-strong, $aviso-cerca)
 
 		&.es-supero
 			background: var(--btn-peligro-borde, #b4443f)
@@ -266,7 +266,7 @@ $aviso-cerca: #d97706
 
 		// El texto acompaña el color de la barra en los dos estados de aviso.
 		&.es-cerca
-			color: $aviso-cerca
+			color: var(--color-text-warning-strong, $aviso-cerca)
 
 		&.es-supero
 			color: var(--btn-peligro-texto, #9c3a36)

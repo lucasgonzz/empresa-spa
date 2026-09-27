@@ -178,7 +178,12 @@ export default {
 <style lang="sass">
 .informe-compartido
 	min-height: 100vh
-	background: var(--bg-body, #ffffff)
+	// 26/9/2026: `--bg-body` no existe en ningun modo (ni :root ni html.dark-mode), asi que el
+	// fallback #ffffff quedaba aplicado SIEMPRE, incluso en oscuro. El texto de abajo si usa
+	// tokens reales, asi que en oscuro terminaba clareando sobre un fondo que nunca se movia de
+	// blanco. --bg-card sí existe y su valor claro (#fff) es identico al literal de antes, asi
+	// que el modo claro no cambia un pixel.
+	background: var(--bg-card, #ffffff)
 	// El gutter de 16px del teléfono, que es donde esta pantalla se abre de verdad.
 	padding: 18px 16px 40px 16px
 

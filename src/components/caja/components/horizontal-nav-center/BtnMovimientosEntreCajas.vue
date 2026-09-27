@@ -44,8 +44,8 @@ $accent-action: #6366f1
 	gap: 10px
 	padding: 8px 12px
 	border-radius: 10px
-	border: 1px solid #e2e8f0
-	background: #fff
+	border: 1px solid var(--color-border, #e2e8f0)
+	background: var(--bg-section, #fff)
 	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
 	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease
 	min-width: 0
@@ -90,7 +90,7 @@ $accent-action: #6366f1
 	&__label
 		font-size: 0.68rem
 		font-weight: 600
-		color: #64748b
+		color: var(--color-text-secondary, #64748b)
 		text-transform: uppercase
 		letter-spacing: 0.04em
 		line-height: 1.2

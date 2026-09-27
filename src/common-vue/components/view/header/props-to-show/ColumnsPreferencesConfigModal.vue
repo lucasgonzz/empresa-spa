@@ -1201,16 +1201,16 @@ export default {
 
 		height: 22px
 
-		border: 1px solid rgba(0,0,0,.15)
+		border: 1px solid var(--color-border, rgba(0,0,0,.15))
 
 		border-radius: 4px
 
-		background: rgba(0,0,0,.03)
+		background: var(--bg-section, rgba(0,0,0,.03))
 
 		cursor: grab
 
 		&:hover
-			background: rgba(0,0,0,.08)
+			background: var(--bg-hover, rgba(0,0,0,.08))
 
 		&:active
 			cursor: grabbing
@@ -1223,7 +1223,7 @@ export default {
 		cursor: default
 
 		&:hover
-			background: rgba(0,0,0,.03)
+			background: var(--bg-section, rgba(0,0,0,.03))
 
 		&:active
 			cursor: default
@@ -1242,7 +1242,7 @@ export default {
 		right: 0
 		top: 0
 		height: 2px
-		background: #007bff
+		background: var(--color-primary, #007bff)
 		border-radius: 2px
 
 	/* Barra de insercion azul: abajo de la fila cuando el drop cae en la mitad de abajo */
@@ -1254,7 +1254,7 @@ export default {
 		right: 0
 		bottom: 0
 		height: 2px
-		background: #007bff
+		background: var(--color-primary, #007bff)
 		border-radius: 2px
 
 
@@ -1413,7 +1413,7 @@ export default {
 
 	pointer-events: none
 
-	color: #9aa0a6
+	color: var(--color-text-secondary, #9aa0a6)
 
 	font-size: 15px
 
@@ -1553,7 +1553,7 @@ export default {
 
 		overflow-y: auto
 
-		border: 1px solid rgba(0, 0, 0, 0.08)
+		border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.08))
 
 		border-radius: 4px
 
@@ -1561,7 +1561,7 @@ export default {
 
 	.columns-preferences-config__table
 
-		background: #fff
+		background: var(--bg-card, #fff)
 
 		margin-bottom: 0
 
@@ -1575,7 +1575,7 @@ export default {
 
 			z-index: 1
 
-			background: #f8f9fa
+			background: var(--bg-section, #f8f9fa)
 
 			font-size: 12px
 
@@ -1630,11 +1630,11 @@ export default {
 	/* posiciona confiable en todos los navegadores, por eso se dibuja sobre los td */
 	.columns-preferences-config__table-row--drop-before td
 
-		box-shadow: inset 0 2px 0 #007bff
+		box-shadow: inset 0 2px 0 var(--color-primary, #007bff)
 
 	.columns-preferences-config__table-row--drop-after td
 
-		box-shadow: inset 0 -2px 0 #007bff
+		box-shadow: inset 0 -2px 0 var(--color-primary, #007bff)
 
 
 

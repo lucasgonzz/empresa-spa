@@ -92,11 +92,12 @@ export default {
 	right: -500px
 	border-radius: 8px
 	padding: 15px
-	background: #FFF
-	border: 2px solid rgba(0, 0, 0, .1)
+	background: var(--bg-card, #FFF)
+	border: 2px solid var(--color-border, rgba(0, 0, 0, .1))
+	color: var(--color-text-primary, inherit)
 	z-index: 1000
-	box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px
-	
+	box-shadow: var(--shadow-color, rgba(100, 100, 111, 0.2)) 0px 7px 29px 0px
+
 	transition: all .2s
 
 	.spinner-border 
