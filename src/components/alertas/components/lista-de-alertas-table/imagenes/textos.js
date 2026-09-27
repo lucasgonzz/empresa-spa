@@ -57,8 +57,13 @@ export const MOTIVOS = {
 	// imagen (se la cargaron a mano, u otra búsqueda se la puso mientras tanto), así que no se
 	// buscó nada (0 búsquedas). No es una falla: la fila lo muestra en gris, no en ámbar.
 	ya_tenia_imagen: 'Ya tenía imagen',
+	// También solo en las de todo el catálogo: el artículo ya tiene una imagen esperando revisión
+	// en OTRA búsqueda, así que en esta no se buscó (0 búsquedas). Tampoco es una falla: va en gris.
+	en_otra_asignacion: 'Esperando revisión en otra búsqueda',
 	// A revisar
 	ia_dudosa: 'La IA no está segura',
+	// La IA la marcó borrosa: una imagen así nunca se asigna sola (plan §13).
+	borrosa: 'Se ve borrosa',
 	confianza_media: 'Coincidencia a medias',
 	imagen_algo_chica: 'Imagen algo chica',
 	marca_de_agua: 'Tiene marca de agua',

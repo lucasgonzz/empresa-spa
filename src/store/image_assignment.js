@@ -487,10 +487,10 @@ export default {
 		},
 		/**
 		 * Previa de "todo el catálogo" (solo acceso maestro): cuántos artículos hay sin imagen,
-		 * cuántos se buscarían ahora, qué se excluye y por qué, la estimación y si ya hay una
-		 * corriendo.
+		 * cuántos se buscarían ahora, qué se excluye y por qué, la estimación, si ya hay una
+		 * corriendo y si la validación con IA está configurada (`ia_configurada`, `ia_motivo`).
 		 *
-		 * @returns {Promise<Object>} Contrato §5.4.
+		 * @returns {Promise<Object>} Contrato §5.4 más los agregados de §13.
 		 */
 		get_previa_catalogo() {
 			return axios.get('/api/image-assignment-runs/catalogo/previa', opciones())
@@ -499,7 +499,8 @@ export default {
 		},
 		/**
 		 * Lanza la asignación de todo el catálogo (solo acceso maestro). 422 con `message` si no
-		 * hay proveedor configurado, si no hay artículos para buscar o si ya hay otra corriendo.
+		 * hay proveedor configurado, si no está configurada la validación con IA (plan §13), si no
+		 * hay artículos para buscar o si ya hay otra corriendo.
 		 *
 		 * @returns {Promise<Object>} RunPayload de la asignación creada.
 		 */
@@ -509,7 +510,8 @@ export default {
 				.catch(relanzar_marcando_la_cancelacion)
 		},
 		/**
-		 * Detiene una asignación (solo acceso maestro): lo ya procesado queda y lo pendiente no se
+		 * Detiene una asignación (las de todo el catálogo, solo con el acceso maestro; las demás,
+		 * cualquiera que las ve, plan §13): lo ya procesado queda y lo pendiente no se
 		 * busca.
 		 *
 		 * @param {Object} context
@@ -526,7 +528,8 @@ export default {
 				.catch(relanzar_marcando_la_cancelacion)
 		},
 		/**
-		 * Reanuda una asignación detenida, fallida o trabada (solo acceso maestro): sigue desde el
+		 * Reanuda una asignación detenida, fallida o trabada (las de todo el catálogo, solo con el
+		 * acceso maestro; las demás, cualquiera que las ve, plan §13): sigue desde el
 		 * primer artículo pendiente.
 		 *
 		 * @param {Object} context

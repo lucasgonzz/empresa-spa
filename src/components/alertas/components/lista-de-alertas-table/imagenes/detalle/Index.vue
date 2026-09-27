@@ -265,7 +265,10 @@ export default {
 			type: String,
 			default: null,
 		},
-		/** true si la sesión entró con la clave maestra (Detener / Reanudar). */
+		/**
+		 * true si la sesión entró con la clave maestra: la piden Detener / Reanudar de las
+		 * búsquedas de todo el catálogo (las de selección y del asistente, cualquiera; plan §13).
+		 */
 		es_acceso_maestro: {
 			type: Boolean,
 			default: false,
@@ -1070,7 +1073,9 @@ export default {
 			}
 		},
 		/**
-		 * Detiene la búsqueda (solo acceso maestro), con confirmación.
+		 * Detiene la búsqueda, con confirmación. En las de todo el catálogo solo lo puede hacer el
+		 * acceso maestro (el encabezado ni muestra el botón y la API contesta 403); en las demás,
+		 * cualquiera que la ve (plan §13).
 		 */
 		detener() {
 			let self = this
@@ -1115,7 +1120,8 @@ export default {
 			})
 		},
 		/**
-		 * Reanuda una búsqueda detenida, cortada o trabada (solo acceso maestro): sigue desde el
+		 * Reanuda una búsqueda detenida, cortada o trabada (en las de todo el catálogo, solo el
+		 * acceso maestro; en las demás, cualquiera, plan §13): sigue desde el
 		 * primer artículo pendiente.
 		 */
 		reanudar() {

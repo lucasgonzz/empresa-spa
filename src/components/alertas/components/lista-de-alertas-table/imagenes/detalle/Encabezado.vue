@@ -8,11 +8,13 @@ data-testid="imagenes-detalle-encabezado"
 		<estado-asignacion :asignacion="asignacion"></estado-asignacion>
 
 		<!--
-			Detener y reanudar son solo del acceso maestro (contrato §5.3: la API contesta 403 a
-			cualquier otra sesión), asi que para el resto ni se dibujan.
+			Detener y reanudar (plan §13): en las busquedas de todo el catalogo son solo del
+			acceso maestro (la API contesta 403 a cualquier otra sesion), asi que para el resto ni
+			se dibujan. Las de seleccion y las del asistente las puede detener o reanudar
+			cualquiera que las ve.
 		-->
 		<div
-		v-if="es_acceso_maestro && (puede_detener || puede_reanudar)"
+		v-if="puede_operar && (puede_detener || puede_reanudar)"
 		class="img-det-enc__acciones">
 			<b-button
 			v-if="puede_detener"
@@ -122,8 +124,9 @@ import {
 
 /**
  * Encabezado del detalle de una búsqueda de imágenes: estado y avance, el motivo si terminó de
- * una forma que hay que explicar, las búsquedas (bien claras) y los datos de la corrida. Para el
- * acceso maestro, además, Detener o Reanudar.
+ * una forma que hay que explicar, las búsquedas (bien claras) y los datos de la corrida. Además,
+ * Detener o Reanudar: en las de todo el catálogo solo con el acceso maestro; en las de selección y
+ * del asistente, para cualquiera (plan §13).
  *
  * Solo dibuja y avisa (`detener`, `reanudar`): los pedidos los hace el detalle.
  */
@@ -137,7 +140,10 @@ export default {
 			type: Object,
 			required: true,
 		},
-		/** true si la sesión entró con la clave maestra. */
+		/**
+		 * true si la sesión entró con la clave maestra: la necesitan Detener / Reanudar de las
+		 * búsquedas de todo el catálogo, y muestra qué proveedor se usó.
+		 */
 		es_acceso_maestro: {
 			type: Boolean,
 			default: false,
@@ -149,6 +155,25 @@ export default {
 		},
 	},
 	computed: {
+		/**
+		 * true si es una búsqueda de todo el catálogo. Mira las dos cosas del contrato: el flag
+		 * `es_de_catalogo` y el origen, por si alguna respuesta trae solo una.
+		 *
+		 * @returns {Boolean}
+		 */
+		es_de_catalogo() {
+			return this.asignacion.es_de_catalogo === true || this.asignacion.origen === 'catalogo'
+		},
+		/**
+		 * true si esta sesión puede detener o reanudar ESTA búsqueda (plan §13): las de todo el
+		 * catálogo solo con el acceso maestro; las de selección y las del asistente, cualquiera
+		 * que las ve.
+		 *
+		 * @returns {Boolean}
+		 */
+		puede_operar() {
+			return this.es_de_catalogo ? this.es_acceso_maestro : true
+		},
 		/** Se puede detener mientras corre o espera turno. */
 		puede_detener() {
 			return esta_activa(this.asignacion)

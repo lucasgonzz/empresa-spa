@@ -175,8 +175,8 @@ export default {
 			'Hay un tope de artículos por vez: los que no entran se buscan lanzándola de nuevo cuando termina. Lo que ya se buscó sin éxito en los últimos 90 días no se vuelve a buscar.',
 			'No gasta el límite diario de búsquedas del comercio.',
 		],
-		requiere: 'Que el servidor tenga cargada la clave de búsqueda y que no haya otra búsqueda de todo el catálogo corriendo.',
-		nota_interna: 'POST image-assignment-runs/catalogo. 422 sin SERPER_API_KEY, sin artículos para buscar o con otra de catálogo activa. Corre en tramos de ~50 s encadenados; tope IMAGENES_TOPE_CATALOGO (5000 por defecto). Orden: publicados en la tienda, con stock, resto.',
+		requiere: 'Que el servidor tenga configuradas la búsqueda de imágenes y la revisión con IA, y que no haya otra búsqueda de todo el catálogo corriendo.',
+		nota_interna: 'POST image-assignment-runs/catalogo. 422 sin SERPER_API_KEY, sin IA configurada (ia_configurada: false en la previa, plan §13), sin artículos para buscar o con otra de catálogo activa. Corre en tramos de ~50 s encadenados; tope IMAGENES_TOPE_CATALOGO (5000 por defecto). Orden: publicados en la tienda, con stock, resto.',
 	},
 
 	'imagenes-catalogo-estimacion': {
@@ -328,7 +328,7 @@ export default {
 			'Lo que ya se procesó queda como está; los artículos que faltaban no se buscan.',
 			'Se puede reanudar después desde el mismo detalle.',
 		],
-		nota_interna: 'Solo acceso maestro. POST image-assignment-runs/{id}/detener.',
+		nota_interna: 'En las de todo el catálogo, solo el acceso maestro (la API contesta 403 al resto y el botón ni aparece); en las de selección y del asistente, cualquiera que las ve (plan §13). POST image-assignment-runs/{id}/detener.',
 	},
 
 	'imagenes-reanudar': {
@@ -337,7 +337,7 @@ export default {
 		repercute: [
 			'Vale para una búsqueda detenida, cortada o que parece trabada (no avanza hace más de 15 minutos).',
 		],
-		nota_interna: 'Solo acceso maestro. POST image-assignment-runs/{id}/reanudar.',
+		nota_interna: 'En las de todo el catálogo, solo el acceso maestro (la API contesta 403 al resto y el botón ni aparece); en las de selección y del asistente, cualquiera que las ve (plan §13). POST image-assignment-runs/{id}/reanudar.',
 	},
 
 	'imagenes-resumen-revisar': {

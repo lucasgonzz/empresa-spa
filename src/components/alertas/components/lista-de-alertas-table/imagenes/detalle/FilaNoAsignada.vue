@@ -67,7 +67,8 @@ import { MOTIVOS, texto_de, busquedas_del_articulo } from '@/components/alertas/
  * distingan de "no se encontró", que es lo normal en esta solapa.
  *
  * Todo lo que no está acá va en gris, y es a propósito: incluye `ya_tenia_imagen` (búsqueda de
- * todo el catálogo que encontró el artículo ya con imagen), que no es ninguna falla, y cualquier
+ * todo el catálogo que encontró el artículo ya con imagen) y `en_otra_asignacion` (el artículo ya
+ * tiene una imagen esperando revisión en otra búsqueda), que no son ninguna falla, y cualquier
  * motivo nuevo que la SPA todavía no conozca (se muestra humanizado, con su `motivo_detalle`).
  */
 const MOTIVOS_DE_AVISO = ['sin_cupo', 'error_de_busqueda', 'error_interno']

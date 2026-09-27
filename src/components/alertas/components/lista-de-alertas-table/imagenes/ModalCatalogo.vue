@@ -69,6 +69,19 @@ title="Buscar imágenes para todo el catálogo"
 			</div>
 
 			<!--
+				Sin la validacion con IA tampoco se lanza (plan §13; la API contesta 422): sin IA
+				ninguna imagen se asigna sola y todo terminaria "a revisar", gastando busquedas. Va
+				aparte del aviso del proveedor porque pueden faltar las dos cosas a la vez. Con una
+				API que todavia no manda `ia_configurada` no se bloquea nada (ver ia_no_configurada).
+			-->
+			<div
+			v-if="!previa.corrida_activa && ia_no_configurada"
+			class="img-cat__aviso img-cat__aviso--mal"
+			data-testid="imagenes-catalogo-sin-ia">
+				{{ motivo_sin_ia }}
+			</div>
+
+			<!--
 				Nada para buscar: se dice por que no se puede lanzar (todos tienen imagen, o los que
 				no tienen quedaron afuera por las dos exclusiones) en vez de dejar el boton apagado
 				sin explicacion.
@@ -184,9 +197,9 @@ import { es_cancelacion } from '@/store/image_assignment'
  *
  * Al abrirse pide la previa (contrato §5.4): cuántos artículos hay sin imagen, cuántos se buscan
  * ahora, qué se excluye y por qué, el tope, el proveedor y la estimación de búsquedas, tiempo y
- * dólares. Con eso Lucas decide antes de gastar. No deja lanzar sin proveedor configurado, sin
- * artículos para buscar o con otra de catálogo en curso: la API contesta 422 en los tres casos,
- * pero es mejor que el botón ya lo diga.
+ * dólares. Con eso Lucas decide antes de gastar. No deja lanzar sin proveedor configurado, sin la
+ * validación con IA configurada (plan §13), sin artículos para buscar o con otra de catálogo en
+ * curso: la API contesta 422 en los cuatro casos, pero es mejor que el botón ya lo diga.
  *
  * Eventos: `lanzada(asignacion)` y `ver_asignacion(asignacion)` (la que estaba en curso).
  */
@@ -208,8 +221,9 @@ export default {
 			return this.previa && this.previa.estimacion ? this.previa.estimacion : null
 		},
 		/**
-		 * Se puede lanzar si hay proveedor, hay algo para buscar y no hay otra de catálogo
-		 * corriendo. Es la misma regla con la que la API contesta 422.
+		 * Se puede lanzar si hay proveedor, la validación con IA no está marcada como faltante,
+		 * hay algo para buscar y no hay otra de catálogo corriendo. Es la misma regla con la que
+		 * la API contesta 422.
 		 *
 		 * @returns {Boolean}
 		 */
@@ -223,7 +237,29 @@ export default {
 			if (!this.previa.proveedor_configurado) {
 				return false
 			}
+			if (this.ia_no_configurada) {
+				return false
+			}
 			return Number(this.previa.a_buscar) > 0
+		},
+		/**
+		 * true solo si la previa dice EXPLÍCITAMENTE que la validación con IA no está configurada
+		 * (`ia_configurada: false`, plan §13). Si la clave no vino (una API de antes de ese
+		 * agregado), no se bloquea nada: esa API tampoco rechaza el lanzamiento por eso.
+		 *
+		 * @returns {Boolean}
+		 */
+		ia_no_configurada() {
+			return !!this.previa && this.previa.ia_configurada === false
+		},
+		/**
+		 * El motivo que manda la API (`ia_motivo`), o uno por defecto si vino vacío.
+		 *
+		 * @returns {String}
+		 */
+		motivo_sin_ia() {
+			let motivo = this.previa && this.previa.ia_motivo ? String(this.previa.ia_motivo).trim() : ''
+			return motivo || 'La validación con IA no está configurada: sin ella todas las imágenes quedarían para revisar a mano.'
 		},
 		/**
 		 * "1.250 de 5.000" de la búsqueda de catálogo que ya está corriendo.
