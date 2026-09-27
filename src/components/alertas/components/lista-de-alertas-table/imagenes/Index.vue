@@ -55,7 +55,12 @@ data-testid="alertas-imagenes">
  *     catálogo. `&solapa=no_asignadas|a_revisar|asignadas` elige con qué solapa abre.
  *  3. Al cerrar el detalle, sacar esos parámetros de la URL: si quedaran, volver a pedir el mismo
  *     link (otro "Revisar en Alertas" de la misma búsqueda) no cambiaría la ruta y el detalle no
- *     se volvería a abrir.
+ *     se volvería a abrir. Y al revés: si el detalle se abrió por URL y el parámetro desaparece
+ *     (el botón Atrás del navegador), el detalle se cierra.
+ *
+ * Además, cuando el número rojo dice que hay una búsqueda nueva o una que terminó (cambian
+ * `en_proceso` o `sin_ver` del resumen), la tabla se vuelve a pedir en silencio: sin eso, una
+ * búsqueda que arrancaba desde el listado o el asistente no aparecía hasta volver a entrar.
  */
 
 /** Cada cuánto se refresca la tabla mientras hay una búsqueda corriendo en la página visible. */
@@ -63,6 +68,12 @@ const REFRESCO_MS = 15000
 
 /** Solapas del detalle que se aceptan por URL; cualquier otro valor se ignora. */
 const SOLAPAS_VALIDAS = ['no_asignadas', 'a_revisar', 'asignadas']
+
+/**
+ * Espera antes del refresco por cambios del resumen: el resumen puede cambiar dos veces seguidas
+ * (el del listado y el de get_resumen) y con esto se pide la tabla una sola vez.
+ */
+const ESPERA_REFRESCO_POR_RESUMEN_MS = 400
 
 export default {
 	components: {
@@ -78,6 +89,14 @@ export default {
 			solapa_pedida: null,
 			/** Timer del refresco periódico de la tabla. */
 			timer_refresco: null,
+			/**
+			 * true si el detalle abierto se abrió por URL (`?asignacion=`). Solo en ese caso que
+			 * desaparezca el parámetro (el botón Atrás) cierra el detalle: uno abierto con un clic
+			 * en la fila nunca tuvo el parámetro.
+			 */
+			abierta_por_url: false,
+			/** Timer del refresco silencioso cuando cambia el resumen del número rojo. */
+			timer_refresco_por_resumen: null,
 		}
 	},
 	computed: {
@@ -92,18 +111,44 @@ export default {
 			let usuario = this.$store.state.auth.user
 			return !!(usuario && usuario.es_acceso_maestro)
 		},
-		/** Id pedido por URL, tal como viene (texto) o undefined. */
-		asignacion_de_la_url() {
-			return this.$route.query.asignacion
+		/**
+		 * Lo que el link directo pide, id y solapa juntos (`12|no_asignadas`). Mirar los dos hace
+		 * que `?asignacion=12&solapa=no_asignadas` sobre la misma búsqueda ya abierta cambie de
+		 * solapa, y no solo un id nuevo.
+		 *
+		 * @returns {String}
+		 */
+		link_directo() {
+			let query = this.$route.query
+			return String(query.asignacion || '') + '|' + String(query.solapa || '')
+		},
+		/**
+		 * Lo del resumen que avisa que la tabla puede estar vieja: una búsqueda que arrancó o
+		 * terminó (`en_proceso`) y una terminada que nadie abrió (`sin_ver`).
+		 *
+		 * @returns {String}
+		 */
+		firma_del_resumen() {
+			let resumen = this.$store.state.image_assignment.resumen
+			return resumen.en_proceso + '|' + resumen.sin_ver
 		},
 	},
 	watch: {
 		/**
 		 * Un link directo nuevo mientras la pestaña ya estaba abierta (la píldora de procesos, el
-		 * aviso de fin de búsqueda): abre ese detalle sin recargar nada más.
+		 * aviso de fin de búsqueda, el botón Atrás): abre, cambia de solapa o cierra el detalle sin
+		 * recargar nada más.
 		 */
-		asignacion_de_la_url() {
+		link_directo() {
 			this.leer_link_directo()
+		},
+		/** El número rojo avisa que hay algo nuevo: la tabla se vuelve a pedir en silencio. */
+		firma_del_resumen() {
+			clearTimeout(this.timer_refresco_por_resumen)
+			this.timer_refresco_por_resumen = setTimeout(() => {
+				this.timer_refresco_por_resumen = null
+				this.$store.dispatch('image_assignment/get_asignaciones', { silencioso: true })
+			}, ESPERA_REFRESCO_POR_RESUMEN_MS)
 		},
 	},
 	created() {
@@ -120,19 +165,29 @@ export default {
 	beforeDestroy() {
 		clearInterval(this.timer_refresco)
 		this.timer_refresco = null
+		clearTimeout(this.timer_refresco_por_resumen)
+		this.timer_refresco_por_resumen = null
 	},
 	methods: {
 		/**
-		 * Lee `?asignacion=<id>&solapa=<solapa>` y, si hay un id válido, abre ese detalle.
+		 * Lee `?asignacion=<id>&solapa=<solapa>` y, si hay un id válido, abre ese detalle (o, si
+		 * ya estaba abierto, le cambia la solapa). Si el parámetro ya no está y el detalle se había
+		 * abierto por URL, lo cierra: es lo que pasa con el botón Atrás del navegador.
 		 */
 		leer_link_directo() {
 			let id = Number(this.$route.query.asignacion)
 			if (!id) {
+				if (this.abierta_por_url && this.asignacion_abierta_id) {
+					this.abierta_por_url = false
+					this.asignacion_abierta_id = null
+					this.solapa_pedida = null
+				}
 				return
 			}
 			let solapa = this.$route.query.solapa
 			this.solapa_pedida = SOLAPAS_VALIDAS.indexOf(solapa) !== -1 ? solapa : null
 			this.asignacion_abierta_id = id
+			this.abierta_por_url = true
 		},
 		/**
 		 * Abre el detalle de una asignación (clic en la fila, "Ver", o "Ver la búsqueda en curso"
@@ -146,6 +201,7 @@ export default {
 			}
 			this.solapa_pedida = null
 			this.asignacion_abierta_id = asignacion.id
+			this.abierta_por_url = false
 		},
 		/**
 		 * El detalle se cerró: se suelta el id y se limpia la URL (ver el punto 3 del comentario
@@ -155,6 +211,7 @@ export default {
 		al_cerrar_detalle() {
 			this.asignacion_abierta_id = null
 			this.solapa_pedida = null
+			this.abierta_por_url = false
 
 			if (typeof this.$route.query.asignacion === 'undefined' && typeof this.$route.query.solapa === 'undefined') {
 				return

@@ -291,8 +291,13 @@ export default {
 				}
 			}
 			this.visible_proxy = false
-			this.$router.push({ name: 'alertas', params: { view: 'imagenes' }, query: query })
-			.catch(() => {
+			let destino = { name: 'alertas', params: { view: 'imagenes' }, query: query }
+			// Si ya se está en Alertas → Imágenes, `replace`: con `push` quedaban dos entradas
+			// iguales en el historial (la de antes y la que deja el cierre del detalle), y el
+			// botón Atrás parecía no hacer nada.
+			let ya_esta_ahi = this.$route && this.$route.name === 'alertas' && this.$route.params.view === 'imagenes'
+			let navegacion = ya_esta_ahi ? this.$router.replace(destino) : this.$router.push(destino)
+			navegacion.catch(() => {
 				// Ya estaba en esa misma URL (NavigationDuplicated): no hay nada que hacer.
 			})
 		},

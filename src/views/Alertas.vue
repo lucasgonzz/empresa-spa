@@ -176,9 +176,11 @@ export default {
 					this.$store.dispatch('image_assignment/get_asignaciones')
 					.then(() => {
 						this.$store.commit('auth/setLoading', false)
+						this.$store.commit('auth/setMessage', '')
 					})
 					.catch(() => {
 						this.$store.commit('auth/setLoading', false)
+						this.$store.commit('auth/setMessage', '')
 					})
 				}
 

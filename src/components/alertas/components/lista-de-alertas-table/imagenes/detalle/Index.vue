@@ -428,6 +428,13 @@ export default {
 			handler(nuevo) {
 				if (nuevo) {
 					this.abrir(nuevo)
+					return
+				}
+				// La solapa soltó el id con el modal todavía abierto (el botón Atrás del navegador
+				// con un detalle abierto por URL): se cierra acá, y el @hidden avisa `cerrado`
+				// como en cualquier otro cierre.
+				if (this.visible) {
+					this.visible = false
 				}
 			},
 		},
