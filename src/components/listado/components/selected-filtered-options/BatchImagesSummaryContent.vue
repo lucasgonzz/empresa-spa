@@ -535,31 +535,31 @@ export default {
 
 	.batch-summary-success
 		background-color: rgba(40, 167, 69, 0.1)
-		color: #155724
+		color: var(--color-text-success-strong, #155724)
 
 	.batch-summary-skipped
 		background-color: rgba(255, 193, 7, 0.1)
-		color: #856404
+		color: var(--color-text-warning-strong, #856404)
 
 	.batch-summary-review
 		background-color: rgba(255, 152, 0, 0.1)
-		color: #7d4e00
+		color: var(--color-text-warning-strong, #7d4e00)
 
 		.batch-summary-review-hint
 			display: block
 			margin-top: 4px
 			font-size: 0.85rem
-			color: #996300
+			color: var(--color-text-warning-strong, #996300)
 
 .batch-summary-quota
 	background-color: rgba(220, 53, 69, 0.1)
-	color: #842029
+	color: var(--color-text-danger-strong, #842029)
 
 	.batch-summary-quota-hint
 		display: block
 		margin-top: 4px
 		font-size: 0.85rem
-		color: #a83240
+		color: var(--color-text-danger-strong, #a83240)
 
 .batch-summary-quota-list
 	margin-top: 4px
@@ -573,13 +573,13 @@ export default {
 		margin: 0 0 8px 0
 		font-weight: bold
 		font-size: 0.95rem
-		color: #842029
+		color: var(--color-text-danger-strong, #842029)
 
 	.batch-summary-quota-names
 		margin: 0
 		padding-left: 20px
 		font-size: 0.9rem
-		color: #6a1a24
+		color: var(--color-text-danger-strong, #6a1a24)
 
 		li
 			margin-bottom: 4px
@@ -594,19 +594,19 @@ export default {
 		margin: 0 0 8px 0
 		font-weight: bold
 		font-size: 0.95rem
-		color: #856404
+		color: var(--color-text-warning-strong, #856404)
 
 	// Contador honesto: texto discreto, distinto del título, sin fondo propio (estética hairline).
 	.batch-summary-diagnostic-counter
 		margin: 0 0 10px 0
 		font-size: 0.85rem
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 
 	.batch-summary-detail-loading,
 	.batch-summary-detail-error
 		margin: 0 0 8px 0
 		font-size: 0.82rem
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 
 	.batch-summary-spin
 		display: inline-block
@@ -620,7 +620,7 @@ export default {
 	// este componente. No volver a poner max-height/overflow acá (ver prompt 05, grupo 217).
 
 	.batch-summary-skipped-item
-		border-bottom: 1px solid rgba(0, 0, 0, 0.06)
+		border-bottom: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.06))
 
 		&:last-child
 			border-bottom: none
@@ -630,7 +630,7 @@ export default {
 	align-items: flex-start
 	padding: 8px 4px
 	font-size: 0.9rem
-	color: #664d03
+	color: var(--color-text-warning-strong, #664d03)
 
 .batch-summary-skipped-item-expandable
 	cursor: pointer
@@ -646,7 +646,7 @@ export default {
 
 .batch-summary-skipped-item-summary
 	font-size: 0.8rem
-	color: #8a7130
+	color: var(--color-text-warning-strong, #8a7130)
 
 .batch-summary-attempts
 	display: flex
@@ -659,7 +659,7 @@ export default {
 	flex-direction: column
 	gap: 6px
 	padding-top: 8px
-	border-top: 1px solid rgba(0, 0, 0, 0.05)
+	border-top: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.05))
 
 	&:first-child
 		border-top: none
@@ -674,18 +674,18 @@ export default {
 .batch-summary-attempt-criterion
 	font-weight: 600
 	font-size: 0.85rem
-	color: #495057
+	color: var(--color-text-primary, #495057)
 
 .batch-summary-attempt-query
 	font-family: monospace
 	font-size: 0.8rem
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 	background: none
 
 .batch-summary-attempt-outcome
 	margin: 0
 	font-size: 0.82rem
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 
 .batch-summary-candidates-grid
 	display: grid
@@ -704,14 +704,14 @@ export default {
 	height: 96px
 	object-fit: cover
 	border-radius: 6px
-	border: 1px solid rgba(0, 0, 0, 0.08)
+	border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.08))
 
 .batch-summary-candidate-thumb-broken
 	display: flex
 	align-items: center
 	justify-content: center
 	background-color: rgba(0, 0, 0, 0.04)
-	color: rgba(0, 0, 0, 0.25)
+	color: var(--color-text-secondary, rgba(0, 0, 0, 0.25))
 	font-size: 1.4rem
 
 .batch-summary-candidate-badge
@@ -720,27 +720,27 @@ export default {
 	padding: 2px 6px
 	border-radius: 6px
 	background-color: rgba(0, 0, 0, 0.05)
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 
 .batch-summary-candidate-badge-neutral
 	background-color: rgba(0, 0, 0, 0.05)
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 
 .batch-summary-candidate-badge-warning
 	background-color: rgba(255, 152, 0, 0.12)
-	color: #7d4e00
+	color: var(--color-text-warning-strong, #7d4e00)
 
 .batch-summary-candidate-badge-danger
 	background-color: rgba(220, 53, 69, 0.1)
-	color: #842029
+	color: var(--color-text-danger-strong, #842029)
 
 .batch-summary-candidate-badge-success
 	background-color: rgba(40, 167, 69, 0.12)
-	color: #155724
+	color: var(--color-text-success-strong, #155724)
 
 .batch-summary-candidate-reason
 	font-size: 0.72rem
-	color: #6c757d
+	color: var(--color-text-secondary, #6c757d)
 	word-break: break-word
 
 @keyframes batch-summary-spin-anim
@@ -758,7 +758,7 @@ export default {
 		margin: 0 0 12px 0
 		font-weight: bold
 		font-size: 0.95rem
-		color: #7d4e00
+		color: var(--color-text-warning-strong, #7d4e00)
 
 .batch-summary-review-grid
 	display: flex
@@ -780,7 +780,7 @@ export default {
 	height: 64px
 	object-fit: cover
 	border-radius: 6px
-	border: 1px solid rgba(0, 0, 0, 0.1)
+	border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.1))
 	flex-shrink: 0
 
 .batch-summary-review-card-info
@@ -819,6 +819,6 @@ export default {
 		background: transparent
 
 	&::-webkit-scrollbar-thumb
-		background-color: rgba(0, 0, 0, 0.2)
+		background-color: var(--color-border, rgba(0, 0, 0, 0.2))
 		border-radius: 8px
 </style>

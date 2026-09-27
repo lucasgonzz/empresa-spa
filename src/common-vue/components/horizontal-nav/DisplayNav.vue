@@ -95,7 +95,7 @@ export default {
 	min-width: 0
 	gap: 6px
 	padding: 4px
-	background-color: #E3E3E3
+	background-color: var(--bg-nav, #E3E3E3)
 	border-radius: 8px
 
 	/* Pestaña inactiva: texto secundario sobre fondo transparente */
@@ -107,14 +107,14 @@ export default {
 		font-size: 0.875rem
 		font-weight: 500
 		line-height: 1.25
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 		background-color: transparent
 		white-space: nowrap
 		transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease
 
 		&:hover:not(.active)
 			color: #0d6efd
-			background-color: #e7f1ff
+			background-color: var(--bg-nav-hover, #e7f1ff)
 
 		&:focus,
 		&:focus-visible

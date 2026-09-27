@@ -172,8 +172,8 @@ export default {
 	flex-direction: row  
 	margin: 1em 1%
 	border-radius: 12px
-	background: #FFF
-	.title 
+	background: var(--bg-card, #FFF)
+	.title
 		font-size: 30px 
 		font-weight: bold
 		// height: 200px
@@ -183,7 +183,7 @@ export default {
 		align-items: center
 		padding: 0 10px
 		p 
-			color: #333 !important
+			color: var(--color-text-primary, #333) !important
 			display: flex
 			flex-direction: row
 			line-height: 25px
@@ -197,8 +197,8 @@ export default {
 			border-radius: 5px 5px 0 0 
 	.cont-props
 		padding: 1em
-		p 
-			color: #333 !important
+		p
+			color: var(--color-text-primary, #333) !important
 			text-align: left
 			margin-bottom: 0
 </style>

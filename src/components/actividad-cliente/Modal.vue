@@ -497,14 +497,14 @@ export default {
 		flex: 1 1 130px
 		min-width: 130px
 		padding: 10px
-		border: 1px solid #dee2e6
+		border: 1px solid var(--color-border, #dee2e6)
 		border-radius: 6px
 	&__total-valor
 		font-size: 1.1rem
 		font-weight: 600
 	&__total-titulo
 		font-size: .8rem
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 	&__seccion
 		font-weight: 600
 		margin-bottom: 10px
@@ -525,7 +525,7 @@ export default {
 		margin-bottom: 0
 	&__evento
 		padding: 6px 0
-		border-bottom: 1px solid #f1f1f1
+		border-bottom: 1px solid var(--color-border-secondary, #f1f1f1)
 		// Es una lista y no una tabla justamente para que en telefono envuelva y se lea sin
 		// scroll horizontal.
 		word-break: break-word
