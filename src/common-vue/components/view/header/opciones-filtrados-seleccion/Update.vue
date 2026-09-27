@@ -736,15 +736,15 @@ export default {
 </script>
 <style scoped lang="sass">
 .update-field-card
-	border: 1px solid #e8ecf0
+	border: 1px solid var(--color-border-secondary, #e8ecf0)
 	border-radius: 8px
 	padding: 12px 14px
-	background: #fafbfc
+	background: var(--bg-section, #fafbfc)
 
 .update-field-card__title
 	font-weight: 600
 	font-size: 0.95rem
-	color: #2c3e50
+	color: var(--color-text-primary, #2c3e50)
 
 .update-field-card__mode-group
 	display: flex

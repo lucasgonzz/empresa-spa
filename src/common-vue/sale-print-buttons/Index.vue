@@ -1159,7 +1159,7 @@ export default {
 .sale-print-dropdown-menu
 	width: 200px
 	z-index: 3060 !important
-	background-color: #fff
+	background-color: var(--bg-card, #fff)
 	.b-dropdown-text
 		text-align: center
 

@@ -333,11 +333,11 @@ export default {
 
 	.filtro-fijo-modal__text
 		font-size: 0.9rem
-		color: #1d1d1f
+		color: var(--color-text-primary, #1d1d1f)
 		margin-bottom: 0
 
 		&.filtro-fijo-modal__text--muted
-			color: #6e6e73
+			color: var(--color-text-secondary, #6e6e73)
 			font-size: 0.85rem
 
 	// Tarjetas seleccionables estilo Apple: borde sutil, sin fondo salido, resalta al elegir
@@ -354,28 +354,30 @@ export default {
 		gap: 2px
 		width: 100%
 		text-align: left
-		border: 1px solid #e2e4e7
-		background: #fff
+		border: 1px solid var(--color-border-secondary, #e2e4e7)
+		background: var(--bg-card, #fff)
 		border-radius: 10px
 		padding: 10px 14px
 		cursor: pointer
 		transition: border-color 0.15s ease, background 0.15s ease
 
 		&:hover
-			border-color: #c7cacf
+			border-color: var(--color-border, #c7cacf)
 
 		&.filtro-fijo-modal__card--active
-			border-color: #007bff
+			border-color: var(--color-primary, #007bff)
+			// Tinte semitransparente de "seleccionado": se apoya en lo que hay debajo y
+			// funciona en los dos modos, no se toca.
 			background: rgba(0, 123, 255, 0.06)
 
 		.filtro-fijo-modal__card-title
 			font-size: 0.9rem
 			font-weight: 600
-			color: #1d1d1f
+			color: var(--color-text-primary, #1d1d1f)
 
 		.filtro-fijo-modal__card-desc
 			font-size: 0.78rem
-			color: #6e6e73
+			color: var(--color-text-secondary, #6e6e73)
 
 	.filtro-fijo-modal__subconfig
 		margin-top: 10px
@@ -383,7 +385,7 @@ export default {
 	.filtro-fijo-modal__label
 		display: block
 		font-size: 0.8rem
-		color: #4b4f56
+		color: var(--color-text-secondary, #4b4f56)
 		margin-bottom: 4px
 		margin-top: 10px
 

@@ -242,14 +242,14 @@ export default {
 	font-weight: 700
 	text-transform: uppercase
 	letter-spacing: 0.04em
-	color: #6b7280
+	color: var(--color-text-secondary, #6b7280)
 	margin-bottom: 10px
 
 .descripcion-de-control-popover__body
 	p
 		font-size: 0.925rem
 		line-height: 1.55
-		color: #1f2937
+		color: var(--color-text-primary, #1f2937)
 		margin-bottom: 10px
 
 		&:last-child
@@ -265,7 +265,7 @@ export default {
 	li
 		font-size: 0.9rem
 		line-height: 1.5
-		color: #1f2937
+		color: var(--color-text-primary, #1f2937)
 		margin-bottom: 6px
 
 		&:last-child
@@ -276,7 +276,7 @@ export default {
 	font-weight: 700
 	text-transform: uppercase
 	letter-spacing: 0.04em
-	color: #6b7280
+	color: var(--color-text-secondary, #6b7280)
 	margin-bottom: 6px
 
 // La precondicion se destaca: es lo que evita que alguien apriete algo que no va a
@@ -285,9 +285,13 @@ export default {
 	margin-top: 12px
 	padding: 10px 12px
 	border-radius: 10px
-	background: #fff8e6
-	border: 1px solid #f5e0a3
+	// --bg-card-secondary es el mismo token que ya usan los paneles de atencion de
+	// ImpresoraConfigModal/InstalarAgenteModal (_dark_theme.sass): en claro no existe y cada
+	// componente se queda con su literal exacto, en oscuro cae en --bg-section para no quedar
+	// como un amarillo encendido en medio de un popover oscuro.
+	background: var(--bg-card-secondary, #fff8e6)
+	border: 1px solid var(--color-border, #f5e0a3)
 	font-size: 0.875rem
 	line-height: 1.5
-	color: #7a5b00
+	color: var(--color-text-warning-strong, #7a5b00)
 </style>

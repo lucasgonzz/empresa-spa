@@ -506,11 +506,11 @@ $tarjeta-clip-verde: #15803D
 
 .tarjeta-clip__sin-video
 	font-size: 0.875rem
-	color: #6b7280
+	color: var(--color-text-secondary, #6b7280)
 	margin: 0
 	padding: 0.75rem 0.875rem
 	border-radius: 12px
-	background: #f4f4f6
+	background: var(--bg-section, #f4f4f6)
 
 .tarjeta-clip__probar
 	margin-top: 0.75rem
@@ -589,8 +589,8 @@ $tarjeta-clip-verde: #15803D
 		transform: scale(1)
 
 .tarjeta-clip__probar:disabled
-	background: #ececed
-	color: #a1a1aa
+	background: var(--bg-section, #ececed)
+	color: var(--color-text-secondary, #a1a1aa)
 	cursor: not-allowed
 
 @keyframes tarjeta-clip-girar

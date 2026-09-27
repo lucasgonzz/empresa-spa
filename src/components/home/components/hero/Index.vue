@@ -49,7 +49,7 @@ export default {
 <style lang="sass">
 .hero_section
 	padding: 56px 0
-	background: radial-gradient(circle at 80% 0, #E2F0FF 0%, #F6F8FC 45%)
+	background: radial-gradient(circle at 80% 0, var(--bg-section, #E2F0FF) 0%, var(--bg-section, #F6F8FC) 45%)
 
 .hero_container
 	max-width: 1200px
@@ -66,7 +66,7 @@ export default {
 		line-height: 1.1
 		margin: 12px 0
 	p
-		color: #5D6F89
+		color: var(--color-text-secondary, #5D6F89)
 		margin-bottom: 20px
 
 .hero_badge
@@ -106,11 +106,11 @@ export default {
 .hero_image
 	width: 100%
 	border-radius: 16px
-	border: 1px solid #DCE7F5
+	border: 1px solid var(--color-border-secondary, #DCE7F5)
 
 .hero_panel
-	background: white
-	border: 1px solid #DDE7F5
+	background: var(--bg-card, white)
+	border: 1px solid var(--color-border-secondary, #DDE7F5)
 	border-radius: 12px
 	padding: 14px
 	max-width: 320px
@@ -124,7 +124,7 @@ export default {
 		padding-left: 18px
 		margin: 0
 	li
-		color: #586B86
+		color: var(--color-text-secondary, #586B86)
 		margin-bottom: 5px
 
 @media screen and (max-width: 992px)

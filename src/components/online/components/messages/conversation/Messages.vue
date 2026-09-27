@@ -107,16 +107,19 @@ export default {
 	height: calc(100% - 70px)
 	overflow-y: scroll
 	padding: 12px
-	background: #f7f9fb
+	background: var(--bg-section, #f7f9fb)
 #messages
 	display: flex
 	flex-direction: column
 	gap: 8px
 .incoming-message
 	align-self: flex-start
-	color: #111827
+	color: var(--color-text-primary, #111827)
 .outgoing-message
 	align-self: flex-end
+	// NO tocar: va pareado con el verde de WhatsApp de .outgoing-message.message, que es marca
+	// y queda igual en los dos modos. Tokenizar solo este lado dejaria texto claro sobre el
+	// mismo verde en oscuro.
 	color: #111827
 .message
 	border-radius: 10px
@@ -124,21 +127,25 @@ export default {
 	margin-bottom: 0
 	width: auto
 	max-width: 80%
-	background: #FFF
-	border: 1px solid #ececec
+	background: var(--bg-card, #FFF)
+	border: 1px solid var(--color-border-secondary, #ececec)
 	.text
 		text-align: left
 		white-space: pre-wrap
 	.since
 		font-size: 11px
 		text-align: right
+		// NO tocar: esta misma regla cae adentro de la burbuja entrante (que va a --bg-card,
+		// oscuro) Y de la saliente (que se queda en el verde de WhatsApp, siempre claro). Un
+		// solo token no puede acertar en las dos a la vez -- ver el comentario de arriba.
 		color: #6b7280
 		margin-top: 4px
 		line-height: 1.2
 .outgoing-message.message
+	// Verde de WhatsApp: color de marca, se mantiene igual en los dos modos (rule 8).
 	background: #dcf8c6
 .incoming-message.message
-	background: #ffffff
-	p 
+	background: var(--bg-card, #ffffff)
+	p
 		margin: 0
 </style>

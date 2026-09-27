@@ -1144,8 +1144,8 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	flex-direction: column
 	width: 100%
 	height: 100%
-	background: #ffffff
-	border-left: 1px solid $panel-demo-linea
+	background: var(--bg-card, #ffffff)
+	border-left: 1px solid var(--color-border-secondary, $panel-demo-linea)
 	// 20% menos intensa que antes (pedido del 18/8: "un poco mas tranquilo el color"). Era
 	// rgba(17, 24, 39, 0.06).
 	box-shadow: -8px 0 24px rgba(17, 24, 39, 0.048)
@@ -1200,11 +1200,11 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	transform: translateY(-50%)
 	width: 36px
 	height: 72px
-	border: 1px solid $panel-demo-linea
+	border: 1px solid var(--color-border-secondary, $panel-demo-linea)
 	border-right: none
 	border-radius: 10px 0 0 10px
-	background: #ffffff
-	color: $panel-demo-tinta
+	background: var(--bg-card, #ffffff)
+	color: var(--color-text-primary, $panel-demo-tinta)
 	cursor: pointer
 	display: flex
 	align-items: center
@@ -1227,7 +1227,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	// alineada a la izquierda hay que decirlo acá o cambia sin que nadie lo haya pedido.
 	text-align: center
 	padding: 1.5rem 1.5rem 1.125rem
-	border-bottom: 1px solid $panel-demo-linea
+	border-bottom: 1px solid var(--color-border-secondary, $panel-demo-linea)
 	// Lavado de marca muy sutil (pedido del 18/8: mas contraste, menos "colores de sistema").
 	// Un solo momento de color arriba de todo, no un fondo entero — restraint, no saturacion.
 	background: linear-gradient(180deg, rgba(11, 132, 248, 0.05), rgba(58, 49, 252, 0.015) 70%, transparent)
@@ -1238,13 +1238,13 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	// Tracking negativo: los titulos grandes se leen separados si se los deja en cero.
 	letter-spacing: -0.02em
 	line-height: 1.2
-	color: $panel-demo-tinta
+	color: var(--color-text-primary, $panel-demo-tinta)
 	margin: 0
 
 .panel-demo__bajada
 	font-size: 0.875rem
 	line-height: 1.45
-	color: $panel-demo-gris
+	color: var(--color-text-secondary, $panel-demo-gris)
 	margin: 0.25rem 0 0
 
 // El cuerpo ya no es gris de sistema plano (pedido del 18/8: mas contraste, fondo al estilo
@@ -1262,13 +1262,13 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	gap: 0.75rem
 	padding: 1rem 1.125rem
 	border-radius: 14px
-	background: #ffffff
-	border: 1px solid $panel-demo-linea
+	background: var(--bg-card, #ffffff)
+	border: 1px solid var(--color-border-secondary, $panel-demo-linea)
 
 .panel-demo__esqueleto-barra
 	height: 12px
 	border-radius: 999px
-	background: #ececee
+	background: var(--bg-section, #ececee)
 	animation: panel-demo-respirar 1.5s ease-in-out infinite
 
 .panel-demo__esqueleto-barra:nth-child(1)
@@ -1287,11 +1287,11 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	margin: 0
 	padding: 1rem 1.125rem
 	border-radius: 14px
-	background: #ffffff
-	border: 1px solid $panel-demo-linea
+	background: var(--bg-card, #ffffff)
+	border: 1px solid var(--color-border-secondary, $panel-demo-linea)
 	font-size: 0.875rem
 	line-height: 1.5
-	color: $panel-demo-gris
+	color: var(--color-text-secondary, $panel-demo-gris)
 
 // ---------------------------------------------------------------------------------------
 // Carrusel horizontal de secciones (punto 1-2 de la mision del 18/8). El viewport recorta
@@ -1322,9 +1322,9 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	width: 32px
 	height: 32px
 	border-radius: 50%
-	border: 1px solid $panel-demo-linea
-	background: #ffffff
-	color: $panel-demo-tinta
+	border: 1px solid var(--color-border-secondary, $panel-demo-linea)
+	background: var(--bg-card, #ffffff)
+	color: var(--color-text-primary, $panel-demo-tinta)
 	font-size: 1.125rem
 	line-height: 1
 	cursor: pointer
@@ -1368,7 +1368,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	font-size: 0.9375rem
 	font-weight: 600
 	letter-spacing: -0.01em
-	color: $panel-demo-tinta
+	color: var(--color-text-primary, $panel-demo-tinta)
 	margin: 0
 	white-space: nowrap
 	overflow: hidden
@@ -1390,7 +1390,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	font-weight: 600
 	letter-spacing: 0.04em
 	text-transform: uppercase
-	color: $panel-demo-gris
+	color: var(--color-text-secondary, $panel-demo-gris)
 	font-variant-numeric: tabular-nums
 
 .panel-demo__carrusel-puntos
@@ -1402,7 +1402,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	width: 6px
 	height: 6px
 	border-radius: 50%
-	background: #d4d4d8
+	background: var(--color-border, #d4d4d8)
 	transition: background 0.2s ease, transform 0.2s ease
 
 .panel-demo__carrusel-punto--activo
@@ -1445,11 +1445,11 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	min-width: 0
 	padding: 1rem 0.375rem 0.5rem
 	border-radius: 14px
-	background: #ffffff
+	background: var(--bg-card, #ffffff)
 	// Sin box-shadow a proposito (punto 3 de la mision del 18/8): antes esta tarjeta era la
 	// que le daba sombra a los items de adentro. El borde solo ya alcanza para separarla del
 	// fondo del cuerpo, que ahora tiene mas caracter (ver mas abajo).
-	border: 1px solid $panel-demo-linea
+	border: 1px solid var(--color-border-secondary, $panel-demo-linea)
 
 .panel-demo__seccion-encabezado
 	padding: 0 0.75rem
@@ -1458,14 +1458,14 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 .panel-demo__progreso
 	display: block
 	font-size: 0.75rem
-	color: $panel-demo-gris
+	color: var(--color-text-secondary, $panel-demo-gris)
 	font-variant-numeric: tabular-nums
 
 .panel-demo__medidor
 	height: 3px
 	margin-top: 0.5rem
 	border-radius: 999px
-	background: #ececee
+	background: var(--bg-section, #ececee)
 	overflow: hidden
 
 .panel-demo__medidor-relleno
@@ -1486,8 +1486,8 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 .panel-demo__item
 	margin: 0 0 0.625rem
 	border-radius: 12px
-	border: 1px solid $panel-demo-linea
-	background: #ffffff
+	border: 1px solid var(--color-border-secondary, $panel-demo-linea)
+	background: var(--bg-card, #ffffff)
 	overflow: hidden
 	transition: border-color 0.2s ease, background 0.2s ease
 
@@ -1511,7 +1511,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	padding: 0.75rem 0.875rem
 	font-size: 0.9375rem
 	line-height: 1.35
-	color: $panel-demo-tinta
+	color: var(--color-text-primary, $panel-demo-tinta)
 	cursor: pointer
 	transition: background 0.15s ease
 
@@ -1524,10 +1524,10 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 
 .panel-demo__item-boton--secundario
 	font-size: 0.875rem
-	color: $panel-demo-gris
+	color: var(--color-text-secondary, $panel-demo-gris)
 
 .panel-demo__item-boton--hecho .panel-demo__item-titulo
-	color: $panel-demo-gris
+	color: var(--color-text-secondary, $panel-demo-gris)
 
 .panel-demo__item-titulo
 	flex: 1 1 auto
@@ -1539,7 +1539,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	width: 18px
 	height: 18px
 	border-radius: 50%
-	border: 1.5px solid #d4d4d8
+	border: 1.5px solid var(--color-border, #d4d4d8)
 	transition: border-color 0.2s ease
 
 .panel-demo__item-marca--hecha
@@ -1572,14 +1572,14 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	height: 4px
 	margin: -2px 0 0 -2px
 	border-radius: 50%
-	background: #c4c4c8
+	background: var(--color-border, #c4c4c8)
 
 .panel-demo__item-flecha
 	flex: 0 0 auto
 	width: 7px
 	height: 7px
 	margin-right: 2px
-	border: solid #c4c4c8
+	border: solid var(--color-border, #c4c4c8)
 	border-width: 0 1.5px 1.5px 0
 	transform: rotate(-45deg)
 	transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)
@@ -1591,7 +1591,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 .panel-demo__biblioteca
 	margin-top: 0.5rem
 	padding: 0.75rem 0 0
-	border-top: 1px solid $panel-demo-linea
+	border-top: 1px solid var(--color-border-secondary, $panel-demo-linea)
 
 .panel-demo__biblioteca-titulo
 	// Mismo caso que el encabezado: el rotulo va centrado a proposito y se declara.
@@ -1601,43 +1601,43 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	text-transform: uppercase
 	// Tracking positivo: el texto chico y en mayusculas necesita aire para leerse.
 	letter-spacing: 0.06em
-	color: #9ca3af
+	color: var(--color-text-secondary, #9ca3af)
 	margin: 0 0 0.25rem
 	padding: 0 0.75rem
 
 .panel-demo__notas
 	padding: 1rem 1.25rem 1.125rem
-	border-top: 1px solid $panel-demo-linea
-	background: #ffffff
+	border-top: 1px solid var(--color-border-secondary, $panel-demo-linea)
+	background: var(--bg-card, #ffffff)
 
 .panel-demo__notas-texto
 	display: block
 	font-size: 0.8125rem
 	line-height: 1.4
-	color: $panel-demo-gris
+	color: var(--color-text-secondary, $panel-demo-gris)
 	margin-bottom: 0.5rem
 
 .panel-demo__notas-campo
 	width: 100%
-	border: 1px solid #e4e4e7
+	border: 1px solid var(--color-border, #e4e4e7)
 	border-radius: 12px
 	padding: 0.625rem 0.75rem
 	font-size: 0.875rem
 	line-height: 1.45
-	color: $panel-demo-tinta
-	background: #fafafa
+	color: var(--color-text-primary, $panel-demo-tinta)
+	background: var(--bg-section, #fafafa)
 	resize: vertical
 	transition: border-color 0.15s ease, background 0.15s ease
 
 .panel-demo__notas-campo:focus
 	outline: none
-	background: #ffffff
+	background: var(--bg-card, #ffffff)
 	border-color: $panel-demo-celeste
 
 .panel-demo__notas-restante
 	margin: 0.375rem 0 0
 	font-size: 0.75rem
-	color: $panel-demo-gris
+	color: var(--color-text-secondary, $panel-demo-gris)
 	text-align: right
 	font-variant-numeric: tabular-nums
 
@@ -1694,7 +1694,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 		margin-right: 0
 		// Espeja el borde y la sombra: pegado por su izquierda, el filo va del otro lado.
 		border-left: none
-		border-right: 1px solid $panel-demo-linea
+		border-right: 1px solid var(--color-border-secondary, $panel-demo-linea)
 		border-radius: 0 10px 10px 0
 		box-shadow: 4px 0 12px rgba(17, 24, 39, 0.08)
 
@@ -1702,7 +1702,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 		left: auto
 		right: 100%
 		border-right: none
-		border-left: 1px solid $panel-demo-linea
+		border-left: 1px solid var(--color-border-secondary, $panel-demo-linea)
 		border-radius: 10px 0 0 10px
 		box-shadow: -4px 0 12px rgba(17, 24, 39, 0.08)
 
