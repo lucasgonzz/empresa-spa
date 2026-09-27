@@ -25,7 +25,7 @@ class="img-det-fila img-det-fila--no-asignada"
 			<span
 			class="img-det-etiqueta"
 			:class="'img-det-etiqueta--' + tono_del_motivo"
-			data-testid="imagenes-item-motivo">
+			data-testid="imagenes-motivo-articulo">
 				{{ motivo }}
 			</span>
 		</div>

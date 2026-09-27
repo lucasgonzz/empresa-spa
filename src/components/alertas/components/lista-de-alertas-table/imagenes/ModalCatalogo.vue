@@ -10,7 +10,7 @@ title="Buscar imágenes para todo el catálogo"
 
 	<div
 	class="img-cat"
-	data-testid="imagenes-catalogo">
+	data-testid="imagenes-modal-catalogo">
 
 		<div
 		v-if="cargando"

@@ -2,7 +2,7 @@
 <div
 v-if="total > 0"
 class="paginacion-modulo m-t-15"
-data-testid="imagenes-paginacion">
+data-testid="imagenes-capsula-paginacion">
 	<div class="paginacion-modulo__barra">
 
 		<span

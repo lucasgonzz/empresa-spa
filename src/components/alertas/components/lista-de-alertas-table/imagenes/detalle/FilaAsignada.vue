@@ -39,7 +39,7 @@ class="img-det-fila img-det-fila--asignada"
 			<span
 			v-if="aprobada"
 			class="img-det-etiqueta img-det-etiqueta--neutro"
-			data-testid="imagenes-item-aprobada">
+			data-testid="imagenes-aprobada-por">
 				{{ texto_aprobada }}
 			</span>
 		</div>

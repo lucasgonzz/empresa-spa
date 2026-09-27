@@ -20,7 +20,7 @@ class="img-asig-estado"
 		<span
 		v-if="asignacion.trabada"
 		class="img-asig-chip img-asig-chip--trabada"
-		data-testid="imagenes-asignacion-trabada"
+		data-testid="imagenes-chip-trabada"
 		title="No avanza hace más de 15 minutos">
 			<i class="bi bi-exclamation-triangle"></i>
 			Parece trabada

@@ -48,7 +48,7 @@ data-testid="imagenes-barra">
 			<b-button
 			class="btn-modulo"
 			variant="outline-danger"
-			data-testid="imagenes-rechazar-seleccionadas"
+			data-testid="imagenes-lote-rechazar"
 			:disabled="ocupado"
 			@click="$emit('rechazar_seleccionadas')">
 				Rechazar seleccionadas ({{ cantidad_seleccionados }})
@@ -56,7 +56,7 @@ data-testid="imagenes-barra">
 			<b-button
 			class="btn-modulo"
 			variant="success"
-			data-testid="imagenes-aprobar-seleccionadas"
+			data-testid="imagenes-lote-aprobar"
 			:disabled="ocupado"
 			@click="$emit('aprobar_seleccionadas')">
 				Aprobar seleccionadas ({{ cantidad_seleccionados }})

@@ -13,7 +13,7 @@
 
 		<div
 		class="img-det"
-		data-testid="imagenes-detalle"
+		data-testid="imagenes-modal-detalle"
 		:data-asignacion="asignacion ? asignacion.id : null">
 
 			<div
@@ -339,7 +339,7 @@ export default {
 				items.push({
 					name: solapa.nombre + ' (' + entero_es(conteo(self.conteos, solapa.valor)) + ')',
 					route_value: solapa.valor,
-					testid: 'imagenes-solapa-' + solapa.valor,
+					testid: 'solapa-imagenes-' + solapa.valor,
 				})
 			})
 			return items

@@ -1,7 +1,7 @@
 <template>
 <div
 class="img-asig-tabla"
-data-testid="imagenes-asignaciones">
+data-testid="imagenes-listado-asignaciones">
 
 	<!-- Primera carga: todavia no hay nada que mostrar, ni siquiera el estado vacio. -->
 	<div
@@ -129,7 +129,7 @@ data-testid="imagenes-asignaciones">
 					size="sm"
 					variant="outline-primary"
 					class="btn-modulo btn-modulo--fila"
-					:data-testid="'imagenes-asignacion-ver-' + data.item.id"
+					:data-testid="'imagenes-ver-asignacion-' + data.item.id"
 					@click.stop="abrir(data.item)">
 						Ver
 					</b-button>
@@ -296,7 +296,7 @@ export default {
 			if (!asignacion || tipo !== 'row') {
 				return null
 			}
-			return { 'data-testid': 'imagenes-asignacion-' + asignacion.id }
+			return { 'data-testid': 'imagenes-fila-asignacion-' + asignacion.id }
 		},
 		/**
 		 * Clase por fila: las nuevas (sin abrir) van en negrita suave, como un mail sin leer.

@@ -8,7 +8,7 @@ class="img-det-fila img-det-fila--revisar"
 
 	<b-form-checkbox
 	class="img-det-fila__tilde"
-	:data-testid="'imagenes-seleccionar-' + item.id"
+	:data-testid="'imagenes-tilde-' + item.id"
 	:checked="seleccionado"
 	:disabled="procesando"
 	:aria-label="'Seleccionar ' + nombre"

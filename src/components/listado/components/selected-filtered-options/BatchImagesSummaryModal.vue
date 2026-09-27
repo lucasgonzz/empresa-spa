@@ -19,7 +19,7 @@
 		<div
 		class="imagenes-resumen"
 		data-tour="listado.modal_resumen_imagenes"
-		data-testid="imagenes-resumen"
+		data-testid="imagenes-modal-resumen"
 		:data-asignacion="asignacion ? asignacion.id : null">
 
 			<p class="imagenes-resumen__intro">

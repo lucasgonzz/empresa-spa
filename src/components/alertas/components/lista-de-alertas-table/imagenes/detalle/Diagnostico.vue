@@ -1,7 +1,7 @@
 <template>
 <div
 class="img-det-diag"
-:data-testid="'imagenes-diagnostico-detalle-' + item_id">
+:data-testid="'imagenes-panel-diagnostico-' + item_id">
 
 	<p
 	v-if="!criterios.length"
