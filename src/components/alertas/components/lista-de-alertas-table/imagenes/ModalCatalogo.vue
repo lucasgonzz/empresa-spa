@@ -96,6 +96,9 @@ title="Buscar imágenes para todo el catálogo"
 					<strong>{{ entero(previa.quedan_para_otra_corrida) }}</strong>
 					quedan para otra búsqueda: el tope es de {{ entero(previa.tope) }} artículos por vez. Cuando termine, lanzala de nuevo y sigue con los que faltan.
 				</li>
+				<li v-else-if="Number(previa.tope) > 0">
+					El tope es de <strong>{{ entero(previa.tope) }}</strong> artículos por búsqueda: esta vez entran todos.
+				</li>
 				<li>
 					Van primero los publicados en la tienda, después los que tienen stock y después el resto.
 				</li>

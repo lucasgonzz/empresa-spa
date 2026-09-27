@@ -45,9 +45,12 @@ data-testid="imagenes-listado-asignaciones">
 		<!--
 			El wrapper propio es el que redondea y recorta el scroll horizontal (ver
 			_controles_modulo.sass): en telefono la tabla se desliza de costado adentro de la caja
-			en vez de romper el ancho de la pagina.
+			en vez de romper el ancho de la pagina. Mientras llega otra pagina, la actual queda un
+			poco apagada en vez de desaparecer.
 		-->
-		<div class="tabla-modulo-wrapper">
+		<div
+		class="tabla-modulo-wrapper img-asig-tabla__caja"
+		:class="{ 'img-asig-tabla__caja--cargando': loading }">
 			<b-table
 			responsive
 			hover
@@ -327,8 +330,16 @@ export default {
 	font-size: 0.875rem
 	color: var(--color-text-secondary, #6c757d)
 
+.img-asig-tabla__caja
+	transition: opacity .15s ease
+
+.img-asig-tabla__caja--cargando
+	opacity: .55
+
 // La tabla no se aprieta por debajo de un ancho legible: en tablet y telefono se desliza de
-// costado adentro de la caja redondeada (el wrapper recorta el scroll).
+// costado adentro de la caja redondeada (el wrapper recorta el scroll). Va en la table-class y no
+// en el wrapper: con `responsive`, un min-width afuera le prohibe achicarse al contenedor del
+// scroll (ver e2e/chequear-min-width-en-tablas-responsive.js).
 .img-asig-tabla__tabla
 	min-width: 920px
 

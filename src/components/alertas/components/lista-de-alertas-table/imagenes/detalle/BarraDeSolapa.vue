@@ -208,6 +208,14 @@ html.dark-mode
 		margin-left: 0
 		width: 100%
 
-		.btn
+		// "Rechazar seleccionadas (12)" no entra en media pantalla de telefono: el boton crece
+		// a dos renglones en vez de cortar el texto (el alto fijo de .btn-modulo lo recortaba).
+		// Tres clases a proposito: .btn-modulo.btn es (0,2,0) y vive en una hoja global.
+		.btn.btn-modulo
 			flex: 1 1 0
+			height: auto
+			min-height: var(--toolbar-control-h, 36px)
+			padding: 6px 10px
+			line-height: 1.2
+			white-space: normal
 </style>

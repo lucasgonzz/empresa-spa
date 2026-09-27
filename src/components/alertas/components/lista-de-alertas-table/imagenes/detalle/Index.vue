@@ -452,7 +452,14 @@ export default {
 	beforeDestroy() {
 		this.detener_refresco()
 		clearTimeout(this.timer_buscar)
-		clearTimeout(this.timer_sincronizacion)
+		// Si se sale de la pantalla con una sincronización en espera (por ejemplo, con el botón
+		// "atrás" del navegador justo después de aprobar), el número rojo se pide igual: si no,
+		// quedaría contando imágenes que ya se resolvieron.
+		if (this.timer_sincronizacion) {
+			clearTimeout(this.timer_sincronizacion)
+			this.timer_sincronizacion = null
+			this.$store.dispatch('image_assignment/get_resumen')
+		}
 	},
 	methods: {
 		/**
@@ -1338,7 +1345,8 @@ html.dark-mode
 	.img-det-fila__acciones
 		width: 100%
 
-		.btn
+		// Tres clases: .btn-modulo--fila.btn (0,2,0) vive en una hoja global y fija 28px.
+		.btn.btn-modulo
 			flex: 1 1 0
 			height: 36px
 

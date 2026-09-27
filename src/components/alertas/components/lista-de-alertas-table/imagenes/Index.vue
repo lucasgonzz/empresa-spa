@@ -107,6 +107,10 @@ export default {
 		},
 	},
 	created() {
+		// Siempre desde la primera página: las búsquedas van de la más nueva a la más vieja, y
+		// quien entra a la pestaña casi siempre viene a ver la última (la que acaba de largar o
+		// la que le avisó el número rojo), no la página en la que había quedado la vez anterior.
+		this.$store.commit('image_assignment/set_page', 1)
 		this.$store.dispatch('image_assignment/get_asignaciones')
 		this.leer_link_directo()
 	},
@@ -178,12 +182,17 @@ export default {
 			this.$store.dispatch('image_assignment/get_asignaciones')
 		},
 		/**
-		 * Refresco periódico: solo si la pestaña del navegador está a la vista y alguna búsqueda
-		 * de la página sigue corriendo. Sin búsquedas activas no hay nada que pueda cambiar solo
-		 * y no tiene sentido pegarle a la API cada 15 segundos.
+		 * Refresco periódico: solo si la pestaña del navegador está a la vista, el detalle está
+		 * cerrado y alguna búsqueda de la página sigue corriendo. Sin búsquedas activas no hay nada
+		 * que pueda cambiar solo y no tiene sentido pegarle a la API cada 15 segundos.
 		 */
 		refrescar_si_hay_activas() {
 			if (typeof document !== 'undefined' && document.hidden) {
+				return
+			}
+			// Con el detalle abierto, el que refresca es el detalle (y de paso actualiza la fila de
+			// su búsqueda en la tabla): no hace falta pedir las dos cosas cada 15 segundos.
+			if (this.asignacion_abierta_id) {
 				return
 			}
 			if (!this.$store.getters['image_assignment/hay_activas']) {
