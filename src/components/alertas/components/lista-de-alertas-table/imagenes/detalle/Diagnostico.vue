@@ -175,7 +175,10 @@ export default {
 				return 'No se buscó.'
 			}
 			// Sin tildes ni mayúsculas para comparar: "No se busco" o "no se buscó" también cuentan.
-			let comparable = motivo.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+			// El rango va con escapes (\u0300-\u036f: los acentos que NFD separa de la letra) y
+			// nunca con los caracteres combinantes pegados: un editor que normaliza el archivo los
+			// borra sin aviso y la regex deja de sacar los acentos.
+			let comparable = motivo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 			if (comparable.indexOf('no se busco') === 0) {
 				return motivo
 			}

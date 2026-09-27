@@ -83,7 +83,7 @@ title="Buscar imágenes para todo el catálogo"
 
 			<!--
 				Nada para buscar: se dice por que no se puede lanzar (todos tienen imagen, o los que
-				no tienen quedaron afuera por las dos exclusiones) en vez de dejar el boton apagado
+				no tienen quedaron afuera por las exclusiones) en vez de dejar el boton apagado
 				sin explicacion.
 			-->
 			<div
@@ -109,13 +109,27 @@ title="Buscar imágenes para todo el catálogo"
 			</div>
 
 			<ul class="img-cat__lista">
+				<!--
+					Los excluidos, uno por motivo. Con estos renglones, lo que se busca ahora y lo que
+					queda para otra busqueda, los numeros suman el total "sin imagen" de arriba.
+				-->
 				<li v-if="Number(previa.excluidos_pendientes_de_revision) > 0">
 					<strong>{{ entero(previa.excluidos_pendientes_de_revision) }}</strong>
-					no se buscan: ya tienen una imagen esperando que alguien la apruebe o la rechace.
+					<template v-if="Number(previa.excluidos_pendientes_de_revision) === 1">no se busca: ya tiene una imagen esperando que alguien la apruebe o la rechace.</template>
+					<template v-else>no se buscan: ya tienen una imagen esperando que alguien la apruebe o la rechace.</template>
 				</li>
 				<li v-if="Number(previa.excluidos_ya_buscados) > 0">
 					<strong>{{ entero(previa.excluidos_ya_buscados) }}</strong>
-					no se buscan: ya se buscaron sin éxito en los últimos 90 días.
+					<template v-if="Number(previa.excluidos_ya_buscados) === 1">no se busca: ya se buscó sin éxito en los últimos 90 días.</template>
+					<template v-else>no se buscan: ya se buscaron sin éxito en los últimos 90 días.</template>
+				</li>
+				<!-- Pendientes o procesándose en otra búsqueda que todavía corre (plan §13). -->
+				<li
+				v-if="Number(previa.excluidos_en_otra_asignacion) > 0"
+				data-testid="imagenes-catalogo-excluidos-en-otra">
+					<strong>{{ entero(previa.excluidos_en_otra_asignacion) }}</strong>
+					<template v-if="Number(previa.excluidos_en_otra_asignacion) === 1">no se busca ahora: ya está en otra búsqueda en curso.</template>
+					<template v-else>no se buscan ahora: ya están en otra búsqueda en curso.</template>
 				</li>
 				<li v-if="Number(previa.quedan_para_otra_corrida) > 0">
 					<strong>{{ entero(previa.quedan_para_otra_corrida) }}</strong>
@@ -287,7 +301,11 @@ export default {
 		/**
 		 * Por qué no hay nada para buscar, armado con los números de la previa: todos los
 		 * artículos activos ya tienen imagen, o los que no tienen quedaron afuera porque esperan
-		 * revisión o porque ya se buscaron sin éxito hace poco.
+		 * revisión, porque ya se buscaron sin éxito hace poco o porque ya están en otra búsqueda
+		 * en curso (`excluidos_en_otra_asignacion`, plan §13).
+		 *
+		 * Con una sola razón que alcanza a todos, se dice de todos juntos (con una pista de qué
+		 * hacer); con varias, cada una con su número.
 		 *
 		 * @returns {String}
 		 */
@@ -296,29 +314,51 @@ export default {
 				return ''
 			}
 			let sin_imagen = Number(this.previa.sin_imagen) || 0
-			let pendientes = Number(this.previa.excluidos_pendientes_de_revision) || 0
-			let ya_buscados = Number(this.previa.excluidos_ya_buscados) || 0
-
 			if (!sin_imagen) {
 				return 'No hay artículos para buscar: todos los artículos activos ya tienen imagen.'
 			}
-			let inicio = 'No hay artículos para buscar: '
-			let de_los = sin_imagen === 1 ? 'el único artículo sin imagen' : 'los ' + entero_es(sin_imagen) + ' artículos sin imagen'
-			if (pendientes && ya_buscados) {
-				return inicio + 'de ' + de_los + ', ' + entero_es(pendientes)
-					+ (pendientes === 1 ? ' tiene una imagen esperando revisión' : ' tienen una imagen esperando revisión')
-					+ ' y ' + entero_es(ya_buscados)
-					+ (ya_buscados === 1 ? ' ya se buscó' : ' ya se buscaron') + ' sin éxito en los últimos 90 días.'
-			}
+
+			let pendientes = Number(this.previa.excluidos_pendientes_de_revision) || 0
+			let ya_buscados = Number(this.previa.excluidos_ya_buscados) || 0
+			let en_otra = Number(this.previa.excluidos_en_otra_asignacion) || 0
+
+			// Cada razón con su cantidad y el verbo ya concordado con esa cantidad.
+			let razones = []
 			if (pendientes) {
-				return inicio + de_los + (sin_imagen === 1 ? ' ya tiene' : ' ya tienen')
-					+ ' una imagen esperando revisión. '
-					+ (sin_imagen === 1 ? 'Aprobala o rechazala desde el detalle de su búsqueda.' : 'Aprobalas o rechazalas desde el detalle de cada búsqueda.')
+				razones.push({ cantidad: pendientes, texto: pendientes === 1 ? 'ya tiene una imagen esperando revisión' : 'ya tienen una imagen esperando revisión' })
 			}
 			if (ya_buscados) {
-				return inicio + de_los + (sin_imagen === 1 ? ' ya se buscó' : ' ya se buscaron') + ' sin éxito en los últimos 90 días.'
+				razones.push({ cantidad: ya_buscados, texto: ya_buscados === 1 ? 'ya se buscó sin éxito en los últimos 90 días' : 'ya se buscaron sin éxito en los últimos 90 días' })
 			}
-			return inicio + 'los que no tienen imagen quedaron afuera de esta búsqueda.'
+			if (en_otra) {
+				razones.push({ cantidad: en_otra, texto: en_otra === 1 ? 'ya está en otra búsqueda en curso' : 'ya están en otra búsqueda en curso' })
+			}
+
+			let inicio = 'No hay artículos para buscar: '
+			let de_los = sin_imagen === 1 ? 'el único artículo sin imagen' : 'los ' + entero_es(sin_imagen) + ' artículos sin imagen'
+
+			if (!razones.length) {
+				return inicio + 'los que no tienen imagen quedaron afuera de esta búsqueda.'
+			}
+
+			if (razones.length === 1 && razones[0].cantidad === sin_imagen) {
+				let pista = ''
+				if (pendientes) {
+					pista = sin_imagen === 1 ? ' Aprobala o rechazala desde el detalle de su búsqueda.' : ' Aprobalas o rechazalas desde el detalle de cada búsqueda.'
+				} else if (en_otra) {
+					pista = ' Esperá a que termine esa búsqueda.'
+				}
+				return inicio + de_los + ' ' + razones[0].texto + '.' + pista
+			}
+
+			let partes = []
+			razones.forEach(function (razon) {
+				partes.push(entero_es(razon.cantidad) + ' ' + razon.texto)
+			})
+			let lista = partes.length > 1
+				? partes.slice(0, -1).join(', ') + ' y ' + partes[partes.length - 1]
+				: partes[0]
+			return inicio + 'de ' + de_los + ', ' + lista + '.'
 		},
 	},
 	methods: {
