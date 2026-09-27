@@ -96,8 +96,13 @@ data-testid="imagenes-detalle-encabezado"
 				<dt>La pidió</dt>
 				<dd>{{ asignacion.lanzada_por }}</dd>
 			</div>
+			<!--
+				Una que todavia no arranco (espera turno en la cola, o se freno antes del primer
+				tramo) no tiene started_at: ahi va cuando se creo, dicho como tal. Mostrar la
+				creacion con la etiqueta "Empezó" afirmaba algo que no paso.
+			-->
 			<div class="img-det-enc__dato">
-				<dt>Empezó</dt>
+				<dt>{{ asignacion.started_at ? 'Empezó' : 'Creada' }}</dt>
 				<dd>{{ fecha_y_hora(asignacion.started_at || asignacion.created_at) }}</dd>
 			</div>
 			<div

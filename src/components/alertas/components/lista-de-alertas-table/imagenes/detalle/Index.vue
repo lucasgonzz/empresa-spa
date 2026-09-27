@@ -381,8 +381,8 @@ export default {
 		},
 		/**
 		 * Qué decir cuando la solapa está vacía: no es lo mismo no encontrar nada buscando que no
-		 * tener nada para revisar (que es una buena noticia), ni una búsqueda terminada que una
-		 * que sigue corriendo.
+		 * tener nada para revisar (que es una buena noticia), ni una asignación terminada que una
+		 * que sigue corriendo o que todavía no procesó ningún artículo.
 		 *
 		 * @returns {Object} { icono, titulo, pista }
 		 */
@@ -395,6 +395,19 @@ export default {
 					icono: 'bi bi-search',
 					titulo: 'Ningún artículo coincide con «' + this.buscar + '»',
 					pista: 'Probá con otra parte del nombre o con el código de barras.',
+				}
+			}
+			// Todavía no se procesó ningún artículo (espera turno en la cola, o se frenó antes de
+			// llegar al primero): las solapas están vacías por eso, y "No quedó ningún artículo sin
+			// imagen" afirmaba un resultado que no existe. Solo con `procesados` en cero de verdad:
+			// si el campo no vino, Number() da NaN y queda lo de siempre.
+			if (this.asignacion && Number(this.asignacion.procesados) === 0) {
+				return {
+					icono: 'bi bi-hourglass-split',
+					titulo: 'Todavía no se procesó ningún artículo',
+					pista: corriendo
+						? 'A medida que la asignación avance, cada artículo va a ir apareciendo en una de las tres solapas.'
+						: 'La asignación se frenó antes de llegar al primero.',
 				}
 			}
 			if (this.solapa === 'a_revisar') {
