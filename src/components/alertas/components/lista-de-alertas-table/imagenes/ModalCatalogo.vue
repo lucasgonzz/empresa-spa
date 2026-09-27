@@ -111,25 +111,32 @@ title="Asignar imágenes a todo el catálogo"
 			<ul class="img-cat__lista">
 				<!--
 					Los excluidos, uno por motivo. Con estos renglones, lo que se busca ahora y lo que
-					queda para otra busqueda, los numeros suman el total "sin imagen" de arriba.
+					queda para otra asignacion, los numeros suman el total "sin imagen" de arriba.
+
+					🔴 El `&nbsp;` al principio de cada <template> es a proposito. Entre </strong> y
+					<template> no hay texto, solo un salto de linea, y Vue 2 (whitespace: 'condense')
+					borra todo nodo de puro espacio que tenga un salto de linea: el numero quedaba
+					pegado a la frase ("7no se buscan…"). Espacio duro y no uno comun: tambien evita
+					que el numero quede solo al final de un renglon. El de "quedan para otra
+					asignacion" no lo necesita: ahi el texto arranca en el mismo nodo del salto.
 				-->
 				<li v-if="Number(previa.excluidos_pendientes_de_revision) > 0">
 					<strong>{{ entero(previa.excluidos_pendientes_de_revision) }}</strong>
-					<template v-if="Number(previa.excluidos_pendientes_de_revision) === 1">no se busca: ya tiene una imagen esperando que alguien la apruebe o la rechace.</template>
-					<template v-else>no se buscan: ya tienen una imagen esperando que alguien la apruebe o la rechace.</template>
+					<template v-if="Number(previa.excluidos_pendientes_de_revision) === 1">&nbsp;no se busca: ya tiene una imagen esperando que alguien la apruebe o la rechace.</template>
+					<template v-else>&nbsp;no se buscan: ya tienen una imagen esperando que alguien la apruebe o la rechace.</template>
 				</li>
 				<li v-if="Number(previa.excluidos_ya_buscados) > 0">
 					<strong>{{ entero(previa.excluidos_ya_buscados) }}</strong>
-					<template v-if="Number(previa.excluidos_ya_buscados) === 1">no se busca: ya se buscó sin éxito en los últimos 90 días.</template>
-					<template v-else>no se buscan: ya se buscaron sin éxito en los últimos 90 días.</template>
+					<template v-if="Number(previa.excluidos_ya_buscados) === 1">&nbsp;no se busca: ya se buscó sin éxito en los últimos 90 días.</template>
+					<template v-else>&nbsp;no se buscan: ya se buscaron sin éxito en los últimos 90 días.</template>
 				</li>
 				<!-- Pendientes o procesándose en otra asignación que todavía corre (plan §13). -->
 				<li
 				v-if="Number(previa.excluidos_en_otra_asignacion) > 0"
 				data-testid="imagenes-catalogo-excluidos-en-otra">
 					<strong>{{ entero(previa.excluidos_en_otra_asignacion) }}</strong>
-					<template v-if="Number(previa.excluidos_en_otra_asignacion) === 1">no se busca ahora: ya está en otra asignación en curso.</template>
-					<template v-else>no se buscan ahora: ya están en otra asignación en curso.</template>
+					<template v-if="Number(previa.excluidos_en_otra_asignacion) === 1">&nbsp;no se busca ahora: ya está en otra asignación en curso.</template>
+					<template v-else>&nbsp;no se buscan ahora: ya están en otra asignación en curso.</template>
 				</li>
 				<li v-if="Number(previa.quedan_para_otra_corrida) > 0">
 					<strong>{{ entero(previa.quedan_para_otra_corrida) }}</strong>
