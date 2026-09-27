@@ -44,6 +44,12 @@ data-testid="imagenes-barra">
 			Seleccionar la página
 		</b-form-checkbox>
 
+		<!--
+			Cada boton trae dos etiquetas y se ve una sola: la larga, y en telefono la corta
+			("Rechazar (25)"), porque "Rechazar seleccionadas (25)" se partia en tres renglones.
+			La cantidad va ADENTRO de cada span y no suelta despues: .btn-modulo es inline-flex, y
+			un texto suelto entre hijos flex pierde el espacio de adelante ("Rechazar(25)").
+		-->
 		<template v-if="cantidad_seleccionados > 0">
 			<b-button
 			class="btn-modulo"
@@ -51,7 +57,8 @@ data-testid="imagenes-barra">
 			data-testid="imagenes-lote-rechazar"
 			:disabled="ocupado"
 			@click="$emit('rechazar_seleccionadas')">
-				Rechazar seleccionadas ({{ cantidad_seleccionados }})
+				<span class="img-det-barra__etiqueta-larga">Rechazar seleccionadas ({{ cantidad_seleccionados }})</span>
+				<span class="img-det-barra__etiqueta-corta">Rechazar ({{ cantidad_seleccionados }})</span>
 			</b-button>
 			<!--
 				Ayuda a la izquierda: es el ultimo de la barra, pegado al borde derecho del modal
@@ -65,7 +72,8 @@ data-testid="imagenes-barra">
 			data-ayuda-placement="left"
 			:disabled="ocupado"
 			@click="$emit('aprobar_seleccionadas')">
-				Aprobar seleccionadas ({{ cantidad_seleccionados }})
+				<span class="img-det-barra__etiqueta-larga">Aprobar seleccionadas ({{ cantidad_seleccionados }})</span>
+				<span class="img-det-barra__etiqueta-corta">Aprobar ({{ cantidad_seleccionados }})</span>
 			</b-button>
 		</template>
 	</div>
@@ -201,6 +209,10 @@ export default {
 	font-size: 0.875rem
 	color: var(--color-text-primary, #212529)
 
+// La etiqueta corta de los botones de lote solo se ve en telefono (ver el @media de abajo).
+.img-det-barra__etiqueta-corta
+	display: none
+
 // Telefono: el buscador y el lote a lo ancho, uno debajo del otro.
 @media (max-width: 575px)
 	.img-det-barra__buscador
@@ -211,9 +223,24 @@ export default {
 		margin-left: 0
 		width: 100%
 
-		// "Rechazar seleccionadas (12)" no entra en media pantalla de telefono: el boton crece
-		// a dos renglones en vez de cortar el texto (el alto fijo de .btn-modulo lo recortaba).
-		// Tres clases a proposito: .btn-modulo.btn es (0,2,0) y vive en una hoja global.
+		// "Seleccionar la página" en su propio renglón: si compartia el primero con "Rechazar",
+		// ese boton quedaba en el hueco que sobraba y "Aprobar" solo y a lo ancho abajo. Asi los
+		// dos botones van juntos, mitad y mitad.
+		.img-det-barra__todos
+			flex-basis: 100%
+			margin-right: 0
+
+		// Etiquetas cortas: "Rechazar seleccionadas (25)" se partia en tres renglones.
+		.img-det-barra__etiqueta-larga
+			display: none
+
+		.img-det-barra__etiqueta-corta
+			display: inline
+
+		// Con la etiqueta corta entran en un renglón; el alto automatico y el corte de linea
+		// quedan de red por si la cantidad es larga en la pantalla mas angosta (el alto fijo de
+		// .btn-modulo recortaba el texto). Tres clases a proposito: .btn-modulo.btn es (0,2,0) y
+		// vive en una hoja global.
 		.btn.btn-modulo
 			flex: 1 1 0
 			height: auto
