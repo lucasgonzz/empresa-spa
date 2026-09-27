@@ -80,10 +80,19 @@ class="img-det-diag"
 					:class="'img-det-etiqueta--' + tono(candidata)">
 						{{ texto_resultado(candidata) }}
 					</span>
-					<!-- El motivo puntual (el de la IA, por ejemplo) va escrito: en telefono no hay title. -->
+					<!--
+						El motivo puntual (el de la IA, por ejemplo) va escrito y cortado a tres
+						renglones. En una pantalla tactil el title de la tarjeta no existe, asi que
+						un toque sobre el motivo lo muestra entero y otro lo vuelve a cortar.
+						`.prevent` porque la tarjeta entera es un link: sin eso, el toque abriria la
+						pagina de origen en vez de desplegar el texto. Tocar la miniatura o la
+						etiqueta sigue abriendo la pagina, como antes.
+					-->
 					<span
 					v-if="candidata.motivo"
-					class="img-det-cand__motivo">
+					class="img-det-cand__motivo"
+					:class="{ 'img-det-cand__motivo--abierto': motivo_abierto(indice, posicion) }"
+					@click.prevent="alternar_motivo(indice, posicion)">
 						{{ candidata.motivo }}
 					</span>
 					<span
@@ -141,6 +150,15 @@ export default {
 			type: Number,
 			default: null,
 		},
+	},
+	data() {
+		return {
+			/**
+			 * Motivos de candidatas desplegados enteros, como claves "criterio-posicion" (ver
+			 * clave_de_motivo). Vacío = todos cortados a tres renglones.
+			 */
+			motivos_abiertos: [],
+		}
 	},
 	computed: {
 		criterios() {
@@ -212,6 +230,42 @@ export default {
 		},
 		texto_resultado(candidata) {
 			return texto_de(RESULTADOS_DE_CANDIDATA, candidata.resultado)
+		},
+		/**
+		 * Clave de un motivo: el índice del criterio y la posición de la candidata en él. Las
+		 * dos juntas, porque la misma posición se repite en cada criterio.
+		 *
+		 * @param {Number} indice Índice del criterio en el diagnóstico.
+		 * @param {Number} posicion Posición de la candidata en ese criterio.
+		 * @returns {String}
+		 */
+		clave_de_motivo(indice, posicion) {
+			return indice + '-' + posicion
+		},
+		/**
+		 * True si el motivo de esa candidata está desplegado entero.
+		 *
+		 * @param {Number} indice
+		 * @param {Number} posicion
+		 * @returns {Boolean}
+		 */
+		motivo_abierto(indice, posicion) {
+			return this.motivos_abiertos.indexOf(this.clave_de_motivo(indice, posicion)) !== -1
+		},
+		/**
+		 * Un toque sobre el motivo: si estaba cortado lo muestra entero, y si estaba entero lo
+		 * vuelve a cortar.
+		 *
+		 * @param {Number} indice
+		 * @param {Number} posicion
+		 */
+		alternar_motivo(indice, posicion) {
+			let clave = this.clave_de_motivo(indice, posicion)
+			if (this.motivos_abiertos.indexOf(clave) !== -1) {
+				this.motivos_abiertos = this.motivos_abiertos.filter(abierto => abierto !== clave)
+				return
+			}
+			this.motivos_abiertos.push(clave)
 		},
 		tono(candidata) {
 			return TONOS_DE_CANDIDATA[candidata.resultado] || 'neutro'
@@ -317,7 +371,8 @@ export default {
 	text-overflow: ellipsis
 	white-space: nowrap
 
-// Hasta tres renglones: el motivo completo queda en el title de la tarjeta.
+// Hasta tres renglones: el motivo completo queda en el title de la tarjeta y, donde no hay title
+// (pantalla tactil), un toque lo despliega entero (--abierto) y otro lo vuelve a cortar.
 .img-det-cand__motivo
 	display: -webkit-box
 	-webkit-line-clamp: 3
@@ -327,4 +382,12 @@ export default {
 	font-size: 0.72rem
 	line-height: 1.3
 	color: var(--color-text-primary, #212529)
+
+// Desplegado puede traer una palabra larga (un dominio, una URL): que corte adentro de la tarjeta
+// en vez de salirse de su columna.
+.img-det-cand__motivo--abierto
+	display: block
+	-webkit-line-clamp: unset
+	overflow: visible
+	overflow-wrap: anywhere
 </style>

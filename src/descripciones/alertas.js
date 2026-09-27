@@ -314,6 +314,7 @@ export default {
 		que_hace: 'Despliega lo que se intentó con este artículo: la búsqueda por código de barras y por nombre, cuántos resultados dio cada una y por qué se descartó cada imagen.',
 		repercute: [
 			'Tocar una imagen abre, en otra pestaña, la página donde apareció.',
+			'Si el motivo de una imagen no entra entero, tocarlo lo muestra completo; otro toque lo vuelve a achicar.',
 		],
 	},
 
