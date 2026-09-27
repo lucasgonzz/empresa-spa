@@ -335,7 +335,7 @@ export default {
 		&:focus:not(:disabled)
 			color: #c0392b
 			border-color: #f1aeb5
-			background: #fff5f5
+			background: var(--bg-hover, #fff5f5)
 
 	/* Imprimir: mismo lenguaje visual que Limpiar */
 	::v-deep .dropdown .btn-danger
@@ -346,8 +346,8 @@ export default {
 		&:hover:not(:disabled),
 		&:focus:not(:disabled)
 			color: var(--color-primary, #007bff)
-			border-color: #b8daff
-			background: #f0f7ff
+			border-color: var(--color-border, #b8daff)
+			background: var(--bg-hover, #f0f7ff)
 
 	/* WhatsApp: acento verde suave, no bloque sólido */
 	::v-deep .btn-success

@@ -1909,7 +1909,7 @@ export default {
 	padding: 10px 12px
 	margin-bottom: 8px
 	border-radius: 10px
-	background: #fff
+	background: var(--bg-card, #fff)
 	transition: box-shadow .2s ease, border-color .2s ease
 
 	&.import-column-card--has-help:hover
@@ -1974,7 +1974,7 @@ export default {
 		margin-top: 10px
 		padding: 10px 12px
 		border-radius: 8px
-		background: linear-gradient(180deg, rgba(248, 250, 252, 1) 0%, rgba(241, 245, 249, 1) 100%)
+		background: linear-gradient(180deg, var(--bg-section, rgba(248, 250, 252, 1)) 0%, var(--bg-section, rgba(241, 245, 249, 1)) 100%)
 		border-left: 3px solid #6c757d
 
 		&.import-column-description--relation

@@ -295,7 +295,7 @@ $acento-fiscal: #0891b2
 			// un escalon abajo. Por eso --bg-section y no --bg-card, que la dejaria igual que las otras.
 			background: var(--bg-section, #f8fafc)
 			border-style: dashed
-			border-color: #cbd5e1
+			border-color: var(--color-border, #cbd5e1)
 
 		&__titulo
 			font-size: 0.95rem

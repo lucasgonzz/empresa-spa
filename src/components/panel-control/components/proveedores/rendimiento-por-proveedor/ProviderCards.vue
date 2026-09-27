@@ -65,7 +65,7 @@ export default {
 		.card
 			width: 300px
 			margin: 10px
-			border: 1.5px solid #DDDDDD
+			border: 1.5px solid var(--color-border, #DDDDDD)
 			display: flex
 			align-items: center 
 			justify-content: center

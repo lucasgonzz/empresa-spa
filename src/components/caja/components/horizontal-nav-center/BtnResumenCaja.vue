@@ -33,8 +33,8 @@ $accent-action: #0891b2
 	gap: 10px
 	padding: 8px 12px
 	border-radius: 10px
-	border: 1px solid #e2e8f0
-	background: #fff
+	border: 1px solid var(--color-border, #e2e8f0)
+	background: var(--bg-card, #fff)
 	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
 	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease
 	min-width: 0
