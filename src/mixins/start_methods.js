@@ -56,6 +56,8 @@ export default {
 			// this.get_ultimos_articulos_actualizados()
 			.then(() => this.get_tn_failed_syncs_count())
 			.catch(err => console.log(err))
+			.then(() => this.get_resumen_de_imagenes())
+			.catch(err => console.log(err))
 			.then(() => this.check_synced_version_notifications())
 			.catch(err => console.log(err))
 			.then(() => this.check_excel_analysis_en_curso())
@@ -264,6 +266,20 @@ export default {
 		},
 		get_deposit_movements_en_curso() {
 			return this.$store.dispatch('deposit_movement/en_curso/getModels')
+		},
+		/**
+		 * Trae el resumen de las busquedas de imagenes (cuantas imagenes esperan revision y
+		 * cuantas busquedas terminadas nadie abrio) para el numero rojo de Alertas -> Imagenes y
+		 * de la campana (mision imagenes-catalogo-completo, 27/9/2026).
+		 *
+		 * Sin extension ni permiso que lo condicione: la solapa es para todos. La accion del
+		 * store es silenciosa y resuelve siempre, asi que no le puede cortar el turno al eslabon
+		 * que sigue.
+		 *
+		 * @returns {Promise}
+		 */
+		get_resumen_de_imagenes() {
+			return this.$store.dispatch('image_assignment/get_resumen')
 		},
 		get_ventas_sin_cobrar() {
 			if (this.owner.dias_alertar_empleados_ventas_no_cobradas) {

@@ -254,6 +254,10 @@ import import_status from '@/store/import_status'
 import background_processes from '@/store/background_processes'
 import excel_analysis from '@/store/excel_analysis'
 import filter_history from '@/store/filter_history'
+// Asignaciones de imagenes inteligentes: la solapa Alertas -> Imagenes y su numero rojo (mision
+// imagenes-catalogo-completo, 27/9/2026). No sale del factory comun: no es un ABM, es el estado de
+// lectura de un modulo con su propio contrato.
+import image_assignment from '@/store/image_assignment'
 
 import provider_order_afip_ticket_iva from '@/store/provider_order_afip_ticket_iva'
 import provider_order_discount from '@/store/provider_order_discount'
@@ -531,6 +535,7 @@ export default new Vuex.Store({
         background_processes,
         excel_analysis,
         filter_history,
+        image_assignment,
 
         provider_order_afip_ticket_iva,
         provider_order_discount,

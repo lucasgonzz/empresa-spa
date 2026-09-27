@@ -47,6 +47,24 @@ export default {
 					name: 'Stock minimo',
 					alert: this.stock_minimo_alert_count
 				},
+				/*
+					Busquedas de imagenes inteligentes (mision imagenes-catalogo-completo,
+					27/9/2026). Sin permiso que la condicione: cualquiera que pida imagenes desde el
+					listado tiene que poder ver que paso con ellas.
+
+					🔴 Es la unica pestaña con acento en el nombre visible, y por eso lleva
+					`route_value` y `testid`: el slug sale de routeString() sobre el nombre, y
+					"Imágenes" daria "imágenes" con tilde en la URL. La ruta queda
+					/alertas/imagenes, que es la que usan los links de "Revisar en Alertas", el
+					historial del listado y la pildora de procesos. `testid` deja el data-testid
+					en `nav-item-imagenes`, sin tilde.
+				*/
+				{
+					name: 'Imágenes',
+					route_value: 'imagenes',
+					testid: 'imagenes',
+					alert: this.imagenes_alert_count
+				},
 			]
 
 			if (this.can('alerts.provider_orders')) {
@@ -93,7 +111,10 @@ export default {
 			console.log('setSelectedView')
 			console.log(this.view)
 			console.log(item)
-			if (this.view == this.routeString(item.name)) {
+			// `route_value` manda sobre el nombre cuando el item lo trae (la pestaña "Imágenes"):
+			// es lo mismo que hace horizontal-nav para armar la URL, y sin esto volver a tocar esa
+			// pestaña no recargaria nunca, porque "imágenes" no es igual a "imagenes".
+			if (this.view == this.routeString(item.route_value ? item.route_value : item.name)) {
 				
 				this.$store.commit('auth/setMessage', 'Cargando informacion')
 				this.$store.commit('auth/setLoading', true)
@@ -144,6 +165,19 @@ export default {
 				if (this.view == 'facturacion') {
 					this.$store.dispatch('afip_ticket/get_problemas_al_facturar')
 					.then(() => {
+						this.$store.commit('auth/setLoading', false)
+					})
+				}
+
+				if (this.view == 'imagenes') {
+					// La tabla de busquedas y el numero rojo salen del mismo pedido (el listado trae
+					// el resumen adentro). La accion resuelve siempre, pero el catch va igual: el
+					// loading global no puede quedar prendido por nada.
+					this.$store.dispatch('image_assignment/get_asignaciones')
+					.then(() => {
+						this.$store.commit('auth/setLoading', false)
+					})
+					.catch(() => {
 						this.$store.commit('auth/setLoading', false)
 					})
 				}
