@@ -446,7 +446,7 @@ export default {
 	margin-top: 16px;
 	margin-bottom: 8px;
 	padding: 12px;
-	background: #e8f4fc;
+	background: var(--bg-info-soft, #e8f4fc);
 	border: 1px solid #b8daff;
 	border-radius: 8px;
 }
@@ -455,7 +455,7 @@ export default {
 	margin: 0 0 10px;
 	font-size: 13px;
 	line-height: 1.4;
-	color: #1a4a6e;
+	color: var(--color-text-info-strong, #1a4a6e);
 }
 
 .support-conversation-new-ticket-btn {

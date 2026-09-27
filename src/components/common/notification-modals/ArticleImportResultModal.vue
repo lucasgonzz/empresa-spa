@@ -1226,7 +1226,7 @@ export default {
 		color: var(--color-text-secondary, #6c757d)
 
 .article-import-result-modal__detail-block
-	background: #fff8f8
+	background: var(--bg-danger-soft, #fff8f8)
 	border: 1px solid rgba(220, 53, 69, 0.15)
 	border-radius: 10px
 	padding: 12px 14px
@@ -1235,12 +1235,12 @@ export default {
 .article-import-result-modal__detail-title
 	font-weight: 600
 	margin: 0 0 6px
-	color: #343a40
+	color: var(--color-text-primary, #343a40)
 
 .article-import-result-modal__detail-text
 	margin: 0 0 4px
 	font-size: 14px
-	color: #495057
+	color: var(--color-text-primary, #495057)
 
 	&--mono
 		font-family: monospace

@@ -393,7 +393,7 @@ export default {
 		margin-top: 10px
 		padding: 10px 12px
 		border-radius: 8px
-		background: #fff3cd
-		color: #856404
+		background: var(--bg-warning-soft, #fff3cd)
+		color: var(--color-text-warning-strong, #856404)
 		font-size: 13px
 </style>
