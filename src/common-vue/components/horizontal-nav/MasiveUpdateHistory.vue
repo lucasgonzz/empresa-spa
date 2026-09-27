@@ -391,12 +391,12 @@ export default {
 	max-height: 200px
 	overflow: auto
 	font-size: 0.8rem
-	background: #f5f7fa
+	background: var(--bg-section, #f5f7fa)
 	padding: 10px
 	border-radius: 6px
 
 .masive-update-article-block
-	border: 1px solid #e8ecf0
+	border: 1px solid var(--color-border-secondary, #e8ecf0)
 	border-radius: 6px
 	padding: 10px
 </style>

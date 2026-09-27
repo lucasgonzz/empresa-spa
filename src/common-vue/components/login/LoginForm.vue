@@ -345,14 +345,14 @@ export default {
 .login-form__welcome-title
 	font-size: 1.5rem
 	font-weight: 700
-	color: #111827
+	color: var(--color-text-primary, #111827)
 	margin: 0 0 0.4rem
 	letter-spacing: -0.02em
 
 /* Subtítulo descriptivo debajo del título */
 .login-form__welcome-text
 	font-size: 0.875rem
-	color: #6b7280
+	color: var(--color-text-secondary, #6b7280)
 	margin: 0
 
 .login-form__field
@@ -362,13 +362,13 @@ export default {
 	display: block
 	font-size: 0.8rem
 	font-weight: 600
-	color: #111827
+	color: var(--color-text-primary, #111827)
 	margin-bottom: 0.4rem
 
 .login-form__input-row
 	display: flex
 	align-items: center
-	background: #f3f4f6
+	background: var(--bg-section, #f3f4f6)
 	border-radius: 10px
 	padding: 0 0 0 0.65rem
 	border: 1px solid transparent
@@ -383,7 +383,7 @@ export default {
 	display: flex
 	align-items: center
 	justify-content: center
-	color: #9ca3af
+	color: var(--color-text-secondary, #9ca3af)
 	flex-shrink: 0
 	padding-right: 0.15rem
 
@@ -400,7 +400,7 @@ export default {
 	padding-right: 0.75rem !important
 	height: 46px !important
 	font-size: 0.95rem
-	color: #111827
+	color: var(--color-text-primary, #111827)
 
 .login-form__control:focus
 	box-shadow: none !important
@@ -408,10 +408,10 @@ export default {
 .login-form__remember
 	margin-bottom: 1.25rem
 	font-size: 0.875rem
-	color: #4b5563
+	color: var(--color-text-secondary, #4b5563)
 
 .login-form__remember .custom-control-label
-	color: #4b5563
+	color: var(--color-text-secondary, #4b5563)
 
 .login-form__submit.btn
 	// background: #007bff !important
@@ -436,11 +436,11 @@ export default {
 
 .login-form__forgot-link
 	font-size: 0.875rem
-	color: #6b7280
+	color: var(--color-text-secondary, #6b7280)
 	text-decoration: none
 
 .login-form__forgot-link:hover
-	color: #007bff
+	color: var(--color-primary, #007bff)
 	text-decoration: underline
 
 // ─── Layout split-screen (réplica del mockup de referencia) ───
@@ -453,14 +453,14 @@ export default {
 .login-form--split .login-form__welcome-title
 	font-size: 1.875rem
 	font-weight: 700
-	color: #111827
+	color: var(--color-text-primary, #111827)
 	margin: 0 0 0.5rem
 	letter-spacing: -0.03em
 
 .login-form--split .login-form__welcome-text
 	font-size: 0.9375rem
 	font-weight: 400
-	color: #6b7280
+	color: var(--color-text-secondary, #6b7280)
 	margin: 0
 
 .login-form--split .login-form__field
@@ -469,12 +469,12 @@ export default {
 .login-form--split .login-form__label
 	font-size: 0.8125rem
 	font-weight: 500
-	color: #6b7280
+	color: var(--color-text-secondary, #6b7280)
 	margin-bottom: 0.5rem
 
 .login-form--split .login-form__input-row
-	background: #ffffff
-	border: 1px solid #e5e7eb
+	background: var(--bg-section, #ffffff)
+	border: 1px solid var(--color-border, #e5e7eb)
 	border-radius: 8px
 	padding: 0 0 0 0.75rem
 	box-shadow: none
@@ -488,15 +488,15 @@ export default {
 	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1)
 
 .login-form--split .login-form__input-icon
-	color: #9ca3af
+	color: var(--color-text-secondary, #9ca3af)
 
 .login-form--split .login-form__control
 	height: 48px !important
 	font-size: 0.9375rem
-	color: #111827
+	color: var(--color-text-primary, #111827)
 
 .login-form--split .login-form__control::placeholder
-	color: #9ca3af
+	color: var(--color-text-secondary, #9ca3af)
 
 // Autocompletado del navegador: fondo amarillo uniforme en todo el campo
 .login-form--split .login-form__control:-webkit-autofill,
@@ -511,8 +511,8 @@ export default {
 	transition: background-color 5000s ease-in-out 0s
 
 .login-form--split .login-form__submit.btn
-	background: #007bff !important
-	border-color: #007bff !important
+	background: var(--color-primary, #007bff) !important
+	border-color: var(--color-primary, #007bff) !important
 	font-size: 1rem
 	font-weight: 600
 	padding-top: 0.75rem
@@ -538,7 +538,7 @@ export default {
 		font-weight: 600
 		letter-spacing: 0.07em
 		text-transform: uppercase
-		color: #6b7280
+		color: var(--color-text-secondary, #6b7280)
 		margin-bottom: 0.45rem
 
 	.login-form--split .login-form__field

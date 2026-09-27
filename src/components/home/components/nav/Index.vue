@@ -41,7 +41,7 @@ export default {
 	top: 0
 	z-index: 50
 	background: rgba(255, 255, 255, .94)
-	border-bottom: 1px solid #E5EBF5
+	border-bottom: 1px solid var(--color-border, #E5EBF5)
 
 .home_nav_container
 	max-width: 1200px
@@ -68,7 +68,7 @@ export default {
 		font-size: 16px
 	span
 		font-size: 12px
-		color: #5F708A
+		color: var(--color-text-secondary, #5F708A)
 
 .actions_block
 	display: flex
@@ -76,7 +76,7 @@ export default {
 	align-items: center
 
 .btn_link
-	color: #283A56
+	color: var(--color-text-primary, #283A56)
 	text-decoration: none
 	font-weight: 600
 

@@ -27,7 +27,7 @@ export default {
 .colors 
 	display: flex
 	.cont-color 
-		background: #FFF
+		background: var(--bg-section, #FFF)
 		display: flex
 		align-items: center
 		padding: 10px 

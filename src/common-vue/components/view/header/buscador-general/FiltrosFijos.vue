@@ -217,26 +217,26 @@ export default {
 		display: flex
 		align-items: center
 		gap: 6px
-		background: #fff
-		border: 1px solid #e2e4e7
+		background: var(--bg-section, #fff)
+		border: 1px solid var(--color-border, #e2e4e7)
 		border-radius: 22px
 		height: 40px
 		padding: 0 10px
-		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+		box-shadow: var(--shadow-color, rgba(99, 99, 99, 0.2)) 0px 2px 8px 0px
 		transition: border-color 0.15s ease, box-shadow 0.15s ease
 
 		&:focus-within
-			border-color: #007bff
-			box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
+			border-color: var(--color-primary, #007bff)
+			box-shadow: var(--shadow-color, rgba(99, 99, 99, 0.2)) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
 
 	.filtros-fijos__label
 		font-size: 0.78rem
-		color: #86868b
+		color: var(--color-text-secondary, #86868b)
 		white-space: nowrap
 
 	.filtros-fijos__operator
 		font-size: 0.82rem
-		color: #1d1d1f
+		color: var(--color-text-primary, #1d1d1f)
 		white-space: nowrap
 
 	.filtros-fijos__select, .filtros-fijos__number
@@ -244,7 +244,7 @@ export default {
 		outline: none
 		background: transparent
 		font-size: 0.86rem
-		color: #1d1d1f
+		color: var(--color-text-primary, #1d1d1f)
 		box-shadow: none
 		padding: 0
 		max-width: 120px
@@ -262,7 +262,7 @@ export default {
 		border: none
 		background: transparent
 		border-radius: 50%
-		color: #86868b
+		color: var(--color-text-secondary, #86868b)
 		font-size: 0.9rem
 		line-height: 1
 		cursor: pointer
@@ -270,8 +270,8 @@ export default {
 		transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease
 
 		&:hover
-			background: #f2f3f4
-			color: #1d1d1f
+			background: var(--bg-hover, #f2f3f4)
+			color: var(--color-text-primary, #1d1d1f)
 
 	.filtros-fijos__item:hover .filtros-fijos__remove
 		opacity: 1

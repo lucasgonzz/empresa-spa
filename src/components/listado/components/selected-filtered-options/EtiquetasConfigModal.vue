@@ -806,7 +806,7 @@ export default {
 	overflow: hidden
 
 .propiedades-orden-table
-	background: #fff
+	background: var(--bg-card, #fff)
 
 	thead th
 		font-size: 12px
@@ -824,10 +824,10 @@ export default {
 		width: 72px
 
 .propiedad-orden-row
-	background: #fff
+	background: var(--bg-card, #fff)
 
 	&:hover
-		background: rgba(0, 0, 0, .02)
+		background: var(--bg-hover, rgba(0, 0, 0, .02))
 
 .propiedad-row-ghost
 	opacity: 0.45
@@ -851,12 +851,12 @@ export default {
 	justify-content: center
 	width: 28px
 	height: 28px
-	color: rgba(0, 0, 0, .45)
+	color: var(--color-text-secondary, rgba(0, 0, 0, .45))
 	border-radius: 4px
 
 	&:hover
-		color: rgba(0, 0, 0, .75)
-		background: rgba(0, 0, 0, .06)
+		color: var(--color-text-primary, rgba(0, 0, 0, .75))
+		background: var(--bg-hover, rgba(0, 0, 0, .06))
 
 	&:active
 		cursor: grabbing
