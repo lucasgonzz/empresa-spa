@@ -67,6 +67,27 @@ tabindex="0"
 			</button>
 		</div>
 
+		<!--
+			Busqueda de imagenes (mision imagenes-catalogo-completo, 27/9/2026): su detalle
+			completo vive en Alertas -> Imagenes (lo asignado, lo que quedo para revisar y por que
+			no se encontro el resto), asi que la fila lleva ahi, mientras corre y cuando termino.
+			Los `keydown.stop` son para que Enter o espacio sobre el boton no le lleguen a la fila,
+			que con esas teclas abre el detalle del proceso y le cancelaria el clic al boton.
+		-->
+		<div
+		v-if="asignacion_de_imagenes_id"
+		class="proceso-fila__acciones">
+			<button
+			type="button"
+			class="proceso-fila__accion"
+			data-testid="proceso-ver-en-alertas"
+			@keydown.enter.stop
+			@keydown.space.stop
+			@click.stop="ver_en_alertas">
+				Ver en Alertas
+			</button>
+		</div>
+
 	</div>
 
 	<button
@@ -83,7 +104,7 @@ tabindex="0"
 </template>
 <script>
 import moment from 'moment'
-import { tipo_de, es_de_importacion, esta_activo } from '@/components/common/procesos-en-segundo-plano/tipos'
+import { tipo_de, es_de_importacion, esta_activo, asignacion_de_imagenes } from '@/components/common/procesos-en-segundo-plano/tipos'
 
 /**
  * Una fila (tarjeta) del modal de procesos en segundo plano: icono por tipo, titulo, detalle,
@@ -142,6 +163,15 @@ export default {
 		es_importacion() {
 			return es_de_importacion(this.proceso.tipo)
 		},
+		/**
+		 * Id de la búsqueda de imágenes de este proceso (null si no es una, o si es de antes de
+		 * que existieran las asignaciones): decide si va el botón "Ver en Alertas".
+		 *
+		 * @returns {Number|null}
+		 */
+		asignacion_de_imagenes_id() {
+			return asignacion_de_imagenes(this.proceso)
+		},
 		medible() {
 			return this.proceso.porcentaje !== null && typeof this.proceso.porcentaje !== 'undefined'
 		},
@@ -190,6 +220,24 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Cierra el modal de procesos y lleva a Alertas → Imágenes con esta búsqueda abierta.
+		 * La navegación la hace la fila y no el modal: es la única acción de la fila que sale de
+		 * él, y así el modal no tiene que saber nada de las búsquedas de imágenes.
+		 *
+		 * @return {void}
+		 */
+		ver_en_alertas() {
+			let id = this.asignacion_de_imagenes_id
+			if (!id) {
+				return
+			}
+			this.$bvModal.hide('procesos-en-segundo-plano')
+			this.$router.push({ name: 'alertas', params: { view: 'imagenes' }, query: { asignacion: String(id) } })
+			.catch(() => {
+				// Ya estaba en esa misma URL (NavigationDuplicated): no hay nada que hacer.
+			})
+		},
 		/**
 		 * "Iniciado hace 4 minutos · 12:03". Sin fecha, solo el verbo.
 		 *
