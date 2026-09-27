@@ -148,4 +148,217 @@ export default {
 			'El valor que pongas queda como stock final del depósito: reemplaza al actual, no se le suma. Si cambió, se registra el movimiento de stock por la diferencia.',
 		],
 	},
+
+	/* -------------------------------------------------------------------- imágenes */
+
+	/*
+	 * Pestaña Alertas → Imágenes (misión imagenes-catalogo-completo, 27/9/2026). Los `repercute`
+	 * salen del contrato de la misión (plan §4 a §6) y del código de la SPA: no hay spec de
+	 * exploración que los mida todavía (la suite la corre Lucas).
+	 */
+
+	'imagenes-catalogo-abrir': {
+		titulo: 'Buscar imágenes para todo el catálogo',
+		que_hace: 'Abre la confirmación para buscarle imagen, de una sola vez, a todos los artículos activos que no tienen.',
+		repercute: [
+			'Antes de lanzar muestra cuántos artículos se buscarían, cuáles quedan afuera y por qué, y cuánto se estima que tarda y cuesta.',
+			'Solo aparece entrando con el acceso maestro: el comercio sigue pidiendo imágenes desde el listado, con su límite diario de búsquedas.',
+		],
+		nota_interna: 'El botón mira auth.user.es_acceso_maestro (la API lo arma desde la sesión del login maestro). La previa es GET image-assignment-runs/catalogo/previa, que contesta 403 a cualquier otra sesión.',
+	},
+
+	'imagenes-catalogo-lanzar': {
+		titulo: 'Lanzar la búsqueda de todo el catálogo',
+		que_hace: 'Arranca en segundo plano la búsqueda de imágenes para los artículos que muestra la confirmación.',
+		repercute: [
+			'Las imágenes que la IA da por buenas se asignan solas y se ven en la tienda; las dudosas quedan en "A revisar" y no se ven hasta que alguien las aprueba.',
+			'Hay un tope de artículos por vez: los que no entran se buscan lanzándola de nuevo cuando termina. Lo que ya se buscó sin éxito en los últimos 90 días no se vuelve a buscar.',
+			'No gasta el límite diario de búsquedas del comercio.',
+		],
+		requiere: 'Que el servidor tenga cargada la clave de búsqueda y que no haya otra búsqueda de todo el catálogo corriendo.',
+		nota_interna: 'POST image-assignment-runs/catalogo. 422 sin SERPER_API_KEY, sin artículos para buscar o con otra de catálogo activa. Corre en tramos de ~50 s encadenados; tope IMAGENES_TOPE_CATALOGO (5000 por defecto). Orden: publicados en la tienda, con stock, resto.',
+	},
+
+	'imagenes-catalogo-estimacion': {
+		titulo: 'Estimación de la búsqueda',
+		que_hace: 'Cuántas búsquedas, cuánto tiempo y cuántos dólares se calcula que va a llevar buscar el catálogo.',
+		repercute: [
+			'Es una cuenta aproximada: cerca de 1,5 búsquedas y 8 segundos por artículo. Lo real queda en el detalle de la búsqueda cuando termina.',
+		],
+		nota_interna: 'Sale de estimacion de GET image-assignment-runs/catalogo/previa (plan §3: ~USD 1 cada 1.000 búsquedas + ~USD 0,005 por artículo de IA).',
+	},
+
+	'imagenes-chip-trabada': {
+		titulo: 'Parece trabada',
+		que_hace: 'Avisa que la búsqueda figura en curso pero no avanza hace más de 15 minutos.',
+		repercute: [
+			'Suele destrabarse sola. Con el acceso maestro se puede reanudar desde el detalle.',
+		],
+	},
+
+	'imagenes-detalle-busquedas': {
+		titulo: 'Búsquedas usadas',
+		que_hace: 'Cuántas búsquedas de imágenes gastó esta búsqueda: el total, el promedio por artículo y cuántas fueron por código de barras y cuántas por nombre.',
+		repercute: [
+			'Cuenta toda búsqueda que el buscador contestó, aunque no haya traído resultados. Las que fallaron no cuentan.',
+			'Primero se busca por código de barras (solo si es un código real) y, si no aparece una imagen buena, por nombre: por eso un artículo puede gastar dos.',
+			'Las validaciones con IA van aparte: son las veces que la IA miró las imágenes candidatas para ver si eran el producto.',
+		],
+	},
+
+	'imagenes-motivo-articulo': {
+		titulo: 'Por qué quedó sin imagen',
+		que_hace: 'El motivo principal por el que no se le asignó imagen a este artículo.',
+		repercute: [
+			'"Ver qué se probó" muestra el detalle: qué se buscó por código de barras y por nombre, y qué pasó con cada imagen que apareció.',
+		],
+	},
+
+	'imagenes-resumen-a-revisar': {
+		titulo: 'Imágenes para revisar',
+		que_hace: 'Cuántas imágenes encontró la búsqueda pero dejó para que alguien las mire antes de asignarlas.',
+		repercute: [
+			'Todavía no se ven en los artículos ni en la tienda: se aprueban o se rechazan desde Alertas → Imágenes.',
+		],
+	},
+
+	'imagenes-resumen-busquedas': {
+		titulo: 'Búsquedas usadas',
+		que_hace: 'Cuántas búsquedas de imágenes gastó esta búsqueda, y el promedio por artículo.',
+	},
+
+	'imagenes-ver-asignacion-*': {
+		titulo: 'Ver la búsqueda de imágenes',
+		que_hace: 'Abre el detalle de la búsqueda: qué imagen se asignó, cuáles quedaron para revisar y por qué no se encontró el resto.',
+		repercute: [
+			'Abrirla la marca como vista: deja de sumar al número rojo de la pestaña. Las imágenes para revisar siguen sumando hasta que se aprueban o se rechazan.',
+		],
+	},
+
+	'imagenes-buscador': {
+		titulo: 'Buscar artículos en esta búsqueda',
+		que_hace: 'Filtra los artículos de la solapa abierta por nombre o código de barras.',
+		repercute: [
+			'Busca solo dentro de esta búsqueda de imágenes, no en todo el catálogo.',
+		],
+	},
+
+	'imagenes-por-pagina': {
+		titulo: 'Artículos por página',
+		que_hace: 'Cambia cuántos artículos se ven por página en la solapa: 25, 50 o 100.',
+	},
+
+	'imagenes-aprobar-*': {
+		titulo: 'Aprobar la imagen',
+		que_hace: 'Le asigna al artículo la imagen que quedó para revisar.',
+		repercute: [
+			'Desde ese momento la imagen se ve en el artículo y en la tienda (y se sincroniza con Tienda Nube si está conectada).',
+			'Se puede deshacer con "Quitar" desde la solapa Asignadas.',
+		],
+		nota_interna: 'POST image-assignment-items/{id}/aprobar. 422 si ya no estaba para revisar o si el artículo se borró (en ese caso lo pasa a no asignadas, motivo articulo_borrado).',
+	},
+
+	'imagenes-rechazar-*': {
+		titulo: 'Rechazar la imagen',
+		que_hace: 'Descarta la imagen que quedó para revisar: el artículo queda sin imagen.',
+		repercute: [
+			'La imagen se borra y el artículo pasa a "No asignadas". Nunca llegó a verse en la tienda.',
+		],
+	},
+
+	'imagenes-seleccionar-pagina': {
+		titulo: 'Seleccionar la página',
+		que_hace: 'Tilda todas las imágenes para revisar de la página que se ve, para aprobarlas o rechazarlas juntas.',
+		repercute: [
+			'Solo toma las de esta página: las de las páginas siguientes no se tildan.',
+		],
+	},
+
+	'imagenes-tilde-*': {
+		titulo: 'Seleccionar esta imagen',
+		que_hace: 'La suma a las que se van a aprobar o rechazar juntas.',
+	},
+
+	'imagenes-lote-aprobar': {
+		titulo: 'Aprobar las seleccionadas',
+		que_hace: 'Aprueba de una vez todas las imágenes tildadas.',
+		repercute: [
+			'Cada una pasa a verse en su artículo y en la tienda, igual que al aprobarlas de a una.',
+			'Si alguna no se pudo aprobar (por ejemplo, porque el artículo se borró), se avisa cuántas y por qué; las demás se aprueban igual.',
+		],
+	},
+
+	'imagenes-lote-rechazar': {
+		titulo: 'Rechazar las seleccionadas',
+		que_hace: 'Descarta de una vez todas las imágenes tildadas, después de confirmar.',
+		repercute: [
+			'Esos artículos quedan sin imagen y pasan a "No asignadas".',
+		],
+	},
+
+	'imagenes-quitar-*': {
+		titulo: 'Quitar la imagen',
+		que_hace: 'Le saca al artículo la imagen que le puso esta búsqueda, después de confirmar.',
+		repercute: [
+			'Deja de verse en el artículo y en la tienda (Tienda Nube también se entera).',
+			'El artículo pasa a "No asignadas".',
+		],
+	},
+
+	'imagenes-diagnostico-*': {
+		titulo: 'Ver qué se probó',
+		que_hace: 'Despliega lo que se intentó con este artículo: la búsqueda por código de barras y por nombre, cuántos resultados dio cada una y por qué se descartó cada imagen.',
+		repercute: [
+			'Tocar una imagen abre, en otra pestaña, la página donde apareció.',
+		],
+	},
+
+	'imagenes-actualizar-lista': {
+		titulo: 'Actualizar la lista',
+		que_hace: 'Trae los artículos que la búsqueda procesó desde que se abrió la solapa.',
+		repercute: [
+			'Mientras la búsqueda corre la lista no se mueve sola, para no cambiarle las filas de lugar a quien está revisando.',
+		],
+	},
+
+	'imagenes-detener': {
+		titulo: 'Detener la búsqueda',
+		que_hace: 'Frena la búsqueda de imágenes en curso, después de confirmar.',
+		repercute: [
+			'Lo que ya se procesó queda como está; los artículos que faltaban no se buscan.',
+			'Se puede reanudar después desde el mismo detalle.',
+		],
+		nota_interna: 'Solo acceso maestro. POST image-assignment-runs/{id}/detener.',
+	},
+
+	'imagenes-reanudar': {
+		titulo: 'Reanudar la búsqueda',
+		que_hace: 'Sigue la búsqueda desde el primer artículo que quedó sin procesar.',
+		repercute: [
+			'Vale para una búsqueda detenida, cortada o que parece trabada (no avanza hace más de 15 minutos).',
+		],
+		nota_interna: 'Solo acceso maestro. POST image-assignment-runs/{id}/reanudar.',
+	},
+
+	'imagenes-resumen-revisar': {
+		titulo: 'Revisar en Alertas',
+		que_hace: 'Abre esta búsqueda en Alertas → Imágenes, con el detalle de cada artículo.',
+		repercute: [
+			'Ahí se aprueban o se rechazan las imágenes que quedaron para revisar: hasta entonces no se ven en la tienda.',
+		],
+	},
+
+	'imagenes-resumen-no-asignadas': {
+		titulo: 'Artículos sin imagen',
+		que_hace: 'Abre la búsqueda en Alertas → Imágenes, directo en los artículos a los que no se les encontró imagen, con el motivo de cada uno.',
+	},
+
+	'proceso-ver-en-alertas': {
+		titulo: 'Ver en Alertas',
+		que_hace: 'Abre esta búsqueda de imágenes en Alertas → Imágenes: qué se asignó, qué quedó para revisar y por qué no se encontró el resto.',
+		repercute: [
+			'Solo navega: no frena ni cambia la búsqueda.',
+		],
+		nota_interna: 'Vive en la fila del modal de procesos en segundo plano (Fila.vue), pero se documenta acá porque lleva a esta pestaña: descripciones/procesos.js no estaba en el alcance de la misión.',
+	},
 }
