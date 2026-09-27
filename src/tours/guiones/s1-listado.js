@@ -946,8 +946,12 @@ export default {
 				techo_ms: TECHO_PUSHER,
 			},
 			{
+				/* Desde la misión imagenes-catalogo-completo (27/9/2026) el resumen es corto y el
+				 * ancla está en "Sin imagen", que lleva a Alertas → Imágenes con esa búsqueda abierta
+				 * en los artículos sin imagen: ahí se ve el motivo de cada uno y qué se probó. El
+				 * texto describe ese flujo; el ancla y el avance por clic no cambiaron. */
 				ancla: 'listado.lista_articulos_sin_imagen',
-				texto: 'Y estos quedaron sin imagen. Desplegá uno y mirá por qué descartó cada foto.',
+				texto: 'Y estos quedaron sin imagen. Tocá "Sin imagen": te lleva a Alertas → Imágenes, donde ves por qué no se le asignó foto a cada uno y qué se probó.',
 				avanza: 'clic',
 			},
 		],
