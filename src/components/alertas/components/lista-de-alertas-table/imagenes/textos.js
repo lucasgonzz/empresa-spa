@@ -69,6 +69,11 @@ export const MOTIVOS = {
 	marca_de_agua: 'Tiene marca de agua',
 	texto_superpuesto: 'Tiene texto encima',
 	collage: 'Varias fotos juntas',
+	// Tres más que marca la IA y que también frenan la asignación sola: la imagen puede ser del
+	// producto, pero no es la foto que se quiere en la tienda.
+	varias_unidades: 'Muestra varias unidades',
+	vista_parcial: 'Se ve solo una parte del producto',
+	ficha_tecnica: 'Es una ficha técnica o de catálogo',
 	sin_validacion_ia: 'Sin revisar por la IA',
 }
 
@@ -127,6 +132,10 @@ export const PROBLEMAS_IA = {
 	collage: 'varias fotos juntas',
 	borrosa: 'borrosa',
 	otro_producto: 'otro producto',
+	// Los mismos códigos pueden venir también en `problemas`: en minúscula, para que la frase
+	// "Vio: ..." de la fila a revisar no quede con una palabra humanizada con mayúscula.
+	vista_parcial: 'solo una parte del producto',
+	ficha_tecnica: 'ficha técnica o de catálogo',
 }
 
 /**
