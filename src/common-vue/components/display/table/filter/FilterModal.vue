@@ -307,6 +307,16 @@ export default {
 		margin-top: 14px
 		padding-top: 14px
 
+	// Columna de imágenes (misión imagenes-catalogo-completo, 27/9/2026): ahí los dos toggles son
+	// el ÚNICO control del filtro (ningún otro subcomponente responde a type 'images'), no hay
+	// nada arriba que separar, y el borde con su margen se veía como una franja vacía encima de
+	// los interruptores. EnBlanco.vue pone la clase solo en esa columna: el resto no cambia. Va
+	// después de .filter-toggles a propósito: misma especificidad, gana el orden.
+	.filter-toggles--solos
+		border-top: 0
+		margin-top: 0
+		padding-top: 0
+
 	.filter-toggle-row
 		display: flex
 		align-items: center

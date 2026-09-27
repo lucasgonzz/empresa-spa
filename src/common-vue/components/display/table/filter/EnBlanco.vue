@@ -1,7 +1,13 @@
 <template>
+	<!--
+		`filter-toggles--solos` solo en la columna de imagenes: ahi estos dos toggles son el unico
+		control del filtro, y el borde que los separa del input de arriba (estilo en
+		FilterModal.vue) quedaba como una franja vacia. Los demas tipos no llevan la clase.
+	-->
 	<div
 	v-if="field.type != 'checkbox'"
-	class="text filter-toggles">
+	class="text filter-toggles"
+	:class="{ 'filter-toggles--solos': es_columna_de_imagenes }">
 		<div class="filter-toggle-row">
 			<span class="filter-toggle-row__label">{{ texto_en_blanco }}</span>
 			<label class="filter-toggle">
