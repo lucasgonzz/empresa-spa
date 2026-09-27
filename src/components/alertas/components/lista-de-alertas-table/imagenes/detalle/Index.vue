@@ -306,6 +306,11 @@ export default {
 			procesando_ids: [],
 			/** true mientras viaja un aprobar / rechazar en lote. */
 			lote_en_curso: false,
+			/**
+			 * true mientras hay una caja de confirmación abierta (quitar, rechazar en lote,
+			 * detener). Un doble clic no tiene que abrir dos cajas ni mandar dos veces lo mismo.
+			 */
+			confirmacion_abierta: false,
 			/** Imagen abierta en el visor ({ url, titulo, detalle }) o null. */
 			imagen_visor: null,
 			/** Contador de pedidos de la lista: una respuesta vieja no pisa una más nueva. */
@@ -453,23 +458,23 @@ export default {
 		this.detener_refresco()
 		clearTimeout(this.timer_buscar)
 		// Si se sale de la pantalla con una sincronización en espera (por ejemplo, con el botón
-		// "atrás" del navegador justo después de aprobar), el número rojo se pide igual: si no,
-		// quedaría contando imágenes que ya se resolvieron.
-		if (this.timer_sincronizacion) {
-			clearTimeout(this.timer_sincronizacion)
-			this.timer_sincronizacion = null
-			this.$store.dispatch('image_assignment/get_resumen')
-		}
+		// "atrás" del navegador justo después de aprobar), los números se piden igual: si no, el
+		// número rojo quedaría contando imágenes que ya se resolvieron.
+		this.sincronizar_pendiente_sin_esperar()
 	},
 	methods: {
 		/**
 		 * Deja el detalle como recién abierto, sin nada de la asignación anterior.
+		 *
+		 * 🔴 Antes de soltar la asignación anterior, si le quedó una sincronización en espera (se
+		 * aprobó algo hace menos de ESPERA_SINCRONIZACION_MS y se abrió otra búsqueda), se hace ya:
+		 * cancelarla sin más dejaba la fila de esa búsqueda en la tabla, y el número rojo, con los
+		 * números de antes de la aprobación.
 		 */
 		reiniciar() {
 			this.detener_refresco()
 			clearTimeout(this.timer_buscar)
-			clearTimeout(this.timer_sincronizacion)
-			this.timer_sincronizacion = null
+			this.sincronizar_pendiente_sin_esperar()
 			this.asignacion = null
 			this.cargando_asignacion = false
 			this.error_asignacion = false
@@ -740,6 +745,17 @@ export default {
 		 * Si la página quedó vacía y hay más, se pide la que corresponda. Los números reales se
 		 * piden un rato después (sincronización).
 		 *
+		 * Se llama solo si la asignación y la solapa siguen siendo las mismas que cuando se mandó
+		 * la acción (lo controla resolver_uno).
+		 *
+		 * 🔴 La fila y el total se tocan SOLO si la fila sigue en la lista. Si la lista se volvió a
+		 * pedir mientras viajaba la acción (otro 422, "actualizar", el fin de la búsqueda, un
+		 * cambio de página), lo que llegó ya viene con el total del servidor: restarle otra vez
+		 * dejaba el total uno abajo, y con 26 para revisar la página 2 desaparecía y el artículo
+		 * 26 quedaba inalcanzable. Los conteos sí se ajustan: mientras hay una acción en vuelo,
+		 * ninguna respuesta los pisa (ver cargar_items y aplicar_asignacion), así que siguen siendo
+		 * los de antes de la acción.
+		 *
 		 * @param {Number} id
 		 * @param {String} desde Solapa de la que sale.
 		 * @param {String} hacia Solapa a la que pasa.
@@ -748,8 +764,8 @@ export default {
 			let indice = this.items.findIndex(item => item.id === id)
 			if (indice !== -1) {
 				this.items.splice(indice, 1)
+				this.total_items = Math.max(0, this.total_items - 1)
 			}
-			this.total_items = Math.max(0, this.total_items - 1)
 
 			let conteos = Object.assign({}, this.conteos)
 			conteos[desde] = Math.max(0, (Number(conteos[desde]) || 0) - 1)
@@ -785,30 +801,118 @@ export default {
 		/**
 		 * Lo común de aprobar, rechazar y quitar de a uno.
 		 *
+		 * 🔴 Se anota de qué asignación y de qué solapa era la fila al mandar la acción. Si cuando
+		 * vuelve ya se está mirando otra cosa (se abrió otra búsqueda, o se cambió de solapa), no
+		 * se toca nada de lo que se ve: sacar la fila o mover conteos ahí movía los números de la
+		 * búsqueda equivocada. Solo se refresca la búsqueda de la acción (su fila en la tabla) y
+		 * el número rojo.
+		 *
 		 * @param {Object} item
 		 * @param {String} accion aprobar | rechazar | quitar (acción del store).
 		 * @param {String} desde Solapa de la que sale.
 		 * @param {String} hacia Solapa a la que pasa.
-		 * @returns {Promise}
+		 * @returns {Promise<Boolean>} true si la API la resolvió.
 		 */
 		resolver_uno(item, accion, desde, hacia) {
 			let self = this
-			if (self.esta_procesando(item.id)) {
-				return Promise.resolve()
+			if (!self.asignacion || self.esta_procesando(item.id)) {
+				return Promise.resolve(false)
 			}
+			let id_de_la_asignacion = self.asignacion.id
+			let solapa_de_la_accion = self.solapa
 			self.marcar_procesando(item.id, true)
 
 			return self.$store.dispatch('image_assignment/' + accion, item.id)
 			.then(() => {
 				self.marcar_procesando(item.id, false)
-				self.sacar_item(item.id, desde, hacia)
+				if (self.sigue_siendo(id_de_la_asignacion, solapa_de_la_accion)) {
+					self.sacar_item(item.id, desde, hacia)
+				} else {
+					self.despues_de_cambiar_de_pantalla(id_de_la_asignacion)
+				}
 				return true
 			})
 			.catch(err => {
 				console.log(err)
 				self.marcar_procesando(item.id, false)
-				self.cargar_items({ silencioso: true })
-				self.programar_sincronizacion()
+				if (self.sigue_siendo(id_de_la_asignacion, solapa_de_la_accion)) {
+					// El motivo (422) ya lo mostró el interceptor; lo que se ve tiene que ser lo real.
+					self.cargar_items({ silencioso: true })
+					self.programar_sincronizacion()
+				} else {
+					self.despues_de_cambiar_de_pantalla(id_de_la_asignacion)
+				}
+				return false
+			})
+		},
+		/**
+		 * Una acción volvió cuando ya se estaba mirando otra cosa. Si es la misma búsqueda en otra
+		 * solapa, se piden sus números reales (los conteos de las solapas son de esta búsqueda y
+		 * se tienen que enterar). Si es otra búsqueda, solo se refresca la de la acción: su fila
+		 * en la tabla y el número rojo.
+		 *
+		 * @param {Number} id_de_la_asignacion Asignación de la acción.
+		 */
+		despues_de_cambiar_de_pantalla(id_de_la_asignacion) {
+			if (this.sigue_siendo(id_de_la_asignacion, null)) {
+				this.programar_sincronizacion()
+				return
+			}
+			this.refrescar_en_segundo_plano(id_de_la_asignacion)
+		},
+		/**
+		 * True si el detalle sigue mostrando la misma asignación (y, si se pasa, la misma solapa)
+		 * que cuando se mandó una acción.
+		 *
+		 * @param {Number} id_de_la_asignacion
+		 * @param {String|null} solapa Si es null, no se compara la solapa.
+		 * @returns {Boolean}
+		 */
+		sigue_siendo(id_de_la_asignacion, solapa) {
+			if (!this.asignacion || this.asignacion.id !== id_de_la_asignacion) {
+				return false
+			}
+			return !solapa || this.solapa === solapa
+		},
+		/**
+		 * Trae una asignación sin tocar lo que muestra el detalle: el store actualiza su fila en
+		 * la tabla de la solapa (actualizar_asignacion) y después se pide el número rojo. Es lo
+		 * que se hace con una búsqueda que ya no es la que se está mirando.
+		 *
+		 * @param {Number} id
+		 * @returns {Promise}
+		 */
+		refrescar_en_segundo_plano(id) {
+			let self = this
+			return self.$store.dispatch('image_assignment/get_asignacion', { id: id, silencioso: true })
+			.catch(err => {
+				console.log(err)
+			})
+			.then(() => self.$store.dispatch('image_assignment/get_resumen'))
+		},
+		/**
+		 * Abre una caja de confirmación de a una por vez: mientras hay una abierta, un segundo
+		 * clic (el doble clic de siempre) no abre otra. Resuelve true solo si la persona confirmó;
+		 * cerrar con Escape o tocando afuera cuenta como no.
+		 *
+		 * @param {String} texto
+		 * @param {Object} opciones Las de $bvModal.msgBoxConfirm.
+		 * @returns {Promise<Boolean>}
+		 */
+		confirmar(texto, opciones) {
+			let self = this
+			if (self.confirmacion_abierta) {
+				return Promise.resolve(false)
+			}
+			self.confirmacion_abierta = true
+			return self.$bvModal.msgBoxConfirm(texto, opciones)
+			.then(confirmado => {
+				self.confirmacion_abierta = false
+				return confirmado === true
+			})
+			.catch(err => {
+				console.log(err)
+				self.confirmacion_abierta = false
 				return false
 			})
 		},
@@ -820,8 +924,11 @@ export default {
 		 */
 		quitar(item) {
 			let self = this
+			if (self.esta_procesando(item.id)) {
+				return
+			}
 			let nombre = item.article_name || ('el artículo N° ' + item.article_id)
-			self.$bvModal.msgBoxConfirm('¿Quitarle la imagen a «' + nombre + '»? Deja de verse en el artículo y en la tienda.', {
+			self.confirmar('¿Quitarle la imagen a «' + nombre + '»? Deja de verse en el artículo y en la tienda.', {
 				title: 'Quitar imagen',
 				okTitle: 'Quitar',
 				okVariant: 'danger',
@@ -829,7 +936,9 @@ export default {
 				centered: true,
 			})
 			.then(confirmado => {
-				if (!confirmado) {
+				// Se vuelve a mirar después de la caja: mientras estaba abierta pudo haber salido
+				// otra acción sobre la misma fila.
+				if (!confirmado || self.esta_procesando(item.id)) {
 					return
 				}
 				return self.resolver_uno(item, 'quitar', 'asignadas', 'no_asignadas')
@@ -850,14 +959,15 @@ export default {
 		resolver_seleccionadas(accion) {
 			let self = this
 			let ids = self.seleccionados.slice()
-			if (!ids.length || self.lote_en_curso) {
+			if (!ids.length || self.lote_en_curso || !self.asignacion) {
 				return
 			}
+			let id_de_la_asignacion = self.asignacion.id
 			let cantidad = ids.length
 			let texto_cantidad = cantidad + (cantidad === 1 ? ' imagen' : ' imágenes')
 
 			let confirmacion = accion === 'rechazar'
-				? self.$bvModal.msgBoxConfirm('¿Rechazar ' + texto_cantidad + '? Se descartan y esos artículos quedan sin imagen.', {
+				? self.confirmar('¿Rechazar ' + texto_cantidad + '? Se descartan y esos artículos quedan sin imagen.', {
 					title: 'Rechazar seleccionadas',
 					okTitle: 'Rechazar',
 					okVariant: 'danger',
@@ -867,7 +977,10 @@ export default {
 				: Promise.resolve(true)
 
 			confirmacion.then(confirmado => {
-				if (!confirmado) {
+				// Se vuelve a mirar después de la caja: un doble clic en "Aprobar seleccionadas"
+				// (que no tiene caja) o un lote que salió mientras la caja estaba abierta no
+				// pueden mandar los mismos ids dos veces.
+				if (!confirmado || self.lote_en_curso || !self.sigue_siendo(id_de_la_asignacion, null)) {
 					return
 				}
 				self.lote_en_curso = true
@@ -880,6 +993,10 @@ export default {
 					self.$store.commit('auth/setMessage', '')
 					self.lote_en_curso = false
 					self.avisar_resultado_del_lote(accion, respuesta)
+					if (!self.sigue_siendo(id_de_la_asignacion, null)) {
+						self.refrescar_en_segundo_plano(id_de_la_asignacion)
+						return
+					}
 					self.seleccionados = []
 					self.cargar_items()
 					self.sincronizar()
@@ -889,7 +1006,9 @@ export default {
 					self.$store.commit('auth/setLoading', false)
 					self.$store.commit('auth/setMessage', '')
 					self.lote_en_curso = false
-					self.cargar_items({ silencioso: true })
+					if (self.sigue_siendo(id_de_la_asignacion, null)) {
+						self.cargar_items({ silencioso: true })
+					}
 				})
 			})
 		},
@@ -927,7 +1046,8 @@ export default {
 			if (!self.asignacion || self.operando_asignacion) {
 				return
 			}
-			self.$bvModal.msgBoxConfirm('¿Detener la búsqueda? Lo que ya se procesó queda como está y los artículos que faltan no se buscan. Se puede reanudar después.', {
+			let id_de_la_asignacion = self.asignacion.id
+			self.confirmar('¿Detener la búsqueda? Lo que ya se procesó queda como está y los artículos que faltan no se buscan. Se puede reanudar después.', {
 				title: 'Detener la búsqueda',
 				okTitle: 'Detener',
 				okVariant: 'danger',
@@ -935,17 +1055,27 @@ export default {
 				centered: true,
 			})
 			.then(confirmado => {
-				if (!confirmado) {
+				// Se vuelve a mirar después de la caja (doble clic, u otra búsqueda abierta).
+				if (!confirmado || self.operando_asignacion || !self.sigue_siendo(id_de_la_asignacion, null)) {
 					return
 				}
 				self.operando_asignacion = true
-				return self.$store.dispatch('image_assignment/detener', self.asignacion.id)
+				return self.$store.dispatch('image_assignment/detener', id_de_la_asignacion)
 				.then(asignacion => {
 					self.operando_asignacion = false
+					self.$toast.success('La búsqueda se detuvo')
+					if (!self.sigue_siendo(id_de_la_asignacion, null)) {
+						self.refrescar_en_segundo_plano(id_de_la_asignacion)
+						return
+					}
 					self.aplicar_asignacion(asignacion)
 					self.detener_refresco()
-					self.$toast.success('La búsqueda se detuvo')
-					self.$store.dispatch('image_assignment/get_resumen')
+					/*
+						sincronizar() y no solo el resumen: detenida, la búsqueda ya salió de proceso,
+						y el GET del detalle es lo que la marca como vista. Sin eso, el número rojo
+						sumaba uno por la misma búsqueda que se está mirando.
+					*/
+					self.sincronizar()
 				})
 				.catch(err => {
 					console.log(err)
@@ -962,13 +1092,19 @@ export default {
 			if (!self.asignacion || self.operando_asignacion) {
 				return
 			}
+			let id_de_la_asignacion = self.asignacion.id
 			self.operando_asignacion = true
-			self.$store.dispatch('image_assignment/reanudar', self.asignacion.id)
+			self.$store.dispatch('image_assignment/reanudar', id_de_la_asignacion)
 			.then(asignacion => {
 				self.operando_asignacion = false
+				self.$toast.success('La búsqueda sigue desde donde quedó')
+				// Si mientras viajaba se abrió otra búsqueda, esta respuesta no es la que se ve (su
+				// fila en la tabla ya la actualizó el store).
+				if (!self.sigue_siendo(id_de_la_asignacion, null)) {
+					return
+				}
 				self.aplicar_asignacion(asignacion)
 				self.programar_refresco()
-				self.$toast.success('La búsqueda sigue desde donde quedó')
 			})
 			.catch(err => {
 				console.log(err)
@@ -990,6 +1126,26 @@ export default {
 			if (!this.procesando_ids.length && asignacion.conteos) {
 				this.conteos = Object.assign({}, asignacion.conteos)
 			}
+		},
+		/**
+		 * Si hay una sincronización en espera, la hace ya para la asignación que se está mostrando,
+		 * sin tocar lo que muestra el detalle. La usan el cierre del modal, abrir otra búsqueda
+		 * (reiniciar) y salir de la pantalla (beforeDestroy): en los tres casos, cancelarla dejaba
+		 * la fila de la tabla y el número rojo con los números de antes de la última acción.
+		 *
+		 * Una acción que todavía viaja se ocupa sola de lo suyo cuando vuelve (ver resolver_uno).
+		 */
+		sincronizar_pendiente_sin_esperar() {
+			if (!this.timer_sincronizacion) {
+				return
+			}
+			clearTimeout(this.timer_sincronizacion)
+			this.timer_sincronizacion = null
+			if (this.asignacion) {
+				this.refrescar_en_segundo_plano(this.asignacion.id)
+				return
+			}
+			this.$store.dispatch('image_assignment/get_resumen')
 		},
 		/**
 		 * Pide los números reales un rato después de la última acción (ver ESPERA_SINCRONIZACION_MS).
@@ -1095,11 +1251,7 @@ export default {
 		al_cerrar() {
 			this.detener_refresco()
 			clearTimeout(this.timer_buscar)
-			if (this.timer_sincronizacion) {
-				clearTimeout(this.timer_sincronizacion)
-				this.timer_sincronizacion = null
-				this.sincronizar()
-			}
+			this.sincronizar_pendiente_sin_esperar()
 			this.imagen_visor = null
 			this.$emit('cerrado')
 		},
