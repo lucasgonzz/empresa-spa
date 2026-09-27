@@ -109,6 +109,7 @@ import {
 	PROBLEMAS_IA,
 	texto_de,
 	busquedas_del_articulo,
+	url_segura,
 } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
 
 /**
@@ -221,9 +222,12 @@ export default {
 			}
 			return partes.join(' ')
 		},
-		/** Página donde apareció la imagen. */
+		/**
+		 * Página donde apareció la imagen, solo si es un link web (ver url_segura): viene de un
+		 * resultado de búsqueda de terceros y va a un href.
+		 */
 		pagina() {
-			return this.imagen.pagina || null
+			return url_segura(this.imagen.pagina)
 		},
 	},
 	methods: {

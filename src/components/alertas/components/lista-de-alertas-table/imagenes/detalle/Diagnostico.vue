@@ -36,7 +36,7 @@ class="img-det-diag"
 		<p
 		v-if="!criterio.usado"
 		class="img-det-diag__texto">
-			No se buscó. {{ criterio.motivo_no_usado || '' }}
+			{{ texto_no_usado(criterio) }}
 		</p>
 
 		<template v-else>
@@ -65,7 +65,7 @@ class="img-det-diag"
 				v-for="(candidata, posicion) in candidatas_de(criterio)"
 				:key="'candidata-' + indice + '-' + posicion"
 				class="img-det-cand"
-				:href="candidata.pagina || candidata.url"
+				:href="link_de(candidata)"
 				:title="candidata.motivo || texto_resultado(candidata)"
 				:data-resultado="candidata.resultado"
 				target="_blank"
@@ -112,6 +112,7 @@ import {
 	texto_de,
 	entero_es,
 	busquedas_del_articulo,
+	url_segura,
 } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
 
 /**
@@ -159,6 +160,36 @@ export default {
 		},
 		busquedas(criterio) {
 			return busquedas_del_articulo(criterio.busquedas)
+		},
+		/**
+		 * Por qué no se usó un criterio. La API ya puede mandar la frase entera ("No se buscó: el
+		 * código 123 es el número interno del artículo..."): el "No se buscó." va adelante solo si
+		 * el texto no lo trae, así no se lee dos veces.
+		 *
+		 * @param {Object} criterio
+		 * @returns {String}
+		 */
+		texto_no_usado(criterio) {
+			let motivo = String(criterio.motivo_no_usado || '').trim()
+			if (!motivo) {
+				return 'No se buscó.'
+			}
+			// Sin tildes ni mayúsculas para comparar: "No se busco" o "no se buscó" también cuentan.
+			let comparable = motivo.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+			if (comparable.indexOf('no se busco') === 0) {
+				return motivo
+			}
+			return 'No se buscó. ' + motivo
+		},
+		/**
+		 * A dónde lleva tocar una candidata: la página donde apareció o, si no vino, la imagen.
+		 * Solo links web (ver url_segura); si ninguno lo es, la tarjeta queda sin link.
+		 *
+		 * @param {Object} candidata
+		 * @returns {String|null}
+		 */
+		link_de(candidata) {
+			return url_segura(candidata.pagina) || url_segura(candidata.url)
 		},
 		/**
 		 * "10 resultados" / "1 resultado" / "Sin resultados".

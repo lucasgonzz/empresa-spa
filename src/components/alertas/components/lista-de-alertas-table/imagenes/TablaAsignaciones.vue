@@ -38,7 +38,16 @@ data-testid="imagenes-listado-asignaciones">
 	data-testid="imagenes-asignaciones-vacio"
 	icon_class="bi bi-images"
 	title="Todavía no hay búsquedas de imágenes"
-	hint="Cuando pidas imágenes automáticas desde el listado de artículos, cada búsqueda queda acá: qué imagen se asignó, cuáles quedaron para revisar y por qué no se encontró el resto."></empty-state>
+	hint="Cuando pidas imágenes automáticas desde el listado de artículos, cada búsqueda queda acá: qué imagen se asignó, cuáles quedaron para revisar y por qué no se encontró el resto.">
+		<!--
+			Una linea aparte, mas chica: quien ya habia buscado imagenes antes de esta version va
+			a extrañar sus busquedas, y no estan porque se guardaban en otro lado (el historial
+			viejo del listado), no porque se hayan perdido las imagenes.
+		-->
+		<p class="img-asig-tabla__nota-vacio">
+			Las búsquedas anteriores a esta versión no aparecen acá.
+		</p>
+	</empty-state>
 
 	<template v-else>
 
@@ -328,6 +337,15 @@ export default {
 	gap: 10px
 	padding: 48px 20px
 	font-size: 0.875rem
+	color: var(--color-text-secondary, #6c757d)
+
+// La linea extra del estado vacio: va en el slot de EmptyState (que le suma 16px arriba), asi que
+// aca solo se achica y se apaga, sin margenes propios.
+.img-asig-tabla__nota-vacio
+	margin: 0
+	max-width: 320px
+	font-size: 0.78rem
+	line-height: 1.4
 	color: var(--color-text-secondary, #6c757d)
 
 .img-asig-tabla__caja

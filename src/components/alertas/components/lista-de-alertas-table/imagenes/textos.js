@@ -264,6 +264,24 @@ export function busquedas_del_articulo(cantidad) {
 }
 
 /**
+ * Devuelve la URL solo si es un link web (http:// o https://); cualquier otra cosa da null.
+ *
+ * Las URLs de las candidatas y de las páginas de origen vienen de resultados de búsqueda de
+ * terceros: una que llegara como `javascript:...` en un `href` se ejecutaría al tocarla. Con null,
+ * Vue no pone el atributo y el link queda quieto.
+ *
+ * @param {String} url
+ * @returns {String|null}
+ */
+export function url_segura(url) {
+	let texto = String(url || '').trim()
+	if (/^https?:\/\//i.test(texto)) {
+		return texto
+	}
+	return null
+}
+
+/**
  * Proveedor de búsqueda para mostrar. Para el comerciante es siempre Google Imágenes (Serper es
  * un intermediario que no le dice nada); el acceso maestro ve además cuál de los dos se usó,
  * porque es lo que decide la cuenta de Google o de Serper que se consumió.

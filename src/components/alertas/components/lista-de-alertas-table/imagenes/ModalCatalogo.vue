@@ -68,6 +68,18 @@ title="Buscar imágenes para todo el catálogo"
 				Falta cargar la clave de Serper (SERPER_API_KEY) en el servidor de este cliente. Sin esa clave no se puede buscar todo el catálogo; la búsqueda desde el listado sigue andando como siempre.
 			</div>
 
+			<!--
+				Nada para buscar: se dice por que no se puede lanzar (todos tienen imagen, o los que
+				no tienen quedaron afuera por las dos exclusiones) en vez de dejar el boton apagado
+				sin explicacion.
+			-->
+			<div
+			v-if="!previa.corrida_activa && sin_nada_para_buscar"
+			class="img-cat__aviso img-cat__aviso--info"
+			data-testid="imagenes-catalogo-nada-para-buscar">
+				{{ motivo_de_nada_para_buscar }}
+			</div>
+
 			<div class="img-cat__principal">
 				<span
 				class="img-cat__cifra"
@@ -96,16 +108,16 @@ title="Buscar imágenes para todo el catálogo"
 					<strong>{{ entero(previa.quedan_para_otra_corrida) }}</strong>
 					quedan para otra búsqueda: el tope es de {{ entero(previa.tope) }} artículos por vez. Cuando termine, lanzala de nuevo y sigue con los que faltan.
 				</li>
-				<li v-else-if="Number(previa.tope) > 0">
+				<li v-else-if="Number(previa.tope) > 0 && !sin_nada_para_buscar">
 					El tope es de <strong>{{ entero(previa.tope) }}</strong> artículos por búsqueda: esta vez entran todos.
 				</li>
-				<li>
+				<li v-if="!sin_nada_para_buscar">
 					Van primero los publicados en la tienda, después los que tienen stock y después el resto.
 				</li>
 			</ul>
 
 			<div
-			v-if="estimacion"
+			v-if="estimacion && !sin_nada_para_buscar"
 			class="img-cat__estimacion"
 			data-testid="imagenes-catalogo-estimacion">
 				<p class="img-cat__estimacion-titulo">
@@ -231,6 +243,46 @@ export default {
 		},
 		proveedor() {
 			return texto_de_proveedor(this.previa ? this.previa.proveedor : null, true)
+		},
+		/** true si la previa dice que no hay ningún artículo para buscar ahora. */
+		sin_nada_para_buscar() {
+			return !!this.previa && Number(this.previa.a_buscar) <= 0
+		},
+		/**
+		 * Por qué no hay nada para buscar, armado con los números de la previa: todos los
+		 * artículos activos ya tienen imagen, o los que no tienen quedaron afuera porque esperan
+		 * revisión o porque ya se buscaron sin éxito hace poco.
+		 *
+		 * @returns {String}
+		 */
+		motivo_de_nada_para_buscar() {
+			if (!this.previa) {
+				return ''
+			}
+			let sin_imagen = Number(this.previa.sin_imagen) || 0
+			let pendientes = Number(this.previa.excluidos_pendientes_de_revision) || 0
+			let ya_buscados = Number(this.previa.excluidos_ya_buscados) || 0
+
+			if (!sin_imagen) {
+				return 'No hay artículos para buscar: todos los artículos activos ya tienen imagen.'
+			}
+			let inicio = 'No hay artículos para buscar: '
+			let de_los = sin_imagen === 1 ? 'el único artículo sin imagen' : 'los ' + entero_es(sin_imagen) + ' artículos sin imagen'
+			if (pendientes && ya_buscados) {
+				return inicio + 'de ' + de_los + ', ' + entero_es(pendientes)
+					+ (pendientes === 1 ? ' tiene una imagen esperando revisión' : ' tienen una imagen esperando revisión')
+					+ ' y ' + entero_es(ya_buscados)
+					+ (ya_buscados === 1 ? ' ya se buscó' : ' ya se buscaron') + ' sin éxito en los últimos 90 días.'
+			}
+			if (pendientes) {
+				return inicio + de_los + (sin_imagen === 1 ? ' ya tiene' : ' ya tienen')
+					+ ' una imagen esperando revisión. '
+					+ (sin_imagen === 1 ? 'Aprobala o rechazala desde el detalle de su búsqueda.' : 'Aprobalas o rechazalas desde el detalle de cada búsqueda.')
+			}
+			if (ya_buscados) {
+				return inicio + de_los + (sin_imagen === 1 ? ' ya se buscó' : ' ya se buscaron') + ' sin éxito en los últimos 90 días.'
+			}
+			return inicio + 'los que no tienen imagen quedaron afuera de esta búsqueda.'
 		},
 	},
 	methods: {
