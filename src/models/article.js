@@ -18,6 +18,15 @@ export default {
 			key: 'images',
 			type: 'images',
 			use_to_show_in_search_modal: true,
+			/*
+				Filtro de columna "Sin imágenes" / "Con imágenes" (mision imagenes-catalogo-completo,
+				27/9/2026). Es OPT-IN a proposito: build_table_filters_from_props() de
+				common-vue/mixins/generals.js sigue salteando toda prop de tipo images que no traiga
+				esta marca, asi las otras tablas con columna de imagenes no cambian en nada. Viaja como
+				{key: 'images', type: 'images', en_blanco | no_en_blanco} y la API lo resuelve con
+				whereDoesntHave / whereHas sobre la relacion (ColumnFiltersHelper).
+			*/
+			filtrable_por_presencia: true,
 			// table_position: 2,
 		},
 		{

@@ -218,6 +218,14 @@ export default {
 
 						|| this.field.type == 'checkbox'
 
+						// Columna de imagenes con filtro "Sin imagenes / Con imagenes" (mision
+						// imagenes-catalogo-completo, 27/9/2026). Solo existe filtro para las props
+						// que traen `filtrable_por_presencia` (build_table_filters_from_props), asi que
+						// el `typeof this.filter` de arriba ya deja afuera a las demas. De los
+						// subcomponentes del template, el unico que responde a este tipo es EnBlanco
+						// (los otros miran su propio `field.type`), que es justo el control que va.
+						|| this.field.type == 'images'
+
 					)
 
 		},
