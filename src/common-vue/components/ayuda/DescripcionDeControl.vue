@@ -5,7 +5,7 @@
 	:target="control_activo.el"
 	:show="visible"
 	triggers=""
-	placement="bottom"
+	:placement="placement"
 	boundary="window"
 	custom-class="descripcion-de-control-popover">
 		<div
@@ -68,13 +68,50 @@ const DEMORA_PARA_MOSTRAR = 2000
 */
 const DEMORA_PARA_OCULTAR = 250
 
+/*
+	Lado donde se abre el popover si el control no pide otro: abajo, como siempre.
+*/
+const LADO_POR_DEFECTO = 'bottom'
+
+/*
+	Lados que un control puede pedir con `data-ayuda-placement` (los que acepta b-popover).
+
+	Para que sirve (misión imagenes-catalogo-completo, 27/9/2026). Adentro de un b-modal,
+	bootstrap-vue cuelga el popover del `.modal-content` del modal, y en los modales
+	`scrollable` ese contenedor tiene `overflow: hidden` (lo pone bootstrap): todo lo que el
+	popover saca afuera de la caja del modal se RECORTA, y `boundary="window"` no lo evita porque
+	mide contra la ventana, no contra el modal. Un botón pegado al borde derecho —"Aprobar" al
+	final de una fila— abría su ayuda abajo y centrada, y media ayuda quedaba comida por el borde.
+	Ese botón pide `data-ayuda-placement="left"` y la ayuda se abre a su izquierda, entera adentro
+	del modal. Es opt-in: un control sin el atributo sigue igual que antes.
+*/
+const LADOS_VALIDOS = [
+	'top', 'topleft', 'topright',
+	'right', 'righttop', 'rightbottom',
+	'bottom', 'bottomleft', 'bottomright',
+	'left', 'lefttop', 'leftbottom',
+	'auto',
+]
+
+/**
+ * Lado que pide el control con `data-ayuda-placement`, o el de siempre si no pide ninguno (o si
+ * pide uno que b-popover no conoce).
+ *
+ * @param {HTMLElement} el Control que tiene el data-testid.
+ * @returns {String}
+ */
+function lado_pedido(el) {
+	let pedido = el && typeof el.getAttribute == 'function' ? el.getAttribute('data-ayuda-placement') : null
+	return LADOS_VALIDOS.indexOf(pedido) !== -1 ? pedido : LADO_POR_DEFECTO
+}
+
 export default {
 	name: 'DescripcionDeControl',
 	data() {
 		return {
 			/*
 				El control que tiene la descripción abierta (o a punto de abrirse):
-				{ el: HTMLElement, testid: String, descripcion: Object }.
+				{ el: HTMLElement, testid: String, descripcion: Object, placement: String }.
 				Es null cuando no hay ninguno.
 			*/
 			control_activo: null,
@@ -87,6 +124,14 @@ export default {
 				return []
 			}
 			return this.control_activo.descripcion.repercute
+		},
+		/**
+		 * Lado donde se abre el popover del control activo (ver LADOS_VALIDOS).
+		 *
+		 * @returns {String}
+		 */
+		placement() {
+			return this.control_activo && this.control_activo.placement ? this.control_activo.placement : LADO_POR_DEFECTO
 		},
 	},
 	mounted() {
@@ -122,7 +167,7 @@ export default {
 		 * documentado todavía --que es el caso de la enorme mayoría de los controles--.
 		 *
 		 * @param {EventTarget} target Elemento donde ocurrió el evento.
-		 * @returns {Object|null} { el, testid, descripcion } o null.
+		 * @returns {Object|null} { el, testid, descripcion, placement } o null.
 		 */
 		control_documentado(target) {
 			if (!target || typeof target.closest != 'function') {
@@ -137,7 +182,7 @@ export default {
 			if (!descripcion) {
 				return null
 			}
-			return { el: el, testid: testid, descripcion: descripcion }
+			return { el: el, testid: testid, descripcion: descripcion, placement: lado_pedido(el) }
 		},
 		al_entrar(event) {
 			let control = this.control_documentado(event.target)

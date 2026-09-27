@@ -53,10 +53,16 @@ data-testid="imagenes-barra">
 			@click="$emit('rechazar_seleccionadas')">
 				Rechazar seleccionadas ({{ cantidad_seleccionados }})
 			</b-button>
+			<!--
+				Ayuda a la izquierda: es el ultimo de la barra, pegado al borde derecho del modal
+				(ver FilaARevisar.vue). "Rechazar seleccionadas" queda lejos del borde y no lo
+				necesita.
+			-->
 			<b-button
 			class="btn-modulo"
 			variant="success"
 			data-testid="imagenes-lote-aprobar"
+			data-ayuda-placement="left"
 			:disabled="ocupado"
 			@click="$emit('aprobar_seleccionadas')">
 				Aprobar seleccionadas ({{ cantidad_seleccionados }})

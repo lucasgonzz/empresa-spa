@@ -75,11 +75,16 @@ class="img-det-fila img-det-fila--revisar"
 	<!--
 		Rechazar a la izquierda y aprobar a la derecha, como en cualquier dialogo: la accion que
 		avanza queda donde termina la lectura. Aprobar es la unica en color lleno.
+
+		`data-ayuda-placement="left"`: los dos quedan pegados al borde derecho del modal, que es
+		scrollable y recorta lo que sale de su caja; su ayuda se abre a la izquierda para verse
+		entera (ver LADOS_VALIDOS en DescripcionDeControl.vue).
 	-->
 	<div class="img-det-fila__acciones">
 		<b-button
 		class="btn-modulo btn-modulo--fila"
 		variant="outline-danger"
+		data-ayuda-placement="left"
 		:data-testid="'imagenes-rechazar-' + item.id"
 		:disabled="procesando"
 		@click="$emit('rechazar')">
@@ -88,6 +93,7 @@ class="img-det-fila img-det-fila--revisar"
 		<b-button
 		class="btn-modulo btn-modulo--fila"
 		variant="success"
+		data-ayuda-placement="left"
 		:data-testid="'imagenes-aprobar-' + item.id"
 		:disabled="procesando"
 		@click="$emit('aprobar')">

@@ -46,10 +46,12 @@ class="img-det-fila img-det-fila--asignada"
 
 	</div>
 
+	<!-- Ayuda a la izquierda: el boton queda pegado al borde derecho del modal (ver FilaARevisar.vue). -->
 	<div class="img-det-fila__acciones">
 		<b-button
 		class="btn-modulo btn-modulo--fila"
 		variant="outline-secondary"
+		data-ayuda-placement="left"
 		:data-testid="'imagenes-quitar-' + item.id"
 		:disabled="procesando"
 		@click="$emit('quitar')">

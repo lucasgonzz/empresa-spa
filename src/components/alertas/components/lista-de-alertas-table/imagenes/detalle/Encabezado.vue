@@ -8,10 +8,11 @@ data-testid="imagenes-detalle-encabezado"
 		<estado-asignacion :asignacion="asignacion"></estado-asignacion>
 
 		<!--
-			Detener y reanudar (plan §13): en las busquedas de todo el catalogo son solo del
+			Detener y reanudar (plan §13): en las asignaciones de todo el catalogo son solo del
 			acceso maestro (la API contesta 403 a cualquier otra sesion), asi que para el resto ni
 			se dibujan. Las de seleccion y las del asistente las puede detener o reanudar
-			cualquiera que las ve.
+			cualquiera que las ve. Su ayuda se abre a la izquierda: quedan pegados al borde derecho
+			del modal (ver FilaARevisar.vue).
 		-->
 		<div
 		v-if="puede_operar && (puede_detener || puede_reanudar)"
@@ -21,6 +22,7 @@ data-testid="imagenes-detalle-encabezado"
 			class="btn-modulo"
 			variant="outline-danger"
 			data-testid="imagenes-detener"
+			data-ayuda-placement="left"
 			:disabled="operando"
 			@click="$emit('detener')">
 				<i class="bi bi-stop-circle m-r-5"></i>
@@ -31,6 +33,7 @@ data-testid="imagenes-detalle-encabezado"
 			class="btn-modulo"
 			variant="primary"
 			data-testid="imagenes-reanudar"
+			data-ayuda-placement="left"
 			:disabled="operando"
 			@click="$emit('reanudar')">
 				<i class="bi bi-play-circle m-r-5"></i>
