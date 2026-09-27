@@ -351,7 +351,7 @@ export default {
 
 <style scoped>
 .support-message-input-bar {
-	border-top: 1px solid #e6e6e6;
+	border-top: 1px solid var(--color-border, #e6e6e6);
 	padding: 10px;
 }
 
@@ -393,25 +393,25 @@ export default {
 .support-input-attachment-remove {
 	flex-shrink: 0;
 	padding: 0 4px;
-	color: #888;
+	color: var(--color-text-secondary, #888);
 	font-size: 12px;
 	line-height: 1;
 	text-decoration: none;
 }
 
 .support-input-attachment-remove:hover {
-	color: #c53030;
+	color: var(--btn-peligro-texto, #c53030);
 }
 
 /* Aviso de permiso de micrófono denegado */
 .support-input-mic-error {
 	padding: 4px 8px;
 	margin-bottom: 6px;
-	background: #fff5f5;
-	border: 1px solid #fca5a5;
+	background: var(--btn-peligro-fondo, #fff5f5);
+	border: 1px solid var(--btn-peligro-borde, #fca5a5);
 	border-radius: 6px;
 	font-size: 12px;
-	color: #c53030;
+	color: var(--btn-peligro-texto, #c53030);
 }
 </style>
 

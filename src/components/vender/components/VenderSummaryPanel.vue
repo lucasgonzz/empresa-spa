@@ -248,7 +248,7 @@ export default {
 	width: 300px
 	z-index: 100
 	background: var(--color-bg, #fff)
-	border: 1px solid #e0e0e0
+	border: 1px solid var(--color-border-tertiary, #e0e0e0)
 	border-radius: 10px
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12)
 	padding: 0

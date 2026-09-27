@@ -69,7 +69,7 @@ circle {
 }
 
 .progress {
-  stroke: #007bff; /* Color más oscuro */
+  stroke: var(--color-primary, #007bff); /* Color más oscuro */
   stroke-linecap: round;
   transition: stroke-dashoffset 0.35s; /* Transición suave */
 }
@@ -80,7 +80,7 @@ circle {
   left: 50%;
   transform: translate(-50%, -50%);
   font-weight: bold;
-  color: #007bff;
+  color: var(--color-primary, #007bff);
 }
 
 

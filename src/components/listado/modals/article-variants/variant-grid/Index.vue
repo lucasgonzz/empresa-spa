@@ -177,7 +177,7 @@ export default {
 		font-weight: 600
 		letter-spacing: 0.02em
 		text-transform: uppercase
-		color: rgba(0, 0, 0, .45)
+		color: var(--color-text-secondary, rgba(0, 0, 0, .45))
 		margin-bottom: 0
 	&__actions
 		display: flex
@@ -187,7 +187,7 @@ export default {
 	&__link-btn
 		border: none
 		background: transparent
-		color: $blue
+		color: var(--color-primary, $blue)
 		font-weight: 500
 		font-size: 0.9em
 		padding: 4px 6px
@@ -196,8 +196,8 @@ export default {
 			text-decoration: underline
 	&__empty
 		text-align: center
-		color: rgba(0, 0, 0, .45)
-		background: #F0F0F3
+		color: var(--color-text-secondary, rgba(0, 0, 0, .45))
+		background: var(--bg-section, #F0F0F3)
 		border-radius: 12px
 		padding: 18px
 		margin: 0
@@ -205,7 +205,7 @@ export default {
 		width: 100%
 		overflow-x: auto
 		border-radius: 14px
-		border: 1px solid rgba(0, 0, 0, .06)
+		border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, .06))
 	&__table
 		width: 100%
 		border-collapse: collapse
@@ -215,12 +215,12 @@ export default {
 			font-weight: 600
 			text-transform: uppercase
 			letter-spacing: 0.02em
-			color: rgba(0, 0, 0, .45)
-			background: #F7F7F9
+			color: var(--color-text-secondary, rgba(0, 0, 0, .45))
+			background: var(--bg-section, #F7F7F9)
 			padding: 10px 12px
 			white-space: nowrap
 		td
 			padding: 10px 12px
-			border-top: 1px solid rgba(0, 0, 0, .06)
+			border-top: 1px solid var(--color-border-secondary, rgba(0, 0, 0, .06))
 			vertical-align: middle
 </style>

@@ -223,7 +223,7 @@ export default {
 .support-chat-panel {
 	width: min(1100px, 95vw);
 	height: min(90vh, 720px);
-	background: #fff;
+	background: var(--bg-card, #fff);
 	display: flex;
 	border-radius: 12px;
 	overflow: hidden;
@@ -232,7 +232,7 @@ export default {
 
 .support-chat-sidebar {
 	width: 30%;
-	border-right: 1px solid #e6e6e6;
+	border-right: 1px solid var(--color-border, #e6e6e6);
 }
 
 .support-chat-main {
@@ -243,7 +243,7 @@ export default {
 
 .support-chat-main-header {
 	height: 52px;
-	border-bottom: 1px solid #e6e6e6;
+	border-bottom: 1px solid var(--color-border, #e6e6e6);
 	display: flex;
 	align-items: center;
 	justify-content: space-between;

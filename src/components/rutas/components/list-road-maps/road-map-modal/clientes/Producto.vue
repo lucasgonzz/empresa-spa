@@ -20,7 +20,7 @@ export default {
 </script>
 <style lang="sass">
 .venta
-	background: #FFF
+	background: var(--bg-card, #FFF)
 	margin: 10px
 	padding: 20px
 	border-radius: 10px

@@ -496,19 +496,19 @@ export default {
 		border: none
 		background: transparent
 		border-radius: 15px
-		color: #86868b
+		color: var(--color-text-secondary, #86868b)
 		box-shadow: none
 		text-decoration: none
 
 		&:hover, &:focus
-			background: #f2f3f4
-			color: #1d1d1f
+			background: var(--bg-hover, #f2f3f4)
+			color: var(--color-text-primary, #1d1d1f)
 			box-shadow: none
 			text-decoration: none
 
 			.buscador-general-dropdown__count
-				background: #e4e6e8
-				color: #1d1d1f
+				background: var(--bg-hover, #e4e6e8)
+				color: var(--color-text-primary, #1d1d1f)
 
 		i
 			font-size: 0.95rem
@@ -524,8 +524,8 @@ export default {
 		height: 18px
 		padding: 0 5px
 		border-radius: 9px
-		background: #f2f3f4
-		color: #6e6e73
+		background: var(--bg-section, #f2f3f4)
+		color: var(--color-text-secondary, #6e6e73)
 		font-size: 0.7rem
 		font-weight: 600
 		line-height: 1
@@ -547,9 +547,9 @@ export default {
 		margin-top: 4px
 		width: 12px
 		height: 12px
-		background: #fff
-		border-left: 1px solid #e2e4e7
-		border-top: 1px solid #e2e4e7
+		background: var(--bg-card, #fff)
+		border-left: 1px solid var(--color-border, #e2e4e7)
+		border-top: 1px solid var(--color-border, #e2e4e7)
 		transform: translateX(-50%) rotate(45deg)
 		z-index: 1001
 		pointer-events: none
@@ -583,11 +583,11 @@ export default {
 	// como regla suelta) porque si no pierde por especificidad contra .b-dropdown-form de arriba.
 	.buscador-general-dropdown__row-form
 		padding: 7px 12px
-		box-shadow: inset 0 -1px 0 #f0f1f3
+		box-shadow: inset 0 -1px 0 var(--color-border-secondary, #f0f1f3)
 		transition: background 0.12s ease
 
 		&:hover
-			background: #fafbfc
+			background: var(--bg-hover, #fafbfc)
 
 	// El divider que va justo despues de la ultima fila de propiedad quedaba pegado a la ultima
 	// hairline; un poco de aire para que se lea como separacion de seccion.
@@ -601,22 +601,24 @@ export default {
 
 	.buscador-general-dropdown__action
 		flex: 1 1 0
-		border: 1px solid #e2e4e7
-		background: #fff
+		border: 1px solid var(--color-border, #e2e4e7)
+		background: var(--bg-card, #fff)
 		border-radius: 8px
 		padding: 5px 8px
 		font-size: 0.78rem
-		color: #4b4f56
+		color: var(--color-text-primary, #4b4f56)
 		cursor: pointer
 		transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
 
 		&:hover
-			background: #f7f8f9
+			background: var(--bg-hover, #f7f8f9)
 
-		// Estado activo: refleja que la seleccion actual ya es "todas" o "ninguna"
+		// Estado activo: refleja que la seleccion actual ya es "todas" o "ninguna". El verde
+		// (borde y tinte de fondo) es el mismo en los dos modos, como cualquier color de accion;
+		// solo el texto necesitaba su version fuerte para leerse bien en oscuro.
 		&.buscador-general-dropdown__action--active
 			border-color: #22c55e
-			color: #15803d
+			color: var(--color-text-success-strong, #15803d)
 			background: rgba(34, 197, 94, 0.08)
 
 // Campo de texto para filtrar la lista de propiedades mostradas (solo visual)
@@ -627,21 +629,21 @@ export default {
 .buscador-general-dropdown__filter
 	width: 100%
 	height: 30px
-	border: 1px solid #e2e4e7
+	border: 1px solid var(--color-border, #e2e4e7)
 	border-radius: 8px
-	background: #fff
+	background: var(--bg-section, #fff)
 	padding: 0 10px
 	font-size: 0.8rem
-	color: #1d1d1f
+	color: var(--color-text-primary, #1d1d1f)
 	// Sin la sombra global de _inputs.sass: input chico y sobrio, igual criterio que el pill
 	box-shadow: none
 
 	&::placeholder
-		color: #9aa0a6
+		color: var(--color-text-secondary, #9aa0a6)
 
 	&:focus
 		outline: none
-		border-color: #c7cacf
+		border-color: var(--color-border, #c7cacf)
 
 // Titulo discreto de cada seccion ("Donde buscar" / "Como buscar")
 .buscador-general-dropdown__section-title
@@ -650,7 +652,7 @@ export default {
 	font-weight: 600
 	text-transform: uppercase
 	letter-spacing: 0.04em
-	color: #9aa0a6
+	color: var(--color-text-secondary, #9aa0a6)
 
 // Fila de una propiedad: nombre a la izquierda, toggle a la derecha
 .buscador-general-dropdown__row
@@ -674,7 +676,7 @@ export default {
 		text-align: left
 		cursor: pointer
 		font-size: 0.86rem
-		color: #1d1d1f
+		color: var(--color-text-primary, #1d1d1f)
 
 		.buscador-general-dropdown__row-label-text
 			overflow: hidden
@@ -685,27 +687,27 @@ export default {
 		.buscador-general-dropdown__row-label-badge
 			flex: 0 0 auto
 			font-size: 0.7rem
-			color: #007bff
+			color: var(--color-primary, #007bff)
 
 		// Icono de ajustes: oculto salvo hover/focus, para no ensuciar la lista en reposo
 		.buscador-general-dropdown__row-label-gear
 			flex: 0 0 auto
 			font-size: 0.75rem
-			color: #86868b
+			color: var(--color-text-secondary, #86868b)
 			opacity: 0
 			transition: opacity 0.15s ease
 
 		&:hover, &:focus
 			.buscador-general-dropdown__row-label-text
 				text-decoration: underline
-				text-decoration-color: #c7cacf
+				text-decoration-color: var(--color-border, #c7cacf)
 
 			.buscador-general-dropdown__row-label-gear
 				opacity: 1
 
 		&.buscador-general-dropdown__row-label--activa
 			.buscador-general-dropdown__row-label-text
-				color: #007bff
+				color: var(--color-primary, #007bff)
 
 // Selector de modo de busqueda por propiedad + icono de ayuda, entre el nombre y el toggle
 // Ancho fijo (no auto): asi la columna del selector de modo queda alineada en todas las filas,
@@ -718,21 +720,21 @@ export default {
 	flex: 0 0 118px
 
 	.buscador-general-dropdown__row-mode-select
-		border: 1px solid #e2e4e7
+		border: 1px solid var(--color-border, #e2e4e7)
 		border-radius: 6px
-		background: #fff
+		background: var(--bg-section, #fff)
 		padding: 1px 4px
 		font-size: 0.72rem
-		color: #4b4f56
+		color: var(--color-text-primary, #4b4f56)
 		width: 100%
 
 		&:focus
 			outline: none
-			border-color: #c7cacf
+			border-color: var(--color-border, #c7cacf)
 
 	.buscador-general-dropdown__row-mode-help
 		font-size: 0.68rem
-		color: #9aa0a6
+		color: var(--color-text-secondary, #9aa0a6)
 		cursor: help
 
 	// Fila no tildada: el selector de modo no aplica, pero se mantiene invisible en vez de no
@@ -755,15 +757,15 @@ export default {
 		flex-direction: column
 		gap: 2px
 		text-align: left
-		border: 1px solid #e2e4e7
-		background: #fff
+		border: 1px solid var(--color-border, #e2e4e7)
+		background: var(--bg-card, #fff)
 		border-radius: 8px
 		padding: 8px 10px
 		cursor: pointer
 		transition: background 0.15s ease, border-color 0.15s ease
 
 		&:hover
-			background: #f7f8f9
+			background: var(--bg-hover, #f7f8f9)
 
 		// Solo se resalta cuando la configuracion actual coincide exactamente con este preset
 		&.buscador-general-dropdown__preset--active
@@ -772,11 +774,11 @@ export default {
 
 		.buscador-general-dropdown__preset-title
 			font-size: 0.82rem
-			color: #1d1d1f
+			color: var(--color-text-primary, #1d1d1f)
 
 		.buscador-general-dropdown__preset-desc
 			font-size: 0.72rem
-			color: #86868b
+			color: var(--color-text-secondary, #86868b)
 			line-height: 1.3
 			// Ningun texto largo puede volver a empujar el ancho del panel: corta de renglon.
 			overflow-wrap: break-word
@@ -792,27 +794,27 @@ export default {
 
 	.buscador-general-dropdown__conector-opcion
 		text-align: left
-		border: 1px solid #e2e4e7
-		background: #fff
+		border: 1px solid var(--color-border, #e2e4e7)
+		background: var(--bg-card, #fff)
 		border-radius: 8px
 		padding: 6px 10px
 		font-size: 0.78rem
-		color: #4b4f56
+		color: var(--color-text-primary, #4b4f56)
 		cursor: pointer
 		transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
 
 		&:hover
-			background: #f7f8f9
+			background: var(--bg-hover, #f7f8f9)
 
 		&.buscador-general-dropdown__conector-opcion--active
 			border-color: #22c55e
-			color: #15803d
+			color: var(--color-text-success-strong, #15803d)
 			background: rgba(34, 197, 94, 0.08)
 
 .buscador-general-dropdown__conector-help
 	margin: 4px 0 0
 	font-size: 0.7rem
-	color: #86868b
+	color: var(--color-text-secondary, #86868b)
 	// Ningun texto largo puede volver a empujar el ancho del panel: corta de renglon.
 	overflow-wrap: break-word
 
