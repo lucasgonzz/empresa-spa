@@ -197,6 +197,40 @@ export function esta_activa(asignacion) {
 }
 
 /**
+ * True si es una asignación de todo el catálogo. Mira las dos cosas del contrato: el flag
+ * `es_de_catalogo` y el origen, por si alguna respuesta trae solo una.
+ *
+ * @param {Object} asignacion RunPayload.
+ * @returns {Boolean}
+ */
+export function es_de_catalogo(asignacion) {
+	return !!asignacion && (asignacion.es_de_catalogo === true || asignacion.origen === 'catalogo')
+}
+
+/**
+ * El motivo del estado de una asignación tal como se muestra: en el encabezado del detalle y en
+ * el title del chip de estado de la tabla.
+ *
+ * Una de todo el catálogo DETENIDA vista sin el acceso maestro no lleva el motivo de la API
+ * ("Se detuvo desde el acceso maestro... se puede reanudar"): esa sesión no tiene el botón de
+ * reanudar (plan §13) y el acceso maestro no es algo que el comercio tenga que conocer. Va una
+ * frase neutra. Con el acceso maestro, o en cualquier otro caso, el motivo de la API tal cual.
+ *
+ * @param {Object} asignacion RunPayload.
+ * @param {Boolean} es_acceso_maestro true si la sesión entró con la clave maestra.
+ * @returns {String} '' si no hay nada que decir.
+ */
+export function motivo_de_estado(asignacion, es_acceso_maestro) {
+	if (!asignacion) {
+		return ''
+	}
+	if (asignacion.status === 'detenida' && es_de_catalogo(asignacion) && !es_acceso_maestro) {
+		return 'La asignación está detenida.'
+	}
+	return asignacion.motivo_estado ? String(asignacion.motivo_estado) : ''
+}
+
+/**
  * Porcentaje entero de artículos procesados, o null si todavía no se sabe el total.
  *
  * @param {Object} asignacion RunPayload.

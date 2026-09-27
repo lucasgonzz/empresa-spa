@@ -39,12 +39,16 @@ data-testid="imagenes-detalle-encabezado"
 		</div>
 	</div>
 
-	<!-- Por que termino, se detuvo o se corto (por ejemplo, el tope diario de busquedas). -->
+	<!--
+		Por que termino, se detuvo o se corto (por ejemplo, el tope diario de busquedas). Sale de
+		motivo_de_estado (textos.js): una de catalogo detenida, vista sin el acceso maestro, dice
+		solo que esta detenida.
+	-->
 	<p
-	v-if="asignacion.motivo_estado"
+	v-if="motivo"
 	class="img-det-enc__motivo"
 	data-testid="imagenes-detalle-motivo">
-		{{ asignacion.motivo_estado }}
+		{{ motivo }}
 	</p>
 	<p
 	v-else-if="asignacion.trabada"
@@ -122,6 +126,8 @@ import {
 	ORIGENES,
 	texto_de,
 	esta_activa,
+	es_de_catalogo,
+	motivo_de_estado,
 	entero_es,
 	promedio_es,
 	texto_de_proveedor,
@@ -161,13 +167,21 @@ export default {
 	},
 	computed: {
 		/**
-		 * true si es una búsqueda de todo el catálogo. Mira las dos cosas del contrato: el flag
-		 * `es_de_catalogo` y el origen, por si alguna respuesta trae solo una.
+		 * true si es una asignación de todo el catálogo (ver es_de_catalogo en textos.js).
 		 *
 		 * @returns {Boolean}
 		 */
 		es_de_catalogo() {
-			return this.asignacion.es_de_catalogo === true || this.asignacion.origen === 'catalogo'
+			return es_de_catalogo(this.asignacion)
+		},
+		/**
+		 * El motivo del estado para mostrar (ver motivo_de_estado en textos.js): el de la API, salvo
+		 * una de catálogo detenida vista sin el acceso maestro, que no tiene cómo reanudarla.
+		 *
+		 * @returns {String}
+		 */
+		motivo() {
+			return motivo_de_estado(this.asignacion, this.es_acceso_maestro)
 		},
 		/**
 		 * true si esta sesión puede detener o reanudar ESTA búsqueda (plan §13): las de todo el

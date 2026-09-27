@@ -6,13 +6,14 @@ class="img-asig-estado"
 	<div class="img-asig-estado__chips">
 		<!--
 			El motivo del estado (por ejemplo "Se agotaron las búsquedas del día") va en el title:
-			en la tabla no hay lugar para una frase entera. En el detalle se muestra escrito.
+			en la tabla no hay lugar para una frase entera. En el detalle se muestra escrito. Sale
+			de motivo_de_estado (textos.js), igual que en el detalle.
 		-->
 		<span
 		class="img-asig-chip"
 		:class="'img-asig-chip--' + asignacion.status"
 		:data-status="asignacion.status"
-		:title="asignacion.motivo_estado || null">
+		:title="motivo || null">
 			<span class="img-asig-chip__punto"></span>
 			{{ texto_estado }}
 		</span>
@@ -40,7 +41,7 @@ class="img-asig-estado"
 </div>
 </template>
 <script>
-import { ESTADOS, texto_de, esta_activa, porcentaje_de, entero_es } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
+import { ESTADOS, texto_de, esta_activa, porcentaje_de, entero_es, motivo_de_estado } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
 
 /**
  * Estado de una asignación de imágenes: el chip ("En curso", "Terminada", "Se cortó"...), el
@@ -68,6 +69,17 @@ export default {
 	computed: {
 		texto_estado() {
 			return texto_de(ESTADOS, this.asignacion.status)
+		},
+		/**
+		 * El motivo del estado para el title del chip (ver motivo_de_estado en textos.js). El
+		 * acceso maestro se lee del usuario de la sesión, igual que en la solapa: este chip lo usan
+		 * la tabla y el detalle, y ninguno de los dos se lo tiene que pasar.
+		 *
+		 * @returns {String}
+		 */
+		motivo() {
+			let usuario = this.$store.state.auth.user
+			return motivo_de_estado(this.asignacion, !!(usuario && usuario.es_acceso_maestro))
 		},
 		activa() {
 			return esta_activa(this.asignacion)
