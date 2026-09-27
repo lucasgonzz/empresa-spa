@@ -79,7 +79,7 @@ export default {
 		
 	.content 
 		height: 100%
-		background: #FFF
+		background: var(--bg-card, #FFF)
 		display: flex 
 		flex-direction: column
 		justify-content: flex-start 

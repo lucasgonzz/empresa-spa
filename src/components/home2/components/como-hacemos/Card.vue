@@ -33,8 +33,8 @@ export default {
 	align-items: center 
 	padding: 20px
 	border-radius: 10px
-	border: 2px solid #DDDDDD
-	background: #FFF
+	border: 2px solid var(--color-border, #DDDDDD)
+	background: var(--bg-card, #FFF)
 	margin: 15px
 
 	.num 
@@ -49,8 +49,8 @@ export default {
 		font-size: 25px 
 		font-weight: bold 
 
-	.title 
-		color: #333 
+	.title
+		color: var(--color-text-primary, #333)
 		font-size: 20px
 
 	.time 

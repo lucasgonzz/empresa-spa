@@ -321,11 +321,11 @@ export default {
 		font-weight: 600
 		letter-spacing: 0.02em
 		text-transform: uppercase
-		color: rgba(0, 0, 0, .45)
+		color: var(--color-text-secondary, rgba(0, 0, 0, .45))
 		margin-bottom: 10px
 	&__card
-		background: #FFF
-		border: 1px solid rgba(0, 0, 0, .06)
+		background: var(--bg-card, #FFF)
+		border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, .06))
 		border-radius: 14px
 		padding: 14px 16px
 		margin-bottom: 12px
@@ -339,11 +339,11 @@ export default {
 	&__property-name
 		font-size: 1.05em
 		font-weight: 600
-		color: #1d1d1f
+		color: var(--color-text-primary, #1d1d1f)
 	&__icon-btn
 		border: none
 		background: transparent
-		color: rgba(0, 0, 0, .35)
+		color: var(--color-text-secondary, rgba(0, 0, 0, .35))
 		padding: 4px 6px
 		border-radius: 8px
 		cursor: pointer
@@ -359,8 +359,8 @@ export default {
 	&__chip
 		display: inline-flex
 		align-items: center
-		background: #F0F0F3
-		color: #1d1d1f
+		background: var(--bg-section, #F0F0F3)
+		color: var(--color-text-primary, #1d1d1f)
 		font-size: 0.9em
 		font-weight: 500
 		padding: 6px 10px
@@ -368,7 +368,7 @@ export default {
 	&__chip-remove
 		margin-left: 8px
 		font-size: 0.8em
-		color: rgba(0, 0, 0, .4)
+		color: var(--color-text-secondary, rgba(0, 0, 0, .4))
 		cursor: pointer
 		&:hover
 			color: #e53935

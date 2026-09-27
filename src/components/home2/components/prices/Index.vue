@@ -58,7 +58,7 @@ export default {
 </script>
 <style lang="sass">
 .prices 
-	background: #fdfdfd
+	background: var(--bg-card, #fdfdfd)
 	.image-premium 
 		width: 100%
 
@@ -90,10 +90,10 @@ export default {
 		justify-content: center
 		p 
 			text-align: left
-			color: rgba(0, 0, 0, .6)
+			color: var(--color-text-primary, rgba(0, 0, 0, .6))
 			font-weight: bold
 			strong 	
-				color: #000
+				color: var(--color-text-primary, #000)
 
 		.btn-whatsapp
 			justify-content: flex-start
