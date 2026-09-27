@@ -65,6 +65,10 @@ import { MOTIVOS, texto_de, busquedas_del_articulo } from '@/components/alertas/
 /**
  * Motivos que son un problema del sistema o del cupo, no del artículo: van en ámbar para que se
  * distingan de "no se encontró", que es lo normal en esta solapa.
+ *
+ * Todo lo que no está acá va en gris, y es a propósito: incluye `ya_tenia_imagen` (búsqueda de
+ * todo el catálogo que encontró el artículo ya con imagen), que no es ninguna falla, y cualquier
+ * motivo nuevo que la SPA todavía no conozca (se muestra humanizado, con su `motivo_detalle`).
  */
 const MOTIVOS_DE_AVISO = ['sin_cupo', 'error_de_busqueda', 'error_interno']
 

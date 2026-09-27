@@ -53,6 +53,10 @@ export const MOTIVOS = {
 	articulo_borrado: 'Artículo borrado',
 	rechazada: 'Imagen rechazada',
 	quitada: 'Imagen quitada',
+	// Solo en las búsquedas de todo el catálogo: cuando le tocó el turno, el artículo ya tenía
+	// imagen (se la cargaron a mano, u otra búsqueda se la puso mientras tanto), así que no se
+	// buscó nada (0 búsquedas). No es una falla: la fila lo muestra en gris, no en ámbar.
+	ya_tenia_imagen: 'Ya tenía imagen',
 	// A revisar
 	ia_dudosa: 'La IA no está segura',
 	confianza_media: 'Coincidencia a medias',
