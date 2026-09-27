@@ -290,7 +290,7 @@ export default {
 	// componente se queda con su literal exacto, en oscuro cae en --bg-section para no quedar
 	// como un amarillo encendido en medio de un popover oscuro.
 	background: var(--bg-card-secondary, #fff8e6)
-	border: 1px solid var(--color-border, #f5e0a3)
+	border: 1px solid #f5e0a3
 	font-size: 0.875rem
 	line-height: 1.5
 	color: var(--color-text-warning-strong, #7a5b00)

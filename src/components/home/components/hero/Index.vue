@@ -49,7 +49,7 @@ export default {
 <style lang="sass">
 .hero_section
 	padding: 56px 0
-	background: radial-gradient(circle at 80% 0, var(--bg-section, #E2F0FF) 0%, var(--bg-section, #F6F8FC) 45%)
+	background: radial-gradient(circle at 80% 0, #E2F0FF 0%, #F6F8FC 45%)
 
 .hero_container
 	max-width: 1200px

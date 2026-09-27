@@ -1974,7 +1974,7 @@ export default {
 		margin-top: 10px
 		padding: 10px 12px
 		border-radius: 8px
-		background: linear-gradient(180deg, var(--bg-section, rgba(248, 250, 252, 1)) 0%, var(--bg-section, rgba(241, 245, 249, 1)) 100%)
+		background: linear-gradient(180deg, var(--bg-section, rgba(248, 250, 252, 1)) 0%, var(--bg-hover, rgba(241, 245, 249, 1)) 100%)
 		border-left: 3px solid #6c757d
 
 		&.import-column-description--relation

@@ -132,7 +132,7 @@ $mobile_breakpoint: 900px
     justify-content: center
     min-height: 34vh
     padding: 2.5rem 1.75rem 2.75rem
-    background: var(--bg-section, $beige)
+    background: $beige
     overflow: hidden
     box-sizing: border-box
 
@@ -192,7 +192,7 @@ $mobile_breakpoint: 900px
   position: relative
   flex: 0 0 50%
   max-width: 50%
-  background: var(--bg-section, $beige)
+  background: $beige
   display: flex
   flex-direction: column
   padding: 2.75rem 3.5rem 2.25rem
