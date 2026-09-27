@@ -164,6 +164,7 @@ title="Buscar imágenes para todo el catálogo"
 <script>
 import { esta_activa, entero_es, porcentaje_de, texto_de_proveedor } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
 import { numero_es as numero_con_decimales } from '@/common-vue/helpers/formato_numero'
+import { es_cancelacion } from '@/store/image_assignment'
 
 /**
  * Confirmación de "Buscar imágenes para todo el catálogo" (solo acceso maestro; la solapa ni
@@ -248,9 +249,12 @@ export default {
 		},
 		/**
 		 * Pide la previa del catálogo. Un 403 (sesión que no es de acceso maestro) lo anuncia el
-		 * interceptor global con el mensaje de la API.
+		 * interceptor global con el mensaje de la API. Una cancelación no es un error: se vuelve a
+		 * pedir una vez (ver `es_cancelacion` en el store).
+		 *
+		 * @param {Boolean} es_reintento
 		 */
-		cargar() {
+		cargar(es_reintento) {
 			let self = this
 			self.cargando = true
 			self.error = false
@@ -261,6 +265,10 @@ export default {
 			})
 			.catch(err => {
 				console.log(err)
+				if (es_cancelacion(err) && es_reintento !== true) {
+					self.cargar(true)
+					return
+				}
 				self.error = true
 				self.cargando = false
 			})

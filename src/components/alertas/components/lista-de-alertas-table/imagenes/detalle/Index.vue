@@ -212,6 +212,7 @@ import FilaAsignada from '@/components/alertas/components/lista-de-alertas-table
 import PaginacionItems from '@/components/alertas/components/lista-de-alertas-table/imagenes/detalle/PaginacionItems'
 import VisorImagen from '@/components/alertas/components/lista-de-alertas-table/imagenes/detalle/VisorImagen'
 import { SOLAPAS, esta_activa, conteo, entero_es } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
+import { es_cancelacion } from '@/store/image_assignment'
 
 /** Cada cuánto se refresca el encabezado mientras la búsqueda sigue corriendo. */
 const REFRESCO_MS = 15000
@@ -503,11 +504,20 @@ export default {
 		 * @param {Number} id
 		 */
 		abrir(id) {
+			this.reiniciar()
+			this.visible = true
+			this.cargando_asignacion = true
+			this.traer_asignacion(id, false)
+		},
+		/**
+		 * El pedido de la asignación que hace `abrir`. Una cancelación no es un error ("No
+		 * pudimos abrir esta búsqueda" sería mentira): se vuelve a pedir una vez.
+		 *
+		 * @param {Number} id
+		 * @param {Boolean} es_reintento
+		 */
+		traer_asignacion(id, es_reintento) {
 			let self = this
-			self.reiniciar()
-			self.visible = true
-			self.cargando_asignacion = true
-
 			self.$store.dispatch('image_assignment/get_asignacion', id)
 			.then(asignacion => {
 				// Mientras viajaba se cerró o se pidió otra: esta respuesta ya no importa.
@@ -531,6 +541,11 @@ export default {
 				if (self.asignacion_id !== id) {
 					return
 				}
+				if (es_cancelacion(err) && !es_reintento) {
+					self.traer_asignacion(id, true)
+					return
+				}
+				// Un error de verdad, o un segundo corte seguido: el modal no puede quedar en blanco.
 				self.cargando_asignacion = false
 				self.error_asignacion = true
 			})
@@ -565,7 +580,7 @@ export default {
 		 * Si la página quedó fuera de rango (se resolvieron los últimos de la última página), va a
 		 * la última que exista.
 		 *
-		 * @param {Object} opciones { silencioso: Boolean }
+		 * @param {Object} opciones { silencioso: Boolean, reintento: Boolean }
 		 * @returns {Promise}
 		 */
 		cargar_items(opciones) {
@@ -618,7 +633,16 @@ export default {
 				if (este_pedido !== self.pedido_de_items) {
 					return
 				}
+				// Una cancelación no es un error. Si todavía no había llegado ninguna página, se
+				// vuelve a pedir una vez (si no, la solapa quedaría vacía como si no tuviera nada);
+				// si la lista ya estaba a la vista, queda lo que se estaba mostrando.
+				if (es_cancelacion(err) && !self.items_cargados && !(opciones && opciones.reintento)) {
+					return self.cargar_items(Object.assign({}, opciones || {}, { reintento: true }))
+				}
 				self.cargando_items = false
+				if (es_cancelacion(err) && self.items_cargados) {
+					return
+				}
 				if (!silencioso) {
 					self.error_items = true
 				}
