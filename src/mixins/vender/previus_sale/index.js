@@ -18,6 +18,7 @@ import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_meth
 */
 import facturar from '@/mixins/vender/guardar_venta/facturar'
 import { env } from '@/runtime_config'
+import { comprobante_con_recargos_en_precios_sin_registro } from '@/utils/recargos_en_precios'
 export default {
 	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods, facturar],
 	// mixins: [vender, set_employee_vender, vender_set_total],
@@ -244,16 +245,37 @@ export default {
 			/*
 				El flag de aplicar los recargos directo a los precios se restaura igual que los dos
 				de arriba. Sin esto quedaba siempre en 0 al abrir una venta o un presupuesto para
-				editarlo, y como from_pivot lee los precios del pivot --que ya vienen recargados,
-				porque getPriceVender() en esa rama no vuelve a llamar aplicar_recargos()--,
-				aplicar_surchages() volvia a sumar el recargo al total y el presupuesto se re-guardaba
-				inflado.
+				editarlo, y aplicar_surchages() volvia a sumar al total un recargo que el precio del
+				renglon ya traia adentro: el presupuesto se re-guardaba inflado.
+
+				Desde la mision recargos-en-precios-editable (28/9/2026) el vendedor lo puede prender
+				y apagar editando: getPriceVender() rearma el precio de cada renglon desde su precio
+				SIN recargos (pivot.price_sin_recargos_de_venta, o el price si esa base es null) y le
+				vuelve a meter los recargos solo si la opcion esta prendida. Restaurarlo sigue siendo
+				obligatorio: es lo que hace que, sin tocar nada, el precio y el total salgan iguales a
+				los guardados.
 
 				Number() y no la verdad del valor a secas: la columna es nullable, asi que un modelo
 				viejo lo trae en null --queda en 0, el default del store-- y un "0" serializado como
 				string seria truthy.
 			*/
 			this.$store.commit('vender/set_aplicar_recargos_directo_a_items', Number(model.aplicar_recargos_directo_a_items) ? 1 : 0)
+
+			/*
+				🔴 Comprobante LEGADO (decision 1 de Lucas): guardado con la opcion prendida antes de
+				que los renglones registraran su precio sin recargos. Queda bloqueado como antes
+				(Surchages.vue) y getPriceVender() usa sus precios tal cual. La regla, y por que no se
+				adivina la base dividiendo por el factor, esta en utils/recargos_en_precios.js.
+
+				Se calcula UNA vez, aca, con lo que el comprobante tiene GUARDADO (su flag, sus
+				recargos, su surchages_in_services y sus pivots), y no con el store: lo que el
+				vendedor toque despues no puede des-bloquear un precio del que no se sabe la base.
+				Va ANTES del setTotal() del final de este metodo, que es el primero en leerlo.
+
+				Lo resetea limpiar_vender(), que es por donde salen todos los caminos (guardar,
+				cancelar, limpiar, guardar el presupuesto).
+			*/
+			this.$store.commit('vender/set_recargos_en_precios_sin_registro', comprobante_con_recargos_en_precios_sin_registro(model))
 
 			if (model.discounts.length) {
 				
