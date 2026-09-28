@@ -420,6 +420,17 @@ export default {
 			// Tamaño de pagina fijo en 5: es lo que pidio Lucas y lo que el backend devuelve
 			// siempre, no un parametro configurable por ahora.
 			per_page: 5,
+			// Contador de la peticion de getModels() mas reciente (hallazgo del chequeo
+			// independiente, 28/9/2026): cambiar de pagina y despues cerrar/reabrir el modal
+			// rapido puede dejar DOS pedidos en vuelo a la vez, y la red no garantiza que
+			// resuelvan en el orden en que salieron. Sin esto, la respuesta VIEJA (de una
+			// pagina que el usuario ya no esta pidiendo) puede llegar despues y pisar
+			// `models`/`total`/`last_page`, dejando la tabla con filas de una pagina distinta
+			// a la que <b-pagination> muestra resaltada. getModels() se guarda a si mismo el
+			// numero de esta llamada puntual antes de salir a la red, y al volver compara
+			// contra el valor actual: si ya no coincide, es porque salio una llamada mas
+			// nueva mientras esta esperaba, y su resultado se descarta en silencio.
+			peticion_actual: 0,
 			articulos_creados: [],
 			import_history_show_lotes: null,
 			// Importacion actualmente seleccionada para ver su error en el modal "import-error-detail"
@@ -1026,9 +1037,21 @@ export default {
 
 			this.loading = true
 			this.error_al_cargar = ''
+
+			// Token de ESTA llamada puntual (ver el comentario de peticion_actual en data()).
+			this.peticion_actual += 1
+			let mi_peticion = this.peticion_actual
+
 			this.$api.get('import-history/'+this.model_name+'?page='+this.current_page)
 			.then(res => {
 				console.log(res)
+				// Ya salio una llamada mas nueva mientras esta esperaba respuesta (cambio de
+				// pagina, o se reabrio el modal): esta respuesta quedo vieja, se descarta sin
+				// tocar nada del estado -- lo que corresponde mostrar ya lo esta resolviendo
+				// la llamada mas nueva.
+				if (mi_peticion !== this.peticion_actual) {
+					return
+				}
 				this.loading = false
 				this.error_al_cargar = ''
 				this.models = res.data.models
@@ -1044,6 +1067,11 @@ export default {
 				// current_page y encadenaria un pedido de mas.
 			})
 			.catch(err => {
+				// Misma guarda que en el .then: un error de una llamada vieja no tiene que
+				// pisar el resultado (bueno o el propio error) de una llamada mas nueva.
+				if (mi_peticion !== this.peticion_actual) {
+					return
+				}
 				this.loading = false
 				console.log(err)
 				/*
