@@ -4,7 +4,9 @@
  *
  * La opcion de VENDER "Aplicar los recargos de esta venta directamente a los precios de los
  * articulos" decide DONDE se ve el recargo -adentro del precio de cada renglon o al pie, sobre el
- * total- y NUNCA si se cobra (decision 2 de Lucas). Prenderla o apagarla no puede mover el total.
+ * total- y NUNCA si se cobra (decision 2 de Lucas). Prenderla o apagarla no puede mover el total,
+ * salvo algun centavo por unidad: con la opcion prendida el precio con recargos se redondea a
+ * centavos (redondear_a_centavos, decision de Lucas del 28/9/2026).
  *
  * Para poder apagarla en una venta o un presupuesto YA GUARDADO, cada renglon guarda, ademas de
  * su `price`, el precio SIN los recargos de venta en `pivot.price_sin_recargos_de_venta`. La
@@ -40,6 +42,31 @@ export function numero_o_null(valor) {
 	}
 
 	return numero
+}
+
+/**
+ * Redondeo a CENTAVOS (2 decimales, mitad hacia arriba) de un precio que lleva los recargos de
+ * venta adentro. Decision de Lucas del 28/9/2026: ese precio se redondea en la SPA y ESE numero
+ * es el que se muestra, se suma al total y se manda. El porque esta en getPriceVender()
+ * (mixins/generals.js), que es donde alguien lo va a querer sacar.
+ *
+ * 🔴 No es Math.round(x * 100) / 100 a secas: en binario 1,005 * 100 da 100,49999999999999 y eso
+ * redondearia para abajo un precio que MySQL (decimal) y PHP (round) redondean para arriba. Se
+ * corta primero a 15 cifras significativas -las que un double representa sin ruido-, que deja
+ * 100,5 limpio, y recien ahi se redondea. Tampoco sirve el `redondear()` de generals.js: ese
+ * redondea a enteros, decenas o centenas segun la configuracion del comercio.
+ *
+ * @param {Number} valor
+ * @returns {Number}
+ */
+export function redondear_a_centavos(valor) {
+	let numero = Number(valor)
+
+	if (isNaN(numero) || !isFinite(numero)) {
+		return numero
+	}
+
+	return Math.round(Number((numero * 100).toPrecision(15))) / 100
 }
 
 /**

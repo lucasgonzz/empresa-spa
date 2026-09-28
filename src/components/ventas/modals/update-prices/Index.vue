@@ -19,7 +19,7 @@ class="update-prices-modal">
 		v-if="factor_recargos_de_la_venta !== null"
 		data-testid="update-prices-aviso-recargos"
 		class="update-prices-modal__intro text-muted">
-			Esta venta tiene los recargos aplicados directamente a los precios de los artículos: el precio actual que se propone ya los incluye. Si escribís un precio a mano, escribilo con los recargos incluidos.
+			{{ texto_aviso_recargos }}
 		</p>
 
 		<div class="update-prices-modal__legend">
@@ -104,7 +104,7 @@ class="update-prices-modal">
 <script>
 import previus_sale from '@/mixins/vender/previus_sale/index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
-import { factor_de_recargos, numero_o_null, precio_sin_recargos_guardado, comprobante_con_recargos_en_precios_sin_registro } from '@/utils/recargos_en_precios'
+import { factor_de_recargos, numero_o_null, precio_sin_recargos_guardado, comprobante_con_recargos_en_precios_sin_registro, redondear_a_centavos } from '@/utils/recargos_en_precios'
 export default {
 	mixins: [previus_sale],
 	components: {
@@ -174,6 +174,19 @@ export default {
 		venta_con_recargos_en_precios_sin_registro() {
 			return comprobante_con_recargos_en_precios_sin_registro(this.sale)
 		},
+		/**
+		 * Aviso de que el precio va con los recargos adentro. Distingue los servicios porque solo
+		 * los llevan con "recargos en servicios": decirle al vendedor que escriba el precio de un
+		 * servicio con recargos cuando la venta no se los cobra lo haría cobrar de más.
+		 *
+		 * @returns {String}
+		 */
+		texto_aviso_recargos() {
+			if (this.sale && Number(this.sale.surchages_in_services)) {
+				return 'Esta venta tiene los recargos aplicados directamente a los precios de los artículos y de los servicios: el precio actual que se propone ya los incluye. Si escribís un precio a mano, escribilo con los recargos incluidos.'
+			}
+			return 'Esta venta tiene los recargos aplicados directamente a los precios de los artículos (los servicios no llevan recargos): el precio actual que se propone para cada artículo ya los incluye. Si escribís a mano el precio de un artículo, escribilo con los recargos incluidos.'
+		},
 	},
 	methods: {
 		/**
@@ -207,8 +220,18 @@ export default {
 				let lleva_recargos = factor !== null
 				let catalog_price = parseFloat(article.final_price) || 0
 
+				// Precio del catálogo SIN recargos: la base exacta si el vendedor no toca el propuesto
+				let catalog_price_sin_recargos = null
+
 				if (lleva_recargos) {
-					catalog_price = catalog_price * factor
+					catalog_price_sin_recargos = catalog_price
+
+					/*
+						🔴 Redondeado a centavos, igual que en VENDER: la API guarda el precio del
+						renglón con 2 decimales y recalcula total y factura sumando renglones (el
+						detalle, con los números medidos, en generals.js::getPriceVender()).
+					*/
+					catalog_price = redondear_a_centavos(catalog_price * factor)
 				}
 
 				item = {
@@ -225,6 +248,9 @@ export default {
 					lleva_recargos: lleva_recargos,
 					// Precio sin recargos que el renglón tiene guardado (null si no tiene)
 					precio_sin_recargos_guardado: precio_sin_recargos_guardado(article.pivot),
+					// Precio propuesto (redondeado) y su base sin redondear, para no perder decimales
+					precio_propuesto: lleva_recargos ? catalog_price : null,
+					precio_propuesto_sin_recargos: catalog_price_sin_recargos,
 				}
 				item.price_vender = lleva_recargos ? catalog_price : article.final_price
 				items.push(item)
@@ -257,9 +283,12 @@ export default {
 		 * `price_vender_sin_recargos`), o null si el precio nuevo no tiene recargos adentro.
 		 *
 		 * Lo escrito en el input es el precio FINAL, con los recargos adentro (lo dice el aviso del
-		 * modal), así que la base es precio / factor. Si el vendedor no tocó el precio, se manda la
-		 * base que el renglón ya tenía guardada: tiene 6 decimales y el precio del pivot 2, así que
-		 * dividir el precio redondeado correría la base unos centavos sin que nadie la cambie.
+		 * modal), así que la base es precio / factor. Pero si el precio es uno que el modal ya
+		 * conocía, se manda la base exacta en vez de dividir un precio redondeado a centavos (eso
+		 * correría la base sin que nadie la cambie):
+		 *   - el precio vendido sin tocar: la base que el renglón ya tenía guardada (6 decimales);
+		 *   - el precio actual propuesto sin tocar: el precio del catálogo sin recargos, sin
+		 *     redondear (igual que VENDER, que divide el precio antes de redondearlo).
 		 *
 		 * 🔴 En una venta legado va null siempre, aunque el precio lleve recargos: no se sabe la
 		 * base de los otros renglones (combos, promociones) y un solo renglón con base no la
@@ -291,6 +320,15 @@ export default {
 				&& item.precio_sin_recargos_guardado !== null
 			) {
 				return item.precio_sin_recargos_guardado
+			}
+
+			if (
+				item.precio_propuesto !== null
+				&& typeof item.precio_propuesto != 'undefined'
+				&& precio === item.precio_propuesto
+				&& item.precio_propuesto_sin_recargos !== null
+			) {
+				return item.precio_propuesto_sin_recargos
 			}
 
 			return precio / factor

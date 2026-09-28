@@ -1,3 +1,4 @@
+import { redondear_a_centavos } from '@/utils/recargos_en_precios'
 export default {
 	computed: {
 		vender_items() {
@@ -45,6 +46,12 @@ export default {
 		 * ArticlesTable.vue::calculate_price_vender() -cantidad vacia cuenta como 1- para que los
 		 * dos numeros coincidan con la opcion apagada.
 		 *
+		 * 🔴 El precio con recargos se redondea a centavos y calculated_price_vender suma esos
+		 * redondeados, por lo mismo que en getPriceVender() (generals.js, ahi esta el detalle con
+		 * los numeros medidos): la API guarda cada renglon con 2 decimales y recalcula el total, la
+		 * factura y el presupuesto sumando renglones. La base (`price_vender_sin_recargos`) es el
+		 * input del vendedor, sin redondear.
+		 *
 		 * @param {Object} item
 		 */
 		set_varios_precios_con_recargos(item) {
@@ -75,7 +82,7 @@ export default {
 					otro_precio.price_vender_con_recargos = precio_sin_recargos
 					otro_precio.price_vender_sin_recargos = null
 				} else {
-					otro_precio.price_vender_con_recargos = precio_sin_recargos * factor
+					otro_precio.price_vender_con_recargos = redondear_a_centavos(precio_sin_recargos * factor)
 					otro_precio.price_vender_sin_recargos = precio_sin_recargos
 				}
 

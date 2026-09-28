@@ -2,7 +2,7 @@ import moment from 'moment'
 import { env } from '@/runtime_config'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
 import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/utils/criterio_de_oferta_por_cantidad'
-import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado } from '@/utils/recargos_en_precios'
+import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado, redondear_a_centavos } from '@/utils/recargos_en_precios'
 export default {
     computed: {
         has_online() {
@@ -718,10 +718,17 @@ export default {
                 bloqueada al reabrirla, que es el modo de falla seguro. Calcular la base con
                 factor_recargos_de_venta() por afuera de las ramas mandaria una base inventada.
 
-                Las ramas que NO son el flujo normal -precio a mano, pivot y precios en blanco-
-                antes NO recargaban, y con la opcion prendida ese recargo no se cobraba en ningun
-                lado (el pie tambien se lo salteaba). Desde esta mision recargan todas (decision
-                2 de Lucas: la opcion decide DONDE se ve el recargo, nunca SI se cobra).
+                Hasta esta mision solo recargaba el flujo normal, y ahi solo articulos y servicios.
+                Lo que pasaba en el resto, con la opcion prendida (el pie se saltea el recargo en
+                ese caso):
+                  - combos y promociones del flujo normal, precio a mano y precios en blanco: el
+                    recargo NO se cobraba en ningun lado.
+                    Desde esta mision recargan (decision 2 de Lucas: la opcion decide DONDE se ve
+                    el recargo, nunca SI se cobra).
+                  - pivot: no recargaba porque el precio guardado YA traia el recargo adentro, y
+                    se usaba tal cual. Eso lo cobraba bien, pero no dejaba apagar la opcion ni
+                    cambiar los recargos al editar. Ahora rearma el precio desde la base sin
+                    recargos y recarga; el precio tal cual queda solo para el comprobante legado.
             */
             let factor_recargos_aplicado = null
 
@@ -749,7 +756,8 @@ export default {
                 /*
                     El precio escrito a mano es el precio SIN recargos de venta, igual que cuando la
                     opcion esta apagada: ahi el recargo se le suma al pie. Con la opcion prendida
-                    se le suma adentro, y el total es el mismo.
+                    se le suma adentro, y el total es el mismo (salvo el redondeo a centavos del
+                    final, ver mas abajo).
                 */
                 price = recargar(price)
 
@@ -964,11 +972,38 @@ export default {
 
                 Sin recargos adentro (opcion apagada, servicio sin recargos en servicios, o
                 renglon de un comprobante legado) viaja null, que es lo que dice la invariante.
-                Va sin redondear a proposito: la columna tiene 6 decimales para que "apagar"
-                devuelva el precio que el renglon habria tenido.
+                La base va SIN redondear a proposito, y se calcula ANTES de redondear el precio:
+                la columna tiene 6 decimales para que "apagar" devuelva exactamente el precio que
+                el renglon habria tenido con la opcion apagada.
+
+                🔴 Y el precio CON recargos adentro se redondea a centavos, aca, y ese es el
+                numero que se muestra, se suma al total y se manda (decision de Lucas,
+                28/9/2026). NO SACAR ESTE REDONDEO "PARA QUE EL TOTAL NO CAMBIE AL PRENDER Y
+                APAGAR". La API guarda el precio del renglon con 2 decimales, y todo lo que
+                recalcula despues -SaleHelper::getTotalSale(), el bruto de la factura de AFIP y
+                BudgetHelper::getTotal(), que rebota con un margen de 3 pesos- suma RENGLONES
+                redondeados. Con el precio sin redondear, el total que armaba la SPA y el de los
+                renglones se separaban: 0,35 × 1,155 = 0,40425 se guarda 0,40, o sea casi medio
+                centavo menos por unidad. Medido contra la API real el 28/9/2026: 10.000 u. a
+                0,35 con 10% + 5% dejaban sales.total en 4.086,30 y los renglones y la factura en
+                4.043,80; un presupuesto asi rebotaba con 500 "El total del presupuesto no
+                corresponde..." (desde unas 700 u. con un solo 10%), y en dolares faltaban 4,81
+                USD en 999 u. Con el precio redondeado, renglones, total, cuenta corriente y
+                factura coinciden siempre; el costo aceptado es que prender o apagar la opcion
+                puede mover el total algun centavo por unidad.
+
+                Sin factor aplicado NO se redondea nada: redondear los precios con la opcion
+                apagada es otro tema, y esta comentado a proposito mas arriba
+                (`// price = this.redondear(price)`).
             */
             if (factor_recargos_aplicado !== null && factor_recargos_aplicado !== 0) {
                 item.price_vender_sin_recargos = price / factor_recargos_aplicado
+
+                let price_sin_redondear = price
+                price = redondear_a_centavos(price)
+                if (price !== price_sin_redondear) {
+                    item_des.push('Redondeo a centavos (recargos adentro del precio): ' + price_sin_redondear + ' -> ' + this.price(price))
+                }
             } else {
                 item.price_vender_sin_recargos = null
             }
