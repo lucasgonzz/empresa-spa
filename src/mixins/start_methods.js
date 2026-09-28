@@ -14,7 +14,8 @@ export default {
 
 			// this.checkUpdateFeaturesCookie()
 
-			// Red de seguridad de los pedidos online + polling de mensajes de compradores
+			// Red de seguridad de los pedidos online (los mensajes de compradores no tienen polling:
+			// ver el comentario adentro de este metodo)
 			this.escuchar_orders_y_messages()
 
 			/*
@@ -45,8 +46,16 @@ export default {
 			.catch(err => console.log(err))
 			.then(() => this.get_deposit_movements_en_curso())
 			.catch(err => console.log(err))
-			.then(() => this.get_buyers_and_set_messages_not_read())
-			.catch(err => console.log(err))
+			/*
+				Aca iba get_buyers_and_set_messages_not_read(): un GET /api/buyer con TODOS los
+				compradores de la tienda en cada inicio de sesion, cuyo unico motivo era contar los
+				mensajes sin leer. Se saco en la mision mensajes-tienda-online (28/9/2026): el
+				contador ahora sale de GET tienda-chats/resumen (tres numeros), que pide el
+				anfitrion del submodulo Mensajes al iniciar sesion
+				(components/online/components/mensajes/SidebarHost.vue). Nadie mas necesitaba
+				buyer.models cargado desde el login: Clientes de Tienda Online pide su propio
+				listado paginado y el buscador de Pedidos va contra la API.
+			*/
 			.then(() => {
 				if (this.is_admin) return this.get_problemas_al_facturar()
 			})
@@ -223,9 +232,10 @@ export default {
 					via buyer/getModels) se saco el 9/9/2026: era la causa principal de OOM-kills
 					de MySQL repetidos en el VPS (~1MB por respuesta, sin paginar, multiplicado por
 					cada pestana abierta cada 20 segundos). No hace falta reemplazo: el mensaje ya
-					llega en tiempo real por el canal message.from_buyer.{owner_id}
-					(mixins/broadcast.js), que hace addBuyerMessage() + setChatsToShow() en el
-					momento, sin refetch. A diferencia del intervalo de pedidos de arriba, este
+					llega en tiempo real por el canal privado de mensajes de la tienda, que escucha
+					el anfitrion del submodulo Mensajes (components/online/components/mensajes/
+					SidebarHost.vue, desde el 28/9/2026), y al reconectar Echo ese mismo anfitrion
+					vuelve a pedir lo que se pudo perder. A diferencia del intervalo de pedidos de arriba, este
 					nunca tuvo una justificacion de negocio escrita como red de seguridad -- si se
 					lo vuelve a agregar, que sea con un motivo nuevo, no por costumbre.
 				*/
@@ -357,15 +367,6 @@ export default {
 		},
 		getProviderOrdersDaysToAdvise() {
 			return this.$store.dispatch('provider_order/getDaysToAdvise')
-		},
-		get_buyers_and_set_messages_not_read() {
-			console.log('get_buyers_and_set_messages_not_read')
-			return this.$store.dispatch('buyer/getModels')
-			.then(() => {
-				console.log('llegaron los buyers, mandando setChatsToShow')
-				this.$store.dispatch('message/setChatsToShow')
-				console.log('setChatsToShow mandado')
-			})
 		},
 		get_problemas_al_facturar() {
 			return this.$store.dispatch('afip_ticket/get_problemas_al_facturar')

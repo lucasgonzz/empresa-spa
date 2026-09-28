@@ -66,7 +66,6 @@ import order_production_status_group from '@/store/order_production_status_group
 import recipe from '@/store/recipe'
 import address from '@/store/address'
 import title from '@/store/title'
-import message from '@/store/message'
 // Submódulo Mensajes de Tienda Online (misión mensajes-tienda-online, 28/9/2026).
 import tienda_mensajes from '@/store/tienda_mensajes'
 import support_ticket from '@/store/support_ticket'
@@ -360,7 +359,6 @@ export default new Vuex.Store({
         recipe,
         address,
         title,
-        message,
         tienda_mensajes,
         support_ticket,
         support_message,
