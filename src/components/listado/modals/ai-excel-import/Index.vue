@@ -69,15 +69,12 @@
 			</b-form-group>
 
 			<!--
-				Resumen del rango detectado y detección de cabecera al elegir el archivo.
-
-				Los dos bloques de arriba (hoja y encabezado) son CONDICIONALES de datos: con un
-				archivo de una sola hoja el primero no existe. El motor del tour saltea solo los
-				pasos cuyo elemento no aparece, así que el clip 1.8 no necesita ramas.
+				Resumen del rango detectado al elegir el archivo. Es CONDICIONAL de datos,
+				igual que el selector de hoja de arriba: con el archivo recién elegido y sin
+				leer todavía, finish_row está vacío y el bloque no se dibuja.
 			-->
 			<div
 			v-if="finish_row && !file_processing"
-			data-tour="listado.deteccion_encabezado"
 			class="ai-import-file-info m-t-10 m-b-10">
 
 				<!-- Resumen de filas -->
@@ -88,64 +85,6 @@
 						(desde la fila <strong>{{ start_row }}</strong> hasta la <strong>{{ finish_row }}</strong>).
 					</span>
 				</p>
-
-				<!-- Toggle de cabecera: permite corregir la detección automática -->
-				<div class="ai-import-header-detection">
-					<b-form-checkbox
-					v-model="has_header_row"
-					size="sm"
-					@change="header_row_manually_overridden = true">
-						La primera fila es una cabecera de columnas
-						<span v-if="!header_row_manually_overridden" class="text-muted ai-import-header-auto-label">
-							(detectado automáticamente)
-						</span>
-					</b-form-checkbox>
-					<!-- Advertencia cuando no hay cabecera: el mapeo de Claude puede ser menos preciso -->
-					<small v-if="!has_header_row" class="text-warning d-block m-t-3">
-						Sin cabecera: Claude recibirá solo los datos para inferir el mapeo. La detección puede ser menos precisa.
-					</small>
-					<!--
-						Fila de encabezado detectada, visible y corregible. Antes esto era un
-						<small> que sólo aparecía cuando la cabecera no estaba en la fila 1 y
-						no se podía tocar: si la detección erraba, el usuario se enteraba
-						cuando ya había importado. Ahora se muestra siempre y se corrige acá,
-						antes de gastar un peso en el análisis.
-					-->
-					<div
-					v-if="has_header_row"
-					class="ai-import-encabezado"
-					:class="{ 'ai-import-encabezado--dudoso': encabezado_confianza === 'baja' }">
-						<label
-						:for="'ai-import-encabezado-fila-' + model"
-						class="ai-import-encabezado-label m-b-0">
-							Encabezado detectado en la fila
-						</label>
-						<b-form-input
-						:id="'ai-import-encabezado-fila-' + model"
-						v-model="encabezado_fila"
-						type="number"
-						size="sm"
-						min="1"
-						class="ai-import-encabezado-input"
-						@change="corregir_fila_de_encabezado">
-						</b-form-input>
-						<span class="ai-import-encabezado-datos text-muted">
-							Los datos empiezan en la fila {{ start_row }}.
-						</span>
-					</div>
-
-					<!-- Detección poco confiable: se lo decimos en vez de dejarlo pasar. -->
-					<small
-					v-if="has_header_row && encabezado_confianza === 'baja'"
-					class="text-warning d-block m-t-3">
-						No pudimos identificar el encabezado con seguridad. Revisá que la fila sea la correcta.
-					</small>
-					<small
-					v-else-if="has_header_row && encabezado_motivo === 'encabezado_corrido'"
-					class="text-muted d-block m-t-3">
-						Es la fila con más celdas llenas, todas de texto corto y ninguna repetida.
-					</small>
-				</div>
 
 			</div>
 			<p
@@ -1561,9 +1500,6 @@ export default {
 			/* True si la fila 1 del Excel fue detectada como cabecera de columnas. */
 			has_header_row: true,
 
-			/* True si el usuario corrigió manualmente la detección automática de cabecera. */
-			header_row_manually_overridden: false,
-
 			/*
 			 * Defecto 1 (hoja elegida): hojas del libro tal como las lee SheetJS acá en el
 			 * navegador, con la forma { indice, nombre, filas }. Con UNA sola hoja no se
@@ -1608,12 +1544,6 @@ export default {
 
 			/* Confianza de la detección: 'alta' | 'baja'. Con 'baja' el campo se muestra resaltado. */
 			encabezado_confianza: 'alta',
-
-			/*
-			 * True cuando el usuario corrigió a mano la fila de encabezado. A partir de ahí
-			 * la detección automática deja de pisarlo.
-			 */
-			encabezado_manualmente_corregido: false,
 
 			/*
 			 * Defecto 2 (celdas fusionadas): índices 0-based de las columnas que quedaron sin
@@ -1987,7 +1917,18 @@ export default {
 				partes.push('encabezado en la fila ' + this.encabezado_del_backend.fila)
 			}
 
-			return partes.join(' — ')
+			let resumen = partes.join(' — ')
+
+			/*
+			 * Sin el control manual, una detección de confianza baja ya no se avisa en el
+			 * paso 1: esta coletilla es lo único que le dice al usuario que convendría
+			 * revisar el Excel antes de confirmar el mapeo.
+			 */
+			if (this.encabezado_del_backend && this.encabezado_del_backend.confianza === 'baja') {
+				resumen += ' — revisá la fila de encabezado (confianza baja)'
+			}
+
+			return resumen
 		},
 
 		/*
@@ -2904,12 +2845,9 @@ export default {
 			}
 
 			/*
-			 * La hoja nueva es otro archivo a todos los efectos: la detección automática
-			 * vuelve a valer, porque las correcciones que el usuario hizo eran sobre la
-			 * hoja anterior.
+			 * La hoja nueva es otro archivo a todos los efectos: detect_header_row()
+			 * se vuelve a correr sobre ella más abajo, dentro de leer_hoja_y_detectar().
 			 */
-			this.header_row_manually_overridden   = false
-			this.encabezado_manualmente_corregido = false
 			this.excel_rows_read_error            = ''
 
 			try {
@@ -2971,21 +2909,6 @@ export default {
 		},
 
 		/*
-		 * Al cambiar el toggle de cabecera manualmente, ajustar start_row de forma relativa.
-		 * Si la detección es automática, detect_header_row ya asignó start_row correctamente.
-		 *
-		 * @param {Boolean} val - Nuevo valor de has_header_row
-		 */
-		has_header_row(val) {
-			/* Solo ajustar start_row si el usuario cambió el toggle manualmente. */
-			if (this.header_row_manually_overridden) {
-				this.start_row = val
-					? Number(this.start_row) + 1
-					: Math.max(1, Number(this.start_row) - 1)
-			}
-		},
-
-		/*
 		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): si el usuario cambia el
 		 * mapeo de columnas en el paso 2 (o el análisis inicial lo carga), reseteamos
 		 * interpretacion_punto a 'auto'. La elección anterior se hizo mirando otras columnas,
@@ -3038,8 +2961,6 @@ export default {
 
 		/*
 		 * Lee el Excel en el navegador y calcula finish_row (retorna promesa).
-		 * Resetea header_row_manually_overridden para que la detección automática
-		 * vuelva a correr con el nuevo archivo.
 		 */
 		process_excel_file(file) {
 			let self = this
@@ -3048,10 +2969,6 @@ export default {
 			self.finish_row = ''
 			self.finish_row_original = ''
 			self.excel_rows_read_error = ''
-
-			/* Al cambiar el archivo, se vuelve a detectar la cabecera automáticamente. */
-			self.header_row_manually_overridden   = false
-			self.encabezado_manualmente_corregido = false
 
 			/*
 			 * 🔴 B7: TODO lo que describe al archivo anterior se limpia ACÁ, antes de leer,
@@ -3307,11 +3224,6 @@ export default {
 		 * @param {Object} worksheet - Hoja de trabajo de XLSX
 		 */
 		detect_header_row(worksheet) {
-			/* Respetar corrección manual del usuario, tanto del toggle como de la fila. */
-			if (this.header_row_manually_overridden || this.encabezado_manualmente_corregido) {
-				return
-			}
-
 			if (!worksheet || !worksheet['!ref']) {
 				/* Sin referencia de rango: fallback a sheet_to_json para no romper el flujo. */
 				let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
@@ -3330,10 +3242,10 @@ export default {
 			let deteccion = this.detectar_fila_de_encabezado(ventana)
 
 			/*
-			 * 🔴 T16: start_row se calcula y se asigna ANTES de has_header_row. El watcher
-			 * de has_header_row ajusta start_row en ±1 cuando el cambio es manual; si se
-			 * invierte el orden, start_row queda corrido en uno y el síntoma es invisible
-			 * hasta que faltan artículos al final de la importación.
+			 * 🔴 T16: start_row se calcula y se asigna ANTES que has_header_row. Antes,
+			 * el watcher de has_header_row ajustaba start_row en ±1 cuando el cambio era
+			 * manual; ese watcher se sacó junto con la corrección manual, pero el orden
+			 * de estas dos asignaciones se mantiene igual para no arriesgar de más.
 			 */
 			let calculated_start_row = deteccion.es_encabezado
 				? deteccion.fila + 1
@@ -3790,28 +3702,6 @@ export default {
 			}
 
 			return this.EXPRESION_NUMERICA_PHP.test(texto)
-		},
-
-		/*
-		 * El usuario corrigió a mano la fila de encabezado en el paso 1. A partir de acá
-		 * la detección automática no la pisa más.
-		 *
-		 * 🔴 T16: se calcula start_row en una variable y se asigna sin tocar has_header_row.
-		 * El bloque sólo se muestra con has_header_row en true, así que el watcher que
-		 * ajusta start_row en ±1 no tiene por qué dispararse acá.
-		 */
-		corregir_fila_de_encabezado() {
-			let fila = Number(this.encabezado_fila)
-
-			if (!fila || fila < 1) {
-				return
-			}
-
-			this.encabezado_manualmente_corregido = true
-
-			let calculated_start_row = fila + 1
-
-			this.start_row = Math.max(1, calculated_start_row)
 		},
 
 		/*
@@ -5682,11 +5572,6 @@ export default {
 
 			if (contexto.header_row) {
 				this.encabezado_fila = Number(contexto.header_row)
-				/*
-				 * Viene de una corrida ya encolada: es una decisión tomada, no una
-				 * detección para volver a pisar.
-				 */
-				this.encabezado_manualmente_corregido = true
 			}
 		},
 
@@ -5859,7 +5744,6 @@ export default {
 			this.actualizar_por_provider_code = 0
 			this.actualizar_proveedor = 0
 			this.has_header_row = true
-			this.header_row_manually_overridden = false
 			/* Hoja elegida y encabezado detectado: todo lo nuevo vuelve a cero. */
 			this.hojas                       = []
 			this.hoja_seleccionada           = null
@@ -5868,7 +5752,6 @@ export default {
 			this.encabezado_fila             = null
 			this.encabezado_motivo           = null
 			this.encabezado_confianza        = 'alta'
-			this.encabezado_manualmente_corregido = false
 			this.columnas_sin_nombre         = []
 			this.columnas_ambiguas           = []
 			this.hoja_elegida_del_backend    = null
@@ -6110,40 +5993,8 @@ export default {
 		font-size: 13px
 		font-weight: 600
 
-/* Contenedor del toggle de cabecera */
-.ai-import-header-detection
-	margin-top: 6px
-
-/* Fila de encabezado detectada y corregible, en una sola línea */
-.ai-import-encabezado
-	display: flex
-	align-items: center
-	flex-wrap: wrap
-	gap: 8px
-	margin-top: 8px
-	font-size: 13px
-
-	&--dudoso .ai-import-encabezado-input
-		border-color: #ffc107
-
-.ai-import-encabezado-label
-	font-size: 13px
-
-/* Ancho justo para dos o tres dígitos: no tiene por qué ocupar la fila entera */
-.ai-import-encabezado-input
-	width: 80px
-	flex: 0 0 auto
-
-.ai-import-encabezado-datos
-	font-size: 12px
-
 /* Renglón fijo del paso 2 con la hoja y la fila de encabezado que usó el backend */
 .ai-import-resumen-hoja
-	font-style: italic
-
-/* Etiqueta de detección automática junto al checkbox */
-.ai-import-header-auto-label
-	font-size: 11px
 	font-style: italic
 
 /* Bloque explicativo de la cadena de identificación efectiva (paso 3, prompt 06 grupo 229) */

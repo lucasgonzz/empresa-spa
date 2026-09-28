@@ -1012,11 +1012,6 @@ export default {
 				techo_ms: 20000,
 			},
 			{
-				ancla: 'listado.deteccion_encabezado',
-				texto: 'Y te dice en qué fila encontró los encabezados. El número es editable, por si se equivocó.',
-				avanza: 'siguiente',
-			},
-			{
 				ancla: 'listado.boton_analizar_con_ia',
 				texto: 'Tocá "Analizar con IA".',
 				avanza: 'aparece',
