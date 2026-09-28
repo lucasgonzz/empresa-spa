@@ -148,10 +148,16 @@ export default {
 				} 
 
 				if (this.view == 'mensajes') {
-					this.$store.dispatch('buyer/getModels')
+					// Conversaciones de la tienda con algo sin leer (store tienda_mensajes, misión
+					// mensajes-tienda-online). Antes bajaba TODOS los compradores con buyer/getModels
+					// para filtrar en el navegador. El resumen se pide junto para que el número de la
+					// pestaña y la tabla digan lo mismo. La acción resuelve siempre, así que el
+					// cargando global no puede quedar prendido.
+					this.$store.dispatch('tienda_mensajes/getResumen')
+					this.$store.dispatch('tienda_mensajes/getChatsNoLeidos')
 					.then(() => {
-						this.$store.dispatch('message/setChatsToShow')
 						this.$store.commit('auth/setLoading', false)
+						this.$store.commit('auth/setMessage', '')
 					})
 				}
 
