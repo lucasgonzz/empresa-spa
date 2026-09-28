@@ -14,6 +14,14 @@ class="update-prices-modal">
 			Compará el precio vendido con el precio actual del artículo. Los renglones resaltados indican diferencias antes de confirmar.
 		</p>
 
+		<!-- Venta con los recargos adentro de los precios: el precio propuesto ya los trae -->
+		<p
+		v-if="factor_recargos_de_la_venta !== null"
+		data-testid="update-prices-aviso-recargos"
+		class="update-prices-modal__intro text-muted">
+			Esta venta tiene los recargos aplicados directamente a los precios de los artículos: el precio actual que se propone ya los incluye. Si escribís un precio a mano, escribilo con los recargos incluidos.
+		</p>
+
 		<div class="update-prices-modal__legend">
 			<b-badge variant="danger" class="update-prices-modal__badge">
 				<i class="icon-arrow-up"></i>
@@ -96,6 +104,7 @@ class="update-prices-modal">
 <script>
 import previus_sale from '@/mixins/vender/previus_sale/index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import { factor_de_recargos, numero_o_null, precio_sin_recargos_guardado, comprobante_con_recargos_en_precios_sin_registro } from '@/utils/recargos_en_precios'
 export default {
 	mixins: [previus_sale],
 	components: {
@@ -131,6 +140,40 @@ export default {
 				{label: 'Diferencia', key: 'diff', thClass: 'text-center', tdClass: 'text-center'},
 			]
 		},
+		/**
+		 * Factor de los recargos GUARDADOS de la venta (Π(1 + p/100) con el porcentaje del
+		 * pivot, no el vigente del catálogo) si la venta tiene la opción "Aplicar los recargos
+		 * directamente a los precios" prendida; null si no la tiene o si no tiene recargos.
+		 *
+		 * Hasta la misión recargos-en-precios-editable (28/9/2026) este modal proponía el
+		 * final_price del catálogo SIN recargo aunque la venta tuviera la opción prendida: el
+		 * renglón perdía el recargo y, como el pie tampoco lo suma con la opción prendida, la
+		 * venta dejaba de cobrarlo.
+		 *
+		 * @returns {Number|null}
+		 */
+		factor_recargos_de_la_venta() {
+			if (!this.sale || !Number(this.sale.aplicar_recargos_directo_a_items)) {
+				return null
+			}
+
+			let recargos = Array.isArray(this.sale.surchages) ? this.sale.surchages : []
+
+			return factor_de_recargos(recargos.map(surchage => {
+				return surchage.pivot ? surchage.pivot.percentage : surchage.percentage
+			}))
+		},
+		/**
+		 * Venta LEGADO: guardada con la opción prendida antes de que los renglones registraran su
+		 * precio sin recargos (misma regla que VENDER, utils/recargos_en_precios.js). En esa venta
+		 * no se manda precio sin recargos: la venta sigue bloqueada, que es el modo de falla
+		 * seguro.
+		 *
+		 * @returns {Boolean}
+		 */
+		venta_con_recargos_en_precios_sin_registro() {
+			return comprobante_con_recargos_en_precios_sin_registro(this.sale)
+		},
 	},
 	methods: {
 		/**
@@ -151,7 +194,23 @@ export default {
 			// Renglon temporal que se reutiliza en cada iteración
 			let item
 
+			// Factor de los recargos de la venta si van adentro de los precios; null si no
+			let factor = this.factor_recargos_de_la_venta
+
 			this.sale.articles.forEach(article => {
+
+				/*
+					Con la opción prendida, el precio actual que se propone es el del catálogo CON
+					los recargos de la venta adentro, igual que lo calcularía VENDER: si no, el
+					renglón perdería el recargo (el pie no lo suma con la opción prendida).
+				*/
+				let lleva_recargos = factor !== null
+				let catalog_price = parseFloat(article.final_price) || 0
+
+				if (lleva_recargos) {
+					catalog_price = catalog_price * factor
+				}
+
 				item = {
 					is_article: true,
 					id: article.id,
@@ -160,10 +219,14 @@ export default {
 					sold_price_raw: parseFloat(article.pivot.price) || 0,
 					actual_price: this.price(article.pivot.price),
 					// Precio actual del catálogo, editable antes de confirmar
-					catalog_price_raw: parseFloat(article.final_price) || 0,
-					catalog_price_display: this.price(article.final_price),
+					catalog_price_raw: catalog_price,
+					catalog_price_display: this.price(catalog_price),
+					// Si el precio de este renglón lleva los recargos de la venta adentro
+					lleva_recargos: lleva_recargos,
+					// Precio sin recargos que el renglón tiene guardado (null si no tiene)
+					precio_sin_recargos_guardado: precio_sin_recargos_guardado(article.pivot),
 				}
-				item.price_vender = article.final_price
+				item.price_vender = lleva_recargos ? catalog_price : article.final_price
 				items.push(item)
 			})
 
@@ -176,12 +239,61 @@ export default {
 					actual_price: this.price(service.pivot.price),
 					catalog_price_raw: parseFloat(service.pivot.price) || 0,
 					catalog_price_display: this.price(service.pivot.price),
+					/*
+						El servicio propone su propio precio vendido, que ya trae el recargo
+						adentro si le correspondía: solo lo lleva con "recargos en servicios".
+					*/
+					lleva_recargos: factor !== null && Boolean(Number(this.sale.surchages_in_services)),
+					precio_sin_recargos_guardado: precio_sin_recargos_guardado(service.pivot),
 				}
 				item.price_vender = service.pivot.price
 				items.push(item)
 			})
 
 			this.table_items = items
+		},
+		/**
+		 * El precio sin recargos de un renglón para `PUT sale/update-prices` (clave
+		 * `price_vender_sin_recargos`), o null si el precio nuevo no tiene recargos adentro.
+		 *
+		 * Lo escrito en el input es el precio FINAL, con los recargos adentro (lo dice el aviso del
+		 * modal), así que la base es precio / factor. Si el vendedor no tocó el precio, se manda la
+		 * base que el renglón ya tenía guardada: tiene 6 decimales y el precio del pivot 2, así que
+		 * dividir el precio redondeado correría la base unos centavos sin que nadie la cambie.
+		 *
+		 * 🔴 En una venta legado va null siempre, aunque el precio lleve recargos: no se sabe la
+		 * base de los otros renglones (combos, promociones) y un solo renglón con base no la
+		 * des-bloquea. Y la clave viaja SIEMPRE: la API guarda null cuando falta.
+		 *
+		 * @param {Object} item Renglón de table_items.
+		 * @returns {Number|null}
+		 */
+		precio_sin_recargos_para_actualizar(item) {
+			let factor = this.factor_recargos_de_la_venta
+
+			if (
+				factor === null
+				|| factor === 0
+				|| !item.lleva_recargos
+				|| this.venta_con_recargos_en_precios_sin_registro
+			) {
+				return null
+			}
+
+			let precio = numero_o_null(item.price_vender)
+
+			if (precio === null) {
+				return null
+			}
+
+			if (
+				precio === item.sold_price_raw
+				&& item.precio_sin_recargos_guardado !== null
+			) {
+				return item.precio_sin_recargos_guardado
+			}
+
+			return precio / factor
 		},
 		/**
 		 * Determina si el nuevo precio subió, bajó o se mantuvo respecto al vendido.
@@ -289,8 +401,17 @@ export default {
 		 */
 		update() {
 			this.loading = true 
+
+			// Cada renglón viaja con su precio sin recargos (null si el precio no los tiene adentro)
+			let items = this.table_items.map(item => {
+				return {
+					...item,
+					price_vender_sin_recargos: this.precio_sin_recargos_para_actualizar(item),
+				}
+			})
+
 			this.$api.put('sale/update-prices/'+this.sale.id, {
-				items: this.table_items 
+				items: items
 			})
 			.then(res => {
 				this.loading = false 
