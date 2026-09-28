@@ -85,6 +85,13 @@ let temporizador_resumen = null
 // reusarlos si se piden dos veces a la vez en vez de mandar dos pedidos iguales.
 let resumen_en_vuelo = null
 let no_leidos_en_vuelo = null
+/*
+	`sello` sube con cada escritura LOCAL de una fila (broadcast, envío, marcar leído) y queda
+	guardado en la fila como `_sello`. Las filas que llegan del backend no lo traen (valen 0). Sirve
+	para saber, cuando una lista vuelve del backend, si la fila que ya estaba en memoria se tocó
+	DESPUÉS de mandar el pedido: en ese caso la de memoria es más nueva que la respuesta y no se pisa.
+*/
+let sello = 0
 
 function estado_inicial() {
 	return {
@@ -260,11 +267,10 @@ function es_de_hoy(fecha) {
  * @returns {Object|null} `{unread_count, last_message_at}` o null.
  */
 function fila_conocida(state, buyer_id) {
-	let fila = state.chats.find(c => c.buyer_id == buyer_id)
-	if (fila) {
-		return fila
-	}
-	fila = state.chats_no_leidos.find(c => c.buyer_id == buyer_id)
+	let fila = fila_mas_nueva(
+		state.chats.find(c => c.buyer_id == buyer_id),
+		state.chats_no_leidos.find(c => c.buyer_id == buyer_id)
+	)
 	if (fila) {
 		return fila
 	}
@@ -272,6 +278,49 @@ function fila_conocida(state, buyer_id) {
 		return { unread_count: 0, last_message_at: null }
 	}
 	return null
+}
+
+/**
+ * De las dos filas que puede haber de un mismo comprador (la de la bandeja y la de la lista de sin
+ * leer de Alertas), la que tiene el dato más nuevo: la del último mensaje más reciente y, si
+ * empatan, la de más sin leer.
+ *
+ * 🔴 Existe porque las dos listas se cargan en momentos distintos. Caso medido en la verificación
+ * visual (28/9/2026): la bandeja cargada con el comprador en 0, entran 2 mensajes SIN evento (una
+ * tienda-api vieja, o un evento perdido), Alertas trae la lista con ese comprador en 2. Mirando
+ * primero la bandeja, "marcar leído" creía que no había nada que descontar y los badges quedaban en
+ * 2 con la base en 0. La sincronización entre listas (`sincronizarListas`) evita la mayoría de
+ * estos casos; esto es lo que decide cuando igual quedan distintas.
+ *
+ * @param {Object|undefined} a
+ * @param {Object|undefined} b
+ * @returns {Object|null}
+ */
+function fila_mas_nueva(a, b) {
+	if (!a) {
+		return b || null
+	}
+	if (!b) {
+		return a
+	}
+	let id_a = id_del_ultimo_mensaje(a)
+	let id_b = id_del_ultimo_mensaje(b)
+	if (id_a != id_b) {
+		return id_a > id_b ? a : b
+	}
+	return entero(b.unread_count) > entero(a.unread_count) ? b : a
+}
+
+/**
+ * La fila de memoria se tocó localmente DESPUÉS de mandar el pedido cuya respuesta se está
+ * aplicando: es más nueva que la respuesta y no se pisa.
+ *
+ * @param {Object} fila
+ * @param {Number} sello_al_pedir
+ * @returns {Boolean}
+ */
+function tocada_despues_del_pedido(fila, sello_al_pedir) {
+	return entero(fila._sello) > entero(sello_al_pedir)
 }
 
 /**
@@ -402,10 +451,11 @@ export default {
 			}
 			let lista = state.chats.slice()
 			let index = lista.findIndex(c => c.buyer_id == chat.buyer_id)
+			sello++
 			if (index == -1) {
-				lista.unshift(chat)
+				lista.unshift(Object.assign({}, chat, { _sello: sello }))
 			} else {
-				lista.splice(index, 1, Object.assign({}, lista[index], chat))
+				lista.splice(index, 1, Object.assign({}, lista[index], chat, { _sello: sello }))
 			}
 			ordenar_chats(lista)
 			state.chats = lista
@@ -452,11 +502,12 @@ export default {
 		upsertChatNoLeido(state, chat) {
 			let lista = state.chats_no_leidos.slice()
 			let index = lista.findIndex(c => c.buyer_id == chat.buyer_id)
+			sello++
 			if (index == -1) {
-				lista.unshift(chat)
+				lista.unshift(Object.assign({}, chat, { _sello: sello }))
 				state.chats_no_leidos_total++
 			} else {
-				lista.splice(index, 1, Object.assign({}, lista[index], chat))
+				lista.splice(index, 1, Object.assign({}, lista[index], chat, { _sello: sello }))
 			}
 			ordenar_chats(lista)
 			state.chats_no_leidos = lista
@@ -468,6 +519,66 @@ export default {
 			}
 			state.chats_no_leidos.splice(index, 1)
 			state.chats_no_leidos_total = Math.max(0, state.chats_no_leidos_total - 1)
+		},
+
+		/**
+		 * Una sola verdad por comprador entre las dos listas: lo que acaba de llegar del backend en
+		 * una (la bandeja o la de sin leer de Alertas) se pasa a la fila del mismo comprador en la
+		 * otra, salvo que esa otra se haya tocado en vivo después de mandar el pedido.
+		 *
+		 * - Desde la bandeja: el "sin leer" nuevo de cada fila actualiza (o saca, si quedó en 0)
+		 *   su fila de Alertas, y la agrega si Alertas ya está cargada y no la tenía.
+		 * - Desde Alertas: actualiza las filas de la bandeja de esos compradores; y si la lista vino
+		 *   entera, las filas de la bandeja con algo sin leer que NO vinieron ya no tienen nada.
+		 *   Alertas nunca agrega filas a la bandeja: la bandeja respeta el buscador y el paginado.
+		 *
+		 * @param {Object} state
+		 * @param {Object} payload `{ origen: 'bandeja'|'no_leidos', data, sello_al_pedir, completa }`
+		 */
+		sincronizarListas(state, payload) {
+			let frescos = Array.isArray(payload.data) ? payload.data : []
+			let sello_al_pedir = payload.sello_al_pedir
+			if (payload.origen == 'bandeja') {
+				let no_leidos = state.chats_no_leidos.slice()
+				let total = state.chats_no_leidos_total
+				frescos.forEach(fresco => {
+					let index = no_leidos.findIndex(c => c.buyer_id == fresco.buyer_id)
+					if (index != -1 && tocada_despues_del_pedido(no_leidos[index], sello_al_pedir)) {
+						return
+					}
+					if (entero(fresco.unread_count) > 0) {
+						if (index != -1) {
+							no_leidos.splice(index, 1, Object.assign({}, no_leidos[index], fresco))
+						} else if (state.chats_no_leidos_cargados) {
+							no_leidos.push(fresco)
+							total++
+						}
+					} else if (index != -1) {
+						no_leidos.splice(index, 1)
+						total = Math.max(0, total - 1)
+					}
+				})
+				ordenar_chats(no_leidos)
+				state.chats_no_leidos = no_leidos
+				state.chats_no_leidos_total = total
+				return
+			}
+			let ids_frescos = frescos.map(c => c.buyer_id)
+			let bandeja = state.chats.map(fila => {
+				if (tocada_despues_del_pedido(fila, sello_al_pedir)) {
+					return fila
+				}
+				let index = ids_frescos.indexOf(fila.buyer_id)
+				if (index != -1) {
+					return Object.assign({}, fila, frescos[index])
+				}
+				if (payload.completa && entero(fila.unread_count) > 0) {
+					return Object.assign({}, fila, { unread_count: 0 })
+				}
+				return fila
+			})
+			ordenar_chats(bandeja)
+			state.chats = bandeja
 		},
 
 		// --- Sidebar y conversación -----------------------------------------------------------
@@ -588,9 +699,10 @@ export default {
 		 */
 		fila_de(state) {
 			return function (buyer_id) {
-				return state.chats.find(c => c.buyer_id == buyer_id)
-					|| state.chats_no_leidos.find(c => c.buyer_id == buyer_id)
-					|| null
+				return fila_mas_nueva(
+					state.chats.find(c => c.buyer_id == buyer_id),
+					state.chats_no_leidos.find(c => c.buyer_id == buyer_id)
+				)
 			}
 		},
 	},
@@ -628,6 +740,7 @@ export default {
 				solo_no_leidos: solo_no_leidos ? 1 : 0,
 			}
 			let opciones_axios = Object.assign({ params: params }, silent ? OPCIONES_SILENCIOSAS : OPCIONES_BASE)
+			let sello_al_pedir = sello
 			return axios.get('/api/tienda-chats', opciones_axios)
 				.then(res => {
 					let vigente = generacion_del_pedido == generacion && este_pedido == pedido_de_chats
@@ -653,6 +766,7 @@ export default {
 						commit('setChatsPaginas', { page: datos.current_page || page, last_page: datos.last_page })
 					}
 					commit('setChatsCargados', true)
+					commit('sincronizarListas', { origen: 'bandeja', data: lista, sello_al_pedir: sello_al_pedir })
 					// Solo el listado sin filtros dice cuántas conversaciones hay en total.
 					if (!buscar && !solo_no_leidos && typeof datos.total != 'undefined') {
 						commit('setTotalConversaciones', datos.total)
@@ -740,13 +854,22 @@ export default {
 			let generacion_del_pedido = generacion
 			let opciones_axios = Object.assign({ params: { page: 1, solo_no_leidos: 1, buscar: '' } }, OPCIONES_SILENCIOSAS)
 			commit('setChatsNoLeidosLoading', true)
+			let sello_al_pedir = sello
 			let promesa = axios.get('/api/tienda-chats', opciones_axios)
 				.then(res => {
 					if (generacion_del_pedido != generacion) {
 						return
 					}
 					let datos = res.data || {}
-					commit('setChatsNoLeidos', { data: datos.data, total: datos.total })
+					let lista = Array.isArray(datos.data) ? datos.data : []
+					commit('setChatsNoLeidos', { data: lista, total: datos.total })
+					commit('sincronizarListas', {
+						origen: 'no_leidos',
+						data: lista,
+						sello_al_pedir: sello_al_pedir,
+						// Vino entera (una sola página): el que no está, no tiene nada sin leer.
+						completa: entero(datos.total) <= lista.length,
+					})
 				})
 				.catch(err => {
 					console.log(err)
@@ -922,9 +1045,10 @@ export default {
 		/**
 		 * Marca leída la conversación de un comprador.
 		 *
-		 * Los contadores se bajan en el momento (sin esperar la respuesta) cuando se sabe cuántos
-		 * había sin leer; si no se sabe (la conversación se abrió sin la bandeja cargada), el
-		 * resumen se vuelve a pedir cuando el backend confirma.
+		 * Los contadores se bajan en el momento (sin esperar la respuesta) con lo que se sabe de
+		 * la conversación (la fila más nueva entre la bandeja y Alertas), y cuando el backend
+		 * confirma el resumen se vuelve a pedir SIEMPRE, para corregir lo que la pantalla tuviera
+		 * viejo.
 		 *
 		 * @param {Number} buyer_id
 		 * @returns {Promise} resuelve siempre.
@@ -948,9 +1072,14 @@ export default {
 			}
 			return axios.post('/api/tienda-chats/' + id + '/leer', {}, OPCIONES_SILENCIOSAS)
 				.then(() => {
-					if (!conocida) {
-						dispatch('pedirResumenPronto')
-					}
+					/*
+						Red de seguridad: con el "leído" confirmado se piden los contadores de verdad
+						(con el mismo debounce, así varios leídos seguidos son un solo pedido). Lo que
+						se descontó en memoria es lo que había en pantalla, y en pantalla puede haber
+						un dato viejo: entraron mensajes sin evento, o las dos listas se cargaron en
+						momentos distintos. Sin esto, el badge podía quedar en 2 con la base en 0.
+					*/
+					dispatch('pedirResumenPronto')
 				})
 				.catch(err => {
 					console.log(err)
