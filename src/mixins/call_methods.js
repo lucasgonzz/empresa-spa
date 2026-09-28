@@ -124,6 +124,10 @@ export default [
     // 'task',
     // 'permission',  -> lo pide common-vue/views/Employee.vue (ver la nota de arriba)
     'sale_type',
+    // Diseños de Vender (mision diseno-vender-configurable, 28/9/2026): Vender los necesita antes
+    // de dibujar su primera etapa. Es un catalogo chico (uno o dos diseños por negocio). Sin
+    // conexion, o con una API vieja que no lo conoce, Vender cae al diseño predeterminado.
+    'vender_layout',
     'discount',
     'surchage',
     'brand',
