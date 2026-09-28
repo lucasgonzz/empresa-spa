@@ -2,6 +2,7 @@ import moment from 'moment'
 import { env } from '@/runtime_config'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
 import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/utils/criterio_de_oferta_por_cantidad'
+import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado } from '@/utils/recargos_en_precios'
 export default {
     computed: {
         has_online() {
@@ -701,10 +702,56 @@ export default {
             // Array de descripción del proceso de cálculo del precio para este item
             let item_des = []
 
+            /*
+                🔴 RECARGOS DE VENTA ADENTRO DEL PRECIO (mision recargos-en-precios-editable,
+                28/9/2026). Con la opcion "Aplicar los recargos de esta venta directamente a los
+                precios" prendida, CADA rama de abajo mete los recargos en el precio llamando a
+                recargar(), y al final se deja en el item el precio SIN ellos
+                (item.price_vender_sin_recargos) para que la API lo guarde en
+                pivot.price_sin_recargos_de_venta. Es lo que permite apagar la opcion al editar
+                una venta o un presupuesto y que cada precio vuelva exacto a como estaba.
+
+                factor_recargos_aplicado lo escribe SOLO recargar(), o sea que el precio sin
+                recargos sale de lo que efectivamente se multiplico y no de lo que "deberia"
+                haberse multiplicado. Si una rama futura se olvida de llamar a recargar(), el
+                renglon viaja sin base (null): en una venta con la opcion prendida eso la deja
+                bloqueada al reabrirla, que es el modo de falla seguro. Calcular la base con
+                factor_recargos_de_venta() por afuera de las ramas mandaria una base inventada.
+
+                Las ramas que NO son el flujo normal -precio a mano, pivot y precios en blanco-
+                antes NO recargaban, y con la opcion prendida ese recargo no se cobraba en ningun
+                lado (el pie tambien se lo salteaba). Desde esta mision recargan todas (decision
+                2 de Lucas: la opcion decide DONDE se ve el recargo, nunca SI se cobra).
+            */
+            let factor_recargos_aplicado = null
+
+            let recargar = precio_sin_recargos => {
+
+                let factor = this.factor_recargos_de_venta(item)
+
+                if (factor === null) {
+                    return precio_sin_recargos
+                }
+
+                factor_recargos_aplicado = factor
+
+                let precio_con_recargos = Number(precio_sin_recargos) * factor
+                item_des.push('Recargos de venta adentro del precio: ' + this.price(precio_sin_recargos) + ' -> ' + this.price(precio_con_recargos))
+
+                return precio_con_recargos
+            }
+
             if (item.price_vender_personalizado) {
 
                 price = item.price_vender_personalizado
                 item_des.push('Precio personalizado: ' + this.price(price))
+
+                /*
+                    El precio escrito a mano es el precio SIN recargos de venta, igual que cuando la
+                    opcion esta apagada: ahi el recargo se le suma al pie. Con la opcion prendida
+                    se le suma adentro, y el total es el mismo.
+                */
+                price = recargar(price)
 
                 // Ajuste IVA sobre el precio personalizado
                 let price_before_iva = price
@@ -748,10 +795,49 @@ export default {
                 // )
             ) {
 
-                price = item.pivot.price
                 // Unica rama donde el precio viene del pivot: ya esta en la moneda de la venta.
                 price_desde_pivot = true
-                item_des.push('Precio del pivot (venta anterior): ' + this.price(price))
+
+                if (this.$store.state.vender.recargos_en_precios_sin_registro) {
+
+                    /*
+                        Comprobante LEGADO (decision 1 de Lucas): se guardo con la opcion
+                        prendida antes de que existiera pivot.price_sin_recargos_de_venta, asi que
+                        su precio tiene el recargo adentro y el sistema no sabe cuanto valia sin
+                        el. Se usa tal cual, como siempre, y no se recarga: Surchages.vue le
+                        bloquea los recargos y la opcion. No viaja base (queda null).
+                    */
+                    price = item.pivot.price
+                    item_des.push('Precio del pivot (venta anterior, recargos ya adentro): ' + this.price(price))
+
+                } else {
+
+                    /*
+                        🔴 El precio se reconstruye desde el precio SIN recargos y se le vuelven a
+                        meter los recargos de HOY (los que el vendedor tiene elegidos ahora, con el
+                        porcentaje historico que les restauro
+                        set_surchages_store_with_pivot_percetage()). Asi, apagar la opcion devuelve
+                        cada precio exacto a como estaba, cambiar un recargo re-precia el renglon,
+                        y prender la opcion sobre un comprobante guardado sin ella mete el recargo
+                        adentro.
+
+                        Con base NULL el price del pivot NO tiene recargos adentro (ver la
+                        invariante en utils/recargos_en_precios.js), asi que el price ES la base.
+                        No se puede usar el price tal cual "cuando nada cambio": hasta el 9/9/2026
+                        esta rama no recargaba y el toggle editando un presupuesto dejaba el
+                        precio y el total desincronizados (242 en vez de 220, o 200 en vez de 220).
+                    */
+                    let precio_sin_recargos = precio_sin_recargos_guardado(item.pivot)
+
+                    if (precio_sin_recargos === null) {
+                        precio_sin_recargos = Number(item.pivot.price)
+                    }
+
+                    price = precio_sin_recargos
+                    item_des.push('Precio del pivot sin recargos de venta (venta anterior): ' + this.price(price))
+
+                    price = recargar(price)
+                }
 
                 // Ajuste IVA sobre el precio del pivot
                 let price_before_iva = price
@@ -775,6 +861,8 @@ export default {
                     price = item.final_price
                     item_des.push('Precio en blanco (sin AFIP): ' + this.price(price))
                 }
+
+                price = recargar(price)
 
                 // Ajuste IVA sobre el precio en blanco
                 let price_before_iva = price
@@ -803,12 +891,8 @@ export default {
                     item_des.push('Descuento metodo de pago: ' + this.price(price_before_pm) + ' -> ' + this.price(price))
                 }
 
-                // Recargos aplicados directo al item
-                let price_before_rec = price
-                price = this.aplicar_recargos(item, price)
-                if (Number(price) !== Number(price_before_rec)) {
-                    item_des.push('Recargo directo al item: ' + this.price(price_before_rec) + ' -> ' + this.price(price))
-                }
+                // Recargos de venta aplicados directo al item
+                price = recargar(price)
 
                 // Cuotas
                 let price_before_cuotas = price
@@ -826,8 +910,6 @@ export default {
 
                 // price = this.redondear(price)
             }
-            
-            // price = this.aplicar_recargos(item, price)
 
             price = Number(price)
 
@@ -865,6 +947,30 @@ export default {
                     item_des.push('Oferta por cantidad (' + porcentaje_legible(item.porcentaje_oferta_por_cantidad) + '%): ' + this.price(price) + ' -> ' + this.price(price_con_oferta))
                     price = price_con_oferta
                 }
+            }
+
+            /*
+                El precio SIN los recargos de venta, que viaja en el payload de cada renglon
+                (venta: el item entero; presupuesto: vender_presupuestos.js) y la API guarda en
+                pivot.price_sin_recargos_de_venta.
+
+                🔴 Se saca DIVIDIENDO el precio final por el factor, y no guardando el numero de
+                antes de recargar(). Despues del recargo todavia pasan las cuotas, el ajuste de IVA,
+                la moneda y la oferta por cantidad, y todos son MULTIPLICATIVOS: el cociente es
+                exactamente el precio que el renglon habria tenido con la opcion apagada, en el
+                mismo contexto de IVA y moneda que `price`. El numero de antes de recargar() no lo
+                es (le faltarian el IVA, la moneda y la oferta). Si algun dia se agrega un paso
+                ADITIVO despues de recargar() -un monto fijo-, esta division deja de ser exacta.
+
+                Sin recargos adentro (opcion apagada, servicio sin recargos en servicios, o
+                renglon de un comprobante legado) viaja null, que es lo que dice la invariante.
+                Va sin redondear a proposito: la columna tiene 6 decimales para que "apagar"
+                devuelva el precio que el renglon habria tenido.
+            */
+            if (factor_recargos_aplicado !== null && factor_recargos_aplicado !== 0) {
+                item.price_vender_sin_recargos = price / factor_recargos_aplicado
+            } else {
+                item.price_vender_sin_recargos = null
             }
 
             // Precio final del item después de todas las transformaciones
@@ -1127,33 +1233,44 @@ export default {
 
             return price
         },
-        aplicar_recargos(item, price) {
+        /**
+         * Factor por el que los recargos de venta elegidos multiplican el precio de ESTE renglon
+         * cuando la opcion "Aplicar los recargos de esta venta directamente a los precios" esta
+         * prendida, o null si no le corresponde ninguno (opcion apagada, sin recargos, o renglon
+         * no elegible: un servicio sin "recargos en servicios").
+         *
+         * Lo usan getPriceVender() para meter el recargo en el precio y
+         * mixins/vender/set_items_prices.js para los `varios_precios`, que no pasan por
+         * getPriceVender(). Los porcentajes salen de surcahges_models_vender, que al editar un
+         * comprobante tiene el porcentaje HISTORICO del pivot
+         * (previus_sale/index.js::set_surchages_store_with_pivot_percetage).
+         *
+         * @param {Object} item
+         * @returns {Number|null}
+         */
+        factor_recargos_de_venta(item) {
 
             if (
-                this.$store.state.vender.aplicar_recargos_directo_a_items
-                && this.surcahges_models_vender.length
+                !this.$store.state.vender.aplicar_recargos_directo_a_items
+                || !this.surcahges_models_vender.length
             ) {
-
-                if (
-                    item.is_article
-                    || (
-                        item.is_service 
-                        && this.$store.state.vender.surchages_in_services
-                    )
-                ) { 
-
-                    price = Number(price)
-
-                    this.surcahges_models_vender.forEach(sur => {
-                        console.log('Aplicando recargo al precio de')
-                        console.log(Number(price))
-                        console.log(Number(sur.percentage))
-                        price += price * Number(sur.percentage) / 100
-                    })
-                }
+                return null
             }
 
-            return price
+            if (!renglon_lleva_recargos_de_venta(item, this.$store.state.vender.surchages_in_services)) {
+                return null
+            }
+
+            /*
+                surcahges_models_vender hace un find() sobre el store de recargos, y un id que no
+                esta en el store devuelve undefined. Se descarta ACA para no tirar un TypeError en
+                medio del calculo del precio.
+            */
+            return factor_de_recargos(
+                this.surcahges_models_vender
+                    .filter(surchage => surchage)
+                    .map(surchage => surchage.percentage)
+            )
         },
         aplicar_descuento_metodo_de_pago(item, price) {
             if (this.current_acount_payment_method_discounts.length 
