@@ -12,29 +12,26 @@ export default {
 			return this.tn_sync_failed_count
 		},
 		/**
-		 * Total para el badge del ítem "Tienda Online": pedidos sin confirmar.
-		 * Usa las mismas fuentes y permisos que las alertas globales para ese rubro.
+		 * Total para el badge del ítem "Tienda Online": pedidos sin confirmar + conversaciones con
+		 * mensajes sin leer de la tienda.
 		 *
 		 * @returns {number}
 		 */
 		online_menu_alert_count() {
-			if (!this.has_online) {
-				return 0
-			}
 			let total = 0
-			if (this.can('alerts.orders')) {
+			if (this.has_online && this.can('alerts.orders')) {
 				total += Number(this.unconfirmed_orders.length)
 			}
 			/*
-				Mensajes quedó OCULTO en la misión "chat IA" (15/8/2026): Online.vue ya
-				no monta el módulo, así que su contador no puede sumar a un badge que
-				invita a entrar a una solapa que no existe en pantalla. El término
-				queda comentado, no borrado, por si el módulo vuelve.
-
-			if (this.can('alerts.messages')) {
-				total += Number(this.messages_not_read)
-			}
+				Mensajes de la tienda (misión mensajes-tienda-online, 28/9/2026): cuenta
+				CONVERSACIONES con algo sin leer y no mensajes, como el badge de una bandeja de chats.
+				Sale del resumen que pide el anfitrión del sidebar al iniciar sesión, así que está
+				prendido desde el login sin entrar al submódulo. Mismo permiso que el hijo "Mensajes"
+				del menú; el resumen solo se pide con la extensión `online`, así que sin ella es 0.
 			*/
+			if (this.can('buyer.index') && this.$store.state.tienda_mensajes) {
+				total += Number(this.$store.state.tienda_mensajes.resumen.chats_no_leidos) || 0
+			}
 			return total
 		},
 		alerts_count() {

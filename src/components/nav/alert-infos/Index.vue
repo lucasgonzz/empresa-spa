@@ -26,7 +26,8 @@ export default {
 	},
 	computed: {
 		alerts() {
-			return this.unconfirmed_orders.length + this.messages_not_read.length + this.provider_order_days_to_advise.length + this.ventas_sin_cobrar.length
+			// `messages_not_read` es un número (el resumen de mensajes de la tienda), no una lista.
+			return this.unconfirmed_orders.length + Number(this.messages_not_read) + this.provider_order_days_to_advise.length + this.ventas_sin_cobrar.length
 		}
 	},
 	methods: {

@@ -31,13 +31,13 @@ export default {
     },
 	methods: {
 		listenChannelsLocal() {
-            this.Echo.channel('message.from_buyer.'+this.owner_id)
-            .notification((notification) => {
-                console.log(notification)
-                this.addBuyerMessage(notification.message)
-                this.$store.dispatch('message/setChatsToShow')
-                this.checkIfIsMessagesView(notification)
-            });
+            /*
+                La escucha publica `message.from_buyer.{owner_id}` (mensajes de la tienda) se saco
+                en la mision mensajes-tienda-online (28/9/2026): el tiempo real de los mensajes de
+                los compradores ahora es del anfitrion del submodulo Mensajes
+                (components/online/components/mensajes/SidebarHost.vue), por un canal PRIVADO del
+                dueño. Con las dos escuchas vivas, cada mensaje se contaria dos veces.
+            */
             // Aviso en tiempo real de que entro un pedido nuevo en la tienda.
             this.escuchar_pedidos_nuevos()
             // Refresco al reconectar Echo. Se llama ACA ademas de desde escuchar_pedidos_nuevos():
@@ -188,7 +188,8 @@ export default {
                 error a la vista, ni en el navegador ni en el servidor. Es el modo de falla mas
                 probable de este cambio y esta medido en el INFORME.md de la mision 42.
 
-                Es el mismo mecanismo que message.from_buyer.{id}, unas lineas mas arriba.
+                Es el mismo mecanismo que usaba message.from_buyer.{id} (la escucha vieja de los
+                mensajes de la tienda, que se saco de este archivo el 28/9/2026).
             */
             this.Echo.channel(order_created_channel)
             .notification(() => {
@@ -259,13 +260,6 @@ export default {
                     this.$store.dispatch('background_processes/getModels')
                 }
             })
-        },
-        checkIfIsMessagesView(noti) {
-            if (this.$route.name == 'online' && this.view == 'mensajes' && this.$route.params.sub_view == noti.message.buyer_id) {
-                console.log('se marcaron mensajes como leidos desde broadcast')
-                this.setMessagesRead()
-                this.scrollBottom('messages')
-            }
         },
         /**
          * Escucha mensajes de soporte enviados desde admin-api (empresa-api re-emite a support.user.{id}).

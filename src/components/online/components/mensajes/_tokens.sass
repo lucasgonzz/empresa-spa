@@ -1,0 +1,26 @@
+// Tokens de color propios del submódulo "Mensajes" de Tienda Online (misión
+// mensajes-tienda-online, 28/9/2026).
+//
+// El submódulo se dibuja con el vocabulario del módulo de WhatsApp (`--wa-*`, globales desde
+// src/sass/_whatsapp_modulo.sass): fondo del chat, burbujas, verde de la marca, bordes. Acá van
+// SOLO los dos matices que ese archivo no tiene, y viven al lado de los componentes que los usan
+// (mismo criterio que vincular-comprador/_tokens.sass) para no tocar la hoja de WhatsApp, sobre la
+// que hay otras misiones trabajando. Cada componente que los usa hace `@import` de este archivo.
+//
+// 🔴 Van en :root (claro) y en html.dark-mode (oscuro), nunca en un contenedor, y sin respaldo
+// `var(--x, #hex)`: un respaldo tapa un token faltante y deja el modo oscuro roto sin que nadie se
+// entere.
+
+:root
+	// Doble check de "el comprador ya lo leyó". El celeste de WhatsApp (#34b7f1) sobre la burbuja
+	// saliente clara da menos de 2:1; este da algo más de 3:1, que es lo que pide un ícono.
+	--tm-check-leido: #0f8fd6
+	// Texto en el verde de la marca (hora de una conversación con algo sin leer, filtro activo en
+	// texto). El --wa-verde sobre blanco da 1,98:1 y no se lee como texto; este teal da 5:1.
+	--tm-acento-texto: #008069
+
+html.dark-mode
+	// Sobre el verde petróleo de la burbuja saliente del modo oscuro (#005c4b): 4,3:1.
+	--tm-check-leido: #53bdeb
+	// Sobre --bg-card del modo oscuro (#2e333a): 4,3:1.
+	--tm-acento-texto: #00a884

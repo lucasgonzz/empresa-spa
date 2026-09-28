@@ -328,7 +328,10 @@ export default [
 			'order.index',
 			'buyer.index',
 		],
-		/* Badge: pedidos sin confirmar (Mensajes quedó oculto; ver online_menu_alert_count) */
+		/*
+			Badge: pedidos sin confirmar + conversaciones con mensajes sin leer de la tienda
+			(ver online_menu_alert_count en mixins/nav_functions.js).
+		*/
 		budget_function: 'online_menu_alert_count',
 		image_url: 'nuevos-nav-icons/online.png',
 		icon: 'shop',
@@ -349,6 +352,19 @@ export default [
 				function: 'ir_a_online_clientes',
 				can: 'buyer.index',
 				icon: 'people',
+			},
+			{
+				/*
+					Mensajes (misión mensajes-tienda-online, 28/9/2026): la bandeja de conversaciones
+					con los compradores de la tienda. Va con `function:` como sus hermanos, por el
+					motivo del comentario de arriba. Se gatea con `buyer.index`, igual que Clientes:
+					el `buyer.messages` que usaba el módulo viejo no existe en los seeders.
+				*/
+				text: 'Mensajes',
+				name: 'online_mensajes',
+				function: 'ir_a_online_mensajes',
+				can: 'buyer.index',
+				icon: 'chat-dots',
 			},
 			{
 				text: 'Cupones',

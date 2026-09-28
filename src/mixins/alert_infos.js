@@ -73,28 +73,26 @@ export default {
             }
             return []
         },
+        /**
+         * Mensajes sin leer de la tienda: el número rojo de Alertas → Mensajes y lo que suma a la
+         * campana del menú.
+         *
+         * Sale del resumen del store `tienda_mensajes` (misión mensajes-tienda-online, 28/9/2026),
+         * que pide el anfitrión del sidebar de Mensajes al iniciar sesión y mantiene al día el
+         * broadcast. Antes sumaba `messagesNotRead()` sobre `message.chats_to_show`, y para eso el
+         * arranque bajaba TODOS los compradores de la tienda (GET /api/buyer entero) en cada login.
+         *
+         * Devuelve SIEMPRE un número (la versión anterior devolvía un array vacío cuando no había
+         * tienda, y un número cuando sí: quien lo usaba tenía que adivinar cuál le tocaba).
+         *
+         * @returns {Number}
+         */
         messages_not_read() {
-            if (this.has_online) {
-            	let messages_not_read = 0
-                this.$store.state.message.chats_to_show.forEach(chats_to_show => {
-
-                    messages_not_read += this.messagesNotRead(chats_to_show)
-
-                })
-                return messages_not_read
-                // let messages_not_read = []
-            	// this.$store.state.buyer.models.forEach(buyer => {
-            	// 	buyer.messages.forEach(message => {
-                //         // console.log(message)
-            	// 		if (message.from_buyer && !message.read && message.buyer_id) {
-                //             message.buyer = buyer
-            	// 			messages_not_read.push(message)
-            	// 		}
-            	// 	})
-            	// })
-            	// return messages_not_read
+            let tienda_mensajes = this.$store.state.tienda_mensajes
+            if (!tienda_mensajes) {
+                return 0
             }
-            return []
+            return Number(tienda_mensajes.resumen.mensajes_no_leidos) || 0
         },
         provider_order_days_to_advise() {
             return this.$store.state.provider_order.days_to_advise_models 
