@@ -83,6 +83,23 @@ export default {
 			state.version_bloqueada = value
 		},
 		setUser(state, user) {
+			/*
+				`es_acceso_maestro` (misión imagenes-catalogo-completo, 27/9/2026) lo arma la API
+				SOLO en el login y en GET /api/user: sale de la sesión del login maestro, no de una
+				columna. Otros lugares reemplazan al usuario con el `model` que devuelve un endpoint
+				que no lo sabe (la foto de perfil en Cropper.vue, deleteImage de acá abajo), y sin
+				esto el flag se perdía a mitad de la sesión: el botón de "todo el catálogo" y
+				Detener / Reanudar desaparecían hasta recargar.
+
+				Por eso: si llega el MISMO usuario (mismo id) sin la clave, se conserva la que ya
+				había. Si la clave viene (true o false), manda la que viene; y si es otro usuario (se
+				cerró sesión y entró otro), no se arrastra nada.
+			*/
+			if (user && state.user && user.id === state.user.id
+				&& typeof user.es_acceso_maestro === 'undefined'
+				&& typeof state.user.es_acceso_maestro !== 'undefined') {
+				user.es_acceso_maestro = state.user.es_acceso_maestro
+			}
 			if (user && user.owner_id) {
 				user.addresses = user.owner_addresses
 				window.localStorage.setItem('user_id', user.owner_id)

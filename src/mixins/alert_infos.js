@@ -27,6 +27,19 @@ export default {
         problemas_al_facturar() {
             return this.$store.state.afip_ticket.problemas_al_facturar 
         },
+        /**
+         * Numero rojo de la solapa "Imagenes" de Alertas (y lo que suma a la campana del menu):
+         * imagenes que esperan que alguien las apruebe o las rechace, mas busquedas de imagenes
+         * terminadas que nadie abrio todavia (mision imagenes-catalogo-completo, 27/9/2026).
+         *
+         * Sale del getter del store y no se recalcula aca: el mismo numero lo usan la solapa y
+         * la campana, y tienen que decir lo mismo.
+         *
+         * @returns {Number}
+         */
+        imagenes_alert_count() {
+            return this.$store.getters['image_assignment/badge']
+        },
         deposit_movements_en_curso() {
             return this.$store.state.deposit_movement.en_curso.models 
         },

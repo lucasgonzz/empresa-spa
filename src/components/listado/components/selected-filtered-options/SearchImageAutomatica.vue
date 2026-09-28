@@ -70,7 +70,13 @@ export default {
 				article_ids: article_ids,
 			})
 			.then(res => {
-				this.$toast.success('Procesando imágenes en segundo plano...')
+				// Dice dónde queda el resultado: el aviso de fin solo le llega a esta pestaña, pero
+				// la asignación (con lo que quedó para revisar) queda siempre en Alertas → Imágenes.
+				// "Asignando" y no "Buscando": es la palabra de la opción del menú y la de la fila
+				// que va a encontrar en Alertas (búsqueda es cada consulta al buscador).
+				this.$toast.success('Asignando imágenes en segundo plano. El resultado va a quedar en Alertas → Imágenes.', {
+					duration: 6000,
+				})
 				/*
 					Único vínculo con el anfitrión: se avisa por el bus y este componente se
 					desentiende, porque puede estar desmontado mucho antes de que el lote termine.

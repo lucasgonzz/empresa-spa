@@ -565,7 +565,14 @@ export default {
 			props.forEach(prop => {
 				// Reglas heredadas del antiguo set_filters() del table.
 				if (typeof prop.no_usar_en_filtros != 'undefined') return
-				if (prop.type == 'images' || prop.type == 'image') return
+				// Las columnas de imagenes no se filtran, SALVO la que lo pide con
+				// `filtrable_por_presencia` (hoy solo `images` del articulo, mision
+				// imagenes-catalogo-completo 27/9/2026): esa se filtra por "tiene / no tiene"
+				// con los mismos en_blanco / no_en_blanco de siempre, y el modal del filtro le
+				// muestra solo esos dos toggles (display/table/filter/Index.vue y EnBlanco.vue).
+				// Es opt-in para que ninguna otra tabla con columna de imagenes cambie.
+				if (prop.type == 'images' && !prop.filtrable_por_presencia) return
+				if (prop.type == 'image') return
 				if (prop.belongs_to_many || prop.has_many) return
 
 				let filter_type = prop.type_to_update ? prop.type_to_update : prop.type

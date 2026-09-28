@@ -9,8 +9,11 @@
 		v-if="show_masive_update_history"
 		:model_name="model_name"></masive-update-history>
 
-		<smart-images-history-modal
-		v-if="show_smart_images_history"></smart-images-history-modal>
+		<!--
+			El historial de imagenes inteligentes ya no es un modal de este menu: desde la mision
+			imagenes-catalogo-completo (27/9/2026) cada busqueda de imagenes vive en Alertas ->
+			Imagenes, y el item de abajo lleva ahi.
+		-->
 
 		<!-- Modal de importación IA: mismo criterio que el ítem del menú (evita id inexistente al abrir) -->
 		<ai-excel-import-modal
@@ -192,7 +195,6 @@ export default {
 	components: {
 		ExportHistory: () => import('@/common-vue/components/horizontal-nav/ExportHistory'),
 		MasiveUpdateHistory: () => import('@/common-vue/components/horizontal-nav/MasiveUpdateHistory'),
-		SmartImagesHistoryModal: () => import('@/components/listado/components/selected-filtered-options/SmartImagesHistoryModal'),
 		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
 		// Los dos que se remontaron acá al sacar la importación clásica (ver el template).
 		ImportHistory: () => import('@/common-vue/components/import/ImportHistory'),
@@ -346,12 +348,18 @@ export default {
 		},
 
 		/**
-		 * Abre el historial de imágenes inteligentes (solo artículos).
+		 * Lleva al historial de imágenes inteligentes, que desde la misión
+		 * imagenes-catalogo-completo (27/9/2026) es la solapa Alertas → Imágenes: una fila por
+		 * búsqueda, con lo asignado, lo que quedó para revisar y por qué no se encontró el resto.
+		 * Solo artículos.
 		 *
 		 * @return {void}
 		 */
 		open_smart_images_history() {
-			this.$bvModal.show('smart-images-history')
+			this.$router.push({ name: 'alertas', params: { view: 'imagenes' } })
+			.catch(() => {
+				// Ya estaba ahí (NavigationDuplicated): no hay nada que hacer.
+			})
 		},
 
 		/**

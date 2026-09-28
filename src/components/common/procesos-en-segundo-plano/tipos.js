@@ -197,6 +197,11 @@ export const ETIQUETAS_DE_RESULTADO = {
 	dudosas: 'Para revisar',
 	sin_resultado: 'Sin resultado',
 	sin_cuota: 'Sin cuota de búsqueda',
+	// Resultado de `imagenes_automaticas` desde la misión imagenes-catalogo-completo (27/9/2026,
+	// contrato §5.6): {asignadas, a_revisar, no_asignadas, busquedas}. `asignadas` y `a_revisar`
+	// ya tenían etiqueta (la comparten con las categorías y las descripciones).
+	no_asignadas: 'Sin imagen',
+	busquedas: 'Búsquedas',
 }
 
 /**
@@ -231,6 +236,27 @@ export function componente_de_detalle(tipo) {
  */
 export function es_de_importacion(tipo) {
 	return tipo === 'importacion_articulos' || tipo === 'importacion_compra'
+}
+
+/**
+ * Id de la asignación de imágenes que corresponde a un proceso de `imagenes_automaticas`, o null.
+ *
+ * Desde la misión imagenes-catalogo-completo (27/9/2026) cada búsqueda de imágenes es una
+ * asignación (`App\Models\ImageAssignmentRun`) y su proceso visible la lleva de `referencia`
+ * (contrato §5.6). Con eso la fila del proceso puede llevar a Alertas → Imágenes. Un proceso de
+ * antes de la misión no tiene esa referencia y devuelve null: la fila se ve como siempre.
+ *
+ * @param {Object} proceso
+ * @returns {Number|null}
+ */
+export function asignacion_de_imagenes(proceso) {
+	if (!proceso || proceso.tipo !== 'imagenes_automaticas' || !proceso.referencia_id) {
+		return null
+	}
+	if (String(proceso.referencia_type || '').indexOf('ImageAssignmentRun') === -1) {
+		return null
+	}
+	return Number(proceso.referencia_id) || null
 }
 
 /**
