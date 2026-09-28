@@ -15,7 +15,8 @@
 			rows="1"
 			maxlength="5000"
 			data-testid="tienda-mensajes-texto"
-			placeholder="Escribí un mensaje (Enter para enviar, Shift+Enter para salto de línea)"
+			placeholder="Escribí un mensaje"
+			title="Enter envía. Shift+Enter hace un salto de línea."
 			:disabled="sending"
 			@keydown.enter="on_enter"></textarea>
 
@@ -96,11 +97,60 @@ export default {
 			}
 		},
 	},
+	created() {
+		// Observador del ancho y último ancho visto. Fuera de `data()`: no los lee ningún template,
+		// y un ResizeObserver adentro de la reactividad de Vue 2 sería un objeto observado al pedo.
+		this._observador_de_ancho = null
+		this._ancho_observado = 0
+	},
 	mounted() {
 		this.ajustar_alto()
+		this.observar_ancho()
 		this.enfocar()
 	},
+	beforeDestroy() {
+		this.dejar_de_observar_ancho()
+	},
 	methods: {
+		/**
+		 * Recalcula el alto del campo cuando cambia el ANCHO del composer.
+		 *
+		 * 🔴 No alcanza con el watch de `text`: el panel se redimensiona arrastrando su borde
+		 * (sidebar/Index.vue) o con la ventana, y ninguna de las dos cosas dispara un evento del
+		 * campo. Con tres renglones escritos y el panel angostándose, el texto pasaba a cinco
+		 * renglones y el campo se quedaba con el alto de tres hasta la próxima tecla. Misma técnica
+		 * que el composer de WhatsApp: se compara el ancho contra el anterior para no recalcular
+		 * cuando el que cambió es el ALTO (que es lo que hace `ajustar_alto()`).
+		 *
+		 * Sin ResizeObserver (navegador viejo) se cae al `resize` de la ventana.
+		 */
+		observar_ancho() {
+			let self = this
+			if (!this.$el || this.$el.nodeType !== 1) {
+				return
+			}
+			this._ancho_observado = this.$el.offsetWidth
+			if (typeof ResizeObserver === 'undefined') {
+				window.addEventListener('resize', this.ajustar_alto)
+				return
+			}
+			this._observador_de_ancho = new ResizeObserver(function () {
+				let ancho = self.$el ? self.$el.offsetWidth : 0
+				if (ancho === self._ancho_observado) {
+					return
+				}
+				self._ancho_observado = ancho
+				self.ajustar_alto()
+			})
+			this._observador_de_ancho.observe(this.$el)
+		},
+		dejar_de_observar_ancho() {
+			if (this._observador_de_ancho) {
+				this._observador_de_ancho.disconnect()
+				this._observador_de_ancho = null
+			}
+			window.removeEventListener('resize', this.ajustar_alto)
+		},
 		/**
 		 * En teléfono no se enfoca solo: abriría el teclado encima de la conversación apenas se abre.
 		 */
@@ -178,6 +228,17 @@ export default {
 				alto_renglon = parseFloat(estilo.fontSize) * 1.4
 			}
 			let maximo = (alto_renglon * MAX_RENGLONES) + relleno + borde
+			/*
+				🔴 Vacío, un renglón exacto, sin medir. Chrome cuenta el PLACEHOLDER en `scrollHeight`:
+				con uno que no entraba en el ancho del panel, el campo vacío arrancaba en dos
+				renglones (medido en la verificación visual, sidebar a 320 px). El placeholder se
+				acortó, y esto hace que no dependa de su largo.
+			*/
+			if (!this.text) {
+				el.style.height = (alto_renglon + relleno + borde) + 'px'
+				el.style.overflowY = 'hidden'
+				return
+			}
 			el.style.height = 'auto'
 			let alto = el.scrollHeight + borde
 			el.style.height = Math.min(alto, maximo) + 'px'
