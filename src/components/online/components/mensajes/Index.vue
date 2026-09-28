@@ -232,6 +232,10 @@ export default {
 		font-size: .8rem
 		color: var(--color-text-secondary)
 		white-space: normal
+		// Último recurso para que una palabra larga ("Conversaciones") nunca se salga de la
+		// tarjeta: si no entra en el renglón, se parte. Con el acomodo de tablet de más abajo no
+		// debería hacer falta, pero en un ancho raro es preferible partirla a desbordar.
+		overflow-wrap: anywhere
 	// Sin leer: rojo, los mismos tokens que la tarjeta "Sin responder" del tablero de WhatsApp.
 	&__tarjeta--sin-leer
 		background: var(--wa-sin-responder-bg)
@@ -270,8 +274,10 @@ export default {
 		font-size: .875rem
 		margin: 0
 
-// Tablet (768-1024px): el panel mide 510-680px, todavía entran las tres tarjetas en fila; se
-// achica el aire para que no se aprieten.
+// Tablet (768-1024px): las tres tarjetas siguen en fila, con menos aire, y el ícono pasa ARRIBA del
+// número. Con el ícono al lado, a 820 px "Conversaciones hoy" y "Total de conversaciones" no
+// entraban y desbordaban la tarjeta por 1 px (medido en la verificación visual): así la etiqueta
+// tiene todo el ancho de la tarjeta y puede partir renglón.
 @media screen and (max-width: 1024px)
 	.tienda-mensajes-panel
 		padding: 16px
@@ -279,8 +285,10 @@ export default {
 		&__tarjetas
 			gap: 10px
 		&__tarjeta
+			flex-direction: column
+			align-items: flex-start
 			padding: 12px
-			gap: 10px
+			gap: 6px
 		&__icono
 			font-size: 1.3rem
 		&__valor
@@ -297,6 +305,8 @@ export default {
 			gap: 8px
 		&__tarjeta
 			flex-direction: column
+			// Centrado otra vez: el acomodo de tablet (arriba) lo deja a la izquierda.
+			align-items: center
 			text-align: center
 			padding: 10px 6px
 			gap: 4px
