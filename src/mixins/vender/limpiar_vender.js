@@ -115,6 +115,16 @@ export default {
 			*/
 			this.$store.commit('vender/set_aplicar_recargos_directo_a_items', 0)
 
+			/*
+				🔴 Y el de comprobante LEGADO (mision recargos-en-precios-editable, 28/9/2026) va con
+				el, por el mismo motivo: set_datos_para_actualizar_en_vender() lo prende con solo
+				ABRIR una venta o un presupuesto guardado con la opcion activa antes de que los
+				renglones registraran su precio sin recargos. Si sobreviviera a limpiar_vender, la
+				venta SIGUIENTE -nueva, de otro cliente- arrancaria con los recargos y la opcion
+				bloqueados en Surchages.vue sin ningun motivo.
+			*/
+			this.$store.commit('vender/set_recargos_en_precios_sin_registro', false)
+
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
 			this.$store.commit('vender/setSellerId', 0)
