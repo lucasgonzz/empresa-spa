@@ -164,22 +164,29 @@ export default {
 	// fijo que no consume alto (el porqué completo está en views/Whatsapp.vue).
 	height: 100vh
 	margin-bottom: 0 !important
-	&__bandeja,
-	&__panel
-		height: 100%
-		padding: 0
 	// Teléfono: las dos columnas se apilan, el panel compacto ARRIBA y la bandeja abajo. En el DOM
 	// la bandeja va primero (así queda a la izquierda en escritorio y tablet), por eso el `order`.
 	@media screen and (max-width: 767px)
 		height: auto
 		min-height: 100vh
-		&__panel
-			order: 1
-		&__bandeja
-			order: 2
-		&__bandeja,
-		&__panel
-			height: auto
+
+// 🔴 Las columnas van con DOS clases (el módulo > la columna) y no con `&__bandeja` a secas. Con
+// una sola clase empataban en especificidad con `.col-12` / `.col-md-4` de Bootstrap y ganaba el
+// que se cargara último: después de pasar por Clientes de Tienda Online, que vuelve a inyectar
+// Bootstrap con `@import '@/sass/_custom'`, reaparecían los 15 px de padding de la columna
+// alrededor de la bandeja y del panel. Con (0,2,0) gana siempre, sin depender del orden.
+.tienda-mensajes-modulo > .tienda-mensajes-modulo__bandeja,
+.tienda-mensajes-modulo > .tienda-mensajes-modulo__panel
+	height: 100%
+	padding: 0
+	@media screen and (max-width: 767px)
+		height: auto
+
+@media screen and (max-width: 767px)
+	.tienda-mensajes-modulo > .tienda-mensajes-modulo__panel
+		order: 1
+	.tienda-mensajes-modulo > .tienda-mensajes-modulo__bandeja
+		order: 2
 
 .tienda-mensajes-sin-permiso
 	padding: 24px 0
