@@ -81,6 +81,10 @@ let pedido_de_chats = 0
 let pedido_de_mensajes = 0
 let version_de_eventos = 0
 let temporizador_resumen = null
+// Pedidos en vuelo del resumen y de la lista de sin leer (`{generacion, promesa}` o null), para
+// reusarlos si se piden dos veces a la vez en vez de mandar dos pedidos iguales.
+let resumen_en_vuelo = null
+let no_leidos_en_vuelo = null
 
 function estado_inicial() {
 	return {
@@ -124,6 +128,9 @@ function estado_inicial() {
 		chats_no_leidos: [],
 		chats_no_leidos_total: 0,
 		chats_no_leidos_cargados: false,
+		// true mientras viaja el pedido de la lista: la tabla de Alertas muestra "Cargando..." en
+		// vez del vacío, que diría "no hay mensajes sin leer" antes de saberlo.
+		chats_no_leidos_loading: false,
 
 		// --- Sidebar y conversación ---------------------------------------------------------
 		// El sidebar se abre y se cierra desde acá, igual que el de WhatsApp: hay UNA sola
@@ -439,6 +446,9 @@ export default {
 			state.chats_no_leidos_total = entero(payload.total || lista.length)
 			state.chats_no_leidos_cargados = true
 		},
+		setChatsNoLeidosLoading(state, value) {
+			state.chats_no_leidos_loading = !!value
+		},
 		upsertChatNoLeido(state, chat) {
 			let lista = state.chats_no_leidos.slice()
 			let index = lista.findIndex(c => c.buyer_id == chat.buyer_id)
@@ -672,9 +682,14 @@ export default {
 		 * el badge de Tienda Online desde el login, sin entrar al submódulo) y al reconectar.
 		 */
 		getResumen({ commit, dispatch }) {
+			// Si ya hay uno en vuelo para este mismo comercio, se reusa: entrar a Alertas por URL
+			// directa lo pide dos veces en el mismo instante (la pestaña y la tabla).
+			if (resumen_en_vuelo && resumen_en_vuelo.generacion == generacion) {
+				return resumen_en_vuelo.promesa
+			}
 			let generacion_del_pedido = generacion
 			let version_al_pedir = version_de_eventos
-			return axios.get('/api/tienda-chats/resumen', OPCIONES_SILENCIOSAS)
+			let promesa = axios.get('/api/tienda-chats/resumen', OPCIONES_SILENCIOSAS)
 				.then(res => {
 					if (generacion_del_pedido != generacion) {
 						return
@@ -686,8 +701,17 @@ export default {
 					}
 				})
 				.catch(err => {
+					// Sin reintento acá (una API vieja sin el endpoint quedaría en bucle): lo vuelve
+					// a pedir el próximo evento en vivo, la reconexión de Echo o entrar al submódulo.
 					console.log(err)
 				})
+				.then(() => {
+					if (resumen_en_vuelo && resumen_en_vuelo.promesa === promesa) {
+						resumen_en_vuelo = null
+					}
+				})
+			resumen_en_vuelo = { generacion: generacion_del_pedido, promesa: promesa }
+			return promesa
 		},
 		/**
 		 * Vuelve a pedir el resumen en un rato, juntando en un solo pedido todo lo que llegue en el
@@ -708,9 +732,15 @@ export default {
 		 * @returns {Promise} resuelve siempre: Alertas apaga el cargando global en el `.then()`.
 		 */
 		getChatsNoLeidos({ commit }) {
+			// Mismo criterio que getResumen: si ya hay uno en vuelo, se reusa (la tabla de Alertas lo
+			// pide al entrar a la pestaña y views/Alertas.vue también, al volver a tocarla).
+			if (no_leidos_en_vuelo && no_leidos_en_vuelo.generacion == generacion) {
+				return no_leidos_en_vuelo.promesa
+			}
 			let generacion_del_pedido = generacion
 			let opciones_axios = Object.assign({ params: { page: 1, solo_no_leidos: 1, buscar: '' } }, OPCIONES_SILENCIOSAS)
-			return axios.get('/api/tienda-chats', opciones_axios)
+			commit('setChatsNoLeidosLoading', true)
+			let promesa = axios.get('/api/tienda-chats', opciones_axios)
 				.then(res => {
 					if (generacion_del_pedido != generacion) {
 						return
@@ -721,6 +751,16 @@ export default {
 				.catch(err => {
 					console.log(err)
 				})
+				.then(() => {
+					if (generacion_del_pedido == generacion) {
+						commit('setChatsNoLeidosLoading', false)
+					}
+					if (no_leidos_en_vuelo && no_leidos_en_vuelo.promesa === promesa) {
+						no_leidos_en_vuelo = null
+					}
+				})
+			no_leidos_en_vuelo = { generacion: generacion_del_pedido, promesa: promesa }
+			return promesa
 		},
 		/**
 		 * Deja el sidebar abierto y parado en la conversación de un comprador. Es la única puerta

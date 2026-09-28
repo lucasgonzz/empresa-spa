@@ -150,9 +150,11 @@ export default {
 				if (this.view == 'mensajes') {
 					// Conversaciones de la tienda con algo sin leer (store tienda_mensajes, misión
 					// mensajes-tienda-online). Antes bajaba TODOS los compradores con buyer/getModels
-					// para filtrar en el navegador. El resumen se pide junto para que el número de la
-					// pestaña y la tabla digan lo mismo. La acción resuelve siempre, así que el
-					// cargando global no puede quedar prendido.
+					// para filtrar en el navegador. Esto es solo el "volver a tocar la pestaña para
+					// recargar": la carga al ENTRAR la hace la propia tabla (lista-de-alertas-table/
+					// Mensajes.vue, watch de `view`), porque este método no corre en ese momento. Si
+					// los dos piden a la vez, el store reusa el pedido en vuelo. La acción resuelve
+					// siempre, así que el cargando global no puede quedar prendido.
 					this.$store.dispatch('tienda_mensajes/getResumen')
 					this.$store.dispatch('tienda_mensajes/getChatsNoLeidos')
 					.then(() => {
