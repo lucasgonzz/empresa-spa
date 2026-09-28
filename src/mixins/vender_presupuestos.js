@@ -108,7 +108,7 @@ export default {
 				'discounts_in_services'		: this.discounts_in_services,
 
 				/*
-					El flag tiene que viajar. Con el prendido, generals.js::aplicar_recargos() ya dejo
+					El flag tiene que viajar. Con el prendido, generals.js::getPriceVender() ya dejo
 					el recargo adentro de cada price_vender y vender_set_total.js::aplicar_surchages()
 					se salteo sumarlo al total: los precios y el total que mandamos ya lo contemplan.
 					Si el campo no llega, BudgetHelper::getTotal() vuelve a sumar el recargo sobre
@@ -383,6 +383,12 @@ export default {
 					price_type_personalizado_id : article.price_type_personalizado_id,
 					bonus : typeof article.discount != 'undefined' ? article.discount : null,
 					location : null,
+					/*
+						Precio sin los recargos de venta (ver precio_sin_recargos_del_renglon). Va al
+						lado de `price`, asi que viaja plano al crear y adentro de `pivot` al
+						actualizar un renglon que ya estaba cargado, igual que el precio.
+					*/
+					price_vender_sin_recargos : this.precio_sin_recargos_del_renglon(article),
 				}
 
 				if (
@@ -436,6 +442,7 @@ export default {
 					pivot: {
 						amount: service.amount,
 						price: service.price_vender,
+						price_vender_sin_recargos: this.precio_sin_recargos_del_renglon(service),
 					}
 				})
 				console.log(services)
@@ -451,6 +458,7 @@ export default {
 					pivot: {
 						amount: promo.amount,
 						price: promo.price_vender,
+						price_vender_sin_recargos: this.precio_sin_recargos_del_renglon(promo),
 					}
 				})
 				console.log(promocion_vinotecas)
@@ -470,10 +478,43 @@ export default {
 					pivot: {
 						amount: combo.amount,
 						price: combo.price_vender,
+						price_vender_sin_recargos: this.precio_sin_recargos_del_renglon(combo),
 					}
 				})
 			})
 			return combos
+		},
+		/**
+		 * El precio SIN los recargos de venta de un renglon del remito, para el payload del
+		 * presupuesto (mision recargos-en-precios-editable, 28/9/2026). Lo deja
+		 * generals.js::getPriceVender() en item.price_vender_sin_recargos cada vez que calcula el
+		 * precio; null si el precio no tiene recargos adentro.
+		 *
+		 * 🔴 Viaja SIEMPRE, tambien en null, y no se omite "porque es null". En el presupuesto la
+		 * API trata distinto la clave ausente y la clave en null: ausente PRESERVA la base guardada
+		 * del renglon si el precio no cambio (es lo que manda el formulario generico del modulo
+		 * Presupuestos, que no conoce la clave), y null la BORRA. Con la opcion apagada el renglon
+		 * tiene que quedar sin base, y solo el null lo dice.
+		 *
+		 * A diferencia de la venta -donde el item viaja entero- aca los renglones se arman a mano,
+		 * asi que cada get_* tiene que sumar la clave: el que se olvide deja el presupuesto con la
+		 * opcion prendida bloqueado al reabrirlo.
+		 *
+		 * @param {Object} item
+		 * @returns {Number|null}
+		 */
+		precio_sin_recargos_del_renglon(item) {
+			let precio_sin_recargos = item ? item.price_vender_sin_recargos : null
+
+			if (
+				typeof precio_sin_recargos != 'number'
+				|| isNaN(precio_sin_recargos)
+				|| !isFinite(precio_sin_recargos)
+			) {
+				return null
+			}
+
+			return precio_sin_recargos
 		},
 
 	}
