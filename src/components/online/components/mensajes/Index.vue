@@ -46,6 +46,16 @@
 			</div>
 		</b-col>
 	</b-row>
+	<!-- /online/mensajes sin el permiso: se dice, en vez de dejar la pantalla en blanco. -->
+	<div
+	v-else-if="view == 'mensajes'"
+	class="tienda-mensajes-sin-permiso"
+	data-testid="tienda-mensajes-sin-permiso">
+		<empty-state
+		icon_class="bi bi-lock"
+		title="No tenés acceso a los mensajes de la tienda"
+		hint="Para ver y contestar los mensajes de tus clientes hace falta el permiso de clientes de Tienda Online. Pedíselo al dueño de la cuenta."></empty-state>
+	</div>
 </template>
 <script>
 import Bandeja from '@/components/online/components/mensajes/bandeja/Index'
@@ -70,10 +80,18 @@ import Bandeja from '@/components/online/components/mensajes/bandeja/Index'
 export default {
 	components: {
 		Bandeja,
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 	},
 	computed: {
+		/**
+		 * 🔴 No alcanza con la vista: Tienda Online se ve con `order.index` O con `buyer.index`, así
+		 * que un empleado con solo pedidos llegaba a /online/mensajes (por URL o por el aviso de
+		 * Alertas) y veía la bandeja de todos los compradores. Se pide el mismo permiso que el hijo
+		 * "Mensajes" del menú y que el anfitrión del sidebar. Como la carga cuelga del watch de este
+		 * computed, sin permiso tampoco sale ningún pedido a la API.
+		 */
 		es_la_vista() {
-			return this.view == 'mensajes'
+			return this.view == 'mensajes' && this.hasExtencion('online') && this.can('buyer.index')
 		},
 		resumen() {
 			return this.$store.state.tienda_mensajes.resumen
@@ -162,6 +180,9 @@ export default {
 		&__bandeja,
 		&__panel
 			height: auto
+
+.tienda-mensajes-sin-permiso
+	padding: 24px 0
 
 .tienda-mensajes-panel
 	height: 100%
