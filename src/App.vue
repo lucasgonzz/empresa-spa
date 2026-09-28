@@ -25,6 +25,14 @@
         -->
         <whatsapp-sidebar-host></whatsapp-sidebar-host>
         <!--
+            Anfitrión del sidebar de Mensajes de Tienda Online (misión mensajes-tienda-online,
+            28/9/2026). Acá arriba por lo mismo que el de WhatsApp: la conversación se abre desde
+            el submódulo, desde Clientes, desde Alertas y desde el aviso de mensaje nuevo, y el
+            mensaje del comprador tiene que entrar en vivo esté donde esté el operador. Es el dueño
+            único de esa suscripción y se gatea solo (sesión + extensión `online` + `buyer.index`).
+        -->
+        <tienda-mensajes-sidebar-host></tienda-mensajes-sidebar-host>
+        <!--
             Descripciones de controles. Va acá, una sola vez para toda la aplicación, porque
             escucha el mouse por delegación en `document` y busca el control por su
             `data-testid` en el diccionario de `src/descripciones/`. Poner una descripción no
@@ -143,6 +151,7 @@ import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
 import SupportChatFloatingButton from '@/common-vue/components/support-chat/FloatingButton'
 import AsistenteIaFloatingButton from '@/components/asistente-ia/FloatingButton'
 import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
+import TiendaMensajesSidebarHost from '@/components/online/components/mensajes/SidebarHost'
 import DescripcionDeControl from '@/common-vue/components/ayuda/DescripcionDeControl'
 import AppInstaladaVieja from '@/components/common/AppInstaladaVieja'
 
@@ -178,6 +187,7 @@ export default {
         SupportChatFloatingButton,
         AsistenteIaFloatingButton,
         WhatsappSidebarHost,
+        TiendaMensajesSidebarHost,
         DescripcionDeControl,
         AppInstaladaVieja,
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),

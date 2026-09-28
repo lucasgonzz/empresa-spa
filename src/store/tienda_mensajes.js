@@ -769,7 +769,9 @@ export default {
 				este_pedido = pedido_de_mensajes
 				commit('setMessagesLoadingMore', true)
 			}
-			let opciones_axios = Object.assign({ params: { page: page } }, silent ? OPCIONES_SILENCIOSAS : OPCIONES_BASE)
+			// Siempre sin el aviso global de error: el que llama lo muestra con su propio texto (un
+			// 404 acá no es un error del sistema, es "ese comprador no es de tu tienda").
+			let opciones_axios = Object.assign({ params: { page: page } }, OPCIONES_SILENCIOSAS)
 			return axios.get('/api/tienda-chats/' + buyer_id + '/mensajes', opciones_axios)
 				.then(res => {
 					let es_el_ultimo = este_pedido == pedido_de_mensajes
