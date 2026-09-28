@@ -1539,10 +1539,7 @@ export default {
 			 */
 			encabezado_fila: null,
 
-			/* Motivo de la detección: 'primera_fila_con_contenido' | 'encabezado_corrido' | 'sin_candidata_clara'. */
-			encabezado_motivo: null,
-
-			/* Confianza de la detección: 'alta' | 'baja'. Con 'baja' el campo se muestra resaltado. */
+			/* Confianza de la detección: 'alta' | 'baja'. Con 'baja' se avisa en el resumen del paso 2. */
 			encabezado_confianza: 'alta',
 
 			/*
@@ -1903,7 +1900,7 @@ export default {
 		 * mapeo que el usuario está por confirmar. Vacío si el backend no lo informó.
 		 */
 		resumen_de_hoja_y_encabezado() {
-			if (!this.hoja_elegida_del_backend && !this.encabezado_del_backend) {
+			if (!this.hoja_elegida_del_backend && !this.encabezado_del_backend && this.has_header_row !== false) {
 				return ''
 			}
 
@@ -1917,18 +1914,26 @@ export default {
 				partes.push('encabezado en la fila ' + this.encabezado_del_backend.fila)
 			}
 
-			let resumen = partes.join(' — ')
-
 			/*
 			 * Sin el control manual, una detección de confianza baja ya no se avisa en el
 			 * paso 1: esta coletilla es lo único que le dice al usuario que convendría
 			 * revisar el Excel antes de confirmar el mapeo.
 			 */
 			if (this.encabezado_del_backend && this.encabezado_del_backend.confianza === 'baja') {
-				resumen += ' — revisá la fila de encabezado (confianza baja)'
+				partes.push('revisá la fila de encabezado (confianza baja)')
 			}
 
-			return resumen
+			/*
+			 * Ídem para "sin cabecera": el aviso "Claude recibirá solo los datos para inferir
+			 * el mapeo" vivía en el control manual que se sacó del paso 1. Sin esta línea el
+			 * usuario no tiene ninguna forma de saber que el sistema decidió que su planilla
+			 * no tiene fila de encabezado.
+			 */
+			if (this.has_header_row === false) {
+				partes.push('sin cabecera de columnas: Claude va a inferir el mapeo solo con los datos')
+			}
+
+			return partes.join(' — ')
 		},
 
 		/*
@@ -2996,7 +3001,6 @@ export default {
 			self.hoja_seleccionada    = null
 			self.hoja_leida           = null
 			self.encabezado_fila      = null
-			self.encabezado_motivo    = null
 			self.encabezado_confianza = 'alta'
 
 			return new Promise(function(resolve, reject) {
@@ -3232,7 +3236,6 @@ export default {
 				/* start_row ANTES de has_header_row: ver el comentario del watcher (T16). */
 				this.start_row                = start_row_sin_ref
 				this.encabezado_fila          = rows.length > 0 ? 1 : null
-				this.encabezado_motivo        = 'primera_fila_con_contenido'
 				this.encabezado_confianza     = 'baja'
 				this.has_header_row           = true
 				return
@@ -3253,7 +3256,6 @@ export default {
 
 			this.start_row            = Math.max(1, calculated_start_row)
 			this.encabezado_fila      = deteccion.es_encabezado ? deteccion.fila : null
-			this.encabezado_motivo    = deteccion.motivo
 			this.encabezado_confianza = deteccion.confianza
 			this.has_header_row       = deteccion.es_encabezado
 		},
@@ -4226,7 +4228,6 @@ export default {
 
 			if (this.encabezado_del_backend && this.encabezado_del_backend.fila) {
 				this.encabezado_fila      = Number(this.encabezado_del_backend.fila)
-				this.encabezado_motivo    = this.encabezado_del_backend.motivo || null
 				this.encabezado_confianza = this.encabezado_del_backend.confianza || 'alta'
 			}
 
@@ -5750,7 +5751,6 @@ export default {
 			this.hoja_leida                  = null
 			this.workbook_cache              = null
 			this.encabezado_fila             = null
-			this.encabezado_motivo           = null
 			this.encabezado_confianza        = 'alta'
 			this.columnas_sin_nombre         = []
 			this.columnas_ambiguas           = []
