@@ -510,8 +510,12 @@ export default {
 				return
 			}
 			let id_minimo = frescos.reduce((minimo, m) => Math.min(minimo, entero(m.id)), Infinity)
+			let id_maximo = frescos.reduce((maximo, m) => Math.max(maximo, entero(m.id)), 0)
 			let viejos = state.messages.filter(m => entero(m.id) < id_minimo)
-			state.messages = viejos.concat(frescos)
+			// Los que entraron por broadcast mientras el pedido viajaba son más nuevos que la
+			// página que volvió: se conservan al final en vez de perderse hasta la próxima recarga.
+			let llegados_en_el_medio = state.messages.filter(m => entero(m.id) > id_maximo)
+			state.messages = viejos.concat(frescos, llegados_en_el_medio)
 		},
 		setMessagesPaginas(state, payload) {
 			state.messages_page = entero(payload.page)
@@ -789,7 +793,12 @@ export default {
 					let datos = res.data || {}
 					let lista = Array.isArray(datos.data) ? datos.data : []
 					if (page == 1 && !silent) {
-						commit('setMessages', lista)
+						// La conversación se vació al pedirla (watch de conversacion/Index.vue): lo que
+						// haya ahora en `messages` entró por broadcast mientras el pedido viajaba. Lo
+						// que sea más nuevo que la página que volvió se conserva al final.
+						let id_maximo = lista.reduce((maximo, m) => Math.max(maximo, entero(m.id)), 0)
+						let llegados_en_el_medio = state.messages.filter(m => entero(m.id) > id_maximo)
+						commit('setMessages', lista.concat(llegados_en_el_medio))
 						commit('setMessagesPaginas', { page: datos.current_page || 1, last_page: datos.last_page })
 					} else if (page == 1) {
 						commit('fusionarMessages', lista)
