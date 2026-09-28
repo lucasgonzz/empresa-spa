@@ -1024,8 +1024,14 @@ export default {
 					delta.conversaciones_hoy = 1
 				}
 				commit('ajustarResumen', delta)
-			} else if (state.resumen_cargado) {
-				// No se sabe cómo estaba antes (o cambió el día): el resumen se pide de nuevo.
+			} else {
+				/*
+					No se sabe cómo estaba antes, cambió el día, o el resumen todavía no se tiene:
+					se pide de nuevo. 🔴 Incluye el caso "no cargado" a propósito: si el pedido del
+					login falló (la API tardó, se cortó la red), sin esto los badges quedaban en 0
+					toda la sesión aunque entraran mensajes. Si hay un pedido del resumen en vuelo,
+					la guarda de versión de `getResumen` lo vuelve a pedir al terminar.
+				*/
 				dispatch('pedirResumenPronto')
 			}
 
