@@ -64,6 +64,32 @@ export default {
                 this.$emit(prop.button.emit, model)
                 return
             }
+			/*
+				Botón que declara `button.function` en el modelo (misión mensajes-tienda-online,
+				28/9/2026): se llama a ESE método con la fila. Hoy lo usan los botones "WhatsApp" y
+				"Mensaje" de Clientes de Tienda Online (src/models/buyer.js), que despachan
+				sendWhatsApp / sendMessage de src/mixins/model_functions.js.
+
+				🔴 Sin esta rama esos dos botones no hacían nada: caían al forEach de abajo con
+				`call_functions` undefined y tiraban TypeError en la consola. Este callMethod es el
+				que gana entre los mixins globales (va después de generals en common-vue/mixins/app.js),
+				y el de generals.js, que sí entendía `button.function`, quedaba tapado.
+
+				Si el método no existe, se avisa por consola y no se tira: un botón mal declarado no
+				puede romper la tabla.
+			*/
+			if (prop.button && prop.button.function) {
+				if (typeof this[prop.button.function] === 'function') {
+					this[prop.button.function](model)
+				} else {
+					console.warn('callMethod: no existe el método "' + prop.button.function + '" que pide el botón', prop)
+				}
+				return
+			}
+			if (!prop.button || !Array.isArray(prop.button.call_functions)) {
+				console.warn('callMethod: el botón no declara emit, function ni call_functions', prop)
+				return
+			}
 			prop.button.call_functions.forEach(funcion => {
 				this[funcion.name](...funcion.params)
 			})
