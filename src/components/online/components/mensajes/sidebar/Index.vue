@@ -77,13 +77,27 @@ export default {
 	},
 	data() {
 		return {
-			ancho_px: ANCHO_DEFAULT,
+			/*
+				Ancho que ELIGIÓ el operador (el guardado, o el último que arrastró), sin acotar.
+				🔴 Se guarda aparte del ancho que se dibuja: si se guardara ya acotado, pasar por una
+				ventana angosta (o por el ancho de teléfono) lo dejaba clavado en el mínimo, y al
+				volver a escritorio el panel no retomaba el ancho guardado. Medido en la verificación
+				visual: se abrió a 375, se agrandó a 820 y a 1440, y quedó en 320 con 460 guardado.
+			*/
+			ancho_preferido: ANCHO_DEFAULT,
 			viewport_width: typeof window !== 'undefined' ? window.innerWidth : 1200,
 		}
 	},
 	computed: {
 		es_movil() {
 			return this.viewport_width < 768
+		},
+		/**
+		 * El ancho que se dibuja: el elegido, acotado a la ventana de AHORA. Se recalcula solo con
+		 * cada cambio de tamaño de la ventana.
+		 */
+		ancho_px() {
+			return this.acotar_ancho(this.ancho_preferido)
 		},
 		estilo_panel() {
 			if (this.es_movil) {
@@ -127,8 +141,8 @@ export default {
 			this.$store.commit('tienda_mensajes/setSidebarAbierto', false)
 		},
 		/**
-		 * Ancho inicial: el que quedó guardado o el default, acotado igual (puede venir de una
-		 * pantalla más grande que esta).
+		 * Ancho inicial: el que quedó guardado o el default. Se acota recién al dibujar
+		 * (`ancho_px`), porque puede venir de una pantalla más grande que esta.
 		 */
 		hidratar_ancho() {
 			let guardado = NaN
@@ -140,10 +154,11 @@ export default {
 			if (isNaN(guardado)) {
 				guardado = ANCHO_DEFAULT
 			}
-			this.ancho_px = this.acotar_ancho(guardado)
+			// Sin acotar: lo acota `ancho_px` contra la ventana que haya en cada momento.
+			this.ancho_preferido = guardado
 		},
 		acotar_ancho(ancho) {
-			let maximo = Math.floor(window.innerWidth * 0.75)
+			let maximo = Math.floor(this.viewport_width * 0.75)
 			if (maximo < ANCHO_MIN) {
 				return maximo
 			}
@@ -156,20 +171,18 @@ export default {
 		 * @param {Number} delta
 		 */
 		on_resize(delta) {
-			this.ancho_px = this.acotar_ancho(this.ancho_px - delta)
+			this.ancho_preferido = this.acotar_ancho(this.ancho_px - delta)
 		},
 		on_resize_end() {
 			try {
-				localStorage.setItem(CLAVE_ANCHO, String(this.ancho_px))
+				localStorage.setItem(CLAVE_ANCHO, String(this.ancho_preferido))
 			} catch (e) {
 				// Sin almacenamiento local: el ancho dura lo que dure la pestaña.
 			}
 		},
 		on_window_resize() {
+			// `ancho_px` sale de acá: no se toca el ancho elegido, solo cambia contra qué se acota.
 			this.viewport_width = window.innerWidth
-			if (!this.es_movil) {
-				this.ancho_px = this.acotar_ancho(this.ancho_px)
-			}
 		},
 		/**
 		 * Escape cierra el sidebar, salvo que haya un modal de Bootstrap abierto encima (el body
