@@ -1096,14 +1096,17 @@ export default {
 		 * Payload: `{ buyer_id, chat: {buyer_id, unread_count, last_message_at}, buyer, message }`.
 		 * `message` viene en null en el evento de "leído" (ahí `unread_count` es 0).
 		 *
-		 * @returns {Promise} resuelve con `{ mensaje_nuevo_del_comprador, conversacion_abierta, buyer }`
-		 *                    para que el anfitrión decida si suena, avisa o marca leído.
+		 * @returns {Promise} resuelve con `{ mensaje_nuevo_del_comprador, conversacion_abierta, buyer,
+		 *                    marcar_leido }` para que el anfitrión decida si suena, avisa o marca leído.
 		 */
 		aplicarBroadcast({ commit, state, dispatch }, payload) {
 			let resultado = {
 				mensaje_nuevo_del_comprador: false,
 				conversacion_abierta: false,
 				buyer: null,
+				// Un mensaje repetido del comprador que la conversación abierta tiene cargado y
+				// todavía sin leer (ver más abajo): el anfitrión lo marca leído si la pestaña se ve.
+				marcar_leido: false,
 			}
 			if (!payload || !payload.buyer_id) {
 				return resultado
@@ -1133,6 +1136,28 @@ export default {
 					repetido = true
 				}
 			}
+
+			/*
+				🔴 Evento ATRASADO de un mensaje que la conversación abierta ya tiene. Caso medido en
+				el navegador: el mensaje del comprador entra a la base, el operador abre la
+				conversación (el GET ya lo trae y el `leer` lo marca leído), y DESPUÉS llega el evento
+				de ese mismo mensaje con el `unread_count: 1` que había al emitirlo. Aplicar ese número
+				dejaba el badge en 1 con la base en 0 hasta el próximo resumen.
+
+				Si la copia cargada ya está leída, el `leer` la cubrió (se hizo con el mensaje ya en
+				pantalla): el evento no puede dejar no leídos en esta conversación, y se conserva lo que
+				dejó el `leer` en la fila y en el resumen, sin ningún pedido de más. Si la copia está
+				SIN leer (la trajo una recarga silenciosa después del `leer`), el número del evento es
+				el verdadero y se pide marcar leído.
+			*/
+			let copia_cargada = conversacion_abierta && message
+				? state.messages.find(m => m.id == message.id) || null
+				: null
+			let del_comprador_y_ya_leido = !!copia_cargada && booleano(message.from_buyer) && booleano(copia_cargada.read)
+			if (del_comprador_y_ya_leido) {
+				unread_nuevo = conocida ? entero(conocida.unread_count) : 0
+			}
+			resultado.marcar_leido = !!copia_cargada && booleano(message.from_buyer) && !booleano(copia_cargada.read) && unread_nuevo > 0
 
 			resultado.conversacion_abierta = conversacion_abierta
 			resultado.buyer = payload.buyer
@@ -1207,7 +1232,8 @@ export default {
 			// --- 4. Conversación abierta ----------------------------------------------------
 			if (conversacion_abierta) {
 				if (message) {
-					commit('appendMessage', message)
+					// Un evento atrasado no puede volver a "sin leer" la copia que ya se leyó.
+					commit('appendMessage', del_comprador_y_ya_leido ? Object.assign({}, message, { read: true }) : message)
 					// El broadcast recorta el texto a 500 caracteres (Pusher corta a los 10 KB por
 					// evento): el mensaje entero se trae de la base sin que la pantalla parpadee.
 					if (booleano(message.text_truncado)) {

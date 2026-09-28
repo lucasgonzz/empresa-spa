@@ -150,7 +150,16 @@ export default {
 			let self = this
 			this.$store.dispatch('tienda_mensajes/aplicarBroadcast', payload)
 			.then(function (resultado) {
-				if (!resultado || !resultado.mensaje_nuevo_del_comprador) {
+				if (!resultado) {
+					return
+				}
+				// Mensaje repetido que la conversación abierta tiene cargado sin leer (lo trajo una
+				// recarga silenciosa después del último "leído"): se marca leído si alguien lo ve.
+				if (resultado.marcar_leido && self.pestana_visible()) {
+					self.$store.dispatch('tienda_mensajes/marcarLeido', payload.buyer_id)
+					return
+				}
+				if (!resultado.mensaje_nuevo_del_comprador) {
 					return
 				}
 				if (resultado.conversacion_abierta && self.pestana_visible()) {
