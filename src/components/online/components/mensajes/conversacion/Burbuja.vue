@@ -7,11 +7,14 @@
 	}"
 	data-testid="tienda-mensajes-burbuja">
 		<!-- Mensaje que mandó el sistema solo (pedido confirmado, pago acreditado...): el rótulo
-		dice de qué se trata. Sin él se leía como si el comercio lo hubiera escrito a mano. -->
+		dice de qué se trata. Sin él se leía como si el comercio lo hubiera escrito a mano. También
+		rotula la consulta que el comprador escribió desde "Ayuda" de la tienda (ver helpers.js). -->
 		<div
 		v-if="rotulo"
 		class="tienda-mensajes-burbuja__rotulo">
-			<i class="bi bi-lightning-charge-fill"></i>
+			<i
+			class="bi"
+			:class="icono_rotulo"></i>
 			{{ rotulo }}
 		</div>
 
@@ -60,7 +63,7 @@
 </template>
 <script>
 import moment from 'moment'
-import { es_verdadero, rotulo_del_mensaje } from '@/components/online/components/mensajes/helpers'
+import { es_verdadero, icono_del_rotulo, rotulo_del_mensaje } from '@/components/online/components/mensajes/helpers'
 
 /**
  * Burbuja de un mensaje de la conversación de la tienda. Basada en
@@ -83,6 +86,9 @@ export default {
 		},
 		rotulo() {
 			return rotulo_del_mensaje(this.message)
+		},
+		icono_rotulo() {
+			return icono_del_rotulo(this.message)
 		},
 		hora() {
 			return this.message.created_at ? moment(this.message.created_at).format('HH:mm') : ''
@@ -116,8 +122,9 @@ export default {
 		margin-bottom: 3px
 		font-size: .7rem
 		font-weight: 700
-		// --wa-sender y no --wa-verde: el rótulo va sobre la burbuja saliente, que en claro es
-		// verde pálido, y el verde de la marca encima no se lee (1,8:1).
+		// --wa-sender y no --wa-verde: los automáticos van sobre la burbuja saliente, que en claro es
+		// verde pálido, y el verde de la marca encima no se lee (1,8:1). El de "Consulta desde
+		// Ayuda" va sobre la entrante (blanca en claro, #202c33 en oscuro) y ahí también se lee.
 		color: var(--wa-sender)
 	&__texto
 		margin: 0

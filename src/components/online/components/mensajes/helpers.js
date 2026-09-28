@@ -25,18 +25,50 @@ export const ROTULOS_POR_TIPO = {
 }
 
 /**
- * Rótulo de un mensaje automático, o null si lo escribió una persona. Un `type` que no está en la
- * lista (uno que agregue el backend mañana) igual se marca como automático: dibujarlo como si lo
- * hubiera escrito el comercio a mano sería mentirle al que lee.
+ * Rótulo de los mensajes que ESCRIBE EL COMPRADOR pero llegan con un `type`: el de "Ayuda →
+ * Escribinos" de la tienda se guarda con `type = 'help'` (`HelpController` de tienda-api). No es
+ * automático: lo escribió una persona, y el rótulo solo dice por dónde entró.
+ */
+export const ROTULOS_DEL_COMPRADOR = {
+	help: 'Consulta desde Ayuda',
+}
+
+/**
+ * Rótulo de un mensaje, o null si no lleva.
  *
- * @param {Object|null} message Mensaje con `type`.
+ * 🔴 Un mensaje del comprador (`from_buyer`) NUNCA se rotula como automático: los automáticos los
+ * manda el sistema en nombre del comercio. Del comprador solo se rotulan los `type` conocidos de
+ * `ROTULOS_DEL_COMPRADOR`; cualquier otro `type` se muestra como lo que es, un mensaje suyo.
+ *
+ * Del lado del comercio, un `type` que no está en la lista (uno que agregue el backend mañana) sí
+ * se marca como automático: dibujarlo como si el comercio lo hubiera escrito a mano sería mentirle
+ * al que lee.
+ *
+ * @param {Object|null} message Mensaje con `type` y `from_buyer`.
  * @returns {String|null}
  */
 export function rotulo_del_mensaje(message) {
 	if (!message || !message.type) {
 		return null
 	}
-	return ROTULOS_POR_TIPO[message.type] || 'Mensaje automático'
+	if (es_verdadero(message.from_buyer)) {
+		return ROTULOS_DEL_COMPRADOR[message.type] || null
+	}
+	return ROTULOS_POR_TIPO[message.type] || ROTULOS_DEL_COMPRADOR[message.type] || 'Mensaje automático'
+}
+
+/**
+ * Ícono del rótulo: el rayo para lo que mandó el sistema solo, el signo de pregunta para una
+ * consulta que el comprador escribió desde Ayuda.
+ *
+ * @param {Object|null} message
+ * @returns {String} clase de bootstrap-icons.
+ */
+export function icono_del_rotulo(message) {
+	if (message && ROTULOS_DEL_COMPRADOR[message.type]) {
+		return 'bi-question-circle'
+	}
+	return 'bi-lightning-charge-fill'
 }
 
 /**
