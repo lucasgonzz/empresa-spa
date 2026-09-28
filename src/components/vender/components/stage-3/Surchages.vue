@@ -40,7 +40,7 @@
 						Este comprobante se guardó con los recargos aplicados directamente a los precios de los artículos, antes de que el sistema registrara cuánto valía cada precio sin el recargo.
 					</p>
 					<p>
-						Por eso no se pueden agregar ni quitar recargos, ni cambiar la opción de aplicarlos a los precios.
+						Por eso no se pueden agregar ni quitar recargos, ni cambiar "Aplicar recargos en los servicios", ni la opción de aplicarlos directamente a los precios.
 					</p>
 				</div>
 
@@ -107,7 +107,7 @@
 					<p
 					v-if="!desactivar_recargos"
 					class="vender-rate-panel__section-hint">
-						Podés cambiarla también al editar la venta o el presupuesto: los precios se recalculan solos y el total no cambia.
+						Podés cambiar esta opción también al editar la venta o el presupuesto: los precios se recalculan solos. El total se mantiene, salvo algún centavo por el redondeo de los precios.
 					</p>
 
 					<!-- Aviso del motivo por el que la opción está deshabilitada -->
@@ -160,7 +160,8 @@ export default {
 		 * Hasta esa misión se bloqueaba TODA venta o presupuesto guardado con la opción
 		 * prendida, por el mismo motivo. Ahora cada renglón guarda su precio sin recargos y
 		 * getPriceVender() lo rearma desde ahí, así que editando se pueden cambiar los recargos
-		 * y la opción, y el total no se mueve.
+		 * y la opción, y el total no se mueve (salvo algún centavo por unidad: con la opción
+		 * prendida el precio con recargos se redondea a centavos, ver getPriceVender()).
 		 *
 		 * El flag lo calcula previus_sale/index.js al abrir el comprobante (sirve para la venta
 		 * Y para el presupuesto: un presupuesto se abre con `vender/setBudget` y nunca setea
@@ -213,9 +214,6 @@ export default {
 				return true
 			}
 			return this.sin_recargos_seleccionados
-		},
-		previus_sale() {
-			return this.$store.state.vender.previus_sales.previus_sale
 		},
 		surchages() {
 			return this.$store.state.surchage.models
