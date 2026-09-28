@@ -55,7 +55,7 @@ const OPCIONES_SILENCIOSAS = {
 }
 
 // Largo del preview del último mensaje en la fila de la bandeja. El listado ya lo manda recortado
-// a 200; el broadcast manda hasta 2000, así que se recorta acá para que la fila pese lo mismo.
+// a 200; el broadcast manda hasta 500, así que se recorta acá para que la fila pese lo mismo.
 const LARGO_PREVIEW = 200
 
 // Espera antes de volver a pedir el resumen cuando no se lo puede recalcular en memoria: junta en
@@ -1079,7 +1079,7 @@ export default {
 			if (conversacion_abierta) {
 				if (message) {
 					commit('appendMessage', message)
-					// El broadcast recorta el texto a 2000 caracteres (Pusher corta a los 10 KB por
+					// El broadcast recorta el texto a 500 caracteres (Pusher corta a los 10 KB por
 					// evento): el mensaje entero se trae de la base sin que la pantalla parpadee.
 					if (booleano(message.text_truncado)) {
 						dispatch('getMessages', { buyer_id: buyer_id, page: 1, silent: true })
