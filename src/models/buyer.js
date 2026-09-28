@@ -52,10 +52,15 @@ export default {
 			}
 		},
 		/*
-			Botón "Mensaje" oculto en la misión "chat IA" (15/8/2026): el módulo de
-			mensajes de la tienda quedó fuera de pantalla (Online.vue ya no lo monta)
-			y este botón navegaba justo ahí. La entrada queda comentada, no borrada,
-			por si el módulo vuelve.
+			Botón "Mensaje": abre la conversación con el comprador en el sidebar de Mensajes de
+			Tienda Online (misión mensajes-tienda-online, 28/9/2026). Estuvo oculto desde el 15/8
+			porque el módulo viejo había salido de pantalla; volvió con el submódulo nuevo. Lo
+			despacha `sendMessage()` de mixins/model_functions.js.
+
+			La `key` conserva la errata de siempre ('meessage') a propósito: es la que tenía la
+			columna antes de ocultarse, y cambiarla dejaría huérfana cualquier preferencia de
+			columnas guardada con ese nombre.
+		*/
 		{
 			text: 'Mensaje',
 			key: 'meessage',
@@ -65,7 +70,6 @@ export default {
 				function: 'sendMessage',
 			}
 		},
-		*/
 		{
 			text: 'Ultimo login',
 			key: 'last_login',
