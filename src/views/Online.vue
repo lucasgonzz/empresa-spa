@@ -2,12 +2,17 @@
 	<div>
 		<!--
 			Misión "chat IA" (15/8/2026): la vista dejó de montar NavComponent (las
-			secciones se navegan desde la nav vertical, hijos de "Tienda Online") y
-			Messages (el módulo de mensajes quedó OCULTO sin borrarse: los archivos
-			de components/online/components/messages/ siguen intactos en disco).
+			secciones se navegan desde la nav vertical, hijos de "Tienda Online").
 		-->
 		<orders></orders>
 		<buyers></buyers>
+		<!--
+			Mensajes (misión mensajes-tienda-online, 28/9/2026): la bandeja de conversaciones con
+			los compradores de la tienda. Reemplaza al módulo viejo de components/online/components/
+			messages/, que estaba oculto desde el 15/8 y se borró. La conversación NO se dibuja
+			acá: vive en el sidebar global (mensajes/SidebarHost.vue, montado en App.vue).
+		-->
+		<mensajes></mensajes>
 		<cupons></cupons>
 		<!--
 			Promociones (15/8/2026): wrapper fino del motor de ofertas por cliente.
@@ -33,6 +38,7 @@ export default {
 	components: {
 		Orders: () => import('@/components/online/components/orders/Index'),
 		Buyers: () => import('@/components/online/components/buyer/Index'),
+		Mensajes: () => import('@/components/online/components/mensajes/Index'),
 		Cupons: () => import('@/components/online/components/cupons/Index'),
 		Promociones: () => import('@/components/online/components/promociones/Index'),
 		VincularComprador: () => import('@/components/online/components/vincular-comprador/Index'),

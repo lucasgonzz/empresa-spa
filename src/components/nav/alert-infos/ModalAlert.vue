@@ -25,12 +25,13 @@ id="modal-alert">
 	class="alert-info apretable">
 		<strong>Pedido</strong> sin confirmar de {{ order.buyer.name }} en la fecha {{ date(order.created_at) }}
 	</div>
-	<div 
-	v-for="message in messages_not_read"
+	<!-- Mensajes de la tienda: `messages_not_read` es un número (el resumen del store
+	tienda_mensajes), no una lista de mensajes, así que va una sola línea con el total. -->
+	<div
+	v-if="messages_not_read > 0"
 	@click="toMessages()"
-	v-if="message.buyer"
 	class="alert-info apretable">
-		<strong>Mensaje</strong> sin leer de {{ message.buyer.name }} en la fecha {{ date(message.created_at) }}
+		<strong>{{ messages_not_read == 1 ? '1 mensaje' : messages_not_read + ' mensajes' }}</strong> sin leer de la tienda
 	</div>
 	<div 
 	v-for="provider_order in provider_order_days_to_advise"

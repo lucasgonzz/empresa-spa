@@ -60,6 +60,46 @@ export default {
 				})
 		},
 		/**
+		 * Abre el sidebar de Mensajes de Tienda Online parado en la conversación con un comprador,
+		 * desde cualquier parte del sistema: la bandeja del submódulo, el botón "Mensaje" de
+		 * Clientes de Tienda Online, la tabla de Alertas y el aviso de mensaje nuevo.
+		 *
+		 * Vive acá por el mismo motivo que `abrir_chat_whatsapp()`: este mixin entra a
+		 * `Vue.mixin()` por `common-vue/mixins/app.js`, así que el método existe en TODA la app,
+		 * incluido el botón de la tabla de Clientes, que no tiene componente propio (se declara en
+		 * `models/buyer.js` y lo despacha `mixins/model_functions.js`).
+		 *
+		 * 🔴 Corta si no está la extensión `online` o el permiso `buyer.index`: el anfitrión del
+		 * sidebar no se monta sin esas dos cosas, y abrir el panel en el store sin nadie que lo
+		 * dibuje dejaría una conversación "abierta" invisible, que se marcaría leída sola con cada
+		 * mensaje que entre.
+		 *
+		 * @param {Object|Number} buyer_o_id El comprador (con `id`, y lo que tenga de nombre,
+		 *                                    email y teléfono para el header) o solo su id.
+		 * @returns {Promise}
+		 */
+		abrir_chat_tienda(buyer_o_id) {
+			let self = this
+			let buyer = buyer_o_id && typeof buyer_o_id == 'object' ? buyer_o_id : null
+			let buyer_id = parseInt(buyer ? buyer.id : buyer_o_id, 10)
+			if (isNaN(buyer_id) || buyer_id <= 0) {
+				this.$toast.error('No se pudo abrir la conversación: falta el comprador')
+				return Promise.resolve(null)
+			}
+			if (!this.hasExtencion('online') || !this.can('buyer.index')) {
+				this.$toast.error('No tenés acceso a los mensajes de la tienda')
+				return Promise.resolve(null)
+			}
+			return this.$store.dispatch('tienda_mensajes/abrirChat', {
+				buyer_id: buyer_id,
+				buyer: buyer,
+			})
+				.catch(function (err) {
+					console.log(err)
+					self.$toast.error('No se pudo abrir la conversación')
+				})
+		},
+		/**
 		 * Hijos de "Tienda Online" (D31). Son funciones y no entradas con name
 		 * 'online' + params porque toRoute() corta cuando el name de la ruta ya es
 		 * el actual, y estos hijos se usan justamente estando adentro de /online.
@@ -69,6 +109,12 @@ export default {
 				return
 			}
 			this.$router.push({name: 'online', params: {view: 'clientes'}})
+		},
+		ir_a_online_mensajes() {
+			if (this.$route.name == 'online' && this.$route.params.view == 'mensajes') {
+				return
+			}
+			this.$router.push({name: 'online', params: {view: 'mensajes'}})
 		},
 		ir_a_online_cupones() {
 			if (this.$route.name == 'online' && this.$route.params.view == 'cupones') {

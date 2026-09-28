@@ -31,15 +31,16 @@
 
 			<div class="vender-rate-panel__body">
 
-				<!-- Aviso cuando los recargos no se pueden modificar -->
+				<!-- Aviso cuando los recargos no se pueden modificar (comprobante legado) -->
 				<div
 				v-if="desactivar_recargos"
+				data-testid="aviso-recargos-en-precios-sin-registro"
 				class="vender-client-block__notice">
 					<p>
-						Los precios de los items de esta venta, ya tienen aplicado los recargos de esta venta al momento de crearce.
+						Este comprobante se guardó con los recargos aplicados directamente a los precios de los artículos, antes de que el sistema registrara cuánto valía cada precio sin el recargo.
 					</p>
 					<p>
-						No puede aplicar no quitar recargos
+						Por eso no se pueden agregar ni quitar recargos, ni cambiar "Aplicar recargos en los servicios", ni la opción de aplicarlos directamente a los precios.
 					</p>
 				</div>
 
@@ -103,14 +104,16 @@
 					<span class="vender-rate-panel__section-label">
 						Precios de artículos
 					</span>
-					<p class="vender-rate-panel__section-hint">
-						Una vez creada la venta, no se podrá cambiar esta opción.
+					<p
+					v-if="!desactivar_recargos"
+					class="vender-rate-panel__section-hint">
+						Podés cambiar esta opción también al editar la venta o el presupuesto: los precios se recalculan solos. El total se mantiene, salvo algún centavo por el redondeo de los precios.
 					</p>
 
 					<!-- Aviso del motivo por el que la opción está deshabilitada -->
 					<p
 					class="vender-rate-panel__section-hint"
-					v-if="sin_recargos_seleccionados && !editando_venta_previa">
+					v-if="sin_recargos_seleccionados && !desactivar_recargos">
 						Seleccioná al menos un recargo de los de arriba para poder usar esta opción.
 					</p>
 
@@ -147,26 +150,28 @@ export default {
 		ToggleDeAjusteDeVenta,
 	},
 	computed: {
+		/**
+		 * Bloquea los recargos (elegirlos, sacarlos, "recargos en servicios" y la opción de
+		 * aplicarlos a los precios) SOLO en un comprobante LEGADO: una venta o un presupuesto
+		 * guardado con la opción prendida antes de que los renglones registraran su precio sin
+		 * recargos (decisión 1 de Lucas, misión recargos-en-precios-editable, 28/9/2026). Sus
+		 * precios tienen el recargo adentro y no se sabe cuánto valían sin él.
+		 *
+		 * Hasta esa misión se bloqueaba TODA venta o presupuesto guardado con la opción
+		 * prendida, por el mismo motivo. Ahora cada renglón guarda su precio sin recargos y
+		 * getPriceVender() lo rearma desde ahí, así que editando se pueden cambiar los recargos
+		 * y la opción, y el total no se mueve (salvo algún centavo por unidad: con la opción
+		 * prendida el precio con recargos se redondea a centavos, ver getPriceVender()).
+		 *
+		 * El flag lo calcula previus_sale/index.js al abrir el comprobante (sirve para la venta
+		 * Y para el presupuesto: un presupuesto se abre con `vender/setBudget` y nunca setea
+		 * `previus_sale`, por eso no se mira `editando_venta_previa`), y lo limpia
+		 * limpiar_vender().
+		 *
+		 * @returns {boolean}
+		 */
 		desactivar_recargos() {
-			if (
-				this.editando_venta_previa && this.previus_sale.aplicar_recargos_directo_a_items
-			) {
-				return true
-			}
-			/*
-				Un PRESUPUESTO guardado con la opcion activa se congela igual que una venta: sus
-				renglones ya tienen el recargo adentro del precio.
-
-				No entra por la rama de arriba porque `editando_venta_previa` mira `previus_sale`, y
-				BtnActualizarEnVender.vue abre el presupuesto con `vender/setBudget` — nunca setea
-				`previus_sale`. O sea que para un presupuesto ese getter es SIEMPRE false.
-			*/
-			if (
-				this.budget && this.budget.aplicar_recargos_directo_a_items
-			) {
-				return true
-			}
-			return false
+			return this.$store.state.vender.recargos_en_precios_sin_registro
 		},
 		/**
 		 * Indica que la venta no tiene ningún recargo de venta seleccionado.
@@ -181,38 +186,34 @@ export default {
 		/**
 		 * Indica si la opción de aplicar los recargos directo a los precios debe estar bloqueada.
 		 *
-		 * Tres motivos, en este orden:
-		 * 1. La venta ya fue creada: la opción queda congelada como se guardó, porque los precios
-		 *    de los items ya se calcularon con ese criterio.
-		 * 2. 🔴 El PRESUPUESTO ya fue creado, por el mismo motivo. No alcanza con el punto 1:
-		 *    `editando_venta_previa` mira `previus_sale`, y un presupuesto se abre con
-		 *    `vender/setBudget` (BtnActualizarEnVender.vue), así que ahí ese getter es false.
+		 * Dos motivos, y ninguno más:
+		 * 1. El comprobante es LEGADO (ver desactivar_recargos).
+		 * 2. La venta no tiene ningún recargo de venta seleccionado: no hay nada que aplicar.
 		 *
-		 *    Sin esta rama el toggle quedaba habilitado editando un presupuesto, y moverlo NO
-		 *    recalculaba el precio del renglón: `from_pivot` (vender_set_total.js) es true, así que
-		 *    getPriceVender() lee el precio del pivot —que ya viene recargado— y esa rama nunca
-		 *    llama a aplicar_recargos(). Lo único que cambiaba era si aplicar_surchages() corría
-		 *    sobre el total. Medido sobre un presupuesto de 2 × $110 (recargo del 10% adentro,
-		 *    total 220): apagar el toggle lo guardaba en 242 —el recargo cobrado dos veces, y 242
-		 *    también en la venta y en la cuenta corriente al confirmarlo—, y prenderlo sobre uno
-		 *    sin recargo aplicado lo bajaba a 200, perdiendo los $20 con el recargo igual de
-		 *    adjunto. Las dos cosas con HTTP 200: `BudgetController::update()` no valida el total
-		 *    como `store()`, así que no hay ninguna red más abajo.
-		 * 3. La venta no tiene ningún recargo de venta seleccionado: no hay nada que aplicar.
+		 * 🔴 Ya NO se bloquea por "estoy editando una venta" ni por "es un presupuesto"
+		 * (misión recargos-en-precios-editable, 28/9/2026). Esos dos bloqueos existían por un
+		 * defecto real, medido el 9/9/2026 sobre un presupuesto de 2 × $110 (recargo del 10%
+		 * adentro, total 220): con el toggle habilitado, moverlo NO recalculaba el precio del
+		 * renglón —getPriceVender() leía el precio del pivot tal cual— y lo único que cambiaba era
+		 * si aplicar_surchages() sumaba el recargo al pie. Apagarlo guardaba 242 (el recargo
+		 * cobrado dos veces, también en la venta y en la cuenta corriente al confirmarlo) y
+		 * prenderlo sobre uno sin recargo lo bajaba a 200. Las dos cosas con HTTP 200:
+		 * `BudgetController::update()` no valida el total como `store()`.
+		 *
+		 * Ese defecto queda cerrado por otro lado, no por el bloqueo: getPriceVender() rearma el
+		 * precio del pivot desde pivot.price_sin_recargos_de_venta y le mete los recargos solo si
+		 * la opción está prendida. Con el mismo presupuesto, apagar deja 2 × $100 + 10% al pie =
+		 * 220, y prender vuelve a 2 × $110 = 220. Si alguien vuelve a leer el precio del pivot
+		 * "tal cual" en esa rama, este toggle vuelve a romper el total: el bloqueo por legado es
+		 * el único lugar donde eso es correcto.
 		 *
 		 * @returns {boolean}
 		 */
 		desactivar_recargos_a_precios_de_articulos() {
-			if (this.editando_venta_previa) {
-				return true
-			}
-			if (this.budget) {
+			if (this.desactivar_recargos) {
 				return true
 			}
 			return this.sin_recargos_seleccionados
-		},
-		previus_sale() {
-			return this.$store.state.vender.previus_sales.previus_sale
 		},
 		surchages() {
 			return this.$store.state.surchage.models
@@ -247,16 +248,21 @@ export default {
 
 				/*
 					Si se quitaron todos los recargos, la opción de aplicarlos directo a los precios
-					queda sin sentido y hay que apagarla. Si no, la venta se guarda con el flag en 1
-					y sin recargos, y al editarla el computed desactivar_recargos (que lee
-					previus_sale.aplicar_recargos_directo_a_items) bloquea agregar o quitar recargos
-					sin ningún motivo.
-					Solo aplica a ventas nuevas: en una venta anterior el flag no se puede cambiar.
+					queda sin sentido y hay que apagarla. Si no, el comprobante se guarda con el flag
+					en 1 y sin recargos, y el toggle queda prendido y bloqueado (sin recargos
+					seleccionados no se puede tocar).
+
+					Desde la misión recargos-en-precios-editable (28/9/2026) vale TAMBIÉN editando
+					una venta o un presupuesto: la opción ya se puede cambiar ahí, y apagarla
+					devuelve cada precio a su valor sin recargos. La única excepción es el
+					comprobante legado, donde este setter no debería correr nunca (los toggles de
+					recargos están deshabilitados) y, si corriera, no hay precio sin recargos al que
+					volver.
 				*/
 				if (
 					!value.length
 					&& this.aplicar_recargos_directo_a_items
-					&& !this.editando_venta_previa
+					&& !this.desactivar_recargos
 				) {
 					this.$store.commit('vender/set_aplicar_recargos_directo_a_items', 0)
 				}

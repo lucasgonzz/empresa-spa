@@ -452,6 +452,23 @@ export default {
 
 		aplicar_recargos_directo_a_items: 0,
 
+		/*
+			True mientras se edita un comprobante (venta o presupuesto) LEGADO: guardado con
+			aplicar_recargos_directo_a_items prendido ANTES de que los renglones registraran su
+			precio sin recargos (pivot.price_sin_recargos_de_venta, mision
+			recargos-en-precios-editable, 28/9/2026). Sus precios tienen el recargo adentro y no se
+			sabe cuanto valian sin el, asi que getPriceVender() los usa tal cual y
+			stage-3/Surchages.vue bloquea los recargos y la opcion (decision 1 de Lucas).
+
+			Lo calcula previus_sale/index.js::set_datos_para_actualizar_en_vender() al abrir el
+			comprobante, con la regla de utils/recargos_en_precios.js.
+
+			🔴 Lo resetea limpiar_vender(). Un flag que se restaura al abrir y no se limpia al salir
+			se filtra a la venta SIGUIENTE (es exactamente el defecto A del 9/9/2026 con
+			aplicar_recargos_directo_a_items): la venta nueva quedaria con los recargos bloqueados.
+		*/
+		recargos_en_precios_sin_registro: false,
+
 		total_description: [],
 
 		sale_status_id: 0,
@@ -597,6 +614,9 @@ export default {
 				after: { aplicar_recargos_directo_a_items: value },
 				diff: { changed: previous_value !== value },
 			})
+		},
+		set_recargos_en_precios_sin_registro(state, value) {
+			state.recargos_en_precios_sin_registro = Boolean(value)
 		},
 		set_fecha_entrega(state, value) {
 			state.fecha_entrega = value

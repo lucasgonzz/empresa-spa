@@ -960,9 +960,16 @@ export default {
             }
             window.open('https://wa.me/'+model.phone)
         },
+        /*
+            Botón "Mensaje" de la tabla de Clientes de Tienda Online (se declara en
+            src/models/buyer.js). Abre la conversación con el comprador en el sidebar de Mensajes,
+            sin salir de la pantalla: mismo camino que el botón de WhatsApp de al lado, por el mismo
+            motivo (acá no hay componente propio, así que el enganche vive en un mixin global).
+            Antes navegaba al módulo viejo de mensajes, que se borró en la misión
+            mensajes-tienda-online (28/9/2026).
+        */
         sendMessage(model) {
-            this.$store.commit('message/setSelectedBuyer', model)
-            this.$router.push({name: 'online', params: {view: 'mensajes'}})
+            this.abrir_chat_tienda(model)
         },
         budgetTotal(model, formated = true) {
             let total = 0 
