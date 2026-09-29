@@ -6,6 +6,13 @@ import vender_set_total from '@/mixins/vender_set_total'
 import diseno_de_vender from '@/mixins/vender/diseno_de_vender'
 import { ETAPAS, TITULOS_DE_ETAPAS } from '@/components/vender/layout/elementos'
 /*
+	El aviso lleva el nombre del cliente y los de sus descuentos/recargos, que son texto libre, y
+	vue-toast-notification pinta el mensaje como HTML (innerHTML): sin escapar, un nombre con
+	<img onerror=...> ejecuta codigo en la sesion del que vende. Mismo helper que usan los avisos
+	del editor de diseños (mision diseno-vender-configurable, 29/9/2026).
+*/
+import { escapar_html } from '@/components/abm/disenos-de-vender/avisos'
+/*
 	Descuentos y recargos del cliente en VENDER (misión descuentos-recargos-por-cliente, 23/9/2026).
 
 	Un cliente puede tener vinculados descuentos y recargos de venta desde su ficha
@@ -458,7 +465,7 @@ export default {
 				return
 			}
 
-			this.$toast.info(lineas.join(' '), {
+			this.$toast.info(escapar_html(lineas.join(' ')), {
 				duration: 12000,
 			})
 		},
