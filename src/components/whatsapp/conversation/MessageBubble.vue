@@ -74,9 +74,15 @@
 			{{ etiqueta_medio_faltante }}
 		</div>
 
+		<!-- El texto normal SOLO se dibuja fuera de edición: en edición lo reemplaza el textarea
+		de más abajo, con una copia local (`texto_editado`) para que un broadcast que parchee el
+		mensaje mientras se escribe no pise lo que el operador está tipeando. -->
 		<p
-		v-if="muestra_texto"
-		class="whatsapp-bubble__text">
+		v-if="muestra_texto && (!editando || !espera_confirmacion)"
+		class="whatsapp-bubble__text"
+		:class="{'whatsapp-bubble__text--editable': espera_confirmacion}"
+		:title="espera_confirmacion ? 'Clic para editar antes de enviar' : null"
+		@click="espera_confirmacion && entrar_en_edicion()">
 			{{ message.body }}
 		</p>
 
@@ -93,6 +99,21 @@
 				Sin enviar — esperando tu aprobación
 			</span>
 
+			<!-- Modo edición: clic en el texto de arriba lo trajo hasta acá. Copia local del
+			cuerpo, para no pisar lo que se está escribiendo con un patch que llegue de afuera. -->
+			<b-form-textarea
+			v-if="editando"
+			ref="textarea_edicion"
+			v-model="texto_editado"
+			class="whatsapp-bubble__textarea-edicion"
+			rows="2"
+			max-rows="10"
+			no-resize
+			autofocus
+			:disabled="acting"
+			placeholder="Editá la respuesta antes de enviarla"
+			@keydown="on_keydown_edicion"></b-form-textarea>
+
 			<span class="whatsapp-bubble__pending-timer">
 				{{ texto_auto_envio }}
 			</span>
@@ -105,7 +126,28 @@
 			</span>
 
 			<div class="whatsapp-bubble__pending-actions">
+				<template v-if="editando">
+					<b-button
+					size="sm"
+					variant="success"
+					:disabled="acting"
+					title="Guarda el texto (si lo cambiaste) y lo manda ahora."
+					@click="enviar_edicion">
+						<i class="bi bi-send"></i>
+						Enviar
+					</b-button>
+					<b-button
+					size="sm"
+					variant="outline-secondary"
+					:disabled="acting"
+					title="Descarta los cambios y vuelve al texto original."
+					@click="cancelar_edicion">
+						<i class="bi bi-x-lg"></i>
+						Cancelar
+					</b-button>
+				</template>
 				<b-button
+				v-else
 				size="sm"
 				variant="success"
 				:disabled="acting"
@@ -211,8 +253,25 @@ export default {
 			// conversación larga tiene decenas de globos y no hace falta un intervalo por cada uno.
 			ahora: Date.now(),
 			intervalo_contador: null,
-			// true mientras se confirma o se descarta, para no mandar dos veces de un doble click.
+			// true mientras se confirma, se descarta o se guarda una edición, para no disparar
+			// dos acciones a la vez de un doble click.
 			acting: false,
+			// true mientras la burbuja pendiente está en modo edición (clic en su texto).
+			editando: false,
+			// Copia local del cuerpo mientras se edita. Adrede NO es un computed sobre
+			// `message.body`: si el store patchea el mensaje mientras se está editando (un
+			// broadcast, o la pausa del auto-envío al entrar en edición), esta copia no se
+			// entera y lo que el operador está tipeando no se pisa.
+			texto_editado: '',
+			/*
+				true mientras confirm()/discard()/enviar_edicion() tienen un pedido propio en
+				vuelo. El watch de `espera_confirmacion`, más abajo, lo consulta para no confundir
+				"el mensaje dejó de estar pendiente porque ESTA burbuja lo mandó/descartó" con
+				"dejó de estarlo por afuera" (otra pestaña, un auto-envío, el broadcast): son la
+				MISMA transición de estado vista desde acá, pero solo la segunda es una novedad
+				que amerita el toast de "se descartó tu edición".
+			*/
+			cambio_propio_en_curso: false,
 		}
 	},
 	computed: {
@@ -437,6 +496,16 @@ export default {
 		 * @returns {boolean}
 		 */
 		muestra_texto() {
+			// La burbuja pendiente de aprobación SIEMPRE deja ver (y editar) su cuerpo, aunque
+			// sea el relleno de un medio sin epígrafe propio: es el único lugar de la burbuja
+			// donde hacer clic para entrar en edición (misión sugerencia-ia-como-borrador,
+			// 29/9/2026 — "el textarea edita el epígrafe, la foto sigue"). En la práctica esto
+			// no cambia nada para las sugerencias de la IA (D7 del plan: la foto queda fuera de
+			// alcance, así que `suggest()` nunca genera un mensaje con medio), pero cubre sin
+			// sorpresas cualquier otra respuesta `a_confirmar` con foto que exista o se agregue.
+			if (this.espera_confirmacion) {
+				return true
+			}
 			if (!this.hay_medio_visible) {
 				return true
 			}
@@ -457,6 +526,43 @@ export default {
 					self.ahora = Date.now()
 				}, 1000)
 			},
+		},
+		/**
+		 * 🔴 Si mientras se está editando el mensaje deja de estar `a_confirmar` por OTRA vía
+		 * —otra pestaña lo confirmó, salió por auto-envío, alguien lo descartó y el patch llegó
+		 * antes que el `removeMessage`—, hay que salir del modo edición ACÁ, y no esperar a que
+		 * lo haga el propio flujo de `enviar_edicion()`. El bloque `__pending` entero (textarea y
+		 * botones incluidos) vive detrás de `v-if="espera_confirmacion"`: sin este watch,
+		 * `editando` se quedaba en `true` con ese bloque ya desmontado, y el `<p>` del texto
+		 * normal (que antes solo se dibujaba con `!editando`) tampoco volvía a aparecer — la
+		 * burbuja quedaba en blanco, sin texto y sin ninguna acción para salir.
+		 *
+		 * El `v-if` del `<p>` de arriba tiene además su propia defensa (`!editando ||
+		 * !espera_confirmacion`), por si algún día este watch corriera después del render.
+		 */
+		espera_confirmacion(sigue_pendiente) {
+			if (sigue_pendiente || !this.editando) {
+				return
+			}
+			this.editando = false
+			this.texto_editado = ''
+			// Lo mandé/descarté yo desde esta misma burbuja: `cambio_propio_en_curso` todavía
+			// está en `true` en este punto porque recién se apaga en el `.then()`/`.catch()` de
+			// esa acción propia, que corre DESPUÉS de este watch (el `commit` que dispara este
+			// watch vive adentro del `.then()` de la action del store, un paso antes). Sale de
+			// edición igual —por eso las dos líneas de arriba no están adentro del if—, pero sin
+			// avisar con un toast que hablaría de un cambio "por afuera" que en realidad disparó
+			// este mismo click.
+			if (this.cambio_propio_en_curso) {
+				return
+			}
+			let ya_se_envio = this.message.ai_status == 'enviando' || this.message.ai_status == 'enviado'
+			this.$toast.warning(
+				ya_se_envio
+					? 'Este mensaje ya se envió: se descartó tu edición.'
+					: 'Este mensaje ya no está pendiente: se descartó tu edición.',
+				{ duration: 6000 }
+			)
 		},
 	},
 	beforeDestroy() {
@@ -490,12 +596,18 @@ export default {
 		confirm() {
 			let self = this
 			this.acting = true
+			// Ver el docblock de `cambio_propio_en_curso` en `data()`: sin esto, el watch de
+			// `espera_confirmacion` de más arriba no puede distinguir este cambio (lo pedí yo)
+			// de uno que llegó por afuera.
+			this.cambio_propio_en_curso = true
 			this.$store.dispatch('whatsapp_chat/confirmAiMessage', this.message.id)
 			.then(() => {
 				self.acting = false
+				self.cambio_propio_en_curso = false
 			})
 			.catch(err => {
 				self.acting = false
+				self.cambio_propio_en_curso = false
 				console.log(err)
 				self.manejar_error_confirmacion(err)
 			})
@@ -506,13 +618,118 @@ export default {
 		discard() {
 			let self = this
 			this.acting = true
+			// Mismo motivo que en confirm(), arriba: Descartar sigue visible mientras se edita
+			// (ver el template), así que este cambio también puede pisarle la carrera al watch.
+			this.cambio_propio_en_curso = true
 			this.$store.dispatch('whatsapp_chat/discardAiMessage', this.message.id)
 			.then(() => {
 				self.acting = false
+				self.cambio_propio_en_curso = false
 				self.$toast.success('Respuesta descartada')
 			})
 			.catch(err => {
 				self.acting = false
+				self.cambio_propio_en_curso = false
+				console.log(err)
+				self.manejar_error_confirmacion(err)
+			})
+		},
+		/**
+		 * Clic en el texto de una burbuja pendiente: la vuelve editable. Copia el cuerpo actual
+		 * a `texto_editado` (de un solo uso, se vuelve a copiar cada vez que se entra) y enfoca
+		 * el textarea apenas se dibuja.
+		 *
+		 * D5 del plan: si la respuesta tenía auto-envío programado, entrar en edición lo pausa
+		 * —una persona la tomó, no puede salir sola con el texto viejo mientras se edita—. Se
+		 * pausa con un PUT sin `body`: el texto no se toca todavía, recién se guarda al confirmar
+		 * o mandar la edición.
+		 */
+		entrar_en_edicion() {
+			if (this.editando || this.acting) {
+				return
+			}
+			this.texto_editado = this.message.body
+			this.editando = true
+			let self = this
+			this.$nextTick(function () {
+				if (self.$refs.textarea_edicion) {
+					self.$refs.textarea_edicion.focus()
+				}
+			})
+			if (this.message.ai_auto_send_at) {
+				this.$store.dispatch('whatsapp_chat/updateAiMessage', { message_id: this.message.id })
+				.catch(function (err) {
+					console.log(err)
+					// El body no se llegó a tocar. Si la pausa falló porque el mensaje ya cambió
+					// de estado por atrás (ya se está enviando, o ya no está pendiente), seguir
+					// "editando" un texto que ya no se puede guardar sería peor que salir: se
+					// cierra la edición y se avisa igual que en confirm/discard.
+					self.editando = false
+					self.manejar_error_confirmacion(err)
+				})
+			}
+		},
+		/**
+		 * Cancela la edición sin guardar nada: vuelve a mostrar el texto original.
+		 */
+		cancelar_edicion() {
+			this.editando = false
+			this.texto_editado = this.message.body
+		},
+		/**
+		 * Ctrl/Cmd+Enter manda la edición, Esc la cancela — mismos atajos que ya usa el composer
+		 * principal de la conversación.
+		 *
+		 * @param {KeyboardEvent} e
+		 */
+		on_keydown_edicion(e) {
+			if (e.key == 'Escape') {
+				e.preventDefault()
+				this.cancelar_edicion()
+				return
+			}
+			if (e.key == 'Enter' && (e.ctrlKey || e.metaKey)) {
+				e.preventDefault()
+				this.enviar_edicion()
+			}
+		},
+		/**
+		 * Guarda la edición (si el texto cambió) y manda la respuesta, en un solo botón: pedirle
+		 * al operador que primero guarde y después confirme por separado sería un paso de más
+		 * para lo que en la cabeza de quien está mirando es una sola acción, "enviar esto".
+		 *
+		 * Si el texto NO cambió (entró en edición y salió sin tocar nada, o lo dejó igual), se
+		 * salta el PUT y se confirma directo: no hay nada que guardar.
+		 */
+		enviar_edicion() {
+			let texto = (this.texto_editado || '').trim()
+			if (!texto) {
+				this.$toast.error('El mensaje no puede quedar vacío')
+				return
+			}
+			let self = this
+			let cambio = texto != this.message.body
+			this.acting = true
+			// Ver el docblock de `cambio_propio_en_curso` en `data()`: el `confirmAiMessage` de
+			// abajo dispara el mismo watch de `espera_confirmacion` que un cambio llegado por
+			// afuera, y sin esta bandera ese watch no tiene forma de saber que este mismo click
+			// es el que lo causó.
+			this.cambio_propio_en_curso = true
+			let promesa = cambio
+				? this.$store.dispatch('whatsapp_chat/updateAiMessage', { message_id: this.message.id, body: texto })
+				: Promise.resolve()
+			promesa
+			.then(function () {
+				return self.$store.dispatch('whatsapp_chat/confirmAiMessage', self.message.id)
+			})
+			.then(function () {
+				self.acting = false
+				self.cambio_propio_en_curso = false
+				self.editando = false
+			})
+			.catch(function (err) {
+				self.acting = false
+				self.cambio_propio_en_curso = false
 				console.log(err)
 				self.manejar_error_confirmacion(err)
 			})
@@ -548,7 +765,25 @@ export default {
 				return
 			}
 			if (status == 422 && (code == 'ya_en_envio' || code == 'ya_no_esta_pendiente')) {
+				// Sale de edición ACÁ (y no solo vía el watch de `espera_confirmacion`): así, si
+				// `recargar_mensajes()` termina cambiando el estado del mensaje, ese watch se
+				// encuentra `editando` ya en `false` y no dispara un segundo toast por lo mismo.
+				this.editando = false
+				this.texto_editado = ''
 				this.$toast.warning(data.message || 'El mensaje ya no está esperando confirmación.', { duration: 6000 })
+				this.recargar_mensajes()
+				return
+			}
+			// 🔴 404: el mensaje ya no existe. Pasa cuando se está editando y, mientras tanto, el
+			// cliente vuelve a escribir: `discard_pending_ai_messages()` la BORRA de la base (no
+			// la patchea), y el broadcast de ese borrado viaja sin mensaje adjunto (no hay nada
+			// que patchear), así que esta instancia no se entera hasta que actúa sobre un id que
+			// ya no está. Sin este caso caía al genérico de abajo y la burbuja fantasma —sin
+			// texto, en edición sobre nada— se quedaba en pantalla hasta recargar a mano.
+			if (status == 404) {
+				this.editando = false
+				this.texto_editado = ''
+				this.$toast.warning('Ese mensaje ya no existe: el cliente volvió a escribir.', { duration: 6000 })
 				this.recargar_mensajes()
 				return
 			}
@@ -604,10 +839,14 @@ export default {
 	&--sim
 		border: 1px dashed var(--wa-sim-borde)
 	// Esperando aprobacion: fondo distinto del saliente normal (no es un mensaje enviado) y
-	// mas ancho, porque adentro entran el aviso, el contador y los dos botones.
+	// mas ancho, porque adentro entran el aviso, el contador y los dos botones. Borde punteado
+	// de 2px (mas grueso que el de --sim, arriba) en el amarillo de "pendiente" del modulo
+	// -mismo token que ya usan la tarjeta del tablero y la fila amarilla de ChatRow.vue-, para
+	// que se note de un vistazo que esta burbuja todavia no salio (pedido de Lucas, misión
+	// sugerencia-ia-como-borrador, 29/9/2026).
 	&--a-confirmar
-		background: var(--wa-sim-bg)
-		border: 1px dashed var(--wa-sim-borde)
+		background: var(--wa-pendiente-bg)
+		border: 2px dashed var(--wa-pendiente-borde)
 		color: var(--wa-texto)
 		max-width: 85%
 
@@ -700,6 +939,28 @@ export default {
 		white-space: pre-wrap
 		word-break: break-word
 		text-align: left
+		// Solo la burbuja pendiente de aprobación agrega esta clase (ver el `:class` del
+		// template): es la única cuyo texto se puede clickear para editar.
+		&--editable
+			cursor: pointer
+			&:hover
+				text-decoration: underline
+				text-decoration-style: dotted
+	// Textarea de edición de la burbuja pendiente: mismos colores del módulo (nada de blanco
+	// fijo, que en modo oscuro sobre el fondo ambar de --a-confirmar quedaría fuera de lugar) y
+	// sin el foco celeste default de bootstrap, que no combina con el amarillo de la burbuja.
+	&__textarea-edicion
+		width: 100%
+		margin-bottom: 4px
+		font-size: .82rem
+		background: var(--wa-panel)
+		color: var(--wa-texto)
+		border-color: var(--wa-pendiente-borde)
+		&:focus
+			background: var(--wa-panel)
+			color: var(--wa-texto)
+			border-color: var(--wa-pendiente-borde)
+			box-shadow: none
 	&__pending
 		display: flex
 		flex-direction: column
@@ -715,7 +976,7 @@ export default {
 			gap: 5px
 			font-size: .72rem
 			font-weight: 700
-			color: var(--wa-sim-texto)
+			color: var(--wa-pendiente-texto)
 		&-timer
 			font-size: .72rem
 			opacity: var(--wa-texto-tenue-op)
