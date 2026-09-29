@@ -24,6 +24,8 @@ export default __base_store({
 		total_aperturas: 0,
 		/** Última página disponible. */
 		ultima_pagina_aperturas: 1,
+		/** false si la API no pagina (versión anterior): la barra no se muestra. */
+		aperturas_paginadas_por_api: false,
 	},
 	mutations: {
 		/**
@@ -41,6 +43,9 @@ export default __base_store({
 			}
 			if (typeof value.ultima_pagina != 'undefined') {
 				state.ultima_pagina_aperturas = value.ultima_pagina
+			}
+			if (typeof value.paginadas_por_api != 'undefined') {
+				state.aperturas_paginadas_por_api = value.paginadas_por_api
 			}
 		},
 	},
@@ -71,7 +76,7 @@ export default __base_store({
 				let total = typeof res.data.total != 'undefined' ? res.data.total : models.length
 				let ultima = typeof res.data.last_page != 'undefined' ? res.data.last_page : 1
 				commit('setModels', models)
-				commit('set_paginacion_aperturas', {pagina: page, total: total, ultima_pagina: ultima})
+				commit('set_paginacion_aperturas', {pagina: page, total: total, ultima_pagina: ultima, paginadas_por_api: typeof res.data.total != 'undefined'})
 				commit('setLoading', false)
 			})
 			.catch(err => {

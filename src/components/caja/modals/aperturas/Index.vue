@@ -3,6 +3,7 @@
 	size="lg"
 	title="Aperturas"
 	hide-footer
+	@hidden="al_cerrar"
 	id="aperturas-caja">
 
 		<!--
@@ -84,7 +85,7 @@
 		-->
 		<div
 		class="aperturas-paginacion"
-		v-if="total_aperturas > por_pagina">
+		v-if="hay_mas_de_una_pagina">
 			<b-pagination
 			pills
 			class="m-0"
@@ -132,6 +133,16 @@ export default {
 		total_aperturas() {
 			return this.$store.state.apertura_caja.total_aperturas
 		},
+		/**
+		 * La barra solo aparece si la API pagina (una anterior devuelve todo y no la necesita) y
+		 * hay mas aperturas que las de una pagina.
+		 *
+		 * @returns {Boolean}
+		 */
+		hay_mas_de_una_pagina() {
+			return this.$store.state.apertura_caja.aperturas_paginadas_por_api
+				&& this.total_aperturas > this.por_pagina
+		},
 		pagina() {
 			return this.$store.state.apertura_caja.pagina_aperturas
 		},
@@ -147,6 +158,18 @@ export default {
 		 * @param {Number} pagina
 		 * @returns {void}
 		 */
+		/**
+		 * Al cerrar el modal se vuelve a la primera pagina: otros modales (movimientos, resumen)
+		 * leen apertura_caja.models[0] como "la apertura actual", y con la pagina 2 cargada seria
+		 * una vieja.
+		 *
+		 * @returns {void}
+		 */
+		al_cerrar() {
+			if (this.pagina != 1) {
+				this.$store.dispatch('apertura_caja/cargar_pagina', 1)
+			}
+		},
 		cambiar_pagina(pagina) {
 			this.$store.dispatch('apertura_caja/cargar_pagina', pagina)
 		},
