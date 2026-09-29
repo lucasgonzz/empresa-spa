@@ -91,6 +91,7 @@
 						:min="TAMANO_MINIMO_PT"
 						:max="TAMANO_MAXIMO_PT"
 						:value="elemento.tamano"
+						@input="tamano_tipeado"
 						@change="poner_tamano"></b-form-input>
 						<button
 						type="button"
@@ -172,6 +173,7 @@
 						step="0.1"
 						min="0"
 						:value="elemento[medida.clave]"
+						@input="medida_tipeada(medida.clave, $event)"
 						@change="poner_medida(medida.clave, $event)"></b-form-input>
 					</label>
 				</div>
@@ -190,8 +192,8 @@
 </template>
 <script>
 import Interruptor from './Interruptor'
-import { definicion, es_texto, es_precio, nombre_del_campo, buscar_lista, LARGO_MAXIMO_DEL_TEXTO } from '../catalogo'
-import { TAMANO_MINIMO_PT, TAMANO_MAXIMO_PT, acotar, encerrar_en_la_etiqueta } from '../geometria'
+import { definicion, es_texto, es_precio, nombre_del_campo, buscar_lista, rotulo_del_precio, LARGO_MAXIMO_DEL_TEXTO } from '../catalogo'
+import { TAMANO_MINIMO_PT, TAMANO_MAXIMO_PT, MINIMO_DEL_CAMPO_MM, acotar, encerrar_en_la_etiqueta } from '../geometria'
 
 /* Botones de alineacion */
 const ALINEACIONES = [
@@ -294,7 +296,7 @@ export default {
 			if (this.elemento.tipo === 'precio_lista') {
 				return 'Mostrar el nombre de la lista'
 			}
-			return 'Mostrar «Precio:» adelante'
+			return 'Mostrar «' + rotulo_del_precio(this.elemento.tipo).trim() + '» adelante'
 		},
 		/**
 		 * Si es un precio de una lista que ya no existe.
@@ -329,6 +331,48 @@ export default {
 		 */
 		cambiar_tamano(paso) {
 			this.elemento.tamano = Math.round(acotar(Number(this.elemento.tamano) + paso, TAMANO_MINIMO_PT, TAMANO_MAXIMO_PT, this.elemento.tamano))
+		},
+		/**
+		 * Mientras se tipea la letra: se aplica en cuanto es un numero valido, sin acotar (asi "12"
+		 * no pasa por un 5 al tipear el "1"). Si el usuario toca otro campo del lienzo antes de salir
+		 * del input, lo tipeado ya quedo en el campo que corresponde.
+		 *
+		 * @param {string} valor
+		 * @returns {void}
+		 */
+		tamano_tipeado(valor) {
+			let numero = Number(String(valor).replace(',', '.'))
+			if (valor !== '' && !isNaN(numero) && numero >= TAMANO_MINIMO_PT && numero <= TAMANO_MAXIMO_PT) {
+				this.elemento.tamano = Math.round(numero)
+			}
+		},
+		/**
+		 * Mientras se tipea una medida: se aplica si ya es valida y entra en la etiqueta tal cual
+		 * (lo que hay que acotar se acota al salir del input, en poner_medida).
+		 *
+		 * @param {string} clave x | y | w | h
+		 * @param {string} valor
+		 * @returns {void}
+		 */
+		medida_tipeada(clave, valor) {
+			let numero = Number(String(valor).replace(',', '.'))
+			if (valor === '' || isNaN(numero) || numero < 0) {
+				return
+			}
+			let e = this.elemento
+			let entra = false
+			if (clave === 'x') {
+				entra = numero + e.w <= this.ancho_mm + 0.001
+			} else if (clave === 'y') {
+				entra = numero + e.h <= this.alto_mm + 0.001
+			} else if (clave === 'w') {
+				entra = numero >= MINIMO_DEL_CAMPO_MM && e.x + numero <= this.ancho_mm + 0.001
+			} else if (clave === 'h') {
+				entra = numero >= MINIMO_DEL_CAMPO_MM && e.y + numero <= this.alto_mm + 0.001
+			}
+			if (entra) {
+				e[clave] = Math.round(numero * 10) / 10
+			}
 		},
 		/**
 		 * El numero de la letra escrito a mano (al salir del campo o con Enter).

@@ -30,8 +30,7 @@
 
 		<div
 		v-if="diseno"
-		class="editor-etiqueta"
-		@keydown="al_tocar_tecla">
+		class="editor-etiqueta">
 
 			<cabecera-del-editor
 			ref="cabecera"
@@ -85,7 +84,7 @@
 					@seleccionar="seleccionado_id = $event"
 					@agregar="agregar"
 					@quitar="quitar"
-					@inicio-arrastre="arrastrando = true"
+					@inicio-arrastre="al_empezar_arrastre"
 					@fin-arrastre="al_terminar_arrastre"></lienzo-de-etiqueta>
 				</div>
 
@@ -108,6 +107,17 @@
 					Cambios sin guardar
 				</span>
 				<div class="editor-etiqueta__botones">
+					<!-- La prueba sale con lo GUARDADO: solo en un diseño que ya existe -->
+					<b-button
+					v-if="modelo_id"
+					variant="outline-secondary"
+					class="editor-etiqueta__prueba"
+					:disabled="guardando"
+					:title="ids_de_prueba.length ? 'Abre el PDF con este diseño y algunos de tus artículos' : SIN_ARTICULOS_PARA_PROBAR"
+					@click="imprimir_prueba">
+						<i class="bi bi-printer"></i>
+						Imprimir una prueba
+					</b-button>
 					<b-button
 					variant="outline-secondary"
 					:disabled="guardando"
@@ -153,7 +163,8 @@ import {
 	nuevo_elemento,
 	lugar_libre,
 } from '../diseno'
-import { crear_diseno, actualizar_diseno, mensaje_de_error } from '../api_de_disenos'
+import { crear_diseno, actualizar_diseno, mensaje_de_error, abrir_prueba, SIN_ARTICULOS_PARA_PROBAR } from '../api_de_disenos'
+import { ids_para_la_prueba } from '../muestra'
 import { avisar } from '@/components/abm/disenos-de-vender/avisos'
 
 /* Nombre que se sugiere al crear un diseño */
@@ -197,6 +208,7 @@ export default {
 	},
 	data() {
 		return {
+			SIN_ARTICULOS_PARA_PROBAR: SIN_ARTICULOS_PARA_PROBAR,
 			/* id del b-modal (tambien scopea los estilos, ver el <style>) */
 			id_del_modal: 'editor-etiqueta-gondola',
 			/* true entre el show y el hidden del modal */
@@ -277,6 +289,14 @@ export default {
 			return !!this.diseno && this.diseno.elementos.length >= TOPE_DE_CAMPOS
 		},
 		/**
+		 * Los articulos con que sale "Imprimir una prueba".
+		 *
+		 * @returns {Array}
+		 */
+		ids_de_prueba() {
+			return ids_para_la_prueba(this)
+		},
+		/**
 		 * Si hay cambios sin guardar (nombre o diseño).
 		 *
 		 * @returns {boolean}
@@ -306,6 +326,7 @@ export default {
 	},
 	beforeDestroy() {
 		clearTimeout(this.timer_de_foto)
+		window.removeEventListener('keydown', this.al_tocar_tecla)
 	},
 	methods: {
 		/**
@@ -340,6 +361,14 @@ export default {
 		 * @returns {void}
 		 */
 		al_mostrarse() {
+			/*
+				Los atajos (Ctrl + Z) se escuchan en la ventana mientras el modal esta abierto, y no en el
+				contenedor del editor: despues de quitar un campo con Supr, de soltarlo con Esc o de tocar
+				la mesa, el foco queda en <body> y un keydown en el contenedor ya no llegaba.
+			*/
+			window.removeEventListener('keydown', this.al_tocar_tecla)
+			window.addEventListener('keydown', this.al_tocar_tecla)
+
 			if (!this.modelo_id && this.$refs.cabecera) {
 				this.$refs.cabecera.enfocar_nombre()
 			}
@@ -428,6 +457,16 @@ export default {
 			this.diseno = normalizar_diseno(JSON.parse(anterior), null)
 		},
 		/**
+		 * Empieza un arrastre en el lienzo: si habia un cambio esperando a anotarse (flechas, letra),
+		 * se anota ahora como su propio paso, y el timer no puede dispararse a mitad del arrastre.
+		 *
+		 * @returns {void}
+		 */
+		al_empezar_arrastre() {
+			this.tomar_foto()
+			this.arrastrando = true
+		},
+		/**
 		 * Termino un arrastre en el lienzo: se anota el paso enseguida.
 		 *
 		 * @returns {void}
@@ -444,8 +483,18 @@ export default {
 		 * @returns {void}
 		 */
 		al_tocar_tecla(evento) {
-			let etiqueta = evento.target && evento.target.tagName ? evento.target.tagName.toLowerCase() : ''
-			let en_un_texto = etiqueta === 'input' || etiqueta === 'textarea' || etiqueta === 'select'
+			if (!this.abierto || !this.diseno) {
+				return
+			}
+
+			let objetivo = evento.target
+			let etiqueta = objetivo && objetivo.tagName ? objetivo.tagName.toLowerCase() : ''
+			let en_un_texto = etiqueta === 'input' || etiqueta === 'textarea' || etiqueta === 'select' || !!(objetivo && objetivo.isContentEditable)
+
+			/* Una pregunta abierta encima del editor (otro modal) no deshace nada */
+			if (objetivo && objetivo.closest && objetivo.closest('.modal') && !objetivo.closest('#' + this.id_del_modal)) {
+				return
+			}
 
 			if ((evento.ctrlKey || evento.metaKey) && !evento.shiftKey && String(evento.key).toLowerCase() === 'z' && !en_un_texto) {
 				evento.preventDefault()
@@ -682,6 +731,21 @@ export default {
 			})
 		},
 		/**
+		 * "Imprimir una prueba": abre el PDF con el diseño guardado y hasta 6 articulos del store. Con
+		 * cambios sin guardar, primero pide guardar (la prueba sale con lo guardado).
+		 *
+		 * @returns {void}
+		 */
+		imprimir_prueba() {
+			if (this.hay_cambios) {
+				avisar(this, 'warning', 'Guardá los cambios antes de imprimir la prueba: la prueba sale con el diseño guardado.')
+				return
+			}
+			if (!abrir_prueba(this.modelo_id, this.ids_de_prueba)) {
+				avisar(this, 'info', SIN_ARTICULOS_PARA_PROBAR)
+			}
+		},
+		/**
 		 * Cierra el modal.
 		 *
 		 * @param {boolean} sin_preguntar true para no preguntar por cambios sin guardar
@@ -734,6 +798,7 @@ export default {
 		 * @returns {void}
 		 */
 		al_ocultarse() {
+			window.removeEventListener('keydown', this.al_tocar_tecla)
 			clearTimeout(this.timer_de_foto)
 			this.timer_de_foto = null
 			this.abierto = false
@@ -889,9 +954,14 @@ export default {
 
 .editor-etiqueta__botones
 	display: flex
+	flex-wrap: wrap
+	justify-content: flex-end
 	gap: 8px
 	margin-left: auto
 
 	.btn
+		display: inline-flex
+		align-items: center
+		gap: 6px
 		border-radius: 8px
 </style>

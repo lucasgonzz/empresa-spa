@@ -21,7 +21,7 @@
 		<div
 		ref="mesa"
 		class="lienzo-etiqueta__mesa"
-		@pointerdown.self="$emit('seleccionar', null)">
+		@pointerdown.self="soltar_seleccion">
 
 			<div
 			ref="papel"
@@ -31,7 +31,7 @@
 				'lienzo-etiqueta__papel--con-grilla': mostrar_grilla,
 			}"
 			:style="estilo_del_papel"
-			@pointerdown.self="$emit('seleccionar', null)"
+			@pointerdown.self="soltar_seleccion"
 			@contextmenu.prevent>
 
 				<div
@@ -470,6 +470,31 @@ export default {
 			window.removeEventListener('pointercancel', this.al_cancelar_puntero)
 		},
 		/**
+		 * Si hay un numero a medio tipear en el panel (letra, medidas) o en el tamaño de la etiqueta,
+		 * lo confirma sacandole el foco ANTES de cambiar la seleccion: el `change` de ese input sale
+		 * ahora, mientras el panel todavia apunta al campo al que se lo tipeo. Sin esto, el
+		 * preventDefault del pointerdown deja el foco en el input y el numero se aplicaba (o se perdia)
+		 * sobre el campo nuevo.
+		 *
+		 * @returns {void}
+		 */
+		confirmar_lo_tipeado() {
+			let activo = typeof document != 'undefined' ? document.activeElement : null
+			let etiqueta = activo && activo.tagName ? activo.tagName.toLowerCase() : ''
+			if ((etiqueta === 'input' || etiqueta === 'textarea' || etiqueta === 'select') && typeof activo.blur == 'function') {
+				activo.blur()
+			}
+		},
+		/**
+		 * Un toque en la mesa o en la etiqueta vacia: suelta el campo elegido.
+		 *
+		 * @returns {void}
+		 */
+		soltar_seleccion() {
+			this.confirmar_lo_tipeado()
+			this.$emit('seleccionar', null)
+		},
+		/**
 		 * Agarra un campo del lienzo: para moverlo (manija null) o para agrandarlo/achicarlo.
 		 *
 		 * @param {PointerEvent} evento
@@ -489,6 +514,7 @@ export default {
 			/* Sin esto el navegador empieza a seleccionar texto o a arrastrar la foto */
 			evento.preventDefault()
 
+			this.confirmar_lo_tipeado()
 			this.$emit('seleccionar', elemento.id)
 			this.enfocar(elemento.id)
 
@@ -524,6 +550,8 @@ export default {
 			if (!elemento) {
 				return
 			}
+
+			this.confirmar_lo_tipeado()
 
 			this.nuevo = {
 				plantilla: plantilla,

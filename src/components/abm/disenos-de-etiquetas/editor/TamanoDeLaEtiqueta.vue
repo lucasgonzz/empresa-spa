@@ -54,8 +54,8 @@
 				type="button"
 				class="tamano-etiqueta__paso"
 				aria-label="Una fila menos"
-				:disabled="filas <= FILAS_MINIMO"
-				@click="$emit('filas', filas - 1)">
+				:disabled="filas_del_contador <= FILAS_MINIMO"
+				@click="$emit('filas', filas_del_contador - 1)">
 					<i class="bi bi-dash-lg"></i>
 				</button>
 				<b-form-input
@@ -66,14 +66,14 @@
 				type="number"
 				:min="FILAS_MINIMO"
 				:max="FILAS_MAXIMO"
-				:value="filas"
+				:value="filas_del_contador"
 				@change="poner_filas"></b-form-input>
 				<button
 				type="button"
 				class="tamano-etiqueta__paso"
 				aria-label="Una fila más"
-				:disabled="filas >= FILAS_MAXIMO"
-				@click="$emit('filas', filas + 1)">
+				:disabled="filas_del_contador >= FILAS_MAXIMO"
+				@click="$emit('filas', filas_del_contador + 1)">
 					<i class="bi bi-plus-lg"></i>
 				</button>
 			</div>
@@ -163,6 +163,15 @@ export default {
 		 */
 		filas() {
 			return filas_por_hoja(this.diseno.alto_mm)
+		},
+		/**
+		 * Lo que muestra el contador "Filas por hoja": las que entran, con tope en su maximo (20, el
+		 * del contrato). Con 10 mm de alto entran 28 y el contador dice 20; "Entran …" dice las 28.
+		 *
+		 * @returns {number}
+		 */
+		filas_del_contador() {
+			return Math.min(FILAS_MAXIMO, this.filas)
 		},
 		/**
 		 * "66,7 × 40 mm".

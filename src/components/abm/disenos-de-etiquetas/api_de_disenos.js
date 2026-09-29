@@ -14,7 +14,12 @@
 	con `skip_global_error_event` y `skip_global_validation_toast` para que el error lo muestre UNA
 	vez quien llama, con mensaje_de_error() (que se reusa de alla).
 */
+import { env } from '@/runtime_config'
+
 export { mensaje_de_error } from '@/components/abm/disenos-de-vender/api_de_disenos'
+
+/* Lo que se dice cuando no hay articulos en memoria para "Imprimir una prueba" */
+export const SIN_ARTICULOS_PARA_PROBAR = 'Abrí el Listado para tener artículos con qué probar.'
 
 /* Ruta del recurso, relativa a $api (que ya lleva el prefijo /api) */
 const RUTA = 'article-ticket-design'
@@ -57,4 +62,20 @@ export function actualizar_diseno(vm, id, datos) {
  */
 export function eliminar_diseno(vm, id) {
 	return vm.$api.delete(RUTA + '/' + id, CONFIGURACION)
+}
+
+/**
+ * "Imprimir una prueba": abre en otra pestaña el PDF de etiquetas con un diseño guardado y unos
+ * articulos (la misma ruta que usa el menu de Listado).
+ *
+ * @param {number} article_ticket_design_id
+ * @param {Array} ids ids de articulos (ids_para_la_prueba de muestra.js)
+ * @returns {boolean} false si no habia articulos con que probar
+ */
+export function abrir_prueba(article_ticket_design_id, ids) {
+	if (!article_ticket_design_id || !ids || !ids.length) {
+		return false
+	}
+	window.open(env('VUE_APP_API_URL') + '/article/tickets-pdf/' + ids.join('-') + '?article_ticket_design_id=' + article_ticket_design_id)
+	return true
 }
