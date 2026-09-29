@@ -128,6 +128,10 @@ export default [
     // de dibujar su primera etapa. Es un catalogo chico (uno o dos diseños por negocio). Sin
     // conexion, o con una API vieja que no lo conoce, Vender cae al diseño predeterminado.
     'vender_layout',
+    // Diseños de etiquetas de gondola (mision disenos-etiquetas-gondola, 29/9/2026): el menu de
+    // Listado -> "Documentos PDF" arma una opcion por diseño sin pedir nada. Catalogo chico (uno por
+    // lista de precios). Con una API vieja que no lo conoce, el menu imprime la etiqueta de siempre.
+    'article_ticket_design',
     'discount',
     'surchage',
     'brand',
