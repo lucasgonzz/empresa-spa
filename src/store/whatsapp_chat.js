@@ -279,6 +279,41 @@ export default {
 			}
 		},
 		/**
+		 * Agrega el mensaje que el propio operador acaba de mandar (`sendMessage`, `sendMedia`,
+		 * `sendTemplate`) — o lo actualiza en vez de duplicarlo, si el broadcast ya lo había
+		 * agregado antes de que volviera la respuesta del POST.
+		 *
+		 * 🔴 POR QUÉ HACE FALTA ESTO Y `appendMessage` A SECAS NO ALCANZA.
+		 * `WhatsappChatUpdated` (empresa-api) es `ShouldBroadcastNow`: sale hacia Pusher DENTRO
+		 * del mismo request que crea el mensaje, antes de que el controller arme la respuesta
+		 * HTTP (que todavía tiene que pedir `fullModel()`). En la práctica, el broadcast le
+		 * suele llegar al MISMO navegador que mandó el POST antes de que la propia promesa de
+		 * ese POST resuelva. `SidebarHost.vue::on_whatsapp_chat_updated()` ya deduplica por id
+		 * de su lado (si el mensaje ya está, hace `patchMessage` en vez de `appendMessage`), pero
+		 * eso no alcanza si el que llega SEGUNDO es el `.then()` del propio envío: ahí no había
+		 * ningún chequeo, así que el mismo id se agregaba una segunda vez.
+		 *
+		 * El síntoma en pantalla: dos burbujas idénticas, una como "Vos" (el mensaje que llegó
+		 * por broadcast, sin `sent_by_user` cargado — ver `WhatsappChatUpdated::broadcastWith()`,
+		 * que manda el modelo recién creado, sin relaciones) y otra con el nombre real del
+		 * empleado (la respuesta del POST, que sí trae `sent_by_user` porque pasa por
+		 * `fullModel()`). Detectado el 28/9/2026, reportado por Lucas probando el módulo con
+		 * "Simulación" activa — pero la carrera no depende de la simulación: pasa con cualquier
+		 * mensaje saliente en el que el broadcast le gane la carrera a la respuesta del propio
+		 * POST.
+		 *
+		 * Mismo patrón que ya usa `simulateInbound()` para el caso equivalente del lado del
+		 * mensaje entrante simulado (dedup por id antes de agregar).
+		 */
+		appendOrPatchSentMessage(state, message) {
+			let index = state.messages.findIndex(m => m.id == message.id)
+			if (index != -1) {
+				state.messages.splice(index, 1, Object.assign({}, state.messages[index], message))
+			} else {
+				state.messages.push(message)
+			}
+		},
+		/**
 		 * Saca un mensaje de la conversación abierta: el backend BORRA la fila cuando se
 		 * descarta una respuesta del agente (`DELETE whatsapp-chats/messages/{id}`), así que
 		 * acá no hay nada que actualizar, hay que sacarlo.
@@ -631,7 +666,10 @@ export default {
 					// si no, el cliente recibiría dos respuestas descoordinadas). Se espeja acá
 					// porque esas filas ya no existen en la base.
 					commit('removePendingAiMessages')
-					commit('appendMessage', res.data.model)
+					// `appendOrPatchSentMessage` y no `appendMessage`: ver su docblock en
+					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
+					// respuesta y ya haber agregado el mensaje.
+					commit('appendOrPatchSentMessage', res.data.model)
 					return res.data.model
 				})
 		},
@@ -668,7 +706,10 @@ export default {
 					// respuestas del agente que esperaban confirmación antes de mandar el
 					// archivo, así que esas filas ya no existen en la base.
 					commit('removePendingAiMessages')
-					commit('appendMessage', res.data.model)
+					// `appendOrPatchSentMessage` y no `appendMessage`: ver su docblock en
+					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
+					// respuesta y ya haber agregado el mensaje.
+					commit('appendOrPatchSentMessage', res.data.model)
 					return res.data
 				})
 		},
@@ -690,7 +731,10 @@ export default {
 					// Misma intervención humana que en sendMessage(): el backend borra lo que
 					// el agente dejó esperando confirmación antes de mandar la plantilla.
 					commit('removePendingAiMessages')
-					commit('appendMessage', res.data.model)
+					// `appendOrPatchSentMessage` y no `appendMessage`: ver su docblock en
+					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
+					// respuesta y ya haber agregado el mensaje.
+					commit('appendOrPatchSentMessage', res.data.model)
 					return res.data.model
 				})
 		},
