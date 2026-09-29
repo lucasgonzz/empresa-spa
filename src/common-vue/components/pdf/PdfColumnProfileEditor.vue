@@ -294,20 +294,26 @@ export default {
 				})
 		},
 		/**
-		 * Alinea perfiles de artículo A4: imprimible 210 mm y margen 5 mm por lado (200 mm para columnas).
-		 * Corrige el valor legacy printable_width_mm=200 que el validador trataba como bruto.
+		 * Alinea perfiles A4 de artículo, presupuesto y pedido online: imprimible 210 mm y margen
+		 * 5 mm por lado (200 mm para columnas). Para artículo, además corrige el valor legacy
+		 * printable_width_mm=200 que el validador trataba como bruto.
+		 *
+		 * Presupuesto y pedido online se suman a la corrección de un perfil NUEVO: su PDF es una hoja
+		 * A4 vertical de 210 mm, y con los defaults del formulario (297/277) el editor dejaría sumar
+		 * columnas hasta 267 mm y el PDF se saldría de la hoja. La venta queda como estaba.
 		 *
 		 * @return {void}
 		 */
 		apply_article_a4_defaults() {
-			if (!this.model || this.model.model_name !== 'article') {
+			const a4_model_names = ['article', 'budget', 'order']
+			if (!this.model || a4_model_names.indexOf(this.model.model_name) === -1) {
 				return
 			}
 
 			const paper_width_mm = Number(this.model.paper_width_mm || 0)
 			const printable_width_mm = Number(this.model.printable_width_mm || 0)
 			const margin_mm = Number(this.model.margin_mm == null || this.model.margin_mm === '' ? 5 : this.model.margin_mm)
-			const is_legacy_net_printable = paper_width_mm === 210 && printable_width_mm === 200 && margin_mm === 5
+			const is_legacy_net_printable = this.model.model_name === 'article' && paper_width_mm === 210 && printable_width_mm === 200 && margin_mm === 5
 			const is_new_profile = !this.model.id
 
 			if (!is_new_profile && !is_legacy_net_printable) {
