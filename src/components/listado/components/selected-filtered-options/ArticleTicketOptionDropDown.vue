@@ -110,7 +110,21 @@ export default {
 			if (!modulo || !Array.isArray(modulo.models)) {
 				return []
 			}
-			return modulo.models.slice().sort(function (a, b) {
+			/*
+				* El diseño que el sistema generó para una lista que ya se borró no se ofrece: la API
+				* lo borra junto con la lista, pero este store lo conserva hasta recargar, y tocarlo
+				* imprimiría la etiqueta de siempre con el precio final en vez del de la lista. Solo se
+				* filtra si las listas ya están cargadas (si no, no hay contra qué comparar).
+			*/
+			let price_types = this.price_types
+			return modulo.models.filter(function (diseno) {
+				if (!diseno.price_type_id || !price_types.length) {
+					return true
+				}
+				return price_types.some(function (price_type) {
+					return Number(price_type.id) === Number(diseno.price_type_id)
+				})
+			}).sort(function (a, b) {
 				let posicion = (Number(a.position) || 0) - (Number(b.position) || 0)
 				return posicion !== 0 ? posicion : Number(a.id) - Number(b.id)
 			})
