@@ -131,7 +131,7 @@
 			class="whatsapp-header__btn"
 			:disabled="suggesting"
 			data-tour="whatsapp.boton_sugerir_respuesta"
-			title="La IA lee la conversación y escribe un borrador en el input. Nunca se envía solo."
+			title="La IA lee la conversación y deja la respuesta como una burbuja pendiente en el chat, marcada para tu aprobación. Nunca se envía sola."
 			@click="suggest">
 				<i class="bi bi-magic"></i>
 				{{ suggesting ? 'Sugiriendo...' : 'Sugerir respuesta' }}
@@ -341,20 +341,17 @@ export default {
 			this.$store.commit('whatsapp_chat/setSimulandoEnVivo', value)
 		},
 		/**
-		 * Pide una sugerencia de la IA y la deja en el input del composer, editable antes de
-		 * enviar (nunca se envía sola).
+		 * Pide una sugerencia de la IA. Desde la misión sugerencia-ia-como-borrador (29/9/2026)
+		 * ya NO se carga en el input del composer (D4 del plan): el store la persiste como una
+		 * burbuja `a_confirmar` más y la agrega directo a la conversación (ver
+		 * `whatsapp_chat/suggest` y `MessageBubble.vue`, que es donde se confirma, se edita o se
+		 * descarta). Acá solo queda pedirla y avisar si salió bien o mal.
 		 *
-		 * 🔴 El texto NO se escribe directo en el composer, porque el borrador es un `data()` de
-		 * ESE componente y desde acá no se puede tocar. Viaja por el mecanismo de borrador que ya
-		 * existe en el store (`setBorrador`), el mismo que usa el botón de una oferta para abrir
-		 * el chat con el mensaje escrito: `Composer.vue` tiene un `watch: borrador` que lo levanta
-		 * y lo consume de una sola vez. No hace falta ningún canal nuevo entre los dos
-		 * componentes, y el que se usa está documentado y probado.
-		 *
-		 * La guarda de "esta sugerencia es de ESTE chat" queda por partida doble: el corte de acá
-		 * abajo y el `borrador.chat_id != chat_id` de `tomar_borrador()`. Sin ella, la respuesta
-		 * que la IA escribió leyendo la conversación del cliente A —con los datos de A adentro—
-		 * aparecía escrita en el input con el cliente B abierto, a un Enter de mandarse.
+		 * La guarda de "esta sugerencia es de ESTE chat" (`chat_pedido != self.chat_id`) sigue
+		 * haciendo falta para el toast: sin ella, terminar de sugerir para el cliente A mientras
+		 * ya se saltó al B mostraría "Sugerencia lista" sobre la conversación de B, que no tiene
+		 * nada que ver. La burbuja en sí ya se cuida sola del lado del store (dedup por chat_id
+		 * antes de tocar `state.messages`).
 		 */
 		suggest() {
 			let self = this
@@ -364,15 +361,18 @@ export default {
 			let chat_pedido = this.chat.id
 			this.suggesting = true
 			this.$store.dispatch('whatsapp_chat/suggest', chat_pedido)
-			.then(function (suggestion) {
+			.then(function (model) {
 				self.suggesting = false
 				if (chat_pedido != self.chat_id) {
 					return
 				}
-				self.$store.commit('whatsapp_chat/setBorrador', {
-					chat_id: chat_pedido,
-					texto: suggestion || '',
-				})
+				// `model` viene null contra una API vieja que todavía no persiste la sugerencia
+				// (ver el docblock de `suggest()` en el store): en ese caso el texto quedó en el
+				// borrador del composer, como pasaba antes de esta misión, y este toast —que
+				// habla de una burbuja que ahí no existe— no corresponde.
+				if (model) {
+					self.$toast.success('Sugerencia lista para revisar', { duration: 3000 })
+				}
 			})
 			.catch(function (err) {
 				self.suggesting = false

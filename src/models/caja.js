@@ -72,11 +72,14 @@ export default {
 		// 	}
 		// },
 		{
-			text: 'Empleados con acceso',
+			text: 'Empleados que pueden operar esta caja',
 			store: 'employee',
 			search_on_models_by: 'name',
 			type: 'search',
 			key: 'users',
+			descriptions: [
+				'Quiénes pueden usar esta caja para vender y cobrar, y elegirla en los selectores de caja por método de pago.',
+			],
 			belongs_to_many: {
 				model_name: 'users',
 				props_to_show: [
@@ -88,13 +91,13 @@ export default {
 			}
 		},
 		{
-			text: 'Visibilidad en tesorería',
+			text: 'Empleados que ven esta caja en tesorería',
 			store: 'employee',
 			search_on_models_by: 'name',
 			type: 'search',
 			key: 'treasury_users',
 			descriptions: [
-				'Si no agrega empleados aquí, se usa la lista de «Empleados con acceso». Si ambas listas quedan vacías, todos los empleados ven la caja en tesorería.',
+				'Quiénes pueden ver esta caja en el listado del módulo de tesorería (no tiene que ver con poder operarla). Si no agrega empleados aquí, se usa la lista de «Empleados que pueden operar esta caja». Si ambas listas quedan vacías, todos los empleados ven la caja en tesorería.',
 			],
 			belongs_to_many: {
 				model_name: 'users',
