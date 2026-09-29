@@ -173,8 +173,12 @@ export default {
 			})
 		},
 		/**
-		 * "Duplicar": crea una copia con el diseño resuelto y serializado (queda como diseño fijo,
-		 * aunque el original sea el predeterminado del sistema) y sin estar en uso.
+		 * "Duplicar": crea una copia sin estar en uso.
+		 *
+		 * Un diseño guardado en null (el "Diseño original del sistema") se duplica en null: la copia
+		 * tambien sigue al del sistema. Serializarlo lo congelaria con los anchos de QUIEN duplica (el
+		 * buscador depende de las extensiones y de si ese usuario pide la cantidad al vender), el mismo
+		 * problema que evita el editor al renombrar. Un diseño fijo se copia resuelto y serializado.
 		 *
 		 * @param {Object} modelo
 		 * @returns {void}
@@ -182,12 +186,13 @@ export default {
 		duplicar(modelo) {
 			let self = this
 			let nombre = (String(modelo.name || 'Diseño') + ' (copia)').slice(0, LARGO_MAXIMO_DEL_NOMBRE)
+			let es_del_sistema = modelo.layout === null || typeof modelo.layout == 'undefined'
 
 			this.empezar_carga('Duplicando el diseño')
 
 			crear_diseno(this, {
 				name: nombre,
-				layout: serializar_diseno(resolver_diseno(modelo.layout, this)),
+				layout: es_del_sistema ? null : serializar_diseno(resolver_diseno(modelo.layout, this)),
 				en_uso: false,
 			})
 			.then(function () {

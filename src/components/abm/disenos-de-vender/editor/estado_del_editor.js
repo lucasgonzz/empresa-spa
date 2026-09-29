@@ -242,18 +242,35 @@ export function armar_diseno_completo(estado) {
 }
 
 /**
+ * Huella de SOLO el diseño (sin nombre ni "en uso"): con ella el editor sabe si el lienzo se toco
+ * respecto de su base (la del momento de abrir, o la de "Restablecer"). Es lo que decide si al
+ * guardar viaja el `layout`: renombrar un diseño o ponerlo en uso no lo tiene que "congelar".
+ *
+ * @param {Object} estado estado de trabajo
+ * @returns {string}
+ */
+export function huella_del_diseno(estado) {
+	return JSON.stringify(armar_diseno_completo(estado))
+}
+
+/**
  * Huella del estado del editor, para saber si hay cambios sin guardar: se compara la del momento
  * de abrir con la de ahora. El nombre va sin espacios de los costados porque asi se guarda.
+ *
+ * `sigue_al_sistema` entra en la huella porque volver al diseño del sistema es un cambio aunque el
+ * lienzo quede igual: un diseño fijo identico al predeterminado, restablecido, se guarda en null.
  *
  * @param {string} nombre
  * @param {boolean} en_uso
  * @param {Object} estado estado de trabajo
+ * @param {boolean} [sigue_al_sistema] si al guardar va a quedar como el diseño del sistema (null)
  * @returns {string}
  */
-export function huella_del_estado(nombre, en_uso, estado) {
+export function huella_del_estado(nombre, en_uso, estado, sigue_al_sistema) {
 	return JSON.stringify({
 		nombre: String(nombre || '').trim(),
 		en_uso: !!en_uso,
+		sigue_al_sistema: !!sigue_al_sistema,
 		diseno: armar_diseno_completo(estado),
 	})
 }

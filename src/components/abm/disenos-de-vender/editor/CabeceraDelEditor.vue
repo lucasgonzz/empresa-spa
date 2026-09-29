@@ -58,6 +58,10 @@
 				<i class="bi bi-arrow-counterclockwise"></i>
 				Restablecer el diseño predeterminado
 			</b-button>
+			<!-- Si el diseño sigue al del sistema, o si al guardar va a dejar de seguirlo -->
+			<p
+			v-if="nota_del_diseno"
+			class="editor-diseno-cabecera__nota">{{ nota_del_diseno }}</p>
 		</div>
 	</div>
 </template>
@@ -90,6 +94,11 @@ export default {
 		nombre_invalido: {
 			type: Boolean,
 			default: false,
+		},
+		/* Linea debajo de "Restablecer": si el diseño sigue al del sistema o va a dejar de seguirlo, o null */
+		nota_del_diseno: {
+			type: String,
+			default: null,
 		},
 	},
 	computed: {
@@ -165,9 +174,19 @@ export default {
 
 	.editor-diseno-cabecera__restablecer
 		display: flex
-		align-items: center
+		flex-direction: column
+		align-items: flex-end
+		gap: 6px
 		margin-left: auto
 		padding-top: 24px
+
+	.editor-diseno-cabecera__nota
+		max-width: 320px
+		margin: 0
+		color: var(--color-text-secondary)
+		font-size: 0.74rem
+		line-height: 1.35
+		text-align: right
 
 		.btn
 			display: inline-flex
@@ -249,5 +268,10 @@ html.dark-mode .editor-diseno-toggle .editor-diseno-toggle__perilla
 			padding-top: 0
 
 		.editor-diseno-cabecera__restablecer
+			align-items: flex-start
 			margin-left: 0
+
+		.editor-diseno-cabecera__nota
+			max-width: none
+			text-align: left
 </style>

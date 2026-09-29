@@ -31,6 +31,7 @@
 			:en_uso.sync="en_uso"
 			:en_uso_bloqueado="en_uso_original"
 			:nombre_invalido="nombre_invalido"
+			:nota_del_diseno="nota_del_diseno"
 			@update:nombre="nombre_invalido = false"
 			@restablecer="restablecer"></cabecera-del-editor>
 
@@ -143,6 +144,7 @@ import {
 	armar_estado_de_trabajo,
 	armar_diseno_completo,
 	huella_del_estado,
+	huella_del_diseno,
 	indice_por_defecto,
 	falta_buscador,
 	identidad,
@@ -213,6 +215,16 @@ export default {
 			sacados_ocultos: [],
 			/* Huella del estado al abrir: si la de ahora es distinta, hay cambios sin guardar */
 			huella_inicial: '',
+			/*
+				Si la base del lienzo es el diseño del sistema (layout null): un diseño nuevo, uno guardado
+				en null, o cualquiera despues de "Restablecer". Mientras el lienzo no se toque desde esa
+				base, el diseño "sigue al del sistema" (ver sigue_al_sistema y guardar()).
+			*/
+			base_es_del_sistema: false,
+			/* Si en esta edicion se toco "Restablecer el diseño predeterminado" */
+			restablecido: false,
+			/* Huella de SOLO el diseño en su base (al abrir o al restablecer): si cambia, el lienzo se toco */
+			huella_del_diseno_base: '',
 			guardando: false,
 			/* Se pone en true para cerrar sin la pregunta de cambios sin guardar (despues de guardar, o ya confirmado) */
 			cerrar_sin_preguntar: false,
@@ -264,7 +276,45 @@ export default {
 			if (!this.abierto || !this.huella_inicial) {
 				return false
 			}
-			return huella_del_estado(this.nombre, this.en_uso, this.estado_de_trabajo) !== this.huella_inicial
+			return huella_del_estado(this.nombre, this.en_uso, this.estado_de_trabajo, this.sigue_al_sistema) !== this.huella_inicial
+		},
+		/**
+		 * Si el lienzo cambio respecto de su base (la del momento de abrir, o la de "Restablecer").
+		 * Cambiar el nombre o el "En uso" NO es tocar el diseño.
+		 *
+		 * @returns {boolean}
+		 */
+		diseno_tocado() {
+			return huella_del_diseno(this.estado_de_trabajo) !== this.huella_del_diseno_base
+		},
+		/**
+		 * Si al guardar el diseño va a quedar (o seguir) como el diseño del sistema, con layout null:
+		 * la base es la del sistema y el lienzo no se toco. Es lo que la tarjeta muestra como "Diseño
+		 * original del sistema", el que se acomoda solo a las extensiones y a cada usuario.
+		 *
+		 * @returns {boolean}
+		 */
+		sigue_al_sistema() {
+			return this.base_es_del_sistema && !this.diseno_tocado
+		},
+		/**
+		 * La linea que, debajo de "Restablecer", dice si el diseño sigue al del sistema o va a dejar de
+		 * seguirlo al guardar. Mismo nombre que usa la tarjeta de la solapa ("Diseño original del
+		 * sistema"). Null en un diseño fijo que no viene del sistema.
+		 *
+		 * @returns {string|null}
+		 */
+		nota_del_diseno() {
+			if (!this.abierto) {
+				return null
+			}
+			if (this.sigue_al_sistema) {
+				return 'Diseño original del sistema: se acomoda solo a las extensiones y a la preferencia de cada usuario.'
+			}
+			if (this.base_es_del_sistema) {
+				return 'Con estos cambios, al guardar el diseño queda fijo y deja de seguir al original del sistema.'
+			}
+			return null
 		},
 		/**
 		 * Si el diseño se quedo sin codigo de barras ni buscador por nombre (y el negocio tiene alguno).
@@ -299,7 +349,12 @@ export default {
 			this.cerrar_sin_preguntar = false
 			this.arrastrando = null
 			this.destacado = null
-			this.huella_inicial = huella_del_estado(this.nombre, this.en_uso, this.estado_de_trabajo)
+
+			/* Un diseño nuevo arranca del predeterminado: su base tambien es la del sistema */
+			this.base_es_del_sistema = !modelo || modelo.layout === null || typeof modelo.layout == 'undefined'
+			this.restablecido = false
+			this.huella_del_diseno_base = huella_del_diseno(this.estado_de_trabajo)
+			this.huella_inicial = huella_del_estado(this.nombre, this.en_uso, this.estado_de_trabajo, this.base_es_del_sistema)
 
 			this.$refs.modal.show()
 		},
@@ -504,8 +559,12 @@ export default {
 		},
 		/**
 		 * Vuelve al diseño predeterminado del sistema (resolver_diseno(null)), sin tocar el nombre ni
-		 * el "En uso". Si ya es el predeterminado no hace nada; si no, pregunta, porque se pierde lo
-		 * armado hasta ahora (aunque todavia no este guardado).
+		 * el "En uso", y lo marca como del sistema: si se guarda sin tocar nada mas del lienzo, viaja
+		 * `layout: null` y el diseño vuelve a acomodarse solo a las extensiones y a cada usuario.
+		 *
+		 * Si el lienzo ya es el predeterminado no hay nada que perder: no pregunta (y si ademas ya era
+		 * del sistema, no hace nada). Si no, pregunta, porque se pierde lo armado hasta ahora aunque
+		 * todavia no este guardado.
 		 *
 		 * @returns {void}
 		 */
@@ -513,15 +572,21 @@ export default {
 			let self = this
 			let predeterminado = armar_estado_de_trabajo(null, this)
 
-			let actual = JSON.stringify(armar_diseno_completo(this.estado_de_trabajo))
-			let original = JSON.stringify(armar_diseno_completo(predeterminado))
+			let actual = huella_del_diseno(this.estado_de_trabajo)
+			let original = huella_del_diseno(predeterminado)
 
 			if (actual === original) {
-				avisar(this, 'info', 'Este diseño ya está igual al predeterminado.')
+				if (this.sigue_al_sistema) {
+					avisar(this, 'info', 'Este diseño ya es el original del sistema.')
+					return
+				}
+				/* Un diseño fijo identico al predeterminado: se lo marca para que vuelva a ser el del sistema */
+				this.marcar_como_del_sistema()
+				avisar(this, 'info', 'Listo: al guardar, este diseño vuelve a ser el original del sistema.')
 				return
 			}
 
-			this.$bvModal.msgBoxConfirm('Cada campo vuelve a su lugar y a su ancho de siempre, y los sacados vuelven a Vender. El nombre y el "En uso" no cambian, y nada se guarda hasta que toques Guardar.', {
+			this.$bvModal.msgBoxConfirm('Cada campo vuelve a su lugar y a su ancho de siempre, y los sacados vuelven a Vender. El nombre y el "En uso" no cambian, y nada se guarda hasta que toques Guardar. Si guardás sin mover nada más, el diseño vuelve a acomodarse solo, como el original del sistema.', {
 				title: '¿Restablecer el diseño predeterminado?',
 				okTitle: 'Restablecer',
 				okVariant: 'primary',
@@ -531,16 +596,37 @@ export default {
 			.then(function (confirmado) {
 				if (confirmado) {
 					self.aplicar_estado(armar_estado_de_trabajo(null, self))
+					self.marcar_como_del_sistema()
 				}
 			})
 			.catch(function () {})
 		},
 		/**
+		 * Toma el lienzo actual como base "del sistema": desde aca, mientras no se toque, al guardar
+		 * viaja `layout: null` (ver guardar()).
+		 *
+		 * @returns {void}
+		 */
+		marcar_como_del_sistema() {
+			this.base_es_del_sistema = true
+			this.restablecido = true
+			this.huella_del_diseno_base = huella_del_diseno(this.estado_de_trabajo)
+		},
+		/**
 		 * Valida y guarda: POST si es nuevo, PUT si se esta editando. Despues vuelve a pedir la lista
 		 * (poner uno en uso apaga a los demas) y cierra.
 		 *
-		 * Un diseño existente sin cambios no se manda: se cierra y listo (si no, guardar el
-		 * predeterminado sin tocarlo lo pasaria de "diseño del sistema" a un diseño fijo).
+		 * Un diseño existente sin cambios no se manda: se cierra y listo.
+		 *
+		 * 🔴 El `layout` viaja SOLO si el lienzo se toco (o si hay que volver al diseño del sistema):
+		 * - Lienzo sin tocar desde el diseño del sistema (nuevo, o restablecido): `layout: null`.
+		 * - Guardado en null y sin tocar (solo cambio el nombre o el "En uso"): sin la clave.
+		 * - Diseño fijo sin tocar: sin la clave.
+		 * - Lienzo tocado: el diseño completo, explicito.
+		 * Mandarlo siempre "congelaba" el predeterminado al renombrarlo: los anchos quedaban fijados
+		 * con la preferencia de "pedir la cantidad" de quien lo edito, y a un empleado con la
+		 * preferencia contraria la fila de buscadores le quedaba con un hueco o partida. La API acepta
+		 * un PUT parcial y no toca las claves que no vienen.
 		 *
 		 * @returns {void}
 		 */
@@ -574,9 +660,20 @@ export default {
 
 			let datos = {
 				name: nombre,
-				layout: serializar_diseno(armar_diseno_completo(this.estado_de_trabajo)),
 				en_uso: !!this.en_uso,
 			}
+
+			if (this.sigue_al_sistema) {
+				/* Nuevo o restablecido, sin tocar el lienzo: nace (o vuelve a ser) el diseño del sistema */
+				if (!this.modelo_id || this.restablecido) {
+					datos.layout = null
+				}
+				/* Guardado en null y sin tocar: la clave no viaja y el backend no toca el layout */
+			} else if (!this.modelo_id || this.diseno_tocado) {
+				/* Lienzo tocado: el diseño completo, explicito */
+				datos.layout = serializar_diseno(armar_diseno_completo(this.estado_de_trabajo))
+			}
+			/* Diseño fijo sin tocar (solo cambio el nombre o el "En uso"): la clave no viaja */
 
 			this.guardando = true
 			this.$store.commit('auth/setMessage', 'Guardando el diseño de Vender')
@@ -684,6 +781,9 @@ export default {
 			this.orden_original = {}
 			this.sacados_ocultos = []
 			this.huella_inicial = ''
+			this.base_es_del_sistema = false
+			this.restablecido = false
+			this.huella_del_diseno_base = ''
 			this.guardando = false
 			this.cerrar_sin_preguntar = false
 			this.arrastrando = null
