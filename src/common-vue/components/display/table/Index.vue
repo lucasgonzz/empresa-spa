@@ -1742,6 +1742,15 @@ export default {
 			position: relative
 			z-index: 900
 
+		// El cuerpo forma su propio contexto de apilamiento (z-index 0) por debajo del thead
+		// (900). Sin esto, en el telefono los elementos de las celdas que el navegador promueve a
+		// capa propia al scrollear --botones con borde y sombra, avatares con overflow:hidden y
+		// radio, celdas con mask-image-- se dibujaban POR ENCIMA del header sticky. Los desplegables
+		// de una fila siguen apilandose normal contra las filas de abajo: comparten este contexto.
+		tbody
+			position: relative
+			z-index: 0
+
 		thead, tbody 
 			min-width: 100%
 
