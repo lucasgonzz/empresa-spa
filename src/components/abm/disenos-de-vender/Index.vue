@@ -73,6 +73,7 @@ import TarjetaDeDiseno from './TarjetaDeDiseno'
 import EditorDeDiseno from './editor/Index'
 import { resolver_diseno, serializar_diseno, diseno_en_uso } from '@/components/vender/layout/resolver_diseno'
 import { crear_diseno, actualizar_diseno, eliminar_diseno, mensaje_de_error } from './api_de_disenos'
+import { avisar } from './avisos'
 
 /* Largo maximo del nombre de un diseño (vender_layouts.name es string(120)) */
 const LARGO_MAXIMO_DEL_NOMBRE = 120
@@ -162,12 +163,13 @@ export default {
 			})
 			.then(function () {
 				self.terminar_carga()
-				self.$toast.success('Listo: todo el negocio vende con «' + modelo.name + '».')
+				avisar(self, 'success', 'Listo: todo el negocio vende con «' + modelo.name + '».')
 			})
 			.catch(function (error) {
 				self.terminar_carga()
 				console.log(error)
-				self.$toast.error(mensaje_de_error(error, 'No se pudo poner el diseño en uso. Revisá tu conexión y volvé a intentar.'))
+				self.refrescar_despues_de_un_error()
+				avisar(self, 'error', mensaje_de_error(error, 'No se pudo poner el diseño en uso. Revisá tu conexión y volvé a intentar.'))
 			})
 		},
 		/**
@@ -193,12 +195,13 @@ export default {
 			})
 			.then(function () {
 				self.terminar_carga()
-				self.$toast.success('Diseño duplicado: «' + nombre + '».')
+				avisar(self, 'success', 'Diseño duplicado: «' + nombre + '».')
 			})
 			.catch(function (error) {
 				self.terminar_carga()
 				console.log(error)
-				self.$toast.error(mensaje_de_error(error, 'No se pudo duplicar el diseño. Revisá tu conexión y volvé a intentar.'))
+				self.refrescar_despues_de_un_error()
+				avisar(self, 'error', mensaje_de_error(error, 'No se pudo duplicar el diseño. Revisá tu conexión y volvé a intentar.'))
 			})
 		},
 		/**
@@ -213,7 +216,7 @@ export default {
 			let self = this
 
 			if (modelo.id === this.id_en_uso) {
-				this.$toast.warning(NO_SE_ELIMINA_EL_EN_USO)
+				avisar(this, 'warning', NO_SE_ELIMINA_EL_EN_USO)
 				return
 			}
 
@@ -237,15 +240,27 @@ export default {
 				})
 				.then(function () {
 					self.terminar_carga()
-					self.$toast.success('Diseño eliminado.')
+					avisar(self, 'success', 'Diseño eliminado.')
 				})
 				.catch(function (error) {
 					self.terminar_carga()
 					console.log(error)
-					self.$toast.error(mensaje_de_error(error, 'No se pudo eliminar el diseño. Revisá tu conexión y volvé a intentar.'))
+					self.refrescar_despues_de_un_error()
+					avisar(self, 'error', mensaje_de_error(error, 'No se pudo eliminar el diseño. Revisá tu conexión y volvé a intentar.'))
 				})
 			})
 			.catch(function () {})
+		},
+		/**
+		 * Vuelve a pedir la lista despues de una escritura que fallo. Un 404 o un 422 suelen decir que
+		 * la lista que se esta viendo quedo vieja (otro dispositivo borro el diseño o puso otro en
+		 * uso): sin esto la insignia "En uso" y las tarjetas seguirian mostrando lo de antes. No se
+		 * espera la respuesta: el aviso del error sale igual.
+		 *
+		 * @returns {void}
+		 */
+		refrescar_despues_de_un_error() {
+			this.$store.dispatch('vender_layout/getModels')
 		},
 		/**
 		 * Prende el indicador global de carga con un mensaje (patron de CLAUDE.md).

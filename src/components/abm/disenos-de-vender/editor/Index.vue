@@ -147,6 +147,7 @@ import {
 	identidad,
 } from './estado_del_editor'
 import { crear_diseno, actualizar_diseno, mensaje_de_error } from '../api_de_disenos'
+import { avisar } from '../avisos'
 
 /* Nombre que se sugiere al crear un diseño */
 const NOMBRE_SUGERIDO = 'Nuevo diseño'
@@ -484,7 +485,7 @@ export default {
 			let original = JSON.stringify(armar_diseno_completo(predeterminado))
 
 			if (actual === original) {
-				this.$toast.info('Este diseño ya está igual al predeterminado.')
+				avisar(this, 'info', 'Este diseño ya está igual al predeterminado.')
 				return
 			}
 
@@ -522,7 +523,7 @@ export default {
 
 			if (!nombre) {
 				this.nombre_invalido = true
-				this.$toast.error('Poné un nombre para el diseño.')
+				avisar(this, 'error', 'Poné un nombre para el diseño.')
 				if (this.$refs.cabecera) {
 					this.$refs.cabecera.enfocar_nombre()
 				}
@@ -530,7 +531,7 @@ export default {
 			}
 
 			if (falta_buscador(this.etapas, this)) {
-				this.$toast.error(TEXTO_FALTA_BUSCADOR)
+				avisar(this, 'error', TEXTO_FALTA_BUSCADOR)
 				return
 			}
 
@@ -561,7 +562,7 @@ export default {
 				self.guardando = false
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
-				self.$toast.success(datos.en_uso ? 'Diseño guardado. Todo el negocio vende con «' + nombre + '».' : 'Diseño guardado.')
+				avisar(self, 'success', datos.en_uso ? 'Diseño guardado. Todo el negocio vende con «' + nombre + '».' : 'Diseño guardado.')
 				self.cerrar(true)
 			})
 			.catch(function (error) {
@@ -569,7 +570,13 @@ export default {
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
 				console.log(error)
-				self.$toast.error(mensaje_de_error(error, 'No se pudo guardar el diseño. Revisá tu conexión y volvé a intentar.'))
+				/*
+					La lista se vuelve a pedir igual: un 404 (lo borraron desde otro dispositivo) o un 422
+					dicen que lo que se ve en la solapa quedo viejo, y la insignia "En uso" no puede
+					quedar mintiendo. No se espera la respuesta.
+				*/
+				self.$store.dispatch('vender_layout/getModels')
+				avisar(self, 'error', mensaje_de_error(error, 'No se pudo guardar el diseño. Revisá tu conexión y volvé a intentar.'))
 			})
 		},
 		/**
