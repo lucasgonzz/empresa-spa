@@ -3,6 +3,7 @@
 	size="lg"
 	title="Aperturas"
 	hide-footer
+	@hidden="al_cerrar"
 	id="aperturas-caja">
 
 		<!--
@@ -33,7 +34,7 @@
 
 				<div class="aperturas-resumen__dato">
 					<span class="aperturas-resumen__label">Aperturas</span>
-					<span class="aperturas-resumen__valor">{{ aperturas.length }}</span>
+					<span class="aperturas-resumen__valor">{{ total_aperturas }}</span>
 				</div>
 			</div>
 		</div>
@@ -76,6 +77,23 @@
 				:apertura_caja="props.model"></table-buttons>
 			</template>
 		</view-component>
+
+		<!--
+			Paginacion propia del modal: las aperturas de una caja se piden de a una pagina
+			(apertura_caja/cargar_pagina). No usa la barra de la tabla comun porque esa solo
+			se muestra con filtro activo o en listados por fecha.
+		-->
+		<div
+		class="aperturas-paginacion"
+		v-if="hay_mas_de_una_pagina">
+			<b-pagination
+			pills
+			class="m-0"
+			:value="pagina"
+			:total-rows="total_aperturas"
+			:per-page="por_pagina"
+			@change="cambiar_pagina"></b-pagination>
+		</div>
 	</b-modal>
 </template>
 <script>
@@ -107,16 +125,54 @@ export default {
 			return Number(this.caja.saldo_disponible) != Number(this.caja.saldo)
 		},
 		/**
-		 * Aperturas cargadas en el store para esta caja (las trae BtnAperturas antes de abrir el
-		 * modal, via apertura_caja/getModels con route_prefix = caja.id).
+		 * Total de aperturas de la caja (todas las paginas): las filas cargadas en la tabla son
+		 * solo la pagina actual.
 		 *
-		 * @returns {Array}
+		 * @returns {Number}
 		 */
-		aperturas() {
-			return this.$store.state.apertura_caja.models
+		total_aperturas() {
+			return this.$store.state.apertura_caja.total_aperturas
+		},
+		/**
+		 * La barra solo aparece si la API pagina (una anterior devuelve todo y no la necesita) y
+		 * hay mas aperturas que las de una pagina.
+		 *
+		 * @returns {Boolean}
+		 */
+		hay_mas_de_una_pagina() {
+			return this.$store.state.apertura_caja.aperturas_paginadas_por_api
+				&& this.total_aperturas > this.por_pagina
+		},
+		pagina() {
+			return this.$store.state.apertura_caja.pagina_aperturas
+		},
+		por_pagina() {
+			return this.$store.state.apertura_caja.por_pagina_aperturas
 		},
 	},
 	methods: {
+		/**
+		 * Pide la pagina elegida en la barra. La pagina activa la fija el store al llegar la
+		 * respuesta, asi la barra no salta a una pagina que todavia no se cargo.
+		 *
+		 * @param {Number} pagina
+		 * @returns {void}
+		 */
+		/**
+		 * Al cerrar el modal se vuelve a la primera pagina: otros modales (movimientos, resumen)
+		 * leen apertura_caja.models[0] como "la apertura actual", y con la pagina 2 cargada seria
+		 * una vieja.
+		 *
+		 * @returns {void}
+		 */
+		al_cerrar() {
+			if (this.pagina != 1) {
+				this.$store.dispatch('apertura_caja/cargar_pagina', 1)
+			}
+		},
+		cambiar_pagina(pagina) {
+			this.$store.dispatch('apertura_caja/cargar_pagina', pagina)
+		},
 		clicked(apertura_caja) {
 			this.$store.commit('apertura_caja/setModel', {model: apertura_caja, properties: []})
 
@@ -180,4 +236,9 @@ export default {
 		line-height: 1.2
 		color: var(--color-text-primary)
 		white-space: nowrap
+
+.aperturas-paginacion
+	display: flex
+	justify-content: center
+	margin-top: 14px
 </style>
