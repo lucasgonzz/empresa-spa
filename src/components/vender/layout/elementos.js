@@ -497,12 +497,18 @@ export const ELEMENTOS = [
 		},
 		aparece_cuando: null,
 	},
+	/*
+		Etapa 3 del predeterminado: IVA, stock y las dos observaciones van de a 3 columnas (una fila de
+		12). Con 2 columnas para los interruptores, en tablet (768-991px) la celda queda en ~115px y el
+		rotulo "Descontar stock" se montaba sobre el campo de al lado (medido el 28/9/2026 a 820px): en
+		develop esos interruptores tenian ancho automatico.
+	*/
 	{
 		key: 'precios_con_iva',
 		nombre: 'Precios con IVA',
 		nombre_corto: 'IVA',
 		etapa: 'etapa_3',
-		cols: 2,
+		cols: 3,
 		obligatorio: false,
 		entrada_de_articulos: false,
 		/* Antes lo decidia IvaYStock.vue::can_use_iva_aplicado */
@@ -516,7 +522,7 @@ export const ELEMENTOS = [
 		nombre: 'Descontar stock',
 		nombre_corto: 'stock',
 		etapa: 'etapa_3',
-		cols: 2,
+		cols: 3,
 		obligatorio: false,
 		entrada_de_articulos: false,
 		/* Antes lo decidia IvaYStock.vue::can_use_discount_stock */
@@ -530,7 +536,7 @@ export const ELEMENTOS = [
 		nombre: 'Observaciones',
 		nombre_corto: 'observaciones',
 		etapa: 'etapa_3',
-		cols: 4,
+		cols: 3,
 		obligatorio: false,
 		entrada_de_articulos: false,
 		disponible: function () { return true },
@@ -541,7 +547,7 @@ export const ELEMENTOS = [
 		nombre: 'Observaciones ocultas',
 		nombre_corto: 'observaciones ocultas',
 		etapa: 'etapa_3',
-		cols: 4,
+		cols: 3,
 		obligatorio: false,
 		entrada_de_articulos: false,
 		disponible: function () { return true },
