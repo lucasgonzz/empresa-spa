@@ -21,15 +21,17 @@
 		los comentarios no cuentan para :empty. Un espacio SI cuenta: con un solo nodo de texto el item
 		deja de estar vacio y el hueco vuelve, sin ningun error.
 
-		Hoy no queda ninguno, y no por casualidad: el compilador de plantillas (el de vue 2.7, que
-		es el que usa vue-loader 15.10 con vue 2.7) descarta siempre el espacio que sigue a una
-		etiqueta de apertura y el que precede a un cierre, y Vue CLI 4.5 lo configura con
+		Hoy no queda ninguno, y no por casualidad. El compilador de plantillas (el de vue 2.7, que es
+		el que usa vue-loader 15.10 con vue 2.7) descarta siempre el espacio que sigue a una etiqueta
+		de apertura y el que precede a un cierre, y el que queda entre el <hr v-if> y el
+		<component v-else> lo saca el propio v-else. Encima Vue CLI 4.5 lo configura con
 		`whitespace: 'condense'` (node_modules/@vue/cli-service/lib/config/base.js; vue.config.js
-		solo le agrega transformAssetUrls y conserva el resto), que borra el espacio con salto de
-		linea entre dos etiquetas; el que queda entre el <hr v-if> y el <component v-else> ademas lo
-		saca el propio v-else. Si alguien pasa el proyecto a `whitespace: 'preserve'` o mete texto
-		suelto adentro del item, esto se rompe en silencio: se verifica ocultando un campo (la caja
-		con el pago repartido en varios metodos) y mirando que no quede un hueco.
+		solo le agrega transformAssetUrls y conserva el resto), que borra cualquier espacio con salto
+		de linea entre dos etiquetas. Verificado el 28/9/2026 compilando esta plantilla con
+		vue/compiler-sfc: con 'condense', y tambien con 'preserve', el item sale con un unico hijo
+		(el hr o el componente). Lo que SI lo rompe es agregar adentro del item un hermano o texto
+		suelto (un icono, un espacio entre dos etiquetas en la misma linea): se verifica ocultando un
+		campo (la caja con el pago repartido en varios metodos) y mirando que no quede un hueco.
 
 		El v-if="user" es el que tenia remito/header-form/Index.vue sobre los buscadores: varios
 		componentes leen `user.` en su plantilla sin guarda (Amount.vue, por ejemplo) y al cerrar

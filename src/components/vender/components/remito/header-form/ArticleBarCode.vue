@@ -1,24 +1,26 @@
 <template>
 	<!--
-		El ancla va sobre la columna entera y no sobre el input: `vender.buscador_articulos` ya
-		cubre TODA la fila del header-form (barra, nombre, combos, promo, servicios), asi que el
-		codigo de barras necesita la suya para que el tour pueda senalarlo aparte.
+		El ancla va sobre el campo entero (input + lector) y no sobre el input solo: es la que usa el
+		tour de la demo para señalar el codigo de barras (clip 2.1).
+
+		Elemento `codigo_de_barras` del diseño de Vender (mision diseno-vender-configurable,
+		28/9/2026): la raiz era un <b-col cols="12" md="3"> de la fila de buscadores; ahora es un div
+		suelto y el ancho y el aire entre campos los pone layout/GrillaDeEtapa.vue segun el diseño
+		en uso. El v-if se queda: con la extension no_usar_codigos_de_barra el campo no existe.
 	-->
-	<b-col
-	class="col-bar-code margin-bottom-since-lg"
-	cols="12"
+	<div
+	class="col-bar-code"
 	data-tour="vender.campo_codigo_barras"
-	v-if="!hasExtencion('no_usar_codigos_de_barra')"
-	:md="3">
+	v-if="!hasExtencion('no_usar_codigos_de_barra')">
 
 		<div
 		class="d-flex w-100">
-	
+
 			<b-form-input
 			id="article-bar-code"
 			dusk="article_bar_code"
 			v-model="item_vender.codigo"
-			autocomplete="off" 
+			autocomplete="off"
 			ref="articleBarCode"
 			@keydown.enter="set_article_from_barcode"
 			:placeholder="placeholder"></b-form-input>
@@ -29,7 +31,7 @@
 			@setBarCode="setBarCode"></bar-code-scanner>
 		</div>
 
-	</b-col>
+	</div>
 </template>
 <script>
 import vender from '@/mixins/vender/index' 
@@ -43,7 +45,15 @@ export default {
 	mixins: [vender, guardar_venta, sonido_error, vender_set_total],
 	created() {
 		setTimeout(() => {
-			document.getElementById('article-bar-code').focus()
+			/*
+				Con guarda: con los diseños de Vender este campo se puede desmontar en esos 500 ms
+				(el store de diseños llega despues de dibujar con el predeterminado y el diseño en
+				uso lo saco o lo mando a otra etapa), y sin el input el focus() tiraba un TypeError.
+			*/
+			let input = document.getElementById('article-bar-code')
+			if (input) {
+				input.focus()
+			}
 		}, 500)
 	},
 	components: {

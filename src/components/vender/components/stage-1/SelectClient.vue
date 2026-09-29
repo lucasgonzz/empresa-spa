@@ -34,19 +34,11 @@
 				Cliente seleccionado: {{ client.name }}
 			</p>
 		</div>
-		<!-- `v-if` triple: extension + cliente elegido + cliente CON mail. En la demo esto pide un
-		cliente de prueba con email cargado; si no lo tiene, el tour saltea el paso. -->
-		<div
-		v-if="hasExtencion('enviar_mail_a_clientes') && client && client.email"
-		data-tour="vender.checkbox_enviar_mail"
-		class="send-mail-check j-end m-b-15">
-			<b-form-checkbox
-			:value="1"
-			:unchecked-value="0"
-			v-model="send_mail">
-				Enviar correo al cliente
-			</b-form-checkbox>
-		</div>
+		<!--
+			El checkbox "Enviar correo al cliente" que estaba aca abajo ahora es un campo propio del
+			diseño de Vender: stage-1/EnviarCorreo.vue (mision diseno-vender-configurable, 28/9/2026).
+			clearSelected() de abajo lo sigue apagando al sacar el cliente.
+		-->
 	</div>
 </template>
 <script>
@@ -82,14 +74,6 @@ export default {
 			},
 			set(value) {
 
-			}
-		},
-		send_mail: {
-			get() {
-				return this.$store.state.vender.send_mail
-			},
-			set(value) {
-				this.$store.commit('vender/set_send_mail', value)
 			}
 		},
 		// Filtro por sucursal del buscador de clientes de VENDER.
@@ -274,7 +258,4 @@ export default {
 .selected-client
 	font-size: 20px
 	font-weight: bold
-
-.send-mail-check
-	margin-top: 8px
 </style>

@@ -1,12 +1,22 @@
 <template>
 	<!--
 		Etapa 1 — Configuración inicial.
-		Arranca abierta en ventas nuevas y colapsada si ya hay datos.
-		Index: orquesta el layout y el comportamiento de colapso;
-		la lógica de cada campo vive en su propio subcomponente.
+
+		Que campos tiene, en que orden y de que ancho lo decide el diseño de Vender en uso (mision
+		diseno-vender-configurable, 28/9/2026): el cuerpo es una grilla (layout/GrillaDeEtapa.vue)
+		y el subtitulo del header se arma con los campos que la grilla dibuja. Si el diseño no le
+		deja ningun campo, la etapa no se dibuja.
+
+		Index: orquesta el colapso y el foco; la logica de cada campo vive en su componente.
+	-->
+	<!--
+		🔴 La clase vender-stage--etapa-1 es la que le da el color azul de la etapa (ver
+		_vender-stages.sass). Antes el color salia de :nth-child(1), que dejo de servir cuando una
+		etapa sin campos dejo de dibujarse: la etapa 2 pasaba a ser la primera y se teñia de azul.
 	-->
 	<div
-	class="vender-stage"
+	v-if="tiene_elementos"
+	class="vender-stage vender-stage--etapa-1"
 	:class="{ 'vender-stage--open': stage1_open }">
 
 		<!-- Header de la etapa 1 -->
@@ -18,128 +28,133 @@
 		<div
 		class="vender-stage__header"
 		data-tour="vender.etapa_1"
-		ref="stage1_header"
 		@click="toggleStage1">
 			<span class="vender-stage__number">1</span>
 			<div class="vender-stage__header-text">
-				<span class="vender-stage__label">Configuración inicial</span>
-				<span class="vender-stage__sublabel">Sucursal, método de pago, lista de precios, fecha, cliente y AFIP</span>
+				<span class="vender-stage__label">{{ titulo }}</span>
+				<span class="vender-stage__sublabel">{{ subtitulo }}</span>
 			</div>
 			<i
 			:class="stage1_open ? 'icon-up' : 'icon-down'"
 			class="vender-stage__chevron"></i>
 		</div>
 
-		<!-- Body colapsable — layout flexible; los selectores ocupan solo el espacio que necesitan -->
+		<!--
+			Cuerpo colapsable. v-show y no v-if, a proposito: los campos tienen que existir aunque la
+			etapa este plegada (el foco de un atajo, las pruebas que esperan el control en el DOM, y
+			los defaults que algunos campos aplican al montarse).
+		-->
 		<transition name="stage-collapse">
 			<div
 			v-show="stage1_open"
-			class="vender-stage__body vender-stage__body--grid">
-
-				<!-- Afip Punto de venta -->
-				<div class="vender-stage__field">
-					<afip-information></afip-information>
-				</div>
-
-				<!-- Método de pago -->
-				<div ref="field_payment_method" class="vender-stage__field">
-					<payment-method></payment-method>
-				</div>
-
-				<!-- Caja (se autocompleta según el método de pago) -->
-				<div class="vender-stage__field">
-					<caja></caja>
-				</div>
-
-				<!-- Sucursal — ayuda en append del input-group (show-help) -->
-				<div ref="field_address" class="vender-stage__field">
-					<select-address show-help></select-address>
-				</div>
-
-				<!-- Lista de precios -->
-				<div ref="field_price_type" class="vender-stage__field">
-					<price-type-selector></price-type-selector>
-				</div>
-
-				<!-- Moneda y cotización USD (solo con extensión ventas_en_dolares) -->
-				<div class="vender-stage__field">
-					<moneda></moneda>
-				</div>
-
-				<!-- Tipo de venta -->
-				<div class="vender-stage__field">
-					<sale-type></sale-type>
-				</div>
-
-				<!-- Tipo de venta -->
-				<div class="vender-stage__field">
-					<seller-selector></seller-selector>
-				</div>
-
-				<!--
-					Fecha de la venta - ultimo campo de la fila.
-					Por defecto hoy; si el operador la cambia, la venta se registra con ese dia.
-				-->
-				<div class="vender-stage__field">
-					<fecha-venta></fecha-venta>
-				</div>
-
-				<!-- Separador visual antes de los campos de cliente -->
-				<hr class="vender-stage__separator">
-
-				<!-- Cliente e información AFIP — misma fila -->
-				<div class="vender-stage__field vender-stage__field--full vender-stage__field--row">
-					<div ref="field_client" class="vender-stage__field-row-item">
-						<select-client data-tour="vender.selector_cliente"></select-client>
-					</div>
-					<div class="vender-stage__field-row-item">
-						<guardar-como-presupuesto></guardar-como-presupuesto>
-						<omitir-en-cuenta-corriente></omitir-en-cuenta-corriente>
-					</div>
-					<div class="vender-stage__field-row-item">
-						<alertar-personalizado></alertar-personalizado>
-					</div>
-				</div>
-
+			class="vender-stage__body vender-stage__body--grilla">
+				<grilla-de-etapa
+				etapa="etapa_1"
+				:stage_open="stage1_open"></grilla-de-etapa>
 			</div>
 		</transition>
 	</div>
 </template>
 
 <script>
-/* Subcomponentes propios de la etapa 1 */
-import SelectClient from './SelectClient'
-import AlertarPersonalizado from './AlertarPersonalizado'
-import OmitirEnCuentaCorriente from './OmitirEnCuentaCorriente'
-import GuardarComoPresupuesto from './GuardarComoPresupuesto'
-import FechaVenta from './FechaVenta'
+import GrillaDeEtapa from '@/components/vender/layout/GrillaDeEtapa'
+import { TITULOS_DE_ETAPAS } from '@/components/vender/layout/elementos'
+import { subtitulo_de_etapa } from '@/components/vender/layout/resolver_diseno'
+import diseno_de_vender, { EVENTO_ENFOCAR_ELEMENTO } from '@/mixins/vender/diseno_de_vender'
+
+/*
+	🔴 PUENTE TEMPORAL con el evento viejo `vender:expand-stage1`.
+
+	Hasta esta mision la barra de resumen y los atajos F3/F4 abrian ESTA etapa con ese evento y una
+	clave propia ('client', 'payment_method', 'address', 'price_type'). Esos dos emisores ya pasaron
+	al evento nuevo (vender:enfocar-elemento, con la key del catalogo), pero queda uno que esta
+	fuera del territorio de la mision y no se toco: src/tours/ganchos.js, los ganchos
+	`abrir_etapa_1_*` del tour de la demo, que lo emiten ANTES de señalar el cliente, el metodo de
+	pago, el punto de venta o la lista de precios. Sin este puente, con la etapa plegada el tour
+	señalaria un recuadro vacio de 0x0.
+
+	El puente traduce la clave vieja a la key del catalogo y la manda por el evento nuevo, asi que
+	se abre la etapa que tenga ese campo en el diseño en uso (con el predeterminado, esta). Una clave
+	que no esta en la tabla ('ninguno', el gancho que solo despliega la etapa) abre esta etapa, que
+	es lo que hacia antes.
+
+	Se borra el dia que ganchos.js emita vender:enfocar-elemento con las keys del catalogo.
+*/
+const EVENTO_VIEJO_DE_LA_ETAPA_1 = 'vender:expand-stage1'
+
+/* Clave del evento viejo -> key del catalogo (layout/elementos.js) */
+const KEYS_DEL_EVENTO_VIEJO = {
+	client: 'cliente',
+	payment_method: 'metodo_de_pago',
+	address: 'sucursal',
+	price_type: 'lista_de_precios',
+}
 
 export default {
 	name: 'VenderStage1',
+	mixins: [diseno_de_vender],
 	components: {
-		/* Campos de configuración — cargados de forma lazy */
-		SelectAddress: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Address'),
-		PriceTypeSelector: () => import('@/components/vender/components/remito/total-previus-sales/price-type/Index'),
-		/* Selector de moneda y cotización dólar — visible según extensión ventas_en_dolares */
-		Moneda: () => import('@/components/vender/components/remito/total-previus-sales/Moneda'),
-		PaymentMethod: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/PaymentMethod'),
-		Caja: () 			=> import('@/components/vender/components/remito/header-2/payment-method-afip-information/Caja'),
-		SellerSelector: () 	=> import('@/components/vender/components/remito/header-2/payment-method-afip-information/Seller'),
-		SaleType: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/SaleType'),
-		AfipInformation: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/afip-information/Index'),
-		/* Subcomponentes del cliente */
-		SelectClient,
-		AlertarPersonalizado,
-		OmitirEnCuentaCorriente,
-		GuardarComoPresupuesto,
-		/* Fecha de la venta - ultimo campo de la fila de configuracion */
-		FechaVenta,
+		GrillaDeEtapa,
 	},
 	data() {
 		return {
 			/* Estado de colapso: abierta si no hay datos previos (se calcula en created) */
 			stage1_open: true,
 		}
+	},
+	computed: {
+		/**
+		 * Titulo de la etapa, el mismo que muestra el editor de diseños.
+		 *
+		 * @returns {string}
+		 */
+		titulo() {
+			return TITULOS_DE_ETAPAS.etapa_1
+		},
+
+		/**
+		 * Si el diseño en uso deja al menos un campo en esta etapa. Si no, la etapa no se dibuja.
+		 *
+		 * @returns {boolean}
+		 */
+		tiene_elementos() {
+			return this.etapa_de_vender_tiene_elementos('etapa_1')
+		},
+
+		/**
+		 * Si el diseño en uso puso en esta etapa algun campo que agrega articulos (codigo de
+		 * barras, buscador...). Con uno de esos adentro la etapa no puede estar plegada.
+		 *
+		 * @returns {boolean}
+		 */
+		tiene_entrada_de_articulos() {
+			return this.etapa_de_vender_tiene_entrada_de_articulos('etapa_1')
+		},
+
+		/**
+		 * Subtitulo del header: los campos que se dibujan, "Facturación, método de pago, ... y N más".
+		 *
+		 * @returns {string}
+		 */
+		subtitulo() {
+			return subtitulo_de_etapa(this.elementos_de_etapa_de_vender('etapa_1'))
+		},
+	},
+	watch: {
+		/**
+		 * Si el diseño cambia con Vender abierto (otro usuario puso otro en uso, o recien llego el
+		 * store despues de dibujar con el predeterminado) y ahora esta etapa tiene un campo que
+		 * agrega articulos, se abre: tiene que estar a la vista. Al reves no se cierra sola, para
+		 * no plegarle la etapa al vendedor mientras la usa.
+		 *
+		 * @param {boolean} tiene
+		 * @returns {void}
+		 */
+		tiene_entrada_de_articulos(tiene) {
+			if (tiene) {
+				this.stage1_open = true
+			}
+		},
 	},
 	created() {
 		/*
@@ -151,23 +166,30 @@ export default {
 			evaluaba nada. Ojo: NO alcanza con corregirle el nombre — el metodo de pago
 			tiene un valor por defecto desde que se entra al modulo, asi que la etapa
 			quedaria colapsada practicamente siempre.
+
+			Y con un diseño que ponga aca un campo de entrada de articulos (codigo de barras,
+			buscador...), arranca abierta siempre: el vendedor no puede escanear en una etapa
+			plegada.
 		*/
 		const hay_venta_en_curso = !!(
 			this.$store.state.vender.items.length
 			|| this.$store.state.vender.client
 			|| this.$store.getters['vender/previus_sales/editando_venta_previa']
 		)
-		this.stage1_open = !hay_venta_en_curso
+		this.stage1_open = !hay_venta_en_curso || this.tiene_entrada_de_articulos
 	},
 	mounted() {
 		/*
-		 * Escuchar el evento global de expansión.
-		 * Emitido por keyboard_shortcuts.js (payment_method, client) y VenderStage1SummaryBar (chips con lápiz).
-		 */
-		this.$root.$on('vender:expand-stage1', this.onExpandStage1)
+			Pedido de foco a un campo (lapices de la barra de resumen, atajos de teclado): lo
+			emite enfocar_elemento_de_vender() del mixin y lo escuchan las tres etapas; actua la
+			que tiene el campo.
+		*/
+		this.$root.$on(EVENTO_ENFOCAR_ELEMENTO, this.al_pedir_el_foco_de_un_elemento)
+		this.$root.$on(EVENTO_VIEJO_DE_LA_ETAPA_1, this.al_recibir_el_evento_viejo)
 	},
 	beforeDestroy() {
-		this.$root.$off('vender:expand-stage1', this.onExpandStage1)
+		this.$root.$off(EVENTO_ENFOCAR_ELEMENTO, this.al_pedir_el_foco_de_un_elemento)
+		this.$root.$off(EVENTO_VIEJO_DE_LA_ETAPA_1, this.al_recibir_el_evento_viejo)
 	},
 	methods: {
 		/**
@@ -178,45 +200,40 @@ export default {
 		},
 
 		/**
-		 * Abre la etapa y hace scroll + foco al campo indicado.
-		 * Escucha el evento `vender:expand-stage1`.
+		 * Si el campo pedido esta en esta etapa: la abre, lo trae a la vista y lo enfoca.
 		 *
-		 * @param {string} field - Campo a enfocar ('payment_method', 'client', 'address', 'price_type')
+		 * `block: 'start'` como siempre: esta etapa esta arriba de todo, y cuando un campo suyo
+		 * queda al tope del area que scrollea, el bloque pegado de la etapa 2 (que viene despues)
+		 * todavia no se pego, asi que no lo tapa.
+		 *
+		 * @param {string} key
+		 * @param {Object} opciones
+		 * @returns {void}
 		 */
-		onExpandStage1(field) {
-			/* Abrir la etapa si estaba cerrada */
+		al_pedir_el_foco_de_un_elemento(key, opciones) {
+			if (!this.elemento_de_vender_esta_en_la_etapa(key, 'etapa_1')) {
+				return
+			}
+
 			this.stage1_open = true
+			this.enfocar_elemento_de_vender_en_esta_etapa(key, opciones, 'start')
+		},
 
-			/* Después de que Vue renderice el body, hacer scroll al campo */
-			this.$nextTick(() => {
-				/* Mapeo de campo → ref del contenedor */
-				const ref_map = {
-					payment_method: 'field_payment_method',
-					client: 'field_client',
-					address: 'field_address',
-					price_type: 'field_price_type',
-				}
-				const ref_name = ref_map[field]
-				if (ref_name && this.$refs[ref_name]) {
-					this.$refs[ref_name].scrollIntoView({ behavior: 'smooth', block: 'start' })
+		/**
+		 * Puente con el evento viejo (ver el comentario de KEYS_DEL_EVENTO_VIEJO).
+		 *
+		 * @param {string} clave 'client' | 'payment_method' | 'address' | 'price_type' | otra
+		 * @returns {void}
+		 */
+		al_recibir_el_evento_viejo(clave) {
+			let key = KEYS_DEL_EVENTO_VIEJO[clave]
 
-					/* Método de pago: esperar render del componente lazy y abrir el select */
-					if (field === 'payment_method') {
-						this.$nextTick(() => {
-							this.$nextTick(() => {
-								this.$root.$emit('vender:focus-payment-method')
-							})
-						})
-						return
-					}
+			if (key && this.elemento_de_vender_esta_visible(key)) {
+				this.$root.$emit(EVENTO_ENFOCAR_ELEMENTO, key, {})
+				return
+			}
 
-					/* Intentar enfocar el primer input dentro del contenedor */
-					const input = this.$refs[ref_name].querySelector('input, select')
-					if (input) {
-						input.focus()
-					}
-				}
-			})
+			this.stage1_open = true
 		},
 	},
 }
