@@ -11,24 +11,26 @@
 		<div
 		v-if="prop.belongs_to_many.searchable"
 		class="btm-checkbox__buscador">
-			<i
-			class="bi bi-search btm-checkbox__lupa"
-			aria-hidden="true"></i>
-			<b-form-input
-			class="btm-checkbox__input"
-			v-model="query"
-			autocomplete="off"
-			:placeholder="prop.belongs_to_many.search_placeholder || 'Buscar... Ej: caja, descuentos, precios'"
-			@keydown.esc="query = ''"
-			@keydown.enter.prevent></b-form-input>
-			<button
-			v-if="query"
-			type="button"
-			class="btm-checkbox__limpiar"
-			aria-label="Borrar la búsqueda"
-			@click="query = ''">
-				<i class="bi bi-x-lg"></i>
-			</button>
+			<div class="btm-checkbox__campo">
+				<i
+				class="bi bi-search btm-checkbox__lupa"
+				aria-hidden="true"></i>
+				<b-form-input
+				class="btm-checkbox__input"
+				v-model="query"
+				autocomplete="off"
+				:placeholder="prop.belongs_to_many.search_placeholder || 'Buscar... Ej: caja, descuentos, precios'"
+				@keydown.esc="query = ''"
+				@keydown.enter.prevent></b-form-input>
+				<button
+				v-if="query"
+				type="button"
+				class="btm-checkbox__limpiar"
+				aria-label="Borrar la búsqueda"
+				@click="query = ''">
+					<i class="bi bi-x-lg"></i>
+				</button>
+			</div>
 		</div>
 
 		<div
@@ -262,7 +264,7 @@ export default {
 				return ''
 			}
 			return ('' + texto).toLowerCase()
-				.normalize('NFD').replace(/[̀-ͯ]/g, '')
+				.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 				.replace(/[._-]+/g, ' ')
 				.replace(/\s+/g, ' ')
 				.trim()
@@ -327,6 +329,11 @@ export default {
 		margin-bottom: 10px
 		padding: calc(1rem + 6px) 2px 8px 2px
 		background: var(--bg-card, #fff)
+
+	// El campo es el que lleva `position: relative`: la lupa y la X se centran contra el input y no
+	// contra el padding del contenedor fijo (que las subia unos 7px).
+	.btm-checkbox__campo
+		position: relative
 
 	// Misma pastilla que abm-search: lupa decorativa a la izquierda, filtra mientras se escribe.
 	.btm-checkbox__lupa
