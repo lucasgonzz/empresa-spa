@@ -21,7 +21,7 @@
 
 		<!-- Manija del borde izquierdo: tirando hacia afuera (a la izquierda) el campo se agranda -->
 		<span
-		v-if="!es_separador"
+		v-if="!es_marcador"
 		key="manija-izquierda"
 		class="editor-elemento__manija editor-elemento__manija--izquierda editor-diseno-no-arrastra"
 		title="Tirá para cambiar el ancho"
@@ -35,15 +35,36 @@
 		<!-- Separador: una fila finita con su linea -->
 		<div
 		v-if="es_separador"
-		class="editor-elemento__tarjeta editor-elemento__tarjeta--separador editor-diseno-caja">
+		class="editor-elemento__tarjeta editor-elemento__tarjeta--marcador editor-elemento__tarjeta--separador editor-diseno-caja">
 			<i class="bi bi-grip-vertical editor-elemento__agarre"></i>
-			<span class="editor-elemento__nombre editor-elemento__nombre--separador">Separador</span>
+			<span class="editor-elemento__nombre editor-elemento__nombre--marcador">Separador</span>
 			<span class="editor-elemento__linea"></span>
 			<button
 			type="button"
 			class="editor-elemento__boton editor-diseno-no-arrastra"
 			title="Quitar este separador"
 			aria-label="Quitar este separador"
+			@click="$emit('sacar', item)">
+				<i class="bi bi-x-lg"></i>
+			</button>
+		</div>
+
+		<!--
+			Salto de fila: una franja fina punteada. En Vender no se ve: solo hace que lo que sigue
+			arranque en una fila nueva, aunque en la anterior quedara lugar.
+		-->
+		<div
+		v-else-if="es_salto"
+		class="editor-elemento__tarjeta editor-elemento__tarjeta--marcador editor-elemento__tarjeta--salto editor-diseno-caja">
+			<i class="bi bi-grip-vertical editor-elemento__agarre"></i>
+			<i class="bi bi-arrow-return-left editor-elemento__icono-salto"></i>
+			<span class="editor-elemento__nombre editor-elemento__nombre--marcador">Salto de fila</span>
+			<span class="editor-elemento__pista-salto">lo que sigue empieza abajo · no se ve en Vender</span>
+			<button
+			type="button"
+			class="editor-elemento__boton editor-diseno-no-arrastra"
+			title="Quitar este salto de fila"
+			aria-label="Quitar este salto de fila"
 			@click="$emit('sacar', item)">
 				<i class="bi bi-x-lg"></i>
 			</button>
@@ -136,7 +157,7 @@
 
 		<!-- Manija del borde derecho: tirando hacia afuera (a la derecha) el campo se agranda -->
 		<span
-		v-if="!es_separador"
+		v-if="!es_marcador"
 		key="manija-derecha"
 		class="editor-elemento__manija editor-elemento__manija--derecha editor-diseno-no-arrastra"
 		title="Tirá para cambiar el ancho"
@@ -150,7 +171,7 @@
 </template>
 <script>
 import VistaPreviaDeElemento from './VistaPreviaDeElemento'
-import { KEY_SEPARADOR, elemento, acotar_cols } from '@/components/vender/layout/elementos'
+import { KEY_SEPARADOR, KEY_SALTO_DE_FILA, es_marcador, elemento, acotar_cols } from '@/components/vender/layout/elementos'
 
 /**
  * Tarjeta de un campo de Vender en el lienzo del editor (mision diseno-vender-configurable,
@@ -204,7 +225,16 @@ export default {
 	},
 	computed: {
 		/**
-		 * Si el item es un separador (linea a lo ancho, sin ancho editable).
+		 * Si el item es un marcador (separador o salto de fila): no es un campo, va siempre a lo
+		 * ancho y no tiene ancho editable.
+		 *
+		 * @returns {boolean}
+		 */
+		es_marcador() {
+			return es_marcador(this.item.key)
+		},
+		/**
+		 * Si el item es un separador (la linea a lo ancho).
 		 *
 		 * @returns {boolean}
 		 */
@@ -212,7 +242,15 @@ export default {
 			return this.item.key === KEY_SEPARADOR
 		},
 		/**
-		 * Elemento del catalogo, o null (separador).
+		 * Si el item es un salto de fila (invisible en Vender: corta la fila).
+		 *
+		 * @returns {boolean}
+		 */
+		es_salto() {
+			return this.item.key === KEY_SALTO_DE_FILA
+		},
+		/**
+		 * Elemento del catalogo, o null (marcador).
 		 *
 		 * @returns {Object|null}
 		 */
@@ -227,6 +265,9 @@ export default {
 		nombre() {
 			if (this.es_separador) {
 				return 'Separador'
+			}
+			if (this.es_salto) {
+				return 'Salto de fila'
 			}
 			return this.definicion ? this.definicion.nombre : this.item.key
 		},
@@ -260,8 +301,8 @@ export default {
 		 * @returns {string}
 		 */
 		etiqueta_accesible() {
-			if (this.es_separador) {
-				return 'Separador'
+			if (this.es_marcador) {
+				return this.nombre
 			}
 			return this.nombre + ', ' + this.item.cols + ' de 12 columnas' + (this.obligatorio ? ', obligatorio' : '')
 		},
@@ -272,10 +313,10 @@ export default {
 		 */
 		clases() {
 			return {
-				'editor-elemento--separador': this.es_separador,
+				'editor-elemento--marcador': this.es_marcador,
 				'editor-elemento--obligatorio': this.obligatorio,
 				'editor-elemento--redimensionando': this.redimensionando,
-				'editor-elemento--angosto': !this.es_separador && this.item.cols <= 2,
+				'editor-elemento--angosto': !this.es_marcador && this.item.cols <= 2,
 				'editor-elemento--destacado': this.destacado,
 			}
 		},
@@ -615,8 +656,8 @@ export default {
 		pointer-events: none
 
 	// Obligatorio: nada especial en la tarjeta; el candado ya lo dice
-	// Separador: una fila finita, sin vista previa ni ancho
-	.editor-elemento__tarjeta--separador
+	// Marcadores (separador y salto de fila): una fila finita, sin vista previa ni ancho
+	.editor-elemento__tarjeta--marcador
 		flex-direction: row
 		align-items: center
 		gap: 8px
@@ -628,7 +669,7 @@ export default {
 		color: var(--color-text-secondary)
 		font-size: 0.8rem
 
-	.editor-elemento__nombre--separador
+	.editor-elemento__nombre--marcador
 		flex: 0 0 auto
 		font-weight: 500
 		color: var(--color-text-secondary)
@@ -637,6 +678,29 @@ export default {
 		flex: 1 1 auto
 		height: 0
 		border-top: 1px solid var(--color-border)
+
+	// El salto de fila es mas finito y sin fondo: en Vender no ocupa lugar, solo corta la fila
+	.editor-elemento__tarjeta--salto
+		padding-top: 2px
+		padding-bottom: 2px
+		background: transparent
+
+		.editor-elemento__nombre--marcador
+			font-size: 0.74rem
+
+	.editor-elemento__icono-salto
+		flex: 0 0 auto
+		color: var(--color-text-secondary)
+		font-size: 0.8rem
+
+	.editor-elemento__pista-salto
+		flex: 1 1 auto
+		min-width: 0
+		color: var(--color-text-secondary)
+		font-size: 0.7rem
+		white-space: nowrap
+		overflow: hidden
+		text-overflow: ellipsis
 
 	// Campo angosto (1 o 2 columnas): menos aire para que entre lo importante
 	&.editor-elemento--angosto

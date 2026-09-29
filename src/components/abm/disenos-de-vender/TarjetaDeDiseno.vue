@@ -87,7 +87,7 @@
 </template>
 <script>
 import MiniaturaDeDiseno from './MiniaturaDeDiseno'
-import { ETAPAS, KEY_SEPARADOR, esta_disponible } from '@/components/vender/layout/elementos'
+import { ETAPAS, es_marcador, esta_disponible } from '@/components/vender/layout/elementos'
 import { resolver_diseno, elementos_visibles } from '@/components/vender/layout/resolver_diseno'
 
 /**
@@ -126,7 +126,7 @@ export default {
 
 			ETAPAS.forEach(function (etapa) {
 				elementos_visibles(resuelto, etapa, self).forEach(function (item) {
-					if (item.key !== KEY_SEPARADOR) {
+					if (!es_marcador(item.key)) {
 						campos++
 					}
 				})

@@ -3,7 +3,8 @@
 		Miniatura de un Diseño de Vender para su tarjeta en la solapa: las tres etapas como bandas, con
 		un bloque por campo del ancho de sus columnas (N/12) y el separador como una linea. Dibuja lo
 		mismo que Vender va a mostrar en ESTE negocio: resolver_diseno + elementos_visibles, las mismas
-		dos funciones que usa Vender. La etapa 2 lleva debajo la tabla de articulos, que es fija.
+		dos funciones que usa Vender. El salto de fila no se dibuja pero corta la fila, como en Vender.
+		La etapa 2 lleva debajo la tabla de articulos, que es fija.
 
 		Es decorativa (aria-hidden): el nombre y el detalle de la tarjeta dicen lo mismo en texto.
 	-->
@@ -22,7 +23,10 @@
 					v-for="item in banda.items"
 					:key="identidad(item)"
 					class="miniatura-de-diseno__celda"
-					:class="{ 'miniatura-de-diseno__celda--separador': item.key === KEY_SEPARADOR }"
+					:class="{
+						'miniatura-de-diseno__celda--separador': item.key === KEY_SEPARADOR,
+						'miniatura-de-diseno__celda--salto': item.key === KEY_SALTO_DE_FILA,
+					}"
 					:data-cols="item.cols">
 						<span class="miniatura-de-diseno__bloque"></span>
 					</span>
@@ -38,7 +42,7 @@
 	</div>
 </template>
 <script>
-import { ETAPAS, KEY_SEPARADOR } from '@/components/vender/layout/elementos'
+import { ETAPAS, KEY_SEPARADOR, KEY_SALTO_DE_FILA } from '@/components/vender/layout/elementos'
 import { resolver_diseno, elementos_visibles } from '@/components/vender/layout/resolver_diseno'
 import { identidad } from './editor/estado_del_editor'
 
@@ -58,6 +62,7 @@ export default {
 	data() {
 		return {
 			KEY_SEPARADOR: KEY_SEPARADOR,
+			KEY_SALTO_DE_FILA: KEY_SALTO_DE_FILA,
 		}
 	},
 	computed: {
@@ -161,6 +166,15 @@ export default {
 		border-radius: 0
 		background: var(--color-border)
 		opacity: 1
+
+// El salto de fila: no se ve, pero ocupa la fila entera con alto cero, asi lo que sigue arranca
+// en la fila de abajo (igual que en Vender)
+.miniatura-de-diseno__celda--salto
+	.miniatura-de-diseno__bloque
+		height: 0
+
+.miniatura-de-diseno__grilla > .miniatura-de-diseno__celda--salto
+	margin-bottom: 0
 
 // Etapa sin campos: una linea punteada donde irian
 .miniatura-de-diseno__vacia

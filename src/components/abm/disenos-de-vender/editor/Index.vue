@@ -133,8 +133,8 @@ import EtapaDelEditor from './EtapaDelEditor'
 import BandejaDeSacados from './BandejaDeSacados'
 import {
 	ETAPAS,
-	KEY_SEPARADOR,
 	elemento,
+	es_marcador,
 	es_obligatorio,
 } from '@/components/vender/layout/elementos'
 import { serializar_diseno } from '@/components/vender/layout/resolver_diseno'
@@ -381,8 +381,8 @@ export default {
 			this.arrastrando = null
 		},
 		/**
-		 * La ✕ de un campo: lo saca de su etapa y lo manda al principio de la bandeja. Un separador
-		 * no va a la bandeja: se quita y listo.
+		 * La ✕ de un campo: lo saca de su etapa y lo manda al principio de la bandeja. Un marcador
+		 * (separador o salto de fila) no va a la bandeja: se quita y listo.
 		 *
 		 * @param {string} etapa
 		 * @param {Object} item
@@ -402,7 +402,7 @@ export default {
 
 			lista.splice(indice, 1)
 
-			if (item.key === KEY_SEPARADOR) {
+			if (es_marcador(item.key)) {
 				return
 			}
 
@@ -446,7 +446,7 @@ export default {
 			/* Se apaga y se vuelve a prender en el proximo tick para que la animacion corra de nuevo */
 			this.destacado = null
 			this.$nextTick(function () {
-				self.destacado = item.key === KEY_SEPARADOR ? identidad(item) : item.key
+				self.destacado = es_marcador(item.key) ? identidad(item) : item.key
 				self.timer_del_destacado = setTimeout(function () {
 					self.destacado = null
 				}, DURACION_DEL_DESTACADO)

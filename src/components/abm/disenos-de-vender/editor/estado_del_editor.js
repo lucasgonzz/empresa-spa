@@ -8,7 +8,8 @@
 	La forma del estado de trabajo:
 
 	- etapas            por etapa, los items que se dibujan en el lienzo: elementos DISPONIBLES para
-	                    este negocio/usuario y separadores, como {key, cols} (y {id} los separadores).
+	                    este negocio/usuario y marcadores (separadores y saltos de fila), como
+	                    {key, cols} (y {id} los marcadores).
 	                    Son las listas que muta vuedraggable.
 	- sacados           los elementos sacados que estan disponibles, como {key, cols}: los que se ven
 	                    en la bandeja y se pueden volver a agregar.
@@ -30,7 +31,7 @@
 */
 import {
 	ETAPAS,
-	KEY_SEPARADOR,
+	es_marcador,
 	elemento,
 	esta_disponible,
 	cols_por_defecto,
@@ -48,8 +49,8 @@ export const KEYS_DE_BUSCADORES = ['codigo_de_barras', 'buscador_de_articulos']
 
 /**
  * Identidad estable de un item dentro de un diseño: la key para un elemento (cada uno aparece una
- * sola vez) y "separador:<id>" para un separador (puede haber varios). Sirve de `key` del v-for y
- * para reconocer un item en otra lista.
+ * sola vez) y "<key>:<id>" para un marcador ("separador:separador_1", "salto_de_fila:...": puede
+ * haber varios). Sirve de `key` del v-for y para reconocer un item en otra lista.
  *
  * @param {Object} item {key, cols, id?}
  * @returns {string}
@@ -58,12 +59,12 @@ export function identidad(item) {
 	if (!item) {
 		return ''
 	}
-	return item.key === KEY_SEPARADOR ? KEY_SEPARADOR + ':' + item.id : item.key
+	return es_marcador(item.key) ? item.key + ':' + item.id : item.key
 }
 
 /**
- * Copia de un item con solo lo que forma parte del diseño. Los separadores van siempre a 12
- * columnas (son una linea a lo ancho).
+ * Copia de un item con solo lo que forma parte del diseño. Los marcadores van siempre a 12
+ * columnas (el separador es una linea a lo ancho; el salto de fila, un corte de fila).
  *
  * @param {Object} item
  * @returns {Object}
@@ -73,7 +74,7 @@ export function copiar_item(item) {
 		key: item.key,
 		cols: item.cols,
 	}
-	if (item.key === KEY_SEPARADOR) {
+	if (es_marcador(item.key)) {
 		copia.id = item.id
 		copia.cols = 12
 	}
@@ -127,7 +128,7 @@ export function armar_estado_de_trabajo(layout, vm) {
 		resuelto.etapas[etapa].forEach(function (item, indice) {
 			estado.orden_original[etapa].push(identidad(item))
 
-			/* esta_disponible() devuelve true para los separadores: se ven siempre */
+			/* esta_disponible() devuelve true para los marcadores: se ven siempre */
 			if (esta_disponible(item.key, vm)) {
 				estado.etapas[etapa].push(copiar_item(item))
 			} else {
@@ -268,10 +269,10 @@ export function indice_por_defecto(lista, key, vm) {
 		return lista.length
 	}
 
-	/* Orden por defecto de la etapa, sin separadores */
+	/* Orden por defecto de la etapa, sin marcadores */
 	let orden = []
 	diseno_predeterminado(vm).etapas[el.etapa].forEach(function (item) {
-		if (item.key !== KEY_SEPARADOR) {
+		if (!es_marcador(item.key)) {
 			orden.push(item.key)
 		}
 	})
@@ -327,13 +328,13 @@ export function falta_buscador(etapas, vm) {
 }
 
 /**
- * Cantidad de campos (sin contar separadores) de una lista de items.
+ * Cantidad de campos (sin contar marcadores) de una lista de items.
  *
  * @param {Array} lista
  * @returns {number}
  */
 export function contar_campos(lista) {
 	return (lista || []).filter(function (item) {
-		return item.key !== KEY_SEPARADOR
+		return !es_marcador(item.key)
 	}).length
 }

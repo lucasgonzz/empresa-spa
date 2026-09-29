@@ -1,17 +1,65 @@
 <template>
 	<!--
-		Bandeja de "Campos sacados" del editor: a la derecha del lienzo en escritorio, debajo en
-		tablet y telefono (lo decide Index.vue).
+		Bandeja del editor: a la derecha del lienzo en escritorio, debajo en tablet y telefono (lo
+		decide Index.vue).
 
-		Arriba, la fuente del Separador: se arrastra a una etapa y se CLONA (pull: 'clone'), asi se
-		pueden poner todos los que se quiera. Debajo, los campos sacados que este negocio puede usar:
-		se arrastran de vuelta a cualquier etapa, o se tocan con "Agregar" y vuelven a su etapa de
+		Arriba, la fuente de los marcadores (Separador y Salto de fila): se arrastran a una etapa y se
+		CLONAN (pull: 'clone'), asi se pueden poner todos los que se quiera, hasta el tope por etapa
+		(ver el `move` del editor). Debajo, los campos sacados que este negocio puede usar: se
+		arrastran de vuelta a cualquier etapa, o se tocan con "Agregar" y vuelven a su etapa de
 		siempre. Y se puede soltar aca cualquier campo que no sea obligatorio para sacarlo.
 	-->
 	<aside
 	class="editor-bandeja"
 	:class="clases"
 	aria-label="Campos sacados">
+
+		<!-- Fuente de los marcadores: se clonan, nunca se vacia ni recibe nada -->
+		<div class="editor-bandeja__marcadores">
+			<p class="editor-bandeja__seccion">Para ordenar las etapas</p>
+			<draggable
+			class="editor-bandeja__fuente"
+			:list="fuente_de_marcadores"
+			:group="grupo_de_la_fuente"
+			:clone="clonar_marcador"
+			:sort="false"
+			:move="move"
+			draggable=".editor-diseno-arrastrable"
+			filter=".editor-diseno-no-arrastra"
+			:prevent-on-filter="false"
+			ghost-class="editor-diseno-hueco"
+			drag-class="editor-diseno-levantado"
+			:force-fallback="true"
+			:fallback-on-body="true"
+			:fallback-tolerance="4"
+			:delay="150"
+			:delay-on-touch-only="true"
+			:scroll-sensitivity="80"
+			:scroll-speed="14"
+			data-zona="fuente"
+			@start="$emit('inicio-arrastre', $event)"
+			@end="$emit('fin-arrastre', $event)">
+				<div
+				v-for="item in fuente_de_marcadores"
+				:key="item.id"
+				class="editor-bandeja__item editor-diseno-arrastrable"
+				data-cols="12"
+				:data-key="item.key"
+				data-obligatorio="no"
+				:title="item.pista">
+					<div class="editor-bandeja__tarjeta editor-bandeja__tarjeta--marcador editor-diseno-caja">
+						<span class="editor-bandeja__fila">
+							<i class="bi bi-grip-vertical editor-bandeja__agarre"></i>
+							<i
+							class="bi editor-bandeja__icono"
+							:class="item.icono"></i>
+							<span class="editor-bandeja__nombre">{{ item.nombre }}</span>
+						</span>
+						<span class="editor-bandeja__explicacion">{{ item.explicacion }}</span>
+					</div>
+				</div>
+			</draggable>
+		</div>
 
 		<div class="editor-bandeja__cabecera">
 			<span class="editor-bandeja__titulo">
@@ -24,49 +72,23 @@
 			:aria-label="sacados.length + (sacados.length === 1 ? ' campo sacado' : ' campos sacados')">{{ sacados.length }}</span>
 		</div>
 
-		<p class="editor-bandeja__ayuda">
+		<!--
+			La ayuda, o el motivo del rechazo mientras se arrastra un obligatorio. El rechazo va ACA,
+			arriba de la zona de soltar, y no adentro: adentro lo tapaba la tarjeta levantada justo
+			cuando el usuario la acercaba a la bandeja, que es cuando lo tiene que leer.
+		-->
+		<p
+		v-if="!rechaza"
+		class="editor-bandeja__ayuda">
 			No se ven en Vender. Para volver a usar uno, arrastralo a una etapa o tocá <strong>Agregar</strong>.
 		</p>
-
-		<!-- Fuente del separador: se clona, nunca se vacia ni recibe nada -->
-		<draggable
-		class="editor-bandeja__fuente"
-		:list="fuente_de_separadores"
-		:group="grupo_de_la_fuente"
-		:clone="clonar_separador"
-		:sort="false"
-		:move="move"
-		draggable=".editor-diseno-arrastrable"
-		filter=".editor-diseno-no-arrastra"
-		:prevent-on-filter="false"
-		ghost-class="editor-diseno-hueco"
-		drag-class="editor-diseno-levantado"
-		:force-fallback="true"
-		:fallback-on-body="true"
-		:fallback-tolerance="4"
-		:delay="150"
-		:delay-on-touch-only="true"
-		:scroll-sensitivity="80"
-		:scroll-speed="14"
-		data-zona="fuente"
-		@start="$emit('inicio-arrastre', $event)"
-		@end="$emit('fin-arrastre', $event)">
-			<div
-			v-for="item in fuente_de_separadores"
-			:key="item.id"
-			class="editor-bandeja__item editor-diseno-arrastrable"
-			data-cols="12"
-			data-key="separador"
-			data-obligatorio="no"
-			title="Arrastralo a una etapa para dividirla con una línea">
-				<div class="editor-bandeja__tarjeta editor-bandeja__tarjeta--separador editor-diseno-caja">
-					<i class="bi bi-grip-vertical editor-bandeja__agarre"></i>
-					<span class="editor-bandeja__nombre">Separador</span>
-					<span class="editor-bandeja__linea"></span>
-					<span class="editor-bandeja__pista">Arrastralo a una etapa</span>
-				</div>
-			</div>
-		</draggable>
+		<div
+		v-else
+		class="editor-bandeja__rechazo"
+		role="status">
+			<i class="bi bi-lock-fill"></i>
+			<span>{{ motivo_del_rechazo }}</span>
+		</div>
 
 		<!-- Los campos sacados -->
 		<div class="editor-bandeja__zona">
@@ -101,19 +123,29 @@
 				:data-key="item.key"
 				data-obligatorio="no">
 					<div class="editor-bandeja__tarjeta editor-diseno-caja">
-						<i class="bi bi-grip-vertical editor-bandeja__agarre"></i>
+						<span class="editor-bandeja__fila">
+							<i class="bi bi-grip-vertical editor-bandeja__agarre"></i>
+							<span
+							class="editor-bandeja__nombre"
+							:title="nombre(item.key)">{{ nombre(item.key) }}</span>
+							<button
+							type="button"
+							class="editor-bandeja__agregar editor-diseno-no-arrastra"
+							:title="'Volver a ponerlo en «' + etapa_por_defecto(item.key) + '»'"
+							:aria-label="'Agregar ' + nombre(item.key) + ' a ' + etapa_por_defecto(item.key)"
+							@click="$emit('agregar', item)">
+								<i class="bi bi-plus-lg"></i>
+								Agregar
+							</button>
+						</span>
+
+						<!-- Lo que conviene saber de este campo mientras esta sacado (ver aviso_de) -->
 						<span
-						class="editor-bandeja__nombre"
-						:title="nombre(item.key)">{{ nombre(item.key) }}</span>
-						<button
-						type="button"
-						class="editor-bandeja__agregar editor-diseno-no-arrastra"
-						:title="'Volver a ponerlo en «' + etapa_por_defecto(item.key) + '»'"
-						:aria-label="'Agregar ' + nombre(item.key) + ' a ' + etapa_por_defecto(item.key)"
-						@click="$emit('agregar', item)">
-							<i class="bi bi-plus-lg"></i>
-							Agregar
-						</button>
+						v-if="aviso_de(item.key)"
+						class="editor-bandeja__aviso">
+							<i class="bi bi-info-circle"></i>
+							<span>{{ aviso_de(item.key) }}</span>
+						</span>
 					</div>
 				</div>
 			</draggable>
@@ -125,22 +157,13 @@
 				<i class="bi bi-box-arrow-in-down"></i>
 				<span>{{ recibe ? 'Soltalo acá para sacarlo de Vender' : 'Arrastrá acá un campo para sacarlo de Vender' }}</span>
 			</div>
-
-			<!-- Se esta arrastrando un obligatorio: la bandeja lo dice antes de que lo suelten -->
-			<div
-			v-if="rechaza"
-			class="editor-bandeja__rechazo"
-			role="status">
-				<i class="bi bi-lock-fill"></i>
-				<span>{{ motivo_del_rechazo }}</span>
-			</div>
 		</div>
 	</aside>
 </template>
 <script>
 import draggable from 'vuedraggable'
-import { KEY_SEPARADOR, TITULOS_DE_ETAPAS, elemento } from '@/components/vender/layout/elementos'
-import { nuevo_id_de_separador } from '@/components/vender/layout/resolver_diseno'
+import { KEY_SEPARADOR, KEY_SALTO_DE_FILA, TITULOS_DE_ETAPAS, elemento, es_marcador } from '@/components/vender/layout/elementos'
+import { nuevo_id_de_marcador } from '@/components/vender/layout/resolver_diseno'
 
 /* Mismo grupo que las etapas (EtapaDelEditor.vue): los campos van y vienen entre todos */
 const GRUPO = {
@@ -149,22 +172,37 @@ const GRUPO = {
 	put: true,
 }
 
-/* La fuente del separador: se CLONA al arrastrarla y no recibe nada */
+/* La fuente de los marcadores: se CLONA al arrastrarla y no recibe nada */
 const GRUPO_DE_LA_FUENTE = {
 	name: 'diseno-de-vender',
 	pull: 'clone',
 	put: false,
 }
 
+/*
+	Avisos de los campos que, aunque se saquen, siguen teniendo efecto en la venta. Son del editor (no
+	del contrato): el contrato solo trae `motivo_forzado`, que tiene prioridad (ver aviso_de).
+
+	Descuentos y recargos: los que estan vinculados a un cliente se prenden solos al elegirlo (mision
+	descuentos-recargos-por-cliente, 23/9/2026), y el panel es el unico lugar donde se pueden apagar.
+	Sacarlo del diseño no los frena: solo le quita al vendedor la forma de verlos y apagarlos.
+*/
+const AVISOS_AL_SACAR = {
+	descuentos: 'Si un cliente tiene descuentos vinculados, se aplican igual al elegirlo y desde Vender no se van a poder apagar.',
+	recargos: 'Si un cliente tiene recargos vinculados, se aplican igual al elegirlo y desde Vender no se van a poder apagar.',
+}
+
 /**
- * Bandeja de campos sacados del editor de diseños (mision diseno-vender-configurable, 28/9/2026).
+ * Bandeja de marcadores y campos sacados del editor de diseños (mision diseno-vender-configurable,
+ * 28/9/2026).
  *
  * Igual que las etapas, recibe su lista de trabajo (`sacados`) y la deja mutar a vuedraggable por
- * referencia. Dos reglas viven aca:
- * - Un separador que se suelta en la bandeja se descarta (al_cambiar): los separadores no se
- *   "sacan", se quitan.
+ * referencia. Las reglas que viven aca:
+ * - Un marcador (separador o salto de fila) que se suelta en la bandeja se descarta (al_cambiar):
+ *   los marcadores no se "sacan", se quitan.
  * - Un obligatorio no se puede soltar aca: lo rechaza el `move` del editor, y mientras se arrastra
- *   uno la bandeja muestra el candado con el motivo (`arrastrando`).
+ *   uno la bandeja muestra el candado con el motivo, arriba de la zona de soltar (`arrastrando`).
+ * - Los campos que siguen teniendo efecto aunque se saquen lo avisan debajo de su nombre (aviso_de).
  */
 export default {
 	name: 'BandejaDeSacados',
@@ -197,12 +235,29 @@ export default {
 		return {
 			grupo: GRUPO,
 			grupo_de_la_fuente: GRUPO_DE_LA_FUENTE,
-			/* Un solo item: el que se ve. Cada arrastre inserta un clon con id propio (clonar_separador) */
-			fuente_de_separadores: [
+			/*
+				Los dos marcadores que se ofrecen. Cada arrastre inserta un clon limpio, {key, id, cols},
+				con un id propio (clonar_marcador): lo demas (nombre, icono, textos) es solo para dibujar
+				la fuente.
+			*/
+			fuente_de_marcadores: [
 				{
 					key: KEY_SEPARADOR,
-					id: 'fuente',
+					id: 'fuente_separador',
 					cols: 12,
+					nombre: 'Separador',
+					icono: 'bi-dash-lg',
+					explicacion: 'Una línea que divide la etapa.',
+					pista: 'Arrastralo a una etapa para dividirla con una línea',
+				},
+				{
+					key: KEY_SALTO_DE_FILA,
+					id: 'fuente_salto_de_fila',
+					cols: 12,
+					nombre: 'Salto de fila',
+					icono: 'bi-arrow-return-left',
+					explicacion: 'Empieza una fila nueva. En Vender no se ve.',
+					pista: 'Arrastralo a una etapa: lo que sigue empieza en una fila nueva',
 				},
 			],
 		}
@@ -267,21 +322,37 @@ export default {
 			return el ? TITULOS_DE_ETAPAS[el.etapa] : ''
 		},
 		/**
-		 * Lo que vuedraggable inserta en la etapa al soltar el separador de la fuente: uno nuevo, con
-		 * un id propio que cumple el patron que valida el backend.
+		 * Lo que conviene saber de un campo mientras esta sacado, o null. Primero el `motivo_forzado`
+		 * del catalogo (hoy la cantidad: con "pedir la cantidad al vender" aparece igual); si no, los
+		 * avisos propios del editor (descuentos y recargos vinculados a un cliente).
 		 *
+		 * @param {string} key
+		 * @returns {string|null}
+		 */
+		aviso_de(key) {
+			let el = elemento(key)
+			if (el && el.motivo_forzado) {
+				return el.motivo_forzado
+			}
+			return Object.prototype.hasOwnProperty.call(AVISOS_AL_SACAR, key) ? AVISOS_AL_SACAR[key] : null
+		},
+		/**
+		 * Lo que vuedraggable inserta en la etapa al soltar un marcador de la fuente: uno nuevo del
+		 * mismo tipo, con un id propio que cumple el patron que valida el backend.
+		 *
+		 * @param {Object} fuente item de fuente_de_marcadores que se arrastro
 		 * @returns {Object}
 		 */
-		clonar_separador() {
+		clonar_marcador(fuente) {
 			return {
-				key: KEY_SEPARADOR,
-				id: nuevo_id_de_separador(),
+				key: fuente.key,
+				id: nuevo_id_de_marcador(fuente.key),
 				cols: 12,
 			}
 		},
 		/**
-		 * Cambio en la lista de la bandeja. Si lo que llego es un separador, se descarta: la bandeja
-		 * guarda campos para volver a usar, y un separador se vuelve a sacar de la fuente.
+		 * Cambio en la lista de la bandeja. Si lo que llego es un marcador, se descarta: la bandeja
+		 * guarda campos para volver a usar, y un marcador se vuelve a sacar de la fuente.
 		 *
 		 * @param {Object} evento {added: {element, newIndex}} | {removed} | {moved}
 		 * @returns {void}
@@ -290,7 +361,7 @@ export default {
 			if (!evento || !evento.added || !evento.added.element) {
 				return
 			}
-			if (evento.added.element.key !== KEY_SEPARADOR) {
+			if (!es_marcador(evento.added.element.key)) {
 				return
 			}
 			let indice = this.sacados.indexOf(evento.added.element)
@@ -314,6 +385,28 @@ export default {
 	background: var(--bg-card)
 	transition: border-color .15s ease, box-shadow .15s ease
 
+// ── Marcadores ────────────────────────────────────────────────────────────────────────────────
+.editor-bandeja__marcadores
+	display: flex
+	flex-direction: column
+	gap: 6px
+	padding-bottom: 12px
+	border-bottom: 1px solid var(--color-border-secondary)
+
+.editor-bandeja__seccion
+	margin: 0
+	color: var(--color-text-secondary)
+	font-size: 0.72rem
+	font-weight: 600
+	text-transform: uppercase
+	letter-spacing: 0.03em
+
+.editor-bandeja__fuente
+	display: flex
+	flex-direction: column
+	gap: 6px
+
+// ── Campos sacados ────────────────────────────────────────────────────────────────────────────
 .editor-bandeja__cabecera
 	display: flex
 	align-items: center
@@ -344,11 +437,26 @@ export default {
 	font-size: 0.76rem
 	line-height: 1.4
 
-.editor-bandeja__fuente
+// El motivo del rechazo, en el lugar de la ayuda: arriba de la zona, a la vista
+.editor-bandeja__rechazo
 	display: flex
-	flex-direction: column
+	align-items: flex-start
+	gap: 8px
+	padding: 8px 10px
+	border: 1px solid var(--color-border)
+	border-radius: 10px
+	background: var(--bg-section)
+	color: var(--color-text-primary)
+	font-size: 0.78rem
+	font-weight: 600
+	line-height: 1.35
 
-// La zona de soltar: el texto de vacia y el del rechazo van encima, sin tapar el arrastre
+	i
+		flex: 0 0 auto
+		margin-top: 1px
+		color: var(--btn-peligro-texto)
+
+// La zona de soltar: el texto de vacia va encima, sin tapar el arrastre
 .editor-bandeja__zona
 	position: relative
 
@@ -362,7 +470,7 @@ export default {
 	padding: 6px
 	border: 1.5px dashed var(--color-border)
 	border-radius: 10px
-	transition: border-color .15s ease, background .15s ease
+	transition: border-color .15s ease, background .15s ease, opacity .15s ease
 
 	// Un campo de una etapa que pasa por aca, mientras se arrastra: un renglon, no la tarjeta entera
 	> .editor-elemento.editor-diseno-hueco
@@ -372,12 +480,13 @@ export default {
 .editor-bandeja__item
 	min-width: 0
 
+// Cada item: un renglon (agarre, nombre, accion) y, si hace falta, una linea de explicacion o aviso
 .editor-bandeja__tarjeta
 	display: flex
-	align-items: center
-	gap: 8px
+	flex-direction: column
+	gap: 4px
 	min-width: 0
-	padding: 7px 8px 7px 8px
+	padding: 7px 8px
 	border: 1px solid var(--color-border)
 	border-radius: 10px
 	background: var(--bg-card)
@@ -388,10 +497,21 @@ export default {
 	&:hover
 		border-color: var(--color-primary)
 
+.editor-bandeja__fila
+	display: flex
+	align-items: center
+	gap: 8px
+	min-width: 0
+
 .editor-bandeja__agarre
 	flex: 0 0 auto
 	color: var(--color-text-secondary)
 	font-size: 0.8rem
+
+.editor-bandeja__icono
+	flex: 0 0 auto
+	color: var(--color-text-secondary)
+	font-size: 0.85rem
 
 .editor-bandeja__nombre
 	flex: 1 1 auto
@@ -403,26 +523,30 @@ export default {
 	overflow: hidden
 	text-overflow: ellipsis
 
-// La fuente del separador: punteada, como los separadores del lienzo
-.editor-bandeja__tarjeta--separador
+// Los marcadores de la fuente: punteados, como en el lienzo, con su explicacion abajo
+.editor-bandeja__tarjeta--marcador
 	border-style: dashed
 
 	.editor-bandeja__nombre
-		flex: 0 0 auto
 		font-weight: 500
 		color: var(--color-text-secondary)
 
-.editor-bandeja__linea
-	flex: 1 1 auto
-	min-width: 16px
-	height: 0
-	border-top: 1px solid var(--color-border)
-
-.editor-bandeja__pista
-	flex: 0 0 auto
+// Texto de la segunda linea, alineado con el nombre (despues del agarre)
+.editor-bandeja__explicacion,
+.editor-bandeja__aviso
+	padding-left: 18px
 	color: var(--color-text-secondary)
-	font-size: 0.7rem
-	white-space: nowrap
+	font-size: 0.72rem
+	line-height: 1.35
+
+.editor-bandeja__aviso
+	display: flex
+	align-items: flex-start
+	gap: 6px
+
+	i
+		flex: 0 0 auto
+		margin-top: 1px
 
 .editor-bandeja__agregar
 	display: inline-flex
@@ -455,11 +579,10 @@ export default {
 .editor-bandeja__item--destacado .editor-bandeja__tarjeta
 	animation: editor-elemento-destello 1.4s ease
 
-// Los dos textos van ENCIMA de la lista (z-index 2) pero no la tapan para el arrastre: sin eventos
-// de puntero, Sortable (que busca el destino con elementFromPoint) los saltea y encuentra la lista.
-// Tienen que ir encima porque mientras se ofrece como destino la lista se pinta de fondo.
-.editor-bandeja__vacia,
-.editor-bandeja__rechazo
+// El texto de vacia va ENCIMA de la lista (z-index 2) pero no la tapa para el arrastre: sin eventos
+// de puntero, Sortable (que busca el destino con elementFromPoint) lo saltea y encuentra la lista.
+// Tiene que ir encima porque mientras se ofrece como destino la lista se pinta de fondo.
+.editor-bandeja__vacia
 	position: absolute
 	top: 0
 	left: 0
@@ -481,14 +604,6 @@ export default {
 		flex: 0 0 auto
 		font-size: 1rem
 
-// El rechazo ademas TAPA los sacados (tiene fondo): mientras se arrastra un obligatorio, lo unico
-// que importa de la bandeja es que ahi no se puede soltar
-.editor-bandeja__rechazo
-	border-radius: 10px
-	background: var(--bg-section)
-	color: var(--color-text-primary)
-	font-weight: 600
-
 // Mientras se arrastra un campo que se puede sacar: la bandeja se ofrece como destino
 .editor-bandeja--recibe
 	border-color: var(--color-primary)
@@ -502,10 +617,11 @@ export default {
 		align-items: flex-end
 		color: var(--color-primary)
 
-// Mientras se arrastra un obligatorio: la bandeja se apaga
+// Mientras se arrastra un obligatorio: la zona se apaga (el motivo esta arriba)
 .editor-bandeja--rechaza
 	.editor-bandeja__lista
 		border-color: var(--color-border)
+		opacity: .45
 
 // Con el hueco adentro, el texto de vacia se corre del todo (:has() es mejora progresiva)
 .editor-bandeja__zona:has(.editor-diseno-hueco) .editor-bandeja__vacia
