@@ -481,10 +481,16 @@ export default {
 				/* ⚠️ El menú de este desplegable tiene `z-index: 3060` y se dibuja ENCIMA del
 				 * overlay del tour. Se ve raro pero no rompe nada: el paso solo lo señala. */
 				ruta: RUTA_PRESUPUESTOS,
-				/* Los tres textos son los del menú de verdad (`budget/components/ModalButtons.vue`):
-				 * la tercera opción dice "Con imagenes", no "con precios y las fotos". */
+				/* 🔴 El menú de `budget/components/ModalButtons.vue` tiene DOS formas y el texto tiene
+				 * que ser verdad en las dos, por eso no cita los nombres de las opciones:
+				 *  - con los diseños de presupuesto sembrados (ABM "Diseño de PDF"): un ítem por
+				 *    diseño ("Presupuesto", "Presupuesto sin precios", "Presupuesto con imágenes" y
+				 *    los que arme el dueño);
+				 *  - sin diseños (API vieja o dueño sin el seeder): los tres botones de antes,
+				 *    "Sin precios", "Con precios" y "Con imagenes".
+				 * En las dos se puede sacar el PDF con precios, sin precios o con imágenes. */
 				ancla: 'presupuestos.boton_imprimir',
-				texto: 'El PDF lo elegís vos: "Sin precios", "Con precios" o "Con imagenes".',
+				texto: 'El PDF lo elegís vos: con precios, sin precios o con imágenes.',
 				avanza: 'siguiente',
 			},
 			{
