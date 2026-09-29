@@ -4,7 +4,9 @@
 		disenos-etiquetas-gondola, 29/9/2026). Es la miniatura de las tarjetas del ABM: el mismo dibujo
 		que el lienzo del editor (ContenidoDelCampo), con el zoom que entre en la tarjeta.
 
-		Decorativa (aria-hidden): la tarjeta dice en texto el nombre y el tamaño.
+		Decorativa (aria-hidden): la tarjeta dice en texto el nombre y el tamaño. Muestra los mismos
+		avisos tenues que el editor ("Lista borrada", "Escribí el texto") para que un precio de una
+		lista que ya no existe no pase desapercibido.
 	-->
 	<div
 	class="etiqueta-dibujada"
@@ -25,7 +27,8 @@
 			:elemento="elemento"
 			:zoom="zoom"
 			:muestra="muestra"
-			:listas="listas"></contenido-del-campo>
+			:listas="listas"
+			editando></contenido-del-campo>
 		</div>
 	</div>
 </template>

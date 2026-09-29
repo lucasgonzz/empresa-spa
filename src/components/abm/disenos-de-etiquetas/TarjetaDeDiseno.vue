@@ -28,6 +28,13 @@
 
 			<p class="tarjeta-de-etiqueta__detalle">{{ detalle }}</p>
 
+			<p
+			v-if="tiene_lista_borrada"
+			class="tarjeta-de-etiqueta__aviso">
+				<i class="bi bi-exclamation-triangle"></i>
+				Tiene un precio de una lista que ya no existe: sale en blanco.
+			</p>
+
 			<div
 			class="tarjeta-de-etiqueta__acciones"
 			@click.stop>
@@ -41,25 +48,48 @@
 					Editar
 				</b-button>
 
-				<span class="tarjeta-de-etiqueta__iconos">
-					<button
-					type="button"
-					class="tarjeta-de-etiqueta__icono"
-					title="Duplicar"
-					:aria-label="'Duplicar el diseño ' + modelo.name"
-					@click="$emit('duplicar')">
-						<i class="bi bi-copy"></i>
-					</button>
-					<button
-					type="button"
-					class="tarjeta-de-etiqueta__icono tarjeta-de-etiqueta__icono--peligro"
-					title="Eliminar"
-					:aria-label="'Eliminar el diseño ' + modelo.name"
-					@click="$emit('eliminar')">
-						<i class="bi bi-trash3"></i>
-					</button>
+				<!--
+					"Imprimir una prueba": el PDF con este diseño y algunos articulos que ya estan en memoria.
+					Sin articulos, deshabilitado; el motivo va en el envoltorio (un boton deshabilitado no
+					muestra su title) y en el texto de abajo.
+				-->
+				<span
+				class="tarjeta-de-etiqueta__envoltorio"
+				:title="hay_articulos ? 'Abre el PDF con este diseño y algunos de tus artículos' : SIN_ARTICULOS_PARA_PROBAR">
+					<b-button
+					size="sm"
+					variant="outline-secondary"
+					class="tarjeta-de-etiqueta__boton"
+					:disabled="!hay_articulos"
+					:aria-label="'Imprimir una prueba del diseño ' + modelo.name"
+					@click="$emit('probar')">
+						<i class="bi bi-printer"></i>
+						Imprimir una prueba
+					</b-button>
 				</span>
+
+				<!-- Con texto y no solo el icono: en el celular no hay tooltip que diga que hace cada uno -->
+				<button
+				type="button"
+				class="tarjeta-de-etiqueta__accion"
+				:aria-label="'Duplicar el diseño ' + modelo.name"
+				@click="$emit('duplicar')">
+					<i class="bi bi-copy"></i>
+					Duplicar
+				</button>
+				<button
+				type="button"
+				class="tarjeta-de-etiqueta__accion tarjeta-de-etiqueta__accion--peligro"
+				:aria-label="'Eliminar el diseño ' + modelo.name"
+				@click="$emit('eliminar')">
+					<i class="bi bi-trash3"></i>
+					Eliminar
+				</button>
 			</div>
+
+			<p
+			v-if="!hay_articulos"
+			class="tarjeta-de-etiqueta__nota">{{ SIN_ARTICULOS_PARA_PROBAR }}</p>
 		</div>
 	</article>
 </template>
@@ -67,6 +97,8 @@
 import EtiquetaDibujada from './EtiquetaDibujada'
 import { normalizar_diseno } from './diseno'
 import { ancho_de_etiqueta, filas_por_hoja } from './geometria'
+import { buscar_lista } from './catalogo'
+import { SIN_ARTICULOS_PARA_PROBAR } from './api_de_disenos'
 
 /* Lugar que tiene la miniatura en la tarjeta (px) */
 const ANCHO_DE_LA_VISTA = 248
@@ -76,8 +108,8 @@ const ALTO_DE_LA_VISTA = 118
 const ZOOM_MAXIMO = 3.6
 
 /**
- * Tarjeta de un Diseño de etiqueta. Solo muestra y avisa (`editar`, `duplicar`, `eliminar`): los
- * pedidos los hace la solapa.
+ * Tarjeta de un Diseño de etiqueta. Solo muestra y avisa (`editar`, `probar`, `duplicar`,
+ * `eliminar`): los pedidos los hace la solapa.
  */
 export default {
 	name: 'TarjetaDeDisenoDeEtiqueta',
@@ -102,8 +134,29 @@ export default {
 				return []
 			},
 		},
+		/* Si hay articulos en memoria para "Imprimir una prueba" */
+		hay_articulos: {
+			type: Boolean,
+			default: false,
+		},
+	},
+	data() {
+		return {
+			SIN_ARTICULOS_PARA_PROBAR: SIN_ARTICULOS_PARA_PROBAR,
+		}
 	},
 	computed: {
+		/**
+		 * Si el diseño tiene un precio de una lista que ya no existe (sale en blanco).
+		 *
+		 * @returns {boolean}
+		 */
+		tiene_lista_borrada() {
+			let listas = this.listas
+			return this.diseno.elementos.some(function (elemento) {
+				return elemento.tipo === 'precio_lista' && !buscar_lista(listas, elemento.price_type_id)
+			})
+		},
 		/**
 		 * El diseño listo para dibujar.
 		 *
@@ -200,24 +253,22 @@ export default {
 	border-radius: 8px
 	white-space: nowrap
 
-.tarjeta-de-etiqueta__iconos
+.tarjeta-de-etiqueta__envoltorio
 	display: inline-flex
-	align-items: center
-	gap: 2px
-	margin-left: auto
 
-.tarjeta-de-etiqueta__icono
+// Duplicar / Eliminar: botones de texto livianos (con el icono adelante)
+.tarjeta-de-etiqueta__accion
 	display: inline-flex
 	align-items: center
-	justify-content: center
-	width: 32px
-	height: 32px
-	padding: 0
+	gap: 5px
+	height: 31px
+	padding: 0 8px
 	border: 0
 	border-radius: 8px
 	background: transparent
 	color: var(--color-text-secondary)
-	font-size: 0.9rem
+	font-size: 0.8rem
+	white-space: nowrap
 	cursor: pointer
 	transition: background .15s ease, color .15s ease
 
@@ -231,7 +282,23 @@ export default {
 	&:focus-visible
 		box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
 
-.tarjeta-de-etiqueta__icono--peligro:hover
+.tarjeta-de-etiqueta__accion--peligro:hover
 	background: var(--btn-peligro-fondo)
 	color: var(--btn-peligro-texto)
+
+.tarjeta-de-etiqueta__aviso
+	display: flex
+	align-items: flex-start
+	gap: 6px
+	margin: 2px 0 0
+	color: var(--color-text-primary)
+	font-size: 0.76rem
+
+	i
+		color: var(--color-text-warning-strong, var(--warning))
+
+.tarjeta-de-etiqueta__nota
+	margin: 6px 0 0
+	color: var(--color-text-secondary)
+	font-size: 0.72rem
 </style>

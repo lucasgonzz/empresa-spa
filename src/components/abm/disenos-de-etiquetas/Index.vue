@@ -55,7 +55,9 @@
 			:modelo="modelo"
 			:muestra="muestra"
 			:listas="listas"
+			:hay_articulos="ids_de_prueba.length > 0"
 			@editar="editar(modelo)"
+			@probar="probar(modelo)"
 			@duplicar="duplicar(modelo)"
 			@eliminar="eliminar(modelo)"></tarjeta-de-diseno>
 		</div>
@@ -75,8 +77,9 @@ import TarjetaDeDiseno from './TarjetaDeDiseno'
 */
 import EditorDeEtiqueta from './editor/Index'
 import { normalizar_diseno, serializar_diseno } from './diseno'
-import { armar_muestra } from './muestra'
-import { crear_diseno, eliminar_diseno, mensaje_de_error } from './api_de_disenos'
+import { armar_muestra, ids_para_la_prueba } from './muestra'
+import { crear_diseno, eliminar_diseno, mensaje_de_error, abrir_prueba, SIN_ARTICULOS_PARA_PROBAR } from './api_de_disenos'
+import { buscar_lista } from './catalogo'
 import { avisar } from '@/components/abm/disenos-de-vender/avisos'
 
 /* Largo maximo del nombre (article_ticket_designs.name es string(120)) */
@@ -131,6 +134,14 @@ export default {
 		muestra() {
 			return armar_muestra(this)
 		},
+		/**
+		 * Los articulos con que sale "Imprimir una prueba" (hasta 6 del store).
+		 *
+		 * @returns {Array}
+		 */
+		ids_de_prueba() {
+			return ids_para_la_prueba(this)
+		},
 	},
 	created() {
 		/* Horizontal-nav no la pide para una solapa con componente propio (ver buildItem en Abm.vue) */
@@ -153,6 +164,17 @@ export default {
 		 */
 		editar(modelo) {
 			this.$refs.editor.abrir(modelo)
+		},
+		/**
+		 * "Imprimir una prueba": el PDF con este diseño y algunos articulos del store.
+		 *
+		 * @param {Object} modelo
+		 * @returns {void}
+		 */
+		probar(modelo) {
+			if (!abrir_prueba(modelo.id, this.ids_de_prueba)) {
+				avisar(this, 'info', SIN_ARTICULOS_PARA_PROBAR)
+			}
 		},
 		/**
 		 * "Duplicar": crea una copia con el mismo diseño y " (copia)" en el nombre. La copia es del
@@ -193,8 +215,18 @@ export default {
 		 */
 		eliminar(modelo) {
 			let self = this
+			let mensaje = '¿Eliminar el diseño «' + modelo.name + '»? Deja de aparecer para imprimir en Listado. No se puede deshacer.'
 
-			this.$bvModal.msgBoxConfirm('¿Eliminar el diseño «' + modelo.name + '»? Deja de aparecer para imprimir en Listado. No se puede deshacer.', {
+			/*
+				El diseño generado para una lista: al borrarlo, esa lista vuelve a tener su opcion de
+				siempre en el menu de Listado (el respaldo por lista sin diseño). Se dice la verdad.
+			*/
+			let lista = modelo.price_type_id && this.ownerUsesListasDePrecio() ? buscar_lista(this.listas, modelo.price_type_id) : null
+			if (lista) {
+				mensaje = '¿Eliminar el diseño «' + modelo.name + '»? No se puede deshacer. La lista «' + lista.name + '» va a seguir apareciendo en Listado, con la etiqueta de siempre.'
+			}
+
+			this.$bvModal.msgBoxConfirm(mensaje, {
 				title: 'Eliminar diseño',
 				okTitle: 'Eliminar',
 				okVariant: 'danger',
