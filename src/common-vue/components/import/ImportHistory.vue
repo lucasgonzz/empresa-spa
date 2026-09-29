@@ -12,8 +12,8 @@
 	size="lg"
 	title="Historial de importaciones"
 	id="import-history"
-	@show="getModels">
-	
+	@show="abrirHistorial">
+
 		<div 
 		v-if="loading"
 		class="all-center-md">
@@ -183,6 +183,21 @@
 
 
 		</b-table>
+
+		<!--
+			Solo tiene sentido si hay mas de una pagina: con <=5 resultados en total (o
+			mientras se esta cargando/hay error sin datos viejos en pantalla) no hay nada para
+			paginar y el control quedaria como un adorno vacio. Mismo criterio que ya usa
+			reportes/components/detalle-modal/Index.vue para su propio <b-pagination>.
+		-->
+		<b-pagination
+		v-if="!loading && models.length && total > per_page"
+		class="m-t-15"
+		align="center"
+		pills
+		v-model="current_page"
+		:total-rows="total"
+		:per-page="per_page"></b-pagination>
 	</b-modal>
 
 	<!-- Modal con el detalle del error de una importacion fallida: motivo humano + log tecnico completo -->
@@ -375,6 +390,16 @@ export default {
 	},
 	watch: {
 		show_history() {
+			this.abrirHistorial()
+		},
+		/*
+		 * Dispara la carga de la pagina nueva cuando el usuario clickea en el
+		 * <b-pagination> (que solo toca current_page via v-model, nunca @input a la vez:
+		 * si se agregara @input ademas del v-model se duplicaria este watch).
+		 * abrirHistorial() NUNCA pasa por aca cuando current_page ya vale 1 -- ver su
+		 * comentario -- asi que reabrir el modal en la pagina 1 no dispara un pedido de mas.
+		 */
+		current_page() {
 			this.getModels()
 		}
 	},
@@ -384,6 +409,28 @@ export default {
 			// Texto del error de carga del historial. Vacio = no hubo error (ver el template).
 			error_al_cargar: '',
 			models: [],
+			// Pagina actual del historial (1-indexado, como espera <b-pagination>). Se resetea
+			// a 1 en cada apertura del modal -- ver abrirHistorial() -- asi que reabrirlo en la
+			// pagina en que quedo la vez anterior no es el comportamiento buscado.
+			current_page: 1,
+			// Total de paginas y de registros que devuelve el backend en `pagination`
+			// (ImportHistoryController::index). total alimenta el total-rows de <b-pagination>.
+			last_page: 1,
+			total: 0,
+			// Tamaño de pagina fijo en 5: es lo que pidio Lucas y lo que el backend devuelve
+			// siempre, no un parametro configurable por ahora.
+			per_page: 5,
+			// Contador de la peticion de getModels() mas reciente (hallazgo del chequeo
+			// independiente, 28/9/2026): cambiar de pagina y despues cerrar/reabrir el modal
+			// rapido puede dejar DOS pedidos en vuelo a la vez, y la red no garantiza que
+			// resuelvan en el orden en que salieron. Sin esto, la respuesta VIEJA (de una
+			// pagina que el usuario ya no esta pidiendo) puede llegar despues y pisar
+			// `models`/`total`/`last_page`, dejando la tabla con filas de una pagina distinta
+			// a la que <b-pagination> muestra resaltada. getModels() se guarda a si mismo el
+			// numero de esta llamada puntual antes de salir a la red, y al volver compara
+			// contra el valor actual: si ya no coincide, es porque salio una llamada mas
+			// nueva mientras esta esperaba, y su resultado se descarta en silencio.
+			peticion_actual: 0,
 			articulos_creados: [],
 			import_history_show_lotes: null,
 			// Importacion actualmente seleccionada para ver su error en el modal "import-error-detail"
@@ -962,6 +1009,26 @@ export default {
 			}
 			return null
 		},
+		/**
+		 * Punto de entrada unico para abrir el modal: lo llaman tanto el @show del b-modal
+		 * (bootstrap-vue) como el watch de la prop show_history, que son los dos caminos que
+		 * hoy dispara el resto de la SPA para mostrar este historial.
+		 *
+		 * Siempre arranca en la pagina 1, aunque la vez anterior se haya quedado en otra: es
+		 * el comportamiento esperable de un modal que se reabre (no una pestaña que retoma
+		 * donde la dejaste). Si current_page ya vale 1 no hay nada que cambiar y el watch de
+		 * arriba no dispara solo -- por eso acá se pide la carga a mano en ese caso, para no
+		 * perder el fetch inicial. Si vale otra cosa, alcanza con pisarlo: el watch de
+		 * current_page hace el pedido. Cualquiera de los dos caminos llama a getModels() una
+		 * sola vez.
+		 */
+		abrirHistorial() {
+			if (this.current_page === 1) {
+				this.getModels()
+			} else {
+				this.current_page = 1
+			}
+		},
 		getModels() {
 			// El catalogo liviano de proveedores, que es lo que resuelve la columna Proveedor de la
 			// tabla (ver getProvider). getOptions tiene su propia guarda: si ya se pidio en esta
@@ -970,14 +1037,41 @@ export default {
 
 			this.loading = true
 			this.error_al_cargar = ''
-			this.$api.get('import-history/'+this.model_name)
+
+			// Token de ESTA llamada puntual (ver el comentario de peticion_actual en data()).
+			this.peticion_actual += 1
+			let mi_peticion = this.peticion_actual
+
+			this.$api.get('import-history/'+this.model_name+'?page='+this.current_page)
 			.then(res => {
 				console.log(res)
+				// Ya salio una llamada mas nueva mientras esta esperaba respuesta (cambio de
+				// pagina, o se reabrio el modal): esta respuesta quedo vieja, se descarta sin
+				// tocar nada del estado -- lo que corresponde mostrar ya lo esta resolviendo
+				// la llamada mas nueva.
+				if (mi_peticion !== this.peticion_actual) {
+					return
+				}
 				this.loading = false
 				this.error_al_cargar = ''
 				this.models = res.data.models
+				// pagination viene siempre del contrato nuevo (models + pagination), pero se
+				// cubre igual por si alguna vez pega contra una API vieja que solo mande
+				// {models}: sin esto, last_page/total quedarian en el valor de la pagina
+				// anterior y <b-pagination> mostraria una cantidad de paginas que ya no existe.
+				let pagination = res.data.pagination || {}
+				this.last_page = pagination.last_page || 1
+				this.total = pagination.total || 0
+				// No se pisa this.current_page con pagination.current_page: ya es el valor que
+				// nosotros mandamos en el pedido, y reasignarlo ademas dispararia el watch de
+				// current_page y encadenaria un pedido de mas.
 			})
 			.catch(err => {
+				// Misma guarda que en el .then: un error de una llamada vieja no tiene que
+				// pisar el resultado (bueno o el propio error) de una llamada mas nueva.
+				if (mi_peticion !== this.peticion_actual) {
+					return
+				}
 				this.loading = false
 				console.log(err)
 				/*
