@@ -7,11 +7,11 @@
 		A diferencia de FechaEntrega (que es otro campo, la fecha de ENTREGA, y vive detras de la
 		extension ventas_con_fecha_de_entrega), este va SIEMPRE y para todos los comercios.
 
-		Sin clases de ancho ni de margen, a diferencia de FechaEntrega: aquel vive suelto en el
-		layout viejo y se las pone el mismo. Aca el ancho y el gap los pone el wrapper
-		.vender-stage__field (flex + max-width + min-width 220px, ver _vender-stages.sass), igual
-		que para Seller y SaleType, que tampoco las llevan. Un w-300 fijo adentro pelearia contra
-		ese max-width y desbordaria en la fila angosta.
+		Sin clases de ancho ni de margen: es el elemento `fecha_de_venta` del diseño de Vender
+		(mision diseno-vender-configurable, 28/9/2026), y el ancho y el aire entre campos los pone
+		layout/GrillaDeEtapa.vue segun el diseño en uso, igual que para todos los campos de las
+		etapas. Un w-300 fijo adentro pelearia contra la columna elegida y desbordaria en una
+		angosta.
 	-->
 	<b-input-group
 	prepend="Fecha">

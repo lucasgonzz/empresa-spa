@@ -285,6 +285,9 @@ import actividad_cliente from '@/store/actividad_cliente'
 import sistema_de_puntos from '@/store/sistema_de_puntos'
 import puntos from '@/store/puntos'
 
+// Diseños de Vender (mision diseno-vender-configurable, 28/9/2026): donde va cada campo de Vender.
+import vender_layout from '@/store/vender_layout'
+
 
 Vue.use(Vuex)
 
@@ -558,5 +561,6 @@ export default new Vuex.Store({
 
         sistema_de_puntos,
         puntos,
+        vender_layout,
     }
 })

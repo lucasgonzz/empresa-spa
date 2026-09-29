@@ -2,7 +2,9 @@
 	<!--
 		Barra de resumen de Etapa 1 (Configuración inicial).
 		Muestra chips con los valores seleccionados: sucursal, método de pago, lista de precios, cliente.
-		Cada chip tiene un ícono de lápiz que expande la Etapa 1 con foco en el campo correspondiente.
+		Cada chip tiene un ícono de lápiz que lleva al campo correspondiente: abre la etapa donde lo
+		puso el diseño de Vender en uso (con el predeterminado, la 1), lo trae a la vista y lo enfoca.
+		Si el diseño en uso no muestra ese campo, avisa (ver editar_campo).
 	-->
 	<div
 	v-if="has_any_data"
@@ -16,7 +18,7 @@
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Editar sucursal"
-			@click="expandStage1('address')">
+			@click="editar_campo('sucursal')">
 				<i class="icon-edit"></i>
 			</button>
 		</div>
@@ -30,7 +32,7 @@
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Editar método de pago"
-			@click="expandStage1('payment_method')">
+			@click="editar_campo('metodo_de_pago')">
 				<i class="icon-edit"></i>
 			</button>
 		</div>
@@ -44,7 +46,7 @@
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Editar lista de precios"
-			@click="expandStage1('price_type')">
+			@click="editar_campo('lista_de_precios')">
 				<i class="icon-edit"></i>
 			</button>
 		</div>
@@ -54,7 +56,7 @@
 			Con la etapa 1 colapsada (edicion de una venta o un presupuesto) era lo unico que no se
 			veia: el chip de arriba solo existe con lista, asi que una venta sin lista no mostraba
 			nada raro hasta expandir la etapa, y el Guardar recien ahi frenaba. Misma accion que el
-			chip normal: expandir la etapa 1 con foco en el selector.
+			chip normal: llevar al selector de la lista, este en la etapa que este.
 		-->
 		<div
 		v-else-if="falta_lista_de_precios"
@@ -65,7 +67,7 @@
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Elegir lista de precios"
-			@click="expandStage1('price_type')">
+			@click="editar_campo('lista_de_precios')">
 				<i class="icon-edit"></i>
 			</button>
 		</div>
@@ -79,7 +81,7 @@
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Editar cliente"
-			@click="expandStage1('client')">
+			@click="editar_campo('cliente')">
 				<i class="icon-edit"></i>
 			</button>
 		</div>
@@ -96,9 +98,14 @@
 	mismo valor.
 */
 import price_types from '@/mixins/vender/price_types'
+/*
+	Por enfocar_elemento_de_vender(): los lapices llevan al campo este en la etapa que este del
+	diseño de Vender en uso (mision diseno-vender-configurable, 28/9/2026).
+*/
+import diseno_de_vender from '@/mixins/vender/diseno_de_vender'
 export default {
 	name: 'VenderStage1SummaryBar',
-	mixins: [price_types],
+	mixins: [price_types, diseno_de_vender],
 	computed: {
 		/**
 		 * Sucursal (address) actualmente seleccionada en la venta.
@@ -184,13 +191,19 @@ export default {
 	},
 	methods: {
 		/**
-		 * Emite el evento para expandir la Etapa 1 con foco en el campo indicado.
-		 * VenderStage1 escucha este evento para abrir la etapa y hacer scroll al campo.
+		 * Lapiz de un chip: lleva al campo, este en la etapa que este.
 		 *
-		 * @param {string} field - Nombre del campo a enfocar ('address', 'payment_method', 'price_type', 'client')
+		 * Hasta los diseños de Vender emitia un evento que solo sabia abrir la etapa 1 (ahi estaban
+		 * los cuatro campos). Con un diseño, el cliente o el metodo de pago pueden estar en la
+		 * etapa 3, asi que se pide el foco por la key del catalogo y lo resuelve la etapa que lo
+		 * tiene. Si el diseño en uso no muestra el campo, enfocar_elemento_de_vender() avisa con un
+		 * toast en vez de no hacer nada.
+		 *
+		 * @param {string} key key del catalogo: 'sucursal', 'metodo_de_pago', 'lista_de_precios' o 'cliente'
+		 * @returns {void}
 		 */
-		expandStage1(field) {
-			this.$root.$emit('vender:expand-stage1', field)
+		editar_campo(key) {
+			this.enfocar_elemento_de_vender(key)
 		},
 	},
 }

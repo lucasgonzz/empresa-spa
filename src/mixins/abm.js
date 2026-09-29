@@ -7,6 +7,9 @@
  * el componente desde cero.
  */
 const componente_integraciones_tienda_online = () => import('@/components/abm/integraciones/TiendaOnline')
+// Diseños de Vender (mision diseno-vender-configurable, 28/9/2026): editor de arrastrar y soltar,
+// no un formulario. Ver src/models/vender_layout.js.
+const componente_disenos_de_vender = () => import('@/components/abm/disenos-de-vender/Index')
 
 export default {
 	computed: {
@@ -53,7 +56,13 @@ export default {
 						'sale_sender_info',
 						'client_reputation',
 						'dealer',
+						// Al final a proposito: el primero de la lista es la solapa que abre por defecto.
+						'vender_layout',
 					],
+					// 'vender_layout' monta su propio componente (tarjetas + editor), no el ABM generico
+					componentes: {
+						vender_layout: componente_disenos_de_vender,
+					},
 				},
 				// Metodos de cobro y planes de pago en cuenta corriente
 				{

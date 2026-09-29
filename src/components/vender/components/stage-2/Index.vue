@@ -3,8 +3,15 @@
 		Etapa 2 — Artículos y servicios.
 		Siempre expandida, no colapsable.
 		Index: orquesta el layout fijo; la lógica vive en cada subcomponente.
+
+		Los campos del bloque pegado (el resumen de la venta y los buscadores) los decide el diseño
+		de Vender en uso (mision diseno-vender-configurable, 28/9/2026), igual que en las etapas 1 y
+		3: se dibujan con layout/GrillaDeEtapa.vue. Lo fijo de esta etapa es lo que scrollea debajo
+		(las ventas anteriores vinculadas y la tabla de articulos), que ningun diseño toca.
+
+		La clase vender-stage--etapa-2 es la que le da el verde de la etapa (ver _vender-stages.sass).
 	-->
-	<div class="vender-stage vender-stage--open vender-stage--no-collapse">
+	<div class="vender-stage vender-stage--etapa-2 vender-stage--open vender-stage--no-collapse">
 
 		<!--
 			Bloque pegado (sticky): header + total + buscador de artículos.
@@ -21,18 +28,47 @@
 			<div class="vender-stage__header vender-stage__header--no-collapse">
 				<span class="vender-stage__number">2</span>
 				<div class="vender-stage__header-text">
-					<span class="vender-stage__label">Artículos y servicios</span>
-					<span class="vender-stage__sublabel">Buscar artículos, servicios, combos y promociones</span>
+					<span class="vender-stage__label">{{ titulo }}</span>
+					<span class="vender-stage__sublabel">{{ subtitulo }}</span>
 				</div>
 			</div>
 
-			<div class="vender-stage__body vender-stage__body--always-open vender-stage__body--pinned">
+			<!--
+				Los campos que el diseño pone en esta etapa: con el predeterminado, el resumen de la
+				venta (total, cliente, metodo de pago y vuelto) a lo ancho y abajo los buscadores
+				(codigo de barras, nombre, combos, promociones, servicio y cantidad), que es lo que
+				habia antes de los diseños. El ancla vender.buscador_articulos del tour ya no esta
+				aca sino sobre el buscador por nombre (ver GrillaDeEtapa.vue).
 
-				<!-- Barra de contexto horizontal: total, cliente, método de pago y checklist -->
-				<context-bar></context-bar>
+				Sin campos ni aviso (un diseño que se llevo todo a otras etapas) el cuerpo no se
+				dibuja: quedaria una franja vacia debajo del header. La condicion es la de
+				grilla_de_vender_se_dibuja() del mixin, la misma con la que la reserva decide que
+				le toca montar a ella: no reemplazarla por otra.
+			-->
+			<div
+			v-if="se_dibuja_la_grilla"
+			class="vender-stage__body vender-stage__body--always-open vender-stage__body--pinned">
 
-				<!-- Buscadores de artículos -->
-				<header-form data-tour="vender.buscador_articulos"></header-form>
+				<grilla-de-etapa
+				etapa="etapa_2"
+				:stage_open="true"></grilla-de-etapa>
+
+				<!--
+					Tope de items por venta (owner.max_items_in_sale) alcanzado: la grilla esconde los
+					campos que agregan articulos, esten en la etapa que esten, y aca se explica por
+					que. Mismo texto que mostraba remito/header-form/Index.vue en lugar de la fila de
+					buscadores.
+				-->
+				<div
+				v-if="tope_de_items_de_vender_alcanzado"
+				class="vender-stage__tope-de-items">
+					<p>
+						Limite de Items en una venta alcanzado.
+					</p>
+					<p>
+						Guarde esta venta para comenzar una nueva.
+					</p>
+				</div>
 
 			</div>
 		</div>
@@ -51,9 +87,12 @@
 </template>
 
 <script>
-import HeaderForm from '@/components/vender/components/remito/header-form/Index.vue'
 import PreviusSaleData from '@/components/vender/components/remito/PreviusSaleData.vue'
 import ArticlesTable from '@/components/vender/components/remito/ArticlesTable.vue'
+import GrillaDeEtapa from '@/components/vender/layout/GrillaDeEtapa'
+import { TITULOS_DE_ETAPAS } from '@/components/vender/layout/elementos'
+import { subtitulo_de_etapa } from '@/components/vender/layout/resolver_diseno'
+import diseno_de_vender, { EVENTO_ENFOCAR_ELEMENTO } from '@/mixins/vender/diseno_de_vender'
 
 /*
 	Mismo valor que $vender_stage_gap en _vender-stages.sass: la distancia, en pixeles desde el borde
@@ -72,12 +111,45 @@ const MAXIMO_DEL_AREA = 0.5
 
 export default {
 	name: 'VenderStage2',
+	mixins: [diseno_de_vender],
 	components: {
-		/* Barra de contexto específica de la etapa 2 */
-		ContextBar: () => import('./ContextBar'),
-		HeaderForm,
+		/* El resumen (ContextBar) y los buscadores los dibuja la grilla, segun el diseño en uso */
+		GrillaDeEtapa,
 		PreviusSaleData,
 		ArticlesTable,
+	},
+	computed: {
+		/**
+		 * Titulo de la etapa, el mismo que muestra el editor de diseños.
+		 *
+		 * @returns {string}
+		 */
+		titulo() {
+			return TITULOS_DE_ETAPAS.etapa_2
+		},
+
+		/**
+		 * Subtitulo del header: los campos que se dibujan ("Resumen, código de barras, buscador...").
+		 * En la primera version de los diseños quedo el texto fijo de antes ("Buscar artículos,
+		 * servicios, combos y promociones"); ahora sale del diseño en uso, como en las etapas 1 y 3
+		 * y como lo muestra el editor.
+		 *
+		 * @returns {string}
+		 */
+		subtitulo() {
+			return subtitulo_de_etapa(this.elementos_de_etapa_de_vender('etapa_2'))
+		},
+
+		/**
+		 * Si la grilla del bloque pegado se dibuja: con algun campo disponible (con el
+		 * predeterminado, siempre: el resumen es obligatorio y vive aca, salvo que alguien lo
+		 * mueva) o con el aviso del tope de items.
+		 *
+		 * @returns {boolean}
+		 */
+		se_dibuja_la_grilla() {
+			return this.grilla_de_vender_se_dibuja('etapa_2')
+		},
 	},
 	data() {
 		return {
@@ -95,6 +167,12 @@ export default {
 		}
 	},
 	mounted() {
+		/*
+			Pedido de foco a un campo (atajos F1/F2 a los buscadores, o cualquier campo que el diseño
+			haya puesto en esta etapa). Va antes del return de abajo: no depende del contenedor.
+		*/
+		this.$root.$on(EVENTO_ENFOCAR_ELEMENTO, this.al_pedir_el_foco_de_un_elemento)
+
 		this.contenedor = this.$el.parentElement
 
 		if (!this.contenedor) {
@@ -118,6 +196,8 @@ export default {
 		this.medir_pegado()
 	},
 	beforeDestroy() {
+		this.$root.$off(EVENTO_ENFOCAR_ELEMENTO, this.al_pedir_el_foco_de_un_elemento)
+
 		if (this.contenedor) {
 			this.contenedor.removeEventListener('scroll', this.pedir_medicion)
 		}
@@ -128,6 +208,27 @@ export default {
 		}
 	},
 	methods: {
+		/**
+		 * Si el campo pedido esta en esta etapa y se esta mostrando, lo trae a la vista y lo
+		 * enfoca. No hay nada que abrir: la etapa 2 no se pliega.
+		 *
+		 * `block: 'nearest'` y no 'start': los campos de esta etapa viven en el bloque pegado, que
+		 * casi siempre ya esta a la vista, y con 'nearest' el scroll no se mueve si no hace falta
+		 * (F1/F2 enfocaban el buscador sin mover nada, y asi siguen). Solo scrollea cuando el
+		 * bloque quedo fuera de vista, que pasa en un telefono, donde no se pega (sin_espacio).
+		 *
+		 * @param {string} key
+		 * @param {Object} opciones
+		 * @returns {void}
+		 */
+		al_pedir_el_foco_de_un_elemento(key, opciones) {
+			if (!this.elemento_de_vender_listo_en_esta_etapa(key, 'etapa_2')) {
+				return
+			}
+
+			this.enfocar_elemento_de_vender_en_esta_etapa(key, opciones, 'nearest')
+		},
+
 		/* Decide si el bloque tiene derecho a pegarse, mirando cuanto del area ocuparia. */
 		medir_espacio() {
 			if (!this.contenedor || !this.$refs.pinned) {

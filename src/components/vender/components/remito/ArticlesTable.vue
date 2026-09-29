@@ -268,6 +268,12 @@ import vender from '@/mixins/vender/index'
 import vender_set_total from '@/mixins/vender_set_total'
 import previus_sales from '@/mixins/vender/previus_sale/index'
 import check_stock from '@/mixins/vender/check_stock'
+/*
+	El foco de vuelta al codigo de barras (al sacar un renglon, al terminar de personalizar un
+	precio) va a la primera entrada A LA VISTA: con los diseños de Vender el codigo de barras puede
+	estar sacado o plegado. Ver layout/foco.js.
+*/
+import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout/foco'
 export default {
 	mixins: [vender, vender_set_total, previus_sales, check_stock],
 	components: {
@@ -621,8 +627,14 @@ export default {
 
 			if (item.personalizar_price_en_vender) {
 
-				document.getElementById('article-bar-code').focus()
-				
+				/*
+					Era document.getElementById('article-bar-code').focus() sin guarda: tiraba un
+					TypeError con el codigo de barras fuera de la pantalla (extension
+					no_usar_codigos_de_barra) y, con los diseños de Vender, enfocaba un input
+					escondido si el diseño lo saco. Con el codigo de barras a la vista es el mismo foco.
+				*/
+				enfocar_primera_entrada_de_articulos()
+
 			} else {
 
 				setTimeout(() => {
@@ -770,7 +782,8 @@ export default {
 		eliminar_item(article) {
 			this.$store.commit('vender/removeItem', article)
 			this.setTotal()
-			document.getElementById('article-bar-code').focus()
+			/* Mismo motivo que en calculate_price_vender: la primera entrada a la vista, no el codigo de barras a ciegas */
+			enfocar_primera_entrada_de_articulos()
 		},
 		calculateTotalFromAmount(article) {
 			article.calculate_from_total = false

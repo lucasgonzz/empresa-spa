@@ -40,13 +40,13 @@ $vender_stages_padding: 8px
 	/* que es lo que pidio Lucas: el buscador de articulos siempre a la vista. */
 	/* El precio de sacar la caja es que el chasis (borde, radio, fondo y el margen inferior) ya no */
 	/* lo puede dibujar ella: lo dibujan sus dos hijos, .vender-stage__pinned (mitad de arriba) y */
-	/* .vender-stage__body--scroll (mitad de abajo). Los acentos por nth-child siguen andando: */
-	/* nth-child mira el arbol del documento, que display: contents no toca. */
+	/* .vender-stage__body--scroll (mitad de abajo). Los acentos por etapa (--etapa-N, abajo) siguen */
+	/* andando: son clases del elemento, y display: contents no las toca. */
 	/* Exclusivo de esta etapa (--no-collapse no lo usan stage-1 ni stage-3). */
 	&--no-collapse
 		display: contents
 
-/* Acentos por número de etapa (orden en .vender-stages): header teñido con el color de la */
+/* Acentos por número de etapa: header teñido con el color de la */
 /* sección + borde de ese mismo color en toda la tarjeta ("Opción A+B" del mockup validado por */
 /* Lucas el 17/9/2026, https://claude.ai/artifact/TDnkeFMHxS9nrVpUjkndmY). Reemplaza al acento de */
 /* borde izquierdo de 4px que tenía el header solo: con el borde de color ya en toda la tarjeta, */
@@ -56,25 +56,31 @@ $vender_stages_padding: 8px
 /* se sigue notando por contraste, no solo por el chevron. */
 /* Los selectores de fondo le ganan por especificidad a `.vender-stage__header` y a */
 /* `.vender-stage--open > .vender-stage__header` (base, más abajo en este archivo) sin depender */
-/* del orden: 4-5 clases/pseudo-clases contra 1-2. border-bottom-color y box-shadow del header */
+/* del orden: 4 clases contra 1-2. border-bottom-color y box-shadow del header */
 /* siguen viniendo de la regla base -- acá solo se pisa el fondo. */
-.vender-stages .vender-stage:nth-child(1) .vender-stage__header
+/* 🔴 La etapa se identifica por su clase --etapa-N (la pone el Index de cada etapa) y NO por su */
+/* posición con :nth-child(N), que es lo que se usaba hasta la misión diseno-vender-configurable */
+/* (28/9/2026). Desde esa misión una etapa a la que el diseño no le deja ningún campo no se dibuja */
+/* (v-if), y con :nth-child la etapa 2 pasaba a ser la primera y se teñía con el azul de la 1. */
+/* Cada :nth-child(N) se reemplazó por una clase en el mismo selector compuesto, así que la */
+/* especificidad es exactamente la de antes y la cascada no cambia. */
+.vender-stages .vender-stage.vender-stage--etapa-1 .vender-stage__header
 	background: rgba(0, 123, 255, .09)
 
 	&:hover
 		background: rgba(0, 123, 255, .16)
 
-.vender-stages .vender-stage--open:nth-child(1) > .vender-stage__header
+.vender-stages .vender-stage--open.vender-stage--etapa-1 > .vender-stage__header
 	background: rgba(0, 123, 255, .13)
 
 	&:hover
 		background: rgba(0, 123, 255, .18)
 
-.vender-stages .vender-stage:nth-child(1) .vender-stage__number
+.vender-stages .vender-stage.vender-stage--etapa-1 .vender-stage__number
 	background: var(--color-primary, #007bff)
 
 /* Etapa 1: borde de tarjeta completo, en vez del neutro de la regla base .vender-stage. */
-.vender-stages .vender-stage:nth-child(1)
+.vender-stages .vender-stage.vender-stage--etapa-1
 	border-color: rgba(0, 123, 255, .45)
 	border-width: 1.5px
 
@@ -82,32 +88,32 @@ $vender_stages_padding: 8px
 /* que distinguir. El borde de la tarjeta completa NO se puede tocar acá: la etapa 2 es */
 /* display: contents (ver .vender-stage--no-collapse) y no genera caja propia, así que su chasis */
 /* lo dibujan .vender-stage__pinned y .vender-stage__body--scroll por separado, más abajo. */
-.vender-stages .vender-stage:nth-child(2) .vender-stage__header--no-collapse
+.vender-stages .vender-stage.vender-stage--etapa-2 .vender-stage__header--no-collapse
 	background: rgba(25, 135, 84, .13)
 
 	&:hover
 		background: rgba(25, 135, 84, .18)
 
-.vender-stages .vender-stage:nth-child(2) .vender-stage__number
+.vender-stages .vender-stage.vender-stage--etapa-2 .vender-stage__number
 	background: #198754
 
-.vender-stages .vender-stage:nth-child(3) .vender-stage__header
+.vender-stages .vender-stage.vender-stage--etapa-3 .vender-stage__header
 	background: rgba(230, 119, 0, .09)
 
 	&:hover
 		background: rgba(230, 119, 0, .16)
 
-.vender-stages .vender-stage--open:nth-child(3) > .vender-stage__header
+.vender-stages .vender-stage--open.vender-stage--etapa-3 > .vender-stage__header
 	background: rgba(230, 119, 0, .13)
 
 	&:hover
 		background: rgba(230, 119, 0, .18)
 
-.vender-stages .vender-stage:nth-child(3) .vender-stage__number
+.vender-stages .vender-stage.vender-stage--etapa-3 .vender-stage__number
 	background: #e67700
 
 /* Etapa 3: borde de tarjeta completo, mismo criterio que la etapa 1. */
-.vender-stages .vender-stage:nth-child(3)
+.vender-stages .vender-stage.vender-stage--etapa-3
 	border-color: rgba(230, 119, 0, .45)
 	border-width: 1.5px
 
@@ -310,18 +316,20 @@ $vender_stages_padding: 8px
 	&--always-open
 		padding: 8px 14px
 
-	/* Mitad pegada del body de etapa 2 (contextbar + buscador, adentro de .vender-stage__pinned): */
-	/* fondo opaco porque queda flotando sobre la tabla al scrollear, y sin padding inferior porque */
-	/* el aire de abajo ya lo pone el buscador con su propio margen (m-b-15). */
-	/* display: flow-root es lo que hace que ese margen quede ADENTRO. Sin el, al no haber ni borde */
-	/* ni padding abajo, el margen del ultimo hijo se colapsa hacia afuera: el bloque terminaba al */
-	/* ras del buscador, el fondo opaco no llegaba a cubrir esos 15px y la primera fila de la tabla */
-	/* quedaba pegada a los inputs, asomando por debajo del bloque pegado. Es el mismo aire de */
-	/* siempre; lo unico que cambia es de que lado del borde del bloque cae. */
+	/* Mitad pegada del body de etapa 2 (la grilla con el resumen y los buscadores, adentro de */
+	/* .vender-stage__pinned): fondo opaco porque queda flotando sobre la tabla al scrollear. */
+	/* El aire de abajo son 15px, como siempre: 10 los pone el margen inferior de la ultima fila de */
+	/* la grilla (layout/GrillaDeEtapa.vue) y 5 este padding. Hasta los diseños de Vender los 15 los */
+	/* ponia entero el m-b-15 de la fila de buscadores y el padding era 0. */
+	/* display: flow-root es lo que hace que el margen de la grilla quede ADENTRO. Sin el, el margen */
+	/* del ultimo hijo se colapsa hacia afuera: el bloque terminaba al ras de los buscadores, el */
+	/* fondo opaco no llegaba a cubrir ese aire y la primera fila de la tabla quedaba pegada a los */
+	/* inputs, asomando por debajo del bloque pegado. Es el mismo aire de siempre; lo unico que */
+	/* cambia es de que lado del borde del bloque cae. */
 	&--pinned
 		display: flow-root
 		background: var(--bg-card, #fff)
-		padding-bottom: 0
+		padding-bottom: 5px
 
 	/* Mitad que sigue scrolleando (ventas anteriores + tabla): sin padding superior, por el mismo */
 	/* motivo que --pinned no lleva el inferior -- entre las dos, el espaciado da igual que antes. */
@@ -339,94 +347,23 @@ $vender_stages_padding: 8px
 		margin-bottom: $vender_stage_gap
 		overflow: hidden
 
-	/* Body con layout flexible para etapas 1 y 3: los selectores se alinean en fila y colapsan si no están visibles */
-	&--grid
-		display: flex
-		flex-wrap: wrap
-		gap: 10px 16px
-		align-items: start
-		padding: 14px 16px
+	/* Body de las etapas 1 y 3: adentro va la grilla del diseño (layout/GrillaDeEtapa.vue), que */
+	/* ordena los campos y pone el aire entre ellos. El padding de abajo es 4px y no 14px porque */
+	/* la ultima fila de la grilla ya trae 10px de margen: entre los dos dan los 14px de siempre. */
+	/* Hasta los diseños de Vender esto era --grid, un flex con gap que acomodaba 3 campos por fila */
+	/* (5 desde 1500px) y escondia con :has() los que no dibujaban nada; eso ahora lo hacen el */
+	/* ancho elegido en el diseño y el :empty de la grilla. */
+	&--grilla
+		padding: 14px 16px 4px
 
-/* Contenedor de un campo individual dentro de la etapa */
-.vender-stage__field
-	margin-bottom: 10px
-
-	&:last-child
-		margin-bottom: 0
-
-	/* Campo que ocupa el ancho completo del contenedor flexible */
-	&--full
-		flex: 1 1 100%
-		width: 100%
-
-/* En layout flexible, el gap maneja el espaciado */
-.vender-stage__body--grid > .vender-stage__field
-	margin-bottom: 0
-
-/* Gap horizontal entre selectores (debe coincidir con gap del --grid) */
-$vender_stage_field_gap: 16px
-
-/* Selectores por fila: hasta 1499px máximo 3; desde 1500px hasta 5 */
-.vender-stage__body--grid > .vender-stage__field:not(.vender-stage__field--full)
-	flex: 1 1 calc((100% - #{$vender_stage_field_gap * 2}) / 3)
-	max-width: calc((100% - #{$vender_stage_field_gap * 2}) / 3)
-	min-width: 220px
-
-@media (min-width: 1500px)
-	.vender-stage__body--grid > .vender-stage__field:not(.vender-stage__field--full)
-		flex: 1 1 calc((100% - #{$vender_stage_field_gap * 4}) / 5)
-		max-width: calc((100% - #{$vender_stage_field_gap * 4}) / 5)
-
-/* Ocultar contenedores sin selector renderizado (los hijos usan v-if y no montan controles) */
-.vender-stage__body--grid > .vender-stage__field:not(.vender-stage__field--full):not(:has(.input-group)):not(:has(.form-moneda))
-	display: none
-
-/* Fila horizontal con dos campos (cliente + AFIP) */
-.vender-stage__field--row
-	display: flex
-	flex-wrap: wrap
-	gap: 10px 16px
-	align-items: flex-start
-
-/* Cada ítem dentro de la fila comparte el ancho disponible */
-.vender-stage__field-row-item
-	flex: 1
-	min-width: 220px
-
-/* Fila de toggles IVA/stock + observaciones en etapa 3 */
-.vender-stage__iva-stock-observations-row
-	display: flex
-	flex-wrap: wrap
-	align-items: flex-end
-	gap: 16px 20px
-	width: 100%
-
-/* Toggles de IVA y stock en etapa 3 */
-.vender-stage__iva-stock-toggles
-	display: flex
-	flex-wrap: wrap
-	align-items: center
-	gap: 12px 20px
-	flex: 0 0 auto
-	padding-bottom: 1px
-
-/* Contenedor de los dos textareas de observaciones */
-.vender-stage__observations-fields
-	display: flex
-	flex: 1 1 360px
-	flex-wrap: wrap
-	gap: 12px 16px
-	min-width: 0
-	align-items: stretch
-
-/* Campo individual de observaciones: label arriba + textarea */
+/* Campo individual de observaciones (stage-3/ObservacionesVisibles.vue y ObservacionesOcultas.vue): */
+/* label arriba + textarea. Es la raiz del componente y ocupa el ancho que le da el diseño; ya no */
+/* lleva flex-basis ni min-width porque no vive en una fila flex propia como antes (un min-width */
+/* de 200px desbordaba una columna angosta). */
 .vender-stage__observations-field
 	display: flex
 	flex-direction: column
 	gap: 4px
-	flex: 1 1 220px
-	min-width: 200px
-	margin-bottom: 0 !important
 
 /* Etiqueta compacta sobre el textarea */
 .vender-stage__observations-label
@@ -458,13 +395,6 @@ $vender_stage_field_gap: 16px
 	&::placeholder
 		color: #adb5bd
 		font-size: 0.82rem
-
-/* Separador visual dentro del body — ancho completo en layout flexible */
-.vender-stage__separator
-	flex: 1 1 100%
-	width: 100%
-	margin: 12px 0
-	border-color: var(--color-border-tertiary, #dee2e6)
 
 /* Animación de colapso/expansión */
 .stage-collapse-enter-active,

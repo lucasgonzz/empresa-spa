@@ -20,9 +20,13 @@
  *
  * 🔴 **La regla que más caro sale en esta sección: todo paso que apunte a algo de la etapa 1 de
  * Vender lleva su gancho `abrir_etapa_1_*`.** La etapa se colapsa sola en cuanto la venta tiene
- * ítems, cliente o está en edición (`vender/components/stage-1/Index.vue:127-144`), y ahí adentro
- * viven el cliente, el método de pago, el punto de venta de ARCA, la lista de precios y los dos
- * interruptores. Sin el gancho el elemento existe pero mide 0×0 y el lead ve un recuadro vacío.
+ * ítems, cliente o está en edición (el `created()` de `vender/components/stage-1/Index.vue`), y ahí
+ * adentro viven —con el diseño de Vender predeterminado— el cliente, el método de pago, el punto de
+ * venta de ARCA, la lista de precios y los dos interruptores. Sin el gancho el elemento existe pero
+ * mide 0×0 y el lead ve un recuadro vacío. Desde los diseños de Vender (misión
+ * diseno-vender-configurable, 28/9/2026) cada campo puede estar en otra etapa: el gancho abre la que
+ * lo tenga en el diseño en uso (ver `src/tours/ganchos.js`), así que el nombre dice "etapa 1" por
+ * historia, no porque abra siempre esa.
  *
  * 🔴 **Tres anclas de Vender no dicen lo que su nombre sugiere, y ningún texto de acá promete lo
  * que prometen los nombres:**
@@ -67,12 +71,15 @@ const PRIMERA_FILA_PRESUPUESTO = '[data-testid^="budget-row-"]'
 /**
  * El input del buscador de artículos por nombre de Vender.
  *
- * 🔴 No se usa el ancla `vender.buscador_articulos` para el paso que dice "tocá acá", y el motivo es
- * de tamaño: esa ancla está puesta sobre `<header-form>`
- * (`components/vender/components/stage-2/Index.vue:25`), o sea sobre la **fila entera** —código de
- * barras, nombre, combos, promociones, servicios y cantidad—. Un recuadro de ese ancho no señala
- * nada, y encima **contiene** al campo de código de barras, que es justo el del paso anterior: el
- * lead vería dos pasos seguidos señalando la misma zona.
+ * 🔴 Para el paso que dice "tocá acá" se ancla el input y no `vender.buscador_articulos`. Hasta los
+ * diseños de Vender (misión diseno-vender-configurable, 28/9/2026) esa ancla estaba sobre la **fila
+ * entera** de buscadores —código de barras, nombre, combos, promociones, servicios y cantidad—: un
+ * recuadro de ese ancho no señalaba nada y encima **contenía** al campo de código de barras, que es
+ * justo el del paso anterior. Esa fila ya no existe: cada buscador es un campo del diseño, y el
+ * ancla pasó a estar sobre el campo del buscador por nombre (la raíz de
+ * `remito/header-form/ArticleName.vue`, se la pone `layout/GrillaDeEtapa.vue`). Igual se sigue
+ * anclando el input por su id: es el blanco exacto del clic que el paso pide, y no depende de dónde
+ * cuelgue el ancla.
  *
  * El `id` sale de `components/common/buscador-articulos/Index.vue:13` (`id="search-article"`), que
  * `common-vue/components/search/Index.vue:67` baja al `<input :id="_id">`. Ya existe, es estable y

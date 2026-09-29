@@ -1,0 +1,27 @@
+// Acento de color de cada etapa de Vender, para el editor de diseños y la miniatura de las
+// tarjetas (mision diseno-vender-configurable, 28/9/2026).
+//
+// En Vender cada etapa tiene su color (azul, verde, naranja: _vender-stages.sass), y el editor lo
+// repite en el numero de la etapa y en los bloques de la miniatura para que el comerciante
+// reconozca "la etapa 2" de un vistazo en las dos pantallas. Se importa desde los componentes que lo
+// usan (EtapaDelEditor.vue y MiniaturaDeDiseno.vue); son tres reglas, repetirlas no pesa.
+//
+// 🔴 SOLO tokens, ningun hex. Vender escribe esos colores a mano (#198754, #e67700); aca no:
+//
+// - Etapa 1: --color-primary, el azul del tema (ya tiene su variante oscura).
+// - Etapas 2 y 3: los tokens de texto de estado de _dark_theme.sass (--color-text-success-strong,
+//   --color-text-warning-strong), que existen SOLO en modo oscuro a proposito. En claro caen al
+//   verde y al naranja que Bootstrap ya declara en :root (--success, --orange). O sea: en claro el
+//   verde/naranja de Bootstrap, en oscuro un verde/ambar claro que se lee sobre el fondo oscuro.
+//
+// Como en oscuro los acentos quedan CLAROS, lo que va escrito encima de un acento (el numero de la
+// etapa) usa --bg-card como color de texto: blanco sobre el acento en claro, el gris oscuro de las
+// tarjetas sobre el acento claro en oscuro. Contraste en los dos modos sin un solo literal.
+.acento-etapa-1
+	--acento-etapa: var(--color-primary)
+
+.acento-etapa-2
+	--acento-etapa: var(--color-text-success-strong, var(--success))
+
+.acento-etapa-3
+	--acento-etapa: var(--color-text-warning-strong, var(--orange))

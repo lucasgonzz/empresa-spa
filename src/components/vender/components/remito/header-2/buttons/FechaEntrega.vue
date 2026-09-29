@@ -1,6 +1,11 @@
 <template>
+	<!--
+		Elemento `fecha_de_entrega` del diseño de Vender (mision diseno-vender-configurable,
+		28/9/2026). Sin el w-300 ni el m-b-10 que traia: el ancho lo da el diseño en uso y el aire
+		entre campos la grilla (layout/GrillaDeEtapa.vue). Un ancho fijo adentro pelearia contra la
+		columna elegida.
+	-->
 	<b-input-group
-	class="w-300 m-b-10"
 	v-if="hasExtencion('ventas_con_fecha_de_entrega') && !budget"
 	prepend="Fecha de Entrega">
 		<b-form-input
