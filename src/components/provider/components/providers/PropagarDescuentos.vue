@@ -174,6 +174,20 @@ export default {
 							? 'Se está actualizando 1 artículo en segundo plano. Podés seguir el avance arriba a la derecha.'
 							: 'Se están actualizando '+actualizados+' artículos en segundo plano. Podés seguir el avance arriba a la derecha.'
 					)
+
+					/*
+						Se trae la lista de procesos YA, para que el aviso de arriba diga la verdad. La
+						pildora se entera de un proceso nuevo por el aviso en tiempo real (Pusher) o por
+						el polling de Tarjeta.vue, que solo corre si ya habia procesos activos. Sin
+						socket (caido, plan de Pusher al tope, o un servidor con BROADCAST_DRIVER=log)
+						la pildora no aparecia hasta un F5, y el usuario leia "podes seguir el avance
+						arriba a la derecha" sin nada arriba a la derecha.
+
+						No rompe nada: la accion atrapa el 404 de una API vieja sin toast (ver el
+						docblock del store), y si el modulo no existiera Vuex solo lo loguea. Por eso
+						tampoco se encadena nada sobre lo que devuelve.
+					*/
+					self.$store.dispatch('background_processes/getModels')
 				} else {
 					self.$toast.success(
 						actualizados == 1
