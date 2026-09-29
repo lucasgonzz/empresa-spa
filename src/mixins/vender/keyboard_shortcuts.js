@@ -2,6 +2,13 @@ import {
 	VENDER_KEYBOARD_SHORTCUT_ACTIONS,
 	VENDER_KEYBOARD_SHORTCUT_KEYS,
 } from '@/constants/vender_keyboard_shortcuts'
+/*
+	Los atajos que llevan el foco a un campo (metodo de pago, cliente, buscador, codigo de barras)
+	lo piden con enfocar_elemento_de_vender(): con los diseños de Vender (mision
+	diseno-vender-configurable, 28/9/2026) cada campo puede estar en cualquier etapa, y la que lo
+	tiene se abre antes de enfocarlo.
+*/
+import diseno_de_vender from '@/mixins/vender/diseno_de_vender'
 
 /**
  * Mixin de atajos de teclado globales para el módulo Vender.
@@ -9,6 +16,7 @@ import {
  * Se debe agregar a Vender.vue y registrar el listener en mounted / beforeDestroy.
  */
 export default {
+	mixins: [diseno_de_vender],
 	methods: {
 		/**
 		 * Mapa action => tecla activo en el store.
@@ -139,40 +147,43 @@ export default {
 		},
 
 		/**
-		 * Expandir Etapa 1 y posicionar el foco en el método de pago.
+		 * Llevar el foco al método de pago, abriendo la etapa donde esté (con el diseño
+		 * predeterminado, la 1). El select lo despliega PaymentMethod.vue.
 		 */
 		_shortcut_foco_payment_method() {
-			this.$root.$emit('vender:expand-stage1', 'payment_method')
+			this.enfocar_elemento_de_vender('metodo_de_pago')
 		},
 
 		/**
-		 * Expandir Etapa 1 y posicionar el foco en el selector de cliente.
+		 * Llevar el foco al selector de cliente, abriendo la etapa donde esté.
 		 */
 		_shortcut_foco_client() {
-			this.$root.$emit('vender:expand-stage1', 'client')
+			this.enfocar_elemento_de_vender('cliente')
 		},
 
 		/**
 		 * Hacer foco en el buscador de artículo por nombre (BuscadorArticulos).
+		 *
+		 * Por el mismo camino que los otros atajos y no con un getElementById directo como antes:
+		 * con los diseños de Vender el buscador puede estar en la etapa 1 o en la 3, que se pliegan,
+		 * y un input plegado (display: none) no toma el foco. La etapa que lo tiene se abre primero.
+		 * El selector apunta al input de siempre (#search-article) y no al primer input del campo.
 		 */
 		_shortcut_foco_article_name() {
-			const input = document.getElementById('search-article')
-
-			if (input) {
-				input.focus()
-			}
+			this.enfocar_elemento_de_vender('buscador_de_articulos', {
+				selector: '#search-article',
+			})
 		},
 
 		/**
-		 * Hacer foco en el input de código de barras.
+		 * Hacer foco en el input de código de barras y seleccionar lo que tenga, para escanear
+		 * encima. Mismo motivo que el buscador para ir por enfocar_elemento_de_vender().
 		 */
 		_shortcut_foco_barcode() {
-			const input = document.getElementById('article-bar-code')
-
-			if (input) {
-				input.focus()
-				input.select()
-			}
+			this.enfocar_elemento_de_vender('codigo_de_barras', {
+				selector: '#article-bar-code',
+				seleccionar: true,
+			})
 		},
 	},
 }
