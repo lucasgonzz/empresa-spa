@@ -692,9 +692,17 @@ export default {
 		showProperty(property, model, check_if_is_empty, check_show_on_form = false) {
 			/**
 			 * Visibilidad según model_name del registro (p. ej. campos solo de venta en pdf_column_profile).
+			 *
+			 * `show_when_model_name` acepta UN string ('sale', como siempre) o una LISTA de
+			 * model_name (['sale', 'budget', 'order'], misión pdf-presupuestos-y-pedidos-personalizables):
+			 * el campo se muestra si el model_name del registro es alguno de ellos. El string se
+			 * normaliza a una lista de un solo elemento, así que su comportamiento no cambia.
 			 */
 			if (property.show_when_model_name && model) {
-				if (!model.model_name || model.model_name !== property.show_when_model_name) {
+				const allowed_model_names = Array.isArray(property.show_when_model_name)
+					? property.show_when_model_name
+					: [property.show_when_model_name]
+				if (!model.model_name || allowed_model_names.indexOf(model.model_name) === -1) {
 					return false
 				}
 			}

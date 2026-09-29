@@ -4,7 +4,7 @@
 		v-if="!model.model_name"
 		show
 		variant="warning">
-			Seleccioná el tipo de modelo (Venta o Artículo) para configurar las columnas.
+			Seleccioná el tipo de modelo (Venta, Presupuesto, Pedido online o Artículo) para configurar las columnas.
 		</b-alert>
 
 		<template v-else>
@@ -22,11 +22,14 @@
 			</b-alert>
 
 			<template v-else>
-				<!-- Botón de acceso al diseñador visual del header (prompt 441). Solo tiene
-				     sentido para perfiles de venta (comprobantes): los perfiles de artículo
-				     tienen su propio diseñador, el del encabezado del catálogo (abajo). -->
+				<!--
+					Botón de acceso al diseñador visual del header (prompt 441). Tiene sentido para los
+					perfiles de comprobantes: venta, presupuesto y pedido online (los tres usan el mismo
+					encabezado emisor/receptor). Los perfiles de artículo tienen su propio diseñador, el
+					del encabezado del catálogo (abajo).
+				-->
 				<div
-				v-if="model.model_name === 'sale'"
+				v-if="has_header_designer"
 				class="m-b-10">
 					<b-button
 					size="sm"
@@ -71,7 +74,7 @@
 				<!-- Diseñador visual del header (modal aparte): recibe el mismo model
 				     que edita este ABM y persiste header_layout + logo_size_mm -->
 				<header-designer
-				v-if="model.model_name === 'sale'"
+				v-if="has_header_designer"
 				ref="header_designer"
 				:model="model"></header-designer>
 
@@ -92,7 +95,8 @@ import HeaderDesigner from '@/common-vue/components/pdf/header-designer/Index.vu
 import CatalogHeaderDesigner from '@/common-vue/components/pdf/catalog-header-designer/Index.vue'
 
 /**
- * Editor de columnas PDF para ABM de pdf_column_profile (ventas o artículos).
+ * Editor de columnas PDF para ABM de pdf_column_profile (ventas, presupuestos, pedidos online
+ * o artículos).
  *
  * Recibe el modelo del perfil como prop y muestra todas las columnas del catálogo,
  * mezclando el estado visible/ancho/orden de los pivots ya guardados.
@@ -142,6 +146,17 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Si el perfil en edición es de un comprobante que usa el diseñador de header
+		 * (emisor + receptor): venta, presupuesto o pedido online. Los perfiles de artículo
+		 * no, porque tienen su propio diseñador del encabezado del catálogo.
+		 *
+		 * @returns {boolean}
+		 */
+		has_header_designer() {
+			const model_name = this.model && this.model.model_name
+			return model_name === 'sale' || model_name === 'budget' || model_name === 'order'
+		},
 		/**
 		 * Suma de anchos de columnas visibles (mm).
 		 *

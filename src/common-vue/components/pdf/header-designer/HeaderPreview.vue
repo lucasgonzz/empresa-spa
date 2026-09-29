@@ -70,17 +70,30 @@
 			group="receptor"
 			empty_text="Arrastrá campos del cliente acá"></quadrant-list>
 
-			<div class="header-designer-preview__col header-designer-preview__col--side header-designer-preview__receptor-fixed">
+			<!--
+				Cuenta corriente: es un bloque de la VENTA (saldo del cliente). El presupuesto y el
+				pedido online no lo tienen: ahí el lado derecho del bloque del cliente queda vacío, y se
+				deja una columna vacía del mismo ancho (el v-else de abajo) para que el cuadrante
+				izquierdo siga ocupando la mitad de la hoja, como en el PDF, y no se estire.
+			-->
+			<div
+			v-if="is_sale"
+			class="header-designer-preview__col header-designer-preview__col--side header-designer-preview__receptor-fixed">
 				<p class="header-designer-preview__col-title text-muted small m-b-5">Receptor · Derecha</p>
 				<div class="header-designer-preview__receptor-fixed-box text-muted small">
 					Cuenta corriente
 					<small class="d-block">(fijo, no editable)</small>
 				</div>
 			</div>
+
+			<div
+			v-else
+			class="header-designer-preview__col header-designer-preview__col--side"
+			aria-hidden="true"></div>
 		</div>
 
 		<p
-		v-else
+		v-else-if="is_sale"
 		class="small text-muted font-italic m-t-15 m-b-0">
 			El bloque receptor no se muestra en perfiles fiscales: el recibo es siempre a nombre del comprador de la venta.
 		</p>
@@ -95,7 +108,8 @@ import { PREVIEW_PX_PER_MM, LOGO_SIZE_MM_MIN, LOGO_SIZE_MM_MAX } from '@/common-
 /**
  * Previsualización visual del header del PDF (prompt 441), con la forma real de la
  * hoja: cuadrantes de emisor (izquierda/centro/derecha) y, si el perfil no es
- * fiscal, cuadrante de receptor. Orquesta los QuadrantList (drag & drop) y la
+ * fiscal, cuadrante de receptor. Sirve a los perfiles de venta, presupuesto y pedido
+ * online (prop `model_name`). Orquesta los QuadrantList (drag & drop) y la
  * manija de redimensionado del logo; el estado del layout vive en el componente
  * padre (Index.vue del diseñador) y se muta por referencia.
  */
@@ -145,6 +159,15 @@ export default {
 			type: Number,
 			default: 210,
 		},
+		/**
+		 * Modelo del perfil en edición ('sale' | 'budget' | 'order'). Define qué bloques atados
+		 * a la venta se muestran (cuenta corriente, aviso del comprador de la venta). Default
+		 * 'sale' para que cualquier uso que no lo pase se comporte como siempre.
+		 */
+		model_name: {
+			type: String,
+			default: 'sale',
+		},
 	},
 	data() {
 		return {
@@ -156,6 +179,16 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Si el perfil es de venta. Los textos y bloques propios de la venta (cuenta corriente
+		 * del cliente, "comprador de la venta") solo se muestran para este modelo; el presupuesto
+		 * y el pedido online comparten el resto del diseñador pero no esos bloques.
+		 *
+		 * @return {boolean}
+		 */
+		is_sale() {
+			return this.model_name === 'sale'
+		},
 		/**
 		 * Muestra el bloque receptor editable solo en perfiles no fiscales (remito negro).
 		 *

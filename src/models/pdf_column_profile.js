@@ -12,6 +12,12 @@ export default {
 				{ value: 0, text: 'Seleccioná un modelo' },
 				{ value: 'sale', text: 'Venta (comprobantes)' },
 				{ value: 'article', text: 'Artículo (listado PDF tabla)' },
+				// Misión pdf-presupuestos-y-pedidos-personalizables (29/9/2026): el presupuesto y el
+				// pedido online se diseñan igual que la venta (columnas, encabezado, pie y totales).
+				// El value es el `model_name` que la API usa para su catálogo de columnas
+				// (GET pdf-column-options?model_name=budget|order) y para elegir el diseño al imprimir.
+				{ value: 'budget', text: 'Presupuesto' },
+				{ value: 'order', text: 'Pedido online' },
 			],
 		},
 		{
@@ -42,24 +48,28 @@ export default {
 		{
 			/**
 			 * Flag para controlar visibilidad del total general en el pie del PDF.
+			 * Aplica a venta, presupuesto y pedido online (`show_when_model_name` acepta un string o
+			 * una lista de model_name). En el presupuesto, apagarlo es justamente lo que da el diseño
+			 * "Presupuesto sin precios": no se imprime ningún renglón de totales.
 			 */
 			text: 'Mostrar total en el pie',
 			key: 'show_total_in_footer',
 			type: 'checkbox',
 			value: 1,
-			show_when_model_name: 'sale',
+			show_when_model_name: ['sale', 'budget', 'order'],
 		},
 		{
 			/**
 			 * Muestra la línea "Sub Total" en el pie del PDF (flag del backend, prompt 417).
-			 * Solo tiene efecto cuando la venta tiene descuentos o recargos: si no los tiene,
+			 * Solo tiene efecto cuando el comprobante tiene descuentos o recargos: si no los tiene,
 			 * el Sub Total es igual al Total y no se imprime. Default 1 = comportamiento legacy.
+			 * Aplica a venta, presupuesto y pedido online.
 			 */
 			text: 'Mostrar Sub Total en el pie',
 			key: 'show_subtotal_in_footer',
 			type: 'checkbox',
 			value: 1,
-			show_when_model_name: 'sale',
+			show_when_model_name: ['sale', 'budget', 'order'],
 		},
 		{
 			/**
@@ -94,24 +104,26 @@ export default {
 			/**
 			 * Cuando está activo, el PDF imprime la fecha actual del servidor
 			 * en lugar de la fecha en que se creó el comprobante.
+			 * Aplica a venta, presupuesto y pedido online.
 			 */
 			text: 'Imprimir con fecha actual',
 			key: 'use_current_date',
 			type: 'checkbox',
 			value: 0,
-			show_when_model_name: 'sale',
+			show_when_model_name: ['sale', 'budget', 'order'],
 		},
 		{
 			/**
 			 * Controla si las observaciones del cliente (campo "Observaciones" del cliente)
 			 * se imprimen en el PDF de venta. Default 1 = comportamiento legacy (se imprimían
 			 * siempre que el cliente tuviera observaciones cargadas).
+			 * Aplica a venta, presupuesto y pedido online.
 			 */
 			text: 'Mostrar observaciones del cliente',
 			key: 'show_client_description',
 			type: 'checkbox',
 			value: 1,
-			show_when_model_name: 'sale',
+			show_when_model_name: ['sale', 'budget', 'order'],
 		},
 		{
 			text: 'Opciones de columnas',
@@ -244,13 +256,14 @@ export default {
 		},
 		{
 			/**
-			 * Tamaño del logo en mm para el header de este comprobante (remito o factura).
+			 * Tamaño del logo en mm para el header de este comprobante (remito, factura, presupuesto
+			 * o pedido online).
 			 * Vacío = usar el tamaño global configurado en el dueño (fallback en el backend).
 			 */
 			text: 'Tamaño del logo en mm (vacío = usar el global del dueño)',
 			key: 'logo_size_mm',
 			type: 'number',
-			show_when_model_name: 'sale',
+			show_when_model_name: ['sale', 'budget', 'order'],
 		},
 		{
 			text: 'Columnas del PDF',
@@ -320,10 +333,10 @@ export default {
 		},
 	],
 	abm_descripcion: {
-		para_que_sirve: 'Define perfiles de diseño para los PDFs del sistema: comprobantes de venta y listados de artículos.',
-		implicancias: 'Cada perfil controla qué columnas se imprimen, en qué orden y con qué ancho, y en los comprobantes de venta también el pie de página: totales, subtotal, comisiones, detalle de descuentos y fecha. El perfil elegido al imprimir determina cómo sale el documento.',
-		como_se_utiliza: 'Creá el perfil eligiendo el modelo (venta o artículo), configurá las columnas y las opciones del pie, y seleccioná el perfil al imprimir. Podés duplicar un perfil existente con el botón de duplicar para hacer variantes rápido. En las plantillas de artículo, el botón Diseñar encabezado permite ubicar el logo, el nombre y los datos del negocio y elegir si salen en todas las hojas o solo en la primera.',
-		palabras_clave: ['comprobante', 'columnas', 'diseño', 'impresion', 'remito', 'presupuesto'],
+		para_que_sirve: 'Define perfiles de diseño para los PDFs del sistema: comprobantes de venta, presupuestos, pedidos online y listados de artículos.',
+		implicancias: 'Cada perfil controla qué columnas se imprimen, en qué orden y con qué ancho, y en los comprobantes de venta, los presupuestos y los pedidos online también el encabezado (logo y datos del negocio y del cliente) y el pie de página: totales, subtotal y fecha. La venta suma además comisiones y el detalle de descuentos. El perfil elegido al imprimir determina cómo sale el documento. Cada dueño ya tiene armados los diseños "Presupuesto", "Presupuesto sin precios", "Presupuesto con imágenes" y "Pedido online": podés modificarlos o duplicarlos.',
+		como_se_utiliza: 'Creá el perfil eligiendo el modelo (venta, presupuesto, pedido online o artículo), configurá las columnas y las opciones del pie, y seleccioná el perfil al imprimir: en un presupuesto o en un pedido online, el botón Imprimir lista los diseños disponibles y el marcado como por defecto va primero. Podés duplicar un perfil existente con el botón de duplicar para hacer variantes rápido. En venta, presupuesto y pedido online, el botón Diseñar header permite ubicar el logo y los datos del negocio y del cliente. En las plantillas de artículo, el botón Diseñar encabezado permite ubicar el logo, el nombre y los datos del negocio y elegir si salen en todas las hojas o solo en la primera.',
+		palabras_clave: ['comprobante', 'columnas', 'diseño', 'impresion', 'remito', 'presupuesto', 'pedido online', 'pedido', 'pdf', 'sin precios', 'con imagenes'],
 	},
 	/**
 	 * Sin esto, model/Index.vue le pasa al formulario una COPIA no reactiva del modelo

@@ -2,7 +2,7 @@
 	<b-modal
 	id="header-designer-modal"
 	size="xl"
-	title="Diseñar header del comprobante"
+	:title="modal_title"
 	:visible="visible"
 	@hide="on_hide"
 	hide-footer>
@@ -22,6 +22,7 @@
 					:locked_emisor_keys="locked_emisor_keys"
 					:logo_size_mm="logo_size_mm"
 					@update:logo_size_mm="logo_size_mm = $event"
+					:model_name="model.model_name"
 					:paper_width_mm="model.paper_width_mm"></header-preview>
 				</b-col>
 
@@ -76,6 +77,9 @@ import {
  * Diseñador visual del header del PDF (prompt 441): modal con previsualización en
  * forma de header A4, drag & drop de campos por cuadrante (emisor izquierda/derecha,
  * receptor izquierda) y manija de redimensionado del logo.
+ *
+ * Sirve a los perfiles de venta, presupuesto y pedido online (`model.model_name`). Lo propio de
+ * la venta (perfil fiscal de ARCA, cuenta corriente del cliente) solo aplica al modelo `sale`.
  *
  * Recibe el `pdf_column_profile` en edición (mismo objeto que maneja el ABM,
  * PdfColumnProfileEditor.vue) y persiste `header_layout` + `logo_size_mm`:
@@ -140,10 +144,30 @@ export default {
 		 * Si el perfil en edición es fiscal (factura ARCA). Determina campos
 		 * obligatorios de emisor y si se muestra el bloque receptor editable.
 		 *
+		 * Solo la venta puede ser fiscal: el checkbox "Es factura de ARCA" no se muestra para
+		 * presupuesto ni pedido online. Se ignora `is_afip_ticket` en esos modelos por si el
+		 * formulario lo arrastra de haber elegido antes "Venta" en un perfil nuevo: sin esto, un
+		 * presupuesto se diseñaría con los campos fiscales obligatorios y sin bloque del cliente.
+		 *
 		 * @return {boolean}
 		 */
 		is_afip() {
-			return !!(this.model && this.model.is_afip_ticket)
+			return !!(this.model && this.model.model_name === 'sale' && this.model.is_afip_ticket)
+		},
+		/**
+		 * Título del modal según el tipo de comprobante que se está diseñando.
+		 *
+		 * @return {string}
+		 */
+		modal_title() {
+			const model_name = this.model && this.model.model_name
+			if (model_name === 'budget') {
+				return 'Diseñar header del presupuesto'
+			}
+			if (model_name === 'order') {
+				return 'Diseñar header del pedido online'
+			}
+			return 'Diseñar header del comprobante'
 		},
 		/**
 		 * Muestra el bloque receptor (y su paleta) solo en perfiles no fiscales.
