@@ -15,7 +15,7 @@
 		dibuja.
 	-->
 	<div
-	v-if="tiene_elementos"
+	v-if="se_dibuja"
 	class="vender-stage vender-stage--etapa-3"
 	:class="{ 'vender-stage--open': stage3_open }">
 
@@ -84,23 +84,25 @@ export default {
 		},
 
 		/**
-		 * Si el diseño en uso deja al menos un campo en esta etapa. Si no, la etapa no se dibuja.
+		 * Si la etapa se dibuja: el diseño en uso le deja al menos un campo disponible. La misma
+		 * regla decide que le toca a la reserva (ReservaDeElementos.vue), asi que no se reemplaza
+		 * por otra condicion aca.
 		 *
 		 * @returns {boolean}
 		 */
-		tiene_elementos() {
-			return this.etapa_de_vender_tiene_elementos('etapa_3')
+		se_dibuja() {
+			return this.grilla_de_vender_se_dibuja('etapa_3')
 		},
 
 		/**
-		 * Si el diseño en uso puso en esta etapa algun campo que agrega articulos (alguien movio el
-		 * codigo de barras o un buscador hasta aca). Con uno de esos adentro la etapa no puede
-		 * arrancar plegada.
+		 * Si la etapa no puede arrancar plegada: el diseño en uso trajo hasta aca un campo que
+		 * agrega articulos (el codigo de barras o un buscador) o el resumen de la venta, que es
+		 * obligatorio justamente para que el total se vea.
 		 *
 		 * @returns {boolean}
 		 */
-		tiene_entrada_de_articulos() {
-			return this.etapa_de_vender_tiene_entrada_de_articulos('etapa_3')
+		se_mantiene_abierta() {
+			return this.etapa_de_vender_se_mantiene_abierta('etapa_3')
 		},
 
 		/**
@@ -115,13 +117,13 @@ export default {
 	watch: {
 		/**
 		 * Si el diseño cambia con Vender abierto y ahora esta etapa tiene un campo que agrega
-		 * articulos, se abre (ver la etapa 1: al reves no se cierra sola).
+		 * articulos o el resumen, se abre (ver la etapa 1: al reves no se cierra sola).
 		 *
-		 * @param {boolean} tiene
+		 * @param {boolean} se_mantiene
 		 * @returns {void}
 		 */
-		tiene_entrada_de_articulos(tiene) {
-			if (tiene) {
+		se_mantiene_abierta(se_mantiene) {
+			if (se_mantiene) {
 				this.stage3_open = true
 			}
 		},
@@ -129,9 +131,10 @@ export default {
 	created() {
 		/*
 			Cerrada por defecto, como siempre, SALVO que el diseño en uso haya traido hasta aca un
-			campo que agrega articulos: el vendedor no puede escanear en una etapa plegada.
+			campo que agrega articulos (el vendedor no puede escanear en una etapa plegada) o el
+			resumen de la venta (es obligatorio para que el total se vea: plegado no se veria).
 		*/
-		this.stage3_open = this.tiene_entrada_de_articulos
+		this.stage3_open = this.se_mantiene_abierta
 	},
 	mounted() {
 		/* Pedido de foco a un campo: actua la etapa que lo tiene (ver diseno_de_vender.js) */
@@ -149,7 +152,8 @@ export default {
 		},
 
 		/**
-		 * Si el campo pedido esta en esta etapa: la abre, lo trae a la vista y lo enfoca.
+		 * Si el campo pedido esta en esta etapa y se esta mostrando: la abre, lo trae a la vista y
+		 * lo enfoca. Si el campo no muestra nada (su v-if lo esconde), no abre la etapa por nada.
 		 *
 		 * 🔴 `block: 'center'` y NO 'start': esta etapa esta debajo de la tabla, y cuando se scrollea
 		 * hasta aca el bloque de la etapa 2 queda PEGADO arriba. Con 'start' el campo quedaba al
@@ -162,7 +166,7 @@ export default {
 		 * @returns {void}
 		 */
 		al_pedir_el_foco_de_un_elemento(key, opciones) {
-			if (!this.elemento_de_vender_esta_en_la_etapa(key, 'etapa_3')) {
+			if (!this.elemento_de_vender_listo_en_esta_etapa(key, 'etapa_3')) {
 				return
 			}
 

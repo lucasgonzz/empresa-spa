@@ -15,7 +15,7 @@
 		etapa sin campos dejo de dibujarse: la etapa 2 pasaba a ser la primera y se teñia de azul.
 	-->
 	<div
-	v-if="tiene_elementos"
+	v-if="se_dibuja"
 	class="vender-stage vender-stage--etapa-1"
 	:class="{ 'vender-stage--open': stage1_open }">
 
@@ -113,22 +113,24 @@ export default {
 		},
 
 		/**
-		 * Si el diseño en uso deja al menos un campo en esta etapa. Si no, la etapa no se dibuja.
+		 * Si la etapa se dibuja: el diseño en uso le deja al menos un campo disponible. La misma
+		 * regla decide que le toca a la reserva (ReservaDeElementos.vue), asi que no se reemplaza
+		 * por otra condicion aca.
 		 *
 		 * @returns {boolean}
 		 */
-		tiene_elementos() {
-			return this.etapa_de_vender_tiene_elementos('etapa_1')
+		se_dibuja() {
+			return this.grilla_de_vender_se_dibuja('etapa_1')
 		},
 
 		/**
-		 * Si el diseño en uso puso en esta etapa algun campo que agrega articulos (codigo de
-		 * barras, buscador...). Con uno de esos adentro la etapa no puede estar plegada.
+		 * Si la etapa no puede estar plegada: el diseño en uso puso aca un campo que agrega
+		 * articulos (codigo de barras, buscador...) o el resumen de la venta, donde se ve el total.
 		 *
 		 * @returns {boolean}
 		 */
-		tiene_entrada_de_articulos() {
-			return this.etapa_de_vender_tiene_entrada_de_articulos('etapa_1')
+		se_mantiene_abierta() {
+			return this.etapa_de_vender_se_mantiene_abierta('etapa_1')
 		},
 
 		/**
@@ -144,14 +146,14 @@ export default {
 		/**
 		 * Si el diseño cambia con Vender abierto (otro usuario puso otro en uso, o recien llego el
 		 * store despues de dibujar con el predeterminado) y ahora esta etapa tiene un campo que
-		 * agrega articulos, se abre: tiene que estar a la vista. Al reves no se cierra sola, para
-		 * no plegarle la etapa al vendedor mientras la usa.
+		 * agrega articulos o el resumen, se abre: tiene que estar a la vista. Al reves no se cierra
+		 * sola, para no plegarle la etapa al vendedor mientras la usa.
 		 *
-		 * @param {boolean} tiene
+		 * @param {boolean} se_mantiene
 		 * @returns {void}
 		 */
-		tiene_entrada_de_articulos(tiene) {
-			if (tiene) {
+		se_mantiene_abierta(se_mantiene) {
+			if (se_mantiene) {
 				this.stage1_open = true
 			}
 		},
@@ -168,15 +170,16 @@ export default {
 			quedaria colapsada practicamente siempre.
 
 			Y con un diseño que ponga aca un campo de entrada de articulos (codigo de barras,
-			buscador...), arranca abierta siempre: el vendedor no puede escanear en una etapa
-			plegada.
+			buscador...) o el resumen de la venta, arranca abierta siempre: el vendedor no puede
+			escanear en una etapa plegada, y el resumen es obligatorio justamente para que el total
+			se vea.
 		*/
 		const hay_venta_en_curso = !!(
 			this.$store.state.vender.items.length
 			|| this.$store.state.vender.client
 			|| this.$store.getters['vender/previus_sales/editando_venta_previa']
 		)
-		this.stage1_open = !hay_venta_en_curso || this.tiene_entrada_de_articulos
+		this.stage1_open = !hay_venta_en_curso || this.se_mantiene_abierta
 	},
 	mounted() {
 		/*
@@ -200,7 +203,8 @@ export default {
 		},
 
 		/**
-		 * Si el campo pedido esta en esta etapa: la abre, lo trae a la vista y lo enfoca.
+		 * Si el campo pedido esta en esta etapa y se esta mostrando: la abre, lo trae a la vista y
+		 * lo enfoca. Si el campo no muestra nada (su v-if lo esconde), no abre la etapa por nada.
 		 *
 		 * `block: 'start'` como siempre: esta etapa esta arriba de todo, y cuando un campo suyo
 		 * queda al tope del area que scrollea, el bloque pegado de la etapa 2 (que viene despues)
@@ -211,7 +215,7 @@ export default {
 		 * @returns {void}
 		 */
 		al_pedir_el_foco_de_un_elemento(key, opciones) {
-			if (!this.elemento_de_vender_esta_en_la_etapa(key, 'etapa_1')) {
+			if (!this.elemento_de_vender_listo_en_esta_etapa(key, 'etapa_1')) {
 				return
 			}
 
@@ -228,7 +232,7 @@ export default {
 		al_recibir_el_evento_viejo(clave) {
 			let key = KEYS_DEL_EVENTO_VIEJO[clave]
 
-			if (key && this.elemento_de_vender_esta_visible(key)) {
+			if (key && this.etapa_donde_se_dibuja_elemento_de_vender(key)) {
 				this.$root.$emit(EVENTO_ENFOCAR_ELEMENTO, key, {})
 				return
 			}

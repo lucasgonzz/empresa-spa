@@ -28,8 +28,8 @@
 			<div class="vender-stage__header vender-stage__header--no-collapse">
 				<span class="vender-stage__number">2</span>
 				<div class="vender-stage__header-text">
-					<span class="vender-stage__label">Artículos y servicios</span>
-					<span class="vender-stage__sublabel">Buscar artículos, servicios, combos y promociones</span>
+					<span class="vender-stage__label">{{ titulo }}</span>
+					<span class="vender-stage__sublabel">{{ subtitulo }}</span>
 				</div>
 			</div>
 
@@ -41,10 +41,12 @@
 				aca sino sobre el buscador por nombre (ver GrillaDeEtapa.vue).
 
 				Sin campos ni aviso (un diseño que se llevo todo a otras etapas) el cuerpo no se
-				dibuja: quedaria una franja vacia debajo del header.
+				dibuja: quedaria una franja vacia debajo del header. La condicion es la de
+				grilla_de_vender_se_dibuja() del mixin, la misma con la que la reserva decide que
+				le toca montar a ella: no reemplazarla por otra.
 			-->
 			<div
-			v-if="tiene_elementos || tope_de_items_de_vender_alcanzado"
+			v-if="se_dibuja_la_grilla"
 			class="vender-stage__body vender-stage__body--always-open vender-stage__body--pinned">
 
 				<grilla-de-etapa
@@ -88,6 +90,8 @@
 import PreviusSaleData from '@/components/vender/components/remito/PreviusSaleData.vue'
 import ArticlesTable from '@/components/vender/components/remito/ArticlesTable.vue'
 import GrillaDeEtapa from '@/components/vender/layout/GrillaDeEtapa'
+import { TITULOS_DE_ETAPAS } from '@/components/vender/layout/elementos'
+import { subtitulo_de_etapa } from '@/components/vender/layout/resolver_diseno'
 import diseno_de_vender, { EVENTO_ENFOCAR_ELEMENTO } from '@/mixins/vender/diseno_de_vender'
 
 /*
@@ -116,13 +120,35 @@ export default {
 	},
 	computed: {
 		/**
-		 * Si el diseño en uso deja algun campo en esta etapa (con el predeterminado, siempre: el
-		 * resumen es obligatorio y vive aca, salvo que alguien lo mueva).
+		 * Titulo de la etapa, el mismo que muestra el editor de diseños.
+		 *
+		 * @returns {string}
+		 */
+		titulo() {
+			return TITULOS_DE_ETAPAS.etapa_2
+		},
+
+		/**
+		 * Subtitulo del header: los campos que se dibujan ("Resumen, código de barras, buscador...").
+		 * En la primera version de los diseños quedo el texto fijo de antes ("Buscar artículos,
+		 * servicios, combos y promociones"); ahora sale del diseño en uso, como en las etapas 1 y 3
+		 * y como lo muestra el editor.
+		 *
+		 * @returns {string}
+		 */
+		subtitulo() {
+			return subtitulo_de_etapa(this.elementos_de_etapa_de_vender('etapa_2'))
+		},
+
+		/**
+		 * Si la grilla del bloque pegado se dibuja: con algun campo disponible (con el
+		 * predeterminado, siempre: el resumen es obligatorio y vive aca, salvo que alguien lo
+		 * mueva) o con el aviso del tope de items.
 		 *
 		 * @returns {boolean}
 		 */
-		tiene_elementos() {
-			return this.etapa_de_vender_tiene_elementos('etapa_2')
+		se_dibuja_la_grilla() {
+			return this.grilla_de_vender_se_dibuja('etapa_2')
 		},
 	},
 	data() {
@@ -183,8 +209,8 @@ export default {
 	},
 	methods: {
 		/**
-		 * Si el campo pedido esta en esta etapa, lo trae a la vista y lo enfoca. No hay nada que
-		 * abrir: la etapa 2 no se pliega.
+		 * Si el campo pedido esta en esta etapa y se esta mostrando, lo trae a la vista y lo
+		 * enfoca. No hay nada que abrir: la etapa 2 no se pliega.
 		 *
 		 * `block: 'nearest'` y no 'start': los campos de esta etapa viven en el bloque pegado, que
 		 * casi siempre ya esta a la vista, y con 'nearest' el scroll no se mueve si no hace falta
@@ -196,7 +222,7 @@ export default {
 		 * @returns {void}
 		 */
 		al_pedir_el_foco_de_un_elemento(key, opciones) {
-			if (!this.elemento_de_vender_esta_en_la_etapa(key, 'etapa_2')) {
+			if (!this.elemento_de_vender_listo_en_esta_etapa(key, 'etapa_2')) {
 				return
 			}
 
