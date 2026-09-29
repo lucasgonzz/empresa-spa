@@ -40,6 +40,15 @@
 	- motivo_obligatorio    texto del candado en el editor.
 	- entrada_de_articulos  agrega articulos a la venta. Una etapa que tiene alguno arranca abierta y
 	                        la grilla los oculta cuando se llega al tope de items por venta.
+	- mantiene_etapa_abierta (opcional) la etapa que lo tiene no arranca plegada ni se pliega sola,
+	                        igual que con una entrada de articulos. Es el caso del resumen: es
+	                        obligatorio justamente para que el total se vea siempre, y moverlo a la
+	                        etapa 3 (plegada por defecto) lo escondia igual.
+	- se_fuerza_si(vm)      (opcional) si devuelve true, el elemento se dibuja en Vender AUNQUE el
+	                        diseño lo haya sacado, en su lugar por defecto. Es para los campos sin los
+	                        que el flujo se traba segun la configuracion del USUARIO (que el diseño,
+	                        que es del negocio, no conoce). Hoy solo `cantidad`.
+	- motivo_forzado        texto que el editor muestra sobre ese elemento cuando esta sacado.
 	- disponible(vm)        si este negocio/usuario puede ver el elemento. Copia SOLO la parte estable
 	                        del v-if raiz del componente (extension, permiso, catalogo vacio). Lo
 	                        transitorio (hay cliente, hay devoluciones, reparto de pagos) NO va aca: el
@@ -52,6 +61,30 @@
 
 /* Key reservada del separador: una linea horizontal a lo ancho que se puede repetir. */
 export const KEY_SEPARADOR = 'separador'
+
+/*
+	Key reservada del salto de fila: como el separador, pero invisible. Lo que viene despues arranca
+	en una fila nueva aunque en la anterior quedara lugar. Se puede repetir.
+
+	Existe para que el diseño predeterminado reproduzca la etapa 3 de antes: IVA, stock y las dos
+	observaciones iban en una fila PROPIA, debajo de estado/fecha de entrega/orden de compra/empleado.
+	Sin el salto, con "Estado" cargado, las observaciones quedaban partidas en dos filas.
+*/
+export const KEY_SALTO_DE_FILA = 'salto_de_fila'
+
+/**
+ * Si la key es un marcador (separador o salto de fila): no es un campo del catalogo, se puede
+ * repetir (cada uno con su `id`) y siempre ocupa las 12 columnas.
+ *
+ * 🔴 Todo lo que antes preguntaba `key === KEY_SEPARADOR` para saber "esto no es un campo" tiene
+ * que preguntar esto: un salto de fila tratado como campo desconocido se descarta o rompe la grilla.
+ *
+ * @param {string} key
+ * @returns {boolean}
+ */
+export function es_marcador(key) {
+	return key === KEY_SEPARADOR || key === KEY_SALTO_DE_FILA
+}
 
 /* Las tres etapas de Vender, en orden. */
 export const ETAPAS = ['etapa_1', 'etapa_2', 'etapa_3']
@@ -311,6 +344,8 @@ export const ELEMENTOS = [
 		obligatorio: true,
 		motivo_obligatorio: MOTIVO_TOTAL,
 		entrada_de_articulos: false,
+		/* Obligatorio para que el total se vea siempre: la etapa que lo tenga no puede arrancar plegada. */
+		mantiene_etapa_abierta: true,
 		disponible: function () { return true },
 		aparece_cuando: null,
 	},
@@ -400,6 +435,17 @@ export const ELEMENTOS = [
 		/* Amount.vue: v-if="user.ask_amount_in_vender" es una preferencia del usuario: va en aparece_cuando. */
 		disponible: function () { return true },
 		aparece_cuando: 'Si el usuario tiene activado "pedir la cantidad al vender"',
+		/*
+			🔴 Con "pedir la cantidad al vender" prendido, el articulo elegido queda PENDIENTE hasta que
+			se confirma la cantidad en este campo (Amount.vue). Si el diseño lo saco, el vendedor no
+			tiene donde confirmarla y no puede agregar ningun articulo. La preferencia es de cada
+			usuario y el diseño es del negocio, asi que no alcanza con un candado en el editor: se
+			fuerza al dibujar.
+		*/
+		se_fuerza_si: function (vm) {
+			return !!(vm && vm.user && vm.user.ask_amount_in_vender)
+		},
+		motivo_forzado: 'Si el usuario tiene activado "pedir la cantidad al vender", aparece igual en Vender: sin este campo no se puede confirmar la cantidad.',
 	},
 
 	/* ---------------------------------------------------------------- Etapa 3 */
@@ -590,16 +636,50 @@ export function es_entrada_de_articulos(key) {
 }
 
 /**
- * Si el elemento se puede ver en este negocio/usuario. Un separador siempre se ve; una key
- * desconocida nunca. Si la funcion del catalogo revienta, se considera NO disponible: un catalogo
- * roto no puede tumbar la pantalla de venta.
+ * Si la etapa que tiene este elemento no puede arrancar plegada ni plegarse sola: las entradas de
+ * articulos (hay que poder escanear) y los que lo piden explicitamente (el resumen, donde esta el
+ * total).
+ *
+ * @param {string} key
+ * @returns {boolean}
+ */
+export function mantiene_etapa_abierta(key) {
+	let el = elemento(key)
+	return !!(el && (el.entrada_de_articulos || el.mantiene_etapa_abierta))
+}
+
+/**
+ * Si el elemento se dibuja aunque el diseño lo haya sacado (ver `se_fuerza_si` en el catalogo).
+ * Si la funcion revienta, NO se fuerza: el diseño manda.
+ *
+ * @param {string} key
+ * @param {Object} vm
+ * @returns {boolean}
+ */
+export function se_fuerza(key, vm) {
+	let el = elemento(key)
+	if (!el || typeof el.se_fuerza_si != 'function') {
+		return false
+	}
+	try {
+		return !!el.se_fuerza_si(vm)
+	} catch (e) {
+		console.log('diseño de vender: fallo se_fuerza_si() de ' + key, e)
+		return false
+	}
+}
+
+/**
+ * Si el elemento se puede ver en este negocio/usuario. Un marcador (separador o salto de fila)
+ * siempre se ve; una key desconocida nunca. Si la funcion del catalogo revienta, se considera NO
+ * disponible: un catalogo roto no puede tumbar la pantalla de venta.
  *
  * @param {string} key
  * @param {Object} vm
  * @returns {boolean}
  */
 export function esta_disponible(key, vm) {
-	if (key === KEY_SEPARADOR) {
+	if (es_marcador(key)) {
 		return true
 	}
 	let el = elemento(key)
@@ -622,7 +702,7 @@ export function esta_disponible(key, vm) {
  * @returns {number}
  */
 export function cols_por_defecto(key, vm) {
-	if (key === KEY_SEPARADOR) {
+	if (es_marcador(key)) {
 		return 12
 	}
 	let el = elemento(key)

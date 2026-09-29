@@ -33,15 +33,21 @@ import {
 	ETAPAS,
 	KEY_SEPARADOR,
 	elemento,
+	es_marcador,
 	es_obligatorio,
 	esta_disponible,
 	cols_por_defecto,
 	acotar_cols,
+	mantiene_etapa_abierta,
+	se_fuerza,
 } from './elementos'
 import diseno_predeterminado, { VERSION_DEL_FORMATO } from './diseno_predeterminado'
 
-/* Mismo patron que valida el backend (VenderLayoutHelper::normalizar_layout) para el id de un separador. */
-const PATRON_ID_SEPARADOR = /^[a-z0-9_]{1,40}$/
+/*
+	Mismo patron que valida el backend (VenderLayoutHelper::normalizar_layout) para el id de un
+	marcador (separador o salto de fila).
+*/
+const PATRON_ID_MARCADOR = /^[a-z0-9_]{1,40}$/
 
 /* Maximo de nombres en el subtitulo de una etapa antes de resumir con "y N más". */
 const MAXIMO_DE_NOMBRES_EN_SUBTITULO = 5
@@ -109,10 +115,10 @@ function indice_de_key(lista, key) {
 function insertar_en_su_lugar(etapas, el, predeterminado, vm) {
 	let lista = etapas[el.etapa]
 
-	/* Orden por defecto de la etapa, sin separadores */
+	/* Orden por defecto de la etapa, sin marcadores */
 	let orden = []
 	predeterminado.etapas[el.etapa].forEach(function (item) {
-		if (item.key !== KEY_SEPARADOR) {
+		if (!es_marcador(item.key)) {
 			orden.push(item.key)
 		}
 	})
@@ -167,7 +173,7 @@ export function resolver_diseno(layout, vm) {
 
 	let etapas = {}
 	let vistos = {}
-	let ids_de_separadores = {}
+	let ids_de_marcadores = {}
 
 	ETAPAS.forEach(function (etapa) {
 		etapas[etapa] = []
@@ -179,19 +185,19 @@ export function resolver_diseno(layout, vm) {
 				return
 			}
 
-			if (item.key === KEY_SEPARADOR) {
-				/* Un separador sin id valido recibe uno estable (depende de la posicion, no del azar). */
-				let id = (typeof item.id == 'string' && PATRON_ID_SEPARADOR.test(item.id))
+			if (es_marcador(item.key)) {
+				/* Un marcador sin id valido recibe uno estable (depende de la posicion, no del azar). */
+				let id = (typeof item.id == 'string' && PATRON_ID_MARCADOR.test(item.id))
 					? item.id
-					: etapa + '_separador_' + indice
+					: etapa + '_' + item.key + '_' + indice
 
-				if (ids_de_separadores[id]) {
+				if (ids_de_marcadores[id]) {
 					return
 				}
-				ids_de_separadores[id] = true
+				ids_de_marcadores[id] = true
 
 				etapas[etapa].push({
-					key: KEY_SEPARADOR,
+					key: item.key,
 					id: id,
 					cols: 12,
 				})
@@ -239,8 +245,10 @@ export function resolver_diseno(layout, vm) {
 
 /**
  * Los items de una etapa que se dibujan: elementos disponibles para este negocio/usuario, y
- * separadores. Por defecto limpia los separadores que quedan al principio, al final o repetidos
- * (pasa cuando los elementos de alrededor no estan disponibles).
+ * marcadores. Por defecto limpia los marcadores que quedan al principio, al final o pegados entre
+ * si (pasa cuando los elementos de alrededor no estan disponibles). Entre un separador y un salto
+ * de fila pegados queda el separador: la linea ya parte la fila, y es lo que el usuario puso a la
+ * vista.
  *
  * @param {Object} resuelto salida de resolver_diseno()
  * @param {string} etapa
@@ -256,7 +264,7 @@ export function elementos_visibles(resuelto, etapa, vm, opciones) {
 	let visibles = []
 
 	items.forEach(function (item) {
-		if (item.key !== KEY_SEPARADOR && !esta_disponible(item.key, vm)) {
+		if (!es_marcador(item.key) && !esta_disponible(item.key, vm)) {
 			return
 		}
 		if (typeof config.excluir == 'function' && config.excluir(item)) {
@@ -272,15 +280,23 @@ export function elementos_visibles(resuelto, etapa, vm, opciones) {
 	let limpios = []
 
 	visibles.forEach(function (item) {
-		if (item.key === KEY_SEPARADOR) {
-			if (!limpios.length || limpios[limpios.length - 1].key === KEY_SEPARADOR) {
+		if (es_marcador(item.key)) {
+			if (!limpios.length) {
+				return
+			}
+			let anterior = limpios[limpios.length - 1]
+			if (es_marcador(anterior.key)) {
+				/* Dos marcadores pegados: queda uno solo, y si alguno es separador, el separador. */
+				if (item.key === KEY_SEPARADOR && anterior.key !== KEY_SEPARADOR) {
+					limpios[limpios.length - 1] = item
+				}
 				return
 			}
 		}
 		limpios.push(item)
 	})
 
-	while (limpios.length && limpios[limpios.length - 1].key === KEY_SEPARADOR) {
+	while (limpios.length && es_marcador(limpios[limpios.length - 1].key)) {
 		limpios.pop()
 	}
 
@@ -298,11 +314,78 @@ export function elementos_visibles(resuelto, etapa, vm, opciones) {
 export function etapa_tiene_elementos(resuelto, etapa, vm) {
 	let tiene = false
 	elementos_visibles(resuelto, etapa, vm).forEach(function (item) {
-		if (item.key !== KEY_SEPARADOR) {
+		if (!es_marcador(item.key)) {
 			tiene = true
 		}
 	})
 	return tiene
+}
+
+/**
+ * Si la etapa no puede arrancar plegada ni plegarse sola: tiene a la vista un elemento que agrega
+ * articulos o que lo pide (el resumen, con el total). Ver mantiene_etapa_abierta() en elementos.js.
+ *
+ * @param {Object} resuelto
+ * @param {string} etapa
+ * @param {Object} vm
+ * @returns {boolean}
+ */
+export function etapa_se_mantiene_abierta(resuelto, etapa, vm) {
+	let se_mantiene = false
+	elementos_visibles(resuelto, etapa, vm).forEach(function (item) {
+		if (!es_marcador(item.key) && mantiene_etapa_abierta(item.key)) {
+			se_mantiene = true
+		}
+	})
+	return se_mantiene
+}
+
+/**
+ * Devuelve el diseño con los elementos FORZADOS vueltos a su lugar: los que el diseño saco pero
+ * que, para este usuario, se tienen que dibujar igual (`se_fuerza_si` del catalogo; hoy solo la
+ * cantidad, con "pedir la cantidad al vender" prendido). Se insertan en su etapa por defecto, al
+ * lado de su predecesor, con su ancho por defecto.
+ *
+ * Es para dibujar Vender, NO para el editor: el editor tiene que mostrar el diseño tal como se
+ * guardo (con la cantidad en la bandeja y el aviso de que igual aparece).
+ *
+ * No muta el que recibe.
+ *
+ * @param {Object} resuelto salida de resolver_diseno()
+ * @param {Object} vm
+ * @returns {Object}
+ */
+export function aplicar_elementos_forzados(resuelto, vm) {
+	if (!resuelto || !Array.isArray(resuelto.sacados) || !resuelto.sacados.length) {
+		return resuelto
+	}
+
+	let forzados = resuelto.sacados.filter(function (key) {
+		return se_fuerza(key, vm)
+	})
+
+	if (!forzados.length) {
+		return resuelto
+	}
+
+	let etapas = {}
+	ETAPAS.forEach(function (etapa) {
+		etapas[etapa] = (resuelto.etapas[etapa] || []).slice()
+	})
+
+	let predeterminado = diseno_predeterminado(vm)
+
+	forzados.forEach(function (key) {
+		insertar_en_su_lugar(etapas, elemento(key), predeterminado, vm)
+	})
+
+	return {
+		version: resuelto.version,
+		etapas: etapas,
+		sacados: resuelto.sacados.filter(function (key) {
+			return forzados.indexOf(key) === -1
+		}),
+	}
 }
 
 /**
@@ -333,7 +416,7 @@ export function subtitulo_de_etapa(items) {
 	let nombres = []
 
 	items.forEach(function (item) {
-		if (item.key === KEY_SEPARADOR) {
+		if (es_marcador(item.key)) {
 			return
 		}
 		let el = elemento(item.key)
@@ -361,13 +444,24 @@ export function subtitulo_de_etapa(items) {
 }
 
 /**
- * Id nuevo para un separador agregado desde el editor. Minusculas, numeros y guion bajo: cumple el
- * patron que valida el backend.
+ * Id nuevo para un marcador agregado desde el editor (separador o salto de fila). Minusculas,
+ * numeros y guion bajo: cumple el patron que valida el backend (maximo 40 caracteres: el mas largo,
+ * 'salto_de_fila_' + 10, da 24).
+ *
+ * @param {string} key KEY_SEPARADOR o KEY_SALTO_DE_FILA
+ * @returns {string}
+ */
+export function nuevo_id_de_marcador(key) {
+	return key + '_' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36)
+}
+
+/**
+ * Id nuevo para un separador. Se conserva por compatibilidad con los que ya lo usan.
  *
  * @returns {string}
  */
 export function nuevo_id_de_separador() {
-	return 'separador_' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36)
+	return nuevo_id_de_marcador(KEY_SEPARADOR)
 }
 
 /**
@@ -389,10 +483,10 @@ export function serializar_diseno(diseno) {
 			if (!item || typeof item.key != 'string') {
 				return
 			}
-			if (item.key === KEY_SEPARADOR) {
+			if (es_marcador(item.key)) {
 				etapas[etapa].push({
-					key: KEY_SEPARADOR,
-					id: (typeof item.id == 'string' && PATRON_ID_SEPARADOR.test(item.id)) ? item.id : nuevo_id_de_separador(),
+					key: item.key,
+					id: (typeof item.id == 'string' && PATRON_ID_MARCADOR.test(item.id)) ? item.id : nuevo_id_de_marcador(item.key),
 					cols: 12,
 				})
 				return
@@ -408,7 +502,7 @@ export function serializar_diseno(diseno) {
 	let sacados_del_diseno = (diseno && Array.isArray(diseno.sacados)) ? diseno.sacados : []
 
 	sacados_del_diseno.forEach(function (key) {
-		if (typeof key == 'string' && key !== KEY_SEPARADOR && sacados.indexOf(key) === -1) {
+		if (typeof key == 'string' && !es_marcador(key) && sacados.indexOf(key) === -1) {
 			sacados.push(key)
 		}
 	})

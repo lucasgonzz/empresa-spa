@@ -11,22 +11,26 @@
 	buscador, que depende de sus extensiones y de si el usuario pide la cantidad al vender (ver
 	`cols` del buscador en elementos.js). Recien al guardar desde el editor el diseño queda explicito.
 
-	El orden sale del catalogo (elementos.js). Lo unico que agrega este archivo son los separadores,
-	que reproducen el <hr> que tenian las etapas 1 y 3: antes de los campos del cliente y antes de
-	los paneles de descuentos y recargos.
+	El orden sale del catalogo (elementos.js). Lo unico que agrega este archivo son los marcadores,
+	que reproducen como se partian las filas antes:
+	- un separador (la linea) antes de los campos del cliente, en la etapa 1;
+	- un salto de fila (invisible) antes de IVA/stock/observaciones, en la etapa 3: antes iban en
+	  una fila propia (IvaYStock.vue), debajo de estado, fecha de entrega, orden de compra y empleado;
+	- un separador antes de los paneles de descuentos y recargos, en la etapa 3.
 */
-import { ELEMENTOS, ETAPAS, KEY_SEPARADOR, cols_por_defecto } from './elementos'
+import { ELEMENTOS, ETAPAS, KEY_SEPARADOR, KEY_SALTO_DE_FILA, cols_por_defecto } from './elementos'
 
 /* Version del formato del JSON de `vender_layouts.layout`. */
 export const VERSION_DEL_FORMATO = 1
 
 /*
-	Separadores del diseño predeterminado: key del elemento ANTES del cual va la linea. Los ids son
-	fijos para que dos resoluciones del default den exactamente el mismo JSON.
+	Marcadores del diseño predeterminado: key del elemento ANTES del cual va. Los ids son fijos para
+	que dos resoluciones del default den exactamente el mismo JSON.
 */
-const SEPARADORES_PREDETERMINADOS = [
-	{ antes_de: 'cliente', id: 'separador_1' },
-	{ antes_de: 'descuentos', id: 'separador_2' },
+const MARCADORES_PREDETERMINADOS = [
+	{ antes_de: 'cliente', key: KEY_SEPARADOR, id: 'separador_1' },
+	{ antes_de: 'precios_con_iva', key: KEY_SALTO_DE_FILA, id: 'salto_de_fila_1' },
+	{ antes_de: 'descuentos', key: KEY_SEPARADOR, id: 'separador_2' },
 ]
 
 /**
@@ -47,11 +51,11 @@ export default function diseno_predeterminado(vm) {
 	})
 
 	ELEMENTOS.forEach(function (elemento) {
-		SEPARADORES_PREDETERMINADOS.forEach(function (separador) {
-			if (separador.antes_de === elemento.key) {
+		MARCADORES_PREDETERMINADOS.forEach(function (marcador) {
+			if (marcador.antes_de === elemento.key) {
 				etapas[elemento.etapa].push({
-					key: KEY_SEPARADOR,
-					id: separador.id,
+					key: marcador.key,
+					id: marcador.id,
 					cols: 12,
 				})
 			}
