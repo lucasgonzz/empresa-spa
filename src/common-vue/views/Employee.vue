@@ -3,12 +3,17 @@
 show_filter_modal
 emit_on_saved_instead_continue
 @modelSaved="modelSaved"
-model_name="employee"></view-component>	
+model_name="employee">
+	<template #table_left_options="props">
+		<btn-duplicar-empleado :model="props.model"></btn-duplicar-empleado>
+	</template>
+</view-component>
 </template>
 <script>
 export default {
 	components: {
-		ViewComponent: () => import('@/common-vue/components/view/Index')
+		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		BtnDuplicarEmpleado: () => import('@/common-vue/components/employee/BtnDuplicarEmpleado'),
 	},
 	created() {
 		/*
