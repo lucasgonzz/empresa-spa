@@ -1,0 +1,304 @@
+<template>
+	<!--
+		Tarjeta de un Diseño de etiqueta en la solapa del ABM (mision disenos-etiquetas-gondola,
+		29/9/2026): la etiqueta dibujada arriba, con datos de un articulo real, y abajo el nombre, el
+		tamaño y las acciones. Mismo dibujo que las tarjetas de los Diseños de Vender.
+
+		Un clic en cualquier parte abre el editor; las acciones frenan el clic para no abrirlo ademas de
+		hacer lo suyo. Por teclado, el camino es el boton "Editar".
+	-->
+	<article
+	class="tarjeta-de-etiqueta"
+	@click="$emit('editar')">
+
+		<div
+		ref="vista"
+		class="tarjeta-de-etiqueta__vista">
+			<etiqueta-dibujada
+			:diseno="diseno"
+			:zoom="zoom"
+			:muestra="muestra"
+			:listas="listas"></etiqueta-dibujada>
+		</div>
+
+		<div class="tarjeta-de-etiqueta__cuerpo">
+			<h3
+			class="tarjeta-de-etiqueta__nombre"
+			:title="modelo.name">{{ modelo.name }}</h3>
+
+			<p class="tarjeta-de-etiqueta__detalle">{{ detalle }}</p>
+
+			<p
+			v-if="tiene_lista_borrada"
+			class="tarjeta-de-etiqueta__aviso">
+				<i class="bi bi-exclamation-triangle"></i>
+				Tiene un precio de una lista que ya no existe: sale en blanco.
+			</p>
+
+			<div
+			class="tarjeta-de-etiqueta__acciones"
+			@click.stop>
+				<b-button
+				size="sm"
+				variant="outline-secondary"
+				class="tarjeta-de-etiqueta__boton"
+				:aria-label="'Editar el diseño ' + modelo.name"
+				@click="$emit('editar')">
+					<i class="bi bi-pencil"></i>
+					Editar
+				</b-button>
+
+				<!--
+					"Imprimir una prueba": el PDF con este diseño y algunos articulos que ya estan en memoria.
+					Sin articulos, deshabilitado; el motivo va en el envoltorio (un boton deshabilitado no
+					muestra su title) y en el texto de abajo.
+				-->
+				<span
+				class="tarjeta-de-etiqueta__envoltorio"
+				:title="hay_articulos ? 'Abre el PDF con este diseño y algunos de tus artículos' : SIN_ARTICULOS_PARA_PROBAR">
+					<b-button
+					size="sm"
+					variant="outline-secondary"
+					class="tarjeta-de-etiqueta__boton"
+					:disabled="!hay_articulos"
+					:aria-label="'Imprimir una prueba del diseño ' + modelo.name"
+					@click="$emit('probar')">
+						<i class="bi bi-printer"></i>
+						Imprimir una prueba
+					</b-button>
+				</span>
+
+				<!-- Con texto y no solo el icono: en el celular no hay tooltip que diga que hace cada uno -->
+				<button
+				type="button"
+				class="tarjeta-de-etiqueta__accion"
+				:aria-label="'Duplicar el diseño ' + modelo.name"
+				@click="$emit('duplicar')">
+					<i class="bi bi-copy"></i>
+					Duplicar
+				</button>
+				<button
+				type="button"
+				class="tarjeta-de-etiqueta__accion tarjeta-de-etiqueta__accion--peligro"
+				:aria-label="'Eliminar el diseño ' + modelo.name"
+				@click="$emit('eliminar')">
+					<i class="bi bi-trash3"></i>
+					Eliminar
+				</button>
+			</div>
+
+			<p
+			v-if="!hay_articulos"
+			class="tarjeta-de-etiqueta__nota">{{ SIN_ARTICULOS_PARA_PROBAR }}</p>
+		</div>
+	</article>
+</template>
+<script>
+import EtiquetaDibujada from './EtiquetaDibujada'
+import { normalizar_diseno } from './diseno'
+import { ancho_de_etiqueta, filas_por_hoja } from './geometria'
+import { buscar_lista } from './catalogo'
+import { SIN_ARTICULOS_PARA_PROBAR } from './api_de_disenos'
+
+/* Lugar que tiene la miniatura en la tarjeta (px) */
+const ANCHO_DE_LA_VISTA = 248
+const ALTO_DE_LA_VISTA = 118
+
+/* Zoom maximo de la miniatura (px por mm): una etiqueta chica no se agranda de mas */
+const ZOOM_MAXIMO = 3.6
+
+/**
+ * Tarjeta de un Diseño de etiqueta. Solo muestra y avisa (`editar`, `probar`, `duplicar`,
+ * `eliminar`): los pedidos los hace la solapa.
+ */
+export default {
+	name: 'TarjetaDeDisenoDeEtiqueta',
+	components: {
+		EtiquetaDibujada,
+	},
+	props: {
+		/* El article_ticket_design */
+		modelo: {
+			type: Object,
+			required: true,
+		},
+		/* Datos del articulo de muestra (muestra.js) */
+		muestra: {
+			type: Object,
+			required: true,
+		},
+		/* Listas de precios del negocio */
+		listas: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
+		/* Si hay articulos en memoria para "Imprimir una prueba" */
+		hay_articulos: {
+			type: Boolean,
+			default: false,
+		},
+	},
+	data() {
+		return {
+			SIN_ARTICULOS_PARA_PROBAR: SIN_ARTICULOS_PARA_PROBAR,
+		}
+	},
+	computed: {
+		/**
+		 * Si el diseño tiene un precio de una lista que ya no existe (sale en blanco).
+		 *
+		 * @returns {boolean}
+		 */
+		tiene_lista_borrada() {
+			let listas = this.listas
+			return this.diseno.elementos.some(function (elemento) {
+				return elemento.tipo === 'precio_lista' && !buscar_lista(listas, elemento.price_type_id)
+			})
+		},
+		/**
+		 * El diseño listo para dibujar.
+		 *
+		 * @returns {Object}
+		 */
+		diseno() {
+			return normalizar_diseno(this.modelo.diseno, this.modelo.price_type_id)
+		},
+		/**
+		 * Zoom para que la etiqueta entre en la tarjeta.
+		 *
+		 * @returns {number}
+		 */
+		zoom() {
+			let ancho = ancho_de_etiqueta(this.diseno.columnas)
+			return Math.min(ANCHO_DE_LA_VISTA / ancho, ALTO_DE_LA_VISTA / this.diseno.alto_mm, ZOOM_MAXIMO)
+		},
+		/**
+		 * "3 por fila · 21 por hoja · 66,7 × 40 mm".
+		 *
+		 * @returns {string}
+		 */
+		detalle() {
+			let columnas = this.diseno.columnas
+			let por_hoja = columnas * filas_por_hoja(this.diseno.alto_mm)
+			let medida = String(ancho_de_etiqueta(columnas)).replace('.', ',') + ' × ' + String(this.diseno.alto_mm).replace('.', ',') + ' mm'
+			return columnas + ' por fila · ' + por_hoja + ' por hoja · ' + medida
+		},
+	},
+}
+</script>
+<style lang="sass">
+// Mismo trato que las tarjetas de los Diseños de Vender (TarjetaDeDiseno.vue de disenos-de-vender):
+// borde sutil por token, radio de 12px, sin sombra en reposo.
+.tarjeta-de-etiqueta
+	display: flex
+	flex-direction: column
+	min-width: 0
+	border: 1px solid var(--color-border)
+	border-radius: 12px
+	background: var(--bg-card)
+	overflow: hidden
+	cursor: pointer
+	transition: border-color .15s ease, box-shadow .15s ease
+
+	&:hover
+		border-color: var(--color-border-tertiary)
+		box-shadow: 0 4px 14px var(--shadow-color)
+
+// La "mesa" gris donde apoya la etiqueta, del mismo alto en todas las tarjetas
+.tarjeta-de-etiqueta__vista
+	display: flex
+	align-items: center
+	justify-content: center
+	height: 150px
+	padding: 16px
+	border-bottom: 1px solid var(--color-border-secondary)
+	background: var(--bg-section)
+	overflow: hidden
+
+.tarjeta-de-etiqueta__cuerpo
+	display: flex
+	flex-direction: column
+	gap: 4px
+	flex: 1 1 auto
+	padding: 12px 16px 14px
+
+.tarjeta-de-etiqueta__nombre
+	margin: 0
+	font-size: 0.95rem
+	font-weight: 600
+	color: var(--color-text-primary)
+	white-space: nowrap
+	overflow: hidden
+	text-overflow: ellipsis
+
+.tarjeta-de-etiqueta__detalle
+	margin: 0
+	color: var(--color-text-secondary)
+	font-size: 0.78rem
+
+.tarjeta-de-etiqueta__acciones
+	display: flex
+	flex-wrap: wrap
+	align-items: center
+	gap: 8px
+	margin-top: 10px
+	cursor: default
+
+.tarjeta-de-etiqueta__boton.btn
+	display: inline-flex
+	align-items: center
+	gap: 6px
+	border-radius: 8px
+	white-space: nowrap
+
+.tarjeta-de-etiqueta__envoltorio
+	display: inline-flex
+
+// Duplicar / Eliminar: botones de texto livianos (con el icono adelante)
+.tarjeta-de-etiqueta__accion
+	display: inline-flex
+	align-items: center
+	gap: 5px
+	height: 31px
+	padding: 0 8px
+	border: 0
+	border-radius: 8px
+	background: transparent
+	color: var(--color-text-secondary)
+	font-size: 0.8rem
+	white-space: nowrap
+	cursor: pointer
+	transition: background .15s ease, color .15s ease
+
+	&:hover
+		background: var(--bg-hover)
+		color: var(--color-text-primary)
+
+	&:focus
+		outline: none
+
+	&:focus-visible
+		box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
+
+.tarjeta-de-etiqueta__accion--peligro:hover
+	background: var(--btn-peligro-fondo)
+	color: var(--btn-peligro-texto)
+
+.tarjeta-de-etiqueta__aviso
+	display: flex
+	align-items: flex-start
+	gap: 6px
+	margin: 2px 0 0
+	color: var(--color-text-primary)
+	font-size: 0.76rem
+
+	i
+		color: var(--color-text-warning-strong, var(--warning))
+
+.tarjeta-de-etiqueta__nota
+	margin: 6px 0 0
+	color: var(--color-text-secondary)
+	font-size: 0.72rem
+</style>

@@ -50,6 +50,46 @@ data-testid="estado-movimientos-stock"
 				</b-button>
 
 			</template>
+
+			<!--
+				Stock de cada deposito antes y despues del movimiento (stock_por_deposito del
+				movimiento, ver SetStockPorDeposito en empresa-api). Una linea por deposito,
+				"Nombre: anterior → resultante", en negrita los que el movimiento toco. Si el
+				movimiento es de una variante que reparte por depositos, va un bloque aparte con el
+				rotulo de la variante. Movimiento sin el dato (anterior a la mision, o de un
+				articulo sin depositos): celda vacia.
+			-->
+			<template #cell(stock_por_deposito)="data">
+
+				<div
+				v-if="data.item.stock_por_deposito"
+				class="stock-por-deposito">
+
+					<div
+					v-for="bloque in data.item.stock_por_deposito"
+					:key="bloque.clave"
+					class="stock-por-deposito__bloque">
+
+						<p
+						v-if="bloque.rotulo"
+						class="stock-por-deposito__rotulo">
+							{{ bloque.rotulo }}
+						</p>
+
+						<p
+						v-for="linea in bloque.lineas"
+						:key="bloque.clave+'-'+linea.address_id"
+						data-testid="stock-por-deposito-linea"
+						:data-address-id="linea.address_id"
+						:data-tocado="linea.tocado ? 1 : 0"
+						:class="{'stock-por-deposito__linea--tocado': linea.tocado}"
+						class="stock-por-deposito__linea">
+							{{ linea.nombre }}: {{ linea.anterior }} → {{ linea.resultante }}
+						</p>
+					</div>
+				</div>
+
+			</template>
 		</b-table>
 
 		<p 
@@ -78,8 +118,20 @@ export default {
 		loading() {
 			return this.$store.state.article.stock_movement.loading 
 		},
+		/**
+		 * Si algun movimiento de la lista trae la foto de stock por deposito. Sin ninguno (un
+		 * articulo que no reparte por depositos, o movimientos anteriores a que existiera el dato)
+		 * la columna no se muestra: no tiene sentido una columna entera vacia.
+		 *
+		 * @returns {Boolean}
+		 */
+		hay_stock_por_deposito() {
+			return this.stock_movements.some(model => {
+				return this.foto_por_deposito(model) !== null
+			})
+		},
 		fields() {
-			return [
+			let fields = [
 				{
 					label: 'Concepto',
 					key: 'concepto',
@@ -100,6 +152,14 @@ export default {
 					label: 'Stock Resultante',
 					key: 'stock_resultante',
 				},
+			]
+			if (this.hay_stock_por_deposito) {
+				fields.push({
+					label: 'Stock por depósito',
+					key: 'stock_por_deposito',
+				})
+			}
+			return fields.concat([
 				{
 					label: 'Proveedor',
 					key: 'provider',
@@ -124,7 +184,7 @@ export default {
 					label: 'Fecha',
 					key: 'created_at',
 				},
-			]
+			])
 		},
 		items() {
 			let items = []
@@ -154,6 +214,9 @@ export default {
 					 */
 					amount_crudo: model.amount,
 					stock_resultante_crudo: model.stock_resultante,
+					// Bloques ya armados para la celda y, para el data-*, la foto cruda en JSON.
+					stock_por_deposito: this.bloques_por_deposito(model),
+					stock_por_deposito_crudo: this.foto_por_deposito(model) !== null ? JSON.stringify(this.foto_por_deposito(model)) : null,
 					provider: this.getRelation('provider', 'provider_id', 'name', model),
 					from_address: this.getRelation('address', 'from_address_id', 'street', model),
 					to_address: this.getRelation('address', 'to_address_id', 'street', model),
@@ -191,7 +254,103 @@ export default {
 				'data-cantidad': item.amount_crudo,
 				'data-stock-resultante': item.stock_resultante_crudo,
 				'data-deposito-destino': item.to_address,
+				'data-stock-por-deposito': item.stock_por_deposito_crudo,
 			}
+		},
+		/**
+		 * La foto de stock por deposito del movimiento, o null si no la trae.
+		 *
+		 * El endpoint la manda como objeto (el modelo tiene el cast 'array'); igual se acepta el
+		 * JSON como texto, por si llega de algun lado sin el cast. Una API anterior a la mision no
+		 * manda la clave: queda null y la celda vacia.
+		 *
+		 * @param {Object} model Movimiento de stock.
+		 * @returns {Object|null} {articulo: [...], variante: [...]} o null.
+		 */
+		foto_por_deposito(model) {
+			let foto = model.stock_por_deposito
+			if (typeof foto == 'undefined' || foto === null || foto === '') {
+				return null
+			}
+			if (typeof foto == 'string') {
+				try {
+					foto = JSON.parse(foto)
+				} catch (e) {
+					return null
+				}
+			}
+			if (!foto || !Array.isArray(foto.articulo)) {
+				return null
+			}
+			return foto
+		},
+		/**
+		 * Bloques que dibuja la celda "Stock por depósito": uno para el articulo y, si el
+		 * movimiento es de una variante que reparte por depositos, otro con el rotulo de la
+		 * variante. Cada linea trae el nombre del deposito, los dos numeros en es-AR y si el
+		 * movimiento lo toco (cambio su cantidad, o es el origen / destino del movimiento).
+		 *
+		 * @param {Object} model Movimiento de stock.
+		 * @returns {Array|null} [{clave, rotulo, lineas: [{address_id, nombre, anterior, resultante, tocado}]}] o null.
+		 */
+		bloques_por_deposito(model) {
+			let foto = this.foto_por_deposito(model)
+			if (foto === null) {
+				return null
+			}
+			let bloques = [
+				{
+					clave: 'articulo',
+					rotulo: null,
+					lineas: this.lineas_por_deposito(foto.articulo, model),
+				},
+			]
+			if (Array.isArray(foto.variante) && foto.variante.length) {
+				bloques.push({
+					clave: 'variante',
+					rotulo: model.article_variant ? 'Variante '+model.article_variant.variant_description : 'Variante',
+					lineas: this.lineas_por_deposito(foto.variante, model),
+				})
+			}
+			return bloques
+		},
+		/**
+		 * @param {Array} renglones Lista de la foto: [{address_id, deposito, anterior, resultante}].
+		 * @param {Object} model Movimiento de stock.
+		 * @returns {Array}
+		 */
+		lineas_por_deposito(renglones, model) {
+			return renglones.map(renglon => {
+				let tocado = Number(renglon.anterior) != Number(renglon.resultante)
+					|| renglon.address_id == model.from_address_id
+					|| renglon.address_id == model.to_address_id
+				return {
+					address_id: renglon.address_id,
+					nombre: this.nombre_de_deposito(renglon),
+					anterior: this.numero_es(renglon.anterior),
+					resultante: this.numero_es(renglon.resultante),
+					tocado: tocado,
+				}
+			})
+		},
+		/**
+		 * Nombre del deposito: el de la sucursal en el store si existe (asi un renombre se ve), si
+		 * no el que quedo guardado en la foto (una sucursal borrada), y como ultimo recurso el id.
+		 *
+		 * @param {Object} renglon Renglon de la foto.
+		 * @returns {String}
+		 */
+		nombre_de_deposito(renglon) {
+			let address = this.$store.state.address.models.find(_address => {
+				return _address.id == renglon.address_id
+			})
+			if (typeof address != 'undefined' && address.street) {
+				return address.street
+			}
+			if (renglon.deposito) {
+				return renglon.deposito
+			}
+			return 'Depósito N° '+renglon.address_id
 		},
 		btn_text(stock_movement) {
 			if (stock_movement.sale_id && stock_movement.sale) {
@@ -249,3 +408,23 @@ export default {
 	}
 }
 </script>
+
+<style lang="sass">
+/* Celda "Stock por depósito" del historial de movimientos: una linea por deposito */
+.stock-por-deposito
+	p
+		margin: 0
+		white-space: nowrap
+
+.stock-por-deposito__bloque + .stock-por-deposito__bloque
+	margin-top: 6px
+
+/* Rotulo del bloque de la variante */
+.stock-por-deposito__rotulo
+	font-size: .85em
+	opacity: .75
+
+/* Deposito que el movimiento toco: cambio su cantidad, o es el origen o el destino */
+.stock-por-deposito__linea--tocado
+	font-weight: bold
+</style>
