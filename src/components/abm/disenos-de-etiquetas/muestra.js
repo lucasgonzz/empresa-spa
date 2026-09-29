@@ -147,17 +147,18 @@ export function stock_legible(stock) {
 }
 
 /**
- * Un peso sin ceros de mas: "1", "1,5", "1.250,125".
+ * Un peso sin ceros de mas, copia de ArticleTicketDesignPdf::decimal_sin_ceros: hasta 4 decimales
+ * ("1", "1,5", "1.250,1255"), y vacio (null) si no hay o si es 0.
  *
  * @param {*} peso
  * @returns {string|null}
  */
 export function peso_legible(peso) {
 	let numero = numero_o_nada(peso)
-	if (numero === null) {
+	if (numero === null || numero === 0) {
 		return null
 	}
-	let texto = numero_argentino(numero, 3)
+	let texto = numero_argentino(numero, 4)
 	if (texto.indexOf(',') !== -1) {
 		texto = texto.replace(/0+$/, '').replace(/,$/, '')
 	}

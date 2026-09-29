@@ -7,8 +7,8 @@
 		- Letra Arial, con el tamaño en pt pasado a mm (1 pt = 0,3528 mm) y los mm a pixeles con el zoom.
 		- Sin saltos de linea: un solo renglon, centrado a lo alto, cortado con "…" al ancho. Con 1 mm
 		  de aire solo del lado de la alineacion (a los dos lados si va centrado), como Cell() de FPDF.
-		- Los precios sin saltos de linea NO se cortan: si no entran, la letra se achica de a 0,5 pt
-		  hasta que entren (minimo 5 pt), igual que el PDF.
+		- Los precios van SIEMPRE en un renglon (aunque tengan saltos_de_linea en true) y NO se cortan:
+		  si no entran, la letra se achica de a 0,5 pt hasta que entren (minimo 5 pt), igual que el PDF.
 		- Con saltos de linea: renglones de tamaño x 1,15, solo los que entran enteros en el alto, y el
 		  ultimo con "…" si sobraba texto; 1 mm de aire a los dos lados (como el PDF).
 		- La foto entera y sin deformar; el codigo de barras estirado al recuadro, como la imagen C128.
@@ -54,7 +54,7 @@
 
 		<!-- Texto con saltos de linea: solo los renglones que entran enteros -->
 		<div
-		v-else-if="elemento.saltos_de_linea"
+		v-else-if="con_saltos"
 		class="contenido-del-campo__renglones"
 		:style="estilo_de_los_renglones">{{ texto_visible }}</div>
 
@@ -211,7 +211,7 @@ export default {
 			}
 			let aire = MARGEN_DE_CELDA_MM * this.zoom
 			/* En un renglon, el aire va solo del lado de la alineacion (centrado: a los dos lados) */
-			let un_renglon = !this.elemento.saltos_de_linea
+			let un_renglon = !this.con_saltos
 			let izquierda = !un_renglon || this.elemento.alineacion !== 'R'
 			let derecha = !un_renglon || this.elemento.alineacion !== 'L'
 			return {
@@ -222,6 +222,15 @@ export default {
 			}
 		},
 		/**
+		 * Si el texto va en varios renglones: saltos_de_linea prendido y que no sea un precio (los
+		 * precios van siempre en un renglon, como en el PDF).
+		 *
+		 * @returns {boolean}
+		 */
+		con_saltos() {
+			return !!this.elemento.saltos_de_linea && !es_precio(this.elemento.tipo)
+		},
+		/**
 		 * El tamaño de letra con que se dibuja: el del campo, salvo en un precio de un renglon que no
 		 * entra, que se achica de a 0,5 pt hasta que entre (minimo 5 pt), como el PDF.
 		 *
@@ -230,7 +239,7 @@ export default {
 		tamano_efectivo() {
 			let tamano = Number(this.elemento.tamano)
 
-			if (!es_precio(this.elemento.tipo) || this.elemento.saltos_de_linea || !this.texto) {
+			if (!es_precio(this.elemento.tipo) || !this.texto) {
 				return tamano
 			}
 

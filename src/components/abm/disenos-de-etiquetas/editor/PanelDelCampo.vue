@@ -111,7 +111,10 @@
 					v-model="elemento.negrita">Negrita</interruptor>
 				</div>
 
-				<div class="panel-campo__bloque">
+				<!-- Los precios van siempre en un renglon (se achica la letra): no tienen saltos de linea -->
+				<div
+				v-if="!es_precio"
+				class="panel-campo__bloque">
 					<interruptor
 					id="panel-campo-saltos"
 					v-model="elemento.saltos_de_linea">Saltos de línea</interruptor>
