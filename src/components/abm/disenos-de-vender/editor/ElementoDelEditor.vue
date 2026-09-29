@@ -75,35 +75,16 @@
 		v-else
 		class="editor-elemento__tarjeta editor-diseno-caja">
 
+			<!--
+				Encabezado: el nombre y la ✕ (o el candado), SIEMPRE en un renglon. El nombre se corta con
+				puntos suspensivos (el completo va en el title) y la accion nunca baja de linea. El ancho no
+				va aca: en una tarjeta de 2/12 (unos 145px a 1366 de ancho) no le dejaba lugar al nombre y
+				lo mandaba, con la ✕, a un segundo renglon.
+			-->
 			<div class="editor-elemento__cabecera">
 				<span
 				class="editor-elemento__nombre"
-				:title="nombre">{{ nombre }}</span>
-
-				<!-- Ancho: − N/12 + (los botones se ven al pasar el mouse; en pantallas tactiles, siempre) -->
-				<span class="editor-elemento__ancho">
-					<button
-					type="button"
-					class="editor-elemento__boton editor-elemento__boton--ancho editor-diseno-no-arrastra"
-					:disabled="item.cols <= 1"
-					title="Achicar una columna"
-					:aria-label="'Achicar ' + nombre + ' una columna'"
-					@click="cambiar_cols(-1)">
-						<i class="bi bi-dash-lg"></i>
-					</button>
-					<span
-					class="editor-elemento__cols"
-					:title="'Ocupa ' + item.cols + ' de las 12 columnas'">{{ item.cols }}/12</span>
-					<button
-					type="button"
-					class="editor-elemento__boton editor-elemento__boton--ancho editor-diseno-no-arrastra"
-					:disabled="item.cols >= 12"
-					title="Agrandar una columna"
-					:aria-label="'Agrandar ' + nombre + ' una columna'"
-					@click="cambiar_cols(1)">
-						<i class="bi bi-plus-lg"></i>
-					</button>
-				</span>
+				:title="titulo_del_nombre">{{ nombre }}</span>
 
 				<!--
 					Obligatorio: candado en lugar de la ✕, con el motivo. Es enfocable para que el
@@ -135,13 +116,45 @@
 			v-if="item.cols > 1"
 			:clave="item.key"></vista-previa-de-elemento>
 
-			<p
-			v-if="aparece_cuando"
-			class="editor-elemento__aparece"
-			:title="'Cuándo se ve en Vender: ' + aparece_cuando">
-				<i class="bi bi-eye"></i>
-				<span>{{ aparece_cuando }}</span>
-			</p>
+			<!--
+				Pie, pegado abajo de la tarjeta: "cuando aparece" a la izquierda y el ancho (− N/12 +) a la
+				derecha. Como las tarjetas de una misma fila se estiran al mismo alto, el N/12 queda
+				alineado abajo a la derecha en todas. Los botones − / + se ven al pasar el mouse (en
+				pantallas tactiles, siempre).
+			-->
+			<div class="editor-elemento__pie">
+				<p
+				v-if="aparece_cuando"
+				class="editor-elemento__aparece"
+				:title="'Cuándo se ve en Vender: ' + aparece_cuando">
+					<i class="bi bi-eye"></i>
+					<span>{{ aparece_cuando }}</span>
+				</p>
+
+				<span class="editor-elemento__ancho">
+					<button
+					type="button"
+					class="editor-elemento__boton editor-elemento__boton--ancho editor-diseno-no-arrastra"
+					:disabled="item.cols <= 1"
+					title="Achicar una columna"
+					:aria-label="'Achicar ' + nombre + ' una columna'"
+					@click="cambiar_cols(-1)">
+						<i class="bi bi-dash-lg"></i>
+					</button>
+					<span
+					class="editor-elemento__cols"
+					:title="'Ocupa ' + item.cols + ' de las 12 columnas'">{{ item.cols }}/12</span>
+					<button
+					type="button"
+					class="editor-elemento__boton editor-elemento__boton--ancho editor-diseno-no-arrastra"
+					:disabled="item.cols >= 12"
+					title="Agrandar una columna"
+					:aria-label="'Agrandar ' + nombre + ' una columna'"
+					@click="cambiar_cols(1)">
+						<i class="bi bi-plus-lg"></i>
+					</button>
+				</span>
+			</div>
 		</div>
 
 		<!--
@@ -272,6 +285,18 @@ export default {
 			return this.definicion ? this.definicion.nombre : this.item.key
 		},
 		/**
+		 * El title del nombre: el nombre completo (en pantalla puede estar cortado con puntos
+		 * suspensivos) y, en la tarjeta de una columna, donde el pie no entra, tambien cuando aparece.
+		 *
+		 * @returns {string}
+		 */
+		titulo_del_nombre() {
+			if (this.item.cols === 1 && this.aparece_cuando) {
+				return this.nombre + '. Se ve en Vender: ' + this.aparece_cuando
+			}
+			return this.nombre
+		},
+		/**
 		 * Si el campo no se puede sacar del diseño (se mueve y se le cambia el ancho, nada mas).
 		 *
 		 * @returns {boolean}
@@ -317,6 +342,7 @@ export default {
 				'editor-elemento--obligatorio': this.obligatorio,
 				'editor-elemento--redimensionando': this.redimensionando,
 				'editor-elemento--angosto': !this.es_marcador && this.item.cols <= 2,
+				'editor-elemento--una-columna': !this.es_marcador && this.item.cols === 1,
 				'editor-elemento--destacado': this.destacado,
 			}
 		},
@@ -465,12 +491,14 @@ export default {
 	&:hover .editor-elemento__tarjeta
 		border-color: var(--color-primary)
 
+	// El encabezado NUNCA parte el renglon: el nombre se achica con puntos suspensivos y la ✕ (o el
+	// candado) queda siempre a su derecha. Con flex-wrap, el nombre (que mide lo que mide su texto)
+	// mandaba las acciones abajo antes de achicarse.
 	.editor-elemento__cabecera
 		display: flex
 		align-items: center
-		// Si no entra todo en un renglon (campo angosto), el ancho y la ✕ bajan al segundo
-		flex-wrap: wrap
-		gap: 4px 6px
+		flex-wrap: nowrap
+		gap: 6px
 		min-width: 0
 
 	.editor-elemento__nombre
@@ -484,11 +512,22 @@ export default {
 		overflow: hidden
 		text-overflow: ellipsis
 
+	// El pie va pegado abajo (margin-top auto en una columna flex). Si "cuando aparece" y el ancho no
+	// entran en un renglon, el ancho baja solo, siempre a la derecha.
+	.editor-elemento__pie
+		display: flex
+		flex-wrap: wrap
+		align-items: flex-end
+		gap: 4px 8px
+		min-width: 0
+		margin-top: auto
+
 	.editor-elemento__ancho
 		display: inline-flex
 		align-items: center
 		gap: 2px
 		flex: 0 0 auto
+		margin-left: auto
 
 	.editor-elemento__cols
 		min-width: 38px
@@ -573,6 +612,8 @@ export default {
 		display: flex
 		align-items: flex-start
 		gap: 5px
+		flex: 1 1 120px
+		min-width: 0
 		margin: 0
 		color: var(--color-text-secondary)
 		font-size: 0.7rem
@@ -702,14 +743,51 @@ export default {
 		overflow: hidden
 		text-overflow: ellipsis
 
-	// Campo angosto (1 o 2 columnas): menos aire para que entre lo importante
+	// Campo angosto (1 o 2 columnas): menos aire y el nombre un punto mas chico, para que entre lo
+	// importante. Medido: una tarjeta de 2/12 tiene unos 128px de contenido a 1366 de ancho (140 a
+	// 1440); con la ✕ de 22px quedan ~100px para el nombre, justo lo que mide "Precios con IVA" asi.
 	&.editor-elemento--angosto
 		.editor-elemento__tarjeta
 			padding: 7px 7px 8px
 
+		.editor-elemento__nombre
+			font-size: 0.76rem
+
 		.editor-elemento__cols
 			min-width: 34px
 			padding: 1px 4px
+
+	// Una sola columna (unos 50px de contenido a 1366): todo apilado y centrado. Arriba la ✕ o el
+	// candado, abajo el nombre cortado (el completo en el title) y el ancho en vertical, el + arriba.
+	// No entra el "cuando aparece": queda en el title del nombre (titulo_del_nombre).
+	&.editor-elemento--una-columna
+		.editor-elemento__tarjeta
+			align-items: center
+			padding: 6px 3px
+
+		.editor-elemento__cabecera
+			flex-direction: column-reverse
+			gap: 4px
+			width: 100%
+
+		.editor-elemento__nombre
+			width: 100%
+			text-align: center
+
+		.editor-elemento__pie
+			justify-content: center
+			width: 100%
+
+		.editor-elemento__aparece
+			display: none
+
+		.editor-elemento__ancho
+			flex-direction: column-reverse
+			margin-left: 0
+
+		.editor-elemento__cols
+			min-width: 0
+			padding: 1px 3px
 
 	// Recien agregado desde la bandeja: un destello del borde para encontrarlo
 	&.editor-elemento--destacado .editor-elemento__tarjeta
