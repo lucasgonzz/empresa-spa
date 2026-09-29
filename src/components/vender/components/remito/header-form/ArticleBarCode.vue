@@ -37,7 +37,8 @@
 import vender from '@/mixins/vender/index' 
 import guardar_venta from '@/mixins/vender/guardar_venta/index' 
 import sonido_error from '@/mixins/sonido_error' 
-import vender_set_total from '@/mixins/vender_set_total' 
+import vender_set_total from '@/mixins/vender_set_total'
+import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout/foco'
 
 import db from '@/offline/db'
 
@@ -46,14 +47,15 @@ export default {
 	created() {
 		setTimeout(() => {
 			/*
-				Con guarda: con los diseños de Vender este campo se puede desmontar en esos 500 ms
-				(el store de diseños llega despues de dibujar con el predeterminado y el diseño en
-				uso lo saco o lo mando a otra etapa), y sin el input el focus() tiraba un TypeError.
+				El foco inicial de Vender va a la primera entrada de articulos A LA VISTA (ver
+				layout/foco.js): con el codigo de barras a la vista es este mismo input, como
+				siempre. Con los diseños de Vender este componente se monta aunque el diseño lo haya
+				sacado (escondido, en layout/ReservaDeElementos.vue), y enfocarse a si mismo dejaba
+				el foco en un input invisible; ahi va al buscador por nombre. Tambien cubre el input
+				que no existe (extension no_usar_codigos_de_barra, o el campo desmontado en estos
+				500 ms), donde el focus() directo tiraba un TypeError.
 			*/
-			let input = document.getElementById('article-bar-code')
-			if (input) {
-				input.focus()
-			}
+			enfocar_primera_entrada_de_articulos()
 		}, 500)
 	},
 	components: {
