@@ -293,6 +293,10 @@ export default {
 // Colores solo por token (mismo criterio que integraciones/TiendaOnline.vue).
 .disenos-de-vender
 	width: 100%
+	// #app centra el texto (common-vue/sass/_app_vue.sass) y la solapa lo heredaba: la linea de
+	// explicacion quedaba centrada y cortada raro. Todo lo de la solapa va a la izquierda; lo que
+	// tiene que ir centrado (el estado vacio) lo dice en su propia regla.
+	text-align: left
 
 	.disenos-de-vender__cabecera
 		display: flex
