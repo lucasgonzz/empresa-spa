@@ -61,6 +61,12 @@ export default {
 			// true cuando Echo ya estuvo conectado alguna vez: distingue la primera conexión
 			// (no hay nada que recuperar) de una reconexión real.
 			echo_de_whatsapp_ya_estuvo_conectado: false,
+			// Timer del debounce de getResumen ante broadcasts (misión sugerencia-ia-como-borrador,
+			// 29/9/2026): un mensaje entrante dispara UN `WhatsappChatUpdated` por chat afectado, y
+			// pedir el resumen en cada uno por separado sería un GET de más por cada mensaje en una
+			// racha. Se limpia en `beforeDestroy` para no dejar un timer vivo apuntando a un
+			// componente destruido.
+			resumen_debounce_timer: null,
 		}
 	},
 	computed: {
@@ -92,11 +98,22 @@ export default {
 		if (!this.$store.state.whatsapp_bot_config.models.length) {
 			this.$store.dispatch('whatsapp_bot_config/getModels')
 		}
+		// Badge del menú + tarjeta del tablero (misión sugerencia-ia-como-borrador, 29/9/2026):
+		// se pide apenas el módulo está habilitado, sin esperar a que se abra el sidebar. Ver
+		// también el watch de `should_show`, que cubre cuando la extensión resuelve DESPUÉS del
+		// arranque (mismo caso que ya cubre `suscribir_canal_de_whatsapp`).
+		if (this.should_show) {
+			this.$store.dispatch('whatsapp_chat/getResumen')
+		}
 	},
 	beforeDestroy() {
 		if (this.whatsapp_echo_channel && this.Echo) {
 			this.Echo.leave(this.whatsapp_echo_channel)
 			this.whatsapp_echo_channel = null
+		}
+		if (this.resumen_debounce_timer) {
+			clearTimeout(this.resumen_debounce_timer)
+			this.resumen_debounce_timer = null
 		}
 	},
 	watch: {
@@ -111,8 +128,11 @@ export default {
 		 * La extensión puede resolverse después del arranque: cuando el módulo aparece o
 		 * desaparece, la suscripción lo sigue.
 		 */
-		should_show() {
+		should_show(value) {
 			this.suscribir_canal_de_whatsapp()
+			if (value) {
+				this.$store.dispatch('whatsapp_chat/getResumen')
+			}
 		},
 	},
 	methods: {
@@ -168,6 +188,10 @@ export default {
 
 			// Actualiza (sin pisar props que este payload liviano no trae) la fila de la bandeja.
 			this.$store.commit('whatsapp_chat/patchChatFromBroadcast', payload.chat)
+			// El badge del menú y la tarjeta del tablero también tienen que enterarse: cualquier
+			// novedad puede sumar o sacar un mensaje `a_confirmar` (una sugerencia, una respuesta
+			// automática del agente, o alguien confirmando/descartando desde otra pestaña).
+			this.pedir_resumen_debounced()
 
 			let state = this.$store.state.whatsapp_chat
 
@@ -206,6 +230,24 @@ export default {
 			}
 		},
 		/**
+		 * Pide el resumen (badge del menú + tarjeta del tablero) con un debounce corto: una
+		 * racha de mensajes entrantes dispara un `WhatsappChatUpdated` por cada uno, y sin esto
+		 * cada uno de esos eventos pediría su propio GET. El timer se reinicia con cada llamada
+		 * nueva, así que solo se pide una vez que la racha se calma ~800 ms.
+		 *
+		 * @returns {void}
+		 */
+		pedir_resumen_debounced() {
+			if (this.resumen_debounce_timer) {
+				clearTimeout(this.resumen_debounce_timer)
+			}
+			let self = this
+			this.resumen_debounce_timer = setTimeout(function () {
+				self.resumen_debounce_timer = null
+				self.$store.dispatch('whatsapp_chat/getResumen')
+			}, 800)
+		},
+		/**
 		 * Vuelve a pedir la bandeja (y la conversación abierta) cada vez que Echo se reconecta:
 		 * los eventos que ocurrieron con la conexión caída no se reenvían solos, así que sin
 		 * esto un mensaje que entró durante el corte no aparece hasta recargar la pantalla.
@@ -235,6 +277,7 @@ export default {
 				}
 				let state = this.$store.state.whatsapp_chat
 				this.$store.dispatch('whatsapp_chat/getChats')
+				this.$store.dispatch('whatsapp_chat/getResumen')
 				if (state.sidebar_abierto && state.selected_chat_id) {
 					// `silent` para que la conversación no parpadee a "Cargando mensajes..." por
 					// una recarga que el operador ni pidió.

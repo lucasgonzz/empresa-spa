@@ -34,6 +34,19 @@ export default {
 			}
 			return total
 		},
+		/**
+		 * Total para el badge del ítem "WhatsApp": cantidad de mensajes de la IA esperando
+		 * aprobación del negocio (misión sugerencia-ia-como-borrador, 29/9/2026). Mismo patrón
+		 * que `online_menu_alert_count` con `tienda_mensajes.resumen`: sale del resumen que pide
+		 * `SidebarHost.vue` apenas el módulo está habilitado, así que está prendido desde el
+		 * login sin entrar a la vista de WhatsApp. Sin la extensión (o antes de la primera
+		 * carga) da 0: `state.whatsapp_chat.resumen` nace en ese valor.
+		 *
+		 * @returns {number}
+		 */
+		whatsapp_por_aprobar_count() {
+			return Number(this.$store.state.whatsapp_chat.resumen.mensajes_por_aprobar) || 0
+		},
 		alerts_count() {
 			let total = 0
 			

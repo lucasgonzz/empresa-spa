@@ -109,8 +109,19 @@ function navegar_pestana(pestana, url) {
  * - PUT    whatsapp-chats/{id}/toggle-ai   -> { model }
  * - PUT    whatsapp-chats/{id}/link-client -> { model }                     (client_id o null)
  * - PUT    whatsapp-chats/{id}/read        -> { model }
- * - POST   whatsapp-chats/{id}/suggest     -> { suggestion }
+ * - POST   whatsapp-chats/{id}/suggest     -> { suggestion, model, chat: { id, estado_pendiente } }
  * - POST   whatsapp-chats/{id}/summary     -> { summary }
+ *
+ * Contrato agregado en la misión sugerencia-ia-como-borrador (29/9/2026): la sugerencia de la IA
+ * deja de ser un texto suelto para el composer y pasa a persistirse como una respuesta
+ * `a_confirmar` más (ver `suggest()` acá abajo, que ahora hace lo mismo que ya hacían las
+ * respuestas automáticas del agente: aparece como burbuja pendiente, hay que confirmarla o
+ * editarla antes de que salga).
+ * - PUT    whatsapp-chats/messages/{message_id} -> { model } (body opcional; sin él, pausa el
+ *                                             auto-envío sin tocar el texto) | 404 | 422
+ *                                             { code: 'ya_en_envio' | 'ya_no_esta_pendiente' } |
+ *                                             422 { message } (validación de `body`)
+ * - GET    whatsapp-chats/resumen          -> { mensajes_por_aprobar, chats_esperando_aprobacion }
  *
  * Contrato agregado en la misión whatsapp-agente (confirmado contra empresa-api):
  * - POST   whatsapp-bot/simulate-inbound   -> 201 { model } (phone, body) | 403 no dueño | 429 throttle 10/min
@@ -197,6 +208,17 @@ export default {
 		// viñeta. Se resetea a `false` en cada cambio de chat (ver `Header.vue`, watch de
 		// `chat_id`), para no dejarlo prendido en la conversación equivocada.
 		simulando_en_vivo: false,
+
+		/*
+			Contadores para el badge del ítem "WhatsApp" del menú lateral y para lo que pida
+			mostrar la cantidad de sugerencias esperando aprobación fuera de la bandeja (misión
+			sugerencia-ia-como-borrador, 29/9/2026). Los pide SidebarHost.vue apenas el módulo
+			está habilitado y los refresca en cada novedad en vivo (ver getResumen()).
+		*/
+		resumen: {
+			mensajes_por_aprobar: 0,
+			chats_esperando_aprobacion: 0,
+		},
 	},
 	mutations: {
 		setLoadingChats(state, value) {
@@ -336,6 +358,30 @@ export default {
 		removePendingAiMessages(state) {
 			state.messages = state.messages.filter(m => m.ai_status != 'a_confirmar')
 		},
+		/**
+		 * Reemplaza en la conversación abierta la sugerencia recién generada por `suggest()`:
+		 * saca cualquier OTRA fila `a_confirmar` (el backend ya las descartó antes de crear
+		 * esta, D2 del plan de la misión) y agrega o actualiza la nueva por id.
+		 *
+		 * 🔴 Por qué no alcanza con `removePendingAiMessages` + `appendMessage` a secas, que es
+		 * lo que hacen el resto de las acciones que descartan pendientes. Acá se CREA una fila
+		 * nueva en el mismo request que descarta las viejas, y esa fila nueva TAMBIÉN nace con
+		 * `ai_status = 'a_confirmar'` — si el broadcast de `WhatsappChatUpdated` le gana la
+		 * carrera a esta respuesta (mismo patrón que ya documenta `appendOrPatchSentMessage`) y
+		 * ya la agregó al array, un `removePendingAiMessages` corrido después se la comería a
+		 * ELLA también, porque no sabe distinguirla de las viejas. Filtrando "menos la que
+		 * tiene este id" se sacan las viejas sin arriesgar la nueva, venga por el camino que
+		 * venga.
+		 */
+		replacePendingAiMessage(state, message) {
+			state.messages = state.messages.filter(m => m.ai_status != 'a_confirmar' || m.id == message.id)
+			let index = state.messages.findIndex(m => m.id == message.id)
+			if (index != -1) {
+				state.messages.splice(index, 1, Object.assign({}, state.messages[index], message))
+			} else {
+				state.messages.push(message)
+			}
+		},
 		setLoadingMessages(state, value) {
 			state.loading_messages = value
 		},
@@ -367,6 +413,18 @@ export default {
 		},
 		setSimulandoEnVivo(state, value) {
 			state.simulando_en_vivo = Boolean(value)
+		},
+		/**
+		 * Pisa los contadores de "mensajes/chats esperando aprobación" con lo que devolvió
+		 * `GET whatsapp-chats/resumen`. Con `Number(...) || 0` por las dudas de que el backend
+		 * mande null en vez del entero (misma cautela que ya usa `online_menu_alert_count`
+		 * sobre `tienda_mensajes.resumen`).
+		 */
+		setResumen(state, value) {
+			state.resumen = {
+				mensajes_por_aprobar: Number(value && value.mensajes_por_aprobar) || 0,
+				chats_esperando_aprobacion: Number(value && value.chats_esperando_aprobacion) || 0,
+			}
 		},
 	},
 	getters: {
@@ -653,7 +711,7 @@ export default {
 		 *
 		 * @param {Object} payload { chat_id, body }
 		 */
-		sendMessage({ commit }, payload) {
+		sendMessage({ commit, dispatch }, payload) {
 			// `skip_navigation_cancel`: WhatsappSidebarHost es un panel global (App.vue); cambiar
 			// de pantalla después de mandar es el uso normal y no tiene que cancelar el envío
 			// (misión cartel-sin-conexion-accesorios, 18/9/2026).
@@ -670,6 +728,9 @@ export default {
 					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
 					// respuesta y ya haber agregado el mensaje.
 					commit('appendOrPatchSentMessage', res.data.model)
+					// Una respuesta pendiente menos (si había una): el badge del menú y la tarjeta
+					// del tablero tienen que enterarse aunque nadie mire este chat en particular.
+					dispatch('getResumen')
 					return res.data.model
 				})
 		},
@@ -695,7 +756,7 @@ export default {
 		 * @param {string} payload.caption Epígrafe, solo para imágenes (el audio no acepta).
 		 * @returns {Promise} resuelve con { model, enviado }.
 		 */
-		sendMedia({ commit }, payload) {
+		sendMedia({ commit, dispatch }, payload) {
 			let form_data = new FormData()
 			form_data.append('file', payload.file)
 			form_data.append('caption', payload.caption || '')
@@ -710,6 +771,7 @@ export default {
 					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
 					// respuesta y ya haber agregado el mensaje.
 					commit('appendOrPatchSentMessage', res.data.model)
+					dispatch('getResumen')
 					return res.data
 				})
 		},
@@ -718,7 +780,7 @@ export default {
 		 *
 		 * @param {Object} payload { chat_id, template_id, variables }
 		 */
-		sendTemplate({ commit }, payload) {
+		sendTemplate({ commit, dispatch }, payload) {
 			// `skip_navigation_cancel`: mismo motivo que sendMessage/sendMedia (WhatsappSidebarHost
 			// es global, App.vue) — se había quedado afuera del fix del 18/9 y TemplatesModal.vue
 			// mostraba "No se pudo enviar la plantilla" ante una cancelación por navegación, no un
@@ -735,13 +797,14 @@ export default {
 					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
 					// respuesta y ya haber agregado el mensaje.
 					commit('appendOrPatchSentMessage', res.data.model)
+					dispatch('getResumen')
 					return res.data.model
 				})
 		},
 		/**
 		 * Prende/apaga la IA para un chat puntual.
 		 */
-		toggleAi({ commit }, chat_id) {
+		toggleAi({ commit, dispatch }, chat_id) {
 			return axios.put('/api/whatsapp-chats/' + chat_id + '/toggle-ai')
 				.then(res => {
 					commit('upsertChat', res.data.model)
@@ -751,6 +814,7 @@ export default {
 					if (!res.data.model.ai_enabled) {
 						commit('removePendingAiMessages')
 					}
+					dispatch('getResumen')
 					return res.data.model
 				})
 		},
@@ -782,7 +846,17 @@ export default {
 				})
 		},
 		/**
-		 * Pide a la IA una sugerencia de respuesta (no se envía ni se persiste).
+		 * Pide a la IA una sugerencia de respuesta. Desde la misión sugerencia-ia-como-borrador
+		 * (29/9/2026) esto YA NO es un texto suelto: el backend la persiste como una respuesta
+		 * `a_confirmar` más (reemplazando cualquier pendiente anterior del mismo chat, D2 del
+		 * plan) y la devuelve completa en `model`, junto con el chat parcial en `chat`.
+		 *
+		 * Si el chat pedido sigue siendo el abierto en el sidebar, la burbuja se agrega a la
+		 * conversación ahí mismo (`replacePendingAiMessage`, con dedup por id: ver su docblock
+		 * en `mutations`). Si el operador ya saltó a otro chat, la burbuja no se dibuja acá —
+		 * igual queda guardada en la base y el chat de origen la va a mostrar en cuanto se abra
+		 * — pero el resumen se refresca siempre, porque el badge del menú y la tarjeta del
+		 * tablero cuentan chats/mensajes sin importar cuál esté abierto.
 		 *
 		 * 🔴 `skip_global_error_event: true`. Desde la misión whatsapp-mejoras-interfaz
 		 * (15/9/2026) el back devuelve 422 con `message` en vez de 200 con `suggestion: ''`
@@ -790,11 +864,64 @@ export default {
 		 * catch de `Header.vue::suggest()` ya muestra ese `message` en un toast propio; sin
 		 * esta bandera, el interceptor global (`main.js`) muestra OTRO toast con el mismo
 		 * texto por encima — dos avisos idénticos por cada sugerencia que falla.
+		 *
+		 * @returns {Promise} resuelve con el `model` (el mensaje `a_confirmar` recién creado).
 		 */
-		suggest(context, chat_id) {
+		suggest({ commit, dispatch, state }, chat_id) {
 			return axios.post('/api/whatsapp-chats/' + chat_id + '/suggest', {}, { skip_global_error_event: true })
 				.then(res => {
-					return res.data.suggestion
+					let model = res.data.model
+					if (chat_id == state.selected_chat_id) {
+						commit('replacePendingAiMessage', model)
+					}
+					commit('patchChatFromBroadcast', res.data.chat)
+					dispatch('getResumen')
+					return model
+				})
+		},
+		/**
+		 * Trae los contadores para el badge del menú y lo que haga falta fuera de la bandeja:
+		 * cantidad de mensajes `a_confirmar` del negocio y de chats esperando aprobación.
+		 * `.catch` que solo loguea: un resumen que no llegó no puede tumbar ninguna otra acción
+		 * de las que lo disparan (SidebarHost.vue, y el resto de acciones de este store al
+		 * terminar).
+		 */
+		getResumen({ commit }) {
+			return axios.get('/api/whatsapp-chats/resumen')
+				.then(res => {
+					commit('setResumen', res.data)
+				})
+				.catch(err => {
+					console.log(err)
+				})
+		},
+		/**
+		 * Edita el cuerpo de una respuesta pendiente de aprobación, o la pausa sin tocar el
+		 * texto (D5: al entrar en modo edición sobre una burbuja con auto-envío programado, se
+		 * llama sin `body` para cancelarlo — una persona la tomó, no puede salir sola mientras
+		 * la está editando).
+		 *
+		 * Sin `.catch()` a propósito, igual que `confirmAiMessage`/`discardAiMessage`: los 422
+		 * (`ya_en_envio`, `ya_no_esta_pendiente`, o de validación con `message` si el `body`
+		 * viene vacío) los interpreta `MessageBubble.vue` con `manejar_error_confirmacion`.
+		 *
+		 * `skip_navigation_cancel`: mismo motivo que el resto de las acciones de este panel
+		 * global (ver `sendMessage`) — cancelado por una navegación no puede leerse como que la
+		 * edición falló.
+		 *
+		 * @param {Object} payload { message_id, body }
+		 * @param {number} payload.message_id
+		 * @param {string} [payload.body] Si no viene, solo pausa el auto-envío.
+		 */
+		updateAiMessage({ commit }, payload) {
+			let data = {}
+			if (payload.body !== undefined) {
+				data.body = payload.body
+			}
+			return axios.put('/api/whatsapp-chats/messages/' + payload.message_id, data, { skip_navigation_cancel: true })
+				.then(res => {
+					commit('patchMessage', res.data.model)
+					return res.data.model
 				})
 		},
 		/**
@@ -876,7 +1003,7 @@ export default {
 		 *
 		 * @param {number} message_id
 		 */
-		confirmAiMessage({ commit }, message_id) {
+		confirmAiMessage({ commit, dispatch }, message_id) {
 			// `skip_navigation_cancel`: mismo motivo que sendMessage/sendMedia/sendTemplate —
 			// confirmar es mandar, y MessageBubble.vue vive en el mismo panel global. Sin la
 			// bandera, cancelado por una navegación caía en la rama genérica de
@@ -885,6 +1012,7 @@ export default {
 			return axios.put('/api/whatsapp-chats/messages/' + message_id + '/confirm', null, { skip_navigation_cancel: true })
 				.then(res => {
 					commit('patchMessage', res.data.model)
+					dispatch('getResumen')
 					return res.data.model
 				})
 		},
@@ -894,7 +1022,7 @@ export default {
 		 *
 		 * @param {number} message_id
 		 */
-		discardAiMessage({ commit }, message_id) {
+		discardAiMessage({ commit, dispatch }, message_id) {
 			// `skip_navigation_cancel`: no es un envío, pero comparte componente y `.catch()`
 			// genérico con confirmAiMessage (MessageBubble.vue::discard() delega en la misma
 			// manejar_error_confirmacion()) — cancelado por una navegación, mostraba "No se pudo
@@ -903,6 +1031,7 @@ export default {
 			return axios.delete('/api/whatsapp-chats/messages/' + message_id, { skip_navigation_cancel: true })
 				.then(res => {
 					commit('removeMessage', message_id)
+					dispatch('getResumen')
 					return res.data
 				})
 		},
