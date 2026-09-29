@@ -18,6 +18,19 @@
 				{{ diseno.name }}
 			</dropdown-option-item>
 
+			<!--
+				Decision de Lucas: nadie pierde la opcion que hoy aparece sola por cada lista. Una lista sin
+				ningun diseño propio (existia antes de prender las listas, o se acaba de crear y su diseño
+				todavia no llego) sigue imprimiendo la etiqueta de siempre con su precio.
+			-->
+			<dropdown-option-item
+			v-for="price_type in listas_sin_diseno"
+			:key="'lista-' + price_type.id"
+			icon="icon-tag"
+			@click="tickets(price_type.id)">
+				{{ price_type.name }}
+			</dropdown-option-item>
+
 			<!-- El cliente con formato especial (golonorte) conserva su etiqueta de siempre -->
 			<dropdown-option-item
 			v-if="tiene_formato_especial"
@@ -98,6 +111,23 @@ export default {
 			return modulo.models.slice().sort(function (a, b) {
 				let posicion = (Number(a.position) || 0) - (Number(b.position) || 0)
 				return posicion !== 0 ? posicion : Number(a.id) - Number(b.id)
+			})
+		},
+		/**
+		 * Con listas de precios: las listas que no tienen ningun diseño generado para ellas
+		 * (article_ticket_design.price_type_id). Cada una conserva su opcion de siempre.
+		 *
+		 * @return {Array}
+		 */
+		listas_sin_diseno() {
+			if (!this.owner_uses_listas_de_precio) {
+				return []
+			}
+			let disenos = this.disenos
+			return this.price_types.filter(function (price_type) {
+				return !disenos.some(function (diseno) {
+					return diseno.price_type_id && Number(diseno.price_type_id) === Number(price_type.id)
+				})
 			})
 		},
 		/**
