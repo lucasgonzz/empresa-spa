@@ -45,7 +45,7 @@ hide-footer
  * padre/hijo por donde bajar una prop. La alternativa era guardar el nombre del cliente en
  * `store/puntos.js`, pero ese store lo construye U8 y no tiene dónde: guarda `client_id` y
  * nada más. `$root.$emit` ya es el mecanismo del repo para este mismo problema
- * (`vender:expand-stage1`, `open-change-provider-modal`).
+ * (`vender:enfocar-elemento`, `open-change-provider-modal`).
  *
  * El pedido lo dispara ESTE componente y no el botón, igual que el modal de actividad: así el
  * único lugar que sabe cómo se carga esta pantalla es esta pantalla, y cambiar de página reusa

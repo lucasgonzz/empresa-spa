@@ -114,7 +114,7 @@ export default {
 		 *
 		 * 🔴 Va por el bus de $root y no por una prop: el modal se monta en `views/Client.vue`,
 		 * como hermano de este componente, o sea en otro subárbol. Es el mismo mecanismo que ya
-		 * usa el repo para cruzar subárboles (`vender:expand-stage1`,
+		 * usa el repo para cruzar subárboles (`vender:enfocar-elemento`,
 		 * `open-change-provider-modal`).
 		 *
 		 * El pedido de datos NO se dispara acá: lo hace el propio modal, que es el único que

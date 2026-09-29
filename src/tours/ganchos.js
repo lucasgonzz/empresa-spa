@@ -9,14 +9,22 @@
  * `store` y `root` (la instancia raíz de Vue, que es por donde viajan los eventos entre módulos).
  */
 
-/** Colapso de la etapa 1 de Vender + su `scrollIntoView` suave. Medido. */
-const ESPERA_ETAPA_1 = 450
+/*
+	El evento con el que Vender lleva el foco a un campo, este en la etapa que este del diseño en
+	uso. Se importa y no se copia el texto: si alguna vez cambia, el tour no puede quedar gritando
+	un evento que nadie escucha (es justo lo que paso con el evento viejo que solo sabia abrir la
+	etapa 1 cuando llegaron los diseños de Vender, mision diseno-vender-configurable, 28/9/2026).
+*/
+import { EVENTO_ENFOCAR_ELEMENTO } from '@/mixins/vender/diseno_de_vender'
+
+/** Apertura de la etapa que tiene el campo (con el diseño predeterminado, la 1) + su `scrollIntoView` suave. Medido. */
+const ESPERA_CAMPO_DE_VENDER = 450
 
 /**
  * Igual que el anterior más los ocho reintentos de foco del select de método de pago
  * (8 × 80 ms = 640 ms) y el reflow que provoca al convertirlo en listbox.
  */
-const ESPERA_ETAPA_1_PAGO = 700
+const ESPERA_METODO_DE_PAGO = 700
 
 /**
  * @param {Number} ms
@@ -29,31 +37,39 @@ function esperar(ms) {
 }
 
 /**
- * Despliega la etapa 1 de Vender ("Configuración inicial").
+ * Lleva Vender hasta un campo: abre la etapa donde lo tiene el diseño de Vender en uso, lo trae a
+ * la vista y lo enfoca.
  *
- * 🔴 Sin esto, la mitad de los pasos de Vender apuntan a algo invisible. La etapa 1 **se colapsa
- * sola** en cuanto la venta tiene ítems, cliente o está en edición
- * (`vender/components/stage-1/Index.vue:127-144`), y ahí adentro viven el selector de cliente, el
- * de método de pago, el de punto de venta AFIP y el de sucursal. Con la venta ya armada —que es
- * justo el estado en el que arrancan los clips 2.2, 2.3 y 2.4— el elemento existe en el DOM pero
- * dentro de un `v-show` en false: driver.js lo resalta en 0x0 y el lead ve un recuadro vacío.
+ * 🔴 Sin esto, la mitad de los pasos de Vender apuntan a algo invisible. Las etapas 1 y 3 **se
+ * pliegan**: la 1 sola en cuanto la venta tiene ítems, cliente o está en edición (created() de
+ * `vender/components/stage-1/Index.vue`), y la 3 arranca plegada. Ahí viven el selector de
+ * cliente, el de método de pago, el de punto de venta de ARCA y la lista de precios. Con la venta
+ * ya armada —que es justo el estado en el que arrancan los clips 2.2, 2.3 y 2.4— el elemento
+ * existe en el DOM pero dentro de un `v-show` en false: driver.js lo resalta en 0x0 y el lead ve
+ * un recuadro vacío.
  *
- * Las claves que el componente acepta son cuatro (`ref_map`, `stage-1/Index.vue:176-181`):
- * `payment_method`, `client`, `address` y `price_type`. Cualquier otra string abre la etapa igual
- * pero sin hacer scroll ni foco.
+ * Hasta los diseños de Vender esto emitía un evento que solo sabía abrir la etapa 1, con cuatro
+ * claves propias. Ahora cada campo puede estar en cualquier etapa, así que se pide el
+ * campo por su key del catálogo (`components/vender/layout/elementos.js`) y lo resuelve la etapa
+ * que lo dibuja (`mixins/vender/diseno_de_vender.js`). Si el diseño en uso sacó el campo, no pasa
+ * nada y el motor saltea el paso solo, porque el ancla no aparece.
+ *
+ * Se emite directo en `root` y no con `enfocar_elemento_de_vender()` del mixin a propósito: ese
+ * helper avisa con un toast cuando el campo no está en el diseño, y en el medio de un tour ese
+ * cartel no le dice nada al lead.
  *
  * @param {Object} contexto
- * @param {String} clave
+ * @param {String} key key del catálogo ('cliente', 'metodo_de_pago', 'facturacion', 'lista_de_precios')
  * @returns {Promise}
  */
-function abrir_etapa_1(contexto, clave) {
+function llevar_al_campo_de_vender(contexto, key) {
 	if (!contexto || !contexto.root) {
 		return Promise.resolve()
 	}
 
-	contexto.root.$emit('vender:expand-stage1', clave)
+	contexto.root.$emit(EVENTO_ENFOCAR_ELEMENTO, key, {})
 
-	return esperar(clave === 'payment_method' ? ESPERA_ETAPA_1_PAGO : ESPERA_ETAPA_1)
+	return esperar(key === 'metodo_de_pago' ? ESPERA_METODO_DE_PAGO : ESPERA_CAMPO_DE_VENDER)
 }
 
 /**
@@ -103,10 +119,17 @@ function esperar_modal(contexto, paso) {
 	})
 }
 
+/*
+	Los nombres `abrir_etapa_1_*` son los de siempre y NO se cambian: los guiones
+	(guiones/s2-vender.js) los referencian por nombre en `antes`. Desde los diseños de Vender ya no
+	abren necesariamente la etapa 1: abren la que tenga el campo en el diseño en uso (con el
+	predeterminado, la 1). El que desplegaba la etapa 1 sin foco (`abrir_etapa_1`) se saco: ningun
+	guion lo usaba, y "la etapa 1" ya no es un lugar fijo.
+*/
 export default {
 	/** El selector de cliente de Vender. */
 	abrir_etapa_1_cliente: function (contexto) {
-		return abrir_etapa_1(contexto, 'client')
+		return llevar_al_campo_de_vender(contexto, 'cliente')
 	},
 
 	/**
@@ -118,22 +141,21 @@ export default {
 	 * colapsar 150 ms después de perder el foco.
 	 */
 	abrir_etapa_1_pago: function (contexto) {
-		return abrir_etapa_1(contexto, 'payment_method')
+		return llevar_al_campo_de_vender(contexto, 'metodo_de_pago')
 	},
 
-	/** El selector de punto de venta de ARCA vive con el de sucursal. */
+	/**
+	 * El selector de punto de venta de ARCA: el campo `facturacion` del diseño. Hasta los diseños
+	 * de Vender se iba a la sucursal, que era el campo de al lado con un `ref` para scrollear; ahora
+	 * se va directo al punto de venta, que es lo que el paso señala.
+	 */
 	abrir_etapa_1_punto_venta: function (contexto) {
-		return abrir_etapa_1(contexto, 'address')
+		return llevar_al_campo_de_vender(contexto, 'facturacion')
 	},
 
 	/** La lista de precios. */
 	abrir_etapa_1_lista_precios: function (contexto) {
-		return abrir_etapa_1(contexto, 'price_type')
-	},
-
-	/** Despliega la etapa 1 sin llevar el foco a ningún campo puntual. */
-	abrir_etapa_1: function (contexto) {
-		return abrir_etapa_1(contexto, 'ninguno')
+		return llevar_al_campo_de_vender(contexto, 'lista_de_precios')
 	},
 
 	esperar_modal: esperar_modal,

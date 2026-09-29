@@ -62,34 +62,6 @@ import { TITULOS_DE_ETAPAS } from '@/components/vender/layout/elementos'
 import { subtitulo_de_etapa } from '@/components/vender/layout/resolver_diseno'
 import diseno_de_vender, { EVENTO_ENFOCAR_ELEMENTO } from '@/mixins/vender/diseno_de_vender'
 
-/*
-	🔴 PUENTE TEMPORAL con el evento viejo `vender:expand-stage1`.
-
-	Hasta esta mision la barra de resumen y los atajos F3/F4 abrian ESTA etapa con ese evento y una
-	clave propia ('client', 'payment_method', 'address', 'price_type'). Esos dos emisores ya pasaron
-	al evento nuevo (vender:enfocar-elemento, con la key del catalogo), pero queda uno que esta
-	fuera del territorio de la mision y no se toco: src/tours/ganchos.js, los ganchos
-	`abrir_etapa_1_*` del tour de la demo, que lo emiten ANTES de señalar el cliente, el metodo de
-	pago, el punto de venta o la lista de precios. Sin este puente, con la etapa plegada el tour
-	señalaria un recuadro vacio de 0x0.
-
-	El puente traduce la clave vieja a la key del catalogo y la manda por el evento nuevo, asi que
-	se abre la etapa que tenga ese campo en el diseño en uso (con el predeterminado, esta). Una clave
-	que no esta en la tabla ('ninguno', el gancho que solo despliega la etapa) abre esta etapa, que
-	es lo que hacia antes.
-
-	Se borra el dia que ganchos.js emita vender:enfocar-elemento con las keys del catalogo.
-*/
-const EVENTO_VIEJO_DE_LA_ETAPA_1 = 'vender:expand-stage1'
-
-/* Clave del evento viejo -> key del catalogo (layout/elementos.js) */
-const KEYS_DEL_EVENTO_VIEJO = {
-	client: 'cliente',
-	payment_method: 'metodo_de_pago',
-	address: 'sucursal',
-	price_type: 'lista_de_precios',
-}
-
 export default {
 	name: 'VenderStage1',
 	mixins: [diseno_de_vender],
@@ -183,16 +155,14 @@ export default {
 	},
 	mounted() {
 		/*
-			Pedido de foco a un campo (lapices de la barra de resumen, atajos de teclado): lo
-			emite enfocar_elemento_de_vender() del mixin y lo escuchan las tres etapas; actua la
+			Pedido de foco a un campo (lapices de la barra de resumen, atajos de teclado, ganchos
+			del tour de la demo en src/tours/ganchos.js): lo escuchan las tres etapas y actua la
 			que tiene el campo.
 		*/
 		this.$root.$on(EVENTO_ENFOCAR_ELEMENTO, this.al_pedir_el_foco_de_un_elemento)
-		this.$root.$on(EVENTO_VIEJO_DE_LA_ETAPA_1, this.al_recibir_el_evento_viejo)
 	},
 	beforeDestroy() {
 		this.$root.$off(EVENTO_ENFOCAR_ELEMENTO, this.al_pedir_el_foco_de_un_elemento)
-		this.$root.$off(EVENTO_VIEJO_DE_LA_ETAPA_1, this.al_recibir_el_evento_viejo)
 	},
 	methods: {
 		/**
@@ -221,23 +191,6 @@ export default {
 
 			this.stage1_open = true
 			this.enfocar_elemento_de_vender_en_esta_etapa(key, opciones, 'start')
-		},
-
-		/**
-		 * Puente con el evento viejo (ver el comentario de KEYS_DEL_EVENTO_VIEJO).
-		 *
-		 * @param {string} clave 'client' | 'payment_method' | 'address' | 'price_type' | otra
-		 * @returns {void}
-		 */
-		al_recibir_el_evento_viejo(clave) {
-			let key = KEYS_DEL_EVENTO_VIEJO[clave]
-
-			if (key && this.etapa_donde_se_dibuja_elemento_de_vender(key)) {
-				this.$root.$emit(EVENTO_ENFOCAR_ELEMENTO, key, {})
-				return
-			}
-
-			this.stage1_open = true
 		},
 	},
 }
