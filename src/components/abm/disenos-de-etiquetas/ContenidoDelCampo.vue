@@ -5,10 +5,12 @@
 		tarjetas, asi los dos se ven igual que el PDF:
 
 		- Letra Arial, con el tamaño en pt pasado a mm (1 pt = 0,3528 mm) y los mm a pixeles con el zoom.
-		- Sin saltos de linea: un solo renglon, centrado a lo alto, cortado con "…" al ancho.
+		- Sin saltos de linea: un solo renglon, centrado a lo alto, cortado con "…" al ancho. Con 1 mm
+		  de aire solo del lado de la alineacion (a los dos lados si va centrado), como Cell() de FPDF.
+		- Los precios sin saltos de linea NO se cortan: si no entran, la letra se achica de a 0,5 pt
+		  hasta que entren (minimo 5 pt), igual que el PDF.
 		- Con saltos de linea: renglones de tamaño x 1,15, solo los que entran enteros en el alto, y el
-		  ultimo con "…" si sobraba texto (como el PDF).
-		- 1 mm de aire a los costados del texto, como las celdas de FPDF.
+		  ultimo con "…" si sobraba texto; 1 mm de aire a los dos lados (como el PDF).
 		- La foto entera y sin deformar; el codigo de barras estirado al recuadro, como la imagen C128.
 
 		Es solo dibujo: no escucha el mouse (el lienzo pone el arrastre encima).
@@ -64,9 +66,36 @@
 	</div>
 </template>
 <script>
-import { es_texto } from './catalogo'
+import { es_texto, es_precio } from './catalogo'
 import { texto_del_campo } from './muestra'
-import { pt_a_mm, alto_de_renglon_mm, MARGEN_DE_CELDA_MM } from './geometria'
+import { pt_a_mm, alto_de_renglon_mm, MARGEN_DE_CELDA_MM, TAMANO_MINIMO_PT } from './geometria'
+
+/* Cuanto se achica la letra de un precio que no entra, en cada paso (pt), como el PDF */
+const PASO_DE_ACHIQUE_PT = 0.5
+
+/* Contexto de un canvas para medir textos (uno solo para toda la app, se crea la primera vez) */
+let contexto_para_medir = null
+
+/**
+ * El ancho de un texto en Arial, en mm.
+ *
+ * @param {string} texto
+ * @param {number} tamano_pt
+ * @param {boolean} negrita
+ * @returns {number|null} null si el navegador no deja medir
+ */
+function ancho_del_texto_mm(texto, tamano_pt, negrita) {
+	if (!contexto_para_medir) {
+		let lienzo = typeof document != 'undefined' ? document.createElement('canvas') : null
+		contexto_para_medir = lienzo && lienzo.getContext ? lienzo.getContext('2d') : null
+	}
+	if (!contexto_para_medir) {
+		return null
+	}
+	/* Se mide a 100 px y se escala: el ancho es proporcional al tamaño de la letra */
+	contexto_para_medir.font = (negrita ? 'bold ' : '') + '100px Arial, Helvetica, sans-serif'
+	return contexto_para_medir.measureText(texto).width / 100 * pt_a_mm(tamano_pt)
+}
 
 /* Patron de inicio y de fin de las barras de muestra (anchos en modulos, barra/espacio alternados) */
 const INICIO_DE_BARRAS = [2, 1, 1, 2, 3, 2]
@@ -181,12 +210,40 @@ export default {
 				return {}
 			}
 			let aire = MARGEN_DE_CELDA_MM * this.zoom
+			/* En un renglon, el aire va solo del lado de la alineacion (centrado: a los dos lados) */
+			let un_renglon = !this.elemento.saltos_de_linea
+			let izquierda = !un_renglon || this.elemento.alineacion !== 'R'
+			let derecha = !un_renglon || this.elemento.alineacion !== 'L'
 			return {
-				fontSize: (pt_a_mm(this.elemento.tamano) * this.zoom) + 'px',
+				fontSize: (pt_a_mm(this.tamano_efectivo) * this.zoom) + 'px',
 				fontWeight: this.elemento.negrita ? 700 : 400,
-				paddingLeft: aire + 'px',
-				paddingRight: aire + 'px',
+				paddingLeft: (izquierda ? aire : 0) + 'px',
+				paddingRight: (derecha ? aire : 0) + 'px',
 			}
+		},
+		/**
+		 * El tamaño de letra con que se dibuja: el del campo, salvo en un precio de un renglon que no
+		 * entra, que se achica de a 0,5 pt hasta que entre (minimo 5 pt), como el PDF.
+		 *
+		 * @returns {number} pt
+		 */
+		tamano_efectivo() {
+			let tamano = Number(this.elemento.tamano)
+
+			if (!es_precio(this.elemento.tipo) || this.elemento.saltos_de_linea || !this.texto) {
+				return tamano
+			}
+
+			let margenes = this.elemento.alineacion === 'C' ? 2 : 1
+			let ancho_util = this.elemento.w - margenes * MARGEN_DE_CELDA_MM
+			let ancho = ancho_del_texto_mm(this.texto, tamano, this.elemento.negrita)
+
+			while (ancho !== null && ancho > ancho_util && tamano > TAMANO_MINIMO_PT) {
+				tamano = Math.max(TAMANO_MINIMO_PT, tamano - PASO_DE_ACHIQUE_PT)
+				ancho = ancho_del_texto_mm(this.texto, tamano, this.elemento.negrita)
+			}
+
+			return tamano
 		},
 		/**
 		 * Renglones con saltos: alto de cada uno y cuantos entran enteros en el recuadro.

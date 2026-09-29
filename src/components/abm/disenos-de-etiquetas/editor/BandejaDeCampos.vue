@@ -75,6 +75,8 @@ import { TOPE_DE_CAMPOS } from '../geometria'
 const GRUPO_DEL_TIPO = {
 	precio_final: 'precios',
 	precio_lista: 'precios',
+	precio_anterior: 'precios',
+	precio_promocional: 'precios',
 	fecha_impresion: 'otros',
 	texto_fijo: 'otros',
 }
@@ -303,9 +305,11 @@ export default {
 .bandeja-campos__nombre
 	flex: 1 1 auto
 	min-width: 0
-	white-space: nowrap
-	overflow: hidden
-	text-overflow: ellipsis
+	// El nombre entra entero, en dos renglones si hace falta: cortado con "…" los dos codigos de
+	// barras ("Código de barras (dibujo)" y "(número)") quedaban iguales
+	white-space: normal
+	overflow-wrap: break-word
+	line-height: 1.25
 
 .bandeja-campos__mas
 	flex: 0 0 auto
