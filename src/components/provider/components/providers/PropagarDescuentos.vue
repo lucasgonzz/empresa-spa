@@ -158,11 +158,29 @@ export default {
 
 				let actualizados = res.data.actualizados
 
-				self.$toast.success(
-					actualizados == 1
-						? 'Se actualizo 1 articulo'
-						: 'Se actualizaron '+actualizados+' articulos'
-				)
+				/*
+					Con muchos articulos (mas que una tanda del recalculo de precios) la API ya no
+					propaga en el request: encola un proceso en segundo plano y responde de inmediato
+					con `en_segundo_plano: true` y `actualizados` = los que se VAN a actualizar
+					(mision recalculo-precios-motor-rapido, 29/9/2026). El avance lo muestra la pildora
+					de procesos, arriba a la derecha, y al terminar llega el aviso.
+
+					Si la clave no viene (pocos articulos, o una API anterior a este cambio), se hace lo
+					de siempre: ya se actualizaron.
+				*/
+				if (res.data.en_segundo_plano) {
+					self.$toast.success(
+						actualizados == 1
+							? 'Se está actualizando 1 artículo en segundo plano. Podés seguir el avance arriba a la derecha.'
+							: 'Se están actualizando '+actualizados+' artículos en segundo plano. Podés seguir el avance arriba a la derecha.'
+					)
+				} else {
+					self.$toast.success(
+						actualizados == 1
+							? 'Se actualizo 1 articulo'
+							: 'Se actualizaron '+actualizados+' articulos'
+					)
+				}
 
 				self.$bvModal.hide('propagar-descuentos-proveedor')
 			})
@@ -174,10 +192,10 @@ export default {
 
 				/*
 					El aviso de error no es cosmetico: sin el, el usuario ve desaparecer el loader y
-					nada mas, y lo natural es volver a apretar "Actualizar articulos". La operacion
-					recorre articulo por articulo, asi que en un catalogo grande puede cortarse por
-					tiempo — y ahi hace falta que quede claro que se corto y que puede haber quedado
-					a medias, no que parezca que no paso nada.
+					nada mas, y lo natural es volver a apretar "Actualizar articulos". Desde el
+					29/9/2026 los catalogos grandes van en segundo plano y los chicos se escriben en
+					bloque, pero un corte (red, servidor) sigue pudiendo dejar la operacion a medias —
+					y ahi hace falta que quede claro que se corto, no que parezca que no paso nada.
 				*/
 				self.$toast.error('No se pudieron actualizar los articulos. Si el proveedor tiene muchos, puede haber quedado a medias: volve a intentar y revisa el resultado.')
 
