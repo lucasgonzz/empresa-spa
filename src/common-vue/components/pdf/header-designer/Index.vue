@@ -67,7 +67,7 @@ import HeaderPreview from '@/common-vue/components/pdf/header-designer/HeaderPre
 import ChipPalette from '@/common-vue/components/pdf/header-designer/ChipPalette.vue'
 import {
 	emisor_chip_keys,
-	RECEPTOR_CHIP_LABELS,
+	receptor_chip_keys,
 	FISCAL_REQUIRED_EMISOR_KEYS,
 	default_header_layout,
 	LOGO_SIZE_MM_DEFAULT,
@@ -224,7 +224,7 @@ export default {
 			const saved_layout = this.model && this.model.header_layout
 			const base_layout = (saved_layout && typeof saved_layout === 'object')
 				? saved_layout
-				: default_header_layout(this.is_afip)
+				: default_header_layout(this.is_afip, this.model && this.model.model_name)
 
 			/* Copia defensiva para no mutar el objeto original hasta guardar */
 			this.layout = {
@@ -249,7 +249,7 @@ export default {
 		 * @return {void}
 		 */
 		restore_default() {
-			const base_layout = default_header_layout(this.is_afip)
+			const base_layout = default_header_layout(this.is_afip, this.model && this.model.model_name)
 			this.layout = {
 				emisor: {
 					izquierda: base_layout.emisor.izquierda.slice(),
@@ -274,7 +274,7 @@ export default {
 			})
 
 			const placed_receptor = this.layout.receptor.izquierda
-			this.receptor_palette = Object.keys(RECEPTOR_CHIP_LABELS).filter(function (key) {
+			this.receptor_palette = receptor_chip_keys(this.model && this.model.model_name).filter(function (key) {
 				return placed_receptor.indexOf(key) === -1
 			})
 		},

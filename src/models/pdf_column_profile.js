@@ -63,13 +63,15 @@ export default {
 			 * Muestra la línea "Sub Total" en el pie del PDF (flag del backend, prompt 417).
 			 * Solo tiene efecto cuando el comprobante tiene descuentos o recargos: si no los tiene,
 			 * el Sub Total es igual al Total y no se imprime. Default 1 = comportamiento legacy.
-			 * Aplica a venta, presupuesto y pedido online.
+			 * Aplica a venta y presupuesto. NO al pedido online: su pie no tiene esa línea (el total
+			 * del pedido no incluye envío, cupón ni medio de pago, así que rotula "Subtotal"/"Total"
+			 * según haya o no esos extras) y el checkbox no haría nada.
 			 */
 			text: 'Mostrar Sub Total en el pie',
 			key: 'show_subtotal_in_footer',
 			type: 'checkbox',
 			value: 1,
-			show_when_model_name: ['sale', 'budget', 'order'],
+			show_when_model_name: ['sale', 'budget'],
 		},
 		{
 			/**
@@ -117,13 +119,16 @@ export default {
 			 * Controla si las observaciones del cliente (campo "Observaciones" del cliente)
 			 * se imprimen en el PDF de venta. Default 1 = comportamiento legacy (se imprimían
 			 * siempre que el cliente tuviera observaciones cargadas).
-			 * Aplica a venta, presupuesto y pedido online.
+			 * Aplica a venta y presupuesto. NO al pedido online: el comprador de la tienda no tiene
+			 * observaciones (el PDF del pedido nunca las imprime). En los diseños de presupuesto
+			 * sembrados nace apagada: es una nota que muchos dueños usan como interna y el PDF le llega
+			 * al cliente.
 			 */
 			text: 'Mostrar observaciones del cliente',
 			key: 'show_client_description',
 			type: 'checkbox',
 			value: 1,
-			show_when_model_name: ['sale', 'budget', 'order'],
+			show_when_model_name: ['sale', 'budget'],
 		},
 		{
 			text: 'Opciones de columnas',
@@ -229,11 +234,18 @@ export default {
 		{
 			/**
 			 * Ancho físico de la hoja. A4 portrait artículos/ventas: 210 mm.
+			 *
+			 * No se muestra para presupuesto ni pedido online: su PDF es SIEMPRE una hoja A4 vertical
+			 * con 200 mm útiles (no lee el ancho, el margen ni el tipo de hoja del diseño), así que
+			 * editarlos no cambiaría el PDF y solo dejaría sumar columnas de más, que se saldrían de
+			 * la hoja. El valor igual viaja en el payload (la API lo exige): un diseño nuevo de esos
+			 * modelos arranca en 210/210/5 (ver `apply_article_a4_defaults()` del editor).
 			 */
 			text: 'Ancho hoja (mm)',
 			key: 'paper_width_mm',
 			type: 'number',
 			value: 297,
+			show_when_model_name: ['sale', 'article'],
 		},
 		{
 			/**
@@ -244,6 +256,7 @@ export default {
 			key: 'printable_width_mm',
 			type: 'number',
 			value: 277,
+			show_when_model_name: ['sale', 'article'],
 		},
 		{
 			/**
@@ -253,6 +266,7 @@ export default {
 			key: 'margin_mm',
 			type: 'number',
 			value: 5,
+			show_when_model_name: ['sale', 'article'],
 		},
 		{
 			/**
