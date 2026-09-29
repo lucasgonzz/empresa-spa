@@ -47,6 +47,14 @@ import diseno_predeterminado from '@/components/vender/layout/diseno_predetermin
 */
 export const KEYS_DE_BUSCADORES = ['codigo_de_barras', 'buscador_de_articulos']
 
+/*
+	Tope de marcadores por etapa: hasta 10 separadores y 10 saltos de fila en cada una. El backend
+	corta cada etapa en 100 items (VenderLayoutHelper::normalizar_layout) y lo que sobra lo reubica el
+	resolver sin avisar; con el tope, ninguna etapa se acerca a ese limite por acumular marcadores, y
+	el usuario se entera en el momento (el `move` del editor rechaza el que sobra y lo avisa).
+*/
+export const TOPE_DE_MARCADORES_POR_ETAPA = 10
+
 /**
  * Identidad estable de un item dentro de un diseño: la key para un elemento (cada uno aparece una
  * sola vez) y "<key>:<id>" para un marcador ("separador:separador_1", "salto_de_fila:...": puede
@@ -325,6 +333,19 @@ export function falta_buscador(etapas, vm) {
 	})
 
 	return !ubicado
+}
+
+/**
+ * Cantidad de marcadores de un tipo (separadores o saltos de fila) en una lista de items.
+ *
+ * @param {Array} lista
+ * @param {string} key KEY_SEPARADOR o KEY_SALTO_DE_FILA
+ * @returns {number}
+ */
+export function contar_marcadores(lista, key) {
+	return (lista || []).filter(function (item) {
+		return item.key === key
+	}).length
 }
 
 /**

@@ -133,6 +133,7 @@ import EtapaDelEditor from './EtapaDelEditor'
 import BandejaDeSacados from './BandejaDeSacados'
 import {
 	ETAPAS,
+	KEY_SEPARADOR,
 	elemento,
 	es_marcador,
 	es_obligatorio,
@@ -145,6 +146,8 @@ import {
 	indice_por_defecto,
 	falta_buscador,
 	identidad,
+	contar_marcadores,
+	TOPE_DE_MARCADORES_POR_ETAPA,
 } from './estado_del_editor'
 import { crear_diseno, actualizar_diseno, mensaje_de_error } from '../api_de_disenos'
 import { avisar } from '../avisos'
@@ -221,6 +224,11 @@ export default {
 			timer_del_destacado: null,
 			/* true despues de intentar guardar sin nombre */
 			nombre_invalido: false,
+			/*
+				true si en el arrastre en curso ya se aviso que una etapa llego al tope de marcadores: el
+				`move` se llama en cada paso del arrastre, y sin esto el aviso saldria decenas de veces
+			*/
+			tope_avisado: false,
 		}
 	},
 	computed: {
@@ -323,7 +331,10 @@ export default {
 		 *
 		 * - Un obligatorio NO se puede soltar en la bandeja (se mueve y se le cambia el ancho, pero no
 		 *   se saca: decision de Lucas, 28/9/2026).
-		 * - La fuente del separador no se suelta en la bandeja (no tiene sentido y se descartaria).
+		 * - La fuente de los marcadores no se suelta en la bandeja (no tiene sentido y se descartaria).
+		 * - Un marcador que ENTRA a una etapa (nuevo desde la fuente, o traido de otra etapa) se
+		 *   rechaza si esa etapa ya tiene el tope de ese tipo (TOPE_DE_MARCADORES_POR_ETAPA), con un
+		 *   aviso. Reordenarlo dentro de su misma etapa siempre se puede.
 		 *
 		 * @param {Object} evento evento de vuedraggable (to, from, draggedContext, relatedContext)
 		 * @returns {boolean} false cancela el movimiento
@@ -332,21 +343,41 @@ export default {
 			let destino = evento && evento.to && evento.to.getAttribute ? evento.to.getAttribute('data-zona') : null
 			let origen = evento && evento.from && evento.from.getAttribute ? evento.from.getAttribute('data-zona') : null
 
-			if (destino !== 'bandeja') {
-				return true
+			let arrastrado = evento && evento.draggedContext ? evento.draggedContext.element : null
+
+			if (destino === 'bandeja') {
+				if (origen === 'fuente') {
+					return false
+				}
+				return !(arrastrado && es_obligatorio(arrastrado.key))
 			}
 
-			if (origen === 'fuente') {
-				return false
-			}
+			if (arrastrado && es_marcador(arrastrado.key) && evento.to !== evento.from) {
+				let etapa = evento.to && evento.to.getAttribute ? evento.to.getAttribute('data-etapa') : null
+				let lista = etapa ? this.etapas[etapa] : null
 
-			let arrastrado = evento.draggedContext ? evento.draggedContext.element : null
-
-			if (arrastrado && es_obligatorio(arrastrado.key)) {
-				return false
+				/* La lista de datos todavia no tiene al que se arrastra: se cuenta lo que ya estaba */
+				if (lista && contar_marcadores(lista, arrastrado.key) >= TOPE_DE_MARCADORES_POR_ETAPA) {
+					this.avisar_tope_de_marcadores(arrastrado.key)
+					return false
+				}
 			}
 
 			return true
+		},
+		/**
+		 * Avisa, una sola vez por arrastre, que la etapa ya tiene el tope de marcadores de ese tipo.
+		 *
+		 * @param {string} key KEY_SEPARADOR o KEY_SALTO_DE_FILA
+		 * @returns {void}
+		 */
+		avisar_tope_de_marcadores(key) {
+			if (this.tope_avisado) {
+				return
+			}
+			this.tope_avisado = true
+			let que = key === KEY_SEPARADOR ? 'separadores' : 'saltos de fila'
+			avisar(this, 'warning', 'Cada etapa admite hasta ' + TOPE_DE_MARCADORES_POR_ETAPA + ' ' + que + '. Quitá alguno de esa etapa para poner otro.')
 		},
 		/**
 		 * Empieza un arrastre: se anota que se arrastra y desde donde, para que la bandeja muestre si
@@ -371,6 +402,7 @@ export default {
 				obligatorio: !!(item && item.getAttribute('data-obligatorio') === 'si'),
 				desde: desde,
 			}
+			this.tope_avisado = false
 		},
 		/**
 		 * Termina un arrastre (se haya soltado o no en algun lado).
