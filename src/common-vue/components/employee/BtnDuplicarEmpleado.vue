@@ -24,8 +24,19 @@
 
 			<p class="btn-duplicar-empleado__explicacion">
 				Se crea un empleado nuevo con <strong>los mismos permisos y accesos</strong> que
-				<strong>{{ model.name }}</strong>: sucursal, perfil de vendedor, cajas, alertas y
-				todo lo que tiene tildado. Completá solo los datos de la persona nueva.
+				<strong>{{ model.name }}</strong>: sucursal, perfil de vendedor, cajas que puede usar,
+				alertas y todo lo que tiene tildado. Completá solo los datos de la persona nueva.
+				<span class="btn-duplicar-empleado__aclaracion">
+					No se copia su caja propia (si tiene una asignada, sigue siendo de {{ model.name }}).
+				</span>
+			</p>
+
+			<p
+			v-if="model.admin_access"
+			class="btn-duplicar-empleado__aviso"
+			role="status">
+				{{ model.name }} tiene acceso de ADMINISTRADOR: la copia también lo va a tener, con
+				acceso a todo el sistema.
 			</p>
 
 			<b-form-group
@@ -178,6 +189,18 @@ export default {
 .btn-duplicar-empleado__explicacion
 	font-size: 0.9rem
 	color: var(--color-text-secondary, #6e6e73)
+
+.btn-duplicar-empleado__aclaracion
+	display: block
+	margin-top: 4px
+	font-size: 0.85rem
+
+.btn-duplicar-empleado__aviso
+	padding: 8px 12px
+	border-radius: 8px
+	font-size: 0.9rem
+	background: var(--bg-warning-soft, #fff4d6)
+	color: var(--color-text-primary, #1d1d1f)
 
 .btn-duplicar-empleado__error
 	margin: 0

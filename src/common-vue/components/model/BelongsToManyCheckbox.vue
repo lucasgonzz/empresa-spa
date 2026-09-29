@@ -211,8 +211,12 @@ export default {
 		},
 		/**
 		 * Todas las palabras de la busqueda tienen que estar (en cualquier orden) en el nombre, el
-		 * grupo o el slug del permiso: "descuento vender" encuentra "Aplicar descuentos ... en Vender".
-		 * Primero van los que matchean en el nombre.
+		 * grupo, el slug o las palabras clave del permiso: "descuento vender" encuentra "Aplicar
+		 * descuentos ... en Vender" y "plata" encuentra las cajas aunque el nombre no la diga.
+		 *
+		 * Cada palabra tiene que EMPEZAR una palabra del texto (no alcanza con estar en el medio): asi
+		 * "arca" no trae "marcas" ni "cuenta" trae "descuenta stock". Primero van los que matchean
+		 * en el nombre.
 		 */
 		resultados() {
 			if (!this.buscando) {
@@ -222,13 +226,13 @@ export default {
 			let en_nombre = []
 			let en_otro_lado = []
 			this.todos.forEach(item => {
-				let nombre = this.normalizar(item.name)
-				let resto = nombre + ' ' + this.normalizar(this.grupo_de(item)) + ' ' + this.normalizar(item.slug)
-				let coincide_todo = palabras.every(palabra => resto.includes(palabra))
+				let nombre = ' ' + this.normalizar(item.name)
+				let resto = nombre + ' ' + this.normalizar(this.grupo_de(item)) + ' ' + this.normalizar(item.slug) + ' ' + this.normalizar(item.palabras_clave)
+				let coincide_todo = palabras.every(palabra => resto.includes(' ' + palabra))
 				if (!coincide_todo) {
 					return
 				}
-				if (palabras.every(palabra => nombre.includes(palabra))) {
+				if (palabras.every(palabra => nombre.includes(' ' + palabra))) {
 					en_nombre.push(item)
 				} else {
 					en_otro_lado.push(item)
