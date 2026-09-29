@@ -1028,7 +1028,7 @@ export default {
 		 *
 		 * @param {number} message_id
 		 */
-		confirmAiMessage({ commit, dispatch }, message_id) {
+		confirmAiMessage({ commit, dispatch, state }, message_id) {
 			// `skip_navigation_cancel`: mismo motivo que sendMessage/sendMedia/sendTemplate —
 			// confirmar es mandar, y MessageBubble.vue vive en el mismo panel global. Sin la
 			// bandera, cancelado por una navegación caía en la rama genérica de
@@ -1036,9 +1036,26 @@ export default {
 			// mensaje que sí se había mandado (misión widgets-globales-envio-navegacion, 18/9/2026).
 			return axios.put('/api/whatsapp-chats/messages/' + message_id + '/confirm', null, { skip_navigation_cancel: true })
 				.then(res => {
-					commit('patchMessage', res.data.model)
+					let model = res.data.model
+					commit('patchMessage', model)
+					/*
+						Espejo LOCAL de `WhatsappChat::estado_pendiente()` (empresa-api) para el chat
+						ABIERTO: sin esto, si el broadcast de este mismo cambio no llega —este slot
+						corre con BROADCAST_DRIVER=log, y en producción puede pasar con Echo caído—
+						la tarjeta "Esperando aprobación" del tablero se queda arriba aunque ya no
+						quede ninguna respuesta pendiente en la conversación que se está mirando.
+						`model` ya vuelve con `ai_status = 'enviado'` (ver el docblock de esta
+						acción, más abajo), así que el filtro de acá no lo cuenta a él.
+					*/
+					if (model && model.whatsapp_chat_id == state.selected_chat_id) {
+						let queda_otra_pendiente = state.messages.some(m => m.ai_status == 'a_confirmar')
+						commit('patchChatFromBroadcast', {
+							id: model.whatsapp_chat_id,
+							estado_pendiente: queda_otra_pendiente ? 'esperando_aprobacion' : null,
+						})
+					}
 					dispatch('getResumen')
-					return res.data.model
+					return model
 				})
 		},
 		/**
@@ -1047,7 +1064,12 @@ export default {
 		 *
 		 * @param {number} message_id
 		 */
-		discardAiMessage({ commit, dispatch }, message_id) {
+		discardAiMessage({ commit, dispatch, state }, message_id) {
+			// Se busca ANTES de mandar el DELETE (y no después): `removeMessage` lo saca de
+			// `state.messages`, y de ahí es de donde sale el `whatsapp_chat_id` que hace falta
+			// para el espejo local de más abajo — la respuesta del DELETE trae `{ message }`
+			// (un texto), no el mensaje borrado.
+			let mensaje_descartado = state.messages.find(m => m.id == message_id)
 			// `skip_navigation_cancel`: no es un envío, pero comparte componente y `.catch()`
 			// genérico con confirmAiMessage (MessageBubble.vue::discard() delega en la misma
 			// manejar_error_confirmacion()) — cancelado por una navegación, mostraba "No se pudo
@@ -1056,6 +1078,27 @@ export default {
 			return axios.delete('/api/whatsapp-chats/messages/' + message_id, { skip_navigation_cancel: true })
 				.then(res => {
 					commit('removeMessage', message_id)
+					/*
+						Mismo espejo LOCAL de `WhatsappChat::estado_pendiente()` que `confirmAiMessage`,
+						de vuelta para el caso en que el broadcast no llega. Acá con un matiz: sin
+						ninguna respuesta pendiente, el chat no vuelve automáticamente a `null` — si
+						el último mensaje real (ya sin el descartado) es un ENTRANTE sin contestar,
+						el estado correcto es `'sin_responder'`, igual que calcula el backend.
+					*/
+					if (mensaje_descartado && mensaje_descartado.whatsapp_chat_id == state.selected_chat_id) {
+						let queda_otra_pendiente = state.messages.some(m => m.ai_status == 'a_confirmar')
+						let estado_pendiente = null
+						if (queda_otra_pendiente) {
+							estado_pendiente = 'esperando_aprobacion'
+						} else {
+							let ultimo = state.messages[state.messages.length - 1]
+							estado_pendiente = (ultimo && ultimo.direction == 'in') ? 'sin_responder' : null
+						}
+						commit('patchChatFromBroadcast', {
+							id: mensaje_descartado.whatsapp_chat_id,
+							estado_pendiente: estado_pendiente,
+						})
+					}
 					dispatch('getResumen')
 					return res.data
 				})

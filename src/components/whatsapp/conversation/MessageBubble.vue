@@ -263,6 +263,15 @@ export default {
 			// broadcast, o la pausa del auto-envío al entrar en edición), esta copia no se
 			// entera y lo que el operador está tipeando no se pisa.
 			texto_editado: '',
+			/*
+				true mientras confirm()/discard()/enviar_edicion() tienen un pedido propio en
+				vuelo. El watch de `espera_confirmacion`, más abajo, lo consulta para no confundir
+				"el mensaje dejó de estar pendiente porque ESTA burbuja lo mandó/descartó" con
+				"dejó de estarlo por afuera" (otra pestaña, un auto-envío, el broadcast): son la
+				MISMA transición de estado vista desde acá, pero solo la segunda es una novedad
+				que amerita el toast de "se descartó tu edición".
+			*/
+			cambio_propio_en_curso: false,
 		}
 	},
 	computed: {
@@ -537,6 +546,16 @@ export default {
 			}
 			this.editando = false
 			this.texto_editado = ''
+			// Lo mandé/descarté yo desde esta misma burbuja: `cambio_propio_en_curso` todavía
+			// está en `true` en este punto porque recién se apaga en el `.then()`/`.catch()` de
+			// esa acción propia, que corre DESPUÉS de este watch (el `commit` que dispara este
+			// watch vive adentro del `.then()` de la action del store, un paso antes). Sale de
+			// edición igual —por eso las dos líneas de arriba no están adentro del if—, pero sin
+			// avisar con un toast que hablaría de un cambio "por afuera" que en realidad disparó
+			// este mismo click.
+			if (this.cambio_propio_en_curso) {
+				return
+			}
 			let ya_se_envio = this.message.ai_status == 'enviando' || this.message.ai_status == 'enviado'
 			this.$toast.warning(
 				ya_se_envio
@@ -577,12 +596,18 @@ export default {
 		confirm() {
 			let self = this
 			this.acting = true
+			// Ver el docblock de `cambio_propio_en_curso` en `data()`: sin esto, el watch de
+			// `espera_confirmacion` de más arriba no puede distinguir este cambio (lo pedí yo)
+			// de uno que llegó por afuera.
+			this.cambio_propio_en_curso = true
 			this.$store.dispatch('whatsapp_chat/confirmAiMessage', this.message.id)
 			.then(() => {
 				self.acting = false
+				self.cambio_propio_en_curso = false
 			})
 			.catch(err => {
 				self.acting = false
+				self.cambio_propio_en_curso = false
 				console.log(err)
 				self.manejar_error_confirmacion(err)
 			})
@@ -593,13 +618,18 @@ export default {
 		discard() {
 			let self = this
 			this.acting = true
+			// Mismo motivo que en confirm(), arriba: Descartar sigue visible mientras se edita
+			// (ver el template), así que este cambio también puede pisarle la carrera al watch.
+			this.cambio_propio_en_curso = true
 			this.$store.dispatch('whatsapp_chat/discardAiMessage', this.message.id)
 			.then(() => {
 				self.acting = false
+				self.cambio_propio_en_curso = false
 				self.$toast.success('Respuesta descartada')
 			})
 			.catch(err => {
 				self.acting = false
+				self.cambio_propio_en_curso = false
 				console.log(err)
 				self.manejar_error_confirmacion(err)
 			})
@@ -680,6 +710,11 @@ export default {
 			let self = this
 			let cambio = texto != this.message.body
 			this.acting = true
+			// Ver el docblock de `cambio_propio_en_curso` en `data()`: el `confirmAiMessage` de
+			// abajo dispara el mismo watch de `espera_confirmacion` que un cambio llegado por
+			// afuera, y sin esta bandera ese watch no tiene forma de saber que este mismo click
+			// es el que lo causó.
+			this.cambio_propio_en_curso = true
 			let promesa = cambio
 				? this.$store.dispatch('whatsapp_chat/updateAiMessage', { message_id: this.message.id, body: texto })
 				: Promise.resolve()
@@ -689,10 +724,12 @@ export default {
 			})
 			.then(function () {
 				self.acting = false
+				self.cambio_propio_en_curso = false
 				self.editando = false
 			})
 			.catch(function (err) {
 				self.acting = false
+				self.cambio_propio_en_curso = false
 				console.log(err)
 				self.manejar_error_confirmacion(err)
 			})
