@@ -1,5 +1,11 @@
 import vender_set_total from '@/mixins/vender_set_total'
 /*
+	Para decir en qué etapa están los paneles de Descuentos y Recargos en el diseño de Vender en uso
+	(ver texto_de_donde_desactivar_ajustes, abajo).
+*/
+import diseno_de_vender from '@/mixins/vender/diseno_de_vender'
+import { ETAPAS, TITULOS_DE_ETAPAS } from '@/components/vender/layout/elementos'
+/*
 	Descuentos y recargos del cliente en VENDER (misión descuentos-recargos-por-cliente, 23/9/2026).
 
 	Un cliente puede tener vinculados descuentos y recargos de venta desde su ficha
@@ -44,7 +50,7 @@ function recargo_usable(percentage) {
 }
 
 export default {
-	mixins: [vender_set_total],
+	mixins: [vender_set_total, diseno_de_vender],
 	watch: {
 		/*
 			Cuando los stores terminan de cargar se resuelven los pendientes del arranque en frío.
@@ -390,8 +396,9 @@ export default {
 		 * El aviso, en palabras de mostrador: qué se activó automáticamente por el cliente y dónde
 		 * se desactiva, y qué se desactivó del cliente anterior. Sin cambios, no avisa nada.
 		 *
-		 * El panel está en la etapa 3 de VENDER, "Cierre y opciones", que arranca PLEGADA
-		 * (stage-3/Index.vue, `stage3_open: false`): por eso el texto dice "desplegá".
+		 * "Dónde se desactiva" sale del diseño de Vender en uso (texto_de_donde_desactivar_ajustes):
+		 * con el predeterminado los paneles están en la etapa 3, "Cierre y opciones", y el texto es
+		 * el de siempre.
 		 *
 		 * @param {Object|null} client
 		 * @param {Object} descuentos Resultado de `recalcular_ajustes_del_cliente()`.
@@ -416,20 +423,17 @@ export default {
 					return {
 						que: 'los descuentos y recargos',
 						detalle: 'descuentos ' + listar(lista_descuentos) + '; recargos ' + listar(lista_recargos),
-						donde: 'en Descuentos y en Recargos',
 					}
 				}
 				if (lista_descuentos.length) {
 					return {
 						que: 'los descuentos',
 						detalle: listar(lista_descuentos),
-						donde: 'en Descuentos',
 					}
 				}
 				return {
 					que: 'los recargos',
 					detalle: listar(lista_recargos),
-					donde: 'en Recargos',
 				}
 			}
 
@@ -439,7 +443,7 @@ export default {
 				let activados = describir(descuentos.sumados, recargos.sumados)
 				lineas.push(
 					'Se activaron automáticamente ' + activados.que + ' del cliente ' + client.name + ': ' + activados.detalle + '.'
-					+ ' Si no querés aplicarlos, desplegá el paso 3 «Cierre y opciones» y desactivalos ' + activados.donde + '.'
+					+ this.texto_de_donde_desactivar_ajustes(descuentos.sumados.length > 0, recargos.sumados.length > 0)
 				)
 			}
 
@@ -457,6 +461,84 @@ export default {
 			this.$toast.info(lineas.join(' '), {
 				duration: 12000,
 			})
+		},
+
+		/**
+		 * La segunda mitad del aviso de "se activaron": dónde se desactivan, según el diseño de
+		 * Vender en uso (misión diseno-vender-configurable, 28/9/2026). Empieza con un espacio, o es
+		 * '' si no hay nada que decir.
+		 *
+		 * Hasta los diseños decía siempre "desplegá el paso 3 «Cierre y opciones»", porque ahí
+		 * estaban los paneles. Ahora cada panel (Descuentos, Recargos) puede estar en cualquier
+		 * etapa, o fuera del diseño:
+		 * - todos en una etapa plegable (1 o 3): "desplegá el paso N «Título» y desactivalos en ..."
+		 *   (con el predeterminado sale exactamente el texto de antes);
+		 * - todos en la etapa 2, que no se pliega: "desactivalos en ... (paso 2 «Título»)";
+		 * - en etapas distintas: cada panel con su paso entre paréntesis;
+		 * - si el diseño sacó alguno, se nombra solo lo que se puede desactivar; si los sacó todos,
+		 *   no se agrega nada: mandar al vendedor a buscar un panel que no existe es peor que no
+		 *   decirle dónde. El aviso de que se aplicaron sale igual.
+		 *
+		 * @param {boolean} hay_descuentos si se activaron descuentos
+		 * @param {boolean} hay_recargos si se activaron recargos
+		 * @returns {string}
+		 */
+		texto_de_donde_desactivar_ajustes(hay_descuentos, hay_recargos) {
+			let self = this
+			let paneles = []
+
+			if (hay_descuentos) {
+				paneles.push({ key: 'descuentos', nombre: 'Descuentos', que: 'los descuentos' })
+			}
+			if (hay_recargos) {
+				paneles.push({ key: 'recargos', nombre: 'Recargos', que: 'los recargos' })
+			}
+
+			/* Los paneles que el diseño en uso dibuja, con la etapa de cada uno */
+			let ubicados = []
+			paneles.forEach(function (panel) {
+				let etapa = self.etapa_donde_se_dibuja_elemento_de_vender(panel.key)
+				if (etapa) {
+					ubicados.push({ panel: panel, etapa: etapa })
+				}
+			})
+
+			if (!ubicados.length) {
+				return ''
+			}
+
+			let paso = function (etapa) {
+				return 'paso ' + (ETAPAS.indexOf(etapa) + 1) + ' «' + TITULOS_DE_ETAPAS[etapa] + '»'
+			}
+
+			/* "en Descuentos", "en Recargos" o "en Descuentos y en Recargos" */
+			let nombres = []
+			ubicados.forEach(function (ubicado) {
+				nombres.push('en ' + ubicado.panel.nombre)
+			})
+
+			let misma_etapa = ubicados.every(function (ubicado) {
+				return ubicado.etapa === ubicados[0].etapa
+			})
+
+			let donde = ''
+
+			if (misma_etapa && ubicados[0].etapa !== 'etapa_2') {
+				donde = 'desplegá el ' + paso(ubicados[0].etapa) + ' y desactivalos ' + nombres.join(' y ')
+			} else if (misma_etapa) {
+				donde = 'desactivalos ' + nombres.join(' y ') + ' (' + paso(ubicados[0].etapa) + ')'
+			} else {
+				let partes = []
+				ubicados.forEach(function (ubicado) {
+					partes.push('en ' + ubicado.panel.nombre + ' (' + paso(ubicado.etapa) + ')')
+				})
+				donde = 'desactivalos ' + partes.join(' y ')
+			}
+
+			/* Si el diseño sacó alguno de los dos, se habla solo del que queda */
+			let que = ubicados.length === paneles.length ? 'aplicarlos' : 'aplicar ' + ubicados[0].panel.que
+
+			return ' Si no querés ' + que + ', ' + donde + '.'
 		},
 	},
 }
