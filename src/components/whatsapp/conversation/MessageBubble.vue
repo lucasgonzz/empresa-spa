@@ -78,7 +78,7 @@
 		de más abajo, con una copia local (`texto_editado`) para que un broadcast que parchee el
 		mensaje mientras se escribe no pise lo que el operador está tipeando. -->
 		<p
-		v-if="muestra_texto && !editando"
+		v-if="muestra_texto && (!editando || !espera_confirmacion)"
 		class="whatsapp-bubble__text"
 		:class="{'whatsapp-bubble__text--editable': espera_confirmacion}"
 		:title="espera_confirmacion ? 'Clic para editar antes de enviar' : null"
@@ -518,6 +518,33 @@ export default {
 				}, 1000)
 			},
 		},
+		/**
+		 * 🔴 Si mientras se está editando el mensaje deja de estar `a_confirmar` por OTRA vía
+		 * —otra pestaña lo confirmó, salió por auto-envío, alguien lo descartó y el patch llegó
+		 * antes que el `removeMessage`—, hay que salir del modo edición ACÁ, y no esperar a que
+		 * lo haga el propio flujo de `enviar_edicion()`. El bloque `__pending` entero (textarea y
+		 * botones incluidos) vive detrás de `v-if="espera_confirmacion"`: sin este watch,
+		 * `editando` se quedaba en `true` con ese bloque ya desmontado, y el `<p>` del texto
+		 * normal (que antes solo se dibujaba con `!editando`) tampoco volvía a aparecer — la
+		 * burbuja quedaba en blanco, sin texto y sin ninguna acción para salir.
+		 *
+		 * El `v-if` del `<p>` de arriba tiene además su propia defensa (`!editando ||
+		 * !espera_confirmacion`), por si algún día este watch corriera después del render.
+		 */
+		espera_confirmacion(sigue_pendiente) {
+			if (sigue_pendiente || !this.editando) {
+				return
+			}
+			this.editando = false
+			this.texto_editado = ''
+			let ya_se_envio = this.message.ai_status == 'enviando' || this.message.ai_status == 'enviado'
+			this.$toast.warning(
+				ya_se_envio
+					? 'Este mensaje ya se envió: se descartó tu edición.'
+					: 'Este mensaje ya no está pendiente: se descartó tu edición.',
+				{ duration: 6000 }
+			)
+		},
 	},
 	beforeDestroy() {
 		this.detener_reloj()
@@ -701,7 +728,25 @@ export default {
 				return
 			}
 			if (status == 422 && (code == 'ya_en_envio' || code == 'ya_no_esta_pendiente')) {
+				// Sale de edición ACÁ (y no solo vía el watch de `espera_confirmacion`): así, si
+				// `recargar_mensajes()` termina cambiando el estado del mensaje, ese watch se
+				// encuentra `editando` ya en `false` y no dispara un segundo toast por lo mismo.
+				this.editando = false
+				this.texto_editado = ''
 				this.$toast.warning(data.message || 'El mensaje ya no está esperando confirmación.', { duration: 6000 })
+				this.recargar_mensajes()
+				return
+			}
+			// 🔴 404: el mensaje ya no existe. Pasa cuando se está editando y, mientras tanto, el
+			// cliente vuelve a escribir: `discard_pending_ai_messages()` la BORRA de la base (no
+			// la patchea), y el broadcast de ese borrado viaja sin mensaje adjunto (no hay nada
+			// que patchear), así que esta instancia no se entera hasta que actúa sobre un id que
+			// ya no está. Sin este caso caía al genérico de abajo y la burbuja fantasma —sin
+			// texto, en edición sobre nada— se quedaba en pantalla hasta recargar a mano.
+			if (status == 404) {
+				this.editando = false
+				this.texto_editado = ''
+				this.$toast.warning('Ese mensaje ya no existe: el cliente volvió a escribir.', { duration: 6000 })
 				this.recargar_mensajes()
 				return
 			}

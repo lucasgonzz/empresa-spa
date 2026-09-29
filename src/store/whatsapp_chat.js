@@ -374,6 +374,12 @@ export default {
 		 * venga.
 		 */
 		replacePendingAiMessage(state, message) {
+			// Guarda defensiva: `suggest()` ya no llama a esto si la respuesta no trae `model`
+			// (API vieja, ver su docblock en `actions`), pero la mutation queda a salvo igual de
+			// un `message` nulo en vez de reventar en `message.id`.
+			if (!message || !message.id) {
+				return
+			}
 			state.messages = state.messages.filter(m => m.ai_status != 'a_confirmar' || m.id == message.id)
 			let index = state.messages.findIndex(m => m.id == message.id)
 			if (index != -1) {
@@ -871,10 +877,29 @@ export default {
 			return axios.post('/api/whatsapp-chats/' + chat_id + '/suggest', {}, { skip_global_error_event: true })
 				.then(res => {
 					let model = res.data.model
+					/*
+						🔴 Compat con una API vieja que todavía contesta el contrato de ANTES de esta
+						misión (solo `{ suggestion }`, sin `model` ni `chat`). Sin esta guarda,
+						`replacePendingAiMessage` recibía `model` en `undefined` y reventaba en
+						`message.id` antes de que ningún `.catch()` lo pudiera atajar (no es un error
+						de red: la promesa se resuelve bien, el problema es lo que se hace DESPUÉS).
+						En ese caso se cae al comportamiento viejo tal cual era: la sugerencia queda
+						como borrador del composer, por el mismo mecanismo que ya usa el botón de una
+						oferta (`setBorrador` + `Composer.vue::tomar_borrador()`). `Header.vue` decide
+						el toast mirando si esto resuelve con `model` o no.
+					*/
+					if (!model) {
+						if (chat_id == state.selected_chat_id) {
+							commit('setBorrador', { chat_id: chat_id, texto: res.data.suggestion || '' })
+						}
+						return null
+					}
 					if (chat_id == state.selected_chat_id) {
 						commit('replacePendingAiMessage', model)
 					}
-					commit('patchChatFromBroadcast', res.data.chat)
+					if (res.data.chat) {
+						commit('patchChatFromBroadcast', res.data.chat)
+					}
 					dispatch('getResumen')
 					return model
 				})

@@ -361,12 +361,18 @@ export default {
 			let chat_pedido = this.chat.id
 			this.suggesting = true
 			this.$store.dispatch('whatsapp_chat/suggest', chat_pedido)
-			.then(function () {
+			.then(function (model) {
 				self.suggesting = false
 				if (chat_pedido != self.chat_id) {
 					return
 				}
-				self.$toast.success('Sugerencia lista para revisar', { duration: 3000 })
+				// `model` viene null contra una API vieja que todavía no persiste la sugerencia
+				// (ver el docblock de `suggest()` en el store): en ese caso el texto quedó en el
+				// borrador del composer, como pasaba antes de esta misión, y este toast —que
+				// habla de una burbuja que ahí no existe— no corresponde.
+				if (model) {
+					self.$toast.success('Sugerencia lista para revisar', { duration: 3000 })
+				}
 			})
 			.catch(function (err) {
 				self.suggesting = false
