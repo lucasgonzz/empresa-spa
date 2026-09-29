@@ -39,12 +39,6 @@
 				Etiquetas gondolas (formato especial)
 			</dropdown-option-item>
 
-			<dropdown-option-item
-			v-if="puede_disenar"
-			icon="icon-edit"
-			@click="ir_a_disenar">
-				Diseñar etiquetas
-			</dropdown-option-item>
 		</template>
 
 		<!--
@@ -67,6 +61,14 @@
 				{{ price_type.name }}
 			</dropdown-option-item>
 		</template>
+
+		<!-- Con o sin diseños: el acceso al ABM para armarlos (si puede entrar al ABM) -->
+		<dropdown-option-item
+		v-if="puede_disenar"
+		icon="icon-edit"
+		@click="ir_a_disenar">
+			Diseñar etiquetas
+		</dropdown-option-item>
 	</div>
 </template>
 <script>
