@@ -147,6 +147,11 @@ export default {
 				doc_number: this.doc_number,
 				visible_password: this.visible_password,
 				phone: this.phone,
+			}, {
+				// El error se muestra en el propio modal: sin esto el aviso global lo repite arriba y en
+				// el telefono tapa los botones.
+				skip_global_validation_toast: true,
+				skip_global_error_event: true,
 			})
 			.then(res => {
 				self.guardando = false
