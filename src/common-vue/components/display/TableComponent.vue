@@ -33,6 +33,7 @@
 						<div
 						:key="prop.key + '-' + prop_index"
 						:class="get_cell_classes(prop, prop_index)"
+						:title="cell_inner_title(prop, models[data.index])"
 						class="cont-tr table-component-cell-inner">
 							<table-thumbnail-images
 							v-if="isImageProp(prop) && hasTableImages(models[data.index], prop)"
@@ -752,11 +753,49 @@ export default {
 				maxWidth: width_px + 'px',
 			}
 		},
+		/**
+		 * Si la columna tiene un ancho PROPIO del modal de busqueda que hay que respetar de verdad:
+		 * estamos en el modal, la prop declara `search_modal_width` (opt-in) y hay un ancho efectivo
+		 * (`table_width`, que Modal.vue ya resolvio contra la preferencia del usuario).
+		 *
+		 * Sin `search_modal_width` esto es siempre false y ninguna otra tabla ni buscador cambia.
+		 *
+		 * @param {Object} prop definicion de la columna.
+		 * @returns {boolean}
+		 */
+		tiene_ancho_de_modal(prop) {
+			return !!this.is_from_search_modal
+				&& !!prop
+				&& Number(prop.search_modal_width) > 0
+				&& Number(prop.table_width) > 0
+		},
+		/**
+		 * `title` de la celda de una columna con ancho de modal: el texto se corta con puntos
+		 * suspensivos dentro de ese ancho, asi que el valor completo queda legible con el mouse.
+		 * null (sin atributo) para cualquier otra columna.
+		 *
+		 * @param {Object} prop definicion de la columna.
+		 * @param {Object} model fila de la tabla.
+		 * @returns {string|null}
+		 */
+		cell_inner_title(prop, model) {
+			if (!this.tiene_ancho_de_modal(prop) || !model || this.isImageProp(prop) || prop.button) {
+				return null
+			}
+			const texto = this.propertyText(model, prop)
+			if (texto === null || typeof texto == 'undefined' || texto === '') {
+				return null
+			}
+			return String(texto)
+		},
 		get_cell_classes(prop, index) {
 			const classes = []
 			const props_visible = this.visible_properties_for_table
 			if (index == props_visible.length - 1) {
 				classes.push('cont-tr-full-width')
+			}
+			if (this.tiene_ancho_de_modal(prop)) {
+				classes.push('cell-ancho-de-modal')
 			}
 			if (prop.table_wrap_content) {
 				classes.push('cell-wrap')
@@ -951,6 +990,23 @@ export default {
 			text-overflow: ellipsis
 		&.cont-tr-full-width
 			white-space: nowrap
+		// Columna con ancho propio del modal de busqueda (`search_modal_width`, opt-in).
+		//
+		// El ancho del <th>/<td> (width/min/max) NO alcanza: la tabla es de layout automatico y en
+		// ese layout el ancho de la columna lo fija el contenido, que es nowrap -> un nombre de 33
+		// caracteres estiraba la columna a 286 px en vez de 130 y empujaba el Stock fuera de
+		// pantalla en un telefono (medido el 30/9/2026). `width: 0` + `min-width: 100%` es la tecnica
+		// clasica para que el contenido NO cuente en el ancho intrinseco de la celda pero igual se
+		// estire hasta el ancho que le da la columna. Y como adentro hay un flex, el ellipsis tiene
+		// que vivir en el hijo directo (el <span> del texto), no en este contenedor.
+		&.cell-ancho-de-modal
+			width: 0
+			min-width: 100%
+			> *
+				min-width: 0
+				overflow: hidden
+				text-overflow: ellipsis
+				white-space: nowrap
 	img
 		width: 100px
 		&.article-thumbnail
