@@ -414,6 +414,24 @@
 								</slot>
 
 								<!--
+									Punto de extension generico, ADITIVO (mision cuenta-corriente-proveedor-en-compras,
+									30/9/2026): deja que la vista que monta el formulario agregue algo DEBAJO de un campo
+									sin reemplazarlo. El scope trae `prop` y `model`, y el consumidor decide a cual campo
+									responde mirando `prop.key`.
+
+									🔴 Por que no alcanza con el slot de arriba (`<slot :name="prop.key">`): ese REEMPLAZA el
+									campo entero, y en un campo de busqueda el reemplazo se lleva tambien el `@set-selected`
+									que dispara la precarga de otros campos (descuentos del proveedor, precios_incluyen_iva).
+
+									Va AFUERA del slot de arriba a proposito, igual que la nota permanente de abajo. Sin
+									consumidor no renderiza nada: ninguna pantalla existente cambia de aspecto.
+								-->
+								<slot
+								name="prop_extras"
+								:prop="prop"
+								:model="model"></slot>
+
+								<!--
 									Nota PERMANENTE debajo del campo (no popover, no tooltip). A diferencia de
 									"description"/"descriptions" -que solo se ven al pasar el mouse por el label- esta
 									queda siempre a la vista; y a diferencia del aviso de arriba (getWarningText) no
