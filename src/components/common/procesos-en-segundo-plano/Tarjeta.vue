@@ -41,6 +41,24 @@
 			informe es CUANTOS hay, asi que la cantidad queda a la vista en un globito, como el
 			badge de alertas del menu. Con el texto visible sobra.
 		-->
+		<!--
+			La x cierra la pildora y deja de ocupar la esquina. Solo se ve con la pildora expandida
+			(al achicarse, el mouse encima la vuelve a expandir). No cancela nada: los procesos siguen
+			y se ven en Configuracion > Procesos del menu.
+		-->
+		<button
+		v-if="!esta_compacta"
+		type="button"
+		class="procesos-tarjeta__cerrar"
+		data-testid="procesos-tarjeta-cerrar"
+		title="Cerrar"
+		aria-label="Cerrar"
+		@click.stop="cerrar"
+		@keydown.enter.stop
+		@keydown.space.stop>
+			<i class="bi bi-x-lg"></i>
+		</button>
+
 		<span
 		v-if="mostrar_contador"
 		class="procesos-tarjeta__contador"
@@ -103,6 +121,14 @@ export default {
 			 * hasta debajo de el. 0 = el cartel no esta, mandan las clases de CSS.
 			 */
 			offset_offline: 0,
+			/**
+			 * true cuando el usuario cerro la pildora con la x. Mientras este prendido, los avances
+			 * de los procesos que ya corrian no la vuelven a mostrar; se apaga cuando aparece un
+			 * proceso nuevo o un error nuevo.
+			 */
+			descartada: false,
+			/** Cuantos errores sin cerrar habia cuando el usuario la descarto. */
+			fallos_al_descartar: 0,
 		}
 	},
 	computed: {
@@ -140,6 +166,10 @@ export default {
 		/** Terminados con error que el usuario todavia no cerro. */
 		fallos_recientes() {
 			return this.$store.getters['background_processes/recientes'].filter(proceso => proceso.status === 'fallo').length
+		},
+		/** true con la pildora achicada al anillo (sin texto ni x). */
+		esta_compacta() {
+			return this.compacta && !this.hover && !this.final
 		},
 		/** El globito con la cantidad: solo compacta (sin texto) y con algo que contar. */
 		mostrar_contador() {
@@ -208,14 +238,21 @@ export default {
 		activos(nuevos, viejos) {
 			let cantidad_vieja = Array.isArray(viejos) ? viejos.length : 0
 
+			if (this.descartada && nuevos.length > cantidad_vieja) {
+				this.descartada = false
+			}
+
 			if (nuevos.length > 0) {
+				if (this.descartada) {
+					return
+				}
 				if (!this.visible || this.final || nuevos.length > cantidad_vieja) {
 					this.mostrar_activa()
 				}
 				return
 			}
 
-			if (cantidad_vieja > 0) {
+			if (cantidad_vieja > 0 && !this.descartada) {
 				this.mostrar_final(this.estado_final_de(viejos))
 			}
 		},
@@ -234,7 +271,13 @@ export default {
 		fallos_recientes: {
 			immediate: true,
 			handler(cantidad) {
-				if (this.cantidad_activos > 0) {
+				if (cantidad > this.fallos_al_descartar) {
+					this.descartada = false
+				}
+				if (cantidad === 0) {
+					this.fallos_al_descartar = 0
+				}
+				if (this.cantidad_activos > 0 || this.descartada) {
 					return
 				}
 				if (cantidad > 0) {
@@ -366,6 +409,18 @@ export default {
 				this.$store.dispatch('background_processes/getModels')
 			}, periodo)
 		},
+		/**
+		 * Cierra la pildora (la x). No toca los procesos: solo la saca de la esquina hasta que
+		 * aparezca un proceso o un error nuevo.
+		 */
+		cerrar() {
+			this.limpiar_timers()
+			this.descartada = true
+			this.fallos_al_descartar = this.fallos_recientes
+			this.visible = false
+			this.final = null
+			this.hover = false
+		},
 		abrir_modal() {
 			this.$bvModal.show('procesos-en-segundo-plano')
 		},
@@ -423,6 +478,29 @@ export default {
 	max-width: 220px
 	opacity: 1
 	transition: max-width .42s cubic-bezier(.22, .61, .36, 1), opacity .18s ease
+
+.procesos-tarjeta__cerrar
+	flex: 0 0 26px
+	width: 26px
+	height: 26px
+	padding: 0
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	font-size: 11px
+	border: 0
+	border-radius: 50%
+	background: transparent
+	color: var(--color-text-secondary, #6e6e73)
+	cursor: pointer
+	transition: background .15s ease, color .15s ease
+
+	&:hover
+		background: rgba(0, 0, 0, .08)
+		color: var(--color-text-primary, #1d1d1f)
+
+	&:focus-visible
+		outline: 2px solid var(--color-primary, #007bff)
 
 .procesos-tarjeta__error
 	flex: 0 0 34px
@@ -499,6 +577,9 @@ export default {
 		top: 74px
 
 html.dark-mode
+	.procesos-tarjeta__cerrar:hover
+		background: rgba(255, 255, 255, .12)
+
 	.procesos-tarjeta
 		// El --bg-card del tema (#2e333a) al mismo 82 %: no se puede escribir rgba(var(--bg-card), .82)
 		// porque el token guarda un color entero, no sus tres componentes.
