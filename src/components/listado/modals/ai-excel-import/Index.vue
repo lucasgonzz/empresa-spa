@@ -24,7 +24,7 @@
 		<div v-if="step === 1">
 
 			<p class="text-muted m-b-15">
-				Subí tu planilla Excel y Claude IA detectará automáticamente qué columna corresponde a cada propiedad del sistema.
+				Subí tu planilla Excel y la IA detectará automáticamente qué columna corresponde a cada propiedad del sistema.
 			</p>
 
 			<b-form-group label="Archivo Excel (.xlsx, .xls)">
@@ -1073,7 +1073,7 @@
 			<div v-if="recomendacion_configuracion" class="ai-import-recomendacion-card m-b-20">
 
 				<p class="font-weight-bold m-b-8">
-					<i class="icon-cpu m-r-5"></i>Recomendación de Claude IA
+					<i class="icon-cpu m-r-5"></i>Recomendación de la IA
 				</p>
 
 				<!-- Texto explicativo de la recomendación -->
@@ -1930,7 +1930,7 @@ export default {
 			 * no tiene fila de encabezado.
 			 */
 			if (this.has_header_row === false) {
-				partes.push('sin cabecera de columnas: Claude va a inferir el mapeo solo con los datos')
+				partes.push('sin cabecera de columnas: la IA va a inferir el mapeo solo con los datos')
 			}
 
 			return partes.join(' — ')

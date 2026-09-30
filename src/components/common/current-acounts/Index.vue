@@ -9,7 +9,6 @@
     id="delete-current-acount"
     toast="Cuenta corriente eliminada"></confirm>
     
-    <confirm-afip-tickets></confirm-afip-tickets>
     <send-afip-tickets></send-afip-tickets>
     
     <update-prices></update-prices>
@@ -56,6 +55,7 @@
         `views/Reportes.vue` y esta. Si aparece una cuarta, va la misma linea.
     -->
     <model-index
+    v-if="!sin_modal_de_compra"
     model_name="provider_order">
         <template #has-many-prop-provider_order_afip_ticket_ivas>
             <alicuotas-iva></alicuotas-iva>
@@ -117,6 +117,14 @@ export default {
     name: 'CurrentAcountIndex',
     mixins: [current_acounts],
     props: {
+        // Mision cuenta-corriente-proveedor-en-compras (30/9/2026). Default false: las ~25 pantallas
+        // que montan este componente no lo pasan y no cambian. Lo apaga la pantalla de Compras, que
+        // ya tiene su propio modal `provider_order` (con sus slots de fecha, total y alicuotas): con
+        // dos `<b-modal>` con el mismo id, cada clic en una compra abriria los dos a la vez.
+        sin_modal_de_compra: {
+            type: Boolean,
+            default: false,
+        },
         // Id del `b-modal`. Default 'current-acounts', el de siempre en las ~25 pantallas que
         // montan este componente. Un caller que pueda convivir con OTRA instancia ya montada
         // en la misma página (el header del sidebar de WhatsApp, que puede estar abierto
@@ -158,7 +166,6 @@ export default {
         BudgetModalButtons: () => import('@/components/budget/components/ModalButtons'),
         OrderProductionModalButtons: () => import('@/components/produccion/components/order-productions/ModalButtons'),
         SaleModal: () => import('@/components/common/SaleModal'),
-        ConfirmAfipTickets: () => import('@/components/ventas/modals/afip-ticket/ConfirmAfipTickets'),
         SendAfipTickets: () => import('@/components/ventas/modals/afip-ticket/SendAfipTickets'),
         UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
         UnidadesEntregadas: () => import('@/components/ventas/modals/unidades-entregadas/Index'),

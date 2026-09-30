@@ -304,7 +304,7 @@ export default {
 				if (
 					model.client_id
 					&& !model.omitir_en_cuenta_corriente
-					&& model.moneda_id == 1
+					&& this.es_en_pesos(model)
 				) {
 					total += Number(this.totalSale(model, false))
 				}
@@ -333,7 +333,7 @@ export default {
 			}
 			let total = 0
 			this.sales_to_show.forEach(model => {
-				if (model.moneda_id == 1) {
+				if (this.es_en_pesos(model)) {
 					total += Number(this.totalSale(model, false))
 				}
 			})
@@ -346,7 +346,7 @@ export default {
 			/* Acumulador de costos para ventas en pesos. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
-				if (model.moneda_id == 1) {
+				if (this.es_en_pesos(model)) {
 					total += Number(model.total_cost)
 				}
 			})
@@ -359,7 +359,7 @@ export default {
 			/* Acumulador de ganancia persistida para ventas en pesos. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
-				if (model.moneda_id == 1) {
+				if (this.es_en_pesos(model)) {
 					/* Se usa el campo persistido por backend y no un calculo local. */
 					total += Number(model.ganancia)
 				}
@@ -484,6 +484,21 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * ¿La venta cuenta en los totales en PESOS? Todo lo que no es dolares.
+		 *
+		 * Decision de Lucas (30/9/2026): una venta con `moneda_id` NULL o 0 se trata SIEMPRE como pesos.
+		 * Antes los acumuladores comparaban `moneda_id == 1` y una venta sin moneda no sumaba en ninguno
+		 * de los dos paneles. Es el espejo de `Sale::EXPRESION_EN_PESOS` de la API, que es quien arma los
+		 * mismos totales cuando vienen del servidor (`totales_del_dia`): los dos tienen que decir lo
+		 * mismo. Los acumuladores de dolares siguen comparando `== 2`.
+		 *
+		 * @param {Object} model La venta.
+		 * @returns {boolean}
+		 */
+		es_en_pesos(model) {
+			return Number(model.moneda_id) !== 2
+		},
 		export_excel() {
 			this.download_sales_excel('sales/excel/export', 'ventas')
 		},

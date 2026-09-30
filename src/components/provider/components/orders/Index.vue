@@ -3,6 +3,26 @@
 		<!-- <edit-article></edit-article> -->
 		<import></import>
 
+		<!--
+			Mision cuenta-corriente-proveedor-en-compras (30/9/2026): el modal de la cuenta corriente que
+			abren el boton de la columna Proveedor (ProviderBtn) y el del formulario
+			(BtnVerCuentaCorriente).
+
+			🔴 `v-if="view == 'compras'"`: Proveedores y Compras son pestañas de la misma vista
+			(views/Provider.vue) y Proveedores ya monta el suyo. Con los dos montados habria dos
+			`b-modal` con el id `current-acounts` y `$bvModal.show()` abriria los dos juntos.
+
+			🔴 `sin_modal_de_compra`: este modal trae adentro su propia copia del modal de la compra
+			(`provider_order`, para abrirla desde un movimiento). Esta pantalla ya tiene el suyo --el del
+			`view-component` de abajo, con sus slots de fecha, total y alicuotas--, y con dos modales con
+			el mismo id cada clic en una fila abriria los dos a la vez. Con el prop apagado, un
+			movimiento de la cuenta corriente abre la compra en el modal de esta pantalla, que es el mismo
+			formulario (mismo store).
+		-->
+		<current-acounts
+		v-if="view == 'compras'"
+		sin_modal_de_compra></current-acounts>
+
 		<!-- Escaneo de facturas de compra con IA (mision escaneo-factura-compra):
 		el modal de subida y el de revision viven aca, al lado del de importacion,
 		porque los dos trabajan sobre la compra que dejo seleccionada la fila. -->
@@ -37,6 +57,29 @@
 			<btn-scan-invoice :model="props.model" />
 			<btn-view-received-diff :model="props.model" />
 		</template>
+
+			<!--
+				Mision cuenta-corriente-proveedor-en-compras (30/9/2026): la columna Proveedor es el
+				boton que abre la cuenta corriente de ese proveedor. La tabla generica reenvia cada
+				`#table-prop-<key>` hasta la celda de esa columna.
+			-->
+			<template #table-prop-provider_id="slotProps">
+				<provider-btn :provider_order="slotProps.model"></provider-btn>
+			</template>
+
+			<!--
+				Mision cuenta-corriente-proveedor-en-compras (30/9/2026): "Ver cuenta corriente" debajo del
+				campo Proveedor del formulario. `prop_extras` es un punto de extension ADITIVO de ModelForm
+				(se dibuja debajo de cada campo con `prop` y `model` en el scope): se filtra por la key.
+
+				🔴 No se usa `#provider_id`: ese slot REEMPLAZA el campo entero y se llevaria la precarga de
+				descuentos y de `precios_incluyen_iva` que dispara al elegir el proveedor.
+			-->
+			<template #prop_extras="extras">
+				<btn-ver-cuenta-corriente
+				v-if="extras.prop.key == 'provider_id'"
+				:model="extras.model"></btn-ver-cuenta-corriente>
+			</template>
 
 			<template #total="props">
 				<total></total>	
@@ -114,6 +157,10 @@ export default {
 	mixins: [models_to_show],
 	components: {
 		Import: () => import('@/components/provider/modals/orders/Import'),
+		// Mision cuenta-corriente-proveedor-en-compras (30/9/2026)
+		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
+		ProviderBtn: () => import('@/components/provider/components/orders/ProviderBtn'),
+		BtnVerCuentaCorriente: () => import('@/components/provider/components/orders/BtnVerCuentaCorriente'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnExport: () => import('@/components/provider/components/orders/BtnExport'),
 		BtnImport: () => import('@/components/provider/components/orders/BtnImport'),

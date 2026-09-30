@@ -35,6 +35,9 @@ export default {
 			only_show: true,
 			is_price: true,
 			if_is_admin: true,
+			// La ganancia de una venta en dolares esta en dolares: "USD 11,85" y no "$11,85" al lado de un
+			// Total que dice "USD 28,92" (Lucas, 30/9/2026). Ver el comentario de _check_moneda().
+			check_simbolo_moneda: true,
 		},
 		{
 			text: 'Moneda',

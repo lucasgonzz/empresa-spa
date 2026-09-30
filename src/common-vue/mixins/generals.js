@@ -1268,10 +1268,27 @@ export default {
 				} 
 
 				if (model[prop_to_check] == value_equal_to) {
-					// Le quito el simbolo $
-					value = value.substring(1)
 
-					value = 'USD '+value
+					/*
+						Cambia el "$" del importe por "USD " SIN tocar el signo ni lo que no es un importe.
+
+						🔴 Antes era `value.substring(1)` (saca el primer caracter, que se daba por "$") y
+						eso rompia dos casos que en la ganancia se ven seguido (Lucas, 30/9/2026):
+						  - un importe NEGATIVO: price() devuelve "-$5,50", el substring se llevaba el
+						    "-" y quedaba "USD $5,50", una perdida que se leia como ganancia;
+						  - un importe nulo o cero: price() devuelve "-" y quedaba "USD " a secas.
+						Ahora solo se reemplaza cuando el texto realmente empieza con un "$" (con signo
+						menos adelante, opcional) y el signo se conserva: "-$5,50" -> "USD -5,50".
+						Cualquier otra cosa ("-", "", un numero, null) vuelve igual que entro.
+					*/
+					if (typeof value === 'string') {
+
+						let importe = value.match(/^(-?)\$\s?(.*)$/)
+
+						if (importe) {
+							value = 'USD ' + importe[1] + importe[2]
+						}
+					}
 				}
 			}
 			return value 
