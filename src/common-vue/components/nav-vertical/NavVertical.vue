@@ -119,7 +119,7 @@
 
 	<download-resources></download-resources>
 
-	<user-config></user-config>
+	<user-config v-if="is_admin"></user-config>
 
     <update-password></update-password>
 </div>
