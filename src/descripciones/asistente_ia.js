@@ -37,7 +37,7 @@
  * negocio con listas el margen va POR LISTA (el margen suelto de la ficha no mueve ningun precio de
  * lista y la pantalla lo esconde), y la tarjeta dice con que margen queda cada lista. La edicion de
  * un articulo tambien cambia el margen de una lista, y en un negocio sin depositos el asistente le
- * carga stock al total de un articulo que ya existe, por el mismo camino que "Asignar Stock".
+ * carga stock al total de un articulo que ya existe, como un ingreso manual (en unidades sueltas: a diferencia de "Asignar Stock", no multiplica por el bulto).
  *
  * Cada afirmacion sale del contrato de la seccion 2 y de las reglas por tipo de la seccion 3.4
  * del plan de la mision (el API registra por el mismo camino que la pantalla); no inventar aca.
@@ -56,7 +56,7 @@ export default {
 			'Un alta, una edición o una baja de lo que se carga desde una pantalla (un proveedor, un cliente, un rubro, un artículo...) se registra por el mismo camino que esa pantalla: la tarjeta muestra los datos exactos y, en una edición, cada campo con el valor anterior y el nuevo. Una baja avisa qué se borra, y si el registro cambió después de armarse la tarjeta, no se toca.',
 			'Una venta se registra por el mismo camino que Vender: queda en Ventas, descuenta stock cuando corresponde y, si es al contado, entra en la caja del método de pago elegido; si es a cuenta corriente, suma a la cuenta del cliente.',
 			'Mandale la foto de un producto con el código de barras a la vista y lo busca en internet para darlo de alta con nombre, descripción y foto: la tarjeta del alta muestra la foto encontrada y la descripción, y al confirmar el artículo queda con las dos, igual que si se hubieran cargado desde su ficha. Si ese código ya está cargado en el sistema, te muestra el artículo que lo tiene en vez de buscarlo. Las búsquedas en internet tienen un tope por día.',
-			'En el alta de un artículo, si el negocio trabaja con listas de precios, el margen va por lista: la tarjeta muestra el margen de cada lista que nombraste y avisa con qué margen quedan las demás; al confirmar, cada lista queda con su precio calculado igual que desde la ficha. El alta también puede llevar el stock inicial: entra como un ingreso manual, en el depósito que se nombre o en el total si el negocio no tiene depósitos, igual que con "Asignar Stock" del Listado.',
+			'En el alta de un artículo, si el negocio trabaja con listas de precios, el margen va por lista: la tarjeta muestra el margen de cada lista que nombraste y avisa con qué margen quedan las demás; al confirmar, cada lista queda con su precio calculado igual que desde la ficha. El alta también puede llevar el stock inicial: entra como un ingreso manual, en el depósito que se nombre o en el total si el negocio no tiene depósitos. La cantidad es en unidades sueltas: si el artículo se vende por bulto, no se multiplica por las unidades del bulto como en "Asignar Stock" del Listado, y la tarjeta lo aclara.',
 			'Una foto de artículo se suma a las imágenes de ese artículo, igual que si se hubiera cargado desde su ficha: se ve en el listado, se publica en la tienda online (Tienda Nube y Mercado Libre) y, si el negocio le sirve el catálogo a otro comercio, también le llega a él. Para sacarla, se saca desde la ficha del artículo.',
 			'Si algo cambió desde que se armó la tarjeta (una caja sin apertura, un permiso, una tarea editada o ya hecha), no se registra nada y la tarjeta muestra el motivo.',
 			'Un segundo clic no duplica la carga.',
