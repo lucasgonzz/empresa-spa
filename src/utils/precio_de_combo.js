@@ -7,9 +7,9 @@
  *
  * DE DONDE SALEN LOS DATOS
  * El servidor arma cada combo con dos cosas (empresa-api, ComboCalculadoHelper):
- *   - `price`: el precio de la lista POR DEFECTO de la cuenta (o el precio unico si la cuenta no
- *     usa listas). Es lo que ya leian las pantallas viejas y las tiendas viejas, por eso sigue
- *     existiendo.
+ *   - `price`: el precio de la lista por defecto PARA EL PUBLICO (la de mayor position entre las no
+ *     ocultas; o el precio unico si la cuenta no usa listas). Es lo que ya leian las pantallas
+ *     viejas y las tiendas viejas, por eso sigue existiendo.
  *   - `price_types`: una fila por lista, en el mismo formato belongsToMany que
  *     `article.price_types` -> `{id, name, position, pivot: {price_type_id, price}}`. OJO que el
  *     pivote lleva `price` y NO `final_price` como el del articulo. Solo se llena para los combos
@@ -148,11 +148,14 @@ export function precio_de_lista_del_combo(combo, price_type_id) {
  * A que precio se vende el combo con la lista pedida.
  *
  * - Con `price_type_id` y fila para esa lista: el precio de esa fila.
- * - Sin `price_type_id` (la venta no tiene lista): el de la lista POR DEFECTO entre las filas del
- *   combo (mayor position, desempate por id mayor). El servidor deja ese mismo valor en
- *   `combo.price`, asi que coinciden; se mira la fila para no depender de que `price` este al dia
- *   si el combo se edito a medias.
- * - Sin fila (o sin `price_types`): `combo.price`.
+ * - Sin `price_type_id` (la venta no tiene lista): el de la lista de mayor position ENTRE TODAS
+ *   las filas del combo (desempate por id mayor), sin mirar si la lista esta oculta al publico.
+ *   Es un criterio DISTINTO al del servidor, a proposito: `combo.price` sale de la lista de mayor
+ *   position entre las NO ocultas al publico (es lo que lee la tienda), mientras que aca estamos
+ *   en Vender, donde el vendedor si puede usar listas ocultas y es la misma eleccion que hace
+ *   mixins/vender/price_types.js para un articulo. Por eso los dos numeros pueden diferir y este
+ *   helper NO da por sentado que coincidan.
+ * - Sin fila (o sin `price_types`): `combo.price`, que queda solo como respaldo.
  *
  * Devuelve null si ni siquiera `combo.price` es un numero: el llamador decide que hacer (en
  * Vender, dejar el precio que ya tenia el renglon).
