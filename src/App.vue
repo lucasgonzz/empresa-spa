@@ -44,6 +44,13 @@
         :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
         <!--
+            Modal de confirmación de factura. Global a propósito: el botón "Emitir factura" del
+            detalle de una venta (BtnFacturar.vue) lo abre con $bvModal.show, y ese detalle se abre
+            desde muchos lados (alertas de facturación, Tesorería, Reportes, etc.). Antes vivía
+            solo en current-acounts y Caja, y en el resto el botón no hacía nada.
+        -->
+        <confirm-afip-tickets v-if="authenticated"></confirm-afip-tickets>
+        <!--
             Facturacion de las ventas que se guardaron sin conexion. Va aca arriba, al lado de
             afip-reenviar-facturas, porque el que llena su lista es el mixin offline -- que se
             mezcla en este mismo App.vue -- y el modal tiene que existir en cualquier vista: la
@@ -193,6 +200,7 @@ export default {
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
+        ConfirmAfipTickets: () => import('@/components/ventas/modals/afip-ticket/ConfirmAfipTickets'),
         FacturarVentasOffline: () => import('@/components/common/facturar-ventas-offline/Index'),
         ArticlesStockMinimo: () => import('@/components/common/ArticlesStockMinimo'),
         SyncedVersionNotifications: () => import('@/components/common/SyncedVersionNotifications'),
