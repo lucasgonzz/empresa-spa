@@ -349,7 +349,13 @@ export default {
 			})
 		},
 
-		getReportes({state, commit}) {
+		/**
+		 * @param {Object} context
+		 * @param {Object} [opciones] - { forzar: true } regenera el snapshot del dia sin esperar
+		 *                              DURACION_REPORTES (boton Actualizar). Solo aplica en 'dia-actual':
+		 *                              el modo rango ya se calcula en vivo en cada pedido.
+		 */
+		getReportes({state, commit}, opciones) {
 
 			console.log(state.rango_temporal)
 
@@ -364,8 +370,14 @@ export default {
 
 			}
 
+			let params = {}
+
+			if (state.rango_temporal != 'rango-de-fechas' && opciones && opciones.forzar) {
+				params.forzar = 1
+			}
+
 			// Return necesario -- ver comentario de getEstadoResultados, misma razon.
-			return axios.get(link)
+			return axios.get(link, {params})
 			.then(res => {
 				console.log('reportes/getReportes')
 				console.log(res.data)
