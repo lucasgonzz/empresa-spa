@@ -68,7 +68,7 @@ export default {
 			v_if_function: 'show_combo_descuento_valor',
 			nota_function: 'combo_nota_de_descuento',
 			not_show: true,
-			description: 'Porcentaje (por ejemplo 10 para un 10%) o monto en pesos, según el tipo elegido. Un porcentaje tiene que estar entre 0 y 100; un monto nunca deja el precio por debajo de $0.',
+			description: 'Porcentaje (por ejemplo 10 para un 10%) o monto en pesos, según el tipo elegido. Un porcentaje tiene que ser menor a 100; un monto nunca deja el precio por debajo de $0.',
 		},
 		{
 			// Solo lectura: lo que el servidor calculo para cada lista, ya con el descuento. Es una
