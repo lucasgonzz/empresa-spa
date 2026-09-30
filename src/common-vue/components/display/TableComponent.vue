@@ -87,6 +87,17 @@
 								v-if="prop.from_pivot">
 									{{ propertyText(models[data.index].pivot, prop) }}
 								</span>
+								<!--
+									Stock "sin control" (opt-in con `null_es_sin_control` en la prop): el valor es null
+									porque no hay nada que contar, NO porque el stock sea cero. Sin esta rama la celda
+									caia en la de abajo, donde null se lee como 0 y se pinta de rojo como si no hubiera
+									stock. Hoy lo declara el combo cuando ningun componente lleva stock (combos-calculados).
+								-->
+								<span
+								v-else-if="prop.is_stock && stock_sin_control(models[data.index], prop)"
+								class="text-muted">
+									-
+								</span>
 								<span
 								v-else-if="prop.is_stock"
 	                :class="{
@@ -579,6 +590,27 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Si una celda de stock es "sin control": la prop lo pide (`null_es_sin_control`) y su
+		 * funcion devuelve null/vacio.
+		 *
+		 * Opt-in a proposito: las columnas de stock por deposito (`address_5`) tambien devuelven
+		 * null cuando el articulo no tiene ese deposito, y ahi el comportamiento de siempre es
+		 * mostrarlo como 0 en rojo. Solo cambia para quien declara la clave. La primera es la
+		 * columna Stock del combo (combos-calculados): null significa que ningun componente lleva
+		 * stock, o sea que el combo se puede vender siempre. No es cero.
+		 *
+		 * @param {Object} model fila de la tabla.
+		 * @param {Object} prop definicion de la columna.
+		 * @returns {boolean}
+		 */
+		stock_sin_control(model, prop) {
+			if (!model || !prop || !prop.null_es_sin_control || !prop.function) {
+				return false
+			}
+			const valor = this.getFunctionValue(prop, model)
+			return valor === null || typeof valor == 'undefined' || valor === ''
+		},
 		/**
 		 * Valor numerico CRUDO de una prop, para decidir estilo (no para mostrar).
 		 *
