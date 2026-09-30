@@ -1,9 +1,14 @@
 <template>
-	<b-col
+	<!--
+		Elemento `cantidad` del diseño de Vender (mision diseno-vender-configurable, 28/9/2026): la
+		raiz era un <b-col cols="12" md="2"> con margenes para apilarse; ahora es un div suelto y el
+		ancho y el aire entre campos los pone el diseño en uso (layout/GrillaDeEtapa.vue). El v-if
+		se queda: sin "pedir la cantidad al vender" el campo no se dibuja y la grilla no le guarda
+		lugar.
+	-->
+	<div
 	v-if="user.ask_amount_in_vender"
-	class="col-buttons m-b-15 m-lg-b-0"
-	cols="12"
-	md="2">
+	class="col-buttons">
 	<div class="d-flex w-100">
 		<!--
 			🔴 Este campo es el paso que falta entre elegir un articulo y que entre a la venta. Con
@@ -43,7 +48,7 @@
 			Sucursal: <strong>{{ numero_es(local_stock) }}</strong>
 		</span>
 	</div>
-	</b-col>
+	</div>
 </template>
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'

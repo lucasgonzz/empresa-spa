@@ -1,24 +1,26 @@
 <template>
 	<!--
-		El ancla va sobre la columna entera y no sobre el input: `vender.buscador_articulos` ya
-		cubre TODA la fila del header-form (barra, nombre, combos, promo, servicios), asi que el
-		codigo de barras necesita la suya para que el tour pueda senalarlo aparte.
+		El ancla va sobre el campo entero (input + lector) y no sobre el input solo: es la que usa el
+		tour de la demo para señalar el codigo de barras (clip 2.1).
+
+		Elemento `codigo_de_barras` del diseño de Vender (mision diseno-vender-configurable,
+		28/9/2026): la raiz era un <b-col cols="12" md="3"> de la fila de buscadores; ahora es un div
+		suelto y el ancho y el aire entre campos los pone layout/GrillaDeEtapa.vue segun el diseño
+		en uso. El v-if se queda: con la extension no_usar_codigos_de_barra el campo no existe.
 	-->
-	<b-col
-	class="col-bar-code margin-bottom-since-lg"
-	cols="12"
+	<div
+	class="col-bar-code"
 	data-tour="vender.campo_codigo_barras"
-	v-if="!hasExtencion('no_usar_codigos_de_barra')"
-	:md="3">
+	v-if="!hasExtencion('no_usar_codigos_de_barra')">
 
 		<div
 		class="d-flex w-100">
-	
+
 			<b-form-input
 			id="article-bar-code"
 			dusk="article_bar_code"
 			v-model="item_vender.codigo"
-			autocomplete="off" 
+			autocomplete="off"
 			ref="articleBarCode"
 			@keydown.enter="set_article_from_barcode"
 			:placeholder="placeholder"></b-form-input>
@@ -29,13 +31,14 @@
 			@setBarCode="setBarCode"></bar-code-scanner>
 		</div>
 
-	</b-col>
+	</div>
 </template>
 <script>
 import vender from '@/mixins/vender/index' 
 import guardar_venta from '@/mixins/vender/guardar_venta/index' 
 import sonido_error from '@/mixins/sonido_error' 
-import vender_set_total from '@/mixins/vender_set_total' 
+import vender_set_total from '@/mixins/vender_set_total'
+import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout/foco'
 
 import db from '@/offline/db'
 
@@ -43,7 +46,16 @@ export default {
 	mixins: [vender, guardar_venta, sonido_error, vender_set_total],
 	created() {
 		setTimeout(() => {
-			document.getElementById('article-bar-code').focus()
+			/*
+				El foco inicial de Vender va a la primera entrada de articulos A LA VISTA (ver
+				layout/foco.js): con el codigo de barras a la vista es este mismo input, como
+				siempre. Con los diseños de Vender este componente se monta aunque el diseño lo haya
+				sacado (escondido, en layout/ReservaDeElementos.vue), y enfocarse a si mismo dejaba
+				el foco en un input invisible; ahi va al buscador por nombre. Tambien cubre el input
+				que no existe (extension no_usar_codigos_de_barra, o el campo desmontado en estos
+				500 ms), donde el focus() directo tiraba un TypeError.
+			*/
+			enfocar_primera_entrada_de_articulos()
 		}, 500)
 	},
 	components: {

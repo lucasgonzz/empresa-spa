@@ -21,7 +21,10 @@ export default {
 			})
 
 			this.$store.commit('apertura_caja/set_route_prefix', this.caja.id)
-			this.$store.dispatch('apertura_caja/getModels')
+			// Siempre desde la primera página y sin filas de la caja anterior a la vista.
+			this.$store.commit('apertura_caja/setModels', [])
+			this.$store.commit('apertura_caja/set_paginacion_aperturas', {pagina: 1, total: 0, ultima_pagina: 1})
+			this.$store.dispatch('apertura_caja/cargar_pagina', 1)
 
 			this.$bvModal.show('aperturas-caja')
 		},

@@ -7,6 +7,12 @@
  * el componente desde cero.
  */
 const componente_integraciones_tienda_online = () => import('@/components/abm/integraciones/TiendaOnline')
+// Diseños de Vender (mision diseno-vender-configurable, 28/9/2026): editor de arrastrar y soltar,
+// no un formulario. Ver src/models/vender_layout.js.
+const componente_disenos_de_vender = () => import('@/components/abm/disenos-de-vender/Index')
+// Diseños de etiquetas de gondola (mision disenos-etiquetas-gondola, 29/9/2026): editor de
+// arrastrar y soltar sobre la etiqueta. Ver src/models/article_ticket_design.js.
+const componente_disenos_de_etiquetas = () => import('@/components/abm/disenos-de-etiquetas/Index')
 
 export default {
 	computed: {
@@ -29,7 +35,13 @@ export default {
 						'article_property_value',
 						'column_position',
 						'article_pre_import_range',
+						// Al final a proposito: el primero de la lista es la solapa que abre por defecto.
+						'article_ticket_design',
 					],
+					// 'article_ticket_design' monta su propio componente (tarjetas + editor), no el ABM generico
+					componentes: {
+						article_ticket_design: componente_disenos_de_etiquetas,
+					},
 				},
 				// Todo lo relacionado a precios en un solo lugar (marco de precios Fase 2)
 				{
@@ -53,7 +65,13 @@ export default {
 						'sale_sender_info',
 						'client_reputation',
 						'dealer',
+						// Al final a proposito: el primero de la lista es la solapa que abre por defecto.
+						'vender_layout',
 					],
+					// 'vender_layout' monta su propio componente (tarjetas + editor), no el ABM generico
+					componentes: {
+						vender_layout: componente_disenos_de_vender,
+					},
 				},
 				// Metodos de cobro y planes de pago en cuenta corriente
 				{

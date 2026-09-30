@@ -285,6 +285,12 @@ import actividad_cliente from '@/store/actividad_cliente'
 import sistema_de_puntos from '@/store/sistema_de_puntos'
 import puntos from '@/store/puntos'
 
+// Diseños de Vender (mision diseno-vender-configurable, 28/9/2026): donde va cada campo de Vender.
+import vender_layout from '@/store/vender_layout'
+
+// Diseños de etiquetas de gondola (mision disenos-etiquetas-gondola, 29/9/2026).
+import article_ticket_design from '@/store/article_ticket_design'
+
 
 Vue.use(Vuex)
 
@@ -558,5 +564,7 @@ export default new Vuex.Store({
 
         sistema_de_puntos,
         puntos,
+        vender_layout,
+        article_ticket_design,
     }
 })

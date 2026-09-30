@@ -1,8 +1,14 @@
 <template>
-	<b-col
-	cols="12"
-	:md="col_header_lg"
-	class="col-autocomplete margin-bottom-since-lg">
+	<!--
+		Elemento `buscador_de_articulos` del diseño de Vender (mision diseno-vender-configurable,
+		28/9/2026). La raiz era un <b-col cols="12" :md="col_header_lg"> que calculaba su ancho segun
+		las extensiones; ahora es un div suelto y el ancho lo da el diseño en uso a traves de
+		layout/GrillaDeEtapa.vue. La cuenta de ese ancho se mudo tal cual al `cols` del buscador en
+		layout/elementos.js, y rige para el diseño predeterminado.
+
+		La grilla le pone a esta raiz el ancla `vender.buscador_articulos` del tour de la demo.
+	-->
+	<div class="col-autocomplete">
 		<buscador-articulos
 		@setSelected="setSelected"
 		:model="item_vender"></buscador-articulos>
@@ -30,7 +36,7 @@
 			</template>
 		</search-component> -->
 
-	</b-col>
+	</div>
 </template>
 <script>
 // import SearchComponent from '@/common-vue/components/search/Index'
@@ -68,27 +74,11 @@ export default {
 		},
 	},
 	computed: {
-		col_header_lg() {
-
-			let col = 4
-
-			if (
-				this.hasExtencion('combos')
-				|| this.hasExtencion('vinoteca')
-			) {
-				col -= 1
-			}
-
-			if (!this.user.ask_amount_in_vender) {
-				col += 2
-			}
-
-			if (this.hasExtencion('no_usar_codigos_de_barra')) {
-				col += 3
-			}
-
-			return col
-		},
+		/*
+			Aca estaba col_header_lg(), el ancho del buscador segun las extensiones. Se saco con los
+			diseños de Vender: la misma cuenta vive ahora en el `cols` de `buscador_de_articulos` en
+			layout/elementos.js.
+		*/
 		str_limint() {
 			return this.owner.str_limint_en_vender
 		},
