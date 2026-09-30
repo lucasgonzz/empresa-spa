@@ -17,6 +17,12 @@ export default {
 		Custom: () => import('@/common-vue/components/configuration/custom/Index'),
 		Password: () => import('@/common-vue/components/configuration/password/Index'),
 	},
+	data() {
+		return {
+			/* Evita disparar redirect() dos veces (created + watch) y el push cancelado que eso genera */
+			redirigido: false,
+		}
+	},
 	created() {
 		this.verificarAcceso()
 	},
@@ -39,7 +45,8 @@ export default {
 			if (!this.authenticated || !this.user) {
 				return
 			}
-			if (!this.is_admin) {
+			if (!this.is_admin && !this.redirigido) {
+				this.redirigido = true
 				this.redirect()
 			}
 		},
