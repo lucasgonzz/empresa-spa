@@ -4,6 +4,7 @@ v-if="from_model"
 id="current-acounts-pago"
 data-tour="cuentas_corrientes.modal_pago"
 @shown="enfocar_primer_monto"
+@hidden="limpiar_al_cerrar"
 title="Pago">
 
     <!--
@@ -308,6 +309,17 @@ export default {
                 return false
             }
 
+            /*
+             * Una fila en otra moneda que la de la cuenta necesita cotizacion. Sin ella no hay con
+             * que convertir, y la fila se guardaba con el monto nominal en la moneda de la cuenta
+             * (USD 10 sobre una cuenta en pesos quedaba como haber $10). La comparacion es contra
+             * la moneda de la cuenta que se esta pagando, la misma que usa PaymentMethods.vue como
+             * base.
+             */
+            if (this.hay_moneda_sin_cotizacion(this.pago.current_acount_payment_methods, this.from_credit_account.moneda_id)) {
+                return false
+            }
+
             if (this.pago.haber == '') {
 
                 let input = document.getElementsByClassName('payment-method-amount')[0]                
@@ -400,40 +412,46 @@ export default {
             return { ok: true };
         },
 
+        /**
+         * Se ejecuta cuando el modal termina de cerrarse, por el motivo que sea (pago registrado, X,
+         * click afuera, ESC).
+         *
+         * 🔴 Antes `clear()` solo corria al registrar un pago. Cerrar con la X sin pagar dejaba las filas
+         * (con la moneda, la cotizacion y el monto de la cuenta que se acababa de mirar) y `to_pay` en el
+         * store; el modal destruye su contenido al cerrarse pero `pago` vive en este componente, asi que
+         * al abrir OTRA cuenta (en la otra moneda) las filas no se reconstruian y el pago arrancaba con la
+         * moneda y el monto de la cuenta anterior. Limpiando aca, cada apertura arranca de cero: las
+         * filas las arma el factory de PaymentMethods.vue con la moneda y la cotizacion de la cuenta que
+         * se abre. Es idempotente: si `hacerPago` ya llamo a `clear()`, esto no cambia nada.
+         */
+        limpiar_al_cerrar() {
+            this.clear()
+        },
         clear() {
             this.pago = {
                 current_date: true,
                 created_at: '',
                 haber: '',
                 is_provisorio: 0,
-                current_acount_payment_methods: [{
-                    current_acount_payment_method_id: 3,
-                    amount: '',
-                    numero: '',
-                    banco: '',
-                    fecha_emision: '',
-                    fecha_pago: '',
-                    es_echeq: 0,
-                    credit_card_id: 0,
-                    credit_card_payment_plan_id: 0,
-                    caja_id: 0,
-                    // Cheque a endosar y banco del catálogo, en 0 como en el factory
-                    // (misión cheques-endoso-y-bancos, 21/9/2026).
-                    cheque_id: 0,
-                    cheque_banco_id: 0,
-                    /*
-                     * Certificado de retencion sufrida: las mismas claves que declara el factory de
-                     * PaymentMethods.vue, para que la fila que queda despues de un pago exitoso sea
-                     * identica a la que nace con el modal. El importe NO va aca: es el `amount` de
-                     * la fila, igual que para el efectivo (ver RetencionInfo.vue).
-                     */
-                    retencion_impuesto: 'ganancias',
-                    retencion_numero_certificado: '',
-                    retencion_fecha: '',
-                    retencion_regimen: '',
-                    retencion_base_imponible: '',
-                    retencion_alicuota: '',
-                }],
+                /*
+                 * 🔴 SIN FILAS, A PROPOSITO: la fila la arma el factory de PaymentMethods.vue.
+                 *
+                 * Esto tenia antes una copia a mano de la fila del factory, y la copia se quedaba
+                 * atras cada vez que el factory ganaba una clave (cheque_id, la retencion...). Le
+                 * faltaban `moneda_id`, `cotizacion`, `amount_cotizado` y `__row_id`: el segundo
+                 * pago de la sesion abria con la Cotizacion vacia, y como la SPA no exigia
+                 * cotizacion, una fila en dolares sobre una cuenta en pesos se registraba con el
+                 * monto nominal (USD 10 -> haber $10).
+                 *
+                 * El modal es un <b-modal> no estatico, asi que al cerrarse destruye su contenido y
+                 * al abrirse vuelve a montar PaymentMethods.vue. Con el array vacio, ese mounted()
+                 * (y el del bloque MultiPaymentMethods) crea la primera fila con el factory y con
+                 * la moneda y la cotizacion DE LA CUENTA QUE SE ABRE: la misma fila que nace la
+                 * primera vez. Dejar aca una fila armada tomaria la moneda de la cuenta que se
+                 * acaba de pagar, y si la proxima es otra (en pesos despues de una en dolares) la
+                 * fila arrancaria en la moneda equivocada.
+                 */
+                current_acount_payment_methods: [],
             }
             this.$store.commit('current_acount/setToPay', null)
             this.$store.commit('current_acount/setSelected', [])
