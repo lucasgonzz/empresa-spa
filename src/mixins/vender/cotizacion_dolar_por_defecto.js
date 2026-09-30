@@ -4,9 +4,9 @@
  * Decision de Lucas (30/9/2026): una venta en dolares necesita la cotizacion (la API la rechaza con
  * 422 sin ella), asi que Vender tiene que arrancar siempre con el dolar que el comercio tiene cargado
  * en el sistema, y no dejarla vacia ni en cero. Este mixin es la unica fuente de ese valor para los
- * tres lugares que lo necesitan: `Moneda.vue` (al montarse y al salir del campo vacio), el chequeo de
- * `guardar_venta` (`check_cotizacion_dolar`) y `limpiar_vender` (que lo restaura al terminar cada
- * comprobante, con la misma cuenta).
+ * lugares que lo necesitan: `Moneda.vue` (al montarse y al salir del campo vacio) y el chequeo de
+ * `guardar_venta` (`check_valor_dolar_de_la_venta`). `limpiar_vender.js` restaura la cotizacion al
+ * terminar cada comprobante con la misma cuenta (`owner.dollar`, o null si no tiene) por su lado.
  *
  * `owner` es el dueño de la cuenta (o su configuracion, para un empleado): `owner.dollar` llega como
  * string ("1570.00") y vale null o 0 cuando el comercio nunca lo cargo.
