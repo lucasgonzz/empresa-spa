@@ -20,6 +20,7 @@
 <script>
 import SearchComponent from '@/common-vue/components/search/Index'
 import vender from '@/mixins/vender/index'
+import { precio_de_combo_para_lista } from '@/utils/precio_de_combo'
 export default {
 	mixins: [vender],
 	components : {
@@ -80,7 +81,23 @@ export default {
 				// amount: 1,
 			}
 
-			combo.final_price = Number(combo.price)
+			/*
+				El precio sale de la lista de la venta, con el mismo helper que usa la deteccion
+				automatica de combos y el rearmado de precios (utils/precio_de_combo.js): un combo
+				calculado de una cuenta con listas trae un precio por cada una en `price_types`.
+				Sin lista en la venta, o sin fila para esa lista (combo manual, servidor viejo), cae
+				a `combo.price`, que es el precio de la lista por defecto. Antes era siempre
+				`combo.price`, sin mirar la lista.
+
+				Si el vendedor cambia la lista despues, aplicar_tipos_de_precio() (generals.js)
+				vuelve a elegir la fila cuando se rearman los precios, igual que con un articulo.
+			*/
+			let precio_del_combo = precio_de_combo_para_lista(
+				combo,
+				this.price_type_vender ? this.price_type_vender.id : null
+			)
+
+			combo.final_price = precio_del_combo !== null ? precio_del_combo : Number(combo.price)
 			this.set_item_vender(combo)
 		},
 	}

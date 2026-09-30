@@ -3,6 +3,8 @@ import { env } from '@/runtime_config'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
 import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/utils/criterio_de_oferta_por_cantidad'
 import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado, redondear_a_centavos } from '@/utils/recargos_en_precios'
+/* Precio de un combo segun la lista de precios de la venta (mision combos-calculados). */
+import { precio_de_combo_para_lista } from '@/utils/precio_de_combo'
 export default {
     computed: {
         has_online() {
@@ -1263,6 +1265,49 @@ export default {
                         }
                     }
                         
+                }
+            } else if (item.is_combo && Array.isArray(item.price_types)) {
+
+                /*
+                    COMBOS (mision combos-calculados): un combo calculado de una cuenta con listas
+                    trae en `price_types` un precio por cada una, con el descuento ya aplicado. Se
+                    reprecia igual que un articulo: con la lista de la venta, y la del renglon si
+                    el vendedor la cambio linea por linea.
+
+                    Es lo que hace que cambiar la lista de la venta en Vender mueva tambien los
+                    renglones de combo (setTotal() -> setItemsPrices() -> getPriceVender() -> aca).
+
+                    🔴 Un combo NO tiene `price_type_monedas` (eso es del articulo, para ventas en
+                    dolares): por eso esta rama va aparte y no dentro del bloque de arriba, que
+                    lo lee sin guardar y revienta con TypeError.
+
+                    Sin lista en la venta NO se toca el precio: queda el que el renglon ya traia
+                    (`final_price`), que es lo que hacia siempre. Con lista pero sin fila para ella
+                    (combo manual, lista creada despues del ultimo calculo) el helper cae a
+                    `combo.price`, el precio de la lista por defecto: hay que volver a el y no dejar
+                    el `final_price`, que pudo haberse fijado con la fila de OTRA lista al agregar el
+                    combo y quedaria pegado en el precio viejo al cambiar la lista de la venta.
+
+                    Un renglon que viene de una venta ya guardada (editar) no pasa por aca: toma el
+                    precio del pivot, y ademas no trae `price_types`.
+                */
+                let price_vender_id = null
+
+                if (this.price_type_vender) {
+                    price_vender_id = this.price_type_vender.id
+                }
+
+                if (item.price_type_personalizado_id) {
+                    price_vender_id = item.price_type_personalizado_id
+                }
+
+                if (price_vender_id) {
+
+                    let precio_de_la_lista = precio_de_combo_para_lista(item, price_vender_id)
+
+                    if (precio_de_la_lista !== null) {
+                        price = precio_de_la_lista
+                    }
                 }
             }
 
