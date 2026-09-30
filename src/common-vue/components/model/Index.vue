@@ -55,6 +55,10 @@
 				<template v-slot:default="slotProps">
 					<slot :model="slotProps.model"></slot>
 				</template>
+				<!-- Reenvio del punto de extension de ModelForm (ver el comentario ahi). -->
+				<template v-slot:prop_extras="slotProps">
+					<slot name="prop_extras" :prop="slotProps.prop" :model="slotProps.model"></slot>
+				</template>
 
 				<template
 				v-for="prop in properties"
