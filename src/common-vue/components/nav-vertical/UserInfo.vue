@@ -58,7 +58,7 @@
 			</div>
 
 		    <div
-		    v-if="is_owner || user.admin_access">
+		    v-if="is_admin">
 		        <div
 		        class="item"
 		        @click="general">
