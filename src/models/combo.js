@@ -19,6 +19,11 @@ export default {
 			// Lo demas (foto, costo, calculado...) sigue disponible en la configuracion de columnas
 			// del modal (table-column-preference/combo/search), apagado por defecto.
 			use_to_show_in_search_modal: true,
+			// Anchos del modal de busqueda (Modal.vue::search_modal_default_width): sin ellos cada
+			// columna salia de 200 px y en un telefono (scroller de ~325 px) el Stock quedaba fuera
+			// de pantalla. Nombre 130 + Precio 90 + Stock 70 = 290 px. Es una clave aparte de
+			// `table_width` para no achicar las columnas de la tabla del ABM.
+			search_modal_width: 130,
 		},
 		{
 			// 🔴 Nace APAGADO en todos los combos que ya existen: ningun combo cambia de precio por
@@ -49,6 +54,7 @@ export default {
 			key: 'price',
 			type: 'number',
 			use_to_show_in_search_modal: true,
+			search_modal_width: 90,
 			use_to_update: true,
 			disabled_function: 'combo_costo_y_precio_bloqueados',
 			nota_function: 'combo_nota_de_campo_calculado',
@@ -117,6 +123,7 @@ export default {
 			key: 'stock_disponible',
 			type: 'number',
 			use_to_show_in_search_modal: true,
+			search_modal_width: 70,
 			is_stock: true,
 			null_es_sin_control: true,
 			function: 'get_stock_disponible_del_combo',

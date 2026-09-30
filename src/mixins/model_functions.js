@@ -1257,7 +1257,19 @@ export default {
             if (prop && prop.key == 'cost') {
                 return 'Se calcula al guardar: suma el costo de cada artículo por su cantidad. El descuento nunca toca el costo.'
             }
-            return 'Se calcula al guardar: suma el precio de cada artículo por su cantidad, menos el descuento. Con listas de precios se calcula un precio por cada lista.'
+            let texto = 'Se calcula al guardar: suma el precio de cada artículo por su cantidad, menos el descuento.'
+
+            /*
+                El precio por lista solo existe en las cuentas con listas de precio comunes. Con
+                listas por categoria o ventas en dolares el combo se calcula con un precio unico
+                (lo avisa combo_nota_de_calculo_sin_listas, debajo del check): decir aca que hay un
+                precio por cada lista contradeciria ese aviso.
+            */
+            if (!this.hasExtencion('lista_de_precios_por_categoria') && !this.hasExtencion('ventas_en_dolares')) {
+                texto += ' Si tu cuenta usa listas de precios, se calcula un precio por cada lista.'
+            }
+
+            return texto
         },
 
         /**

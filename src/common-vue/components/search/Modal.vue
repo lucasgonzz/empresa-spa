@@ -808,6 +808,16 @@ export default {
 		 * @returns {Number}
 		 */
 		search_modal_default_width(prop) {
+			/*
+				Ancho propio del MODAL DE BUSQUEDA (opt-in con `search_modal_width` en la prop).
+				`table_width` no sirve para esto: lo leen tambien la tabla del ABM y las demas, asi
+				que achicar una columna para que entre en el modal de un telefono la achicaria
+				tambien en el listado. Sin la clave, todo sigue como antes. Primer uso: el modal de
+				combos de Vender (Nombre, Precio y Stock tienen que entrar juntos en 325 px).
+			*/
+			if (prop && Number(prop.search_modal_width) > 0) {
+				return Number(prop.search_modal_width)
+			}
 			return default_column_width_for_property(prop)
 		},
 		buildSearchConfigRows() {
@@ -818,7 +828,7 @@ export default {
 				label: this.propText(prop),
 				visible: this.defaultVisibleInSearch(prop),
 				order: index,
-				width: default_column_width_for_property(prop),
+				width: this.search_modal_default_width(prop),
 				wrap_content: !!prop.table_wrap_content,
 			}))
 			this.search_config_rows = this.normalizeSearchPreferenceRows(this.search_preference_columns, defaults)
