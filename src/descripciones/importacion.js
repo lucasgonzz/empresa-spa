@@ -29,13 +29,13 @@ export default {
 
 	'ai-import-btn-analizar': {
 		titulo: 'Analizar con IA',
-		que_hace: 'Sube el archivo y Claude propone qué columna del Excel corresponde a cada propiedad del sistema.',
+		que_hace: 'Sube el archivo y la IA propone qué columna del Excel corresponde a cada propiedad del sistema.',
 		repercute: [
 			'El análisis corre en segundo plano: se puede cerrar la ventana y seguir trabajando.',
 			'Todavía no importa nada: el mapeo se revisa y se confirma en el paso siguiente.',
 		],
 		requiere: 'Un archivo elegido y, si el libro tiene varias hojas, una hoja elegida. Sin eso el botón está deshabilitado.',
-		nota_interna: 'El resultado se espera por polling HTTP (analysis_polling en Index.vue), no por broadcast. Con la API key de Anthropic inválida el análisis muere con estado "error" y el mensaje genérico "El servicio de IA rechazó el pedido" (medido el 2/9/2026 con una key vencida: el motivo real —401 authentication_error— queda solo en el log de Laravel).',
+		nota_interna: 'El resultado se espera por polling HTTP (analysis_polling en Index.vue), no por broadcast. El modelo de IA lo elige el admin por cliente (default DeepSeek Pro; sin DEEPSEEK_API_KEY cae a Anthropic, misión modelos-ia-por-cliente 30/9/2026). Con la API key del proveedor inválida el análisis muere con estado "error" y el mensaje genérico "El servicio de IA rechazó el pedido" (medido el 2/9/2026 con una key vencida: el motivo real —401 authentication_error— queda solo en el log de Laravel).',
 	},
 
 	'ai-import-proveedor': {
@@ -81,7 +81,7 @@ export default {
 
 	'ai-import-btn-confirmar-mapeo': {
 		titulo: 'Confirmar y configurar importación',
-		que_hace: 'Da por bueno el mapeo y pasa al paso de duplicados, donde Claude recomienda una configuración.',
+		que_hace: 'Da por bueno el mapeo y pasa al paso de duplicados, donde la IA recomienda una configuración.',
 		repercute: [
 			'El sistema recorre el archivo y cuenta códigos repetidos (en el archivo y contra lo ya cargado): de eso salen las decisiones del paso 3.',
 		],
