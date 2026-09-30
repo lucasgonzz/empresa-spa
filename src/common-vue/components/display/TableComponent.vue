@@ -591,61 +591,6 @@ export default {
 	},
 	methods: {
 		/**
-		 * Si una celda de stock es "sin control": la prop lo pide (`null_es_sin_control`) y su
-		 * funcion devuelve null/vacio.
-		 *
-		 * Opt-in a proposito: las columnas de stock por deposito (`address_5`) tambien devuelven
-		 * null cuando el articulo no tiene ese deposito, y ahi el comportamiento de siempre es
-		 * mostrarlo como 0 en rojo. Solo cambia para quien declara la clave. La primera es la
-		 * columna Stock del combo (combos-calculados): null significa que ningun componente lleva
-		 * stock, o sea que el combo se puede vender siempre. No es cero.
-		 *
-		 * @param {Object} model fila de la tabla.
-		 * @param {Object} prop definicion de la columna.
-		 * @returns {boolean}
-		 */
-		stock_sin_control(model, prop) {
-			if (!model || !prop || !prop.null_es_sin_control || !prop.function) {
-				return false
-			}
-			const valor = this.getFunctionValue(prop, model)
-			return valor === null || typeof valor == 'undefined' || valor === ''
-		},
-		/**
-		 * Valor numerico CRUDO de una prop, para decidir estilo (no para mostrar).
-		 *
-		 * 🔴 Existe para no leer nunca el texto que devuelve propertyText(). Antes la clase de la
-		 * celda de stock se decidia con `parseFloat(propertyText(model, prop))`, y eso se rompe en
-		 * cuanto el texto lleva separadores argentinos: `parseFloat('1.234,56')` devuelve **1.234**,
-		 * porque corta en la coma. Un stock de `0,5` daria 0 y la celda se pintaria de rojo como si
-		 * no hubiera stock.
-		 *
-		 * La regla general: el texto formateado es para el ojo, nunca para una cuenta ni para una
-		 * condicion. Si hay que decidir algo con el numero, se lee del model.
-		 *
-		 * Mision del 21/8/2026 — separadores de numeros.
-		 *
-		 * @param {Object} model fila de la tabla.
-		 * @param {Object} prop definicion de la columna.
-		 * @returns {number} el valor como numero, o 0 si no se puede leer.
-		 */
-		valor_numerico_crudo(model, prop) {
-			if (!model || !prop || !prop.key) {
-				return 0
-			}
-			/*
-				Las columnas de stock por deposito se declaran con `function` y una key que NO
-				existe en el model (`address_5`): el valor lo calcula la funcion recorriendo
-				article.addresses. Leer model['address_5'] daria undefined -> NaN -> 0, y la
-				columna entera quedaria pintada de rojo como si no hubiera stock.
-			*/
-			const valor = Number(prop.function ? this.getFunctionValue(prop, model) : model[prop.key])
-			if (isNaN(valor)) {
-				return 0
-			}
-			return valor
-		},
-		/**
 		 * Recalcula la altura disponible del contenedor de tabla según su posición en viewport.
 		 * Resta un margen inferior para evitar scroll residual en la página.
 		 */

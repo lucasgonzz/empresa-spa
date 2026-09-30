@@ -154,6 +154,30 @@
 						{{ relationColumnValue(model, prop) }}
 					</template>
 
+					<!--
+						Stock de una columna que declara `null_es_sin_control` (hoy solo el Stock del combo):
+						la misma regla que TableComponent.vue (buscador de Vender). null = ningun componente
+						lleva stock, se ve "-" en gris y NO en rojo; 0 o menos va en rojo; positivo en negrita.
+						Es opt-in: sin la clave, una columna `is_stock` cae en la rama de texto de abajo
+						exactamente como antes, asi que ninguna otra columna de stock cambia.
+					-->
+					<template
+					v-else-if="prop.is_stock && prop.null_es_sin_control">
+						<span
+						v-if="stock_sin_control(model, prop)"
+						class="text-muted">
+							-
+						</span>
+						<span
+						v-else
+						:class="{
+							'text-danger font-weight-bold': valor_numerico_crudo(model, prop) <= 0,
+							'font-weight-bold': valor_numerico_crudo(model, prop) > 0,
+						}">
+							{{ propertyText(model, prop) }}
+						</span>
+					</template>
+
 					<template
 					v-else-if="!prop.is_pivot_prop">
 						<template
