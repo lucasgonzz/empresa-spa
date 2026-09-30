@@ -1261,6 +1261,42 @@ export default {
         },
 
         /**
+         * nota_function del check "Calcular en base a los articulos": en las cuentas que usan
+         * listas de precio por categoria o ventas en dolares, el combo calculado NO tiene un precio
+         * por lista. El servidor lo calcula con el precio de venta base de cada articulo
+         * (`final_price`), que es un unico numero, porque en esas extensiones el precio por lista no
+         * vive en price_types. Sin este aviso el operador creeria que tiene un precio por lista
+         * (es lo que dice la pantalla en cuentas comunes) y vende con uno solo.
+         *
+         * Solo con el check prendido: apagado no hay calculo y no hay nada que avisar.
+         *
+         * @param {Object} combo
+         * @returns {String} '' si el combo es manual o la cuenta no usa ninguna de las dos extensiones
+         */
+        combo_nota_de_calculo_sin_listas(combo) {
+            if (!this.combo_se_calcula_desde_articulos(combo)) {
+                return ''
+            }
+
+            let por_categoria = this.hasExtencion('lista_de_precios_por_categoria')
+            let en_dolares = this.hasExtencion('ventas_en_dolares')
+
+            if (!por_categoria && !en_dolares) {
+                return ''
+            }
+
+            let motivo = 'usa listas de precio por categoría'
+
+            if (en_dolares && !por_categoria) {
+                motivo = 'vende en dólares'
+            } else if (en_dolares && por_categoria) {
+                motivo = 'usa listas de precio por categoría y vende en dólares'
+            }
+
+            return 'Tu cuenta ' + motivo + ': el combo se calcula con un precio único (el precio de venta base de cada artículo) y no con las listas de precios.'
+        },
+
+        /**
          * v_if_function del tipo de descuento: solo tiene sentido con el check prendido, porque un
          * combo manual tiene el precio que se le escribio y no hay sobre que descontar.
          *

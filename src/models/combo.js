@@ -13,6 +13,12 @@ export default {
 			text: 'Nombre',
 			key: 'name',
 			type: 'text',
+			// Columnas del modal de busqueda de Vender: solo lo util para vender, en este orden
+			// (el de las props del modelo): Nombre, Precio, Stock. Sin ninguna marca, el modal
+			// mostraba TODAS las props y el Stock quedaba fuera de pantalla en tablet y telefono.
+			// Lo demas (foto, costo, calculado...) sigue disponible en la configuracion de columnas
+			// del modal (table-column-preference/combo/search), apagado por defecto.
+			use_to_show_in_search_modal: true,
 		},
 		{
 			// 🔴 Nace APAGADO en todos los combos que ya existen: ningun combo cambia de precio por
@@ -24,12 +30,16 @@ export default {
 			key: 'calcular_desde_articulos',
 			type: 'checkbox',
 			value: 0,
+			// Visible solo con el check prendido y en cuentas cuyas extensiones hacen que el
+			// combo NO pueda tener un precio por lista (ver combo_nota_de_calculo_sin_listas).
+			nota_function: 'combo_nota_de_calculo_sin_listas',
 			description: 'Si lo activás, el costo y el precio del combo salen de los artículos que lo componen (cada uno por su cantidad) y se recalculan solos cada vez que cambia el costo o el precio de alguno. Si tu cuenta usa listas de precios, se calcula un precio por cada lista. Apagado, cargás costo y precio a mano como siempre.',
 		},
 		{
 			text: 'Costo',
 			key: 'cost',
 			type: 'number',
+			use_to_update: true,
 			// Con el check prendido lo escribe el servidor: se bloquea y se avisa por que.
 			disabled_function: 'combo_costo_y_precio_bloqueados',
 			nota_function: 'combo_nota_de_campo_calculado',
@@ -38,6 +48,8 @@ export default {
 			text: 'Precio',
 			key: 'price',
 			type: 'number',
+			use_to_show_in_search_modal: true,
+			use_to_update: true,
 			disabled_function: 'combo_costo_y_precio_bloqueados',
 			nota_function: 'combo_nota_de_campo_calculado',
 		},
@@ -49,6 +61,13 @@ export default {
 			table_text: 'Desc.',
 			key: 'descuento_tipo',
 			type: 'select',
+			// options: [] intencional (mismo patron que address.default_afip_information_id y
+			// user.modo_redondeo): FieldSelectInput monta el componente generico de relacion cuando
+			// typeof prop.options == 'undefined', y saca el modelo de key.substring(0, len-3), o sea
+			// 'descuento_t', que no existe (Error in render: Cannot find module './descuento_t').
+			// Lo mismo le pasa a getOptions() en la actualizacion masiva. Las opciones reales las
+			// calcula dynamic_options_function, que getOptions() resuelve ANTES de mirar `options`.
+			options: [],
 			dynamic_options_function: 'combo_descuento_tipo_options',
 			value_function: 'combo_descuento_tipo_inicial',
 			// Prop de formulario: no es filtrable (sin options ni store el filtro de select no sabe armarse).
@@ -92,10 +111,12 @@ export default {
 			// mas limita). Se calcula al leer en el servidor porque articles.stock se escribe por
 			// muchos caminos y persistirlo exigiria enganchar todos.
 			// `null_es_sin_control`: null = ningun componente lleva stock, no es cero ni va en rojo
-			// (ver TableComponent.vue::stock_sin_control). El formulario usa la prop de abajo.
+			// (ver stock_sin_control en common-vue/mixins/generals.js; lo leen TableComponent.vue y
+			// display/table/Tr.vue). El formulario usa la prop de abajo.
 			text: 'Stock',
 			key: 'stock_disponible',
 			type: 'number',
+			use_to_show_in_search_modal: true,
 			is_stock: true,
 			null_es_sin_control: true,
 			function: 'get_stock_disponible_del_combo',
@@ -122,6 +143,7 @@ export default {
 			key: 'online',
 			type: 'checkbox',
 			show: true,
+			use_to_update: true,
 			description: 'Si lo activás, el combo se publica en tu ecommerce y los compradores pueden agregarlo al carrito. Apagado, el combo sigue existiendo solo para vender desde el sistema.',
 			// Arranca apagado: hay cuentas con combos armados solo para cargar ventas mas rapido,
 			// y esos no tienen por que aparecer en el ecommerce sin que el dueño lo decida.
@@ -133,6 +155,7 @@ export default {
 			search_on_models_by: 'name',
 			type: 'search',
 			key: 'articles',
+			use_to_update: true,
 			search_from_api_function: 'search_from_api_in_provider_order',
 			belongs_to_many: {
 				model_name: 'article',
