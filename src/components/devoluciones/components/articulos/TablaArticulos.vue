@@ -511,21 +511,35 @@ export default {
 				position: relative
 				display: grid
 				grid-template-columns: repeat(2, minmax(0, 1fr))
+				align-items: start
 				gap: 12px 16px
 				padding: 14px 16px
 				border-radius: 12px
 				box-shadow: inset 0 0 0 1px var(--color-border-secondary)
 				white-space: normal
 
+			// Cada celda es un bloque etiqueta-arriba / dato-abajo, desde arriba (no desde abajo:
+			// con flex-end, una celda con input y otra con texto arrancaban a distinta altura).
 			tbody td
 				display: flex
 				flex-direction: column
-				justify-content: flex-end
+				justify-content: flex-start
 				min-width: 0
 				padding: 0
 				border: none
 				text-align: left
 				white-space: normal
+
+			// 🔴 td.dev-tabla__num lleva una clase y un elemento más que `.dev-tabla
+			// .dev-tabla__num` (text-align: right, el de la tabla): sin esto las etiquetas y las
+			// cifras de la tarjeta salían alineadas a la derecha.
+			// El dato de solo lectura (Comprada, Ya devueltas, Desc.) va con line-height de 36px,
+			// el mismo alto que un input (--toolbar-control-h): así las dos columnas de cada fila
+			// de la grilla quedan parejas.
+			tbody td.dev-tabla__num,
+			tbody td.dev-tabla__celda-variante
+				text-align: left
+				line-height: var(--toolbar-control-h, 36px)
 
 			tbody td[data-etiqueta]::before
 				content: attr(data-etiqueta)
@@ -533,6 +547,8 @@ export default {
 				margin-bottom: 4px
 				font-size: 0.75rem
 				font-weight: 500
+				line-height: 1.3
+				text-align: left
 				color: var(--color-text-secondary)
 
 			.dev-tabla__nombre
