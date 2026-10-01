@@ -46,6 +46,7 @@
 		<modal-pdf-columns-profile
 		:sale="sale"
 		:modal_id="pdf_columns_modal_id"
+		:perfil="selected_profile_for_edit"
 		:pdf_config_rows="pdf_config_rows"
 		:paper_width_mm.sync="paper_width_mm"
 		:printable_width_mm.sync="printable_width_mm"
