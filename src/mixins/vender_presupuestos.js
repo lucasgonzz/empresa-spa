@@ -115,8 +115,30 @@ export default {
 		 * El cartel se monta UNA sola vez, en views/Vender.vue: BtnGuardar se monta en mas de un
 		 * lugar (la barra inferior y el bloque del total) y un id de modal repetido rompe.
 		 * Este metodo solo le pide que se abra, por id.
+		 *
+		 * 🔴 No hace nada mientras el reparto de metodos de pago de ESTE presupuesto esta abierto
+		 * (la marca `budget_cobro_pendiente` prendida). El atajo de teclado de guardar es un listener
+		 * global (views/Vender.vue, fase de captura) que hace click sobre el boton sin mirar que
+		 * modales hay abiertos: con el reparto en pantalla abria el cartel ENCIMA, y contestarlo
+		 * pisaba el reparto a medias. El guard esta aca, en el unico embudo, y no en el handler del
+		 * atajo (mixins/vender/keyboard_shortcuts.js), para que lo cubra tambien el click de otros
+		 * llamadores. Con el cartel ya abierto no hace falta nada: `show` de un modal visible es un
+		 * no-op.
+		 *
+		 * La marca sola no alcanza como prueba de que el reparto esta a la vista: si alguna vez
+		 * quedara prendida sin modal, "Guardar presupuesto" no haria nada y sin ningun aviso. Por eso
+		 * se mira ademas que `payment-method-modal` exista en el DOM (un b-modal no estatico solo
+		 * existe mientras esta visible o animandose); si no esta, la marca se descarta y se sigue.
 		 */
 		guardar_presupuesto() {
+			if (this.$store.state.vender.budget_cobro_pendiente) {
+				if (document.getElementById(ID_MODAL_REPARTO_DE_PAGOS)) {
+					return
+				}
+
+				this.$store.commit('vender/set_budget_cobro_pendiente', false)
+			}
+
 			this.$bvModal.show(ID_MODAL_COBRO_DEL_PRESUPUESTO)
 		},
 		/**
@@ -462,7 +484,7 @@ export default {
 				'selected_payment_methods'	: selected_payment_methods,
 
 				// Id 1 es el estado "sin confirmar"
-				'budget_status_id'          : 1,
+				'budget_status_id'          : 1, 
 
 				'discounts'					: this.get_discounts(),
 				'surchages'					: this.get_surchages(),
