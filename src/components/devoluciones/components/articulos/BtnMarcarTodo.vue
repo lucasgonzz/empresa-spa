@@ -29,7 +29,8 @@ export default {
 		/**
 		 * Pone en cada renglón la cantidad devuelta igual a la cantidad original (vendida o
 		 * comprada) y recalcula el total. La cantidad devuelta es ACUMULADA (incluye lo ya
-		 * devuelto antes), así que lo que se devuelve ahora es lo que faltaba.
+		 * devuelto antes), así que lo que se devuelve ahora es lo que faltaba. En compra además
+		 * se llena "A devolver" con eso que faltaba.
 		 */
 		marcar_todo() {
 			this.items.forEach(article => {
@@ -41,6 +42,11 @@ export default {
 				}
 				if (faltantes > 0) {
 					article.unidades_devueltas = faltantes
+				}
+
+				// En compra la tabla muestra "A devolver" (unidades de esta nota): lo pendiente.
+				if (this.es_compra) {
+					article.a_devolver = faltantes > 0 ? faltantes : 0
 				}
 			})
 

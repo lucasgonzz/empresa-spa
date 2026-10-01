@@ -53,6 +53,8 @@ export default {
 				article_variant_id: 0,
 				discount: '',
 				returned_amount: '',
+				// "A devolver" de compra (TablaArticulos.vue); en venta no se usa.
+				a_devolver: '',
 				ya_devueltas: null,
 				pivot: {},
 			}

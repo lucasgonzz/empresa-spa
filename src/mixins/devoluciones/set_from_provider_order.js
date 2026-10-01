@@ -168,6 +168,9 @@ export default {
 					article_variant_id: 0,
 					ya_devueltas: ya_devueltas,
 					returned_amount: ya_devueltas,
+					// Lo que el usuario escribe en "A devolver" (TablaArticulos.vue): las unidades
+					// de ESTA nota. Arranca vacío; returned_amount se mantiene en ya_devueltas + esto.
+					a_devolver: '',
 					unidades_devueltas: 0,
 					pivot: {
 						...(article.pivot || {}),

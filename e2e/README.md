@@ -1215,7 +1215,7 @@ circuito es Exento justamente para que la mezcla exista y la propiedad se siga c
 | `nav-item-devolucion-tipo-venta` · `nav-item-devolucion-tipo-compra` | `devoluciones/components/TipoSelector.vue` | Selector Venta / Compra (HorizontalNav). Al entrar, el modo es Venta. |
 | `devolucion-compra-num` · `devolucion-compra-btn-buscar` | `devoluciones/components/origen/InputNumero.vue` | N° de compra (el `<input>`, Enter o la lupa). Le pega a `devoluciones/search-provider-order/`. La lupa de venta es `devolucion-btn-buscar-venta`. |
 | `devolucion-compra-proveedor` | `devoluciones/components/origen/BuscadorProveedor.vue` | Buscador de proveedor para una nota de credito sin compra. |
-| `devolucion-compra-item-devueltas-<article_id>` · `devolucion-compra-item-costo-<article_id>` | `devoluciones/components/articulos/TablaArticulos.vue` | Unidades devueltas (acumuladas: el minimo es lo ya devuelto) y costo de cada renglon de la compra. |
+| `devolucion-compra-item-devueltas-<article_id>` · `devolucion-compra-item-costo-<article_id>` | `devoluciones/components/articulos/TablaArticulos.vue` | "A devolver": unidades de ESTA nota (de 0 a comprada - ya devueltas; NO acumuladas como en venta) y costo de cada renglon de la compra. |
 | `devolucion-compra-btn-marcar-todo` | `devoluciones/components/articulos/BtnMarcarTodo.vue` | Marcar todo devuelto sobre la compra. |
 | `devolucion-compra-descontar-stock` · `devolucion-compra-deposito` | `devoluciones/components/resumen/opciones/Stock.vue` | Descontar del stock (toggle) y el deposito del que sale. |
 | `devolucion-compra-generar-cuenta-corriente` | `devoluciones/components/resumen/opciones/CuentaCorriente.vue` | Haber en la C/C del proveedor (toggle). |

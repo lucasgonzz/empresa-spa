@@ -44,7 +44,7 @@
 					class="dev-tabla__num">Ya devueltas</th>
 					<th
 					class="dev-tabla__num"
-					title="Total devuelto del renglón, contando lo que ya se había devuelto antes">Devuelta</th>
+					:title="titulo_devuelta">{{ etiqueta_devuelta }}</th>
 					<th
 					v-if="!hay_comprobante"
 					class="dev-tabla__accion"></th>
@@ -120,8 +120,28 @@
 
 					<td
 					class="dev-tabla__num dev-tabla__celda-devuelta"
-					data-etiqueta="Devuelta">
+					:data-etiqueta="etiqueta_devuelta">
+						<!--
+							Compra: "A devolver" = unidades de ESTA nota (arranca vacío, de 0 a lo
+							pendiente). Internamente se mantiene returned_amount = ya_devueltas +
+							a_devolver, así set_total.js y el POST (unidades_devueltas) no cambian.
+							Venta: la cantidad ACUMULADA de siempre (mínimo = lo ya devuelto).
+							Uno u otro (v-if): un solo <input> por data-testid.
+						-->
 						<input
+						v-if="es_compra"
+						type="number"
+						step="any"
+						min="0"
+						class="form-control dev-input-num"
+						placeholder="0"
+						:data-testid="testid_devueltas(item)"
+						:max="pendientes(item)"
+						@input="al_cambiar_a_devolver(item)"
+						@change="al_cambiar_a_devolver(item)"
+						v-model="item.a_devolver">
+						<input
+						v-else
 						type="number"
 						step="any"
 						class="form-control dev-input-num"
@@ -185,6 +205,22 @@ export default {
 		 */
 		etiqueta_cantidad() {
 			return this.es_compra ? 'Comprada' : 'Vendida'
+		},
+		/**
+		 * @returns {String} Título de la columna de cantidad: en compra son las unidades de esta
+		 *                   nota; en venta, la cantidad devuelta acumulada de siempre.
+		 */
+		etiqueta_devuelta() {
+			return this.es_compra ? 'A devolver' : 'Devuelta'
+		},
+		/**
+		 * @returns {String} Ayuda (title) del título de la columna de cantidad.
+		 */
+		titulo_devuelta() {
+			if (this.es_compra) {
+				return 'Unidades que le devolvés al proveedor con esta nota de crédito'
+			}
+			return 'Total devuelto del renglón, contando lo que ya se había devuelto antes'
 		},
 		/**
 		 * La columna Código se oculta si NINGÚN renglón tiene código (de barras o de proveedor):
@@ -263,6 +299,34 @@ export default {
 				return item.ya_devueltas
 			}
 			return 0
+		},
+		/**
+		 * Unidades que todavía se le pueden devolver al proveedor de un renglón de compra:
+		 * comprada - ya devueltas. Sin compra de origen (nota libre) no hay tope.
+		 *
+		 * @param {Object} item Renglón de compra.
+		 * @returns {Number|null} Tope, o null si no hay.
+		 */
+		pendientes(item) {
+			if (item.amount === '' || item.amount === null || typeof item.amount == 'undefined') {
+				return null
+			}
+			let pendientes = Number(item.amount) - Number(item.ya_devueltas || 0)
+			return pendientes > 0 ? pendientes : 0
+		},
+		/**
+		 * Cambio de "A devolver" en compra: traduce las unidades de esta nota a la cantidad
+		 * acumulada que usan set_total.js y la API (returned_amount = ya_devueltas + a_devolver).
+		 *
+		 * 🔴 Por qué no se edita returned_amount directo en compra: era acumulado, y con 4 ya
+		 * devueltas, para devolver 7 había que escribir 11. El usuario escribe 7.
+		 *
+		 * @param {Object} item Renglón de compra editado.
+		 */
+		al_cambiar_a_devolver(item) {
+			let a_devolver = Number(item.a_devolver) || 0
+			item.returned_amount = Number(item.ya_devueltas || 0) + a_devolver
+			this.recalcular()
 		},
 		/**
 		 * Cambio del precio (venta) o costo (compra) de un renglón.
