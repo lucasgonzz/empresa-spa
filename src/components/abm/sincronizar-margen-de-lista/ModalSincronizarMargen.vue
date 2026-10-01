@@ -138,7 +138,7 @@ size="lg"
 				-->
 				<span class="d-block text-muted sincronizar-subtexto">
 					Alcanza a {{ total_articulos_de_la_lista == 1 ? 'el articulo' : 'los ' + total_articulos_de_la_lista + ' articulos' }}
-					de la lista, incluidos los que tienen un margen propio: pasan a {{ etiqueta_margen_nuevo }}.
+					de la lista, incluidos los que tienen un margen propio: pasan a {{ etiqueta_margen_nuevo }}<span v-if="con_precio_fijado_a_mano_en_la_lista"> (salvo los que tienen el precio fijado a mano, ver abajo)</span>.
 				</span>
 			</b-form-radio>
 		</div>
