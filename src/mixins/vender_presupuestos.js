@@ -131,6 +131,18 @@ export default {
 				'forzar_total_monto'		: this.forzar_total_monto,
 
 				'moneda_id'              	: this.moneda_id,
+
+				/*
+					La cotizacion viaja tambien al actualizar, no solo al crear: ahora que el presupuesto
+					se puede pasar de $ a USD (o al reves) editandolo, los precios de los renglones ya
+					estan en la moneda nueva y la API tiene que guardar la cotizacion con la que se
+					convirtieron. Sin ella el presupuesto quedaba en USD con la cotizacion vieja (o
+					NULL) y al confirmarlo la venta nacia mal cotizada. Es la del campo USD de VENDER:
+					la guardada en el presupuesto, o el dolar del sistema si no tenia, y editable.
+					Una API vieja ignora la clave: queda la cotizacion anterior, como siempre.
+				*/
+				'valor_dolar'				: this.valor_dolar,
+
 				// Un presupuesto va siempre a la cuenta corriente (decision de Lucas, 18/9/2026): viaja 0
 				// pase lo que pase con el store, y el back lo fija en 0 igual.
 				'omitir_en_cuenta_corriente'              	: 0,

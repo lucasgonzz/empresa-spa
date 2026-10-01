@@ -21,7 +21,8 @@ export default {
 			value: '',
 			descriptions: [
 				'Este margen de ganancia se le aplicara a todos los articulos que al momento de ser creados, no se le complete el margen de ganancia para esta lista de precios, ni tampoco se le complete el precio final de forma manual',
-				'Si al momento de crear el articulo completa usted el campo, se usara ese valor y no se usara este valor',				
+				'Si al momento de crear el articulo completa usted el campo, se usara ese valor y no se usara este valor',
+				'Cambiar este margen no modifica los articulos que ya estan cargados. Para aplicarselo, use el boton "Sincronizar articulos" de abajo: le permite elegir si se aplica solo a los que tienen el margen actual o a todos los articulos de la lista',
 			]
 		},
 		{
@@ -48,25 +49,15 @@ export default {
 		// 		'Esta opcion solo se define al crear la lista; luego no se puede modificar.',
 		// 	]
 		// },
-		{
-			text: 'Al actualizar el margen por defecto, actualizar los articulos que ...',
-			key: 'update_existing_articles_percentage_mode',
-			type: 'select',
-			value: 'none',
-			not_show: true,
-			// value: lo que persiste la API; text (o label): etiqueta en el select.
-			options: [
-				{ value: 'none', text: 'No actualizar ningún artículo' },
-				{ value: 'only_default_matches', text: 'Solo los que coincidían con el margen por defecto actual' },
-				{ value: 'all', text: 'Todos los artículos' },
-			],
-			descriptions: [
-				'Define como impacta el cambio de porcentaje por defecto sobre la relacion article_price_type.',
-				'none: no actualiza ningun articulo relacionado.',
-				'only_default_matches: actualiza solo articulos cuyo porcentaje del pivot coincide con el porcentaje previo por defecto.',
-				'all: actualiza todos los articulos relacionados, incluso con porcentaje personalizado.',
-			],
-		},
+		/*
+			Mision sincronizar-margen-lista-precios (1/10/2026): se saco la propiedad
+			`update_existing_articles_percentage_mode` ("Al actualizar el margen por defecto,
+			actualizar los articulos que..."). Cambiar el margen ya no toca ningun articulo por su
+			cuenta: se sincroniza a proposito con el boton "Sincronizar articulos" que va debajo del
+			margen (src/components/abm/sincronizar-margen-de-lista/, montado desde
+			src/common-vue/views/Abm.vue). La columna sigue en la base por compatibilidad con el SPA
+			viejo cacheado; la API ya no la persiste.
+		*/
 		{
 			text: 'Ocultar al publico',
 			key: 'ocultar_al_publico',
@@ -154,7 +145,7 @@ export default {
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Define las listas de precios del negocio (minorista, mayorista, distribuidores, etc.) y cómo se calcula cada una.',
-		implicancias: 'Cada lista aplica un margen por defecto sobre el costo de los artículos que no tengan margen o precio final propio. Al cambiar el margen por defecto podés elegir si se actualizan los artículos ya creados. Las listas se asignan a los clientes, definen qué precio ven en Vender y en la tienda, y pueden ocultarse al público o usarse en Tienda Nube y Mercado Libre.',
+		implicancias: 'Cada lista aplica un margen por defecto sobre el costo de los artículos que no tengan margen o precio final propio. Cambiar el margen por defecto no modifica los artículos ya creados: para aplicárselo se usa el botón "Sincronizar artículos" que está debajo del margen, que pregunta si va solo a los que tienen el margen actual o a todos (los que tienen el precio fijado a mano quedan afuera, salvo que se los incluya a propósito). Las listas se asignan a los clientes, definen qué precio ven en Vender y en la tienda, y pueden ocultarse al público o usarse en Tienda Nube y Mercado Libre.',
 		como_se_utiliza: 'Creá la lista con nombre, posición y margen por defecto. Opcionalmente definí recargos propios de la lista y márgenes específicos por categoría o subcategoría. Después asignásela a los clientes que corresponda.',
 		palabras_clave: ['listas de precios', 'margen', 'ganancia', 'mayorista', 'minorista', 'porcentaje'],
 	},

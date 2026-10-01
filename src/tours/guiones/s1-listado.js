@@ -499,9 +499,12 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
-				selector: '#form-group-update_existing_articles_percentage_mode',
+				/* Mision sincronizar-margen-lista-precios (1/10/2026): el select viejo
+				 * (`update_existing_articles_percentage_mode`) se saco; cambiar el margen ya no toca
+				 * los articulos solo, se sincroniza con el boton de abajo del margen. */
+				selector: '#btn-sincronizar-margen-lista',
 				ruta: RUTA_TIPOS_DE_PRECIO,
-				texto: 'Y cuando lo cambiás, te pregunta qué hacer con lo que ya está cargado. La del medio respeta los precios que tocaste a mano.',
+				texto: 'Y si querés pasar el margen nuevo a lo que ya está cargado, lo sincronizás desde acá: elegís si va solo a los que tienen el margen actual o a todos, y los precios que fijaste a mano quedan afuera.',
 				avanza: 'siguiente',
 			},
 		],

@@ -324,6 +324,22 @@ export default {
 			this.$store.commit('afip_ticket/set_model', afip_ticket)
 			this.$bvModal.show('afip-ticket-errors')
 		},
+		/**
+		 * Recarga la lista de ventas con problemas al facturar cuando hay una pantalla mostrandola
+		 * (el modal `afip-reenviar-facturas` o la pestaña Facturacion de Alertas). Esa lista vive en
+		 * el store y NO se deriva de `sale`, asi que eliminar una factura o una nota de credito la
+		 * deja desactualizada: la venta ya resuelta seguia apareciendo en el modal.
+		 *
+		 * @returns {void}
+		 */
+		refrescar_problemas_al_facturar() {
+			if (
+				this.modal_afip_errors_abierto
+				|| this.route_name == 'alertas'
+			) {
+				this.$store.dispatch('afip_ticket/get_problemas_al_facturar')
+			}
+		},
 		delete_afip_ticket(afip_ticket) {
 			let text = '¿Seguro que quiere eliminar esta factura?'
 
@@ -339,6 +355,7 @@ export default {
 					this.$store.commit('auth/setLoading', false)
 					this.$store.commit('sale/add', res.data.sale)
 					this.$toast.success('Factura eliminada')
+					this.refrescar_problemas_al_facturar()
 				})
 				.catch(err => {
 					this.$store.commit('auth/setLoading', false)
@@ -463,6 +480,7 @@ export default {
 					this.$store.commit('auth/setMessage', '')
 					this.$store.commit('sale/add', res.data.sale)
 					this.$toast.success('Nota de credito AFIP eliminada')
+					this.refrescar_problemas_al_facturar()
 				})
 				.catch(err => {
 					this.$store.commit('auth/setLoading', false)
