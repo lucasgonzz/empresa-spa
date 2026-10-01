@@ -94,6 +94,10 @@ export default {
 		iva_aplicado() {
 			return this.$store.state.vender.iva_aplicado
 		},
+		// "Sumar IVA a los artículos sin IVA" (0/1), viaja con iva_aplicado en ventas y presupuestos
+		iva_en_articulos_sin_iva() {
+			return this.$store.state.vender.iva_en_articulos_sin_iva
+		},
 		discounts_in_services: {
 			get() {
 				return this.$store.state.vender.discounts_in_services

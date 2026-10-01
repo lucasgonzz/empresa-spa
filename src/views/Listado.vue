@@ -107,7 +107,7 @@
 			<cost-input></cost-input>
 		</template>
 
-		<!-- Prompt 612: "Aplicar iva" forzado y bloqueado para RRII; oculto por completo en Monotributista via v_if_function -->
+		<!-- Prompt 612: "Aplicar iva" forzado y bloqueado para RRII migrado (check normal en configuracion vieja); oculto por completo en Monotributista via v_if_function -->
 		<template #aplicar_iva>
 			<aplicar-iva-input></aplicar-iva-input>
 		</template>

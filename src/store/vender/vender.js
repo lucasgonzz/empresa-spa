@@ -494,6 +494,13 @@ export default {
 		discount_stock: 1,
 		// Indica si los precios de los items se interpretan con IVA aplicado. Por defecto en true (1).
 		iva_aplicado: 1,
+		/*
+			Sumar el IVA a los artículos que lo tienen apagado en el listado (mision
+			iva-a-articulos-sin-iva-en-vender, 1/10/2026). Solo tiene efecto con iva_aplicado en 1: el
+			check se deshabilita y vuelve a 0 cuando se apaga "Precios con IVA". Por defecto en 0, que
+			deja cada precio tal cual el listado. La regla vive en utils/iva_en_vender.js.
+		*/
+		iva_en_articulos_sin_iva: 0,
 		// Indica si se debe enviar un correo al cliente al crear la venta.
 		send_mail: 0,
 
@@ -616,6 +623,10 @@ export default {
 		// Mutation para controlar si los precios incluyen IVA
 		set_iva_aplicado(state, value) {
 			state.iva_aplicado = value
+		},
+		// Mutation para sumar el IVA a los artículos sin IVA aplicado (0/1)
+		set_iva_en_articulos_sin_iva(state, value) {
+			state.iva_en_articulos_sin_iva = value
 		},
 		// Mutation para controlar si se envía correo al cliente
 		set_send_mail(state, value) {
@@ -1359,6 +1370,8 @@ export default {
 			discount_stock: state.discount_stock,
 			// Indica si los precios enviados en la venta incluyen IVA
 			iva_aplicado: state.iva_aplicado,
+			// Indica si a los artículos sin IVA aplicado se les sumó el IVA (solo con iva_aplicado en 1)
+			iva_en_articulos_sin_iva: state.iva_en_articulos_sin_iva,
 			// Array de descripciones del cálculo del precio final, serializado como JSON
 			price_description: JSON.stringify(state.total_description),
 			// Indica si se debe enviar correo al cliente al crear la venta

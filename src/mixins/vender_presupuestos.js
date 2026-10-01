@@ -385,6 +385,8 @@ export default {
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
+				// "Sumar IVA a los artículos sin IVA" (0/1): el presupuesto lo guarda igual que iva_aplicado
+				'iva_en_articulos_sin_iva'	: this.iva_en_articulos_sin_iva,
 			})
 			.then(res => {
 				// Primero, antes de cualquier cosa que pueda tirar un error: si algo de abajo falla, el
@@ -495,6 +497,8 @@ export default {
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
+				// "Sumar IVA a los artículos sin IVA" (0/1): el presupuesto lo guarda igual que iva_aplicado
+				'iva_en_articulos_sin_iva'	: this.iva_en_articulos_sin_iva,
 			}, {
 				/*
 					El aviso global del interceptor se apaga: el catch de abajo ya muestra el

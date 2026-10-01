@@ -200,6 +200,8 @@ export default {
 			this.$store.commit('vender/set_discount_stock', 1)
 			// Al limpiar vender, iva_aplicado vuelve al valor por defecto (true)
 			this.$store.commit('vender/set_iva_aplicado', 1)
+			// Y "Sumar IVA a los artículos sin IVA" vuelve a apagado (precios tal cual el listado)
+			this.$store.commit('vender/set_iva_en_articulos_sin_iva', 0)
 
 			this.$store.commit('vender/clearPendingAttachments')
 			this.$store.commit('vender/setSaleAttachments', [])
