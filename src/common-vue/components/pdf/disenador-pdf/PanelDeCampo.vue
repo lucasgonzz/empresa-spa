@@ -44,6 +44,17 @@
 				data-testid="disenador-pdf-panel-texto"
 				@input="campo.texto = $event.target.value"></textarea>
 				<small class="dpdf-panel__ayuda">{{ largo_del_texto }}/{{ disenador.limites.max_texto_libre }} caracteres. Podés usar varios renglones.</small>
+				<!-- Largo para el ancho de su caja: aviso suave, no bloquea (el PDF no parte una caja entre hojas) -->
+				<p
+				v-if="texto_largo"
+				class="dpdf-panel__aviso"
+				role="status"
+				data-testid="disenador-pdf-panel-texto-largo">
+					<i
+					class="bi bi-exclamation-triangle"
+					aria-hidden="true"></i>
+					<span>{{ aviso_de_texto_largo }}</span>
+				</p>
 			</div>
 
 			<!-- El rótulo: el del catálogo (vacío), uno propio o ninguno -->
@@ -186,6 +197,8 @@ import {
 	acotar_entero,
 	estilo_efectivo,
 	tiene_estilo_propio,
+	texto_libre_largo,
+	aviso_de_texto_largo,
 } from './estado_del_disenador'
 import { nombre_de_la_alineacion, icono_de_la_alineacion } from './estilos_de_caja'
 
@@ -203,8 +216,37 @@ export default {
 			type: Object,
 			required: true,
 		},
+		/* La caja donde está (para avisar un texto libre largo para su ancho), o null */
+		caja: {
+			type: Object,
+			default: null,
+		},
 	},
 	computed: {
+		/**
+		 * Columnas de la caja donde está el campo.
+		 *
+		 * @returns {number}
+		 */
+		cols_de_la_caja() {
+			return this.caja ? this.caja.cols : 12
+		},
+		/**
+		 * Si el texto libre es largo para el ancho de su caja (aviso suave, no bloquea).
+		 *
+		 * @returns {boolean}
+		 */
+		texto_largo() {
+			return texto_libre_largo(this.campo, this.cols_de_la_caja)
+		},
+		/**
+		 * El aviso del texto largo, con las columnas de su caja.
+		 *
+		 * @returns {string}
+		 */
+		aviso_de_texto_largo() {
+			return aviso_de_texto_largo(this.cols_de_la_caja)
+		},
 		/**
 		 * Definición del campo en el catálogo (null si la key ya no existe).
 		 *

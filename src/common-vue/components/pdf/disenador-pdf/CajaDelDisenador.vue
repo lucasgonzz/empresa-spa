@@ -125,7 +125,8 @@
 					<campo-de-caja
 					v-for="campo in caja.campos"
 					:key="campo.ui_id"
-					:campo="campo"></campo-de-caja>
+					:campo="campo"
+					:cols_de_la_caja="caja.cols"></campo-de-caja>
 				</draggable>
 
 				<!-- Caja vacía: el texto va encima de la zona de soltar, sin tapar el arrastre -->

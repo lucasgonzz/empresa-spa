@@ -44,6 +44,17 @@
 				class="dpdf-campo__valor"
 				:class="clase_del_valor">{{ renglon }}</span>
 			</span>
+			<!--
+				Texto libre largo para el ancho de la caja: un aviso suave (no se imprime y no bloquea).
+				Acá va corto; el completo, en el title y en el panel de propiedades.
+			-->
+			<span
+			v-if="texto_largo"
+			class="dpdf-campo__aviso"
+			:title="aviso_de_texto_largo">
+				<i class="bi bi-exclamation-triangle"></i>
+				Puede no entrar en la hoja
+			</span>
 		</div>
 
 		<button
@@ -57,7 +68,7 @@
 	</div>
 </template>
 <script>
-import { KEY_TEXTO_LIBRE, estilo_efectivo, etiqueta_efectiva } from './estado_del_disenador'
+import { KEY_TEXTO_LIBRE, estilo_efectivo, etiqueta_efectiva, texto_libre_largo, aviso_de_texto_largo } from './estado_del_disenador'
 
 /* Milímetros que mide un punto tipográfico (1 pt = 1/72 de pulgada = 0,3528 mm) */
 const MM_POR_PUNTO = 0.3528
@@ -91,8 +102,30 @@ export default {
 			type: Object,
 			required: true,
 		},
+		/* Columnas de la caja donde está (para avisar un texto libre largo para ese ancho) */
+		cols_de_la_caja: {
+			type: Number,
+			default: 12,
+		},
 	},
 	computed: {
+		/**
+		 * Si es un texto libre largo para el ancho de su caja: puede no entrar en la hoja (el PDF no
+		 * parte una caja entre hojas). Aviso suave, no bloquea.
+		 *
+		 * @returns {boolean}
+		 */
+		texto_largo() {
+			return texto_libre_largo(this.campo, this.cols_de_la_caja)
+		},
+		/**
+		 * El aviso completo del texto largo (para el title).
+		 *
+		 * @returns {string}
+		 */
+		aviso_de_texto_largo() {
+			return aviso_de_texto_largo(this.cols_de_la_caja)
+		},
 		/**
 		 * Definición del catálogo, o null si la key ya no existe (un campo que se retiró).
 		 *
@@ -232,7 +265,8 @@ export default {
 		 * @returns {string}
 		 */
 		etiqueta_accesible() {
-			return 'Campo ' + this.nombre + (this.seleccionado ? ', seleccionado' : '') + '. Enter para editarlo'
+			let aviso = this.texto_largo ? '. ' + this.aviso_de_texto_largo : ''
+			return 'Campo ' + this.nombre + (this.seleccionado ? ', seleccionado' : '') + aviso + '. Enter para editarlo'
 		},
 		/**
 		 * Clases de estado del renglón.
@@ -369,6 +403,21 @@ export default {
 
 	.dpdf-campo__valor--perdido
 		color: var(--color-text-danger-strong, var(--danger))
+
+	// El aviso del texto libre largo: chico, en el color de advertencia y con la letra de la
+	// interfaz (no es parte de lo que se imprime)
+	.dpdf-campo__aviso
+		display: flex
+		align-items: center
+		gap: 4px
+		margin-top: 2px
+		color: var(--color-text-warning-strong, var(--orange))
+		font-family: var(--font-family-sans-serif)
+		font-size: 0.7rem
+		font-weight: 600
+		font-style: normal
+		line-height: 1.3
+		text-align: left
 
 	// Seleccionado: el anillo primario y un fondo suave
 	&.dpdf-campo--seleccionado

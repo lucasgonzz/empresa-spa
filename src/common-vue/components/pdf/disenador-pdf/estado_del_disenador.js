@@ -74,6 +74,14 @@ export const MOTIVO_A5_EN_ARCA = 'En A5 no entra completo el cuadro de ARCA (imp
 /* Aviso suave (no bloquea) de una venta en A5 con "Mostrar pie de página en cada hoja" */
 export const AVISO_A5_CON_PIE_EN_CADA_HOJA = 'Con hoja A5 y el pie en cada hoja, entran pocos renglones por hoja.'
 
+/*
+	Caracteres de texto libre que entran cómodos por cada columna de la caja. El PDF no parte una
+	caja entre hojas, así que un texto libre muy largo en una caja angosta puede no entrar en la hoja
+	(medido del lado API, 1/10/2026: 1000 caracteres miden 39 mm en 12 columnas, 88 en 6, 129 en 4 y
+	336 en 2). Pasado `columnas × 60`, el diseñador avisa (no bloquea).
+*/
+export const CARACTERES_DE_TEXTO_LIBRE_POR_COLUMNA = 60
+
 /* Ancho (en columnas de 12) de una caja nueva desde "+ Agregar caja" (plan §8.3) */
 export const COLS_DE_CAJA_NUEVA = 6
 
@@ -869,6 +877,32 @@ export function formato_de_hoja(formatos, ancho, alto) {
 		}
 	})
 	return encontrado
+}
+
+/**
+ * Si un texto libre es largo para el ancho de su caja (más de CARACTERES_DE_TEXTO_LIBRE_POR_COLUMNA
+ * por columna): puede no entrar en la hoja, porque el PDF no parte una caja entre hojas.
+ *
+ * @param {Object} campo campo de trabajo
+ * @param {number} cols columnas de la caja donde está
+ * @returns {boolean}
+ */
+export function texto_libre_largo(campo, cols) {
+	if (!campo || campo.key !== KEY_TEXTO_LIBRE) {
+		return false
+	}
+	let largo = Array.from(String(campo.texto || '')).length
+	return largo > acotar_entero(cols, 1, 12, 12) * CARACTERES_DE_TEXTO_LIBRE_POR_COLUMNA
+}
+
+/**
+ * El aviso de un texto libre largo para su caja (no bloquea).
+ *
+ * @param {number} cols columnas de la caja
+ * @returns {string}
+ */
+export function aviso_de_texto_largo(cols) {
+	return 'Este texto es largo para una caja de ' + cols + (Number(cols) === 1 ? ' columna' : ' columnas') + ': puede no entrar en la hoja. Agrandá la caja o acortá el texto.'
 }
 
 /**

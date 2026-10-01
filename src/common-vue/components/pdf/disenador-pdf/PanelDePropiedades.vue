@@ -50,7 +50,8 @@
 			<panel-de-campo
 			v-else-if="seleccion.tipo === 'campo'"
 			:key="'campo-' + seleccion.item.ui_id"
-			:campo="seleccion.item"></panel-de-campo>
+			:campo="seleccion.item"
+			:caja="seleccion.caja"></panel-de-campo>
 
 			<panel-de-fijo
 			v-else-if="seleccion.tipo === 'fijo'"
@@ -267,6 +268,21 @@ export default {
 .dpdf-panel__perdido
 	color: var(--color-text-danger-strong, var(--danger))
 	font-weight: 600
+
+// Aviso suave (no bloquea): el texto libre largo para el ancho de su caja
+.dpdf-panel__aviso
+	display: flex
+	align-items: flex-start
+	gap: 6px
+	margin: 2px 0 0
+	color: var(--color-text-warning-strong, var(--orange))
+	font-size: 0.74rem
+	font-weight: 600
+	line-height: 1.35
+
+	i
+		flex: 0 0 auto
+		margin-top: 1px
 
 // Estilos de caja: tres opciones con una mini vista previa
 .dpdf-panel__estilos
