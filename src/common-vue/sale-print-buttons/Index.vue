@@ -538,7 +538,12 @@ export default {
 			if (profile) {
 				this.paper_width_mm = Number(profile.paper_width_mm || 297)
 				this.printable_width_mm = Number(profile.printable_width_mm || 277)
-				this.margin_mm = Number(profile.margin_mm || 5)
+				/*
+					Un margen de 0 es valido (el diseñador de PDF lo ofrece, misión diseno-pdf-configurable):
+					con `|| 5` se volvía 5 al abrir este modal, y guardar desde acá lo pisaba sin aviso.
+					Solo un margen ausente cae al 5 de siempre.
+				*/
+				this.margin_mm = (profile.margin_mm == null || profile.margin_mm === '') ? 5 : Number(profile.margin_mm)
 				this.profile_name = profile.name || ''
 				this.sheet_type_id = profile.sheet_type_id || (profile.sheet_type ? profile.sheet_type.id : null)
 			this.is_afip_ticket = this.normalize_boolean(profile.is_afip_ticket)
