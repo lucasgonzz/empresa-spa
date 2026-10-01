@@ -197,7 +197,7 @@
 <script>
 import draggable from 'vuedraggable'
 import CampoDeCaja from './CampoDeCaja'
-import { acotar_entero } from './estado_del_disenador'
+import redimension_por_columnas from './redimension_por_columnas'
 import { nombre_del_estilo, icono_del_estilo } from './estilos_de_caja'
 
 /*
@@ -226,14 +226,13 @@ const PUNTOS_DEL_TITULO = 9
  * trabajo del diseñador, las mismas que vuedraggable muta por referencia (`:list`). Es el patrón de
  * ElementoDelEditor.vue (Diseños de Vender) y hace que el diseñador vea el cambio sin eventos.
  *
- * El ancho se cambia de dos formas, igual que en Vender:
- * - Tirando de un borde (pointer events + setPointerCapture). Salta de a una columna:
- *   cols = redondear(cols_inicial + Δx·signo / (anchoDeLaZona / 12)), acotado a 1..12.
- * - Con los botones − / +, que además son el camino por teclado.
+ * El ancho (manijas de los dos bordes y − / +, acotado a 1..12) lo pone el mixin
+ * redimension_por_columnas.js, el mismo que usa el bloque del cliente de la factura de ARCA.
  */
 export default {
 	name: 'CajaDelDisenador',
 	inject: ['disenador'],
+	mixins: [redimension_por_columnas],
 	components: {
 		draggable,
 		CampoDeCaja,
@@ -254,21 +253,25 @@ export default {
 		return {
 			/* Opciones del grupo de arrastre de los campos (ver GRUPO_DE_CAMPOS) */
 			grupo: GRUPO_DE_CAMPOS,
-			/* true mientras se tira de una de las dos manijas */
-			redimensionando: false,
-			/* 'izquierda' | 'derecha': de qué borde se está tirando */
-			lado: null,
-			/* Posición X del puntero al empezar a tirar */
-			x_inicial: 0,
-			/* Ancho (en columnas) que tenía la caja al empezar a tirar */
-			cols_inicial: 0,
-			/* Ancho en px de UNA columna de la zona, medido al empezar a tirar */
-			ancho_de_columna: 0,
-			/* Puntero que está tirando (con dos dedos en una tablet solo cuenta el primero) */
-			id_de_puntero: null,
 		}
 	},
 	computed: {
+		/**
+		 * Lo que se ensancha con las manijas y − / + (lo pide el mixin redimension_por_columnas).
+		 *
+		 * @returns {Object}
+		 */
+		item_redimensionable() {
+			return this.caja
+		},
+		/**
+		 * Ancho mínimo de una caja: una columna (lo pide el mixin redimension_por_columnas).
+		 *
+		 * @returns {number}
+		 */
+		cols_minimo() {
+			return 1
+		},
 		/**
 		 * Cómo se nombra la caja para un lector de pantalla y en los botones: su título, o "sin título".
 		 *
@@ -324,13 +327,6 @@ export default {
 			}
 		},
 	},
-	beforeDestroy() {
-		/* Si la caja se destruye a mitad de un tirón (p. ej. se cerró el modal), avisar igual */
-		if (this.redimensionando) {
-			this.redimensionando = false
-			this.$emit('redimension', false)
-		}
-	},
 	methods: {
 		/**
 		 * Nombre de un estilo de caja (ver estilos_de_caja.js).
@@ -358,107 +354,6 @@ export default {
 		seleccionar() {
 			this.disenador.seleccionar('caja', this.caja)
 		},
-		/**
-		 * Cambia el ancho una columna con los botones − / +, acotado a 1..12.
-		 *
-		 * @param {number} paso -1 o 1
-		 * @returns {void}
-		 */
-		cambiar_cols(paso) {
-			this.caja.cols = acotar_entero(this.caja.cols + paso, 1, 12, this.caja.cols)
-		},
-		/**
-		 * Empieza a tirar de un borde: mide la zona, toma el puntero y avisa a la zona (que resalta
-		 * las guías de las 12 columnas). El ancho de UNA columna sale del ancho de la lista de la
-		 * zona (el padre de esta caja): los ítems ocupan calc(100% * N / 12) de esa lista.
-		 *
-		 * @param {PointerEvent} evento pointerdown sobre la manija
-		 * @param {string} lado 'izquierda' | 'derecha'
-		 * @returns {void}
-		 */
-		iniciar_redimension(evento, lado) {
-			/* Solo el botón principal del mouse (o un dedo, o el lápiz) */
-			if (evento.button !== undefined && evento.button !== 0) {
-				return
-			}
-			if (this.redimensionando) {
-				return
-			}
-
-			let lista = this.$el.parentElement
-			let ancho_de_la_lista = lista ? lista.getBoundingClientRect().width : 0
-
-			if (!ancho_de_la_lista) {
-				return
-			}
-
-			/* Sin esto el navegador empieza a seleccionar texto (mouse) o a scrollear (táctil) */
-			evento.preventDefault()
-
-			this.lado = lado
-			this.x_inicial = evento.clientX
-			this.cols_inicial = this.caja.cols
-			this.ancho_de_columna = ancho_de_la_lista / 12
-			this.id_de_puntero = evento.pointerId
-			this.redimensionando = true
-
-			/* Con la captura, los pointermove siguen llegando a la manija aunque el puntero salga de ella */
-			try {
-				evento.currentTarget.setPointerCapture(evento.pointerId)
-			} catch (e) {
-				console.log('diseño de PDF: no se pudo capturar el puntero', e)
-			}
-
-			this.$emit('redimension', true)
-		},
-		/**
-		 * Recalcula el ancho mientras se tira: salta de a una columna, nunca por píxeles.
-		 *
-		 * @param {PointerEvent} evento
-		 * @returns {void}
-		 */
-		mover_redimension(evento) {
-			if (!this.redimensionando || evento.pointerId !== this.id_de_puntero) {
-				return
-			}
-
-			/* Hacia afuera siempre agranda: a la derecha en el borde derecho, a la izquierda en el izquierdo */
-			let signo = this.lado === 'derecha' ? 1 : -1
-			let desplazamiento = (evento.clientX - this.x_inicial) * signo
-			let cols = acotar_entero(Math.round(this.cols_inicial + desplazamiento / this.ancho_de_columna), 1, 12, this.cols_inicial)
-
-			if (cols !== this.caja.cols) {
-				this.caja.cols = cols
-			}
-		},
-		/**
-		 * Termina de tirar (se soltó, se canceló el gesto o se perdió la captura). Puede llegar dos
-		 * veces seguidas (pointerup y después lostpointercapture): la segunda no hace nada.
-		 *
-		 * @param {PointerEvent} evento
-		 * @returns {void}
-		 */
-		terminar_redimension(evento) {
-			if (!this.redimensionando) {
-				return
-			}
-			if (evento && evento.pointerId !== undefined && evento.pointerId !== this.id_de_puntero) {
-				return
-			}
-
-			this.redimensionando = false
-
-			try {
-				if (evento && evento.currentTarget && evento.currentTarget.hasPointerCapture && evento.currentTarget.hasPointerCapture(this.id_de_puntero)) {
-					evento.currentTarget.releasePointerCapture(this.id_de_puntero)
-				}
-			} catch (e) {
-				console.log('diseño de PDF: no se pudo soltar el puntero', e)
-			}
-
-			this.id_de_puntero = null
-			this.$emit('redimension', false)
-		},
 	},
 }
 </script>
@@ -466,7 +361,11 @@ export default {
 // Sin `scoped`: mientras se arrastra, Sortable dibuja un clon de la caja colgado de <body>
 // (fallbackOnBody), fuera del modal, y el clon tiene que verse igual. Ninguna regla depende de un
 // ancestro: todo cuelga de las clases dpdf-caja*. El ancho (flex-basis N/12), el gutter y el margen
-// de abajo los pone la lista de la zona (ZonaDelDisenador.vue). Colores solo por token.
+// de abajo los pone la lista de la zona (ZonaDelDisenador.vue). Colores solo por token. Las manijas,
+// el ancho − N/12 +, la insignia y los botones redondos salen de los mixins de _ancho_por_columnas
+// (los mismos del bloque del cliente de ARCA).
+@import '@/common-vue/components/pdf/disenador-pdf/_ancho_por_columnas'
+
 .dpdf-caja
 	position: relative
 	display: flex
@@ -559,35 +458,7 @@ export default {
 
 	// Botones redondos chiquitos: estilos, − / + y la ✕
 	.dpdf-caja__boton
-		display: inline-flex
-		align-items: center
-		justify-content: center
-		flex: 0 0 22px
-		width: 22px
-		height: 22px
-		padding: 0
-		border: 0
-		border-radius: 50%
-		background: transparent
-		color: var(--color-text-secondary)
-		font-size: 0.72rem
-		line-height: 1
-		cursor: pointer
-		transition: background .15s ease, color .15s ease, opacity .15s ease
-
-		&:hover:not(:disabled)
-			background: var(--bg-hover)
-			color: var(--color-text-primary)
-
-		&:disabled
-			opacity: .35
-			cursor: default
-
-		&:focus
-			outline: none
-
-		&:focus-visible
-			box-shadow: 0 0 0 2px var(--color-primary)
+		+dpdf-boton-redondo
 
 	.dpdf-caja__boton--activo
 		background: var(--bg-nav-hover)
@@ -637,73 +508,12 @@ export default {
 		justify-content: flex-end
 		min-width: 0
 
-	.dpdf-caja__ancho
-		display: inline-flex
-		align-items: center
-		gap: 2px
-		flex: 0 0 auto
+	// El ancho − N/12 +: − y + se ven al pasar el mouse, al enfocar algo de la caja o con la caja
+	// seleccionada
+	+dpdf-ancho('dpdf-caja', 'dpdf-caja--seleccionada')
 
-	.dpdf-caja__cols
-		min-width: 38px
-		padding: 1px 6px
-		border-radius: 999px
-		background: var(--bg-section)
-		color: var(--color-text-secondary)
-		font-size: 0.7rem
-		font-weight: 600
-		text-align: center
-		font-variant-numeric: tabular-nums
-
-	// − y + ocupan su lugar siempre, pero solo se ven al pasar el mouse o al enfocar algo de la
-	// caja con el teclado (con las dos clases para ganarle a :disabled, como en Vender)
-	.dpdf-caja__boton.dpdf-caja__boton--ancho
-		opacity: 0
-
-	&:hover .dpdf-caja__boton.dpdf-caja__boton--ancho,
-	&:focus-within .dpdf-caja__boton.dpdf-caja__boton--ancho,
-	&.dpdf-caja--seleccionada .dpdf-caja__boton.dpdf-caja__boton--ancho
-		opacity: 1
-
-		&:disabled
-			opacity: .35
-
-	// Manijas de los bordes, sobre el gutter, centradas en el borde de la tarjeta: el ítem tiene 8px
-	// de padding a cada lado, así que el borde cae a 8px y la manija de 12px va a 2px
-	.dpdf-caja__manija
-		position: absolute
-		top: 0
-		bottom: 0
-		z-index: 2
-		display: flex
-		align-items: center
-		justify-content: center
-		width: 12px
-		cursor: ew-resize
-		// Sin esto, en una pantalla táctil tirar de la manija scrollea la página
-		touch-action: none
-
-		// La marquita visible: una píldora vertical
-		&::before
-			content: ''
-			width: 4px
-			height: 28px
-			max-height: 70%
-			border-radius: 999px
-			background: var(--color-primary)
-			opacity: 0
-			transition: opacity .15s ease
-
-	.dpdf-caja__manija--izquierda
-		left: 2px
-
-	.dpdf-caja__manija--derecha
-		right: 2px
-
-	&:hover .dpdf-caja__manija::before
-		opacity: .5
-
-	.dpdf-caja__manija:hover::before
-		opacity: 1
+	// Manijas de los dos bordes
+	+dpdf-manijas('dpdf-caja')
 
 	// Seleccionada: anillo primario por fuera (el borde de adentro es el del estilo de la caja)
 	&.dpdf-caja--seleccionada .dpdf-caja__tarjeta
@@ -718,24 +528,8 @@ export default {
 		.dpdf-caja__manija::before
 			opacity: 1
 
-	// La insignia grande "N/12" del medio de la caja mientras se tira (texto en --bg-card: blanco
-	// sobre el azul en claro, gris oscuro sobre el azul claro en oscuro)
-	.dpdf-caja__insignia
-		position: absolute
-		top: 50%
-		left: 50%
-		z-index: 3
-		transform: translate(-50%, -50%)
-		padding: 4px 12px
-		border-radius: 999px
-		background: var(--color-primary)
-		color: var(--bg-card)
-		font-size: 0.85rem
-		font-weight: 700
-		white-space: nowrap
-		font-variant-numeric: tabular-nums
-		box-shadow: 0 4px 12px var(--shadow-color)
-		pointer-events: none
+	// La insignia grande "N/12" del medio de la caja mientras se tira
+	+dpdf-insignia('dpdf-caja')
 
 	// Caja angosta (3 columnas o menos): menos aire
 	&.dpdf-caja--angosta .dpdf-caja__tarjeta
@@ -762,24 +556,7 @@ export default {
 		animation: dpdf-destello 1.4s ease
 
 // Pantallas táctiles: manijas y − / + siempre a la vista, y manijas más anchas para el dedo
-// (16px: justo el gutter entre dos cajas)
 @media (hover: none)
 	.dpdf-caja
-		.dpdf-caja__boton.dpdf-caja__boton--ancho
-			opacity: 1
-
-			&:disabled
-				opacity: .35
-
-		.dpdf-caja__manija
-			width: 16px
-
-			&::before
-				opacity: .45
-
-		.dpdf-caja__manija--izquierda
-			left: 0
-
-		.dpdf-caja__manija--derecha
-			right: 0
+		+dpdf-ancho-tactil('dpdf-caja')
 </style>

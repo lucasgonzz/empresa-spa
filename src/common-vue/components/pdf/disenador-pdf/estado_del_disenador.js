@@ -299,20 +299,53 @@ export function mapa_de_definiciones(campos) {
 }
 
 /**
- * La zona de cada bloque fijo según el catálogo ({afip_receptor: 'superior', afip_pie: 'pie'} en
- * una factura de ARCA; vacío si el perfil no es fiscal).
+ * Los bloques fijos del catálogo por key ({key, zona, nombre, descripcion, redimensionable,
+ * cols_min}): los dos de la factura de ARCA, o ninguno si el perfil no es fiscal. Solo entran los
+ * que tienen una zona válida.
  *
  * @param {Array} fijos `fijos` del catálogo
- * @returns {Object}
+ * @returns {Object} {key: definición}
  */
-function zonas_de_los_fijos(fijos) {
-	let zonas = {}
+function fijos_del_catalogo(fijos) {
+	let definiciones = {}
 	;(fijos || []).forEach(function (fijo) {
 		if (fijo && typeof fijo.key == 'string' && ZONAS.indexOf(fijo.zona) !== -1) {
-			zonas[fijo.key] = fijo.zona
+			definiciones[fijo.key] = fijo
 		}
 	})
-	return zonas
+	return definiciones
+}
+
+/**
+ * El ancho mínimo (columnas) de un bloque fijo: el `cols_min` del catálogo si cambia de ancho (el
+ * del cliente de la factura de ARCA), acotado a 1..12; 12 si no trae o si no cambia de ancho. Nada
+ * escrito a mano: el mínimo es el que dice la API.
+ *
+ * @param {Object|null} definicion bloque fijo del catálogo
+ * @returns {number}
+ */
+export function cols_minimo_de_fijo(definicion) {
+	if (!definicion || !definicion.redimensionable) {
+		return 12
+	}
+	return acotar_entero(definicion.cols_min, 1, 12, 12)
+}
+
+/**
+ * El ancho (columnas) de un bloque fijo que cambia de ancho -- el del cliente de la factura de ARCA,
+ * según el catálogo (`redimensionable` y `cols_min`, contrato de la segunda tanda) --: el que trae,
+ * acotado a cols_min..12, o 12 si no trae (como DisenoDePaginaPdf::normalizar_fijo). Null si el
+ * bloque no cambia de ancho (el de importes, QR y CAE, que va siempre a lo ancho y no lleva `cols`).
+ *
+ * @param {Object|null} definicion bloque fijo del catálogo
+ * @param {*} cols
+ * @returns {number|null}
+ */
+export function cols_de_fijo(definicion, cols) {
+	if (!definicion || !definicion.redimensionable) {
+		return null
+	}
+	return acotar_entero(cols, cols_minimo_de_fijo(definicion), 12, 12)
 }
 
 /**
@@ -484,18 +517,21 @@ function armar_caja(item, limites, ids, keys) {
 }
 
 /**
- * Un bloque fijo de trabajo, o null si no es de esta zona según el catálogo (o ya estaba).
+ * Un bloque fijo de trabajo, o null si no es de esta zona según el catálogo (o ya estaba). El del
+ * pie lleva `importes`; el que cambia de ancho (según el catálogo), `cols`. Mismo orden de claves
+ * que DisenoDePaginaPdf::normalizar_fijo().
  *
  * @param {string} zona
  * @param {Object} item
- * @param {Object} zona_del_fijo ver zonas_de_los_fijos()
+ * @param {Object} definiciones ver fijos_del_catalogo()
  * @param {Object} keys keys ya ubicadas (se modifica; los fijos van como "fijo:<key>")
  * @returns {Object|null}
  */
-function armar_fijo(zona, item, zona_del_fijo, keys) {
+function armar_fijo(zona, item, definiciones, keys) {
 	let key = item.key
+	let definicion = typeof key == 'string' ? definiciones[key] : null
 
-	if (typeof key != 'string' || zona_del_fijo[key] !== zona || keys['fijo:' + key]) {
+	if (!definicion || definicion.zona !== zona || keys['fijo:' + key]) {
 		return null
 	}
 	keys['fijo:' + key] = true
@@ -507,6 +543,11 @@ function armar_fijo(zona, item, zona_del_fijo, keys) {
 
 	if (key === FIJO_AFIP_PIE) {
 		fijo.importes = Object.prototype.hasOwnProperty.call(item, 'importes') ? !!item.importes : true
+	}
+
+	let cols = cols_de_fijo(definicion, item.cols)
+	if (cols !== null) {
+		fijo.cols = cols
 	}
 
 	return fijo
@@ -528,7 +569,7 @@ function armar_fijo(zona, item, zona_del_fijo, keys) {
 export function armar_estado(diseno, catalogo) {
 	let leido = leer_diseno(diseno) || {}
 	let limites = catalogo.limites
-	let zona_del_fijo = zonas_de_los_fijos(catalogo.fijos)
+	let definiciones_de_fijos = fijos_del_catalogo(catalogo.fijos)
 	let ids = {}
 	let keys = {}
 	let estado = {
@@ -556,7 +597,7 @@ export function armar_estado(diseno, catalogo) {
 				return
 			}
 			if (item.tipo === TIPO_FIJO) {
-				let fijo = armar_fijo(zona, item, zona_del_fijo, keys)
+				let fijo = armar_fijo(zona, item, definiciones_de_fijos, keys)
 				if (fijo) {
 					estado[zona].push(fijo)
 				}
@@ -578,17 +619,18 @@ export function armar_estado(diseno, catalogo) {
  * @returns {{superior: Array, pie: Array}}
  */
 export function asegurar_fijos(estado, fijos) {
-	let zona_del_fijo = zonas_de_los_fijos(fijos)
+	let definiciones = fijos_del_catalogo(fijos)
 	let resultado = {}
 
 	ZONAS.forEach(function (zona) {
 		resultado[zona] = ((estado && estado[zona]) || []).filter(function (item) {
-			return !(item.tipo === TIPO_FIJO && zona_del_fijo[item.key] !== zona)
+			return !(item.tipo === TIPO_FIJO && (!definiciones[item.key] || definiciones[item.key].zona !== zona))
 		})
 	})
 
 	;(fijos || []).forEach(function (fijo) {
-		let zona = zona_del_fijo[fijo.key]
+		let definicion = definiciones[fijo.key]
+		let zona = definicion ? definicion.zona : null
 		if (!zona) {
 			return
 		}
@@ -606,6 +648,11 @@ export function asegurar_fijos(estado, fijos) {
 		}
 		if (fijo.key === FIJO_AFIP_PIE) {
 			nuevo.importes = true
+		}
+		/* El que cambia de ancho nace a lo ancho (12), como en DisenoDePaginaPdf::asegurar_fijos() */
+		let cols = cols_de_fijo(definicion, 12)
+		if (cols !== null) {
+			nuevo.cols = cols
 		}
 
 		if (zona === 'superior') {
@@ -694,6 +741,10 @@ export function serializar(estado, limites) {
 				}
 				if (item.key === FIJO_AFIP_PIE) {
 					fijo.importes = !!item.importes
+				}
+				/* El que cambia de ancho (el del cliente de ARCA) lleva sus columnas; el otro, no */
+				if (typeof item.cols != 'undefined' && item.cols !== null) {
+					fijo.cols = acotar_entero(item.cols, 1, 12, 12)
 				}
 				diseno[zona].push(fijo)
 			}

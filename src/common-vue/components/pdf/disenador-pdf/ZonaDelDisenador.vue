@@ -25,7 +25,7 @@
 		</header>
 
 		<div class="dpdf-zona__grilla">
-			<!-- Las 12 columnas de fondo. Se resaltan mientras se tira del borde de una caja -->
+			<!-- Las 12 columnas de fondo. Se resaltan mientras se tira del borde de una caja o del bloque del cliente de ARCA -->
 			<div
 			class="dpdf-zona__guias"
 			aria-hidden="true">
@@ -75,7 +75,8 @@
 					<bloque-fijo
 					v-else-if="item.tipo === TIPO_FIJO"
 					:key="identidad(item)"
-					:fijo="item"></bloque-fijo>
+					:fijo="item"
+					@redimension="redimensionando = $event"></bloque-fijo>
 
 					<!--
 						Salto de fila: una franja fina punteada. En el PDF no se ve: solo hace que lo que
@@ -206,7 +207,7 @@ export default {
 			TIPO_FIJO: TIPO_FIJO,
 			/* Opciones del grupo de arrastre (ver GRUPO_DE_CAJAS) */
 			grupo: GRUPO_DE_CAJAS,
-			/* true mientras se tira del borde de una caja de esta zona: resalta las guías */
+			/* true mientras se tira del borde de una caja (o del bloque del cliente de ARCA) de esta zona: resalta las guías */
 			redimensionando: false,
 		}
 	},

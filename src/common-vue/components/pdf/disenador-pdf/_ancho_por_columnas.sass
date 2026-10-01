@@ -1,0 +1,158 @@
+// Cambiar de ancho por columnas en el diseñador de PDF (misión diseno-pdf-configurable, 1/10/2026):
+// el dibujo que comparten la caja (CajaDelDisenador.vue) y el bloque del cliente de la factura de
+// ARCA (BloqueFijo.vue), los dos con el mixin redimension_por_columnas.js. Las manijas de los dos
+// bordes, el ancho − N/12 +, la insignia grande mientras se tira y los botones redondos chiquitos.
+// Mismo lenguaje que ElementoDelEditor.vue del editor de Diseños de Vender.
+//
+// 🔴 Solo define mixins: importarlo no escribe CSS, así lo importa cada componente sin duplicar
+// nada. Cada mixin se incluye ADENTRO de la regla del bloque del componente (las reglas dependen de
+// su estado: hover, seleccionado, redimensionando) y recibe el bloque BEM ('dpdf-caja', 'dpdf-fijo').
+// Sin depender de ningún ancestro: el clon de Sortable que sigue al puntero cuelga de <body>.
+// Colores solo por token.
+
+// Botón redondo chiquito (estilos de la caja, − / + y la ✕). Se incluye adentro de su clase.
+=dpdf-boton-redondo
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	flex: 0 0 22px
+	width: 22px
+	height: 22px
+	padding: 0
+	border: 0
+	border-radius: 50%
+	background: transparent
+	color: var(--color-text-secondary)
+	font-size: 0.72rem
+	line-height: 1
+	cursor: pointer
+	transition: background .15s ease, color .15s ease, opacity .15s ease
+
+	&:hover:not(:disabled)
+		background: var(--bg-hover)
+		color: var(--color-text-primary)
+
+	&:disabled
+		opacity: .35
+		cursor: default
+
+	&:focus
+		outline: none
+
+	&:focus-visible
+		box-shadow: 0 0 0 2px var(--color-primary)
+
+// El ancho − N/12 +. $seleccionado: la clase de estado del bloque cuando está seleccionado (ahí los
+// botones quedan a la vista).
+=dpdf-ancho($b, $seleccionado)
+	.#{$b}__ancho
+		display: inline-flex
+		align-items: center
+		gap: 2px
+		flex: 0 0 auto
+
+	.#{$b}__cols
+		min-width: 38px
+		padding: 1px 6px
+		border-radius: 999px
+		background: var(--bg-section)
+		color: var(--color-text-secondary)
+		font-size: 0.7rem
+		font-weight: 600
+		text-align: center
+		font-variant-numeric: tabular-nums
+
+	// − y + ocupan su lugar siempre, pero solo se ven al pasar el mouse o al enfocar algo del bloque
+	// con el teclado (con las dos clases para ganarle a :disabled, como en Vender)
+	.#{$b}__boton.#{$b}__boton--ancho
+		opacity: 0
+
+	&:hover .#{$b}__boton.#{$b}__boton--ancho,
+	&:focus-within .#{$b}__boton.#{$b}__boton--ancho,
+	&.#{$seleccionado} .#{$b}__boton.#{$b}__boton--ancho
+		opacity: 1
+
+		&:disabled
+			opacity: .35
+
+// Manijas de los bordes, sobre el gutter, centradas en el borde de la tarjeta: el ítem tiene 8px de
+// padding a cada lado (lo pone la lista de la zona), así que el borde cae a 8px y la manija de 12px
+// va a 2px. La que se está tirando se pinta firme desde el estado "redimensionando" de cada bloque.
+=dpdf-manijas($b)
+	.#{$b}__manija
+		position: absolute
+		top: 0
+		bottom: 0
+		z-index: 2
+		display: flex
+		align-items: center
+		justify-content: center
+		width: 12px
+		cursor: ew-resize
+		// Sin esto, en una pantalla táctil tirar de la manija scrollea la página
+		touch-action: none
+
+		// La marquita visible: una píldora vertical
+		&::before
+			content: ''
+			width: 4px
+			height: 28px
+			max-height: 70%
+			border-radius: 999px
+			background: var(--color-primary)
+			opacity: 0
+			transition: opacity .15s ease
+
+	.#{$b}__manija--izquierda
+		left: 2px
+
+	.#{$b}__manija--derecha
+		right: 2px
+
+	&:hover .#{$b}__manija::before
+		opacity: .5
+
+	.#{$b}__manija:hover::before
+		opacity: 1
+
+// La insignia grande "N/12" del medio del bloque mientras se tira (texto en --bg-card: blanco sobre
+// el azul en claro, gris oscuro sobre el azul claro en oscuro)
+=dpdf-insignia($b)
+	.#{$b}__insignia
+		position: absolute
+		top: 50%
+		left: 50%
+		z-index: 3
+		transform: translate(-50%, -50%)
+		padding: 4px 12px
+		border-radius: 999px
+		background: var(--color-primary)
+		color: var(--bg-card)
+		font-size: 0.85rem
+		font-weight: 700
+		white-space: nowrap
+		font-variant-numeric: tabular-nums
+		box-shadow: 0 4px 12px var(--shadow-color)
+		pointer-events: none
+
+// Pantallas táctiles: manijas y − / + siempre a la vista, y manijas más anchas para el dedo (16px:
+// justo el gutter entre dos ítems). Se incluye adentro de la regla del bloque, dentro de un
+// @media (hover: none).
+=dpdf-ancho-tactil($b)
+	.#{$b}__boton.#{$b}__boton--ancho
+		opacity: 1
+
+		&:disabled
+			opacity: .35
+
+	.#{$b}__manija
+		width: 16px
+
+		&::before
+			opacity: .45
+
+	.#{$b}__manija--izquierda
+		left: 0
+
+	.#{$b}__manija--derecha
+		right: 0

@@ -3,8 +3,9 @@
 		Panel de propiedades del diseñador de PDF: arriba de la bandeja, muestra lo seleccionado en la
 		hoja (plan §8.3). La cabecera (qué es, cómo se llama y la ✕ para dejar de editarlo) es común; el
 		cuerpo es de cada tipo: PanelDeCaja (título, estilo, ancho, quitar), PanelDeCampo (rótulo,
-		texto, letra, alineación, volver al estilo del campo, sacar) y PanelDeFijo (el cuadro de
-		importes del bloque de ARCA del pie). Sin nada seleccionado, una línea de ayuda.
+		texto, letra, alineación, volver al estilo del campo, sacar) y PanelDeFijo (el ancho del
+		bloque de ARCA del cliente, el cuadro de importes del del pie). Sin nada seleccionado, una
+		línea de ayuda.
 
 		Todo se cambia EN EL LUGAR sobre el objeto seleccionado (el mismo de las listas de trabajo):
 		la hoja lo ve al instante y el diseñador lo cuenta como cambio sin guardar.

@@ -24,6 +24,11 @@
 	.dpdf-caja__insignia
 		display: none
 
+.dpdf-fijo.dpdf-hueco
+	.dpdf-fijo__manija,
+	.dpdf-fijo__insignia
+		display: none
+
 // Un campo como hueco: un renglón punteado
 .dpdf-campo.dpdf-hueco
 	background: var(--bg-nav-hover)
@@ -53,6 +58,11 @@
 .dpdf-caja.dpdf-levantado
 	.dpdf-caja__manija,
 	.dpdf-caja__boton--ancho
+		visibility: hidden
+
+.dpdf-fijo.dpdf-levantado
+	.dpdf-fijo__manija,
+	.dpdf-fijo__boton--ancho
 		visibility: hidden
 
 .dpdf-campo.dpdf-levantado

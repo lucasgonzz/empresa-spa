@@ -2,14 +2,18 @@
 	<!--
 		Bloque fijo de la factura de ARCA en una zona del diseñador: los datos del cliente que pide
 		ARCA (arriba) o el cuadro de importes + QR + CAE (en el pie). Es un ítem de la lista de la zona
-		(clase dpdf-item-de-zona) y siempre ocupa una fila entera (data-cols 12, plan §4.3). Se mueve
-		dentro de su zona -- el `move` del diseñador rechaza llevarlo a la otra o a la bandeja -- y no
-		tiene ✕ ni manijas: lo pide ARCA (decisión 4 del plan).
+		(clase dpdf-item-de-zona). Se mueve dentro de su zona -- el `move` del diseñador rechaza
+		llevarlo a la otra o a la bandeja -- y no tiene ✕: lo pide ARCA (decisión 4 del plan).
+
+		El ancho lo dice el catálogo (`redimensionable` y `cols_min` de su definición en `fijos`): el
+		del cliente cambia de ancho como una caja -- manijas en los dos bordes, − N/12 + y la insignia
+		mientras se tira, de a una columna y acotado a cols_min..12 -- y con menos de 12 columnas deja
+		lugar para una caja al lado; el del pie va siempre a lo ancho (data-cols 12), sin manijas.
 	-->
 	<div
 	class="dpdf-fijo dpdf-item-de-zona"
 	:class="clases"
-	data-cols="12"
+	:data-cols="cols"
 	data-tipo="fijo"
 	:data-key="fijo.key"
 	:data-testid="'fijo-' + fijo.key + '-disenador-pdf'"
@@ -19,6 +23,24 @@
 	@click="seleccionar"
 	@keydown.enter.self.prevent="seleccionar"
 	@keydown.space.self.prevent="seleccionar">
+
+		<!--
+			Manija del borde izquierdo: tirando hacia afuera (a la izquierda) el bloque se agranda. El
+			clic no llega al bloque (como en la caja, tirar de un borde no lo selecciona).
+		-->
+		<span
+		v-if="redimensionable"
+		key="manija-izquierda"
+		class="dpdf-fijo__manija dpdf-fijo__manija--izquierda dpdf-no-arrastra"
+		title="Tirá para cambiar el ancho"
+		aria-hidden="true"
+		@click.stop
+		@pointerdown="iniciar_redimension($event, 'izquierda')"
+		@pointermove="mover_redimension"
+		@pointerup="terminar_redimension"
+		@pointercancel="terminar_redimension"
+		@lostpointercapture="terminar_redimension"></span>
+
 		<div class="dpdf-fijo__tarjeta">
 			<i
 			class="bi bi-grip-vertical dpdf-fijo__agarre"
@@ -31,7 +53,10 @@
 				<i class="bi bi-lock-fill"></i>
 			</span>
 			<div class="dpdf-fijo__textos">
-				<span class="dpdf-fijo__nombre">{{ nombre }}</span>
+				<!-- En un bloque angosto el nombre se corta con "…": el title lo muestra entero -->
+				<span
+				class="dpdf-fijo__nombre"
+				:title="nombre">{{ nombre }}</span>
 				<span
 				v-if="descripcion"
 				class="dpdf-fijo__descripcion">{{ descripcion }}</span>
@@ -42,42 +67,143 @@
 			:class="{ 'dpdf-fijo__estado--apagado': !fijo.importes }">
 				{{ fijo.importes ? 'Con el cuadro de importes' : 'Sin el cuadro de importes' }}
 			</span>
+
+			<!--
+				El ancho (− N/12 +), como en una caja: los botones se ven al pasar el mouse o al enfocar
+				el bloque con el teclado (en pantallas táctiles, siempre), y son el camino por teclado
+				para cambiarlo.
+			-->
+			<span
+			v-if="redimensionable"
+			class="dpdf-fijo__ancho">
+				<button
+				type="button"
+				class="dpdf-fijo__boton dpdf-fijo__boton--ancho dpdf-no-arrastra"
+				:disabled="cols <= cols_minimo"
+				title="Achicar una columna"
+				:aria-label="'Achicar «' + nombre + '» una columna'"
+				@click.stop="cambiar_cols(-1)">
+					<i class="bi bi-dash-lg"></i>
+				</button>
+				<span
+				class="dpdf-fijo__cols"
+				:title="'Ocupa ' + cols + ' de las 12 columnas (de ' + cols_minimo + ' a 12)'">{{ cols }}/12</span>
+				<button
+				type="button"
+				class="dpdf-fijo__boton dpdf-fijo__boton--ancho dpdf-no-arrastra"
+				:disabled="cols >= 12"
+				title="Agrandar una columna"
+				:aria-label="'Agrandar «' + nombre + '» una columna'"
+				@click.stop="cambiar_cols(1)">
+					<i class="bi bi-plus-lg"></i>
+				</button>
+			</span>
 		</div>
+
+		<!--
+			Mientras se tira de un borde: el ancho en grande. Las manijas y esta insignia llevan `key`
+			para que Vue nunca reutilice el nodo de una manija para dibujar la insignia (perdería la
+			captura del puntero en pleno tirón).
+		-->
+		<span
+		v-if="redimensionando"
+		key="insignia"
+		class="dpdf-fijo__insignia"
+		aria-hidden="true">{{ cols }}/12</span>
+
+		<!-- Manija del borde derecho: tirando hacia afuera (a la derecha) el bloque se agranda -->
+		<span
+		v-if="redimensionable"
+		key="manija-derecha"
+		class="dpdf-fijo__manija dpdf-fijo__manija--derecha dpdf-no-arrastra"
+		title="Tirá para cambiar el ancho"
+		aria-hidden="true"
+		@click.stop
+		@pointerdown="iniciar_redimension($event, 'derecha')"
+		@pointermove="mover_redimension"
+		@pointerup="terminar_redimension"
+		@pointercancel="terminar_redimension"
+		@lostpointercapture="terminar_redimension"></span>
 	</div>
 </template>
 <script>
-/* Lo que se dice del candado de un bloque fijo */
+import redimension_por_columnas from './redimension_por_columnas'
+import { cols_de_fijo, cols_minimo_de_fijo } from './estado_del_disenador'
+
+/* Lo que se dice del candado de un bloque fijo, según cambie de ancho o no */
 const MOTIVO_DEL_CANDADO = 'Lo pide ARCA: se puede mover dentro de su zona, pero no sacar.'
+const MOTIVO_DEL_CANDADO_CON_ANCHO = 'Lo pide ARCA: se puede mover dentro de su zona y cambiar de ancho, pero no sacar.'
 
 /**
  * Bloque fijo de la factura de ARCA en el diseñador de PDF (misión diseno-pdf-configurable,
- * 1/10/2026). El nombre y la descripción salen de `fijos` del catálogo; el único dato propio que
- * tiene es `importes` (solo el del pie), que se cambia desde el panel de propiedades.
+ * 1/10/2026). El nombre, la descripción y si cambia de ancho (y desde cuántas columnas) salen de
+ * `fijos` del catálogo. Sus datos propios son `importes` (solo el del pie, se cambia desde el panel
+ * de propiedades) y `cols` (solo el que cambia de ancho).
+ *
+ * 🔴 `fijo` se muta EN EL LUGAR (cols), como la caja: es el objeto de la lista de trabajo. El ancho
+ * (manijas, − / + y la insignia) lo pone el mixin redimension_por_columnas.js, el mismo de la caja.
  */
 export default {
 	name: 'BloqueFijo',
 	inject: ['disenador'],
+	mixins: [redimension_por_columnas],
 	props: {
-		/* Bloque de trabajo: {tipo: 'fijo', key, (importes)} */
+		/* Bloque de trabajo: {tipo: 'fijo', key, (cols), (importes)} */
 		fijo: {
 			type: Object,
 			required: true,
 		},
 	},
-	data() {
-		return {
-			/* Texto del candado (ver MOTIVO_DEL_CANDADO) */
-			motivo: MOTIVO_DEL_CANDADO,
-		}
-	},
 	computed: {
 		/**
-		 * Definición del bloque en el catálogo ({key, zona, nombre, descripcion}), o null.
+		 * Definición del bloque en el catálogo ({key, zona, nombre, descripcion, redimensionable,
+		 * cols_min}), o null.
 		 *
 		 * @returns {Object|null}
 		 */
 		definicion() {
 			return this.disenador.fijos_por_key[this.fijo.key] || null
+		},
+		/**
+		 * Si el bloque cambia de ancho (lo dice el catálogo: el del cliente sí, el del pie no).
+		 *
+		 * @returns {boolean}
+		 */
+		redimensionable() {
+			return !!(this.definicion && this.definicion.redimensionable)
+		},
+		/**
+		 * Lo que se ensancha con las manijas y − / + (lo pide el mixin redimension_por_columnas).
+		 *
+		 * @returns {Object}
+		 */
+		item_redimensionable() {
+			return this.fijo
+		},
+		/**
+		 * Ancho mínimo: el `cols_min` del catálogo (lo pide el mixin redimension_por_columnas).
+		 *
+		 * @returns {number}
+		 */
+		cols_minimo() {
+			return cols_minimo_de_fijo(this.definicion)
+		},
+		/**
+		 * Columnas que ocupa en la grilla de la zona: las suyas si cambia de ancho; si no, 12.
+		 *
+		 * @returns {number}
+		 */
+		cols() {
+			let cols = cols_de_fijo(this.definicion, this.fijo.cols)
+			return cols === null ? 12 : cols
+		},
+		/**
+		 * Texto del candado.
+		 *
+		 * @returns {string}
+		 */
+		motivo() {
+			return this.redimensionable ? MOTIVO_DEL_CANDADO_CON_ANCHO : MOTIVO_DEL_CANDADO
 		},
 		/**
 		 * Nombre del bloque.
@@ -118,7 +244,9 @@ export default {
 		 * @returns {string}
 		 */
 		etiqueta_accesible() {
-			return this.nombre + ', bloque fijo de ARCA' + (this.seleccionado ? ', seleccionado' : '') + '. ' + MOTIVO_DEL_CANDADO
+			return this.nombre + ', bloque fijo de ARCA'
+				+ (this.redimensionable ? ', ' + this.cols + ' de 12 columnas' : '')
+				+ (this.seleccionado ? ', seleccionado' : '') + '. ' + this.motivo
 		},
 		/**
 		 * Clases de estado.
@@ -128,13 +256,15 @@ export default {
 		clases() {
 			return {
 				'dpdf-fijo--seleccionado': this.seleccionado,
+				'dpdf-fijo--redimensionando': this.redimensionando,
 				'dpdf-fijo--destacado': this.disenador.destacado === 'fijo:' + this.fijo.key,
 			}
 		},
 	},
 	methods: {
 		/**
-		 * Selecciona el bloque (el panel muestra su descripción y, en el del pie, los importes).
+		 * Selecciona el bloque (el panel muestra su descripción y, según el bloque, el ancho o los
+		 * importes).
 		 *
 		 * @returns {void}
 		 */
@@ -146,6 +276,11 @@ export default {
 </script>
 <style lang="sass">
 // Sin `scoped`: el clon de Sortable que sigue al puntero cuelga de <body>. Colores solo por token.
+// El ancho (flex-basis N/12), el gutter y el margen de abajo los pone la lista de la zona
+// (ZonaDelDisenador.vue). Las manijas, el ancho − N/12 +, la insignia y los botones redondos del
+// bloque que cambia de ancho salen de los mixins de _ancho_por_columnas (los mismos de la caja).
+@import '@/common-vue/components/pdf/disenador-pdf/_ancho_por_columnas'
+
 .dpdf-fijo
 	position: relative
 	display: flex
@@ -218,10 +353,39 @@ export default {
 		background: var(--bg-card)
 		color: var(--color-text-secondary)
 
+	// − / + del ancho (solo el bloque que cambia de ancho)
+	.dpdf-fijo__boton
+		+dpdf-boton-redondo
+
+	// El ancho − N/12 +, al final de la tarjeta: − y + se ven al pasar el mouse, al enfocar el
+	// bloque o con el bloque seleccionado
+	+dpdf-ancho('dpdf-fijo', 'dpdf-fijo--seleccionado')
+
+	// Manijas de los dos bordes
+	+dpdf-manijas('dpdf-fijo')
+
 	&.dpdf-fijo--seleccionado .dpdf-fijo__tarjeta
 		border-color: var(--color-primary)
 		box-shadow: 0 0 0 2px var(--color-primary), 0 0 0 5px var(--metodo-pago-focus-ring)
 
+	// Mientras se tira: anillo suave y manijas firmes
+	&.dpdf-fijo--redimensionando
+		.dpdf-fijo__tarjeta
+			border-color: var(--color-primary)
+			box-shadow: 0 0 0 2px var(--color-primary), 0 0 0 5px var(--metodo-pago-focus-ring)
+			cursor: ew-resize
+
+		.dpdf-fijo__manija::before
+			opacity: 1
+
+	// La insignia grande "N/12" del medio del bloque mientras se tira
+	+dpdf-insignia('dpdf-fijo')
+
 	&.dpdf-fijo--destacado .dpdf-fijo__tarjeta
 		animation: dpdf-destello 1.4s ease
+
+// Pantallas táctiles: manijas y − / + siempre a la vista, y manijas más anchas para el dedo
+@media (hover: none)
+	.dpdf-fijo
+		+dpdf-ancho-tactil('dpdf-fijo')
 </style>
