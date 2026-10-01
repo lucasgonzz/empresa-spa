@@ -104,7 +104,7 @@ tabindex="0"
 </template>
 <script>
 import moment from 'moment'
-import { tipo_de, es_de_importacion, esta_activo, asignacion_de_imagenes } from '@/components/common/procesos-en-segundo-plano/tipos'
+import { tipo_de, es_de_importacion, esta_activo, asignacion_de_imagenes, duracion_de, formatear_duracion } from '@/components/common/procesos-en-segundo-plano/tipos'
 
 /**
  * Una fila (tarjeta) del modal de procesos en segundo plano: icono por tipo, titulo, detalle,
@@ -183,8 +183,8 @@ export default {
 			}
 		},
 		/**
-		 * "Iniciado hace 4 minutos · 12:03" mientras corre; "Terminado hace 2 minutos · 12:10"
-		 * (o "Falló ...") cuando termino. Lee `ahora` solo para depender de el.
+		 * "Iniciado hace 4 minutos · 12:03" mientras corre; "Terminado hace 2 minutos · 12:10 ·
+		 * tardó 3 min 20 s" (o "Falló ...") cuando termino. Lee `ahora` solo para depender de el.
 		 */
 		texto_tiempo() {
 			// eslint-disable-next-line no-unused-vars
@@ -193,7 +193,9 @@ export default {
 			if (this.activo || !this.proceso.finished_at) {
 				return this.describir_momento('Iniciado', this.proceso.started_at)
 			}
-			return this.describir_momento(this.fallo ? 'Falló' : 'Terminado', this.proceso.finished_at)
+			let texto = this.describir_momento(this.fallo ? 'Falló' : 'Terminado', this.proceso.finished_at)
+			let duracion = formatear_duracion(duracion_de(this.proceso))
+			return duracion ? texto + ' · tardó ' + duracion : texto
 		},
 		/**
 		 * Debajo de la barra: medible -> "3 de 12 lotes · 41 %"; no medible -> la etapa.
