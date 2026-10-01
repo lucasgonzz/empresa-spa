@@ -31,7 +31,7 @@
 			</label>
 
 			<small class="text-muted d-block m-t-5">
-				Si lo apagás, el precio de este artículo no lleva IVA. En Vender igual se lo podés sumar con "Sumar IVA a los artículos sin IVA".
+				Si lo apagás, el precio de este artículo no lleva IVA. En Vender, si ves el check "Sumar IVA a los artículos sin IVA", con ese check se lo podés sumar en una venta puntual.
 			</small>
 		</template>
 

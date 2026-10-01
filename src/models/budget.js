@@ -150,12 +150,13 @@ export default {
 				el IVA a los articulos que lo tienen apagado en el listado. Se guarda y viaja igual que
 				iva_aplicado. Solo se muestra en las cuentas donde el check existe en VENDER
 				(configuracion vieja, no Monotributista): en el resto siempre es 0 y no dice nada.
+				Sin `show`: la tabla arma sus columnas con propertiesToShow(), que no mira
+				v_if_function, asi que con `show` la columna aparecia tambien en las cuentas migradas.
 			*/
 			text: 'Sumar IVA a los artículos sin IVA',
 			key: 'iva_en_articulos_sin_iva',
 			type: 'checkbox',
 			value: false,
-			show: true,
 			description: 'Se guarda en el presupuesto y se aplica al generar la venta al confirmar; coherente con el flag en VENDER. Solo tiene efecto con "Precios con IVA" activo.',
 			only_show: true,
 			v_if_function: 'cuenta_admite_iva_en_articulos_sin_iva_v_if_function',

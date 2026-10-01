@@ -364,7 +364,7 @@ export default {
 				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,
 
 				/*
-					🔴 Estas nueve claves tienen que ser LAS MISMAS que manda el POST online
+					🔴 Estas diez claves tienen que ser LAS MISMAS que manda el POST online
 					(store/vender/vender.js, action vender). La venta offline se guarda con lo que
 					quedo en IndexedDB y nada mas, y SaleController::store las lee igual venga de
 					donde venga. Faltaban, y el back las defaulteaba: discount_stock e iva_aplicado

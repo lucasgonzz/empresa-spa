@@ -192,12 +192,12 @@ export default {
 			description: 'Alicuota de IVA que tiene este articulo, coloque el VALOR REAL ya que este dato sera usado en caso de hacer una FACTURA por la venta de este articulo',
 		},
 		{
-			// Prompt 612: solo se muestra (y se puede ver) para cuentas Responsable Inscripto, donde
-			// queda siempre activado y bloqueado (el usuario no lo puede apagar; los articulos
-			// exentos se resuelven por la alicuota de IVA, no apagando este control). En
+			// Prompt 612: solo se muestra (y se puede ver) para cuentas Responsable Inscripto. En
 			// Monotributista se oculta por completo. El render se reemplaza por un componente propio
-			// (slot "#aplicar_iva" en src/views/Listado.vue -> AplicarIvaInput.vue), que fuerza el
-			// valor a 1 y agrega la aclaracion siempre visible.
+			// (slot "#aplicar_iva" en src/views/Listado.vue -> AplicarIvaInput.vue): en la cuenta
+			// MIGRADA a precios por condicion fiscal queda activado y bloqueado (lo fuerza a 1); en la
+			// cuenta con configuracion VIEJA es un check normal que se prende y se apaga (mision
+			// iva-a-articulos-sin-iva-en-vender, 1/10/2026).
 			text: 'Aplicar iva',
 			key: 'aplicar_iva',
 			type: 'checkbox',
