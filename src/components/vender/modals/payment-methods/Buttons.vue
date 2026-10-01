@@ -89,9 +89,33 @@ export default {
 				return Number(pay.current_acount_payment_method_id)
 			})
 
+			/*
+				Si este reparto lo abrio el cartel de GUARDAR UN PRESUPUESTO, sin ningun metodo con
+				datos no hay nada que cobrar al confirmarlo: el presupuesto se guardaria "de contado"
+				sin reparto, que la API trata como cuenta corriente. Se frena aca, con el modal
+				abierto, en vez de guardar algo distinto de lo que el vendedor eligio.
+			*/
+			if (this.$store.state.vender.budget_cobro_pendiente && !metodos.length) {
+				this.$toast.error('Elegí al menos un método de pago para cobrar el presupuesto')
+				return
+			}
+
 			this.$store.commit('vender/setSelectedPaymentMethods', metodos)
 
 			this.$bvModal.hide('payment-method-modal')
+
+			/*
+				🔴 Si el modal lo abrio el cartel del presupuesto, "Listo" ademas GUARDA el presupuesto
+				con este reparto (mision presupuesto-contado-o-cuenta-corriente, 1/10/2026). Va despues
+				de commitear el reparto y de cerrar el modal. La marca se apaga ACA, antes de avisar:
+				el cartel (budget-cobro/Index.vue) es el unico que escucha el aviso y es quien guarda.
+				El modal es el mismo que abre el boton verde de una venta, y para esa la marca esta
+				apagada, asi que no pasa nada.
+			*/
+			if (this.$store.state.vender.budget_cobro_pendiente) {
+				this.$store.commit('vender/set_budget_cobro_pendiente', false)
+				this.$root.$emit('vender:presupuesto-cobro-definido')
+			}
 		},
 		calcular() {
 		    /*
@@ -223,6 +247,17 @@ export default {
             this.$store.commit('vender/setSelectedPaymentMethods', [])
             this.setTotal()
             this.$bvModal.hide('payment-method-modal')
+
+			/*
+				Si el modal lo abrio el cartel del presupuesto, cancelar NO guarda nada y devuelve la
+				pantalla a como estaba antes de preguntar (omitir en cuenta corriente, metodo de pago,
+				caja y total). Lo hace el cartel, que es quien sacó la foto de lo anterior; aca solo se
+				le avisa. Cerrar el modal con Esc, que no pasa por este metodo, lo cubre el propio
+				cartel escuchando el cierre del modal.
+			*/
+			if (this.$store.state.vender.budget_cobro_pendiente) {
+				this.$root.$emit('vender:presupuesto-cobro-cancelado')
+			}
 		}
 	}
 }

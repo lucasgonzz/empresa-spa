@@ -9,6 +9,8 @@
 	<!-- Freno duro al superar el límite de crédito del cliente (misión 160) -->
 	<limite-credito-excedido></limite-credito-excedido>
 	<payment-methods></payment-methods>
+	<!-- Cartel de "Guardar presupuesto": ¿pasar a la cuenta corriente? Uno solo, ver BudgetCobro -->
+	<budget-cobro></budget-cobro>
 	<!-- Selector de variantes al escanear un articulo con variantes disponibles (Prompt 525) -->
 	<select-variant></select-variant>
 
@@ -46,6 +48,12 @@ import keyboard_shortcuts from '@/mixins/vender/keyboard_shortcuts'
 */
 import payment_methods_recovery from '@/mixins/vender/payment_methods_recovery'
 import afip_information_recovery from '@/mixins/vender/afip_information_recovery'
+/*
+	Import estatico y no `() => import(...)` como los demas modales: el cartel tiene que estar
+	montado cuando el vendedor toca "Guardar presupuesto". Con un componente asincrono que todavia
+	no llego, ese click abriria un modal que no existe y no pasaria nada, sin ningun aviso.
+*/
+import BudgetCobro from '@/components/vender/modals/budget-cobro/Index'
 
 export default {
 	mixins: [
@@ -62,6 +70,7 @@ export default {
 	components: {
 		/* Modales globales del módulo vender */
 		PaymentMethods: () => import('@/components/vender/modals/payment-methods/Index'),
+		BudgetCobro,
 		NewArticle: () => import('@/components/vender/modals/NewArticle'),
 		LoadingAfipTicket: () => import('@/components/vender/modals/LoadingAfipTicket'),
 		SelectVariant: () => import('@/components/vender/modals/SelectVariant'),
