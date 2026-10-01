@@ -198,16 +198,30 @@ export default {
 			return options
 		},
 		disabled() {
+			/*
+				En un presupuesto el cobro NO se elige con estos controles: se elige al guardar, desde
+				el cartel "¿Pasar a la cuenta corriente?" y su reparto de metodos de pago (mision
+				presupuesto-contado-o-cuenta-corriente, 1/10/2026). Quedan deshabilitados SIEMPRE,
+				tambien con "omitir en cuenta corriente" en 1: antes se habilitaban en un presupuesto
+				nuevo con ese flag, y lo que se elegia aca no viaja con el presupuesto.
+			*/
+			if (this.en_modo_presupuesto) {
+				return true
+			}
 			if (
-				this.client 
+				this.client
 				&& (
 					!this.omitir_en_cuenta_corriente
 					|| this.budget
 				)
 			) {
-				return true 
+				return true
 			}
 			return false
+		},
+		/* true cuando lo que se arma es un presupuesto (toggle prendido o presupuesto cargado). */
+		en_modo_presupuesto() {
+			return this.$store.getters['vender/en_modo_presupuesto']
 		},
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods
