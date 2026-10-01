@@ -106,8 +106,12 @@ export default {
 			if (!duracion) {
 				return ''
 			}
-			let partes = [(this.proceso.status === 'fallo' ? 'Corrió ' : 'Tardó ') + duracion]
 			let espera = espera_de(this.proceso)
+			// Cerrado sin haber llegado a correr: no se dice que "corrió", solo cuánto esperó.
+			if (duracion_de(this.proceso) < 1 && espera !== null && espera >= 5) {
+				return 'No llegó a ejecutarse · esperó ' + formatear_duracion(espera) + ' en cola'
+			}
+			let partes = [(this.proceso.status === 'fallo' ? 'Corrió ' : 'Tardó ') + duracion]
 			if (espera !== null && espera >= 5) {
 				partes.push('esperó ' + formatear_duracion(espera) + ' en cola')
 			}
