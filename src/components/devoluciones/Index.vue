@@ -233,18 +233,53 @@ html.dark-mode .devoluciones-modulo
 
 	// Patrón de inputs de contexto/estilo_interfaz_empresa.md §3: radio de 8px y anillo de foco
 	// suave en vez del borde de 3px + halo del default global.
-	.form-control,
-	.custom-select,
-	textarea.form-control
+	//
+	// 🔴 Y además el TAMAÑO, medido en el navegador a 1366px: sin esto el N° de venta/compra, los
+	// inputs de la tabla y el select de depósito quedaban en 48px de alto con letra de 22.4px y
+	// sombra, al lado del buscador (search-component) en 36px. Las reglas globales que los inflan
+	// son estas, y se pisan exactamente esas propiedades:
+	// - src/sass/_inputs.sass: `input.form-control` / `select.custom-select` { font-size: 1.4rem }
+	//   (con .ui-small, src/sass/_ui_sizes.sass los baja a 1rem), y `input, select` { border: 2px }
+	//   + `input:focus, select:focus` { border: 3px; box-shadow: 0 0 8px ... }.
+	// - common-vue/sass/_inputs.sass: `input, textarea, select` { box-shadow: ... 1.95px 1.95px }.
+	// - Bootstrap: `.form-control` { height: calc(1.5em + .75rem + 2px) }, que con 1.4rem da 48px.
+	// Los valores se copian del campo del buscador (.search-field en
+	// common-vue/components/search/Index.vue): alto var(--toolbar-control-h) (36px, 32px en el modo
+	// compacto), letra 0.95rem, line-height 1.45. Así los dos tipos de campo miden lo mismo.
+	//
+	// `:not(.search-field__input)`: el input del buscador tiene su propio chasis (sin borde, alto
+	// auto, el borde lo pone .search-field) y no se toca. En el select y el textarea el :not no
+	// excluye nada: está para sumar peso y ganarle a `.ui-small select.custom-select` /
+	// `.ui-small textarea.form-control` (_ui_sizes.sass), que si no les vuelven a poner height:
+	// auto y su propio padding.
+	.form-control:not(.search-field__input),
+	.custom-select:not(.search-field__input)
 		border-radius: var(--metodo-pago-input-radius)
-		border-width: 1px
+		border: 1px solid var(--color-border)
+		box-shadow: none
+		font-size: 0.95rem
+		line-height: 1.45
 		&:focus
-			border-color: var(--color-primary)
+			border: 1px solid var(--color-primary)
 			box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
+
+	input.form-control:not(.search-field__input)
+		height: var(--toolbar-control-h, 36px)
+		padding: 0.25rem 0.7rem
+
+	// El select lleva lugar a la derecha para su flecha.
+	.custom-select:not(.search-field__input)
+		height: var(--toolbar-control-h, 36px)
+		padding: 0.25rem 1.75rem 0.25rem 0.7rem
+
+	textarea.form-control:not(.search-field__input)
+		height: auto
+		min-height: var(--toolbar-control-h, 36px)
+		padding: 0.4rem 0.7rem
 
 	// Inputs numéricos compactos (precio, cantidades): no a lo ancho de la celda, a la derecha.
 	.dev-input-num
-		width: 112px
+		width: 104px
 		margin-left: auto
 		text-align: right
 		font-variant-numeric: tabular-nums

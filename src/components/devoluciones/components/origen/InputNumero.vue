@@ -113,20 +113,21 @@ export default {
 	.dev-num__campo
 		position: relative
 
-	// Lugar para la lupa adentro del campo.
-	.dev-num__input
-		padding-right: 44px
+	// Lugar para la lupa adentro del campo. Con dos clases más que la regla de tamaño de los inputs
+	// del módulo (Index.vue), que también fija el padding: si no, esa le gana y la lupa tapa el texto.
+	.dev-num .dev-num__campo .dev-num__input
+		padding-right: 40px
 
 	.dev-num__buscar.btn
 		position: absolute
 		top: 50%
-		right: 4px
+		right: 3px
 		transform: translateY(-50%)
 		display: inline-flex
 		align-items: center
 		justify-content: center
-		width: 36px
-		height: 36px
+		width: 30px
+		height: 30px
 		padding: 0
 		border-radius: 50%
 		color: var(--color-text-secondary)
