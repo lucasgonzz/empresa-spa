@@ -209,7 +209,7 @@ export default {
 			text: 'Mostrar la seccion "Novedades" en el home de la tienda',
 			key: 'mostrar_novedades_en_home',
 			type: 'checkbox',
-			description: 'Si se desactiva, el home de la tienda deja de mostrar la seccion "Novedades".',
+			description: 'Novedades muestra los ultimos 20 articulos que recibieron un ingreso de mercaderia (compra a proveedor, ingreso manual, importacion de excel o produccion). Una venta, una devolucion o un movimiento entre depositos no cuenta. Es distinta de "Ultimos ingresos", que muestra los articulos segun la fecha en que se cargaron en el sistema. Si se desactiva, el home de la tienda deja de mostrar la seccion "Novedades".',
 		},
 		{
 			text: 'Auto scroll en Home (px/segundo)',

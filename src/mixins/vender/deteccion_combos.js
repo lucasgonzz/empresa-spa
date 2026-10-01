@@ -17,9 +17,13 @@
 	   pregunta al vendedor y aplica el reemplazo contra el store.
 
 	🔴 Esto NO cambia como se calcula un precio. Reordena lineas: baja cantidades, borra las que
-	quedan en cero y agrega un renglon de combo. El precio del combo sale de `combo.price` por el
-	mismo camino de siempre (getPriceVender lee `final_price`).
+	quedan en cero y agrega un renglon de combo. El precio del combo sale de la lista de la venta
+	(o de `combo.price` si el combo no tiene precio para esa lista) por el mismo helper que usa el
+	buscador de combos y el rearmado de precios: utils/precio_de_combo.js. Despues getPriceVender
+	lo lee de `final_price`, como siempre.
 */
+
+import { precio_de_combo_para_lista } from '@/utils/precio_de_combo'
 
 /* ══════════════════════════════════════════════════════════════════════════════════════════════
    1 · NUCLEO PURO
@@ -566,15 +570,25 @@ export default {
 
 			/*
 				Mismo molde con el que el buscador de combos arma el item (header-form/Combos.vue):
-				is_combo, final_price desde combo.price -- que es de donde getPriceVender lo toma --
-				y article_variant_id en 0 para que el matcheo del store lo trate como una linea mas.
+				is_combo, final_price -- que es de donde getPriceVender lo toma -- y
+				article_variant_id en 0 para que el matcheo del store lo trate como una linea mas.
+
+				El precio sale del MISMO helper que el buscador (precio_de_combo_para_lista), con la
+				lista de la venta: antes se fijaba a mano desde `combo.price`, y un combo calculado
+				con precio por lista se agregaba a la lista por defecto aunque la venta fuera de
+				otra. Sin lista en la venta, o sin fila para esa lista, cae a `combo.price`.
 			*/
+			let precio_del_combo = precio_de_combo_para_lista(
+				candidato.combo,
+				this.price_type_vender ? this.price_type_vender.id : null
+			)
+
 			this.$store.commit('vender/addItem', {
 				...candidato.combo,
 				is_combo: true,
 				article_variant_id: 0,
 				price_type_personalizado_id: 0,
-				final_price: Number(candidato.combo.price),
+				final_price: precio_del_combo !== null ? precio_del_combo : Number(candidato.combo.price),
 				amount: candidato.veces,
 			})
 		},

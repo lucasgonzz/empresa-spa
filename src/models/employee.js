@@ -97,6 +97,8 @@ export default {
 			store: 'permission',
 			belongs_to_many: {
 				order_by: 'model_name',
+				searchable: true,
+				search_placeholder: 'Buscar permiso... Ej: caja, precios',
 			}
 		},
 	],

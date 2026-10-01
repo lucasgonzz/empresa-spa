@@ -48,8 +48,17 @@
 				@input="toggle_dark_mode"></ios-toggle>
 			</div>
 
+			<!-- Abre el modal de procesos en segundo plano (components/common/procesos-en-segundo-plano/Modal.vue). -->
+			<div
+			class="item"
+			data-testid="menu-procesos"
+			v-b-modal="'procesos-en-segundo-plano'">
+				<i class="bi bi-activity"></i>
+				Procesos
+			</div>
+
 		    <div
-		    v-if="is_owner || user.admin_access">
+		    v-if="is_admin">
 		        <div
 		        class="item"
 		        @click="general">

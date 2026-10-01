@@ -658,6 +658,34 @@ export default {
 			if (cfg.pensamiento) {
 				this.pensamiento = cfg.pensamiento
 			}
+			/*
+				Misión modelos-ia-por-cliente (30/9/2026): si lo ELEGIDO es un proveedor sin clave
+				en esta instalación, el modal preselecciona lo que CORRE de verdad (cfg.modelo, que
+				el API resuelve con el fallback de clave y conserva `equilibrado` en Claude).
+
+				Pasa con los dueños que la migración del 30/9 pasó de Claude a DeepSeek en una
+				instalación que todavía no tiene DEEPSEEK_API_KEY: el API dice "deepseek" elegido
+				y el asistente sigue corriendo con Claude. Sin esto:
+				- la tarjeta de DeepSeek, que está DESHABILITADA ("No disponible"), figuraría
+				  elegida, y una opción deshabilitada no puede aparecer marcada;
+				- apretar Guardar sin tocar nada mandaría proveedor=deepseek y el API contestaría
+				  422 (sin clave no se puede elegir);
+				- y si el dueño tocaba Claude, elegir_proveedor() lo dejaba en Ágil: un dueño que
+				  estaba en Sonnet (Equilibrado) bajaba a Haiku sin enterarse.
+				Con lo que corre preseleccionado, Guardar da 200 y deja exactamente el modelo que ya
+				usaba. El dueño que NO abre el modal no se toca: sigue con DeepSeek elegido y pasa
+				solo a DeepSeek el día que se cargue la clave en su instalación.
+			*/
+			if (cfg.proveedor
+				&& this.proveedores_disponibles.indexOf(cfg.proveedor) == -1
+				&& cfg.modelo
+				&& cfg.modelo.proveedor
+				&& this.proveedores_disponibles.indexOf(cfg.modelo.proveedor) != -1) {
+				this.proveedor = cfg.modelo.proveedor
+				if (cfg.modelo.pensamiento) {
+					this.pensamiento = cfg.modelo.pensamiento
+				}
+			}
 		},
 		/**
 		 * Elige la inteligencia y, si el modo de pensamiento elegido no existe en ella (por

@@ -33,6 +33,7 @@
 						<div
 						:key="prop.key + '-' + prop_index"
 						:class="get_cell_classes(prop, prop_index)"
+						:title="cell_inner_title(prop, models[data.index])"
 						class="cont-tr table-component-cell-inner">
 							<table-thumbnail-images
 							v-if="isImageProp(prop) && hasTableImages(models[data.index], prop)"
@@ -86,6 +87,17 @@
 								<span
 								v-if="prop.from_pivot">
 									{{ propertyText(models[data.index].pivot, prop) }}
+								</span>
+								<!--
+									Stock "sin control" (opt-in con `null_es_sin_control` en la prop): el valor es null
+									porque no hay nada que contar, NO porque el stock sea cero. Sin esta rama la celda
+									caia en la de abajo, donde null se lee como 0 y se pinta de rojo como si no hubiera
+									stock. Hoy lo declara el combo cuando ningun componente lleva stock (combos-calculados).
+								-->
+								<span
+								v-else-if="prop.is_stock && stock_sin_control(models[data.index], prop)"
+								class="text-muted">
+									-
 								</span>
 								<span
 								v-else-if="prop.is_stock"
@@ -580,40 +592,6 @@ export default {
 	},
 	methods: {
 		/**
-		 * Valor numerico CRUDO de una prop, para decidir estilo (no para mostrar).
-		 *
-		 * 🔴 Existe para no leer nunca el texto que devuelve propertyText(). Antes la clase de la
-		 * celda de stock se decidia con `parseFloat(propertyText(model, prop))`, y eso se rompe en
-		 * cuanto el texto lleva separadores argentinos: `parseFloat('1.234,56')` devuelve **1.234**,
-		 * porque corta en la coma. Un stock de `0,5` daria 0 y la celda se pintaria de rojo como si
-		 * no hubiera stock.
-		 *
-		 * La regla general: el texto formateado es para el ojo, nunca para una cuenta ni para una
-		 * condicion. Si hay que decidir algo con el numero, se lee del model.
-		 *
-		 * Mision del 21/8/2026 — separadores de numeros.
-		 *
-		 * @param {Object} model fila de la tabla.
-		 * @param {Object} prop definicion de la columna.
-		 * @returns {number} el valor como numero, o 0 si no se puede leer.
-		 */
-		valor_numerico_crudo(model, prop) {
-			if (!model || !prop || !prop.key) {
-				return 0
-			}
-			/*
-				Las columnas de stock por deposito se declaran con `function` y una key que NO
-				existe en el model (`address_5`): el valor lo calcula la funcion recorriendo
-				article.addresses. Leer model['address_5'] daria undefined -> NaN -> 0, y la
-				columna entera quedaria pintada de rojo como si no hubiera stock.
-			*/
-			const valor = Number(prop.function ? this.getFunctionValue(prop, model) : model[prop.key])
-			if (isNaN(valor)) {
-				return 0
-			}
-			return valor
-		},
-		/**
 		 * Recalcula la altura disponible del contenedor de tabla según su posición en viewport.
 		 * Resta un margen inferior para evitar scroll residual en la página.
 		 */
@@ -775,11 +753,49 @@ export default {
 				maxWidth: width_px + 'px',
 			}
 		},
+		/**
+		 * Si la columna tiene un ancho PROPIO del modal de busqueda que hay que respetar de verdad:
+		 * estamos en el modal, la prop declara `search_modal_width` (opt-in) y hay un ancho efectivo
+		 * (`table_width`, que Modal.vue ya resolvio contra la preferencia del usuario).
+		 *
+		 * Sin `search_modal_width` esto es siempre false y ninguna otra tabla ni buscador cambia.
+		 *
+		 * @param {Object} prop definicion de la columna.
+		 * @returns {boolean}
+		 */
+		tiene_ancho_de_modal(prop) {
+			return !!this.is_from_search_modal
+				&& !!prop
+				&& Number(prop.search_modal_width) > 0
+				&& Number(prop.table_width) > 0
+		},
+		/**
+		 * `title` de la celda de una columna con ancho de modal: el texto se corta con puntos
+		 * suspensivos dentro de ese ancho, asi que el valor completo queda legible con el mouse.
+		 * null (sin atributo) para cualquier otra columna.
+		 *
+		 * @param {Object} prop definicion de la columna.
+		 * @param {Object} model fila de la tabla.
+		 * @returns {string|null}
+		 */
+		cell_inner_title(prop, model) {
+			if (!this.tiene_ancho_de_modal(prop) || !model || this.isImageProp(prop) || prop.button) {
+				return null
+			}
+			const texto = this.propertyText(model, prop)
+			if (texto === null || typeof texto == 'undefined' || texto === '') {
+				return null
+			}
+			return String(texto)
+		},
 		get_cell_classes(prop, index) {
 			const classes = []
 			const props_visible = this.visible_properties_for_table
 			if (index == props_visible.length - 1) {
 				classes.push('cont-tr-full-width')
+			}
+			if (this.tiene_ancho_de_modal(prop)) {
+				classes.push('cell-ancho-de-modal')
 			}
 			if (prop.table_wrap_content) {
 				classes.push('cell-wrap')
@@ -974,6 +990,23 @@ export default {
 			text-overflow: ellipsis
 		&.cont-tr-full-width
 			white-space: nowrap
+		// Columna con ancho propio del modal de busqueda (`search_modal_width`, opt-in).
+		//
+		// El ancho del <th>/<td> (width/min/max) NO alcanza: la tabla es de layout automatico y en
+		// ese layout el ancho de la columna lo fija el contenido, que es nowrap -> un nombre de 33
+		// caracteres estiraba la columna a 286 px en vez de 130 y empujaba el Stock fuera de
+		// pantalla en un telefono (medido el 30/9/2026). `width: 0` + `min-width: 100%` es la tecnica
+		// clasica para que el contenido NO cuente en el ancho intrinseco de la celda pero igual se
+		// estire hasta el ancho que le da la columna. Y como adentro hay un flex, el ellipsis tiene
+		// que vivir en el hijo directo (el <span> del texto), no en este contenedor.
+		&.cell-ancho-de-modal
+			width: 0
+			min-width: 100%
+			> *
+				min-width: 0
+				overflow: hidden
+				text-overflow: ellipsis
+				white-space: nowrap
 	img
 		width: 100px
 		&.article-thumbnail

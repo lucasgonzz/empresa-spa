@@ -36,7 +36,20 @@ export default {
 			}
 			return false
 		},
+		/**
+		 * La ultima apertura es la primera fila de la PRIMERA pagina (vienen de la mas nueva a la
+		 * mas vieja). En la pagina 2 en adelante, models[0] es una apertura vieja: reabrirla
+		 * dejaria la caja apuntando a una apertura que no es la actual.
+		 *
+		 * @returns {Boolean}
+		 */
 		es_la_ultima_apertura() {
+			if (this.$store.state.apertura_caja.pagina_aperturas != 1) {
+				return false
+			}
+			if (!this.aperturas_caja.length) {
+				return false
+			}
 			return this.aperturas_caja[0].id == this.apertura_caja.id
 		},
 		aperturas_caja() {

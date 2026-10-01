@@ -1203,5 +1203,274 @@ export default {
 
             return total  
         },
+
+        /* ══════════════════════════════════════════════════════════════════════════════════════
+           COMBOS CALCULADOS (mision combos-calculados, 30/9/2026)
+
+           Funciones globales que consume src/models/combo.js (v_if_function, disabled_function,
+           nota_function, function, value_function, dynamic_options_function). Los motores del
+           formulario las resuelven por nombre contra los mixins globales, por eso viven aca.
+
+           El front NO calcula costo ni precio del combo: con el check prendido lo calcula el
+           servidor al guardar (una sola implementacion, la de empresa-api). Estas funciones solo
+           deciden que campos se muestran, cuales se bloquean y como se ve el resultado.
+           ══════════════════════════════════════════════════════════════════════════════════════ */
+
+        /**
+         * Si el combo esta marcado para calcularse desde sus articulos.
+         *
+         * Number() y no un chequeo de verdad a secas: el check del formulario escribe 1/0, la API
+         * puede devolver el tinyint como 1/0 o como true/false segun el cast del modelo, y un "0"
+         * string es truthy en JS.
+         *
+         * @param {Object} combo
+         * @returns {Boolean}
+         */
+        combo_se_calcula_desde_articulos(combo) {
+            return !!combo && Number(combo.calcular_desde_articulos) === 1
+        },
+
+        /**
+         * disabled_function de `cost` y `price` del combo: con el check prendido esos dos campos
+         * los escribe el servidor al guardar, asi que se bloquean para que nadie tipee un numero
+         * que se va a pisar en silencio.
+         *
+         * @param {Object} combo
+         * @returns {Boolean}
+         */
+        combo_costo_y_precio_bloqueados(combo) {
+            return this.combo_se_calcula_desde_articulos(combo)
+        },
+
+        /**
+         * nota_function de `cost` y `price` del combo: la leyenda permanente debajo del campo
+         * bloqueado. Sin ella el campo queda gris (con el valor viejo o vacio) sin explicar por que.
+         *
+         * @param {Object} combo
+         * @param {Object} prop `cost` o `price`
+         * @returns {String} '' cuando el combo es manual y el campo se edita normalmente
+         */
+        combo_nota_de_campo_calculado(combo, prop) {
+            if (!this.combo_se_calcula_desde_articulos(combo)) {
+                return ''
+            }
+            if (prop && prop.key == 'cost') {
+                return 'Se calcula al guardar: suma el costo de cada artículo por su cantidad. El descuento nunca toca el costo.'
+            }
+            let texto = 'Se calcula al guardar: suma el precio de cada artículo por su cantidad, menos el descuento.'
+
+            /*
+                El precio por lista solo existe en las cuentas con listas de precio comunes. Con
+                listas por categoria o ventas en dolares el combo se calcula con un precio unico
+                (lo avisa combo_nota_de_calculo_sin_listas, debajo del check): decir aca que hay un
+                precio por cada lista contradeciria ese aviso.
+            */
+            if (!this.hasExtencion('lista_de_precios_por_categoria') && !this.hasExtencion('ventas_en_dolares')) {
+                texto += ' Si tu cuenta usa listas de precios, se calcula un precio por cada lista.'
+            }
+
+            return texto
+        },
+
+        /**
+         * nota_function del check "Calcular en base a los articulos": en las cuentas que usan
+         * listas de precio por categoria o ventas en dolares, el combo calculado NO tiene un precio
+         * por lista. El servidor lo calcula con el precio de venta base de cada articulo
+         * (`final_price`), que es un unico numero, porque en esas extensiones el precio por lista no
+         * vive en price_types. Sin este aviso el operador creeria que tiene un precio por lista
+         * (es lo que dice la pantalla en cuentas comunes) y vende con uno solo.
+         *
+         * Solo con el check prendido: apagado no hay calculo y no hay nada que avisar.
+         *
+         * @param {Object} combo
+         * @returns {String} '' si el combo es manual o la cuenta no usa ninguna de las dos extensiones
+         */
+        combo_nota_de_calculo_sin_listas(combo) {
+            if (!this.combo_se_calcula_desde_articulos(combo)) {
+                return ''
+            }
+
+            let por_categoria = this.hasExtencion('lista_de_precios_por_categoria')
+            let en_dolares = this.hasExtencion('ventas_en_dolares')
+
+            if (!por_categoria && !en_dolares) {
+                return ''
+            }
+
+            let motivo = 'usa listas de precio por categoría'
+
+            if (en_dolares && !por_categoria) {
+                motivo = 'vende en dólares'
+            } else if (en_dolares && por_categoria) {
+                motivo = 'usa listas de precio por categoría y vende en dólares'
+            }
+
+            return 'Tu cuenta ' + motivo + ': el combo se calcula con un precio único (el precio de venta base de cada artículo) y no con las listas de precios.'
+        },
+
+        /**
+         * v_if_function del tipo de descuento: solo tiene sentido con el check prendido, porque un
+         * combo manual tiene el precio que se le escribio y no hay sobre que descontar.
+         *
+         * @param {Object} prop
+         * @param {Object} combo
+         * @returns {Boolean}
+         */
+        show_combo_descuento_tipo(prop, combo) {
+            return this.combo_se_calcula_desde_articulos(combo)
+        },
+
+        /**
+         * v_if_function del valor del descuento: ademas del check pide que ya se haya elegido si es
+         * porcentaje o monto. Asi el servidor nunca recibe un valor suelto sin tipo, y el operador
+         * no tiene un numero que no sabe si son pesos o por ciento.
+         *
+         * @param {Object} prop
+         * @param {Object} combo
+         * @returns {Boolean}
+         */
+        show_combo_descuento_valor(prop, combo) {
+            return this.combo_se_calcula_desde_articulos(combo)
+                && (combo.descuento_tipo == 'porcentaje' || combo.descuento_tipo == 'monto')
+        },
+
+        /**
+         * nota_function del valor del descuento: aclara sobre que se aplica, que es lo que el
+         * operador no puede deducir mirando el campo (decision de Lucas: el mismo descuento a cada
+         * lista, y nunca sobre el costo).
+         *
+         * @param {Object} combo
+         * @returns {String}
+         */
+        combo_nota_de_descuento(combo) {
+            if (!this.show_combo_descuento_valor(null, combo)) {
+                return ''
+            }
+            if (combo.descuento_tipo == 'porcentaje') {
+                return 'Se descuenta este porcentaje al precio de venta de cada lista. El costo no cambia.'
+            }
+            return 'Se resta este monto al precio de venta de cada lista (nunca queda por debajo de $0). El costo no cambia.'
+        },
+
+        /**
+         * Opciones del tipo de descuento. Van por dynamic_options_function y no por `options`
+         * porque getOptions() le antepone siempre una opcion "Seleccione ..." con value 0, y un 0
+         * como tipo de descuento no es un valor que el servidor entienda (solo acepta
+         * 'porcentaje', 'monto' o null).
+         *
+         * @returns {Array}
+         */
+        combo_descuento_tipo_options() {
+            return [
+                { value: null, text: 'Sin descuento' },
+                { value: 'porcentaje', text: 'Porcentaje (%)' },
+                { value: 'monto', text: 'Monto fijo ($)' },
+            ]
+        },
+
+        /**
+         * value_function del tipo de descuento en un combo NUEVO. Sin esto, el motor le pone 0 a
+         * todo select sin `value` (display.js::getSelectAndCheckboxProps), y el servidor recibiria
+         * un tipo 0 que no existe. null = sin descuento.
+         *
+         * @returns {null}
+         */
+        combo_descuento_tipo_inicial() {
+            return null
+        },
+
+        /**
+         * Stock del combo para la columna `stock_disponible` (tabla del ABM, buscador de Vender).
+         *
+         * Devuelve el numero CRUDO (o null), nunca texto: TableComponent decide con este valor si
+         * la celda va en rojo (`is_stock`), y un '1.234' formateado dejaria de poder leerse como
+         * numero. Los separadores se los pone propertyText().
+         *
+         * `null` no es cero: es "ningun componente lleva control de stock", el combo se puede
+         * vender siempre. La columna declara `null_es_sin_control` para no pintarlo de rojo.
+         *
+         * @param {Object} combo
+         * @returns {Number|null}
+         */
+        get_stock_disponible_del_combo(combo) {
+            if (!combo || combo.stock_disponible === null || typeof combo.stock_disponible == 'undefined' || combo.stock_disponible === '') {
+                return null
+            }
+            let stock = Number(combo.stock_disponible)
+            return isNaN(stock) ? null : stock
+        },
+
+        /**
+         * El mismo stock, pero como TEXTO para el formulario del ABM (campo de solo lectura). El
+         * formulario no sabe pintar un null: mostraria un recuadro gris vacio, y "sin control" es
+         * una informacion que el operador tiene que poder leer.
+         *
+         * @param {Object} combo
+         * @returns {String}
+         */
+        get_stock_disponible_del_combo_en_formulario(combo) {
+            let stock = this.get_stock_disponible_del_combo(combo)
+            if (stock === null) {
+                return 'Sin control de stock (ningún artículo del combo lleva stock)'
+            }
+            return stock + ' (cuántos combos se pueden armar con lo que hay)'
+        },
+
+        /**
+         * v_if_function de los campos de solo lectura del combo (stock y precios por lista): un
+         * combo que todavia no se guardo no tiene ni stock ni precios calculados que mostrar.
+         *
+         * @param {Object} prop
+         * @param {Object} combo
+         * @returns {Boolean}
+         */
+        show_combo_dato_calculado_si_esta_guardado(prop, combo) {
+            return !!(combo && combo.id)
+        },
+
+        /**
+         * v_if_function del detalle de precios por lista: ademas de estar guardado, el combo tiene
+         * que tener filas por lista (solo las tienen los calculados de una cuenta con listas).
+         *
+         * @param {Object} prop
+         * @param {Object} combo
+         * @returns {Boolean}
+         */
+        show_combo_precios_por_lista(prop, combo) {
+            return !!(combo && combo.id && Array.isArray(combo.price_types) && combo.price_types.length)
+        },
+
+        /**
+         * Texto de solo lectura con el precio del combo en cada lista ("Mayorista: $ 900 · ...").
+         * Se muestra en el formulario para que quien calcula el combo vea el resultado por lista
+         * sin tener que ir a Vender.
+         *
+         * El nombre de la lista lo escribe el usuario y el campo de solo lectura dibuja con v-html:
+         * se escapa antes de armar el texto.
+         *
+         * @param {Object} combo
+         * @returns {String}
+         */
+        get_precios_por_lista_del_combo(combo) {
+            if (!combo || !Array.isArray(combo.price_types)) {
+                return ''
+            }
+
+            let escapar = texto => String(texto)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+
+            let partes = []
+
+            combo.price_types.forEach(price_type => {
+                if (!price_type || !price_type.pivot || price_type.pivot.price === null || typeof price_type.pivot.price == 'undefined') {
+                    return
+                }
+                partes.push(escapar(price_type.name) + ': ' + this.price(price_type.pivot.price))
+            })
+
+            return partes.join(' · ')
+        },
 	}
 }

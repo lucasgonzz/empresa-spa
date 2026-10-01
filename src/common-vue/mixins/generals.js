@@ -1276,10 +1276,27 @@ export default {
 				} 
 
 				if (model[prop_to_check] == value_equal_to) {
-					// Le quito el simbolo $
-					value = value.substring(1)
 
-					value = 'USD '+value
+					/*
+						Cambia el "$" del importe por "USD " SIN tocar el signo ni lo que no es un importe.
+
+						🔴 Antes era `value.substring(1)` (saca el primer caracter, que se daba por "$") y
+						eso rompia dos casos que en la ganancia se ven seguido (Lucas, 30/9/2026):
+						  - un importe NEGATIVO: price() devuelve "-$5,50", el substring se llevaba el
+						    "-" y quedaba "USD $5,50", una perdida que se leia como ganancia;
+						  - un importe nulo o cero: price() devuelve "-" y quedaba "USD " a secas.
+						Ahora solo se reemplaza cuando el texto realmente empieza con un "$" (con signo
+						menos adelante, opcional) y el signo se conserva: "-$5,50" -> "USD -5,50".
+						Cualquier otra cosa ("-", "", un numero, null) vuelve igual que entro.
+					*/
+					if (typeof value === 'string') {
+
+						let importe = value.match(/^(-?)\$\s?(.*)$/)
+
+						if (importe) {
+							value = 'USD ' + importe[1] + importe[2]
+						}
+					}
 				}
 			}
 			return value 
@@ -1322,6 +1339,66 @@ export default {
 				last = prop.key.substring(prop.key.length-3, prop.key.length)
 			}
 			return last == '_id'
+		},
+		/*
+			Las dos funciones de abajo vivian en TableComponent.vue. Se subieron aca (mixin global) para
+			que las use tambien display/table/Tr.vue, que es la celda de la tabla del ABM: el mismo criterio
+			de "stock sin control" y de color, escrito una sola vez.
+		*/
+		/**
+		 * Si una celda de stock es "sin control": la prop lo pide (`null_es_sin_control`) y su
+		 * funcion devuelve null/vacio.
+		 *
+		 * Opt-in a proposito: las columnas de stock por deposito (`address_5`) tambien devuelven
+		 * null cuando el articulo no tiene ese deposito, y ahi el comportamiento de siempre es
+		 * mostrarlo como 0 en rojo. Solo cambia para quien declara la clave. La primera es la
+		 * columna Stock del combo (combos-calculados): null significa que ningun componente lleva
+		 * stock, o sea que el combo se puede vender siempre. No es cero.
+		 *
+		 * @param {Object} model fila de la tabla.
+		 * @param {Object} prop definicion de la columna.
+		 * @returns {boolean}
+		 */
+		stock_sin_control(model, prop) {
+			if (!model || !prop || !prop.null_es_sin_control || !prop.function) {
+				return false
+			}
+			const valor = this.getFunctionValue(prop, model)
+			return valor === null || typeof valor == 'undefined' || valor === ''
+		},
+		/**
+		 * Valor numerico CRUDO de una prop, para decidir estilo (no para mostrar).
+		 *
+		 * 🔴 Existe para no leer nunca el texto que devuelve propertyText(). Antes la clase de la
+		 * celda de stock se decidia con `parseFloat(propertyText(model, prop))`, y eso se rompe en
+		 * cuanto el texto lleva separadores argentinos: `parseFloat('1.234,56')` devuelve **1.234**,
+		 * porque corta en la coma. Un stock de `0,5` daria 0 y la celda se pintaria de rojo como si
+		 * no hubiera stock.
+		 *
+		 * La regla general: el texto formateado es para el ojo, nunca para una cuenta ni para una
+		 * condicion. Si hay que decidir algo con el numero, se lee del model.
+		 *
+		 * Mision del 21/8/2026 — separadores de numeros.
+		 *
+		 * @param {Object} model fila de la tabla.
+		 * @param {Object} prop definicion de la columna.
+		 * @returns {number} el valor como numero, o 0 si no se puede leer.
+		 */
+		valor_numerico_crudo(model, prop) {
+			if (!model || !prop || !prop.key) {
+				return 0
+			}
+			/*
+				Las columnas de stock por deposito se declaran con `function` y una key que NO
+				existe en el model (`address_5`): el valor lo calcula la funcion recorriendo
+				article.addresses. Leer model['address_5'] daria undefined -> NaN -> 0, y la
+				columna entera quedaria pintada de rojo como si no hubiera stock.
+			*/
+			const valor = Number(prop.function ? this.getFunctionValue(prop, model) : model[prop.key])
+			if (isNaN(valor)) {
+				return 0
+			}
+			return valor
 		},
 		propertiesToShow(props, with_title_and_images = true) {
 			if (with_title_and_images) {
