@@ -66,9 +66,11 @@ export default {
 		 *
 		 * Es una PROPUESTA (el costo es editable en la tabla): sin compra de origen no hay un
 		 * costo "de esa compra" que respetar. Se usa `costo_real` (el costo con los descuentos del
-		 * proveedor ya aplicados) y, si el artículo cuesta en dólares, se pasa a pesos con el
-		 * dólar del sistema, igual que costoReal() de model_functions.js. La nota libre va en
-		 * pesos (moneda 1, plan §4.2).
+		 * proveedor ya aplicados, todavía SIN cotizar: en ArticleHelper::setFinalPrice() la
+		 * cotización va después) y se cotiza con el mismo criterio que ArticleHelper::cotizar():
+		 * solo si el artículo cuesta en dólares Y el dueño tiene `cotizar_precios_en_dolares`;
+		 * con el dólar del proveedor del artículo si lo tiene (> 0), si no con el dólar global.
+		 * La nota libre va en pesos (moneda 1, plan §4.2).
 		 *
 		 * @param {Object} article Artículo del buscador.
 		 * @returns {Number}
@@ -79,12 +81,39 @@ export default {
 			if (
 				article.cost_in_dollars
 				&& this.owner
-				&& Number(this.owner.dollar) > 0
+				&& this.owner.cotizar_precios_en_dolares
 			) {
-				costo = costo * Number(this.owner.dollar)
+				let dolar_proveedor = this.dolar_del_proveedor(article)
+
+				if (dolar_proveedor > 0) {
+					costo = costo * dolar_proveedor
+				} else {
+					costo = costo * (Number(this.owner.dollar) || 0)
+				}
 			}
 
 			return Math.round(costo * 100) / 100
+		},
+
+		/**
+		 * Dólar propio del proveedor del artículo: el de la relación si vino cargada, si no el
+		 * del store de proveedores (mismo fallback que costoReal() de model_functions.js).
+		 *
+		 * @param {Object} article Artículo del buscador.
+		 * @returns {Number} La cotización, o 0 si el proveedor no tiene una propia.
+		 */
+		dolar_del_proveedor(article) {
+			let provider = article.provider || null
+
+			if (!provider && article.provider_id) {
+				provider = this.getModelFromId('provider', article.provider_id) || null
+			}
+
+			if (provider && provider.dolar) {
+				return Number(provider.dolar) || 0
+			}
+
+			return 0
 		},
 
 		/**
