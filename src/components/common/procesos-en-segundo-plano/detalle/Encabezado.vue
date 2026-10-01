@@ -25,6 +25,13 @@ class="proceso-encabezado"
 		</p>
 
 		<p
+		v-if="texto_duracion"
+		class="proceso-encabezado__momento"
+		data-testid="proceso-detalle-duracion">
+			{{ texto_duracion }}
+		</p>
+
+		<p
 		v-if="proceso.status === 'fallo' && proceso.error_message"
 		class="proceso-encabezado__error"
 		data-testid="proceso-detalle-error">
@@ -36,7 +43,7 @@ class="proceso-encabezado"
 </template>
 <script>
 import moment from 'moment'
-import { esta_activo } from '@/components/common/procesos-en-segundo-plano/tipos'
+import { esta_activo, duracion_de, espera_de, formatear_duracion } from '@/components/common/procesos-en-segundo-plano/tipos'
 
 /**
  * Cabecera comun de todos los detalles: el anillo grande, la etapa ("Lote 3 de 12"), el chip de
@@ -73,7 +80,10 @@ export default {
 		etapa_visible() {
 			return this.etapa || this.proceso.etapa || ''
 		},
-		/** "Iniciado hace 4 minutos · 12:03", y ademas "Terminado 12:10" si ya cerro. */
+		/**
+		 * "Iniciado hace 4 minutos · 12:03", y ademas "Terminado 12:10" si ya cerro.
+		 * La duracion va aparte (`texto_duracion`).
+		 */
 		texto_tiempo() {
 			let partes = []
 			let inicio = this.formato(this.proceso.started_at)
@@ -84,6 +94,26 @@ export default {
 			}
 			if (!esta_activo(this.proceso) && fin) {
 				partes.push((this.proceso.status === 'fallo' ? 'Falló ' : 'Terminado ') + fin)
+			}
+			return partes.join(' · ')
+		},
+		/**
+		 * "Tardó 3 min 20 s · esperó 40 s en cola" una vez cerrado. La espera solo se nombra si
+		 * pasó de un par de segundos: en un proceso que arranca al instante es ruido.
+		 */
+		texto_duracion() {
+			let duracion = formatear_duracion(duracion_de(this.proceso))
+			if (!duracion) {
+				return ''
+			}
+			let espera = espera_de(this.proceso)
+			// Cerrado sin haber llegado a correr: no se dice que "corrió", solo cuánto esperó.
+			if (duracion_de(this.proceso) < 1 && espera !== null && espera >= 5) {
+				return 'No llegó a ejecutarse · esperó ' + formatear_duracion(espera) + ' en cola'
+			}
+			let partes = [(this.proceso.status === 'fallo' ? 'Corrió ' : 'Tardó ') + duracion]
+			if (espera !== null && espera >= 5) {
+				partes.push('esperó ' + formatear_duracion(espera) + ' en cola')
 			}
 			return partes.join(' · ')
 		},

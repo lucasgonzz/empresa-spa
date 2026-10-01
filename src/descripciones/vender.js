@@ -47,9 +47,11 @@ export default {
 		titulo: 'Guardar como presupuesto',
 		que_hace: 'Guarda la operación como presupuesto en vez de como venta.',
 		repercute: [
-			'NO toca el stock y NO toca la cuenta corriente. Un presupuesto no mueve nada hasta que se confirma.',
-			'Al confirmarlo después, recién ahí nace la venta, baja el stock y aparece la deuda.',
+			'NO toca el stock, NO toca la cuenta corriente y NO toca la caja. Un presupuesto no mueve nada hasta que se confirma.',
+			'Al guardarlo, un cartel pregunta si el presupuesto pasa a la cuenta corriente del cliente. Si contestás que sí, al confirmarlo recién ahí nace la venta, baja el stock y aparece la deuda.',
+			'Si contestás que no, se abre el reparto de métodos de pago (con sus descuentos, recargos, cuotas y cajas) y queda guardado con el presupuesto. El total del presupuesto incluye el ajuste de esos métodos de pago. Al confirmarlo nace la venta ya cobrada: baja el stock, entra la plata a las cajas elegidas y no queda deuda en la cuenta corriente.',
 		],
+		requiere: 'Un cliente elegido. Si el presupuesto va a cobrarse al confirmar, el reparto tiene que sumar el total y cada método de pago con caja necesita una caja abierta.',
 	},
 
 	'venta-omitir-cuenta-corriente': {

@@ -302,18 +302,32 @@ async function abrir_venta_para_editar(page, venta_id) {
 /**
  * Guarda lo que haya en Vender y devuelve el modelo que contesto el servidor.
  *
+ * 🔴 Guardar un PRESUPUESTO ya no sale con un solo click (mision presupuesto-contado-o-cuenta-
+ * corriente, 1/10/2026): "Guardar Presupuesto" abre el cartel "¿Pasar a la cuenta corriente?" y
+ * el POST/PUT recien sale cuando se contesta. Este circuito es el de la cuenta corriente, asi que
+ * contesta "Sí, a la cuenta corriente". Se sabe que el endpoint es un presupuesto porque `ruta`
+ * lo nombra (`/budget`); las ventas (`/api/sale/`) siguen guardando con un solo click.
+ *
  * @param {import('@playwright/test').Page} page
  * @param {RegExp|string} ruta Parte de la URL que identifica al endpoint esperado.
  * @param {string} metodo
  * @returns {Promise<Object>}
  */
 async function guardar_en_vender(page, ruta, metodo) {
+	const es_presupuesto = typeof ruta === 'string' && ruta.includes('/budget')
+
 	const [respuesta] = await Promise.all([
 		page.waitForResponse(res => {
 			const coincide = typeof ruta === 'string' ? res.url().includes(ruta) : ruta.test(res.url())
 			return coincide && res.request().method() === metodo
 		}),
-		page.locator('[data-testid="btn-guardar-venta"]').click(),
+		(async () => {
+			await page.locator('[data-testid="btn-guardar-venta"]').click()
+
+			if (es_presupuesto) {
+				await page.locator('[data-testid="budget-cobro-si"]').click()
+			}
+		})(),
 	])
 
 	expect(respuesta.ok(), `el ${metodo} a ${ruta} no salio bien`).toBeTruthy()
