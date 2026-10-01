@@ -459,6 +459,16 @@ export default {
 			this.$store.commit('vender/set_discount_stock', model.discount_stock)
 			// Seteamos iva_aplicado desde la venta que se está actualizando
 			this.$store.commit('vender/set_iva_aplicado', model.iva_aplicado)
+			/*
+				"Sumar IVA a los artículos sin IVA" (mision iva-a-articulos-sin-iva-en-vender, 1/10/2026).
+				Esta funcion la comparten la venta y el presupuesto ("Actualizar en VENDER"), asi que
+				los dos lo restauran por aca, igual que iva_aplicado. Normalizado a 0/1: una venta o un
+				presupuesto guardado antes de esta mision (o una API vieja) no lo trae y queda en 0; y
+				con "Precios con IVA" apagado no tiene efecto, asi que tambien queda en 0. Restaurarlo es
+				lo que hace que, sin tocar nada, cada renglon salga igual al guardado (getPriceVender()
+				compara contra los flags del comprobante, ver utils/iva_en_vender.js).
+			*/
+			this.$store.commit('vender/set_iva_en_articulos_sin_iva', (Number(model.iva_aplicado) == 1 && Number(model.iva_en_articulos_sin_iva) == 1) ? 1 : 0)
 			this.$store.commit('vender/set_send_mail', Number(model.send_mail))
 
 			// Umbral opcional de alerta de cobro persistido en la venta (null = usar reglas globales).
@@ -637,6 +647,8 @@ export default {
 				discount_stock: this.$store.state.vender.discount_stock,
 				// Enviamos el valor actual de iva_aplicado al actualizar la venta
 				iva_aplicado: this.$store.state.vender.iva_aplicado,
+				// Enviamos el valor actual de "Sumar IVA a los artículos sin IVA" (0/1)
+				iva_en_articulos_sin_iva: this.$store.state.vender.iva_en_articulos_sin_iva,
 				// Array de descripciones del cálculo del precio final, serializado como JSON
 				price_description: JSON.stringify(this.$store.state.vender.total_description),
 				// Indica si se debe enviar correo al cliente
@@ -750,6 +762,13 @@ export default {
 				item.iva_id = article.iva_id
 				// Se conserva la relacion iva para disponer del porcentaje en frontend.
 				item.iva = article.iva
+				/*
+					Si el articulo tiene el IVA aplicado en el listado. Sin esto el renglon llega sin el
+					campo y precio_del_item_incluye_iva() (utils/iva_en_vender.js) lo trata como si lo
+					tuviera: "Precios con IVA" apagado le sacaria un IVA que el precio no trae, y "Sumar IVA
+					a los artículos sin IVA" no se lo sumaria.
+				*/
+				item.aplicar_iva = article.aplicar_iva
 				item.discount = this.get_pivot_amount(article.pivot.discount ? article.pivot.discount : article.pivot.bonus)
 				item.checked_amount = this.get_pivot_amount(article.pivot.checked_amount)
 				item.returned_amount = this.get_pivot_amount(article.pivot.returned_amount)

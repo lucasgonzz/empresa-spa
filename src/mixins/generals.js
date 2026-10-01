@@ -5,6 +5,8 @@ import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/u
 import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado, redondear_a_centavos } from '@/utils/recargos_en_precios'
 /* Precio de un combo segun la lista de precios de la venta (mision combos-calculados). */
 import { precio_de_combo_para_lista } from '@/utils/precio_de_combo'
+/* IVA en los precios de VENDER: los dos checks y el estado de partida (mision iva-a-articulos-sin-iva-en-vender). */
+import { estado_de_iva, estado_de_partida_de_iva, precio_del_item_incluye_iva, ajustar_precio_por_iva } from '@/utils/iva_en_vender'
 export default {
     computed: {
         has_online() {
@@ -586,42 +588,44 @@ export default {
             return parsed_percentage
         },
         /*
-            Obtiene el contexto de iva_aplicado actual y guardado.
-            Se usa para evitar doble descuento al editar ventas previas.
+            Obtiene el estado de IVA actual de VENDER y el estado de partida del renglon.
+            Mision iva-a-articulos-sin-iva-en-vender (1/10/2026): ademas de "Precios con IVA"
+            (iva_aplicado) lleva "Sumar IVA a los articulos sin IVA" (iva_en_articulos_sin_iva).
+            La regla de que estado de partida corresponde vive en utils/iva_en_vender.js
+            (estado_de_partida_de_iva); aca solo se lee el store.
+
+            @param {boolean} from_pivot Si el precio sale del pivot de una venta/presupuesto guardado.
+            @returns {{estado_actual: Object, estado_de_partida: Object}}
         */
         get_iva_aplicado_context(from_pivot) {
-            // Valor actual del checkbox iva_aplicado en store vender.
-            let current_iva_aplicado = this.$store.state.vender.iva_aplicado == 1 ? 1 : 0
+            // Flags actuales de los dos checks de VENDER, normalizados a 0/1.
+            let estado_actual = estado_de_iva(this.$store.state.vender.iva_aplicado, this.$store.state.vender.iva_en_articulos_sin_iva)
             // Venta previa cargada en store al actualizar una venta existente.
             let previus_sale = this.$store.state.vender.previus_sales.previus_sale
             // Presupuesto cargado en vender al usar "Actualizar en VENDER" u operar sobre un budget existente.
             let budget = this.$store.state.vender.budget
-            // Define si hay una venta previa real sobre la que comparar flags.
-            let has_previus_sale = from_pivot && previus_sale && previus_sale.id
-            // Misma idea que la venta previa: ítems desde pivot al editar un presupuesto ya guardado.
-            let has_previus_budget = from_pivot && budget && budget.id
-            // Valor de iva_aplicado persistido en la venta o presupuesto que se esta editando.
-            let saved_iva_aplicado = current_iva_aplicado
-
-            if (has_previus_sale) {
-                saved_iva_aplicado = previus_sale.iva_aplicado == 1 ? 1 : 0
-            } else if (has_previus_budget) {
-                if (typeof budget.iva_aplicado !== 'undefined' && budget.iva_aplicado !== null) {
-                    saved_iva_aplicado = budget.iva_aplicado == 1 ? 1 : 0
-                }
-            }
 
             return {
-                current_iva_aplicado,
-                saved_iva_aplicado,
+                estado_actual,
+                estado_de_partida: estado_de_partida_de_iva(from_pivot, estado_actual, previus_sale, budget),
             }
         },
         /*
-            Ajusta el precio segun iva_aplicado actual vs guardado.
-            Permite alternar IVA en nuevas ventas y en actualizacion sin doble descuento.
+            Ajusta el precio de un renglon segun los checks de IVA de VENDER.
+
+            precio = precio_de_partida × factor(estado actual) / factor(estado de partida), con el
+            factor de utils/iva_en_vender.js: depende de si el precio del listado del renglon ya
+            incluye el IVA (precio_del_item_incluye_iva: articulo con aplicar_iva apagado -> no; el
+            resto, y todo en Monotributista -> si). Asi se pueden prender y apagar los dos checks en
+            ventas y presupuestos nuevos o guardados sin descontar ni sumar el IVA dos veces.
+
+            @param {Object} item Renglon de VENDER.
+            @param {number|string} price Precio de partida.
+            @param {boolean} from_pivot Si el precio sale del pivot de una venta/presupuesto guardado.
+            @returns {number|string}
         */
         ajustar_precio_segun_iva_aplicado(item, price, from_pivot = false) {
-            // Contexto actual/guardado del flag iva_aplicado.
+            // Estado actual y de partida de los dos checks de IVA.
             let iva_context = this.get_iva_aplicado_context(from_pivot)
             // Alicuota de IVA del item, en porcentaje.
             let iva_percentage = this.get_item_iva_percentage(item)
@@ -630,25 +634,58 @@ export default {
                 return price
             }
 
-            // Multiplicador para convertir entre neto y precio con IVA.
-            let iva_multiplier = 1 + (iva_percentage / 100)
+            return ajustar_precio_por_iva(
+                price,
+                iva_percentage,
+                precio_del_item_incluye_iva(item, this.es_monotributista_del_negocio()),
+                iva_context.estado_actual,
+                iva_context.estado_de_partida,
+            )
+        },
+        /*
+            Dice si esta cuenta puede usar "Sumar IVA a los artículos sin IVA" en VENDER (ademas de
+            la extension y el permiso de "Precios con IVA", que mira el componente).
 
-            if (iva_context.saved_iva_aplicado == iva_context.current_iva_aplicado) {
-                if (!from_pivot && iva_context.current_iva_aplicado == 0) {
-                    return Number(price) / iva_multiplier
-                }
-                return price
+            Solo en la configuracion VIEJA (owner.usar_condicion_fiscal_en_costeo apagado): ahi el
+            listado deja apagar "Aplicar IVA" por articulo. En una cuenta migrada el control del
+            listado queda bloqueado en Si, asi que no hay articulos sin IVA a los que sumarselo.
+            Y nunca en Monotributista, que siempre incorpora el IVA al precio. Para un empleado se
+            mira el owner (la configuracion es del negocio).
+
+            @returns {boolean}
+        */
+        cuenta_admite_iva_en_articulos_sin_iva() {
+            if (!this.owner) {
+                return false
             }
+            return !this.owner.usar_condicion_fiscal_en_costeo && !this.es_monotributista_del_negocio()
+        },
+        /*
+            Condicion Monotributista del NEGOCIO, para la regla de IVA de VENDER.
 
-            if (iva_context.saved_iva_aplicado == 1 && iva_context.current_iva_aplicado == 0) {
-                return Number(price) / iva_multiplier
+            La computed global es_monotributista lee this.user, que para un empleado es SU fila de
+            users: la condicion fiscal se configura en el dueño y nada garantiza que la fila del
+            empleado la tenga (la columna nace en RRII). La API arma los precios con la del dueño
+            (ArticlePricesHelper::es_monotributista_para_costeo). Si VENDER mirara la del empleado,
+            un empleado de un Monotributista veria el check nuevo y le sumaria el IVA a precios que
+            ya lo traen. Por eso se mira tambien el owner.
+
+            @returns {boolean}
+        */
+        es_monotributista_del_negocio() {
+            if (this.es_monotributista) {
+                return true
             }
+            return !!(this.owner && this.owner.condicion_iva_precios == 'MT')
+        },
+        /*
+            v_if_function del campo iva_en_articulos_sin_iva de src/models/budget.js: el dato solo
+            se muestra en las cuentas donde el check existe en VENDER.
 
-            if (iva_context.saved_iva_aplicado == 0 && iva_context.current_iva_aplicado == 1) {
-                return Number(price) * iva_multiplier
-            }
-
-            return price
+            @returns {boolean}
+        */
+        cuenta_admite_iva_en_articulos_sin_iva_v_if_function() {
+            return this.cuenta_admite_iva_en_articulos_sin_iva()
         },
         /**
          * Nombre a mostrar de un ítem en vender (remito, totales, etc.).
