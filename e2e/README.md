@@ -1204,12 +1204,22 @@ circuito es Exento justamente para que la mezcla exista y la propiedad se siga c
 | `btn-modo-seleccion` (con `data-activo`) | `view/header/BtnSeleccion.vue` | Prender/apagar el modo seleccion, y saber en cual esta. |
 | `btn-presupuesto-accion-<id>` (con `data-accion`) | `budget/BtnConfirmarAnular.vue` | Confirmar o anular, y saber cual de las dos ofrece. |
 | `btn-actualizar-presupuesto` | `budget/BtnActualizarEnVender.vue` | Carga el presupuesto en Vender para editarlo. |
-| `devolucion-num-venta` · `devolucion-btn-marcar-todo` | `devoluciones/nav/` | Buscar la venta y marcar todo devuelto. |
-| `devolucion-item-devueltas-<article_id>` · `devolucion-item-precio-<article_id>` | `devoluciones/articles-table/` | Unidades devueltas y precio de cada renglon. |
-| `devolucion-regresar-stock` · `devolucion-deposito` · `devolucion-generar-cuenta-corriente` | `devoluciones/options/` | Las opciones de la devolucion. |
-| `devolucion-facturar-nota-credito-<afip_ticket_id>` | `devoluciones/options/Facturar.vue` | Emitir la nota de credito con ARCA sobre ESA factura. |
-| `devolucion-total` (con `data-monto`) | `devoluciones/sale-info/Total.vue` | El total de la devolucion. |
-| `btn-guardar-devolucion` | `devoluciones/BtnGuardar.vue` | Guardar. |
+| `devolucion-num-venta` | `devoluciones/components/origen/InputNumero.vue` | El N° de venta (el `<input>`); se busca con Enter. Le pega a `devoluciones/search-sale/`. |
+| `devolucion-btn-marcar-todo` | `devoluciones/components/articulos/BtnMarcarTodo.vue` | Marcar todo devuelto (solo con venta cargada). |
+| `devolucion-item-devueltas-<article_id>` · `devolucion-item-precio-<article_id>` | `devoluciones/components/articulos/TablaArticulos.vue` | Unidades devueltas y precio de cada renglon (los dos en el `<input>`; el precio es el numero crudo, se lee con `inputValue()`). |
+| `devolucion-regresar-stock` · `devolucion-deposito` | `devoluciones/components/resumen/opciones/Stock.vue` | Regresar al stock (toggle: el testid va en el `<input type=checkbox>` envuelto en su `<label>`, lo prende `poner_toggle()`) y el `<select>` del deposito. |
+| `devolucion-generar-cuenta-corriente` | `devoluciones/components/resumen/opciones/CuentaCorriente.vue` | Movimiento en la C/C del cliente (toggle, solo con cliente). |
+| `devolucion-facturar-nota-credito-<afip_ticket_id>` | `devoluciones/components/resumen/opciones/Facturar.vue` | Emitir la nota de credito con ARCA sobre ESA factura (toggle, solo facturas con CAE). |
+| `devolucion-total` (con `data-monto`) | `devoluciones/components/resumen/Total.vue` | El total de la devolucion (numero grande del panel de resumen). |
+| `btn-guardar-devolucion` | `devoluciones/components/resumen/BtnGuardar.vue` | Guardar, en los dos modos. Sin renglones queda deshabilitado. |
+| `nav-item-devolucion-tipo-venta` · `nav-item-devolucion-tipo-compra` | `devoluciones/components/TipoSelector.vue` | Selector Venta / Compra (HorizontalNav). Al entrar, el modo es Venta. |
+| `devolucion-compra-num` · `devolucion-compra-btn-buscar` | `devoluciones/components/origen/InputNumero.vue` | N° de compra (el `<input>`, Enter o la lupa). Le pega a `devoluciones/search-provider-order/`. La lupa de venta es `devolucion-btn-buscar-venta`. |
+| `devolucion-compra-proveedor` | `devoluciones/components/origen/BuscadorProveedor.vue` | Buscador de proveedor para una nota de credito sin compra. |
+| `devolucion-compra-item-devueltas-<article_id>` · `devolucion-compra-item-costo-<article_id>` | `devoluciones/components/articulos/TablaArticulos.vue` | Unidades devueltas (acumuladas: el minimo es lo ya devuelto) y costo de cada renglon de la compra. |
+| `devolucion-compra-btn-marcar-todo` | `devoluciones/components/articulos/BtnMarcarTodo.vue` | Marcar todo devuelto sobre la compra. |
+| `devolucion-compra-descontar-stock` · `devolucion-compra-deposito` | `devoluciones/components/resumen/opciones/Stock.vue` | Descontar del stock (toggle) y el deposito del que sale. |
+| `devolucion-compra-generar-cuenta-corriente` | `devoluciones/components/resumen/opciones/CuentaCorriente.vue` | Haber en la C/C del proveedor (toggle). |
+| `devolucion-compra-btn-nota-credito-<provider_order_id>` | `provider/components/orders/BtnNotaCredito.vue` | "Nota de credito" de una compra guardada (fila del listado y formulario): abre Devoluciones en modo Compra con la compra cargada. |
 
 ### 🔴 El buscador general tambien se come un `fill()`, y falla de la peor manera
 
