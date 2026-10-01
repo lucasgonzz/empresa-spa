@@ -44,6 +44,13 @@ export const RECEPTOR_CHIP_LABELS = {
 }
 
 /**
+ * Campos del cliente que el PDF del pedido online NUNCA resuelve: el comprador de la tienda no
+ * tiene vendedor ni empleado asociado ni condición de IVA. Ofrecerlos en la paleta deja arrastrar
+ * un campo que se guarda y no imprime nada (el PDF saltea los valores vacíos).
+ */
+const RECEPTOR_CHIP_KEYS_SIN_VALOR_EN_PEDIDO = ['vendedor', 'empleado', 'cliente_condicion_iva']
+
+/**
  * Chips del emisor obligatorios cuando el perfil es fiscal (is_afip_ticket = true).
  * Se pueden reordenar y mover de cuadrante, pero no se pueden quitar del header.
  * Coincide con `AfipPdfHelper::enforce_fiscal_required_fields()` del backend
@@ -72,6 +79,22 @@ export function emisor_chip_keys(is_afip) {
 	return Object.keys(EMISOR_CHIP_LABELS).filter(function (key) {
 		if (key === 'punto_venta') {
 			return !!is_afip
+		}
+		return true
+	})
+}
+
+/**
+ * Claves de los chips de receptor (datos del cliente) que se ofrecen según el tipo de perfil.
+ * Venta y presupuesto ofrecen todos; el pedido online no ofrece los que nunca tendrían valor.
+ *
+ * @param {string} model_name Modelo del perfil ('sale' | 'budget' | 'order').
+ * @return {Array<string>} Claves de chips habilitadas para el catálogo de receptor.
+ */
+export function receptor_chip_keys(model_name) {
+	return Object.keys(RECEPTOR_CHIP_LABELS).filter(function (key) {
+		if (model_name === 'order') {
+			return RECEPTOR_CHIP_KEYS_SIN_VALOR_EN_PEDIDO.indexOf(key) === -1
 		}
 		return true
 	})
@@ -112,10 +135,15 @@ export function is_emisor_chip_locked(key, is_afip) {
  * del backend (empresa-api). Se usa para inicializar el diseñador cuando el perfil
  * todavía no tiene `header_layout` guardado, y para "Restaurar diseño por defecto".
  *
+ * Para un presupuesto suma además el 'vendedor' al final del bloque del cliente: el PDF de
+ * presupuesto de siempre imprimía "Vendedor: <empleado que lo cargó>". Es el mismo criterio que
+ * `PdfDocumentSetupHelper::default_header_layout_for()` del backend.
+ *
  * @param {boolean} is_afip Si el perfil es fiscal (agrega 'punto_venta' en emisor.derecha).
+ * @param {string} [model_name] Modelo del perfil; solo 'budget' cambia el resultado.
  * @return {{emisor: {izquierda: string[], derecha: string[]}, receptor: {izquierda: string[]}}}
  */
-export function default_header_layout(is_afip) {
+export function default_header_layout(is_afip, model_name) {
 	/* Emisor derecha base; se agrega punto_venta al final solo si el perfil es fiscal */
 	const emisor_derecha = [
 		'numero_comprobante',
@@ -129,19 +157,25 @@ export function default_header_layout(is_afip) {
 		emisor_derecha.push('punto_venta')
 	}
 
+	const receptor_izquierda = [
+		'cliente_nombre',
+		'cliente_telefono',
+		'cliente_localidad',
+		'cliente_direccion',
+		'cliente_cuit',
+	]
+
+	if (model_name === 'budget') {
+		receptor_izquierda.push('vendedor')
+	}
+
 	return {
 		emisor: {
 			izquierda: ['razon_social', 'domicilio_comercial', 'condicion_iva'],
 			derecha: emisor_derecha,
 		},
 		receptor: {
-			izquierda: [
-				'cliente_nombre',
-				'cliente_telefono',
-				'cliente_localidad',
-				'cliente_direccion',
-				'cliente_cuit',
-			],
+			izquierda: receptor_izquierda,
 		},
 	}
 }

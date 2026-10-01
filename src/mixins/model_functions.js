@@ -1069,6 +1069,99 @@ export default {
                 return this.price(sale.afip_ticket.importe_total)
             }
         },
+        /**
+         * Costo total de un renglón de una venta: costo unitario congelado × cantidad vendida.
+         * Devuelve null si el renglón no tiene costo (la celda muestra "-", no un costo cero).
+         *
+         * @param {Object} item  Artículo con su pivot de la venta (pivot.cost, pivot.amount).
+         * @return {number|null}
+         */
+        get_sale_item_cost_total(item) {
+            if (!item || !item.pivot || this.pivot_value_is_empty(item.pivot.cost)) {
+                return null
+            }
+            return Number(item.pivot.cost) * Number(item.pivot.amount)
+        },
+        /**
+         * Precio unitario CON IVA de un renglón de venta. `article_sale.price` ya se guarda con IVA
+         * incluido (el neto sale de dividirlo, ver SaleHelper::get_price_sin_iva en la API), así que
+         * es el mismo valor que la columna "Precio unitario": se ofrece con el nombre explícito.
+         *
+         * @param {Object} item  Artículo con su pivot de la venta.
+         * @return {number|null}
+         */
+        get_sale_item_price_con_iva(item) {
+            if (!item || !item.pivot || this.pivot_value_is_empty(item.pivot.price)) {
+                return null
+            }
+            return Number(item.pivot.price)
+        },
+        /**
+         * Precio total CON IVA de un renglón: unitario × cantidad menos el descuento de línea.
+         * Es el mismo cálculo que la columna "Precio total" (getTotalItem).
+         *
+         * @param {Object} item  Artículo con su pivot de la venta.
+         * @return {number|null}
+         */
+        get_sale_item_price_con_iva_total(item) {
+            if (!item || !item.pivot || this.pivot_value_is_empty(item.pivot.price)) {
+                return null
+            }
+            return this.getTotalItem(item)
+        },
+        /**
+         * Precio unitario SIN IVA de un renglón de venta. Usa el neto congelado al vender
+         * (pivot.price_sin_iva); en ventas viejas que no lo tienen lo calcula con la alícuota
+         * congelada (pivot.iva_percentage). Si tampoco hay alícuota devuelve null: no se inventa un
+         * IVA para restar. Una alícuota no numérica (Exento / No Gravado) deja el precio como está.
+         *
+         * @param {Object} item  Artículo con su pivot de la venta.
+         * @return {number|null}
+         */
+        get_sale_item_price_sin_iva(item) {
+            if (!item || !item.pivot) {
+                return null
+            }
+            const pivot = item.pivot
+            if (!this.pivot_value_is_empty(pivot.price_sin_iva)) {
+                return Number(pivot.price_sin_iva)
+            }
+            if (this.pivot_value_is_empty(pivot.price) || this.pivot_value_is_empty(pivot.iva_percentage)) {
+                return null
+            }
+            const alicuota = Number(pivot.iva_percentage)
+            if (isNaN(alicuota) || alicuota == 0) {
+                return Number(pivot.price)
+            }
+            return Number(pivot.price) / (1 + alicuota / 100)
+        },
+        /**
+         * Precio total SIN IVA de un renglón: neto unitario × cantidad menos el descuento de línea.
+         *
+         * @param {Object} item  Artículo con su pivot de la venta.
+         * @return {number|null}
+         */
+        get_sale_item_price_sin_iva_total(item) {
+            const unitario = this.get_sale_item_price_sin_iva(item)
+            if (unitario === null) {
+                return null
+            }
+            let total = unitario * Number(item.pivot.amount)
+            if (!this.pivot_value_is_empty(item.pivot.discount)) {
+                total -= total * Number(item.pivot.discount) / 100
+            }
+            return total
+        },
+        /**
+         * Informa si un valor del pivot viene vacío (null, undefined o ''). El 0 NO es vacío:
+         * un costo de 0 es un dato, no una ausencia.
+         *
+         * @param {*} value
+         * @return {boolean}
+         */
+        pivot_value_is_empty(value) {
+            return value === null || typeof value === 'undefined' || value === ''
+        },
         getTotalItem(item, from_pivot = true) {
             let price 
             let amount 
