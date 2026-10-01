@@ -3,11 +3,18 @@
 	class="form-moneda"
 	v-if="show">
 		<b-input-group prepend="Moneda">
+			<!--
+				:value + @change y no v-model: al cambiar la moneda de un presupuesto en edicion hace
+				falta saber de cual venia (para convertir los renglones) y poder RECHAZAR el cambio si
+				no hay cotizacion. :key se incrementa cuando se rechaza, para que el select vuelva a
+				mostrar la moneda del store (b-form-select guarda lo elegido en un estado local).
+			-->
 			<b-form-select
 			class="select-moneda"
+			:key="select_moneda_key"
 			:disabled="disabled"
-			v-model="moneda_id"
-			@change="set_total"
+			:value="moneda_id"
+			@change="elegir_moneda_del_comprobante"
 			:options="getOptions({key: 'moneda_id', text: 'Moneda'}, null, null, false)"></b-form-select>
 		</b-input-group>
 
@@ -29,8 +36,9 @@
 <script>
 import vender_set_total from '@/mixins/vender_set_total'
 import cotizacion_dolar_por_defecto from '@/mixins/vender/cotizacion_dolar_por_defecto'
+import reexpresar_comprobante from '@/mixins/vender/reexpresar_comprobante'
 export default {
-	mixins: [vender_set_total, cotizacion_dolar_por_defecto],
+	mixins: [vender_set_total, cotizacion_dolar_por_defecto, reexpresar_comprobante],
 	computed: {
 		show() {
 			return this.user && this.hasExtencion('ventas_en_dolares')
@@ -61,11 +69,15 @@ export default {
 				this.$store.commit('vender/set_moneda_id', value)
 			}
 		},
+		/*
+			Una VENTA ya guardada sigue con la moneda bloqueada (editarla es otra mision: el punto 10 del
+			presupuesto de 2R). Un PRESUPUESTO sin confirmar, en cambio, se puede pasar de $ a USD y
+			viceversa (mision 2r-presupuestos-editables, 1/10/2026): los renglones se convierten con la
+			cotizacion del campo USD en elegir_moneda_del_comprobante(). Uno confirmado no llega aca:
+			el boton "Actualizar en VENDER" esta deshabilitado y la API lo rechaza con 422.
+		*/
 		disabled() {
-			if (
-				this.editando_venta_previa
-				|| this.budget
-			) {
+			if (this.editando_venta_previa) {
 				return true
 			}
 			return false
@@ -78,9 +90,11 @@ export default {
 		},
 	},
 	data() {
-	    return {
-	        input_dolar_valor: null  // Este será el input editable
-	    }
+		return {
+			input_dolar_valor: null,  // Este será el input editable
+			// Se incrementa para forzar que el select vuelva a pintar la moneda del store
+			select_moneda_key: 0,
+		}
 	},
 	created() {
 		this.iniciar_dolar()
@@ -106,6 +120,17 @@ export default {
 			if (Number(this.input_dolar_valor) !== Number(valor)) {
 				this.input_dolar_valor = valor
 			}
+
+			/*
+				🔴 La cotizacion cambio con un presupuesto en edicion: los renglones tienen que
+				re-expresarse con la nueva. Va ACA, en el watcher del store, y no en set_valor_dolar(),
+				porque la cotizacion puede cambiar por cuatro caminos --el vendedor tipeando, el
+				restaurar_dolar_si_falta() al salir del campo vacio, iniciar_dolar() y el chequeo de
+				guardado que carga la del sistema-- y los cuatro terminan en un commit al store. Sin
+				esto, la cotizacion nueva quedaba guardada con renglones convertidos con la vieja.
+				No hay recursion: reexpresar no toca valor_dolar.
+			*/
+			this.reexpresar_por_cambio_de_cotizacion()
 		},
 	},
 	methods: {
@@ -146,6 +171,106 @@ export default {
 		},
 		set_total() {
 			this.setTotal()
+		},
+		/**
+		 * Con un presupuesto en edicion, vuelve a expresar los renglones con la cotizacion vigente
+		 * (la moneda no cambia). Si el presupuesto esta en su moneda original no cambia ningun
+		 * precio: los importes son los originales. Sin cotizacion mayor que cero no hace nada (el
+		 * campo puede estar vacio mientras el vendedor escribe; al salir se restaura el dolar del
+		 * sistema y este metodo vuelve a correr).
+		 */
+		reexpresar_por_cambio_de_cotizacion() {
+
+			if (
+				!this.budget
+				|| this.editando_venta_previa
+			) {
+				return
+			}
+
+			let cotizacion = Number(this.valor_dolar)
+
+			if (!(cotizacion > 0)) {
+				return
+			}
+
+			this.reexpresar_comprobante_en_otra_moneda(this.moneda_id, this.moneda_id, cotizacion)
+
+			this.setTotal()
+		},
+		/**
+		 * El vendedor eligio otra moneda en el select.
+		 *
+		 * Con una venta nueva o un presupuesto nuevo es lo de siempre: se guarda la moneda y se
+		 * recalcula el total (los precios salen del catalogo y check_moneda los cotiza).
+		 *
+		 * Con un presupuesto en edicion (`budget` en el store) los renglones NO salen del catalogo
+		 * sino de lo guardado, y check_moneda no cotiza lo que sale del pivot: por eso aca se
+		 * CONVIERTEN antes de recalcular (ver mixins/vender/reexpresar_comprobante.js, que explica la
+		 * regla). La cotizacion es la que muestra el campo USD en este momento; si el store no
+		 * tiene una (presupuesto en pesos, o en USD guardado sin cotizacion) se usa el dolar del
+		 * sistema, igual que al abrir Vender. Sin ninguna de las dos el cambio se RECHAZA: convertir
+		 * con una cotizacion inventada deja precios que parecen buenos y no lo son.
+		 *
+		 * Los renglones se recalculan siempre desde sus importes originales (ver el mixin): volver a
+		 * la moneda original los devuelve exactos, y cambiar la cotizacion despues de convertir los
+		 * re-expresa con la nueva (watcher de valor_dolar).
+		 *
+		 * @param {Number|String} moneda_nueva Valor elegido en el select.
+		 */
+		elegir_moneda_del_comprobante(moneda_nueva) {
+
+			let moneda_anterior = this.moneda_id
+
+			if (!this.budget) {
+				this.moneda_id = moneda_nueva
+				this.setTotal()
+				return
+			}
+
+			let cambia_de_expresion = this.reexpresar_moneda_es_dolar(moneda_anterior) !== this.reexpresar_moneda_es_dolar(moneda_nueva)
+
+			let cotizacion = null
+
+			if (cambia_de_expresion) {
+
+				if (!(Number(this.valor_dolar) > 0)) {
+					this.cargar_dolar_por_defecto()
+				}
+
+				cotizacion = Number(this.valor_dolar)
+
+				if (!(cotizacion > 0)) {
+
+					this.$toast.warning('Para cambiar la moneda del presupuesto hace falta la cotización del dólar. Cargala en el campo USD y volvé a elegir la moneda.', {
+						duration: 8000,
+					})
+
+					this.select_moneda_key++
+
+					return
+				}
+			}
+
+			let resultado = this.reexpresar_comprobante_en_otra_moneda(moneda_anterior, moneda_nueva, cotizacion)
+
+			this.moneda_id = moneda_nueva
+
+			this.setTotal()
+
+			if (cambia_de_expresion) {
+
+				this.$toast.info('Se convirtieron los renglones del presupuesto con la cotización del dólar de ' + cotizacion + '.', {
+					duration: 6000,
+				})
+
+				if (resultado.con_precios_propios_por_moneda) {
+
+					this.$toast.warning('Hay ' + resultado.con_precios_propios_por_moneda + ' renglón(es) con precios propios por moneda que no se convirtieron: revisá su precio.', {
+						duration: 10000,
+					})
+				}
+			}
 		},
 		/**
 		 * Cada cambio del campo (`input`, y no `keyup`: el campo es numerico y un valor pegado o movido con
