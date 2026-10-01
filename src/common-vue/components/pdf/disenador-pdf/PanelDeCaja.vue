@@ -18,7 +18,7 @@
 			:maxlength="disenador.limites.max_titulo"
 			placeholder="Sin título"
 			autocomplete="off"
-			data-testid="disenador-pdf-panel-titulo"
+			data-testid="titulo-panel-disenador-pdf"
 			@input="caja.titulo = $event.target.value">
 			<small class="dpdf-panel__ayuda">Se imprime arriba de los campos, en negrita. Vacío: sin título.</small>
 		</div>
@@ -39,7 +39,7 @@
 				class="dpdf-panel__estilo"
 				:class="{ 'dpdf-panel__estilo--activo': caja.estilo === estilo }"
 				:aria-checked="caja.estilo === estilo ? 'true' : 'false'"
-				:data-testid="'disenador-pdf-panel-estilo-' + estilo"
+				:data-testid="'estilo-' + estilo + '-panel-disenador-pdf'"
 				@click="caja.estilo = estilo">
 					<span
 					class="dpdf-panel__muestra"
@@ -94,7 +94,7 @@
 		variant="outline-danger"
 		size="sm"
 		class="dpdf-panel__quitar"
-		data-testid="disenador-pdf-panel-quitar"
+		data-testid="quitar-panel-disenador-pdf"
 		@click="disenador.quitar_item(zona, caja)">
 			<i class="bi bi-trash3"></i>
 			Quitar caja

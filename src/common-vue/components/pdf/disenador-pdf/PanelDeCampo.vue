@@ -41,7 +41,7 @@
 				:value="campo.texto"
 				:maxlength="disenador.limites.max_texto_libre"
 				placeholder="Escribí el texto que se imprime"
-				data-testid="disenador-pdf-panel-texto"
+				data-testid="texto-panel-disenador-pdf"
 				@input="campo.texto = $event.target.value"></textarea>
 				<small class="dpdf-panel__ayuda">{{ largo_del_texto }}/{{ disenador.limites.max_texto_libre }} caracteres. Podés usar varios renglones.</small>
 				<!-- Largo para el ancho de su caja: aviso suave, no bloquea (el PDF no parte una caja entre hojas) -->
@@ -49,7 +49,7 @@
 				v-if="texto_largo"
 				class="dpdf-panel__aviso"
 				role="status"
-				data-testid="disenador-pdf-panel-texto-largo">
+				data-testid="aviso-texto-largo-panel-disenador-pdf">
 					<i
 					class="bi bi-exclamation-triangle"
 					aria-hidden="true"></i>
@@ -71,7 +71,7 @@
 				:maxlength="disenador.limites.max_etiqueta"
 				:disabled="!!rotulo_del_catalogo && campo.etiqueta === ''"
 				autocomplete="off"
-				data-testid="disenador-pdf-panel-rotulo"
+				data-testid="rotulo-panel-disenador-pdf"
 				@input="cambiar_rotulo($event.target.value)">
 				<b-form-checkbox
 				v-if="rotulo_del_catalogo"
@@ -98,7 +98,7 @@
 						:disabled="estilo.tamano <= disenador.limites.tamano_min"
 						title="Letra más chica"
 						aria-label="Letra un punto más chica"
-						data-testid="disenador-pdf-panel-letra-menos"
+						data-testid="achicar-letra-panel-disenador-pdf"
 						@click="cambiar_tamano(-1)">
 							<i class="bi bi-dash-lg"></i>
 						</button>
@@ -111,7 +111,7 @@
 						:disabled="estilo.tamano >= disenador.limites.tamano_max"
 						title="Letra más grande"
 						aria-label="Letra un punto más grande"
-						data-testid="disenador-pdf-panel-letra-mas"
+						data-testid="agrandar-letra-panel-disenador-pdf"
 						@click="cambiar_tamano(1)">
 							<i class="bi bi-plus-lg"></i>
 						</button>
@@ -123,7 +123,7 @@
 					:aria-pressed="estilo.negrita ? 'true' : 'false'"
 					title="Negrita"
 					aria-label="Negrita"
-					data-testid="disenador-pdf-panel-negrita"
+					data-testid="negrita-panel-disenador-pdf"
 					@click="campo.negrita = !estilo.negrita">
 						<i class="bi bi-type-bold"></i>
 					</button>
@@ -134,7 +134,7 @@
 					:aria-pressed="estilo.cursiva ? 'true' : 'false'"
 					title="Cursiva"
 					aria-label="Cursiva"
-					data-testid="disenador-pdf-panel-cursiva"
+					data-testid="cursiva-panel-disenador-pdf"
 					@click="campo.cursiva = !estilo.cursiva">
 						<i class="bi bi-type-italic"></i>
 					</button>
@@ -160,7 +160,7 @@
 					:aria-checked="estilo.alineacion === alineacion ? 'true' : 'false'"
 					:title="nombre_de_la_alineacion(alineacion)"
 					:aria-label="nombre_de_la_alineacion(alineacion)"
-					:data-testid="'disenador-pdf-panel-alineacion-' + alineacion"
+					:data-testid="'alineacion-' + alineacion + '-panel-disenador-pdf'"
 					@click="campo.alineacion = alineacion">
 						<i
 						class="bi"
@@ -173,7 +173,7 @@
 			type="button"
 			class="dpdf-panel__restablecer"
 			:disabled="!con_estilo_propio"
-			data-testid="disenador-pdf-panel-restablecer"
+			data-testid="restablecer-panel-disenador-pdf"
 			@click="disenador.restablecer_estilo(campo)">
 				<i class="bi bi-arrow-counterclockwise"></i>
 				Volver al estilo del campo
@@ -184,7 +184,7 @@
 		variant="outline-danger"
 		size="sm"
 		class="dpdf-panel__quitar"
-		data-testid="disenador-pdf-panel-quitar"
+		data-testid="sacar-panel-disenador-pdf"
 		@click="disenador.quitar_campo(campo)">
 			<i class="bi bi-trash3"></i>
 			Sacar de la caja

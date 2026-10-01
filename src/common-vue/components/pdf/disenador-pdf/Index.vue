@@ -25,7 +25,7 @@
 
 		<div
 		class="disenador-pdf"
-		data-testid="disenador-pdf">
+		data-testid="cuerpo-disenador-pdf">
 
 			<div
 			v-if="cargando"
@@ -67,7 +67,7 @@
 						class="disenador-pdf__prueba"
 						:disabled="hay_cambios"
 						:title="hay_cambios ? 'Guardá los cambios para verlos en el PDF' : 'Abre el PDF del último comprobante con este diseño'"
-						data-testid="disenador-pdf-ver-prueba"
+						data-testid="ver-prueba-disenador-pdf"
 						@click="ver_pdf_de_prueba">
 							<i class="bi bi-file-earmark-pdf"></i>
 							Ver un PDF de prueba
@@ -100,12 +100,24 @@
 					La hoja se ve a escala, con datos de ejemplo. En cada comprobante se imprime lo que tenga datos: una caja sin ninguno no ocupa lugar.
 				</p>
 
+				<!-- El Modelo se cambió en el formulario y no se guardó: no se guarda el diseño -->
+				<div
+				v-if="modelo_cambiado_sin_guardar"
+				class="disenador-pdf__aviso disenador-pdf__aviso--bloquea"
+				role="alert"
+				data-testid="aviso-modelo-disenador-pdf">
+					<i
+					class="bi bi-exclamation-triangle"
+					aria-hidden="true"></i>
+					<span>{{ AVISO_MODELO_SIN_GUARDAR }}</span>
+				</div>
+
 				<!-- Una factura de ARCA que llegó guardada en A5: no se guarda hasta elegir otra hoja -->
 				<div
 				v-if="arca_no_entra_en_la_hoja"
 				class="disenador-pdf__aviso disenador-pdf__aviso--bloquea"
 				role="alert"
-				data-testid="disenador-pdf-aviso-a5-arca">
+				data-testid="aviso-a5-arca-disenador-pdf">
 					<i
 					class="bi bi-exclamation-triangle"
 					aria-hidden="true"></i>
@@ -117,7 +129,7 @@
 				v-if="pocos_renglones_por_hoja"
 				class="disenador-pdf__aviso"
 				role="status"
-				data-testid="disenador-pdf-aviso-a5-pie">
+				data-testid="aviso-a5-pie-disenador-pdf">
 					<i
 					class="bi bi-info-circle"
 					aria-hidden="true"></i>
@@ -152,7 +164,7 @@
 				size="sm"
 				class="disenador-pdf__volver"
 				:disabled="guardando"
-				data-testid="disenador-pdf-volver"
+				data-testid="volver-disenador-pdf"
 				@click="volver_al_de_siempre">
 					<i class="bi bi-arrow-counterclockwise"></i>
 					Volver al diseño de siempre
@@ -161,14 +173,14 @@
 					<b-button
 					variant="outline-secondary"
 					:disabled="guardando"
-					data-testid="disenador-pdf-cancelar"
+					data-testid="cancelar-disenador-pdf"
 					@click="cancelar">
 						{{ hay_cambios ? 'Cancelar' : 'Cerrar' }}
 					</b-button>
 					<b-button
 					variant="primary"
 					:disabled="guardando || !catalogo"
-					data-testid="disenador-pdf-guardar"
+					data-testid="guardar-disenador-pdf"
 					@click="guardar">
 						<span
 						v-if="guardando"
@@ -191,6 +203,8 @@ import {
 	HOJA_DE_SIEMPRE,
 	MOTIVO_A5_EN_ARCA,
 	AVISO_A5_CON_PIE_EN_CADA_HOJA,
+	AVISO_MODELO_SIN_GUARDAR,
+	LOGO_DEL_PDF_POR_DEFECTO_MM,
 	es_hoja_a5,
 	es_verdadero,
 	tiene_diseno,
@@ -204,12 +218,11 @@ import {
 	ancho_util,
 	columnas_visibles,
 } from './estado_del_disenador'
-import { traer_catalogo, mensaje_de_error } from './api_del_disenador'
+import { traer_catalogo, traer_perfil, mensaje_de_error } from './api_del_disenador'
 import {
 	emisor_chip_keys,
 	FISCAL_REQUIRED_EMISOR_KEYS,
 	default_header_layout,
-	LOGO_SIZE_MM_DEFAULT,
 } from '@/common-vue/components/pdf/header-designer/header_designer_catalog'
 
 /* Escala (px de pantalla por mm de hoja) hasta que la hoja se mide por primera vez */
@@ -284,9 +297,10 @@ export default {
 	},
 	data() {
 		return {
-			/* Textos de los avisos de la hoja A5 (ver estado_del_disenador.js), para el template */
+			/* Textos de los avisos de arriba del lienzo (ver estado_del_disenador.js), para el template */
 			MOTIVO_A5_EN_ARCA: MOTIVO_A5_EN_ARCA,
 			AVISO_A5_CON_PIE_EN_CADA_HOJA: AVISO_A5_CON_PIE_EN_CADA_HOJA,
+			AVISO_MODELO_SIN_GUARDAR: AVISO_MODELO_SIN_GUARDAR,
 			/* id del b-modal (también scopea los estilos de los inputs, ver el <style>) */
 			id_del_modal: 'disenador-pdf',
 			/* true entre el show y el hidden del modal */
@@ -299,6 +313,8 @@ export default {
 			pedido_en_curso: 0,
 			/* Respuesta del catálogo (GET pdf-column-profiles/page-layout-catalog), o null */
 			catalogo: null,
+			/* El Modelo del perfil GUARDADO (GET pdf-column-profiles/{id}), o null si no se pudo leer o es nuevo */
+			modelo_guardado: null,
 			/* Las dos zonas de trabajo (ver estado_del_disenador.js) */
 			superior: [],
 			pie: [],
@@ -313,7 +329,7 @@ export default {
 			/* Datos del negocio que no están en el encabezado (paleta de abajo del encabezado) */
 			emisor_paleta: [],
 			/* Tamaño del logo (mm), copia de trabajo de logo_size_mm */
-			logo_size_mm: LOGO_SIZE_MM_DEFAULT,
+			logo_size_mm: LOGO_DEL_PDF_POR_DEFECTO_MM,
 			/* Px de pantalla por mm de hoja: la mide HojaDelDisenador */
 			escala: ESCALA_INICIAL,
 			/* Si el perfil tenía un diseño con cajas al abrir (o al último guardado) */
@@ -329,7 +345,7 @@ export default {
 			/* Huellas de la base: del lienzo + la hoja, del emisor y del logo */
 			huella_base_del_diseno: '',
 			huella_base_del_emisor: '',
-			logo_base: LOGO_SIZE_MM_DEFAULT,
+			logo_base: LOGO_DEL_PDF_POR_DEFECTO_MM,
 			/* Huella de todo al abrir (o al guardar): si la de ahora es distinta, hay cambios sin guardar */
 			huella_inicial: '',
 			/* Lo seleccionado en la hoja: {tipo: 'caja'|'campo'|'fijo', item}, o null */
@@ -408,6 +424,16 @@ export default {
 		 */
 		pocos_renglones_por_hoja() {
 			return this.hoja_es_a5 && this.modelo_del_perfil === 'sale' && es_verdadero(this.model.show_totals_on_each_page)
+		},
+		/**
+		 * Si el Modelo del formulario no es el del perfil guardado (se cambió y no se guardó): el
+		 * lienzo se armó con el catálogo del Modelo nuevo, pero la API normaliza con el guardado. Se
+		 * avisa arriba del lienzo y no se deja guardar (ver guardar()).
+		 *
+		 * @returns {boolean}
+		 */
+		modelo_cambiado_sin_guardar() {
+			return !!(this.model.id && this.modelo_guardado && this.modelo_guardado !== this.model.model_name)
 		},
 		/**
 		 * Límites del catálogo (constantes de DisenoDePaginaPdf).
@@ -714,19 +740,37 @@ export default {
 			this.pedido_en_curso = pedido
 			this.cargando = true
 			this.error_de_carga = null
+			this.modelo_guardado = null
 
-			traer_catalogo(this, parametros)
-			.then(function (respuesta) {
+			/*
+				Con un perfil ya creado se pide también el perfil GUARDADO: si el Modelo del formulario no
+				es el guardado (se cambió y no se guardó), la API normalizaría el diseño con el de la base
+				y el diseñador no deja guardar (ver modelo_cambiado_sin_guardar). Si ese pedido falla, el
+				diseñador abre igual, sin ese chequeo.
+			*/
+			let pedidos = [traer_catalogo(this, parametros)]
+			if (this.model.id) {
+				pedidos.push(traer_perfil(this, this.model.id).catch(function (error) {
+					console.log('diseño de PDF: no se pudo leer el perfil guardado', error)
+					return null
+				}))
+			}
+
+			Promise.all(pedidos)
+			.then(function (respuestas) {
 				if (pedido !== self.pedido_en_curso || !self.abierto) {
 					return
 				}
 				self.cargando = false
 
-				let catalogo = respuesta ? respuesta.data : null
+				let catalogo = respuestas[0] ? respuestas[0].data : null
 				if (!catalogo_valido(catalogo)) {
 					self.error_de_carga = 'La respuesta del servidor no tiene la forma esperada. Probá de nuevo en un rato.'
 					return
 				}
+
+				let guardado = respuestas[1] && respuestas[1].data ? respuestas[1].data.model : null
+				self.modelo_guardado = guardado && guardado.model_name ? guardado.model_name : null
 
 				self.aplicar_catalogo(catalogo)
 			})
@@ -815,8 +859,18 @@ export default {
 				return colocados.indexOf(key) === -1
 			})
 
+			/*
+				El tamaño EFECTIVO del logo, con el mismo orden que el PDF (NewSalePdf / ProfileDocumentPdf):
+				el del perfil; si no tiene, el global del dueño (pdf_image_size); si tampoco, 35 mm. Así la
+				hoja "a escala" no miente. Sin tocar la manija no viaja (el perfil sigue en null y el PDF
+				sigue usando el global del dueño).
+			*/
 			let logo = parseInt(this.model.logo_size_mm, 10)
-			this.logo_size_mm = logo > 0 ? logo : LOGO_SIZE_MM_DEFAULT
+			if (!(logo > 0)) {
+				let del_duenio = this.owner ? parseInt(this.owner.pdf_image_size, 10) : NaN
+				logo = del_duenio > 0 ? del_duenio : LOGO_DEL_PDF_POR_DEFECTO_MM
+			}
+			this.logo_size_mm = logo
 		},
 		/**
 		 * Toma lo de ahora como base: sin cambios sin guardar y, si no es de siempre, "no tocado".
@@ -839,6 +893,7 @@ export default {
 			this.cargando = false
 			this.error_de_carga = null
 			this.catalogo = null
+			this.modelo_guardado = null
 			this.superior = []
 			this.pie = []
 			this.hoja = {
@@ -848,13 +903,13 @@ export default {
 			}
 			this.encabezado = encabezado_vacio()
 			this.emisor_paleta = []
-			this.logo_size_mm = LOGO_SIZE_MM_DEFAULT
+			this.logo_size_mm = LOGO_DEL_PDF_POR_DEFECTO_MM
 			this.tenia_diseno = false
 			this.base_es_de_siempre = true
 			this.restablecido = false
 			this.huella_base_del_diseno = ''
 			this.huella_base_del_emisor = ''
-			this.logo_base = LOGO_SIZE_MM_DEFAULT
+			this.logo_base = LOGO_DEL_PDF_POR_DEFECTO_MM
 			this.huella_inicial = ''
 			this.seleccion = null
 			this.arrastrando = null
@@ -976,11 +1031,15 @@ export default {
 // Inputs del modal con el trato "nuevo" del sistema (radio de 8px y anillo de foco suave). Patrón
 // de contexto/estilo_interfaz_empresa.md: scopeado por el id del modal, sin !important.
 #disenador-pdf
+	// La letra va acá también: el global de _inputs.sass pone input.form-control en 1.4rem (22,4px,
+	// medido en "Buscar campo…" y en el rótulo del panel) y en el diseñador tiene que ser la del resto
+	// del modal. Id + clase le gana a input.form-control sin !important.
 	.form-control,
 	.custom-select,
 	textarea.form-control
 		border-radius: var(--metodo-pago-input-radius)
 		border-width: 1px
+		font-size: 0.85rem
 
 		&:focus
 			border-width: 1px
@@ -1105,7 +1164,9 @@ export default {
 		i
 			color: var(--color-text-warning-strong, var(--warning))
 
-	// Hoja + panel y bandeja. El lateral va a la derecha desde 992px (lg); más angosto, debajo.
+	// Hoja + panel y bandeja. El lateral va a la derecha desde 1200px (xl); más angosto, debajo. No
+	// desde 992 como en Vender: la hoja tiene un ancho mínimo legible y a 1024 el marco quedaba en
+	// 621px para una hoja de 680 (medido): con el lateral abajo entra entera sin deslizar.
 	.disenador-pdf__area
 		display: grid
 		grid-template-columns: minmax(0, 1fr) 300px
@@ -1131,7 +1192,7 @@ export default {
 		max-height: calc(100vh - 12rem)
 		overflow-y: auto
 
-@media (max-width: 991.98px)
+@media (max-width: 1199.98px)
 	.disenador-pdf
 		.disenador-pdf__area
 			grid-template-columns: minmax(0, 1fr)
@@ -1142,6 +1203,8 @@ export default {
 			overflow: visible
 			margin-bottom: 12px
 
+@media (max-width: 991.98px)
+	.disenador-pdf
 		.disenador-pdf__acciones
 			align-items: flex-start
 			margin-left: 0

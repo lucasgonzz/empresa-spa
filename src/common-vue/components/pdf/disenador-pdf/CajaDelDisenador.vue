@@ -16,7 +16,7 @@
 	:data-cols="caja.cols"
 	data-tipo="caja"
 	:data-id="caja.id"
-	:data-testid="'disenador-pdf-caja-' + caja.id"
+	:data-testid="'caja-' + caja.id + '-disenador-pdf'"
 	role="group"
 	:aria-label="etiqueta_accesible">
 
@@ -58,7 +58,7 @@
 				autocomplete="off"
 				:aria-label="'Título de la caja (se imprime arriba de sus campos)'"
 				:style="estilo_del_titulo"
-				:data-testid="'disenador-pdf-caja-titulo-' + caja.id"
+				:data-testid="'titulo-caja-' + caja.id + '-disenador-pdf'"
 				@input="caja.titulo = $event.target.value"
 				@focus="seleccionar"
 				@click.stop>
@@ -92,7 +92,7 @@
 				class="dpdf-caja__boton dpdf-caja__boton--quitar dpdf-no-arrastra"
 				title="Quitar la caja"
 				:aria-label="'Quitar la caja ' + nombre_accesible"
-				:data-testid="'disenador-pdf-caja-quitar-' + caja.id"
+				:data-testid="'quitar-caja-' + caja.id + '-disenador-pdf'"
 				@click.stop="disenador.quitar_item(zona, caja)">
 					<i class="bi bi-x-lg"></i>
 				</button>
@@ -204,11 +204,15 @@ import { nombre_del_estilo, icono_del_estilo } from './estilos_de_caja'
 	Grupo de las listas de campos: todas las cajas (de las dos zonas) y la bandeja comparten el
 	nombre, así un campo va y viene entre cualquiera de ellas. Declarado afuera para no crear un
 	objeto nuevo en cada render (vuedraggable le pasa sus atributos a Sortable cada vez que cambian).
+
+	🔴 `put` es la LISTA de grupos que acepta, no `true`: en SortableJS `put: true` acepta elementos
+	de CUALQUIER grupo (toFn: value === true → true sin mirar el nombre), y una "Caja nueva" soltada
+	sobre una caja terminaba adentro de sus campos. El `move` del diseñador lo vuelve a rechazar.
 */
 const GRUPO_DE_CAMPOS = {
 	name: 'pdf-campos',
 	pull: true,
-	put: true,
+	put: ['pdf-campos'],
 }
 
 /* Milímetros de un punto tipográfico y tamaño del título de una caja en el PDF (plan §4.4: 9 pt) */

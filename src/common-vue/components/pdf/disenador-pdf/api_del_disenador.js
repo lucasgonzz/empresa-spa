@@ -9,9 +9,14 @@
 	              diseno_derivado, comprobante_de_prueba}
 	      -> 422 {message} si el modelo no se diseña con cajas (no pasa: el diseñador solo se abre
 	              para venta, presupuesto y pedido online). Con una API vieja, 404.
+	- GET pdf-column-profiles/{id}   el perfil GUARDADO -> 200 {model}: para comparar su Modelo con el
+	                                 del formulario (si se cambió sin guardar, no se deja guardar).
 	- PUT pdf-column-profiles/{id}   solo las claves que vienen (page_layout, paper_width_mm,
 	                                 printable_width_mm, margin_mm, paper_height_mm, header_layout,
-	                                 logo_size_mm) -> 200 {model}; 422 {message | errors}.
+	                                 logo_size_mm y, en venta, is_afip_ticket) -> 200 {model};
+	                                 422 {message | errors}. Va como JSON en el cuerpo (objeto): la
+	                                 API lee page_layout del cuerpo crudo para no perder las etiquetas
+	                                 vacías ("sin rótulo").
 
 	🔴 Los pedidos van con `skip_global_error_event` y `skip_global_validation_toast`, igual que
 	disenos-de-vender/api_de_disenos.js: el error lo muestra el diseñador con mensaje_de_error().
@@ -42,6 +47,18 @@ export function traer_catalogo(vm, parametros) {
 		skip_global_error_event: CONFIGURACION.skip_global_error_event,
 		skip_global_validation_toast: CONFIGURACION.skip_global_validation_toast,
 	})
+}
+
+/**
+ * Trae el perfil GUARDADO (GET pdf-column-profiles/{id} → {model}), para comparar el Modelo del
+ * formulario con el de la base antes de dejar diseñar y guardar.
+ *
+ * @param {Object} vm
+ * @param {number} id id del pdf_column_profile
+ * @returns {Promise}
+ */
+export function traer_perfil(vm, id) {
+	return vm.$api.get(RUTA + '/' + id, CONFIGURACION)
 }
 
 /**

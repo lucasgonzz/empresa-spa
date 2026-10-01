@@ -9,7 +9,7 @@
 	class="dpdf-tabla"
 	:class="{ 'dpdf-tabla--se-pasa': sobra_mm > 0 }"
 	aria-label="Tabla de artículos (fija)"
-	data-testid="disenador-pdf-tabla">
+	data-testid="tabla-disenador-pdf">
 
 		<header class="dpdf-tabla__cabecera">
 			<i

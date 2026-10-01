@@ -71,8 +71,24 @@ export const KEY_HOJA_A5 = 'a5'
 /* Por qué una factura de ARCA no va en A5 (se muestra en los controles de la hoja y arriba del lienzo) */
 export const MOTIVO_A5_EN_ARCA = 'En A5 no entra completo el cuadro de ARCA (importes, QR y CAE): para facturas usá A4, Carta u Oficio.'
 
-/* Aviso suave (no bloquea) de una venta en A5 con "Mostrar pie de página en cada hoja" */
-export const AVISO_A5_CON_PIE_EN_CADA_HOJA = 'Con hoja A5 y el pie en cada hoja, entran pocos renglones por hoja.'
+/*
+	Aviso suave (no bloquea) de una venta en A5 con "Mostrar pie de página en cada hoja": del lado API,
+	si el pie no deja lugar para los renglones, sale solo en la última hoja.
+*/
+export const AVISO_A5_CON_PIE_EN_CADA_HOJA = 'Con hoja A5 y el pie en cada hoja, si el pie no deja lugar para los renglones, sale solo en la última hoja.'
+
+/*
+	El Modelo del formulario no es el del perfil guardado: el lienzo se armó con el catálogo del Modelo
+	nuevo y la API normalizaría con el guardado, así que el diseño no se guarda (bloquea).
+*/
+export const AVISO_MODELO_SIN_GUARDAR = 'Cambiaste el Modelo y todavía no lo guardaste: guardá primero el diseño de PDF y después volvé a diseñar.'
+
+/*
+	Tamaño del logo (mm) que usa el PDF cuando ni el perfil (logo_size_mm) ni el dueño
+	(users.pdf_image_size) tienen uno: NewSalePdf y ProfileDocumentPdf, "perfil → global del dueño →
+	35". El diseñador dibuja el mismo, así la hoja "a escala" no miente.
+*/
+export const LOGO_DEL_PDF_POR_DEFECTO_MM = 35
 
 /*
 	Caracteres de texto libre que entran cómodos por cada columna de la caja. El PDF no parte una
@@ -207,12 +223,28 @@ export function texto_de_un_renglon(texto, maximo) {
 	if (texto === null || typeof texto == 'undefined' || typeof texto == 'object') {
 		return ''
 	}
-	return cortar(String(texto).replace(/\s+/g, ' ').trim(), maximo)
+	/*
+		Los espacios se recortan antes Y después de cortar el largo, como la API desde 058bfadd: si el
+		corte cae justo detrás de un espacio, ese espacio no queda colgando, y lo que se ve en el
+		lienzo es lo que queda guardado.
+	*/
+	return cortar(String(texto).replace(/\s+/g, ' ').trim(), maximo).trim()
+}
+
+/**
+ * rtrim() de PHP sin segundo parámetro: saca del final espacio, tab, \n, \r, \0 y \x0B.
+ *
+ * @param {string} texto
+ * @returns {string}
+ */
+function rtrim_de_php(texto) {
+	return texto.replace(/[ \t\n\r\0\x0B]+$/, '')
 }
 
 /**
  * El texto libre como lo guarda la API (texto_acotado sin una_linea): conserva los saltos de
- * línea, pasa CRLF a LF, saca los espacios del final y lo corta.
+ * línea, pasa CRLF a LF, saca los espacios del final y lo corta (y vuelve a sacar los del final
+ * después de cortar, como la API desde 058bfadd).
  *
  * @param {*} texto
  * @param {number} [maximo]
@@ -222,9 +254,8 @@ export function texto_libre_acotado(texto, maximo) {
 	if (texto === null || typeof texto == 'undefined' || typeof texto == 'object') {
 		return ''
 	}
-	/* rtrim() de PHP: espacio, tab, \n, \r, \0 y \x0B */
-	let limpio = String(texto).replace(/\r\n/g, '\n').replace(/[ \t\n\r\0\x0B]+$/, '')
-	return cortar(limpio, maximo)
+	let limpio = rtrim_de_php(String(texto).replace(/\r\n/g, '\n'))
+	return rtrim_de_php(cortar(limpio, maximo))
 }
 
 /**
@@ -755,6 +786,25 @@ export function ubicar(estado, objeto) {
 	})
 
 	return ubicacion
+}
+
+/**
+ * Dónde se agrega algo nuevo "al final" de una zona: ANTES del bloque de ARCA del pie (importes, QR
+ * y CAE) si la zona lo tiene, así lo que se agrega al pie de una factura no cae debajo del cuadro de
+ * ARCA; si no, al final de la zona.
+ *
+ * @param {Array} lista ítems de una zona
+ * @returns {number}
+ */
+export function indice_para_agregar(lista) {
+	let items = lista || []
+	let indice = -1
+	items.forEach(function (item, posicion) {
+		if (indice === -1 && item.tipo === TIPO_FIJO && item.key === FIJO_AFIP_PIE) {
+			indice = posicion
+		}
+	})
+	return indice === -1 ? items.length : indice
 }
 
 /**

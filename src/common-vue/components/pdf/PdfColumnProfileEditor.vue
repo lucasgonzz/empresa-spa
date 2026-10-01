@@ -37,7 +37,7 @@
 					<b-button
 					size="sm"
 					variant="outline-primary"
-					data-testid="disenador-pdf-abrir"
+					data-testid="abrir-disenador-pdf"
 					@click="abrir_disenador_de_pdf">
 						<i class="icon-configuration"></i>
 						Diseñar PDF

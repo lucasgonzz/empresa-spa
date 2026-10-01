@@ -10,7 +10,7 @@
 	class="dpdf-hoja"
 	:class="clases"
 	:style="estilo_de_la_hoja"
-	data-testid="disenador-pdf-hoja">
+	data-testid="hoja-disenador-pdf">
 		<div
 		class="dpdf-hoja__util"
 		:style="estilo_del_margen">
@@ -82,9 +82,10 @@ import TablaFija from './TablaFija'
 	Ancho mínimo (px) de la hoja más ancha que se puede elegir. En el teléfono la hoja no se achica
 	por debajo de esto -- con menos, una caja de 3 columnas no deja leer nada -- y se desliza de
 	costado adentro de su marco (Index.vue), sin que la página scrollee de costado. Las hojas más
-	angostas tienen su mínimo proporcional (A5: unos 470px).
+	angostas tienen su mínimo proporcional (A5: unos 440px). 640 y no más: con el lateral abajo
+	(hasta 1199px), a 768px de pantalla una Carta tiene que entrar entera en el marco.
 */
-const ANCHO_MINIMO_PX = 680
+const ANCHO_MINIMO_PX = 640
 
 /* Paleta del receptor: el diseñador no la muestra (el cliente va en cajas), pero la prop es requerida */
 const SIN_RECEPTOR = []

@@ -22,6 +22,7 @@ import {
 	ids_en_uso,
 	identidad,
 	ubicar,
+	indice_para_agregar,
 	caja_nueva,
 	salto_nuevo,
 	campo_nuevo,
@@ -32,11 +33,16 @@ import { avisar } from '@/components/abm/disenos-de-vender/avisos'
 /* Cuánto dura el resaltado de algo recién agregado o movido con un botón (ms), como en Vender */
 const DURACION_DEL_DESTACADO = 1600
 
+/* Los tipos de los ítems de una zona (los campos no son ninguno de estos) */
+const TIPOS_DE_ITEM_DE_ZONA = [TIPO_CAJA, TIPO_SALTO_DE_FILA, TIPO_FIJO]
+
 export default {
 	methods: {
 		/**
 		 * `move` de vuedraggable para todas las listas del diseñador.
 		 *
+		 * - Una caja, un salto de fila o un bloque fijo solo entran a una zona; un campo nunca entra a
+		 *   una zona (ver el comentario de adentro: `put: true` de Sortable no mira el grupo).
 		 * - Un bloque fijo solo se mueve dentro de su zona (decisión 4 del plan).
 		 * - A la bandeja (zona para sacar o una categoría) va cualquier campo de una caja; lo que
 		 *   sale de la bandeja no vuelve a la bandeja.
@@ -52,6 +58,27 @@ export default {
 			let origen = evento && evento.from && evento.from.getAttribute ? evento.from.getAttribute('data-lista') : null
 			let arrastrado = evento && evento.draggedContext ? evento.draggedContext.element : null
 			let lista_destino = evento && evento.relatedContext ? evento.relatedContext.list : null
+
+			/*
+				🔴 Cada cosa en su lista. En SortableJS `put: true` acepta elementos de CUALQUIER grupo
+				(toFn: value === true → true sin mirar el nombre), y así una "Caja nueva" soltada sobre la
+				parte de abajo de una caja del pie terminaba ADENTRO de sus campos ("Este campo ya no
+				existe (undefined)"). Los grupos ya declaran `put` con la lista de grupos que aceptan; esto
+				es la segunda red: un ítem de zona (caja, salto de fila o bloque fijo, también la fuente)
+				solo entra a una zona, y un campo nunca entra a una zona. Se mira de dónde sale (la lista)
+				y qué es (el `tipo` de los ítems de zona; los campos del catálogo traen otro `tipo`:
+				texto, texto_largo o lista).
+			*/
+			let es_item_de_zona = origen === 'zona'
+				|| origen === 'fuente'
+				|| !!(arrastrado && TIPOS_DE_ITEM_DE_ZONA.indexOf(arrastrado.tipo) !== -1)
+
+			if (es_item_de_zona && destino !== 'zona') {
+				return false
+			}
+			if (!es_item_de_zona && destino === 'zona') {
+				return false
+			}
 
 			if (arrastrado && arrastrado.tipo === TIPO_FIJO) {
 				return evento.to === evento.from
@@ -232,7 +259,8 @@ export default {
 		},
 		/**
 		 * "+ Agregar caja" de una zona: una caja de 6 columnas, sin título y con el primer estilo
-		 * del catálogo (el de borde), al final de la zona, seleccionada para ponerle título.
+		 * del catálogo (el de borde), al final de la zona -- antes del bloque de ARCA del pie, si la
+		 * zona lo tiene --, seleccionada para ponerle título.
 		 *
 		 * @param {string} zona
 		 * @returns {void}
@@ -246,15 +274,17 @@ export default {
 			}
 
 			let caja = caja_nueva(ids_en_uso(this.estado_de_trabajo), COLS_DE_CAJA_NUEVA, this.limites.estilos_de_caja[0])
-			lista.push(caja)
+			/* Al final de la zona, pero ANTES del bloque de ARCA del pie (no debajo del cuadro de ARCA) */
+			lista.splice(indice_para_agregar(lista), 0, caja)
 			this.seleccionar('caja', caja)
 			this.destacar(identidad(caja))
-			this.llevar_a_la_vista('[data-testid="disenador-pdf-caja-' + caja.id + '"]')
+			this.llevar_a_la_vista('.dpdf-caja[data-id="' + caja.id + '"]')
 		},
 		/**
 		 * "Agregar" de la bandeja: el campo va a la caja seleccionada (o a la del campo
-		 * seleccionado); si no hay, a la última caja de su zona sugerida; si esa zona no tiene
-		 * cajas, a una nueva de 12 columnas (plan §8.3).
+		 * seleccionado); si no hay, a la última caja de su zona sugerida que esté ANTES del bloque de
+		 * ARCA del pie; si no hay ninguna, a una nueva de 12 columnas puesta antes de ese bloque (plan
+		 * §8.3; en una factura, lo que se agrega al pie no cae debajo del cuadro de ARCA).
 		 *
 		 * @param {Object} definicion campo del catálogo
 		 * @returns {void}
@@ -278,18 +308,24 @@ export default {
 
 			if (!destino) {
 				let zona = ZONAS.indexOf(definicion.zona_sugerida) !== -1 ? definicion.zona_sugerida : ZONAS[0]
-				let cajas = this[zona].filter(function (item) {
+				let lista = this[zona]
+				/*
+					Solo cuentan las cajas que están ANTES del bloque de ARCA del pie: lo que se agrega al pie
+					de una factura no cae debajo del cuadro de ARCA (y una caja nueva va antes de él)
+				*/
+				let limite = indice_para_agregar(lista)
+				let cajas = lista.slice(0, limite).filter(function (item) {
 					return item.tipo === TIPO_CAJA
 				})
 				destino = cajas.length ? cajas[cajas.length - 1] : null
 
 				if (!destino) {
-					if (this[zona].length >= this.limites.max_items_por_zona) {
+					if (lista.length >= this.limites.max_items_por_zona) {
 						avisar(this, 'warning', 'La zona ya tiene ' + this.limites.max_items_por_zona + ' cajas y saltos de fila: elegí una caja para agregarle el campo.')
 						return
 					}
 					destino = caja_nueva(ids_en_uso(this.estado_de_trabajo), COLS_DE_CAJA_COMPLETA, this.limites.estilos_de_caja[0])
-					this[zona].push(destino)
+					lista.splice(limite, 0, destino)
 				}
 			}
 

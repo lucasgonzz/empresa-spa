@@ -19,7 +19,7 @@
 			id="dpdf-panel-importes"
 			type="checkbox"
 			:checked="fijo.importes"
-			data-testid="disenador-pdf-panel-importes"
+			data-testid="importes-panel-disenador-pdf"
 			@change="fijo.importes = $event.target.checked">
 			<span class="dpdf-toggle__pista">
 				<span class="dpdf-toggle__perilla"></span>

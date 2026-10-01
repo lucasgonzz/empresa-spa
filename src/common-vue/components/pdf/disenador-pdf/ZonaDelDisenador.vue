@@ -61,7 +61,7 @@
 			:scroll-speed="14"
 			data-lista="zona"
 			:data-zona="zona"
-			:data-testid="'disenador-pdf-zona-' + zona"
+			:data-testid="'zona-' + zona + '-disenador-pdf'"
 			@start="disenador.al_empezar_arrastre($event)"
 			@end="disenador.al_terminar_arrastre($event)">
 				<template v-for="item in lista">
@@ -126,7 +126,7 @@
 		<button
 		type="button"
 		class="dpdf-zona__agregar"
-		:data-testid="'disenador-pdf-agregar-caja-' + zona"
+		:data-testid="'agregar-caja-' + zona + '-disenador-pdf'"
 		:aria-label="'Agregar una caja a ' + titulo"
 		@click="disenador.agregar_caja(zona)">
 			<i class="bi bi-plus-lg"></i>
@@ -145,11 +145,15 @@ import { TIPO_CAJA, TIPO_FIJO, identidad } from './estado_del_disenador'
 	salto de fila van y vienen entre ellas; la "Caja nueva" y el "Salto de fila" de la bandeja se
 	clonan acá. Los bloques fijos también están en este grupo, pero el `move` del diseñador no los
 	deja salir de su zona.
+
+	🔴 `put` es la LISTA de grupos que acepta, no `true`: en SortableJS `put: true` acepta elementos
+	de CUALQUIER grupo (toFn: value === true → true sin mirar el nombre), así que una zona aceptaba
+	un campo suelto. El `move` del diseñador lo vuelve a rechazar.
 */
 const GRUPO_DE_CAJAS = {
 	name: 'pdf-cajas',
 	pull: true,
-	put: true,
+	put: ['pdf-cajas'],
 }
 
 /**

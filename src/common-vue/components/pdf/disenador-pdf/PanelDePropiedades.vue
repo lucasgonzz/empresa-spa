@@ -13,7 +13,7 @@
 	class="dpdf-panel"
 	:class="{ 'dpdf-panel--vacio': !seleccion }"
 	aria-label="Propiedades de lo seleccionado"
-	data-testid="disenador-pdf-panel">
+	data-testid="panel-disenador-pdf">
 
 		<!-- Nada seleccionado: una línea de ayuda -->
 		<div

@@ -11,6 +11,8 @@
 import {
 	HOJA_DE_SIEMPRE,
 	MOTIVO_A5_EN_ARCA,
+	AVISO_MODELO_SIN_GUARDAR,
+	es_verdadero,
 	armar_estado,
 	serializar,
 	tiene_diseno,
@@ -23,6 +25,26 @@ import { env } from '@/runtime_config'
 
 /* Lo que el diseñador guarda del perfil: lo único que copia al formulario después de guardar */
 const CLAVES_DEL_DISENO = ['page_layout', 'paper_width_mm', 'printable_width_mm', 'margin_mm', 'paper_height_mm', 'header_layout', 'logo_size_mm']
+
+/* Comienzo del mensaje del 422 de columnas (PdfColumnProfileController::assert_sum_of_column_widths_not_exceeds_paper) */
+const MENSAJE_DEL_422_DE_COLUMNAS = 'La suma de los anchos visibles'
+
+/**
+ * Si un error del guardado es el 422 de "la suma de los anchos visibles no puede superar el ancho
+ * disponible": viene en `errors.pdf_column_options` (o, por las dudas, se reconoce por el texto).
+ *
+ * @param {Object} error error de axios
+ * @param {string} mensaje el mensaje que ya se armó con mensaje_de_error()
+ * @returns {boolean}
+ */
+function es_el_422_de_columnas(error, mensaje) {
+	let respuesta = error && error.response ? error.response : null
+	if (!respuesta || respuesta.status !== 422) {
+		return false
+	}
+	let errores = respuesta.data && respuesta.data.errors ? respuesta.data.errors : null
+	return !!(errores && errores.pdf_column_options) || String(mensaje || '').indexOf(MENSAJE_DEL_422_DE_COLUMNAS) !== -1
+}
 
 export default {
 	methods: {
@@ -148,6 +170,12 @@ export default {
 				return
 			}
 
+			/* El Modelo del formulario no es el guardado: primero se guarda el diseño de PDF */
+			if (this.modelo_cambiado_sin_guardar) {
+				avisar(this, 'error', AVISO_MODELO_SIN_GUARDAR)
+				return
+			}
+
 			/* Una factura de ARCA que llegó guardada en A5 no se guarda hasta elegir otra hoja */
 			if (this.arca_no_entra_en_la_hoja) {
 				avisar(this, 'error', MOTIVO_A5_EN_ARCA + ' Elegí otra hoja para poder guardar.')
@@ -178,6 +206,17 @@ export default {
 				return
 			}
 
+			/*
+				🔴 Guardar el diseño guarda también "Es factura de ARCA" del formulario (solo venta): el
+				lienzo se armó con ese check -- los bloques fijos de ARCA y su cuadro de importes -- y la
+				API normaliza el diseño con el `is_afip_ticket` del pedido si viene, si no con el guardado.
+				Sin mandarlo, con el check cambiado y sin guardar, los bloques perdían su lugar y "sin
+				cuadro de importes" se volvía a prender.
+			*/
+			if (this.modelo_del_perfil === 'sale') {
+				datos.is_afip_ticket = es_verdadero(this.model.is_afip_ticket)
+			}
+
 			this.guardando = true
 			this.$store.commit('auth/setMessage', 'Guardando el diseño de PDF')
 			this.$store.commit('auth/setLoading', true)
@@ -197,7 +236,17 @@ export default {
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
 				console.log(error)
-				avisar(self, 'error', mensaje_de_error(error, 'No se pudo guardar el diseño. Revisá tu conexión y volvé a intentar.'))
+
+				let mensaje = mensaje_de_error(error, 'No se pudo guardar el diseño. Revisá tu conexión y volvé a intentar.')
+				/*
+					El 422 de "La suma de los anchos visibles…": el diseñador chequea con las columnas del
+					FORMULARIO (con lo que se cambió sin guardar) y la API con las GUARDADAS. Si difieren,
+					el chequeo de acá pasa y el de la API no: se dice qué hacer.
+				*/
+				if (es_el_422_de_columnas(error, mensaje)) {
+					mensaje += ' Si cambiaste columnas en el formulario, guardalas primero.'
+				}
+				avisar(self, 'error', mensaje)
 			})
 		},
 		/**

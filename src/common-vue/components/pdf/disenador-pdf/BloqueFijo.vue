@@ -12,7 +12,7 @@
 	data-cols="12"
 	data-tipo="fijo"
 	:data-key="fijo.key"
-	:data-testid="'disenador-pdf-fijo-' + fijo.key"
+	:data-testid="'fijo-' + fijo.key + '-disenador-pdf'"
 	tabindex="0"
 	role="group"
 	:aria-label="etiqueta_accesible"

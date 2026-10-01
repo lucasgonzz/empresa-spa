@@ -28,7 +28,7 @@
 				:aria-pressed="es_el_formato(formato) ? 'true' : 'false'"
 				:aria-describedby="esta_bloqueado(formato) ? 'dpdf-controles-motivo-a5' : null"
 				:title="esta_bloqueado(formato) ? MOTIVO_A5_EN_ARCA : formato.nombre + ': ' + formato.ancho_mm + ' × ' + formato.alto_mm + ' mm, vertical'"
-				:data-testid="'disenador-pdf-hoja-' + formato.key"
+				:data-testid="'formato-' + formato.key + '-disenador-pdf'"
 				@click="disenador.elegir_formato(formato)">
 					{{ formato.nombre }}
 				</button>
@@ -41,7 +41,7 @@
 			v-if="hay_formato_bloqueado"
 			id="dpdf-controles-motivo-a5"
 			class="dpdf-controles__motivo"
-			data-testid="disenador-pdf-motivo-a5">
+			data-testid="motivo-a5-disenador-pdf">
 				<i
 				class="bi bi-lock-fill"
 				aria-hidden="true"></i>
@@ -63,21 +63,21 @@
 				:disabled="disenador.hoja.margen <= disenador.limites.margen_min"
 				title="Achicar el margen 1 mm"
 				aria-label="Achicar el margen 1 milímetro"
-				data-testid="disenador-pdf-margen-menos"
+				data-testid="achicar-margen-disenador-pdf"
 				@click="disenador.cambiar_margen(-1)">
 					<i class="bi bi-dash-lg"></i>
 				</button>
 				<span
 				class="dpdf-controles__valor"
 				aria-live="polite"
-				data-testid="disenador-pdf-margen">{{ disenador.hoja.margen }} mm</span>
+				data-testid="margen-disenador-pdf">{{ disenador.hoja.margen }} mm</span>
 				<button
 				type="button"
 				class="dpdf-controles__boton"
 				:disabled="disenador.hoja.margen >= disenador.limites.margen_max"
 				title="Agrandar el margen 1 mm"
 				aria-label="Agrandar el margen 1 milímetro"
-				data-testid="disenador-pdf-margen-mas"
+				data-testid="agrandar-margen-disenador-pdf"
 				@click="disenador.cambiar_margen(1)">
 					<i class="bi bi-plus-lg"></i>
 				</button>

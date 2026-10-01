@@ -18,7 +18,7 @@
 	class="dpdf-bandeja"
 	:class="clases"
 	aria-label="Campos para la hoja"
-	data-testid="disenador-pdf-bandeja">
+	data-testid="bandeja-disenador-pdf">
 
 		<!-- ── Fuente de cajas y saltos de fila: se clonan, nunca se vacía ni recibe nada ──────── -->
 		<div class="dpdf-bandeja__fuente">
@@ -52,7 +52,7 @@
 				:data-cols="item.cols"
 				data-tipo="fuente"
 				:data-fuente="item.tipo"
-				:data-testid="'disenador-pdf-fuente-' + item.tipo"
+				:data-testid="'fuente-' + item.tipo + '-disenador-pdf'"
 				:title="item.pista">
 					<div class="dpdf-fuente__tarjeta">
 						<span class="dpdf-fuente__fila">
@@ -100,7 +100,7 @@
 			:force-fallback="true"
 			:fallback-on-body="true"
 			data-lista="papelera"
-			data-testid="disenador-pdf-papelera"></draggable>
+			data-testid="papelera-disenador-pdf"></draggable>
 			<div class="dpdf-bandeja__papelera-texto">
 				<i
 				class="bi bi-box-arrow-in-down"
@@ -120,7 +120,7 @@
 			placeholder="Buscar campo…"
 			aria-label="Buscar campo"
 			autocomplete="off"
-			data-testid="disenador-pdf-buscar">
+			data-testid="buscar-campo-disenador-pdf">
 		</div>
 
 		<!-- Las categorías del catálogo, en su orden -->
@@ -133,7 +133,7 @@
 			class="dpdf-bandeja__categoria-cabecera"
 			:aria-expanded="abierta(categoria, indice) ? 'true' : 'false'"
 			:aria-controls="'dpdf-bandeja-' + categoria.key"
-			:data-testid="'disenador-pdf-categoria-' + categoria.key"
+			:data-testid="'categoria-' + categoria.key + '-disenador-pdf'"
 			@click="alternar(categoria, indice)">
 				<i
 				class="bi dpdf-bandeja__chevron"
@@ -208,7 +208,7 @@
 							class="dpdf-bandeja__agregar dpdf-no-arrastra"
 							:title="titulo_de_agregar(definicion)"
 							:aria-label="'Agregar ' + definicion.nombre + ' a la hoja'"
-							:data-testid="'disenador-pdf-agregar-' + definicion.key"
+							:data-testid="'agregar-campo-' + definicion.key + '-disenador-pdf'"
 							@click="disenador.agregar_campo(definicion)">
 								<i class="bi bi-plus-lg"></i>
 								Agregar
@@ -238,18 +238,22 @@ const GRUPO_DE_LA_FUENTE = {
 	put: false,
 }
 
-/* Las categorías del catálogo: se clonan hacia las cajas y reciben lo que se saca (se descarta) */
+/*
+	Las categorías del catálogo: se clonan hacia las cajas y reciben lo que se saca (se descarta).
+	🔴 `put` como LISTA de grupos y no `true`: en SortableJS `put: true` acepta elementos de cualquier
+	grupo (una caja o un salto de fila también). Ver CajaDelDisenador.vue.
+*/
 const GRUPO_DE_LA_BANDEJA = {
 	name: 'pdf-campos',
 	pull: 'clone',
-	put: true,
+	put: ['pdf-campos'],
 }
 
-/* La zona para sacar: solo recibe */
+/* La zona para sacar: solo recibe, y solo campos (ver arriba) */
 const GRUPO_DE_LA_PAPELERA = {
 	name: 'pdf-campos',
 	pull: false,
-	put: true,
+	put: ['pdf-campos'],
 }
 
 /* Lo que se muestra de ejemplo de un campo de tipo lista: los renglones, separados */

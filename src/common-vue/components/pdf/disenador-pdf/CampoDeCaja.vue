@@ -14,7 +14,7 @@
 	:data-key="campo.key"
 	:data-ui="campo.ui_id"
 	data-tipo="campo"
-	:data-testid="'disenador-pdf-campo-' + campo.key"
+	:data-testid="id_de_prueba"
 	tabindex="0"
 	role="group"
 	:aria-label="etiqueta_accesible"
@@ -109,6 +109,20 @@ export default {
 		},
 	},
 	computed: {
+		/**
+		 * El data-testid del renglón: "campo-<key>-disenador-pdf", y el texto libre (que puede ir
+		 * varias veces) con su id: "campo-texto_libre-<id>-disenador-pdf". Lo dinámico va en el medio
+		 * y el final es fijo, así ningún testid es prefijo de otro (venta_fecha / venta_fecha_entrega;
+		 * regla de e2e/chequear-prefijos-de-testid.js).
+		 *
+		 * @returns {string}
+		 */
+		id_de_prueba() {
+			if (this.campo.key === KEY_TEXTO_LIBRE) {
+				return 'campo-' + KEY_TEXTO_LIBRE + '-' + this.campo.id + '-disenador-pdf'
+			}
+			return 'campo-' + this.campo.key + '-disenador-pdf'
+		},
 		/**
 		 * Si es un texto libre largo para el ancho de su caja: puede no entrar en la hoja (el PDF no
 		 * parte una caja entre hojas). Aviso suave, no bloquea.
