@@ -43,6 +43,14 @@
 			</li>
 		</ul>
 
+		<!-- Con total en cero "No" no tiene nada que repartir: ver sin_nada_que_cobrar -->
+		<p
+		v-if="sin_nada_que_cobrar"
+		class="budget-cobro__aviso"
+		data-testid="budget-cobro-aviso-en-cero">
+			El presupuesto está en cero: no hay nada que cobrar.
+		</p>
+
 		<!-- Los botones van en el slot #modal-footer para que la franja y el separador los ponga _modals.sass -->
 		<template #modal-footer>
 			<div class="budget-cobro-footer">
@@ -58,6 +66,7 @@
 				<b-button
 				ref="boton_no"
 				:variant="preseleccion_es_no ? 'primary' : 'outline-primary'"
+				:disabled="sin_nada_que_cobrar"
 				data-testid="budget-cobro-no"
 				@click="responder_no">
 					No, se cobra al confirmar
@@ -101,7 +110,16 @@ export default {
 			la principal; no decide nada por el vendedor.
 		*/
 		preseleccion_es_no() {
-			return !!Number(this.omitir_en_cuenta_corriente)
+			return !!Number(this.omitir_en_cuenta_corriente) && !this.sin_nada_que_cobrar
+		},
+		/*
+			Total del presupuesto en cero (o negativo): "No, se cobra al confirmar" no tiene nada que
+			repartir. Sin esto el reparto abre con la fila por defecto (Efectivo, sin monto), "Listo"
+			no tiene un metodo con plata y la API rechaza con un "Elegí un método de pago" que no
+			explica nada. Se mira el total que la pantalla muestra ahora, que es el del store.
+		*/
+		sin_nada_que_cobrar() {
+			return !(Number(this.total) > 0)
 		},
 	},
 	mounted() {
@@ -158,6 +176,11 @@ export default {
 		 * `setTotal()` ignoraria el del reparto nuevo (solo lo aplica sin metodo unico elegido).
 		 */
 		responder_no() {
+			// El boton ya viene deshabilitado con el total en cero; esto cubre cualquier otro llamador.
+			if (this.sin_nada_que_cobrar) {
+				return
+			}
+
 			this.recordar_cobro_previo_al_presupuesto()
 
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 1)
@@ -181,6 +204,9 @@ export default {
 		 * todavia no se toco, asi que alcanza con cerrarlo.
 		 */
 		cancelar() {
+			// Por si la marca hubiera quedado prendida de un reparto que no llego a abrirse.
+			this.$store.commit('vender/set_budget_cobro_pendiente', false)
+
 			this.$bvModal.hide(this.modal_id)
 		},
 
@@ -248,6 +274,11 @@ export default {
 .budget-cobro__pregunta
 	margin-bottom: 12px
 	color: var(--color-text-primary)
+
+.budget-cobro__aviso
+	margin: 12px 0 0
+	color: var(--color-text-secondary)
+	font-size: 0.9rem
 
 .budget-cobro__opciones
 	display: flex
