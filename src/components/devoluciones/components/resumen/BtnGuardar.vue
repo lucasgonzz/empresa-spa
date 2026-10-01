@@ -37,6 +37,19 @@ export default {
 		items() {
 			return this.$store.state.devoluciones.items
 		},
+		/**
+		 * Proveedor de la nota de crédito a proveedor. Con compra cargada es SIEMPRE el de la
+		 * compra (`provider_order.provider_id`): la API exige que coincidan, y así se guarda bien
+		 * aunque el proveedor esté borrado y su objeto no venga.
+		 *
+		 * @returns {Number|null}
+		 */
+		provider_id_de_la_nota() {
+			if (this.provider_order && this.provider_order.provider_id) {
+				return this.provider_order.provider_id
+			}
+			return this.provider ? this.provider.id : null
+		},
 		descriptions() {
 			return this.$store.state.devoluciones.descriptions
 		},
@@ -177,7 +190,7 @@ export default {
 		datos_compra() {
 			return {
 				tipo: 'compra',
-				provider_id: this.provider ? this.provider.id : null,
+				provider_id: this.provider_id_de_la_nota,
 				provider_order_id: this.provider_order ? this.provider_order.id : null,
 				total_devolucion: this.total_devolucion,
 				items: this.items,
@@ -255,7 +268,7 @@ export default {
 		check_compra() {
 			let ok = true
 
-			if (!this.provider) {
+			if (!this.provider_id_de_la_nota) {
 				this.$toast.error('Elegí el proveedor')
 				ok = false
 			}

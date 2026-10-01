@@ -79,7 +79,7 @@ export default {
 		set_from_provider_order(provider_order) {
 
 			this.$store.commit('devoluciones/set_provider_order', provider_order)
-			this.$store.commit('devoluciones/set_provider', provider_order.provider || null)
+			this.$store.commit('devoluciones/set_provider', this.proveedor_de_la_compra(provider_order))
 
 			// En compra no hay descuentos/recargos de venta, ni ARCA, ni "actualizar unidades
 			// devueltas": se dejan en cero para que nada de una venta anterior viaje en el POST.
@@ -102,6 +102,39 @@ export default {
 
 			// Recién cargada, nada está marcado para devolver (returned_amount = ya_devueltas).
 			this.$store.commit('devoluciones/set_total_devolucion_manual', 0)
+		},
+
+		/**
+		 * Proveedor de la compra para el store.
+		 *
+		 * 🔴 Si el proveedor está borrado (soft delete), `provider_order.provider` llega null.
+		 * Con null el módulo quedaba trabado: con compra cargada el buscador de proveedor se
+		 * esconde y Guardar exige proveedor. Y la API exige que `provider_id` sea el de la compra,
+		 * así que tampoco serviría elegir otro. Se arma un proveedor de respaldo con
+		 * `provider_order.provider_id`: el del store de proveedores si está, si no uno mínimo
+		 * con ese id y un nombre que avisa.
+		 *
+		 * @param {Object} provider_order Compra traída de la API.
+		 * @returns {Object|null} Proveedor ({id, name, ...}) o null si la compra no tiene.
+		 */
+		proveedor_de_la_compra(provider_order) {
+			if (provider_order.provider) {
+				return provider_order.provider
+			}
+
+			if (!provider_order.provider_id) {
+				return null
+			}
+
+			let del_store = this.getModelFromId('provider', provider_order.provider_id)
+			if (del_store) {
+				return del_store
+			}
+
+			return {
+				id: provider_order.provider_id,
+				name: 'Proveedor eliminado (N° '+provider_order.provider_id+')',
+			}
 		},
 
 		/**

@@ -115,7 +115,9 @@ export default {
 		 */
 		nombre_contraparte() {
 			if (this.es_compra) {
-				return this.comprobante.provider ? this.comprobante.provider.name : 'Sin proveedor'
+				// Del store y no de `comprobante.provider`: si el proveedor está borrado, la compra
+				// lo trae null y el store tiene el de respaldo (set_from_provider_order.js).
+				return this.contraparte ? this.contraparte.name : 'Sin proveedor'
 			}
 			return this.comprobante.client ? this.comprobante.client.name : 'Sin cliente'
 		},
