@@ -385,6 +385,23 @@ export default {
 		// Aca guardo los metodos de pago con sus cantidades final, es el que se envia finalmente al back
 		selected_payment_methods: [],
 
+		/*
+			Marca de que el modal de reparto (`payment-method-modal`) se abrio desde el cartel
+			"¿Pasar a la cuenta corriente?" de GUARDAR UN PRESUPUESTO (mision
+			presupuesto-contado-o-cuenta-corriente, 1/10/2026), y no desde el boton verde de una venta.
+
+			Es lo unico que le dice a Buttons.vue (el footer de ese modal) que "Listo" tiene que
+			terminar guardando el presupuesto y que "Cancelar" tiene que deshacer lo que el cartel
+			toco, en vez de limitarse a cerrar. El modal es el mismo para los dos usos.
+
+			Vive en el store y no en el cartel porque el modal y el cartel no se conocen entre si.
+
+			🔴 La apaga quien la prendio apenas termina (Listo, Cancelar o cualquier otro cierre del
+			modal, ver budget-cobro/Index.vue) y tambien limpiar_vender(). Una marca que queda
+			prendida convertiria el "Listo" de una venta comun en el guardado de un presupuesto.
+		*/
+		budget_cobro_pendiente: false,
+
 		vendiendo: false,
 		sale: null,
 
@@ -514,6 +531,22 @@ export default {
 		// Preferencia de columnas de la tabla de items (sistema props-to-show)
 		props_to_show: [],
 	},
+	getters: {
+		/*
+			true cuando lo que se arma en pantalla es un PRESUPUESTO: el toggle "Guardar como
+			presupuesto" esta prendido, o hay un presupuesto cargado para editar ("Actualizar en
+			VENDER").
+
+			Existe para que los controles de cobro de la pantalla (metodo de pago, caja, cuotas)
+			y el titulo del modal de reparto lean UNA sola definicion. En un presupuesto el cobro
+			no se elige con esos controles sino al guardar, desde el cartel "¿Pasar a la cuenta
+			corriente?" (components/vender/modals/budget-cobro/Index.vue); dejar que cada
+			componente repita esta condicion es como uno se olvida de la mitad de los casos.
+		*/
+		en_modo_presupuesto: state => {
+			return !!state.guardar_como_presupuesto || !!state.budget
+		},
+	},
 	mutations: {
 		/*
 			Marca la venta en curso como ya inicializada (ver el comentario de la propiedad
@@ -640,6 +673,10 @@ export default {
 
 		set_modal_payment_methods(state, value){
 			state.modal_payment_methods = value
+		},
+		/* Ver el comentario de `budget_cobro_pendiente` en el state. */
+		set_budget_cobro_pendiente(state, value) {
+			state.budget_cobro_pendiente = !!value
 		},
 		setSelectedPaymentMethods(state, value){
 			const previous_payment_methods = get_safe_clone(state.selected_payment_methods)
