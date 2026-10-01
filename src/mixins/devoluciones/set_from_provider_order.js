@@ -8,7 +8,7 @@
 	- `cantidad_efectiva`: lo que la compra ingresó, en la unidad de la compra (bultos).
 	- `ya_devueltas`: lo ya devuelto al proveedor sobre esta compra, leído del libro de stock.
 	- `costo_unitario_devolucion`: costo por unidad con el mismo criterio con que la compra armó su
-	  total (dólar, descuento del renglón, IVA, bonificaciones).
+		total (dólar, descuento del renglón, IVA, bonificaciones).
 
 	🔴 El costo se toma TAL CUAL lo manda el servidor. No se recalcula acá: la cuenta (dólar,
 	descuentos, IVA, bonificaciones prorrateadas) vive en NewProviderOrderHelper y duplicarla en el
@@ -63,7 +63,7 @@ export default {
 					self.$toast.error('No se encontró la compra N° '+num)
 				}
 			})
-			.catch(err => {
+			.catch(() => {
 				// El toast del error lo pone el interceptor global (main.js); acá solo se apaga
 				// el indicador de carga, como en search_sale.
 				self.$store.commit('auth/setLoading', false)

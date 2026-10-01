@@ -1,8 +1,11 @@
 <template>
+	<!--
+		Cliente de una nota de crédito SIN venta (la venta, si se busca, ya trae el suyo). Mismo
+		buscador y mismo id que antes (`select_client_devoluciones`).
+	-->
 	<search-component
-	v-if="!sale"
-	class="m-l-15"
 	id="select_client_devoluciones"
+	placeholder="Buscar cliente por nombre, N° o teléfono"
 	@setSelected="setSelected"
 	@clearSelected="clearSelected"
 	:prop="{text: 'Cliente', key: 'client_id'}"
@@ -16,22 +19,28 @@
 export default {
 	components: {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
-	}, 
+	},
 	computed: {
-		sale() {
-			return this.$store.state.devoluciones.sale
-		},
+		/**
+		 * @returns {Object|null} Cliente elegido en el store de devoluciones.
+		 */
 		client() {
 			return this.$store.state.devoluciones.client
 		},
 	},
 	methods: {
+		/**
+		 * @param {Object} result Resultado del buscador; el cliente viene en `result.model`.
+		 */
 		setSelected(result) {
 			this.$store.commit('devoluciones/set_client', result.model)
 		},
+		/**
+		 * El usuario borró el cliente elegido.
+		 */
 		clearSelected() {
 			this.$store.commit('devoluciones/set_client', null)
-		}
-	}
+		},
+	},
 }
 </script>
