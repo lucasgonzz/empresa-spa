@@ -9,16 +9,33 @@
 	data-testid="btn-guardar-devolucion"
 	variant="primary"
 	block
-	:disabled="!items.length"
+	:disabled="!items.length || guardando"
 	@click="guardar">
-		{{ es_compra ? 'Guardar nota de crédito' : 'Guardar devolución' }}
+		{{ texto }}
 	</b-button>
 </template>
 <script>
 import limpiar from '@/mixins/devoluciones/limpiar'
 export default {
 	mixins: [limpiar],
+	data() {
+		return {
+			// true mientras el POST está en vuelo: el botón queda deshabilitado para que un
+			// segundo clic no mande otra nota de crédito igual (la API tiene candado, pero el
+			// segundo pedido terminaría en un 422 confuso o en una nota duplicada sin compra).
+			guardando: false,
+		}
+	},
 	computed: {
+		/**
+		 * @returns {String} Texto del botón según el modo y si está guardando.
+		 */
+		texto() {
+			if (this.guardando) {
+				return 'Guardando…'
+			}
+			return this.es_compra ? 'Guardar nota de crédito' : 'Guardar devolución'
+		},
 		/**
 		 * @returns {Boolean} true si el módulo está en modo Compra.
 		 */
@@ -90,6 +107,10 @@ export default {
 		 * y deja el módulo en blanco (en el mismo modo).
 		 */
 		guardar() {
+			if (this.guardando) {
+				return
+			}
+
 			let ok = this.es_compra ? this.check_compra() : this.check_venta()
 			if (!ok) {
 				return
@@ -98,6 +119,7 @@ export default {
 			let self = this
 			let datos = this.es_compra ? this.datos_compra() : this.datos_venta()
 
+			this.guardando = true
 			this.$store.commit('auth/setMessage', 'Guardando')
 			this.$store.commit('auth/setLoading', true)
 
@@ -106,6 +128,7 @@ export default {
 			this.$api.post('devoluciones', datos, { skip_global_error_event: true })
 			.then(() => {
 
+				self.guardando = false
 				self.$store.commit('auth/setLoading', false)
 
 				self.$toast.success(self.es_compra ? 'Nota de crédito al proveedor creada' : 'Devolución creada')
@@ -113,6 +136,7 @@ export default {
 				self.limpiar_devolucion()
 			})
 			.catch(err => {
+				self.guardando = false
 				self.$store.commit('auth/setLoading', false)
 
 				let mensaje = self.mensaje_de_error(err)
