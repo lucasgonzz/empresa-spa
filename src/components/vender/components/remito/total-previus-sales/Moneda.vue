@@ -90,11 +90,11 @@ export default {
 		},
 	},
 	data() {
-	    return {
-	        input_dolar_valor: null,  // Este será el input editable
-	        // Se incrementa para forzar que el select vuelva a pintar la moneda del store
-	        select_moneda_key: 0,
-	    }
+		return {
+			input_dolar_valor: null,  // Este será el input editable
+			// Se incrementa para forzar que el select vuelva a pintar la moneda del store
+			select_moneda_key: 0,
+		}
 	},
 	created() {
 		this.iniciar_dolar()

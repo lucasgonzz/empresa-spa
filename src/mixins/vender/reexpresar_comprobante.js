@@ -1,4 +1,7 @@
-import { numero_o_null } from '@/utils/recargos_en_precios'
+import { numero_o_null, redondear_a_centavos } from '@/utils/recargos_en_precios'
+
+// Decimales de article_budget.price_sin_recargos_de_venta (decimal(25,6)): la base sin recargos.
+const DECIMALES_BASE_SIN_RECARGOS = 6
 
 /**
  * Re-expresa en otra moneda (de $ a USD o de USD a $) los importes FIJOS de un presupuesto que se
@@ -15,10 +18,17 @@ import { numero_o_null } from '@/utils/recargos_en_precios'
  * LA REGLA, SIMETRICA, con `c` = la cotizacion que muestra el campo USD en ese momento:
  *   - $ -> USD:  importe_usd  = importe_pesos / c
  *   - USD -> $:  importe_pesos = importe_usd * c
- * Con la misma `c` la ida y la vuelta devuelven el valor original. NO se redondea nada aca, a
- * proposito: redondear a centavos en USD rompe la vuelta ($1.000 / 1.400 = 0,71 -> 0,71 * 1.400 =
- * $994). Lo unico que puede alejar la vuelta del original es el redondeo con el que la API guarde
- * cada precio al persistir.
+ * Con la misma `c` la ida y la vuelta devuelven el valor original, salvo el redondeo.
+ *
+ * 🔴 CADA IMPORTE SE REDONDEA A LO QUE GUARDA LA BASE, y no es un detalle de display. La API guarda
+ * article_budget.price y .cost con 2 decimales (decimal(12,2)), el monto forzado con 2 y la base
+ * sin recargos con 6: si la SPA mandara el numero sin redondear, el vendedor veria 0,7142857 y la
+ * base guardaria 0,71, y el total que calcula la SPA (suma de renglones sin redondear) no
+ * coincidiria con la suma de los renglones guardados; PUT budget/{id} no valida ese total, asi que
+ * la diferencia entraria sin control. Redondeando aca, lo que se ve es lo que se guarda.
+ * El costo de aceptarlo es el mismo que ya aceptó Lucas en las ventas en dolares (30/9/2026): la
+ * ida y la vuelta puede no dar EXACTO ($1.000 / 1.560 = 0,64 USD -> 0,64 * 1.560 = $998,40). En un
+ * renglon de decenas de miles de pesos la diferencia es de centavos; en uno de pocos pesos se nota.
  *
  * QUE SE CONVIERTE (todo lo que es un importe fijo y NO se vuelve a derivar del catalogo):
  *   - pivot.price y pivot.price_sin_recargos_de_venta de cada renglon guardado (articulos,
@@ -59,15 +69,17 @@ export default {
 		},
 
 		/**
-		 * Lleva UN importe fijo de una moneda a la otra con la regla simetrica. Un valor vacio o no
-		 * numerico vuelve tal cual: no se inventa un 0.
+		 * Lleva UN importe fijo de una moneda a la otra con la regla simetrica y lo redondea a los
+		 * decimales con que lo guarda la base. Un valor vacio o no numerico vuelve tal cual: no se
+		 * inventa un 0.
 		 *
 		 * @param {*} importe
 		 * @param {Boolean} hacia_dolares true: $ -> USD (divide); false: USD -> $ (multiplica).
 		 * @param {Number} cotizacion Mayor que cero (lo valida quien llama).
+		 * @param {Number} decimales 2 (precio, costo, monto forzado) o 6 (base sin recargos).
 		 * @returns {*}
 		 */
-		reexpresar_importe_del_comprobante(importe, hacia_dolares, cotizacion) {
+		reexpresar_importe_del_comprobante(importe, hacia_dolares, cotizacion, decimales = 2) {
 
 			let numero = numero_o_null(importe)
 
@@ -75,7 +87,19 @@ export default {
 				return importe
 			}
 
-			return hacia_dolares ? numero / cotizacion : numero * cotizacion
+			let convertido = hacia_dolares ? numero / cotizacion : numero * cotizacion
+
+			if (decimales === 2) {
+				return redondear_a_centavos(convertido)
+			}
+
+			/*
+				toPrecision(15) antes de redondear, por lo mismo que redondear_a_centavos(): en binario
+				un .5 puede quedar en .49999999 y bajar donde MySQL (decimal) y PHP (round) suben.
+			*/
+			let escala = Math.pow(10, decimales)
+
+			return Math.round(Number((convertido * escala).toPrecision(15))) / escala
 		},
 
 		/**
@@ -118,7 +142,9 @@ export default {
 			// Si el destino es el dolar se divide; si el destino son pesos se multiplica.
 			let hacia_dolares = nueva_es_dolar
 
+			// A 2 decimales (precio, costo, monto forzado) y la base sin recargos a 6, como la base de datos.
 			let convertir = importe => this.reexpresar_importe_del_comprobante(importe, hacia_dolares, cotizacion)
+			let convertir_base = importe => this.reexpresar_importe_del_comprobante(importe, hacia_dolares, cotizacion, DECIMALES_BASE_SIN_RECARGOS)
 
 			this.$store.state.vender.items.forEach(item => {
 
@@ -136,7 +162,7 @@ export default {
 					let pivot = Object.assign({}, item.pivot)
 
 					pivot.price = convert_si_hay(pivot.price, convertir)
-					pivot.price_sin_recargos_de_venta = convert_si_hay(pivot.price_sin_recargos_de_venta, convertir)
+					pivot.price_sin_recargos_de_venta = convert_si_hay(pivot.price_sin_recargos_de_venta, convertir_base)
 
 					if (item.is_article) {
 						pivot.cost = convert_si_hay(pivot.cost, convertir)
