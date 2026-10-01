@@ -56,6 +56,10 @@
 			<btn-import :model="props.model" />
 			<btn-scan-invoice :model="props.model" />
 			<btn-view-received-diff :model="props.model" />
+			<!-- Mision devoluciones-compras-y-rediseno: nota de credito al proveedor sobre esta compra. -->
+			<btn-nota-credito
+			:model="props.model"
+			en_fila></btn-nota-credito>
 		</template>
 
 			<!--
@@ -76,9 +80,18 @@
 				descuentos y de `precios_incluyen_iva` que dispara al elegir el proveedor.
 			-->
 			<template #prop_extras="extras">
-				<btn-ver-cuenta-corriente
+				<!--
+					Mision devoluciones-compras-y-rediseno (1/10/2026): al lado de "Ver cuenta corriente"
+					va "Nota de credito" (solo con la compra ya guardada, ver BtnNotaCredito.vue).
+				-->
+				<div
 				v-if="extras.prop.key == 'provider_id'"
-				:model="extras.model"></btn-ver-cuenta-corriente>
+				class="compra-acciones-proveedor">
+					<btn-ver-cuenta-corriente
+					:model="extras.model"></btn-ver-cuenta-corriente>
+					<btn-nota-credito
+					:model="extras.model"></btn-nota-credito>
+				</div>
 			</template>
 
 			<template #total="props">
@@ -161,6 +174,8 @@ export default {
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 		ProviderBtn: () => import('@/components/provider/components/orders/ProviderBtn'),
 		BtnVerCuentaCorriente: () => import('@/components/provider/components/orders/BtnVerCuentaCorriente'),
+		// Mision devoluciones-compras-y-rediseno (1/10/2026)
+		BtnNotaCredito: () => import('@/components/provider/components/orders/BtnNotaCredito'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnExport: () => import('@/components/provider/components/orders/BtnExport'),
 		BtnImport: () => import('@/components/provider/components/orders/BtnImport'),
@@ -249,3 +264,13 @@ export default {
 	},
 }
 </script>
+<style scoped lang="sass">
+// "Ver cuenta corriente" y "Nota de credito" en una fila debajo del campo Proveedor. Cada boton trae
+// su propio margen de arriba (el de BtnVerCuentaCorriente es 8px): aca se alinean y se separan, y en
+// un ancho angosto el segundo baja de renglon.
+.compra-acciones-proveedor
+	display: flex
+	flex-wrap: wrap
+	align-items: flex-end
+	gap: 8px
+</style>
