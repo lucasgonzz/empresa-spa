@@ -19,6 +19,47 @@ import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_meth
 import facturar from '@/mixins/vender/guardar_venta/facturar'
 import { env } from '@/runtime_config'
 import { comprobante_con_recargos_en_precios_sin_registro } from '@/utils/recargos_en_precios'
+
+/**
+ * Reconstruye `modal_payment_methods` --los metodos de pago con su descuento / recargo-- a partir
+ * de las filas FINALES de un reparto, con la misma forma que le arma Buttons.vue::calcular() y de
+ * la que lee vender_set_total.js. Solo entran las filas que tienen un ajuste: las demas no mueven
+ * el total.
+ *
+ * Es una funcion pura y exportada porque la usan DOS caminos que tienen que dar lo mismo:
+ * reabrir un presupuesto de contado (ajustes_del_cobro_del_presupuesto, mas abajo) y el "Listo"
+ * del reparto que abre el cartel de guardar un presupuesto (payment-methods/Buttons.vue). En los
+ * dos la API calcula el ajuste del total desde estas mismas filas (BudgetCobroHelper::
+ * ajuste_por_metodos_de_pago), asi que la SPA tiene que calcularlo desde ellas tambien.
+ *
+ * @param {Array} filas Filas del reparto (con discount_amount / surchage_amount).
+ * @param {Array} metodos_de_pago Catalogo de metodos de pago del store.
+ * @returns {Array}
+ */
+export function ajustes_del_cobro_de_filas(filas, metodos_de_pago) {
+	let ajustes = []
+
+	filas.forEach(fila => {
+		if (!Number(fila.discount_amount) && !Number(fila.surchage_amount)) {
+			return
+		}
+
+		let metodo = metodos_de_pago.find(pay => {
+			return pay.id == fila.current_acount_payment_method_id
+		})
+
+		ajustes.push({
+			...metodo,
+			amount: '',
+			discount_amount: fila.discount_amount,
+			surchage_amount: fila.surchage_amount,
+			caja_id: fila.caja_id,
+		})
+	})
+
+	return ajustes
+}
+
 export default {
 	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods, facturar],
 	// mixins: [vender, set_employee_vender, vender_set_total],
@@ -592,36 +633,14 @@ export default {
 			})
 		},
 		/**
-		 * Reconstruye `modal_payment_methods` --los metodos con su descuento / recargo-- a partir de
-		 * las filas guardadas de un presupuesto, con la misma forma que le arma Buttons.vue::calcular()
-		 * y de la que lee vender_set_total.js. Solo entran las filas que tienen un ajuste: las demas no
-		 * mueven el total.
+		 * Reconstruye `modal_payment_methods` a partir de las filas guardadas de un presupuesto. Ver
+		 * `ajustes_del_cobro_de_filas`, que es la que lo hace.
 		 *
 		 * @param {Array} filas Lo que devolvio filas_de_cobro_del_presupuesto().
 		 * @returns {Array}
 		 */
 		ajustes_del_cobro_del_presupuesto(filas) {
-			let ajustes = []
-
-			filas.forEach(fila => {
-				if (!Number(fila.discount_amount) && !Number(fila.surchage_amount)) {
-					return
-				}
-
-				let metodo = this.$store.state.current_acount_payment_method.models.find(pay => {
-					return pay.id == fila.current_acount_payment_method_id
-				})
-
-				ajustes.push({
-					...metodo,
-					amount: '',
-					discount_amount: fila.discount_amount,
-					surchage_amount: fila.surchage_amount,
-					caja_id: fila.caja_id,
-				})
-			})
-
-			return ajustes
+			return ajustes_del_cobro_de_filas(filas, this.$store.state.current_acount_payment_method.models)
 		},
 		setPreviusReturnedArticles() {
 			let returned_articles = []

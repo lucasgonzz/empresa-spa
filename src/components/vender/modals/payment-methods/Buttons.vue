@@ -49,6 +49,8 @@
 </template>
 <script>
 import metodos_de_pago_validacion from '@/mixins/metodos_de_pago_validacion'
+/* El mismo armado de descuentos / recargos desde las filas que usa la reapertura de un presupuesto. */
+import { ajustes_del_cobro_de_filas } from '@/mixins/vender/previus_sale/index'
 export default {
 	mixins: [metodos_de_pago_validacion],
 	props: {
@@ -76,6 +78,17 @@ export default {
 			// Una fila con monto y sin metodo elegido la descarta el backend en silencio.
 			if (this.hay_metodo_de_pago_sin_elegir(this.selected_payment_methods_)) return
 
+			/*
+				🔴 Si este reparto lo abrio el cartel de GUARDAR UN PRESUPUESTO (mision presupuesto-contado-
+				o-cuenta-corriente, 1/10/2026), "Listo" tiene reglas propias y ademas GUARDA el presupuesto.
+				Va por un camino aparte y no mezclado con el de abajo para que una venta comun --que usa este
+				mismo modal con el boton verde, con la marca apagada-- no cambie en nada.
+			*/
+			if (this.$store.state.vender.budget_cobro_pendiente) {
+				this.terminar_cobro_del_presupuesto()
+				return
+			}
+
 			if (!this.chequear_total_repartido()) return
 
 			/*
@@ -89,33 +102,126 @@ export default {
 				return Number(pay.current_acount_payment_method_id)
 			})
 
-			/*
-				Si este reparto lo abrio el cartel de GUARDAR UN PRESUPUESTO, sin ningun metodo con
-				datos no hay nada que cobrar al confirmarlo: el presupuesto se guardaria "de contado"
-				sin reparto, que la API trata como cuenta corriente. Se frena aca, con el modal
-				abierto, en vez de guardar algo distinto de lo que el vendedor eligio.
-			*/
-			if (this.$store.state.vender.budget_cobro_pendiente && !metodos.length) {
-				this.$toast.error('Elegí al menos un método de pago para cobrar el presupuesto')
-				return
-			}
-
 			this.$store.commit('vender/setSelectedPaymentMethods', metodos)
 
 			this.$bvModal.hide('payment-method-modal')
+		},
+		/**
+		 * "Listo" del reparto que abrio el cartel de guardar un presupuesto: valida, deja el store con
+		 * el reparto y el total definitivos, cierra el modal y avisa para que el cartel guarde.
+		 *
+		 * Lo que hace distinto de una venta, y por que:
+		 *
+		 * - 🔴 El AJUSTE del total se recalcula desde las filas FINALES. Una venta lo toma de
+		 *   `modal_payment_methods`, que `calcular()` fija en el paso 1; si en el paso 2 se QUITA una
+		 *   fila, el modal conserva su descuento / recargo y el total de la SPA queda distinto del que
+		 *   calcula la API, que suma `discount_amount` / `surchage_amount` de las filas que llegan
+		 *   (BudgetCobroHelper::ajuste_por_metodos_de_pago). Medido: bruto 2530, paso 1 Tarjeta con
+		 *   recargo 122,40 y Transferencia con descuento 50 (total 2602,40); en el paso 2 se quita la
+		 *   Transferencia y la Tarjeta toma todo: la SPA mandaba 2602,40 y la API calculaba 2652,40,
+		 *   y el POST moria con "El total del presupuesto no corresponde". Reconstruir el modal desde
+		 *   las filas deja los dos lados calculando de la misma fuente; si el total cambia y el reparto
+		 *   ya no cierra, el chequeo de abajo frena y el vendedor vuelve a repartir.
+		 * - Una fila sin plata (metodo elegido y monto en cero, como la que nace por defecto) se trata
+		 *   como una fila quitada: no viaja y su descuento / recargo tampoco cuenta.
+		 * - La CAJA es obligatoria como en Vender (chequeos/cajas.js::check_cajas), que acá no corre.
+		 *   Sin esto, en un comercio con cajas se repartia Efectivo con "Seleccione caja", la API lo
+		 *   aceptaba y al confirmar la venta nacia de contado sin movimiento de caja NI de cuenta
+		 *   corriente: plata que no esta en ningun lado.
+		 * - Despues de commitear el reparto y cerrar, apaga la marca y emite el aviso que escucha el
+		 *   cartel (budget-cobro/Index.vue), que es quien guarda.
+		 *
+		 * Si algo falla muestra el toast y deja el modal abierto: no se cierra ni se guarda nada.
+		 */
+		terminar_cobro_del_presupuesto() {
+			let filas = this.selected_payment_methods_.filter(pay => {
+				return Number(pay.current_acount_payment_method_id) && this.fila_con_monto(pay)
+			})
+
+			// Sin ningun metodo con plata no hay nada que cobrar al confirmar: la API lo trataria como cuenta corriente.
+			if (!filas.length) {
+				this.$toast.error('Elegí al menos un método de pago, con su monto, para cobrar el presupuesto')
+				return
+			}
+
+			// 1) El ajuste sale de las filas finales, y el total se recalcula con el.
+			this.$store.commit('vender/set_modal_payment_methods', ajustes_del_cobro_de_filas(filas, this.payment_methods))
+			this.setTotal()
 
 			/*
-				🔴 Si el modal lo abrio el cartel del presupuesto, "Listo" ademas GUARDA el presupuesto
-				con este reparto (mision presupuesto-contado-o-cuenta-corriente, 1/10/2026). Va despues
-				de commitear el reparto y de cerrar el modal. La marca se apaga ACA, antes de avisar:
-				el cartel (budget-cobro/Index.vue) es el unico que escucha el aviso y es quien guarda.
-				El modal es el mismo que abre el boton verde de una venta, y para esa la marca esta
-				apagada, asi que no pasa nada.
+				2) El reparto tiene que sumar el total YA recalculado. Se compara contra el store y no contra
+				la prop `total_a_repartir`: la prop recien se actualiza cuando el padre vuelve a dibujar, y
+				con el valor viejo el chequeo pasaria justo cuando no tiene que pasar.
 			*/
-			if (this.$store.state.vender.budget_cobro_pendiente) {
-				this.$store.commit('vender/set_budget_cobro_pendiente', false)
-				this.$root.$emit('vender:presupuesto-cobro-definido')
+			if (!this.chequear_total_repartido(this.$store.state.vender.total, this.sumar_reparto(filas))) return
+
+			// 3) Cada metodo con caja necesita la suya. Se miran las filas del modal, no las filtradas, para que "metodo N" sea el de la pantalla.
+			if (!this.chequear_cajas_del_cobro(this.selected_payment_methods_)) return
+
+			this.$store.commit('vender/setSelectedPaymentMethods', filas)
+
+			this.$bvModal.hide('payment-method-modal')
+
+			// La marca se apaga ACA, antes de avisar: el cartel es el unico que escucha y quien guarda.
+			this.$store.commit('vender/set_budget_cobro_pendiente', false)
+			this.$root.$emit('vender:presupuesto-cobro-definido')
+		},
+		/**
+		 * ¿La fila tiene plata? Se mira el monto en la moneda de la fila Y el cotizado, igual que
+		 * hay_metodo_de_pago_sin_elegir / hay_metodo_de_pago_sin_caja.
+		 *
+		 * @param {Object} pay Fila del reparto.
+		 * @returns {boolean}
+		 */
+		fila_con_monto(pay) {
+			return (Number(pay.amount) || 0) > 0 || (Number(pay.amount_cotizado) || 0) > 0
+		},
+		/**
+		 * Suma del reparto: por fila, el monto cotizado si lo hay (otra moneda) y si no el monto. Es la
+		 * misma cuenta de `total_repartido` en payment-methods/Index.vue y la de la API (V3), pero
+		 * sobre las filas que ya se decidio mandar.
+		 *
+		 * @param {Array} filas
+		 * @returns {number}
+		 */
+		sumar_reparto(filas) {
+			let total = 0
+
+			filas.forEach(pay => {
+				if (Number(pay.amount_cotizado) > 0) {
+					total += Number(pay.amount_cotizado)
+				} else {
+					total += Number(pay.amount) || 0
+				}
+			})
+
+			return total
+		},
+		/**
+		 * La regla de caja de Vender (chequeos/cajas.js::check_cajas) para el reparto de un
+		 * presupuesto. No se llama a check_cajas() porque lee `selected_payment_methods` del STORE, que
+		 * a esta altura todavia no tiene el reparto nuevo, y porque pide caja hasta para las filas
+		 * donde el select ni se dibuja.
+		 *
+		 * No se exige de mas: sin cajas cargadas no hay select (PaymentMethodsStep.show_caja_select) ni
+		 * nada que elegir, y las filas sin plata y las del metodo 1 (que no mueve caja) las saltea
+		 * hay_metodo_de_pago_sin_caja. Con cajas cargadas pero ninguna abierta se avisa lo mismo que
+		 * Vender, porque el select estaria vacio y "elegi la caja" no se podria cumplir.
+		 *
+		 * @param {Array} filas Filas del modal, tal cual se ven.
+		 * @returns {boolean} true si se puede seguir (si no, ya mostro el toast).
+		 */
+		chequear_cajas_del_cobro(filas) {
+			if (!this.cajas.length) {
+				return true
 			}
+
+			if (!this.cajas_abiertas.length) {
+				this.$toast.error('Habra al menos una CAJA para poder indicarla en este presupuesto')
+				return false
+			}
+
+			return !this.hay_metodo_de_pago_sin_caja(filas)
 		},
 		calcular() {
 		    /*
@@ -208,7 +314,12 @@ export default {
 
 		    this.calculado = true
 		},
-		chequear_total_repartido() {
+		/*
+			Los dos totales son opcionales y valen lo que siempre: las props del padre. El reparto de un
+			presupuesto (terminar_cobro_del_presupuesto) los pasa a mano porque acaba de recalcular el
+			total y las props todavia no se actualizaron.
+		*/
+		chequear_total_repartido(total_a_repartir = this.total_a_repartir, total_repartido = this.total_repartido) {
 
 			console.log('total_repartido')
 			console.log(this.total_repartido)
@@ -235,7 +346,7 @@ export default {
 				Redondear es ademas lo que corresponde para plata: dos importes que redondean al
 				mismo centavo SON el mismo importe.
 			*/
-			if (Math.round(this.total_repartido * 100) / 100 != Math.round(this.total_a_repartir * 100) / 100) {
+			if (Math.round(total_repartido * 100) / 100 != Math.round(total_a_repartir * 100) / 100) {
 				this.$toast.error('El total repartido esta mal')
 				return false
 			}
