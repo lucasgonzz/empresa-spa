@@ -1,8 +1,16 @@
 <template>
 	<!--
-		Renglones a devolver. Tabla escrita a mano (no b-table) para controlar cada celda y que los
-		inputs queden compactos y alineados a la derecha. En pantallas angostas scrollea en
-		horizontal ADENTRO de su contenedor: la página nunca se ensancha.
+		Renglones a devolver. Tabla escrita a mano (no b-table) para controlar cada celda.
+
+		Tres anchos, UNA sola estructura (solo CSS, ver el <style>):
+		- Escritorio (>= 1200): tabla normal.
+		- Tablet (768-1199): la misma tabla, apretada para entrar entera en 768 sin scroll: nombre
+			flexible con salto de línea, inputs de 88px y menos sangría.
+		- Teléfono (< 768): cada renglón es una tarjeta: nombre (y código) arriba, el botón de
+			quitar arriba a la derecha y debajo una grilla de 2 columnas con etiqueta + dato. La
+			etiqueta sale de `data-etiqueta` de cada celda (::before).
+		🔴 Es la MISMA tabla en los tres anchos a propósito: hay un solo <input> por data-testid en
+		el DOM. Dos vistas (tabla + tarjetas) duplicarían los testids y el spec no sabría cuál tocar.
 
 		🔴 Los data-testid de venta se conservan con la misma forma que leen los specs
 		(circuito-devolucion-afip.spec.js):
@@ -21,16 +29,16 @@
 		<table class="dev-tabla">
 			<thead>
 				<tr>
-					<th>Código</th>
+					<th v-if="muestra_codigo">Código</th>
 					<th>Nombre</th>
-					<th class="dev-tabla__num">{{ es_compra ? 'Costo' : 'Precio' }}</th>
+					<th class="dev-tabla__num">{{ etiqueta_precio }}</th>
 					<th
 					v-if="!es_compra"
 					class="dev-tabla__num">Desc.</th>
 					<th v-if="muestra_variante">Variante</th>
 					<th
 					v-if="hay_comprobante"
-					class="dev-tabla__num">{{ es_compra ? 'Comprada' : 'Vendida' }}</th>
+					class="dev-tabla__num">{{ etiqueta_cantidad }}</th>
 					<th
 					v-if="muestra_ya_devueltas"
 					class="dev-tabla__num">Ya devueltas</th>
@@ -45,9 +53,12 @@
 			<tbody>
 				<tr
 				v-for="(item, index) in items"
-				:key="item.id+'-'+index">
+				:key="item.id+'-'+index"
+				:class="{'dev-tabla__fila--quitable': !hay_comprobante}">
 
-					<td class="dev-tabla__codigo">
+					<td
+					v-if="muestra_codigo"
+					class="dev-tabla__codigo">
 						{{ item.bar_code || item.provider_code || '—' }}
 					</td>
 
@@ -58,7 +69,9 @@
 						class="dev-chip">Servicio</span>
 					</td>
 
-					<td class="dev-tabla__num">
+					<td
+					class="dev-tabla__num"
+					:data-etiqueta="etiqueta_precio">
 						<input
 						type="number"
 						step="any"
@@ -71,11 +84,15 @@
 
 					<td
 					v-if="!es_compra"
-					class="dev-tabla__num dev-texto-secundario">
+					class="dev-tabla__num dev-texto-secundario"
+					data-etiqueta="Desc.">
 						{{ item.discount ? porcentaje_es(item.discount)+'%' : '—' }}
 					</td>
 
-					<td v-if="muestra_variante">
+					<td
+					v-if="muestra_variante"
+					class="dev-tabla__celda-variante"
+					data-etiqueta="Variante">
 						<b-form-select
 						v-if="item.is_article && item.article_variants && item.article_variants.length"
 						class="dev-tabla__variante"
@@ -89,17 +106,21 @@
 
 					<td
 					v-if="hay_comprobante"
-					class="dev-tabla__num">
+					class="dev-tabla__num"
+					:data-etiqueta="etiqueta_cantidad">
 						{{ numero_es(item.amount) }}
 					</td>
 
 					<td
 					v-if="muestra_ya_devueltas"
-					class="dev-tabla__num dev-texto-secundario">
+					class="dev-tabla__num dev-texto-secundario"
+					data-etiqueta="Ya devueltas">
 						{{ item.ya_devueltas ? numero_es(item.ya_devueltas) : '—' }}
 					</td>
 
-					<td class="dev-tabla__num">
+					<td
+					class="dev-tabla__num dev-tabla__celda-devuelta"
+					data-etiqueta="Devuelta">
 						<input
 						type="number"
 						step="any"
@@ -152,6 +173,27 @@ export default {
 				return !!state.provider_order
 			}
 			return !!state.sale
+		},
+		/**
+		 * @returns {String} Título de la columna de precio: "Costo" en compra, "Precio" en venta.
+		 */
+		etiqueta_precio() {
+			return this.es_compra ? 'Costo' : 'Precio'
+		},
+		/**
+		 * @returns {String} Título de la cantidad original del comprobante.
+		 */
+		etiqueta_cantidad() {
+			return this.es_compra ? 'Comprada' : 'Vendida'
+		},
+		/**
+		 * La columna Código se oculta si NINGÚN renglón tiene código (de barras o de proveedor):
+		 * una columna entera de guiones solo le quita lugar al nombre y a la cantidad devuelta.
+		 *
+		 * @returns {Boolean}
+		 */
+		muestra_codigo() {
+			return this.items.some(item => item.bar_code || item.provider_code)
 		},
 		/**
 		 * Variantes: solo en venta y con la extensión (las compras no cargan variante).
@@ -270,8 +312,9 @@ export default {
 </script>
 <style lang="sass">
 .devoluciones-modulo
-	// Scroll horizontal ADENTRO de la tarjeta: en teléfono la tabla es más ancha que la pantalla
-	// y es esta caja la que scrollea, no la página.
+	// Red de seguridad: si algún caso raro no entra (p. ej. venta con variantes en tablet), scrollea
+	// ADENTRO de la tarjeta y la página no se ensancha. En el caso normal no hace falta: ver los tres
+	// anchos más abajo.
 	.dev-tabla-scroll
 		width: 100%
 		overflow-x: auto
@@ -309,14 +352,16 @@ export default {
 		tbody tr:last-child td
 			border-bottom: none
 
-		// El primer y el último renglón pegados al borde de la tarjeta, sin sangría de más.
-		th:first-child,
-		td:first-child
-			padding-left: 0
+		// El primer y el último renglón pegados al borde de la tarjeta, sin sangría de más. Solo en
+		// modo tabla: en teléfono cada celda es un bloque de la tarjeta y no lleva sangría.
+		@media screen and (min-width: 768px)
+			th:first-child,
+			td:first-child
+				padding-left: 0
 
-		th:last-child,
-		td:last-child
-			padding-right: 0
+			th:last-child,
+			td:last-child
+				padding-right: 0
 
 		// Modificadores de celda adentro de .dev-tabla: así suman una clase más que las reglas de
 		// thead th / tbody td de arriba y les ganan sin !important.
@@ -347,4 +392,111 @@ export default {
 		.dev-tabla__accion
 			width: 1%
 			text-align: right
+
+	// --- Tablet (768-1199): la misma tabla, apretada -----------------------------------------
+	// Medido el 1/10/2026 con una compra de 3 renglones: a 768px la tabla medía 667px en un
+	// contenedor de 610 y "Devuelta" --el campo principal-- quedaba fuera de vista. Con esto entra
+	// entera: menos sangría (6px por lado), inputs de 88px, el nombre flexible desde 96px, los
+	// títulos pueden partir en dos líneas ("Ya / devueltas") y el código corta donde haga falta.
+	@media screen and (min-width: 768px) and (max-width: 1199px)
+		.dev-tabla
+			thead th
+				padding: 0 6px 8px
+				white-space: normal
+				vertical-align: bottom
+
+			tbody td
+				padding: 8px 6px
+
+			.dev-tabla__nombre
+				min-width: 96px
+
+			.dev-tabla__codigo
+				max-width: 88px
+				white-space: normal
+				overflow-wrap: anywhere
+
+			.dev-tabla__variante
+				min-width: 120px
+
+			.dev-input-num
+				width: 88px
+
+	// --- Teléfono (< 768): cada renglón es una tarjeta ------------------------------------------
+	// Misma estructura de tabla, otro display: el <thead> se esconde y cada <td> muestra su propia
+	// etiqueta con `data-etiqueta` (::before). Arriba el nombre (y el código chico), el botón de
+	// quitar arriba a la derecha, y debajo una grilla de 2 columnas con los datos.
+	@media screen and (max-width: 767px)
+		.dev-tabla-scroll
+			overflow-x: visible
+
+		.dev-tabla
+			display: block
+
+			thead
+				display: none
+
+			tbody
+				display: flex
+				flex-direction: column
+				gap: 12px
+
+			// El fondo del renglón lo fija _tables.sass con !important (blanco / --bg-card en
+			// oscuro), que es el mismo de la tarjeta: el contorno va con un box-shadow interno.
+			tbody tr
+				position: relative
+				display: grid
+				grid-template-columns: repeat(2, minmax(0, 1fr))
+				gap: 12px 16px
+				padding: 14px 16px
+				border-radius: 12px
+				box-shadow: inset 0 0 0 1px var(--color-border-secondary)
+				white-space: normal
+
+			tbody td
+				display: flex
+				flex-direction: column
+				justify-content: flex-end
+				min-width: 0
+				padding: 0
+				border: none
+				text-align: left
+				white-space: normal
+
+			tbody td[data-etiqueta]::before
+				content: attr(data-etiqueta)
+				display: block
+				margin-bottom: 4px
+				font-size: 0.75rem
+				font-weight: 500
+				color: var(--color-text-secondary)
+
+			.dev-tabla__nombre
+				grid-column: 1 / -1
+				order: -2
+				min-width: 0
+				font-size: 1rem
+
+			// Lugar para el botón de quitar, que va arriba a la derecha.
+			.dev-tabla__fila--quitable .dev-tabla__nombre
+				padding-right: 40px
+
+			.dev-tabla__codigo
+				grid-column: 1 / -1
+				order: -1
+				margin-top: -8px
+
+			.dev-tabla__accion
+				position: absolute
+				top: 8px
+				right: 8px
+				width: auto
+
+			.dev-tabla__variante
+				min-width: 0
+				width: 100%
+
+			.dev-input-num
+				width: 100%
+				margin-left: 0
 </style>
