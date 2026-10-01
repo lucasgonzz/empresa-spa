@@ -181,9 +181,11 @@ export default {
 
 				 * segmentos son obligatorios. Con dos, Laravel devuelve 404. El /1/0 es el mismo
 
-				 * "Con precios" que arma el dropdown de impresion de ModalButtons.vue. */
+				 * que arma el dropdown de impresion de ModalButtons.vue. Si el dueño tiene un diseño
 
-				mensaje += this.owner.api_url + '/budget/pdf/' + this.sale.id + '/1/0'
+				 * de presupuesto por defecto, el link lo lleva (build_budget_pdf_url). */
+
+				mensaje += this.build_budget_pdf_url()
 
 			} else {
 
@@ -210,6 +212,66 @@ export default {
 			/* Avisa al padre el telefono usado -- VenderActionsBar lo escucha para ofrecer actualizar el telefono del cliente */
 
 			this.$emit('sent', this.effective_phone)
+
+		},
+
+		/**
+
+		 * Arma la URL del PDF del presupuesto: la de siempre (/budget/pdf/{id}/1/0) y, si el dueño
+
+		 * tiene un diseño de presupuesto marcado por defecto, con ?pdf_column_profile_id=<id>.
+
+		 * Sin diseño en el store (API vieja, dueño sin el seeder) queda el link de siempre, que la
+
+		 * API atiende con el PDF de antes. Los links ya enviados a clientes tampoco cambian.
+
+		 *
+
+		 * @returns {string}
+
+		 */
+
+		build_budget_pdf_url() {
+
+			let pdf_url = this.owner.api_url + '/budget/pdf/' + this.sale.id + '/1/0'
+
+			const profile_id = this.get_budget_default_pdf_profile_id()
+
+			if (profile_id) {
+
+				pdf_url += '?pdf_column_profile_id=' + profile_id
+
+			}
+
+			return pdf_url
+
+		},
+
+		/**
+
+		 * Id del diseño de presupuesto marcado por defecto (is_default) del dueño, o null.
+
+		 * Se filtra por model_name 'budget' a propósito y no con get_model_profiles(): este boton
+
+		 * se monta con model_name 'sale' por defecto, y un diseño de venta jamás debe salir
+
+		 * como PDF de un presupuesto.
+
+		 *
+
+		 * @returns {number|null}
+
+		 */
+
+		get_budget_default_pdf_profile_id() {
+
+			const models = this.$store.state.pdf_column_profile.models || []
+
+			const budget_profiles = models.filter(profile => profile.model_name === 'budget')
+
+			const default_profile = budget_profiles.find(profile => this.normalize_boolean(profile.is_default))
+
+			return default_profile ? default_profile.id : null
 
 		},
 
