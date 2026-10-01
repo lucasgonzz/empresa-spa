@@ -40,6 +40,18 @@
 					v-if="selected_model === 'pdf_column_profile'"
 					:model="model"></btn-duplicate-pdf-profile>
 				</template>
+				<!--
+					Mision sincronizar-margen-lista-precios (1/10/2026): el boton "Sincronizar
+					articulos" debajo del campo "Margen por defecto" del formulario de la lista de
+					precios. `prop_extras` es el punto de extension ADITIVO de ModelForm (se dibuja
+					debajo de cada campo, con `prop` y `model` en el scope): se filtra por modelo y
+					por key, asi ningun otro formulario del ABM cambia.
+				-->
+				<template #prop_extras="{ prop, model }">
+					<sincronizar-margen-de-lista
+					v-if="selected_model === 'price_type' && prop.key === 'percentage'"
+					:model="model"></sincronizar-margen-de-lista>
+				</template>
 			</view-component>
 		</b-col>
 	</b-row>
@@ -54,6 +66,7 @@ export default {
 		HorizontalNav: () => import('@/common-vue/components/horizontal-nav/Index'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnDuplicatePdfProfile: () => import('@/common-vue/components/pdf/BtnDuplicatePdfProfile'),
+		SincronizarMargenDeLista: () => import('@/components/abm/sincronizar-margen-de-lista/Index'),
 	},
 	data() {
 		return {
