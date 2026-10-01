@@ -64,8 +64,8 @@
 						step="any"
 						class="form-control dev-input-num"
 						:data-testid="testid_precio(item)"
-						@input="recalcular"
-						@change="recalcular"
+						@input="al_cambiar_precio(item)"
+						@change="al_cambiar_precio(item)"
 						v-model="item.price_vender">
 					</td>
 
@@ -172,6 +172,11 @@ export default {
 			if (!this.hay_comprobante) {
 				return false
 			}
+			// En compra va siempre: es lo que explica el tope de lo que se le puede devolver al
+			// proveedor (plan §4.3).
+			if (this.es_compra) {
+				return true
+			}
 			return this.items.some(item => Number(item.ya_devueltas) > 0)
 		},
 	},
@@ -216,6 +221,22 @@ export default {
 				return item.ya_devueltas
 			}
 			return 0
+		},
+		/**
+		 * Cambio del precio (venta) o costo (compra) de un renglón.
+		 *
+		 * 🔴 En compra, `costo_real` se iguala a `price_vender`: es el costo con el que la API
+		 * valúa la mercadería que sale, y si quedaba el de la compra, el costo editado a mano se
+		 * veía en el total pero no en el costo de lo devuelto. En venta `costo_real` es el costo
+		 * del artículo, no el precio, y no se toca.
+		 *
+		 * @param {Object} item Renglón editado.
+		 */
+		al_cambiar_precio(item) {
+			if (this.es_compra) {
+				item.costo_real = item.price_vender
+			}
+			this.recalcular()
 		},
 		/**
 		 * Recalcula el total de la devolución con set_total.js (misma fórmula de siempre).
