@@ -365,6 +365,7 @@ export default {
 	&__actions
 		display: flex
 		flex-direction: row
+		flex-wrap: wrap
 		align-items: center
 		gap: 10px
 	&__link-btn
@@ -375,6 +376,7 @@ export default {
 		font-size: 0.9em
 		padding: 4px 6px
 		cursor: pointer
+		white-space: nowrap
 		&:hover
 			text-decoration: underline
 	&__notice

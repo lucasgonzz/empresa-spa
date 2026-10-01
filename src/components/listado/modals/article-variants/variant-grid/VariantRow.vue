@@ -255,6 +255,7 @@ export default {
 		border-color: var(--color-border, #ced4da)
 		background-color: var(--bg-card, #fff)
 		color: var(--color-text-primary, #1d1d1f)
+		box-shadow: none
 		&:focus
 			border-width: 1px
 			border-color: var(--color-primary, #007bff)
