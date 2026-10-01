@@ -294,6 +294,10 @@ export default {
          * Limpieza y cierre despues de emitir todas las facturas. Los 2 segundos de espera son
          * los de siempre: dan tiempo a leer el resultado de la ultima venta antes de que el
          * modal se cierre solo.
+         *
+         * `afip-reenviar-facturas` (Facturas no autorizadas) NO se cierra de entrada: si el usuario
+         * emitio desde una venta abierta ahi adentro, tiene que seguir viendo el modal con la lista
+         * recargada. Solo se cierra cuando, ya recargada, no queda ninguna venta con problemas.
          */
         terminar_emision() {
             let self = this
@@ -315,9 +319,13 @@ export default {
                 self.$bvModal.hide('send-afip-tickets')
                 self.$bvModal.hide('confirm-make-afip-tickets')
                 self.$bvModal.hide('sale')
-                self.$bvModal.hide('afip-reenviar-facturas')
 
                 self.$store.dispatch('afip_ticket/get_problemas_al_facturar')
+                .then(() => {
+                    if (!self.$store.state.afip_ticket.problemas_al_facturar.length) {
+                        self.$bvModal.hide('afip-reenviar-facturas')
+                    }
+                })
 
             }, 2000)
         },
