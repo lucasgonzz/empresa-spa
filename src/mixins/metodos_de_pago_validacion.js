@@ -112,5 +112,75 @@ export default {
 
 			return false
 		},
+
+		/**
+		 * Guarda hermana de las dos de arriba: una fila en OTRA moneda que la del comprobante y sin
+		 * cotización. Vale para los circuitos donde el comprobante tiene su propia moneda (el pago de
+		 * una cuenta corriente en pesos o en dólares).
+		 *
+		 * 🔴 Sin esta guarda la fila llega al backend sin con qué convertir, y en el cobro de una
+		 * cuenta corriente el monto se guardaba NOMINAL en la moneda de la cuenta: USD 10 sobre una
+		 * cuenta en pesos quedaba como un haber de $10, sin ningún error. Esta es la guarda del lado
+		 * del usuario, donde todavía se puede corregir.
+		 *
+		 * `Number('')`, `Number(undefined)` y `Number(null)` no son > 1, así que la cotización
+		 * vacía, ausente, en cero o en uno quedan todas dentro de la misma guarda.
+		 *
+		 * @param {Array} payment_methods Filas del bloque de metodos de pago.
+		 * @param {number} moneda_base Moneda del comprobante (la de la cuenta corriente).
+		 * @returns {boolean} true si hay alguna fila con monto, en otra moneda y sin cotización (y ya avisó).
+		 */
+		hay_moneda_sin_cotizacion(payment_methods, moneda_base) {
+
+			if (!Array.isArray(payment_methods)) {
+				return false
+			}
+
+			let base = Number(moneda_base) || 0
+
+			// Sin moneda del comprobante no hay contra qué comparar: no se bloquea a nadie.
+			if (!base) {
+				return false
+			}
+
+			for (let index = 0; index < payment_methods.length; index++) {
+
+				let fila = payment_methods[index]
+
+				if (!fila) {
+					continue
+				}
+
+				let moneda_fila = Number(fila.moneda_id) || 0
+
+				// Una fila sin moneda es de la moneda del comprobante (PaymentMethodsStep la resuelve igual).
+				if (!moneda_fila || moneda_fila === base) {
+					continue
+				}
+
+				// Una fila vacía del todo no molesta a nadie: el backend la saltea sin perder plata.
+				let monto = Number(fila.amount) || 0
+				let monto_cotizado = Number(fila.amount_cotizado) || 0
+
+				if (!(monto > 0 || monto_cotizado > 0)) {
+					continue
+				}
+
+				/*
+					Mayor a 1 y no solo a 0: una cotización de 1 entre pesos y dólares es lo que queda
+					cuando no se cargó ninguna, y el backend la rechaza (CurrentAcountPagoMonedaHelper::
+					COTIZACION_MINIMA). Caso real en 2R el 14/8/2026: $126.900 con cotización 1 acreditaron
+					USD 126.900. Mismo límite acá para avisarle al usuario antes del POST.
+				*/
+				if (!(Number(fila.cotizacion) > 1)) {
+
+					this.$toast.error('Falta la cotización del método de pago ' + (index + 1) + ': está en otra moneda que la cuenta y la cotización tiene que ser mayor a 1. Cargala para poder registrar el pago')
+
+					return true
+				}
+			}
+
+			return false
+		},
 	}
 }

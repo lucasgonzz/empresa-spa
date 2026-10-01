@@ -8,6 +8,7 @@ import sucursal from '@/mixins/vender/guardar_venta/chequeos/sucursal'
 import afip from '@/mixins/vender/guardar_venta/chequeos/afip'
 import limite_credito from '@/mixins/vender/guardar_venta/chequeos/limite_credito'
 import price_type from '@/mixins/vender/guardar_venta/chequeos/price_type'
+import valor_dolar_de_la_venta from '@/mixins/vender/guardar_venta/chequeos/valor_dolar_de_la_venta'
 import articulo_pendiente_de_agregar from '@/mixins/vender/articulo_pendiente_de_agregar'
 export default {
 	mixins: [
@@ -21,6 +22,7 @@ export default {
 		afip,
 		limite_credito,
 		price_type,
+		valor_dolar_de_la_venta,
 		articulo_pendiente_de_agregar,
 	],
 	methods: {
@@ -41,6 +43,15 @@ export default {
 				metodo de pago para una venta que no va a salir.
 			*/
 			if (!this.check_price_type()) {
+				return false
+			}
+
+			/*
+				La cotizacion del dolar va antes que las cajas y los metodos de pago por el mismo motivo
+				que el chequeo de la lista: no tiene sentido pedir caja para una venta en dolares que la
+				API va a rechazar por no tener cotizacion.
+			*/
+			if (!this.check_valor_dolar_de_la_venta()) {
 				return false
 			}
 

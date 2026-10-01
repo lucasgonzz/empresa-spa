@@ -7,22 +7,47 @@
 		</p>
 
 		<div class="variant-grid__actions">
-			<!-- Toggle: por defecto solo se muestran las disponibles (!oculta) -->
+			<!--
+				Toggle: por defecto solo se muestran las disponibles (!oculta). Dice cuantas quedan
+				ocultas para que no parezca que "no se generaron". Si ninguna esta disponible la grilla
+				ya las muestra todas (ver showing_all), asi que el toggle no tendria nada que alternar.
+			-->
 			<button
+			v-if="!none_available && (show_all || hidden_count)"
 			type="button"
 			class="variant-grid__link-btn"
 			@click="show_all = !show_all">
-				{{ show_all ? 'Ver solo disponibles' : 'Ver todas las posibles' }}
+				{{ show_all ? 'Ver solo disponibles' : 'Ver todas las posibles ('+hidden_count+' oculta'+(hidden_count == 1 ? '' : 's')+')' }}
 			</button>
 
 			<!-- Acciones masivas de disponibilidad (prompt 519/521), extraidas a sub-componente en el 543 -->
 			<bulk-availability
+			ref="bulk_availability"
 			:article_id="article.id"
 			@disponibilidad-actualizada="onDisponibilidadActualizada"></bulk-availability>
 		</div>
 	</div>
 
-	<!-- Estado vacio: sin variantes generadas, o sin ninguna disponible con el filtro actual -->
+	<!--
+		Aviso: las variantes se generan ocultas (no disponibles) a proposito, para que no salgan en Vender
+		ni en la tienda sin precio ni stock. Se explica y se ofrece habilitarlas, en vez de dejar la grilla vacia.
+	-->
+	<div
+	v-if="none_available"
+	class="variant-grid__notice">
+		<span>
+			Se generaron {{ variants.length }} variante{{ variants.length == 1 ? '' : 's' }}, pero todavia ninguna esta disponible:
+			no se ve en Vender ni en la tienda. Activa las que quieras vender o habilitalas todas.
+		</span>
+		<button
+		type="button"
+		class="variant-grid__notice-btn"
+		@click="habilitarTodas">
+			Habilitar todas
+		</button>
+	</div>
+
+	<!-- Estado vacio: todavia no hay ninguna variante generada -->
 	<p
 	v-if="!variants_to_show.length"
 	class="variant-grid__empty">
@@ -104,9 +129,21 @@ export default {
 		variants() {
 			return this.$store.state.article_variant.models
 		},
+		/** Cantidad de variantes no disponibles (oculta = true). */
+		hidden_count() {
+			return this.variants.filter(variant => variant.oculta).length
+		},
+		/** Hay variantes generadas pero ninguna disponible: caso tipico recien generadas (nacen ocultas). */
+		none_available() {
+			return this.variants.length > 0 && this.hidden_count == this.variants.length
+		},
+		/** Se muestran todas si el usuario lo pidio, o si no hay ninguna disponible (si no, la grilla quedaria vacia). */
+		showing_all() {
+			return this.show_all || this.none_available
+		},
 		/** Listado a renderizar segun el filtro "ver todas" vs "solo disponibles". */
 		variants_to_show() {
-			if (this.show_all) {
+			if (this.showing_all) {
 				return this.variants
 			}
 			return this.variants.filter(variant => !variant.oculta)
@@ -157,6 +194,13 @@ export default {
 		onDisponibilidadActualizada(updated_models) {
 			this.$store.commit('article_variant/setModels', updated_models)
 		},
+		/**
+		 * Boton "Habilitar todas" del aviso. Delega en BulkAvailability (que es quien pega al endpoint
+		 * masivo) para que este orquestador siga sin llamadas directas a $api.
+		 */
+		habilitarTodas() {
+			this.$refs.bulk_availability.setDisponibilidadMasiva('todas')
+		},
 	},
 }
 </script>
@@ -194,6 +238,30 @@ export default {
 		cursor: pointer
 		&:hover
 			text-decoration: underline
+	&__notice
+		display: flex
+		flex-direction: row
+		align-items: center
+		justify-content: space-between
+		flex-wrap: wrap
+		gap: 10px
+		background: rgba(0, 122, 255, .08)
+		color: #1d1d1f
+		border-radius: 12px
+		padding: 12px 16px
+		margin-bottom: 12px
+		font-size: 0.9em
+	&__notice-btn
+		border: none
+		background: $blue
+		color: #FFF
+		font-weight: 500
+		padding: 6px 14px
+		border-radius: 10px
+		cursor: pointer
+		white-space: nowrap
+		&:hover
+			opacity: .9
 	&__empty
 		text-align: center
 		color: var(--color-text-secondary, rgba(0, 0, 0, .45))

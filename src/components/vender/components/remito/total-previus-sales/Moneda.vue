@@ -12,14 +12,15 @@
 		</b-input-group>
 
 		<b-input-group
-		v-if="!hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')"
+		v-if="mostrar_input_dolar"
 		class="m-t-10"
 		prepend="USD">
 			<b-form-input
 			type="number"
 			:disabled="disabled"
 			class="input-dolar"
-			@keyup="set_valor_dolar"
+			@input="set_valor_dolar"
+			@blur="restaurar_dolar_si_falta"
 			v-model="input_dolar_valor"></b-form-input>
 		</b-input-group>
 
@@ -27,14 +28,22 @@
 </template>
 <script>
 import vender_set_total from '@/mixins/vender_set_total'
+import cotizacion_dolar_por_defecto from '@/mixins/vender/cotizacion_dolar_por_defecto'
 export default {
-	mixins: [vender_set_total],
+	mixins: [vender_set_total, cotizacion_dolar_por_defecto],
 	computed: {
 		show() {
 			return this.user && this.hasExtencion('ventas_en_dolares')
 		},
-		user_dolar() {
-			return this.owner.dollar
+		/*
+			El campo de la cotizacion se ve siempre, salvo en las cuentas con listas de precio por
+			moneda (los precios ya vienen en su moneda y el campo no pinta nada)... y salvo que el
+			comercio NO tenga dolar cargado en el sistema: sin dolar por defecto el vendedor no tiene
+			otro lugar donde ponerlo, y una venta en dolares sin cotizacion la API la rechaza.
+		*/
+		mostrar_input_dolar() {
+			return !this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')
+				|| this.valor_dolar_por_defecto === null
 		},
 		valor_dolar: {
 			get() {
@@ -100,67 +109,69 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Deja la cotizacion de la venta cargada: la que ya tiene (la de la venta que se edita, o la que
+		 * el vendedor tipeo) y, si no hay ninguna, el dolar del sistema.
+		 *
+		 * 🔴 Decision de Lucas (30/9/2026): una venta en dolares sin cotizacion la API la rechaza (422),
+		 * asi que Vender tiene que arrancar SIEMPRE con el dolar que el comercio tiene cargado. Antes
+		 * solo se sembraba cuando el store estaba en `null`: una cotizacion en CERO (el vendedor borro
+		 * el campo) se quedaba en cero y la venta en dolares salia sin con que convertir. Ahora
+		 * null, 0 o vacio se tratan igual: sin cotizacion -> la del sistema.
+		 *
+		 * Sin dolar configurado en el comercio no se inventa nada: queda vacio y el campo USD se ve
+		 * (`mostrar_input_dolar`) para que el vendedor lo cargue.
+		 */
 		iniciar_dolar() {
 
-			console.log('iniciar_dolar')
-
-			if (this.user) {
-
-				if (!this.owner.dollar) {
-					console.log('El dueño no tiene dolar configurado')
-					return
-				}
-
-
-				console.log(this.valor_dolar)
-				console.log(this.input_dolar_valor)
-
-				if (
-					this.valor_dolar !== null
-					&& typeof this.valor_dolar !== 'undefined'
-				) {
-
-					this.input_dolar_valor = this.valor_dolar
-				} else {
-
-					this.input_dolar_valor = this.user_dolar
-				}
-
-
-				if (this.input_dolar_valor === null) {
-					this.iniciar_dolar()
-					return
-				}
-
-				console.log('-----------------------------------')
-				console.log('input_dolar_valor:')
-				console.log(this.input_dolar_valor)
-				console.log('-----------------------------------')
-
-				if (this.valor_dolar === null) {
-
-					console.log('ENTRO a valor_dolar')
-				    this.set_valor_dolar()
-				}
-			} else {
-				console.log('No habia user, volviendo a llamar, user:')
-				console.log(this.user)
+			if (!this.user) {
 				setTimeout(() => {
 					this.iniciar_dolar()
 				}, 500)
+				return
 			}
-			
+
+			if (Number(this.valor_dolar) > 0) {
+				this.input_dolar_valor = this.valor_dolar
+				return
+			}
+
+			if (!this.cargar_dolar_por_defecto()) {
+				console.log('El dueño no tiene dolar configurado')
+				return
+			}
+
+			this.input_dolar_valor = this.valor_dolar_por_defecto
+			this.setTotal()
 		},
 		set_total() {
 			this.setTotal()
 		},
+		/**
+		 * Cada cambio del campo (`input`, y no `keyup`: el campo es numerico y un valor pegado o movido con
+		 * las flechitas del propio campo no dispara ninguna tecla, asi que el store se quedaba con la
+		 * cotizacion anterior mientras el campo mostraba otra): el valor va al store (es lo que viaja en el POST) y se recalcula el total.
+		 * Si el campo queda vacio o en cero NO se restaura el dolar del sistema acá, porque el vendedor
+		 * puede estar borrando para escribir otro valor: eso lo hace `restaurar_dolar_si_falta` cuando
+		 * sale del campo.
+		 */
 		set_valor_dolar() {
 			this.valor_dolar = Number(this.input_dolar_valor)
 
-			if (!this.valor_dolar) {
-				this.iniciar_dolar()
-			}
 			this.setTotal()
+		},
+		/**
+		 * Al salir del campo: si quedo vacio o en cero, vuelve el dolar del sistema.
+		 */
+		restaurar_dolar_si_falta() {
+			if (Number(this.input_dolar_valor) > 0) {
+				return
+			}
+
+			if (this.cargar_dolar_por_defecto()) {
+				this.input_dolar_valor = this.valor_dolar_por_defecto
+				this.setTotal()
+			}
 		}
 	}
 }
