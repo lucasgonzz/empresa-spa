@@ -103,12 +103,15 @@ export default {
 			 * se imprime en cada hoja o solo en la última. Apagado (default) = solo en la última página.
 			 * Esta columna ya existía en la base; acá solo se la expone en el editor de perfiles
 			 * (antes solo estaba en el modal de impresión).
+			 * Aplica a venta, presupuesto y pedido online (misión diseno-pdf-configurable,
+			 * 1/10/2026): con un diseño de cajas es la zona del pie del diseñador de PDF la que
+			 * sale en cada hoja.
 			 */
 			text: 'Mostrar pie de página en cada hoja',
 			key: 'show_totals_on_each_page',
 			type: 'checkbox',
 			value: 0,
-			show_when_model_name: 'sale',
+			show_when_model_name: ['sale', 'budget', 'order'],
 		},
 		{
 			/**

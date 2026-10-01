@@ -124,7 +124,7 @@
 					<span>{{ MOTIVO_A5_EN_ARCA }} Elegí otra hoja para poder guardar.</span>
 				</div>
 
-				<!-- A5 con el pie en cada hoja (venta): vale, pero conviene saberlo -->
+				<!-- A5 con el pie en cada hoja (venta, presupuesto o pedido online): vale, pero conviene saberlo -->
 				<div
 				v-if="pocos_renglones_por_hoja"
 				class="disenador-pdf__aviso"
@@ -417,13 +417,14 @@ export default {
 			return this.es_factura_de_arca && this.hoja_es_a5
 		},
 		/**
-		 * Una venta en A5 con "Mostrar pie de página en cada hoja": vale, pero entran pocos renglones
-		 * por hoja. Solo un aviso suave.
+		 * Un comprobante en A5 con "Mostrar pie de página en cada hoja" (venta, presupuesto o pedido
+		 * online: los tres lo tienen, ver models/pdf_column_profile.js): vale, pero entran pocos
+		 * renglones por hoja. Solo un aviso suave.
 		 *
 		 * @returns {boolean}
 		 */
 		pocos_renglones_por_hoja() {
-			return this.hoja_es_a5 && this.modelo_del_perfil === 'sale' && es_verdadero(this.model.show_totals_on_each_page)
+			return this.hoja_es_a5 && es_verdadero(this.model.show_totals_on_each_page)
 		},
 		/**
 		 * Si el Modelo del formulario no es el del perfil guardado (se cambió y no se guardó): el
@@ -568,13 +569,13 @@ export default {
 			return referencia
 		},
 		/**
-		 * Cuándo sale el pie: en cada hoja solo en la venta con "Mostrar pie de página en cada hoja"
-		 * (decisión 7 del plan); presupuesto y pedido, en la última.
+		 * Cuándo sale el pie: en cada hoja con "Mostrar pie de página en cada hoja" (venta, presupuesto
+		 * o pedido online: los tres lo tienen desde la segunda tanda, 1/10/2026); si no, en la última.
 		 *
 		 * @returns {string}
 		 */
 		cuando_sale_el_pie() {
-			if (this.modelo_del_perfil === 'sale' && es_verdadero(this.model.show_totals_on_each_page)) {
+			if (es_verdadero(this.model.show_totals_on_each_page)) {
 				return 'sale en cada hoja'
 			}
 			return 'sale en la última hoja'

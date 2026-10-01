@@ -72,8 +72,9 @@ export const KEY_HOJA_A5 = 'a5'
 export const MOTIVO_A5_EN_ARCA = 'En A5 no entra completo el cuadro de ARCA (importes, QR y CAE): para facturas usá A4, Carta u Oficio.'
 
 /*
-	Aviso suave (no bloquea) de una venta en A5 con "Mostrar pie de página en cada hoja": del lado API,
-	si el pie no deja lugar para los renglones, sale solo en la última hoja.
+	Aviso suave (no bloquea) de un comprobante en A5 con "Mostrar pie de página en cada hoja" (venta,
+	presupuesto o pedido online): del lado API, si el pie no deja lugar para los renglones, sale solo
+	en la última hoja.
 */
 export const AVISO_A5_CON_PIE_EN_CADA_HOJA = 'Con hoja A5 y el pie en cada hoja, si el pie no deja lugar para los renglones, sale solo en la última hoja.'
 
