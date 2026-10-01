@@ -47,7 +47,7 @@
 	class="variant-row__stock-cell">
 		<b-form-input
 		type="number"
-		step="any"
+		step="1"
 		size="sm"
 		class="variant-row__input"
 		placeholder="0"
@@ -178,7 +178,12 @@ export default {
 			}
 
 			if (!this.addresses.length) {
-				article_variant.stock = parseFloat(this.variant.stock) || 0
+				// Input vaciado: no es "poner en 0", es no haber decidido todavia. No se encola nada.
+				if (this.variant.stock === '' || this.variant.stock === null) {
+					return
+				}
+				// article_variants.stock es una columna entera.
+				article_variant.stock = Math.round(parseFloat(this.variant.stock) || 0)
 			}
 
 			this.addresses.forEach(_address => {

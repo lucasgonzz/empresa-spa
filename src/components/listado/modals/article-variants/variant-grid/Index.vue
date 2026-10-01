@@ -224,6 +224,15 @@ export default {
 			this.reapplyPendingStock()
 		},
 	},
+	created() {
+		// Variantes tal como las vio la ultima corrida de reapplyPendingStock (id => objeto). No es
+		// reactivo a proposito: solo sirve para detectar que objetos reemplazo el store.
+		let known = {}
+		this.stored_variants.forEach(variant => {
+			known[variant.id] = variant
+		})
+		this.known_variant_objects = known
+	},
 	methods: {
 		/**
 		 * Firma de una combinacion: ids de valor ordenados ascendente y unidos por "-". Igual a la que
@@ -258,11 +267,25 @@ export default {
 		reapplyPendingStock() {
 			let pending = this.$store.state.article.edit_variants_stock.variants_to_update
 
+			// Solo se toca la variante cuyo objeto CAMBIO desde la ultima vez (la que el back devolvio y
+			// el store reemplazo). Las demas siguen siendo las mismas que el usuario esta editando: pisarlas
+			// le cambiaria el numero mientras escribe.
+			let replaced_ids = []
+			let known = {}
+			this.stored_variants.forEach(variant => {
+				if (this.known_variant_objects[variant.id] !== variant) {
+					replaced_ids.push(variant.id)
+				}
+				known[variant.id] = variant
+			})
+			this.known_variant_objects = known
+
 			pending.forEach(pending_variant => {
-				let variant = this.stored_variants.find(_variant => _variant.id == pending_variant.id)
-				if (!variant) {
+				if (replaced_ids.indexOf(pending_variant.id) == -1) {
 					return
 				}
+
+				let variant = known[pending_variant.id]
 
 				if (typeof pending_variant.stock != 'undefined') {
 					variant.stock = pending_variant.stock
@@ -276,7 +299,20 @@ export default {
 
 				pending_addresses.forEach(pending_address => {
 					let variant_address = variant.addresses.find(_address => _address.id == pending_address.id)
-					if (variant_address && variant_address.pivot) {
+
+					if (!variant_address) {
+						// Variante recien generada: todavia no tiene fila de ese deposito en la base.
+						variant_address = {
+							id: pending_address.id,
+							pivot: {
+								amount: 0,
+								on_display: 0,
+							},
+						}
+						variant.addresses.push(variant_address)
+					}
+
+					if (variant_address.pivot) {
 						variant_address.pivot.amount = pending_address.amount
 						variant_address.pivot.on_display = pending_address.on_display
 					}
@@ -293,6 +329,9 @@ export default {
 		 */
 		onDisponibilidadActualizada(updated_models) {
 			this.$store.commit('article_variant/setModels', updated_models)
+			// La fila del listado comparte el articulo con el store: se la deja al dia para que, al
+			// cerrar y volver a abrir el modal, no cargue las variantes viejas.
+			this.$set(this.article, 'article_variants', updated_models)
 		},
 		/**
 		 * Boton "Habilitar todas" del aviso. Delega en BulkAvailability (que es quien pega al endpoint
