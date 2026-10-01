@@ -8,16 +8,17 @@
 
 		<div class="variant-grid__actions">
 			<!--
-				Toggle: por defecto solo se muestran las disponibles (!oculta). Dice cuantas quedan
-				ocultas para que no parezca que "no se generaron". Si ninguna esta disponible la grilla
-				ya las muestra todas (ver showing_all), asi que el toggle no tendria nada que alternar.
+				Toggle: por defecto se muestran TODAS las variantes posibles (disponibles o no), para
+				poder ir activando las que el negocio realmente tiene sin que las demas desaparezcan.
+				Este boton las filtra a solo las disponibles. Si ninguna esta disponible la grilla ya
+				muestra todas (ver showing_all), asi que no tendria nada que alternar.
 			-->
 			<button
-			v-if="!none_available && (show_all || hidden_count)"
+			v-if="!none_available && hidden_count"
 			type="button"
 			class="variant-grid__link-btn"
 			@click="show_all = !show_all">
-				{{ show_all ? 'Ver solo disponibles' : 'Ver todas las posibles ('+hidden_count+' oculta'+(hidden_count == 1 ? '' : 's')+')' }}
+				{{ show_all ? 'Ver solo disponibles' : 'Ver todas las posibles ('+hidden_count+' sin habilitar)' }}
 			</button>
 
 			<!-- Acciones masivas de disponibilidad (prompt 519/521), extraidas a sub-componente en el 543 -->
@@ -64,6 +65,8 @@
 					<th>Variante</th>
 					<th>Disponible</th>
 					<th>Precio</th>
+					<!-- Sin depositos (negocio sin sucursales) el stock es uno solo por variante -->
+					<th v-if="!addresses.length">Stock</th>
 					<th
 					v-for="address in addresses"
 					:key="address.id">
@@ -83,37 +86,38 @@
 	</div>
 
 	<!--
-		Modal unico compartido por todas las filas para elegir imagen desde las imagenes ya
-		cargadas del articulo. Reusa el componente generico de common-vue (SelectImage) en vez
-		de duplicar la logica de seleccion/guardado.
+		Modal unico compartido por todas las filas para cambiar la imagen de una variante: subir
+		una desde el equipo o buscarla en Google (mismas piezas que el modal de imagenes del
+		listado de articulos).
 	-->
-	<select-image
-	v-if="editing_variant"
-	:prop="image_prop"
-	:model="editing_variant"
-	model_name="article_variant"></select-image>
+	<variant-image-modal :variant_id="editing_variant_id"></variant-image-modal>
 
 	<btn-save></btn-save>
 </div>
 </template>
 <script>
+import VariantImageModal from '@/components/listado/modals/article-variants/variant-grid/ImageModal'
+
 export default {
 	components: {
 		VariantRow: () => import('@/components/listado/modals/article-variants/variant-grid/VariantRow'),
 		BtnSave: () => import('@/components/listado/modals/article-variants/variant-grid/BtnSave'),
-		SelectImage: () => import('@/common-vue/components/model/images/SelectImage'),
+		// Modal de imagen de la variante (subir desde el equipo / buscar en Google). Se importa en
+		// forma sincronica porque se abre con $bvModal.show por id y tiene que estar montado ya.
+		VariantImageModal,
 		// Acciones masivas de disponibilidad: extraido del orquestador en el prompt 543 para
 		// que este no tenga llamadas directas a $api (regla de CLAUDE.md).
 		BulkAvailability: () => import('@/components/listado/modals/article-variants/variant-grid/BulkAvailability'),
 	},
 	data() {
 		return {
-			// Si es true se muestran TODAS las variantes (incluidas las no disponibles) para poder
-			// habilitarlas/deshabilitarlas. Por defecto false: solo las disponibles (oculta = false).
-			show_all: false,
-			// Variante que se esta editando en el selector de imagen compartido (una sola instancia
-			// de modal reutilizada por todas las filas, en vez de una por fila).
-			editing_variant: null,
+			// Si es true se muestran TODAS las variantes posibles (incluidas las no disponibles). Es el
+			// default: el usuario va activando solo las que tiene y las demas no tienen que desaparecer.
+			// En false se muestran solo las disponibles (oculta = false).
+			show_all: true,
+			// Id de la variante que se esta editando en el modal de imagen compartido (una sola
+			// instancia de modal reutilizada por todas las filas, en vez de una por fila).
+			editing_variant_id: null,
 		}
 	},
 	computed: {
@@ -125,9 +129,62 @@ export default {
 		addresses() {
 			return this.$store.state.address.models
 		},
-		/** Variantes ya generadas para el articulo (cargadas en showVariants, ver Buttons.vue). */
-		variants() {
+		/** Propiedades del articulo con sus valores: definen que combinaciones son validas hoy. */
+		article_properties() {
+			return this.$store.state.article_property.models
+		},
+		/** Todas las variantes que hay en la base para el articulo (cargadas en showVariants, ver Buttons.vue). */
+		stored_variants() {
 			return this.$store.state.article_variant.models
+		},
+		/**
+		 * Firmas ("3-8": ids de valor ordenados) de las combinaciones validas hoy, o sea el cartesiano
+		 * de las propiedades que tienen al menos un valor. Misma firma que arma el back en
+		 * ArticleVariantGeneratorHelper.
+		 *
+		 * @return {Object} Mapa firma => true.
+		 */
+		valid_signatures() {
+			let groups = this.article_properties
+				.filter(property => property.article_property_values && property.article_property_values.length)
+				.map(property => property.article_property_values.map(value => value.id))
+
+			let combinations = []
+
+			if (groups.length) {
+				combinations = [[]]
+				groups.forEach(group => {
+					let next_combinations = []
+					combinations.forEach(combination => {
+						group.forEach(value_id => {
+							next_combinations.push(combination.concat([value_id]))
+						})
+					})
+					combinations = next_combinations
+				})
+			}
+
+			let signatures = {}
+			combinations.forEach(combination => {
+				signatures[this.signature(combination)] = true
+			})
+			return signatures
+		},
+		/**
+		 * Variantes que corresponden a las propiedades actuales. El back nunca borra una variante
+		 * cuya combinacion dejo de ser valida (puede estar en ventas): solo la oculta. Esas "huerfanas"
+		 * (ej: "Plata" de cuando solo existia Color, una vez agregado Talle) no se muestran: la grilla
+		 * lista exactamente las combinaciones que anuncia el contador ("Se van a generar 4 variantes").
+		 * Una variante sin valores de propiedad (no se puede juzgar) se muestra igual.
+		 */
+		variants() {
+			return this.stored_variants.filter(variant => {
+				let values = variant.article_property_values || []
+				if (!values.length) {
+					return true
+				}
+				return !!this.valid_signatures[this.signature(values.map(value => value.id))]
+			})
 		},
 		/** Cantidad de variantes no disponibles (oculta = true). */
 		hidden_count() {
@@ -155,32 +212,75 @@ export default {
 			}
 			return 'No hay variantes disponibles todavia. Proba "Ver todas las posibles" para habilitar alguna.'
 		},
+	},
+	watch: {
 		/**
-		 * Definicion de prop reutilizada por el SelectImage generico: la imagen de la variante
-		 * se elige entre las imagenes ya subidas al articulo (mismo patron que otros modelos).
+		 * Cuando el back devuelve una variante (al habilitarla, cambiar el precio o la imagen) el
+		 * store la reemplaza por una copia nueva, que trae el stock de la base y no lo que el usuario
+		 * ya tipeo y todavia no guardo con "Actualizar Stock". Se vuelve a volcar lo pendiente sobre
+		 * la copia nueva para que el input no "se borre" delante del usuario.
 		 */
-		image_prop() {
-			return {
-				key: 'image_url',
-				select_image_from: {
-					model_name: 'article',
-					images_prop: 'images',
-				},
-			}
+		stored_variants() {
+			this.reapplyPendingStock()
 		},
 	},
 	methods: {
 		/**
-		 * Abre el selector de imagen compartido para una variante puntual.
+		 * Firma de una combinacion: ids de valor ordenados ascendente y unidos por "-". Igual a la que
+		 * arma ArticleVariantGeneratorHelper en el back, para comparar combinaciones sin importar el orden.
+		 *
+		 * @param {Array} value_ids Ids de article_property_value de la combinacion.
+		 * @return {String}
+		 */
+		signature(value_ids) {
+			return value_ids.slice().sort((a, b) => a - b).join('-')
+		},
+		/**
+		 * Abre el modal de imagen para una variante puntual.
+		 *
+		 * El store de variantes necesita la variante como `model` para borrar su imagen
+		 * (article_variant/deleteImageProp lee state.model).
 		 *
 		 * @param {Object} variant Variante (article_variant) cuya imagen se va a cambiar.
 		 */
 		openImagePicker(variant) {
-			this.editing_variant = variant
-			// El modal recien se crea en el DOM cuando editing_variant deja de ser null (v-if),
-			// por eso el show se pide en el siguiente tick.
-			this.$nextTick(() => {
-				this.$bvModal.show('select-image-image_url')
+			this.$store.commit('article_variant/setModel', {
+				model: variant,
+				properties: [],
+			})
+			this.editing_variant_id = variant.id
+			this.$bvModal.show('variant-image-modal')
+		},
+		/**
+		 * Vuelca sobre las variantes del store el stock que el usuario ya cargo y todavia no guardo
+		 * (la cola variants_to_update del store del articulo): stock global y/o stock por deposito.
+		 */
+		reapplyPendingStock() {
+			let pending = this.$store.state.article.edit_variants_stock.variants_to_update
+
+			pending.forEach(pending_variant => {
+				let variant = this.stored_variants.find(_variant => _variant.id == pending_variant.id)
+				if (!variant) {
+					return
+				}
+
+				if (typeof pending_variant.stock != 'undefined') {
+					variant.stock = pending_variant.stock
+				}
+
+				if (!variant.addresses) {
+					return
+				}
+
+				let pending_addresses = pending_variant.addresses || []
+
+				pending_addresses.forEach(pending_address => {
+					let variant_address = variant.addresses.find(_address => _address.id == pending_address.id)
+					if (variant_address && variant_address.pivot) {
+						variant_address.pivot.amount = pending_address.amount
+						variant_address.pivot.on_display = pending_address.on_display
+					}
+				})
 			})
 		},
 		/**

@@ -34,9 +34,26 @@
 		type="number"
 		step="0.01"
 		size="sm"
-		placeholder="Precio del articulo"
+		class="variant-row__input"
+		placeholder="Precio"
+		title="Si lo dejas vacio se usa el precio del articulo"
 		v-model="variant.price"
 		@change="updateVariant('Guardando precio')"></b-form-input>
+	</td>
+
+	<!-- Sin depositos (negocio sin sucursales): un unico stock global para la variante -->
+	<td
+	v-if="!addresses.length"
+	class="variant-row__stock-cell">
+		<b-form-input
+		type="number"
+		step="any"
+		size="sm"
+		class="variant-row__input"
+		placeholder="0"
+		title="Stock de la variante"
+		v-model.number="variant.stock"
+		@change="onStockChange()"></b-form-input>
 	</td>
 
 	<!-- Una celda por deposito: cantidad + checkbox "En exhibicion" -->
@@ -47,6 +64,7 @@
 		<b-form-input
 		type="number"
 		size="sm"
+		class="variant-row__input"
 		v-model.number="addressPivot(address).pivot.amount"
 		@change="onStockChange()"></b-form-input>
 
@@ -145,15 +163,22 @@ export default {
 			})
 		},
 		/**
-		 * Se dispara al tocar cantidad o "En exhibicion" de cualquier deposito de esta fila. Arma
-		 * el payload completo de la variante (todos los depositos conocidos, mismo contrato que
-		 * antes: {id, addresses:[{id, amount, on_display}]}) y lo encola en el store para
-		 * guardarse por lote con el boton "Actualizar Stock" (BtnSave -> article-update-varians-stock).
+		 * Se dispara al tocar el stock de la variante: la cantidad global (negocio sin sucursales) o
+		 * la cantidad / "En exhibicion" de cualquier deposito. Arma el payload de la variante y lo
+		 * encola en el store para guardarse por lote con el boton "Actualizar Stock"
+		 * (BtnSave -> article-update-varians-stock).
+		 *
+		 * Con depositos el contrato es el de siempre: {id, addresses:[{id, amount, on_display}]}. Sin
+		 * depositos se manda ademas `stock` (campo opcional que el back toma como stock global).
 		 */
 		onStockChange() {
 			let article_variant = {
 				id: this.variant.id,
 				addresses: [],
+			}
+
+			if (!this.addresses.length) {
+				article_variant.stock = parseFloat(this.variant.stock) || 0
 			}
 
 			this.addresses.forEach(_address => {
@@ -207,9 +232,31 @@ export default {
 	&__available-cell
 		text-align: center
 	&__price-cell
-		min-width: 130px
+		width: 110px
+		min-width: 96px
 	&__stock-cell
-		min-width: 140px
+		width: 96px
+		min-width: 84px
+	// Inputs de precio y stock: el default global de _inputs.sass (font-size 1.4rem, borde de 2px,
+	// foco con halo fuerte) los deja enormes dentro de una tabla. Se pisan con el patron de
+	// contexto/estilo_interfaz_empresa.md §3 (borde de 1px, radio y foco por token). El selector
+	// de dos clases le gana al `input.form-control` global sin necesitar !important.
+	.form-control.variant-row__input
+		font-size: 0.9rem
+		height: 34px
+		padding: 4px 10px
+		border-width: 1px
+		border-radius: var(--metodo-pago-input-radius, 8px)
+		border-color: var(--color-border, #ced4da)
+		background-color: var(--bg-card, #fff)
+		color: var(--color-text-primary, #1d1d1f)
+		&:focus
+			border-width: 1px
+			border-color: var(--color-primary, #007bff)
+			box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring, rgba(0, 123, 255, .15))
+			background-color: var(--bg-card, #fff)
+		&::placeholder
+			color: var(--color-text-secondary, rgba(0, 0, 0, .4))
 	&__on-display
 		margin-top: 4px
 		font-size: 0.8em
