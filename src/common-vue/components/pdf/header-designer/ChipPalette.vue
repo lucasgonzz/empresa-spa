@@ -1,5 +1,7 @@
 <template>
-	<div class="header-designer-palette">
+	<div
+	class="header-designer-palette"
+	:class="{ 'header-designer-palette--en-linea': en_linea }">
 		<p class="header-designer-palette__section-title small text-muted m-b-5">
 			Campos del emisor sin colocar
 		</p>
@@ -98,6 +100,15 @@ export default {
 				return []
 			},
 		},
+		/**
+		 * true = los chips van uno al lado del otro en vez de uno debajo del otro (misión
+		 * diseno-pdf-configurable: el diseñador de PDF pone la paleta a lo ancho, debajo del
+		 * encabezado). Default false: la columna de siempre.
+		 */
+		en_linea: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	methods: {
 		/**
@@ -153,4 +164,16 @@ export default {
 	border-radius: 4px
 	padding: 6px
 	background: rgba(0, 0, 0, .015)
+
+// En línea (prop en_linea): los chips en fila, con el ancho de su texto. Solo con la prop en true.
+.header-designer-palette--en-linea
+	.header-designer-palette__list
+		display: flex
+		flex-wrap: wrap
+		gap: 6px
+		min-height: 36px
+
+	.header-designer-chip
+		margin-bottom: 0
+		max-width: 100%
 </style>
