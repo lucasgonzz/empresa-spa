@@ -149,7 +149,8 @@ size="lg"
 			(default, decision de Lucas) o pierden el precio fijo y pasan a calcularse con el margen.
 
 			Con "coinciden" no hay pregunta: esos articulos nunca entran en ese alcance (que coincida
-			su margen es casualidad, sale del precio), asi que solo se informa.
+			su margen es casualidad, sale del precio), asi que solo lo informa el resumen de
+			"Esto es lo que va a pasar" (antes habia ademas una linea suelta aca que lo repetia).
 		-->
 		<div
 		v-if="con_precio_fijado_a_mano_en_la_lista && alcance_efectivo_margen == 'todos'"
@@ -165,12 +166,6 @@ size="lg"
 				a calcularse con el margen.
 			</p>
 		</div>
-		<p
-		v-else-if="con_precio_fijado_a_mano_en_la_lista"
-		class="text-muted m-b-20">
-			{{ con_precio_fijado_a_mano_en_la_lista == 1 ? 'El que tiene' : 'Los ' + con_precio_fijado_a_mano_en_la_lista + ' que tienen' }}
-			el precio fijado a mano no se {{ con_precio_fijado_a_mano_en_la_lista == 1 ? 'toca' : 'tocan' }}.
-		</p>
 
 		<!--
 			El cierre de la ventana: la combinacion que el usuario armo (alcance + tilde), con los
