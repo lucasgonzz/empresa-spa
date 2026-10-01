@@ -1,6 +1,6 @@
 <template>
     <b-modal
-    title="Múltiples métodos de pago"
+    :title="titulo_del_modal"
         no-close-on-backdrop
     hide-header-close
     @show="on_modal_show"
@@ -62,6 +62,14 @@ export default {
             payment_methods_with_discounts: [],
             selected_payment_methods_: [],
             payment_methods_key: 0,
+            /*
+                Titulo del modal. Se decide al ABRIRLO (on_modal_show) y no se calcula en vivo: el
+                reparto lo abre el boton verde de una venta o el cartel de guardar un presupuesto, y
+                la marca que los distingue se apaga apenas se aprieta "Listo". Calculado en vivo, el
+                titulo volveria a "Múltiples métodos de pago" mientras el modal todavia se esta
+                desvaneciendo.
+            */
+            titulo_del_modal: 'Múltiples métodos de pago',
         }
     },
     computed: {
@@ -107,6 +115,14 @@ export default {
     },
     methods: {
         on_modal_show() {
+            /*
+                En un presupuesto lo que se reparte no es una venta que se esta cobrando ahora sino
+                lo que el cliente va a pagar cuando se confirme: el titulo lo dice.
+            */
+            this.titulo_del_modal = this.$store.state.vender.budget_cobro_pendiente
+                ? 'Cobro del presupuesto'
+                : 'Múltiples métodos de pago'
+
             // ✅ fuerza remount del MultiPaymentMethods
             this.payment_methods_key += 1
             

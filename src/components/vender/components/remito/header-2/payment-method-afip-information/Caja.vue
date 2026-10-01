@@ -56,6 +56,14 @@ export default {
 		// 	return !this.client || this.omitir_en_cuenta_corriente
 		// },
 		disabled() {
+			/*
+				En un presupuesto la caja de cada cobro se elige en el reparto de metodos de pago que
+				abre el cartel de guardar (cada fila lleva la suya): este select queda deshabilitado
+				SIEMPRE, tambien con "omitir en cuenta corriente" en 1. Ver PaymentMethod.vue.
+			*/
+			if (this.en_modo_presupuesto) {
+				return true
+			}
 			if (
 				this.client 
 				&& (
@@ -66,6 +74,10 @@ export default {
 				return true 
 			}
 			return false
+		},
+		/* true cuando lo que se arma es un presupuesto (toggle prendido o presupuesto cargado). */
+		en_modo_presupuesto() {
+			return this.$store.getters['vender/en_modo_presupuesto']
 		},
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods

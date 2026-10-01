@@ -19,6 +19,47 @@ import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_meth
 import facturar from '@/mixins/vender/guardar_venta/facturar'
 import { env } from '@/runtime_config'
 import { comprobante_con_recargos_en_precios_sin_registro } from '@/utils/recargos_en_precios'
+
+/**
+ * Reconstruye `modal_payment_methods` --los metodos de pago con su descuento / recargo-- a partir
+ * de las filas FINALES de un reparto, con la misma forma que le arma Buttons.vue::calcular() y de
+ * la que lee vender_set_total.js. Solo entran las filas que tienen un ajuste: las demas no mueven
+ * el total.
+ *
+ * Es una funcion pura y exportada porque la usan DOS caminos que tienen que dar lo mismo:
+ * reabrir un presupuesto de contado (ajustes_del_cobro_del_presupuesto, mas abajo) y el "Listo"
+ * del reparto que abre el cartel de guardar un presupuesto (payment-methods/Buttons.vue). En los
+ * dos la API calcula el ajuste del total desde estas mismas filas (BudgetCobroHelper::
+ * ajuste_por_metodos_de_pago), asi que la SPA tiene que calcularlo desde ellas tambien.
+ *
+ * @param {Array} filas Filas del reparto (con discount_amount / surchage_amount).
+ * @param {Array} metodos_de_pago Catalogo de metodos de pago del store.
+ * @returns {Array}
+ */
+export function ajustes_del_cobro_de_filas(filas, metodos_de_pago) {
+	let ajustes = []
+
+	filas.forEach(fila => {
+		if (!Number(fila.discount_amount) && !Number(fila.surchage_amount)) {
+			return
+		}
+
+		let metodo = metodos_de_pago.find(pay => {
+			return pay.id == fila.current_acount_payment_method_id
+		})
+
+		ajustes.push({
+			...metodo,
+			amount: '',
+			discount_amount: fila.discount_amount,
+			surchage_amount: fila.surchage_amount,
+			caja_id: fila.caja_id,
+		})
+	})
+
+	return ajustes
+}
+
 export default {
 	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods, facturar],
 	// mixins: [vender, set_employee_vender, vender_set_total],
@@ -352,7 +393,30 @@ export default {
 			*/
 			this.$store.commit('vender/set_modal_payment_methods', [])
 
-			if (model.current_acount_payment_methods
+			/*
+				🔴 PRESUPUESTO DE CONTADO (mision presupuesto-contado-o-cuenta-corriente, 1/10/2026).
+
+				Un presupuesto que el vendedor guardo con "No, se cobra al confirmar" trae su reparto de
+				metodos de pago en `selected_payment_methods`. Al reabrirlo se cargan las filas en el
+				store y se reconstruye `modal_payment_methods` con los descuentos / recargos de esas
+				filas: es lo que le permite a setTotal() --el del final de este metodo-- reproducir el
+				total NETO guardado. Sin eso la pantalla mostraria el bruto, un numero distinto del que
+				muestra el listado de presupuestos, y al volver a guardar el total que viaja no
+				coincidiria con el que el vendedor vio.
+
+				El metodo unico va en 0 a proposito: setTotal() solo aplica el ajuste del reparto sin
+				un metodo unico elegido (ver aplicar_payment_method_discounts_a_total_repartido_del_modal).
+
+				Al volver a guardar, el cartel arranca el reparto de cero (no se precarga el modal): asi
+				el reparto siempre suma el total vigente.
+			*/
+			let cobro_del_presupuesto = this.filas_de_cobro_del_presupuesto(model)
+
+			if (cobro_del_presupuesto.length) {
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
+				this.$store.commit('vender/setSelectedPaymentMethods', cobro_del_presupuesto)
+				this.$store.commit('vender/set_modal_payment_methods', this.ajustes_del_cobro_del_presupuesto(cobro_del_presupuesto))
+			} else if (model.current_acount_payment_methods
 				&& model.current_acount_payment_methods.length == 1) {
 				// Venta con un único método de pago: se setea el id y se limpia el reparto múltiple.
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_methods[0].id)
@@ -447,11 +511,26 @@ export default {
 				hoy: no saber la fecha no puede traducirse en reescribirla con la de hoy.
 			*/
 			this.$store.commit('vender/set_created_at', model.created_at ? moment(model.created_at).format('YYYY-MM-DD') : null)
-			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
+
+			/*
+				Un presupuesto es de contado SOLO con "omitir" en 1 Y un reparto (la regla de la API). Si
+				la API nueva lo devuelve --la clave `selected_payment_methods` viene aunque sea en
+				null--, "omitir" se restaura segun esa regla y no pelado: un presupuesto viejo con
+				omitir en 1 y sin reparto (de antes del 18/9/2026) es cuenta corriente para la API, y
+				mostrarlo como de contado preseleccionaria "No" en el cartel por nada. Una venta, o un
+				presupuesto de una API anterior, no trae la clave y conserva su valor.
+			*/
+			let omitir_a_restaurar = model.omitir_en_cuenta_corriente
+
+			if (typeof model.selected_payment_methods != 'undefined') {
+				omitir_a_restaurar = cobro_del_presupuesto.length ? 1 : 0
+			}
+
+			this.$store.commit('vender/set_omitir_en_cuenta_corriente', omitir_a_restaurar)
 
 			this.$store.commit('vender/setObservations', model.observations)
 			this.$store.commit('vender/setObservationsOcultas', model.observations_ocultas)
-			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
+			this.$store.commit('vender/set_omitir_en_cuenta_corriente', omitir_a_restaurar)
 			this.$store.commit('vender/set_moneda_id', model.moneda_id)
 			this.$store.commit('vender/set_valor_dolar', model.valor_dolar)
 			this.$store.commit('vender/set_sale_status_id', model.sale_status_id)
@@ -538,6 +617,40 @@ export default {
 			// Log limpio solo para cambios posteriores a la carga de la venta a editar.
 			this.$store.commit('vender/init_sale_log')
 			this.$store.commit('vender/set_sale_log_paused', false)
+		},
+		/**
+		 * Las filas del reparto de metodos de pago de un presupuesto GUARDADO de contado, o [] si va a
+		 * la cuenta corriente (o si el modelo es una venta, que no trae `selected_payment_methods`).
+		 *
+		 * Misma regla que aplica la API para decidir que un presupuesto es de contado: "omitir en
+		 * cuenta corriente" prendido Y al menos una fila con un metodo de pago. Una fila sin metodo
+		 * no cuenta: no hay nada que cobrar con ella.
+		 *
+		 * @param {Object} model Presupuesto o venta que se abre en VENDER.
+		 * @returns {Array}
+		 */
+		filas_de_cobro_del_presupuesto(model) {
+			if (!Number(model.omitir_en_cuenta_corriente)) {
+				return []
+			}
+
+			if (!Array.isArray(model.selected_payment_methods)) {
+				return []
+			}
+
+			return model.selected_payment_methods.filter(fila => {
+				return fila && Number(fila.current_acount_payment_method_id)
+			})
+		},
+		/**
+		 * Reconstruye `modal_payment_methods` a partir de las filas guardadas de un presupuesto. Ver
+		 * `ajustes_del_cobro_de_filas`, que es la que lo hace.
+		 *
+		 * @param {Array} filas Lo que devolvio filas_de_cobro_del_presupuesto().
+		 * @returns {Array}
+		 */
+		ajustes_del_cobro_del_presupuesto(filas) {
+			return ajustes_del_cobro_de_filas(filas, this.$store.state.current_acount_payment_method.models)
 		},
 		setPreviusReturnedArticles() {
 			let returned_articles = []

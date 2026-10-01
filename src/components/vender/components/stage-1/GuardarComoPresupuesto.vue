@@ -42,12 +42,21 @@ export default {
 				this.$store.commit('vender/setGuardarComoPresupuesto', value)
 
 				/*
-					🔴 Un presupuesto va SIEMPRE a la cuenta corriente del cliente (decision de Lucas,
-					18/9/2026; el back lo fija igual: BudgetController guarda 0 y saveSale() escribe
-					0). Al prender el toggle, "omitir en cuenta corriente" se apaga y el cobro queda
+					🔴 Al prender el toggle, "omitir en cuenta corriente" se apaga y el cobro queda
 					bloqueado como en cualquier venta a cuenta corriente (metodo de pago y caja en
 					0), que es lo que hace el propio toggle de omitir al apagarse. Antes el toggle de
 					omitir se escondia y el 1 que tuviera viajaba igual en el presupuesto.
+
+					Cambio del 1/10/2026 sobre la decision del 18/9/2026. El 18/9 Lucas decidio que un
+					presupuesto iba SIEMPRE a la cuenta corriente (BudgetController guardaba 0 y
+					saveSale() escribia 0), porque el presupuesto no guardaba ningun dato de cobro y la
+					venta que nacia al confirmarlo de contado quedaba sin metodo de pago ni caja. El
+					1/10 el presupuesto pasa a guardar el reparto de metodos de pago y el vendedor
+					elige al tocar "Guardar presupuesto" (cartel components/vender/modals/budget-cobro).
+					El default sigue siendo la cuenta corriente, y por eso este toggle sigue apagando
+					"omitir": el valor de contado NO se arrastra de la venta, se define recien al guardar.
+					No volver a "simplificarlo" para que conserve el 1: el cartel lo pone en el momento
+					justo, con su reparto.
 
 					Al apagarlo vuelve a ser una venta: se re-aplica el default del comercio
 					(siempre_omitir_en_cuenta_corriente) y, si el default es omitir, el metodo de
