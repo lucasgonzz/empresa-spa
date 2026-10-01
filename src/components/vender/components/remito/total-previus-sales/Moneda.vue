@@ -120,6 +120,17 @@ export default {
 			if (Number(this.input_dolar_valor) !== Number(valor)) {
 				this.input_dolar_valor = valor
 			}
+
+			/*
+				🔴 La cotizacion cambio con un presupuesto en edicion: los renglones tienen que
+				re-expresarse con la nueva. Va ACA, en el watcher del store, y no en set_valor_dolar(),
+				porque la cotizacion puede cambiar por cuatro caminos --el vendedor tipeando, el
+				restaurar_dolar_si_falta() al salir del campo vacio, iniciar_dolar() y el chequeo de
+				guardado que carga la del sistema-- y los cuatro terminan en un commit al store. Sin
+				esto, la cotizacion nueva quedaba guardada con renglones convertidos con la vieja.
+				No hay recursion: reexpresar no toca valor_dolar.
+			*/
+			this.reexpresar_por_cambio_de_cotizacion()
 		},
 	},
 	methods: {
@@ -162,6 +173,32 @@ export default {
 			this.setTotal()
 		},
 		/**
+		 * Con un presupuesto en edicion, vuelve a expresar los renglones con la cotizacion vigente
+		 * (la moneda no cambia). Si el presupuesto esta en su moneda original no cambia ningun
+		 * precio: los importes son los originales. Sin cotizacion mayor que cero no hace nada (el
+		 * campo puede estar vacio mientras el vendedor escribe; al salir se restaura el dolar del
+		 * sistema y este metodo vuelve a correr).
+		 */
+		reexpresar_por_cambio_de_cotizacion() {
+
+			if (
+				!this.budget
+				|| this.editando_venta_previa
+			) {
+				return
+			}
+
+			let cotizacion = Number(this.valor_dolar)
+
+			if (!(cotizacion > 0)) {
+				return
+			}
+
+			this.reexpresar_comprobante_en_otra_moneda(this.moneda_id, this.moneda_id, cotizacion)
+
+			this.setTotal()
+		},
+		/**
 		 * El vendedor eligio otra moneda en el select.
 		 *
 		 * Con una venta nueva o un presupuesto nuevo es lo de siempre: se guarda la moneda y se
@@ -175,8 +212,9 @@ export default {
 		 * sistema, igual que al abrir Vender. Sin ninguna de las dos el cambio se RECHAZA: convertir
 		 * con una cotizacion inventada deja precios que parecen buenos y no lo son.
 		 *
-		 * La cotizacion se fija ANTES de cambiar la moneda. Cambiarla despues no vuelve a convertir
-		 * los renglones: solo cambia la que se guarda.
+		 * Los renglones se recalculan siempre desde sus importes originales (ver el mixin): volver a
+		 * la moneda original los devuelve exactos, y cambiar la cotizacion despues de convertir los
+		 * re-expresa con la nueva (watcher de valor_dolar).
 		 *
 		 * @param {Number|String} moneda_nueva Valor elegido en el select.
 		 */
