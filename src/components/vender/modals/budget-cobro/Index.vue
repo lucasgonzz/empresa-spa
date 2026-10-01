@@ -238,10 +238,12 @@ export default {
 // Los modales de bootstrap-vue cuelgan de `body`, fuera de `#app`: los colores salen de tokens
 // (`var(--color-...)`) y no de hexadecimales, o el cartel queda blanco en modo oscuro.
 
-// Un poco mas ancho que el modal por defecto (500px): con los tres botones del footer en una sola
-// fila no entran en 500px. El selector lleva dos clases para ganarle al `.modal-dialog` de bootstrap.
+// Mas ancho que el modal por defecto (500px): los tres botones del footer (Cancelar y las dos
+// respuestas, de ~85 + ~215 + ~215px, mas los huecos) suman unos 540px y el footer deja 40px de
+// padding, asi que en una sola fila necesitan un dialogo de ~600px. A 640px entran con aire.
+// El selector lleva dos clases para ganarle al `.modal-dialog` de bootstrap.
 .modal-dialog.budget-cobro-dialog
-	max-width: 560px
+	max-width: 640px
 
 .budget-cobro__pregunta
 	margin-bottom: 12px
