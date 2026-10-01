@@ -54,6 +54,8 @@
 						v-model="desde_input"
 						class="form-control cc-periodo__fecha"
 						aria-label="Fecha desde"
+						min="2000-01-01"
+						max="2099-12-31"
 						type="date">
 					</label>
 					<label
@@ -65,6 +67,8 @@
 						v-model="hasta_input"
 						class="form-control cc-periodo__fecha"
 						aria-label="Fecha hasta"
+						min="2000-01-01"
+						max="2099-12-31"
 						type="date">
 					</label>
 					<p
@@ -93,6 +97,17 @@
 			class="cc-periodo__aviso"
 			role="status">
 				Se amplió el período para mostrar al menos 10 movimientos.
+			</span>
+
+			<!--
+				La API manda solo los 2000 movimientos más recientes cuando el período tiene más: se
+				avisa para que nadie crea que la tabla es el historial completo.
+			-->
+			<span
+			v-if="periodo_truncado"
+			class="cc-periodo__aviso"
+			role="status">
+				Se muestran los 2000 movimientos más recientes del período. Acotá las fechas para ver el resto.
 			</span>
 		</div>
 
@@ -149,7 +164,7 @@
 <script>
 import current_acounts from '@/mixins/current_acounts'
 import { env } from '@/runtime_config'
-import { FECHA_INICIO_HISTORIAL, rangoDeAtajo, paramsDePeriodo } from '@/store/current_acount'
+import { FECHA_INICIO_HISTORIAL, fechaLocal, rangoDeAtajo, paramsDePeriodo } from '@/store/current_acount'
 
 // Atajos del menú de período. La clave es la que entiende rangoDeAtajo() del store.
 const ATAJOS = [
@@ -193,6 +208,9 @@ export default {
 		periodo_ampliado() {
 			return !!(this.periodo_efectivo && this.periodo_efectivo.ampliado)
 		},
+		periodo_truncado() {
+			return !!(this.periodo_efectivo && this.periodo_efectivo.truncado)
+		},
 		/**
 		 * Texto del período activo. Con el período efectivo que devolvió la API se ve también el
 		 * ampliado. Si la API es vieja y no manda `periodo`, NO se inventan fechas que no se
@@ -219,7 +237,9 @@ export default {
 			return !!(this.desde_input && this.hasta_input && this.desde_input > this.hasta_input)
 		},
 		personalizado_valido() {
-			return !!(this.desde_input && this.hasta_input) && !this.rango_invertido
+			// Año de 4 dígitos entre 2000 y 2099: si no, la API rechaza la fecha y cae en silencio
+			// al camino viejo (los últimos N), mostrando algo distinto de lo que se eligió.
+			return this.fecha_valida(this.desde_input) && this.fecha_valida(this.hasta_input) && !this.rango_invertido
 		},
 		loading() {
 			return this.$store.state.current_acount.loading
@@ -258,6 +278,13 @@ export default {
 			this.$store.commit('current_acount/set_periodo', { modo, clave, desde, hasta })
 			this.$store.dispatch('current_acount/getModels')
 		},
+		fecha_valida(fecha) {
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha || '')) {
+				return false
+			}
+			let anio = parseInt(fecha.substring(0, 4), 10)
+			return anio >= 2000 && anio <= 2099
+		},
 		elegirAtajo(clave) {
 			if (clave == 'defecto') {
 				return this.aplicarPeriodo('defecto', 'defecto', null, null)
@@ -279,7 +306,9 @@ export default {
 				rango = rangoDeAtajo('defecto')
 			}
 			this.desde_input = rango.desde
-			this.hasta_input = rango.hasta ? rango.hasta : ''
+			// El por defecto no manda `hasta` (queda abierto hasta hoy): se precarga hoy para que
+			// "Aplicar" no arranque deshabilitado.
+			this.hasta_input = rango.hasta ? rango.hasta : fechaLocal(new Date())
 		},
 		aplicarPersonalizado() {
 			if (!this.personalizado_valido) {
