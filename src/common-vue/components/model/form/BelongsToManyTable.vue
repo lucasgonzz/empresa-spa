@@ -300,6 +300,21 @@ export default {
 			/* Sin preferencias guardadas: usar defaults y no sobreescribir el comportamiento nativo */
 			this.config_rows = default_rows
 			/* active_belongs_to_many queda como prop.belongs_to_many (comportamiento original) */
+
+			/*
+			 * Excepcion: las columnas de pivot que declaran `hidden_by_default` no se muestran hasta
+			 * que el usuario las elige. Sin preferencias guardadas la tabla dibuja TODO
+			 * prop.belongs_to_many.pivot_props_to_show, asi que hay que sacarlas de ahi a mano (con
+			 * preferencias guardadas ya lo resuelve apply_rows_to_active_pivot por `visible`).
+			 * Sin ninguna columna con el flag no se toca nada: el comportamiento es el de siempre.
+			 */
+			const pivot_props_originales = this.prop.belongs_to_many.pivot_props_to_show || []
+			if (pivot_props_originales.some(pivot_prop => pivot_prop.hidden_by_default)) {
+				this.active_belongs_to_many = {
+					...this.prop.belongs_to_many,
+					pivot_props_to_show: pivot_props_originales.filter(pivot_prop => !pivot_prop.hidden_by_default),
+				}
+			}
 		},
 		/*
 		 * Construye las filas de configuración por defecto combinando:
@@ -364,7 +379,8 @@ export default {
 					key: pivot_prop.key,
 					row_id: this.build_row_id('pivot_show', pivot_prop.key),
 					label: pivot_show_label,
-					visible: true,
+					/* `hidden_by_default`: columna elegible que no se ve hasta que el usuario la activa */
+					visible: !pivot_prop.hidden_by_default,
 					order: order_index++,
 					width: pivot_prop.table_width
 						? Number(pivot_prop.table_width)
