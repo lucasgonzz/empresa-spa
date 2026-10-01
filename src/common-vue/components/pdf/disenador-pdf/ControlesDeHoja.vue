@@ -24,8 +24,10 @@
 				type="button"
 				class="dpdf-controles__formato"
 				:class="{ 'dpdf-controles__formato--activo': es_el_formato(formato) }"
+				:disabled="esta_bloqueado(formato)"
 				:aria-pressed="es_el_formato(formato) ? 'true' : 'false'"
-				:title="formato.nombre + ': ' + formato.ancho_mm + ' × ' + formato.alto_mm + ' mm, vertical'"
+				:aria-describedby="esta_bloqueado(formato) ? 'dpdf-controles-motivo-a5' : null"
+				:title="esta_bloqueado(formato) ? MOTIVO_A5_EN_ARCA : formato.nombre + ': ' + formato.ancho_mm + ' × ' + formato.alto_mm + ' mm, vertical'"
 				:data-testid="'disenador-pdf-hoja-' + formato.key"
 				@click="disenador.elegir_formato(formato)">
 					{{ formato.nombre }}
@@ -34,6 +36,17 @@
 			<span
 			class="dpdf-controles__detalle"
 			:class="{ 'dpdf-controles__detalle--personalizada': !formato_actual }">{{ detalle_de_la_hoja }}</span>
+			<!-- En una factura de ARCA la A5 queda deshabilitada: el motivo, a la vista -->
+			<span
+			v-if="hay_formato_bloqueado"
+			id="dpdf-controles-motivo-a5"
+			class="dpdf-controles__motivo"
+			data-testid="disenador-pdf-motivo-a5">
+				<i
+				class="bi bi-lock-fill"
+				aria-hidden="true"></i>
+				{{ MOTIVO_A5_EN_ARCA }}
+			</span>
 		</div>
 
 		<div class="dpdf-controles__grupo">
@@ -74,18 +87,36 @@
 	</div>
 </template>
 <script>
-import { formato_de_hoja } from './estado_del_disenador'
+import { formato_de_hoja, KEY_HOJA_A5, MOTIVO_A5_EN_ARCA } from './estado_del_disenador'
 
 /**
  * Controles de la hoja del diseñador de PDF (misión diseno-pdf-configurable, 1/10/2026).
  *
  * Presentacional: la hoja, los formatos y los límites del margen los tiene el diseñador (llega por
- * `inject`), que es quien cambia la hoja (elegir_formato, cambiar_margen).
+ * `inject`), que es quien cambia la hoja (elegir_formato, cambiar_margen). En una factura de ARCA
+ * la A5 se ofrece deshabilitada, con el motivo debajo: no entra el cuadro de importes, QR y CAE.
  */
 export default {
 	name: 'ControlesDeHoja',
 	inject: ['disenador'],
+	data() {
+		return {
+			/* El motivo de la A5 deshabilitada (ver estado_del_disenador.js), para el template */
+			MOTIVO_A5_EN_ARCA: MOTIVO_A5_EN_ARCA,
+		}
+	},
 	computed: {
+		/**
+		 * Si algún formato del catálogo está deshabilitado (la A5 en una factura de ARCA).
+		 *
+		 * @returns {boolean}
+		 */
+		hay_formato_bloqueado() {
+			let self = this
+			return this.disenador.catalogo.formatos_de_hoja.some(function (formato) {
+				return self.esta_bloqueado(formato)
+			})
+		},
 		/**
 		 * El formato que coincide con la hoja de ahora, o null (hoja personalizada).
 		 *
@@ -118,6 +149,16 @@ export default {
 		es_el_formato(formato) {
 			return !!(this.formato_actual && this.formato_actual.key === formato.key)
 		},
+		/**
+		 * Si un formato no se puede elegir: la A5 en una factura de ARCA (dato del lado API: el
+		 * cuadro de importes, QR y CAE mide unos 100 mm y en A5 no entra completo).
+		 *
+		 * @param {Object} formato
+		 * @returns {boolean}
+		 */
+		esta_bloqueado(formato) {
+			return this.disenador.es_factura_de_arca && formato.key === KEY_HOJA_A5
+		},
 	},
 }
 </script>
@@ -132,7 +173,7 @@ export default {
 .dpdf-controles__grupo
 	display: grid
 	grid-template-columns: auto auto
-	grid-template-areas: "etiqueta control" ". detalle"
+	grid-template-areas: "etiqueta control" ". detalle" ". motivo"
 	align-items: center
 	gap: 4px 10px
 
@@ -158,6 +199,21 @@ export default {
 	color: var(--color-text-warning-strong, var(--orange))
 	font-weight: 600
 
+// Por qué un formato está deshabilitado (la A5 en una factura de ARCA)
+.dpdf-controles__motivo
+	grid-area: motivo
+	display: flex
+	align-items: flex-start
+	gap: 6px
+	max-width: 360px
+	color: var(--color-text-secondary)
+	font-size: 0.72rem
+	line-height: 1.35
+
+	i
+		flex: 0 0 auto
+		margin-top: 1px
+
 // Formatos: una pastilla segmentada, como el nav horizontal del sistema
 .dpdf-controles__formatos
 	display: inline-flex
@@ -180,8 +236,12 @@ export default {
 	cursor: pointer
 	transition: background .15s ease, color .15s ease
 
-	&:hover:not(.dpdf-controles__formato--activo)
+	&:hover:not(.dpdf-controles__formato--activo):not(:disabled)
 		background: var(--bg-card)
+
+	&:disabled
+		opacity: .45
+		cursor: not-allowed
 
 	&:focus
 		outline: none

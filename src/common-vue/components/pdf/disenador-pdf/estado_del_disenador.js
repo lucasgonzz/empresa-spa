@@ -13,9 +13,10 @@
 	una caja lleva además `ui_id` (solo interfaz: no se guarda).
 
 	🔴 Lo único del catálogo que este archivo conoce por nombre son las keys `texto_libre`,
-	`afip_receptor` y `afip_pie` y los tipos `caja` / `salto_de_fila` / `fijo` (contrato con
-	CatalogoDeCamposPdf y DisenoDePaginaPdf). Nombres, ejemplos, estilos por defecto y límites
-	llegan del endpoint `pdf-column-profiles/page-layout-catalog`: nada de eso se escribe acá.
+	`afip_receptor` y `afip_pie`, los tipos `caja` / `salto_de_fila` / `fijo` (contrato con
+	CatalogoDeCamposPdf y DisenoDePaginaPdf) y el formato `a5` (solo para la regla de la factura de
+	ARCA, ver KEY_HOJA_A5). Nombres, ejemplos, estilos por defecto y límites llegan del endpoint
+	`pdf-column-profiles/page-layout-catalog`: nada de eso se escribe acá.
 */
 
 /* El único campo repetible: el texto que escribe el usuario (CatalogoDeCamposPdf::KEY_TEXTO_LIBRE) */
@@ -58,6 +59,20 @@ export const HOJA_DE_SIEMPRE = {
 export const ANCHO_DE_HOJA_POR_DEFECTO = 210
 export const ALTO_DE_HOJA_POR_DEFECTO = 297
 export const MARGEN_POR_DEFECTO = 5
+
+/*
+	Key del formato A5 en CatalogoDeCamposPdf::formatos_de_hoja(). En una A5 no entra completo el
+	bloque fijo de ARCA del pie (importes + QR + CAE, unos 100 mm) debajo del encabezado y la zona de
+	arriba (dato del lado API, 1/10/2026): una factura de ARCA no se diseña en A5. Es la única key de
+	formato que el diseñador conoce por nombre, y solo para esta regla.
+*/
+export const KEY_HOJA_A5 = 'a5'
+
+/* Por qué una factura de ARCA no va en A5 (se muestra en los controles de la hoja y arriba del lienzo) */
+export const MOTIVO_A5_EN_ARCA = 'En A5 no entra completo el cuadro de ARCA (importes, QR y CAE): para facturas usá A4, Carta u Oficio.'
+
+/* Aviso suave (no bloquea) de una venta en A5 con "Mostrar pie de página en cada hoja" */
+export const AVISO_A5_CON_PIE_EN_CADA_HOJA = 'Con hoja A5 y el pie en cada hoja, entran pocos renglones por hoja.'
 
 /* Ancho (en columnas de 12) de una caja nueva desde "+ Agregar caja" (plan §8.3) */
 export const COLS_DE_CAJA_NUEVA = 6
@@ -854,6 +869,18 @@ export function formato_de_hoja(formatos, ancho, alto) {
 		}
 	})
 	return encontrado
+}
+
+/**
+ * Si una hoja es la A5 del catálogo (por sus medidas: la hoja se guarda como ancho y alto).
+ *
+ * @param {Array} formatos `formatos_de_hoja` del catálogo
+ * @param {Object} hoja {ancho, alto}
+ * @returns {boolean}
+ */
+export function es_hoja_a5(formatos, hoja) {
+	let formato = hoja ? formato_de_hoja(formatos, hoja.ancho, hoja.alto) : null
+	return !!(formato && formato.key === KEY_HOJA_A5)
 }
 
 /**

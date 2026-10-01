@@ -10,10 +10,12 @@
 */
 import {
 	HOJA_DE_SIEMPRE,
+	MOTIVO_A5_EN_ARCA,
 	armar_estado,
 	serializar,
 	tiene_diseno,
 	ancho_util,
+	hoja_del_perfil,
 } from './estado_del_disenador'
 import { guardar_diseno, mensaje_de_error } from './api_del_disenador'
 import { avisar } from '@/components/abm/disenos-de-vender/avisos'
@@ -146,6 +148,12 @@ export default {
 				return
 			}
 
+			/* Una factura de ARCA que llegó guardada en A5 no se guarda hasta elegir otra hoja */
+			if (this.arca_no_entra_en_la_hoja) {
+				avisar(this, 'error', MOTIVO_A5_EN_ARCA + ' Elegí otra hoja para poder guardar.')
+				return
+			}
+
 			if (!this.hay_cambios) {
 				this.cerrar(true)
 				return
@@ -193,12 +201,14 @@ export default {
 			})
 		},
 		/**
-		 * Después de un PUT: copia al formulario lo que se guardó y toma lo de ahora como base.
+		 * Después de un PUT: lo que devolvió la API es la verdad (pedido de la sesión madre): la API
+		 * normaliza el diseño (recorta textos, acota tamaños, genera ids si faltan) y el encabezado.
 		 *
-		 * `page_layout` se copia del que se MANDÓ, no del que devolvió la API: solo difieren si el
-		 * formulario tiene "Es factura de ARCA" cambiado sin guardar (la API asegura los bloques
-		 * fijos con lo guardado y los saca), y así el próximo guardado del formulario lleva los
-		 * bloques donde el usuario los puso. El resto, de la respuesta, que también va al store.
+		 * - Las claves del diseño (CLAVES_DEL_DISENO) se copian al formulario desde la respuesta
+		 *   (`res.data.model`), y la respuesta va al store. Sin respuesta, lo que se mandó.
+		 * - Si el `page_layout` guardado no es el mismo que se ve, el lienzo se rearma desde él (y se
+		 *   pierde la selección); la hoja y el encabezado se vuelven a leer del perfil. Así la huella
+		 *   de "sin cambios" se toma de lo que quedó guardado de verdad.
 		 *
 		 * @param {Object} datos lo que se mandó
 		 * @param {Object|null} guardado el `model` de la respuesta
@@ -206,16 +216,11 @@ export default {
 		 */
 		aplicar_lo_guardado(datos, guardado) {
 			let self = this
+			let fuente = guardado || datos
 
 			CLAVES_DEL_DISENO.forEach(function (clave) {
-				if (clave === 'page_layout' && Object.prototype.hasOwnProperty.call(datos, clave)) {
-					self.$set(self.model, clave, datos.page_layout)
-					return
-				}
-				if (guardado && Object.prototype.hasOwnProperty.call(guardado, clave)) {
-					self.$set(self.model, clave, guardado[clave])
-				} else if (Object.prototype.hasOwnProperty.call(datos, clave)) {
-					self.$set(self.model, clave, datos[clave])
+				if (Object.prototype.hasOwnProperty.call(fuente, clave)) {
+					self.$set(self.model, clave, fuente[clave])
 				}
 			})
 
@@ -224,6 +229,20 @@ export default {
 			}
 
 			this.tenia_diseno = tiene_diseno(this.model.page_layout)
+
+			/* El lienzo desde el diseño guardado, si difiere del que se ve (con null queda el derivado) */
+			if (this.tenia_diseno) {
+				let estado = armar_estado(this.model.page_layout, this.catalogo)
+				if (JSON.stringify(serializar(estado, this.limites)) !== JSON.stringify(serializar(this.estado_de_trabajo, this.limites))) {
+					this.superior = estado.superior
+					this.pie = estado.pie
+					this.seleccion = null
+				}
+			}
+
+			this.hoja = hoja_del_perfil(this.model, this.tenia_diseno, this.limites)
+			this.armar_encabezado()
+
 			this.base_es_de_siempre = !this.tenia_diseno
 			this.restablecido = false
 			this.tomar_bases()

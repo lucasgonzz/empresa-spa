@@ -17,6 +17,8 @@ import {
 	KEY_TEXTO_LIBRE,
 	COLS_DE_CAJA_NUEVA,
 	COLS_DE_CAJA_COMPLETA,
+	KEY_HOJA_A5,
+	MOTIVO_A5_EN_ARCA,
 	ids_en_uso,
 	identidad,
 	ubicar,
@@ -378,6 +380,11 @@ export default {
 		 * @returns {void}
 		 */
 		elegir_formato(formato) {
+			/* Una factura de ARCA no va en A5 (el botón ya viene deshabilitado; esto es por las dudas) */
+			if (this.es_factura_de_arca && formato.key === KEY_HOJA_A5) {
+				avisar(this, 'warning', MOTIVO_A5_EN_ARCA)
+				return
+			}
 			this.hoja = {
 				ancho: Number(formato.ancho_mm),
 				alto: Number(formato.alto_mm),

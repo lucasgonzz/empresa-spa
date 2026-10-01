@@ -100,6 +100,30 @@
 					La hoja se ve a escala, con datos de ejemplo. En cada comprobante se imprime lo que tenga datos: una caja sin ninguno no ocupa lugar.
 				</p>
 
+				<!-- Una factura de ARCA que llegó guardada en A5: no se guarda hasta elegir otra hoja -->
+				<div
+				v-if="arca_no_entra_en_la_hoja"
+				class="disenador-pdf__aviso disenador-pdf__aviso--bloquea"
+				role="alert"
+				data-testid="disenador-pdf-aviso-a5-arca">
+					<i
+					class="bi bi-exclamation-triangle"
+					aria-hidden="true"></i>
+					<span>{{ MOTIVO_A5_EN_ARCA }} Elegí otra hoja para poder guardar.</span>
+				</div>
+
+				<!-- A5 con el pie en cada hoja (venta): vale, pero conviene saberlo -->
+				<div
+				v-if="pocos_renglones_por_hoja"
+				class="disenador-pdf__aviso"
+				role="status"
+				data-testid="disenador-pdf-aviso-a5-pie">
+					<i
+					class="bi bi-info-circle"
+					aria-hidden="true"></i>
+					<span>{{ AVISO_A5_CON_PIE_EN_CADA_HOJA }}</span>
+				</div>
+
 				<div class="disenador-pdf__area">
 					<!-- El marco de la hoja: en el teléfono la hoja se desliza de costado adentro de él -->
 					<div class="disenador-pdf__marco">
@@ -165,6 +189,9 @@ import acciones_del_disenador from './acciones_del_disenador'
 import guardado_del_disenador from './guardado_del_disenador'
 import {
 	HOJA_DE_SIEMPRE,
+	MOTIVO_A5_EN_ARCA,
+	AVISO_A5_CON_PIE_EN_CADA_HOJA,
+	es_hoja_a5,
 	es_verdadero,
 	tiene_diseno,
 	catalogo_valido,
@@ -257,6 +284,9 @@ export default {
 	},
 	data() {
 		return {
+			/* Textos de los avisos de la hoja A5 (ver estado_del_disenador.js), para el template */
+			MOTIVO_A5_EN_ARCA: MOTIVO_A5_EN_ARCA,
+			AVISO_A5_CON_PIE_EN_CADA_HOJA: AVISO_A5_CON_PIE_EN_CADA_HOJA,
 			/* id del b-modal (también scopea los estilos de los inputs, ver el <style>) */
 			id_del_modal: 'disenador-pdf',
 			/* true entre el show y el hidden del modal */
@@ -342,6 +372,42 @@ export default {
 		 */
 		es_fiscal() {
 			return !!(this.catalogo && this.catalogo.es_fiscal)
+		},
+		/**
+		 * Si el diseño es de una factura de ARCA para la regla de la hoja A5: lo que dice la API o,
+		 * en una venta, el "Es factura de ARCA" del formulario (pedido de la sesión madre, 1/10/2026).
+		 *
+		 * @returns {boolean}
+		 */
+		es_factura_de_arca() {
+			return this.es_fiscal || (this.modelo_del_perfil === 'sale' && es_verdadero(this.model.is_afip_ticket))
+		},
+		/**
+		 * Si la hoja de ahora es la A5 del catálogo.
+		 *
+		 * @returns {boolean}
+		 */
+		hoja_es_a5() {
+			return !!this.catalogo && es_hoja_a5(this.catalogo.formatos_de_hoja, this.hoja)
+		},
+		/**
+		 * Una factura de ARCA en A5: en esa hoja no entra completo el cuadro de importes, QR y CAE.
+		 * El botón de A5 queda deshabilitado (ControlesDeHoja), y si el perfil llegó guardado así se
+		 * avisa arriba del lienzo y no se guarda hasta elegir otra hoja (ver guardar()).
+		 *
+		 * @returns {boolean}
+		 */
+		arca_no_entra_en_la_hoja() {
+			return this.es_factura_de_arca && this.hoja_es_a5
+		},
+		/**
+		 * Una venta en A5 con "Mostrar pie de página en cada hoja": vale, pero entran pocos renglones
+		 * por hoja. Solo un aviso suave.
+		 *
+		 * @returns {boolean}
+		 */
+		pocos_renglones_por_hoja() {
+			return this.hoja_es_a5 && this.modelo_del_perfil === 'sale' && es_verdadero(this.model.show_totals_on_each_page)
 		},
 		/**
 		 * Límites del catálogo (constantes de DisenoDePaginaPdf).
@@ -1013,6 +1079,31 @@ export default {
 		margin: 0 0 14px
 		color: var(--color-text-secondary)
 		font-size: 0.75rem
+
+	// Avisos arriba del lienzo: el mismo dibujo que el de "falta un buscador" del editor de Vender
+	.disenador-pdf__aviso
+		display: flex
+		align-items: center
+		gap: 10px
+		margin-bottom: 14px
+		padding: 10px 14px
+		border: 1px solid var(--color-border)
+		border-radius: 10px
+		background: var(--bg-card)
+		color: var(--color-text-primary)
+		font-size: 0.82rem
+
+		i
+			flex: 0 0 auto
+			color: var(--color-primary)
+			font-size: 1rem
+
+	// El que no deja guardar: borde e ícono de advertencia
+	.disenador-pdf__aviso--bloquea
+		border-color: var(--color-text-warning-strong, var(--warning))
+
+		i
+			color: var(--color-text-warning-strong, var(--warning))
 
 	// Hoja + panel y bandeja. El lateral va a la derecha desde 992px (lg); más angosto, debajo.
 	.disenador-pdf__area
