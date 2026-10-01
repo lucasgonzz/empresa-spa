@@ -206,7 +206,7 @@
 							v-else
 							type="button"
 							class="dpdf-bandeja__agregar dpdf-no-arrastra"
-							title="Agregarlo a la caja seleccionada"
+							:title="titulo_de_agregar(definicion)"
 							:aria-label="'Agregar ' + definicion.nombre + ' a la hoja'"
 							:data-testid="'disenador-pdf-agregar-' + definicion.key"
 							@click="disenador.agregar_campo(definicion)">
@@ -465,6 +465,19 @@ export default {
 		 */
 		titulo_del_campo(definicion) {
 			return definicion.nombre + (definicion.aparece_cuando ? '. ' + definicion.aparece_cuando : '')
+		},
+		/**
+		 * El title de "Agregar": a dónde va a ir el campo (la regla de agregar_campo del diseñador).
+		 *
+		 * @param {Object} definicion
+		 * @returns {string}
+		 */
+		titulo_de_agregar(definicion) {
+			let seleccion = this.disenador.seleccion_actual
+			if (seleccion && (seleccion.tipo === 'caja' || seleccion.tipo === 'campo')) {
+				return 'Agregarlo a la caja seleccionada'
+			}
+			return definicion.zona_sugerida === 'pie' ? 'Agregarlo a la última caja del pie' : 'Agregarlo a la última caja de arriba de la tabla'
 		},
 		/**
 		 * Lo que vuedraggable inserta en una caja al soltar un campo de la bandeja: un campo nuevo

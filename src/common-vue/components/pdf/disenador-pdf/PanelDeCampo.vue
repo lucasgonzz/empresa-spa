@@ -263,7 +263,11 @@ export default {
 			if (this.campo.etiqueta === '') {
 				return 'Sin rótulo'
 			}
-			return this.rotulo_del_catalogo ? this.rotulo_del_catalogo : 'Sin rótulo: el renglón ya dice lo que es'
+			if (this.rotulo_del_catalogo) {
+				return this.rotulo_del_catalogo
+			}
+			/* Sin rótulo de catálogo: el texto libre, o un renglón que ya dice lo que es (descuentos...) */
+			return this.es_texto_libre ? 'Sin rótulo (podés ponerle uno)' : 'Sin rótulo: el renglón ya dice lo que es'
 		},
 		/**
 		 * Estilo efectivo del campo.

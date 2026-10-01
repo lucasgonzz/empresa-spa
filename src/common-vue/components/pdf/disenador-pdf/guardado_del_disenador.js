@@ -97,7 +97,11 @@ export default {
 			if (hoja) {
 				let util = ancho_util({ ancho: hoja.ancho, margen: hoja.margen })
 				if (this.suma_de_columnas_mm > util) {
-					avisar(this, 'error', 'Las columnas de la tabla suman ' + this.suma_de_columnas_mm + ' mm y en esta hoja entran ' + util + ' mm. Achicá columnas en "Columnas del PDF", o elegí una hoja más ancha o menos margen.')
+					/* Volviendo al diseño de siempre la hoja es fija (A4): solo queda achicar columnas */
+					let que_hacer = datos.page_layout === null
+						? 'Achicá columnas en "Columnas del PDF" antes de volver al diseño de siempre (A4 con 5 mm de margen).'
+						: 'Achicá columnas en "Columnas del PDF", o elegí una hoja más ancha o menos margen.'
+					avisar(this, 'error', 'Las columnas de la tabla suman ' + this.suma_de_columnas_mm + ' mm y en esta hoja entran ' + util + ' mm. ' + que_hacer)
 					return null
 				}
 				datos.paper_width_mm = hoja.ancho
