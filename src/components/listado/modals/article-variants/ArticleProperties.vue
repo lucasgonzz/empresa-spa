@@ -299,6 +299,9 @@ export default {
 			})
 			.then(res => {
 				this.$store.commit('article_variant/setModels', res.data.models)
+				// La fila del listado comparte el articulo con el store: se la deja al dia para que, al
+				// cerrar y volver a abrir el modal, no cargue las variantes de antes de este cambio.
+				this.$set(this.article, 'article_variants', res.data.models)
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
 			})
