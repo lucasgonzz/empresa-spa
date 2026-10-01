@@ -31,47 +31,55 @@ export default {
 			type: 'checkbox',
 			show_when_model_name: 'sale',
 		},
+		/*
+			Misión diseno-pdf-configurable (1/10/2026): comisiones, costos, total, sub total,
+			observaciones del cliente, la hoja, el margen, el logo y el texto del pie de venta,
+			presupuesto y pedido online pasan a decidirse en el diseñador de PDF ("Diseñar PDF", con
+			cajas y campos). Acá dejan de mostrarse para esos modelos: `show_when_model_name: []` (lista
+			vacía) = no se muestra para ninguno. Las propiedades siguen declaradas porque viajan en el
+			payload del formulario (getModelToSend arma el envío desde `model`) y con su `value` de
+			siempre: un perfil nuevo nace con los defaults de hoy y su PDF de siempre sale igual (y
+			el diseño derivado que muestra el diseñador también los usa).
+		*/
 		{
 			text: 'Mostrar comisiones',
 			key: 'show_comissions',
 			type: 'checkbox',
 			value: 0,
-			show_when_model_name: 'sale',
+			show_when_model_name: [],
 		},
 		{
 			text: 'Mostrar total costos',
 			key: 'show_total_costs',
 			type: 'checkbox',
 			value: 0,
-			show_when_model_name: 'sale',
+			show_when_model_name: [],
 		},
 		{
 			/**
-			 * Flag para controlar visibilidad del total general en el pie del PDF.
-			 * Aplica a venta, presupuesto y pedido online (`show_when_model_name` acepta un string o
-			 * una lista de model_name). En el presupuesto, apagarlo es justamente lo que da el diseño
-			 * "Presupuesto sin precios": no se imprime ningún renglón de totales.
+			 * Flag para controlar visibilidad del total general en el pie del PDF de siempre.
+			 * Aplica a venta, presupuesto y pedido online. En el presupuesto, apagarlo es justamente
+			 * lo que da el diseño "Presupuesto sin precios": no se imprime ningún renglón de totales.
+			 * Desde el diseñador de PDF se decide con la caja de totales (no se muestra acá).
 			 */
 			text: 'Mostrar total en el pie',
 			key: 'show_total_in_footer',
 			type: 'checkbox',
 			value: 1,
-			show_when_model_name: ['sale', 'budget', 'order'],
+			show_when_model_name: [],
 		},
 		{
 			/**
-			 * Muestra la línea "Sub Total" en el pie del PDF (flag del backend, prompt 417).
-			 * Solo tiene efecto cuando el comprobante tiene descuentos o recargos: si no los tiene,
-			 * el Sub Total es igual al Total y no se imprime. Default 1 = comportamiento legacy.
-			 * Aplica a venta y presupuesto. NO al pedido online: su pie no tiene esa línea (el total
-			 * del pedido no incluye envío, cupón ni medio de pago, así que rotula "Subtotal"/"Total"
-			 * según haya o no esos extras) y el checkbox no haría nada.
+			 * Muestra la línea "Sub Total" en el pie del PDF de siempre (flag del backend, prompt
+			 * 417). Solo tiene efecto cuando el comprobante tiene descuentos o recargos. Default 1 =
+			 * comportamiento legacy. Desde el diseñador de PDF es el campo "Sub total" de la caja de
+			 * totales (no se muestra acá).
 			 */
 			text: 'Mostrar Sub Total en el pie',
 			key: 'show_subtotal_in_footer',
 			type: 'checkbox',
 			value: 1,
-			show_when_model_name: ['sale', 'budget'],
+			show_when_model_name: [],
 		},
 		{
 			/**
@@ -117,18 +125,17 @@ export default {
 		{
 			/**
 			 * Controla si las observaciones del cliente (campo "Observaciones" del cliente)
-			 * se imprimen en el PDF de venta. Default 1 = comportamiento legacy (se imprimían
-			 * siempre que el cliente tuviera observaciones cargadas).
-			 * Aplica a venta y presupuesto. NO al pedido online: el comprador de la tienda no tiene
-			 * observaciones (el PDF del pedido nunca las imprime). En los diseños de presupuesto
+			 * se imprimen en el PDF de siempre. Default 1 = comportamiento legacy (se imprimían
+			 * siempre que el cliente tuviera observaciones cargadas). En los diseños de presupuesto
 			 * sembrados nace apagada: es una nota que muchos dueños usan como interna y el PDF le llega
-			 * al cliente.
+			 * al cliente. Desde el diseñador de PDF es el campo "Observaciones del cliente" (no se
+			 * muestra acá).
 			 */
 			text: 'Mostrar observaciones del cliente',
 			key: 'show_client_description',
 			type: 'checkbox',
 			value: 1,
-			show_when_model_name: ['sale', 'budget'],
+			show_when_model_name: [],
 		},
 		{
 			text: 'Opciones de columnas',
@@ -233,51 +240,54 @@ export default {
 		},
 		{
 			/**
-			 * Ancho físico de la hoja. A4 portrait artículos/ventas: 210 mm.
+			 * Ancho físico de la hoja. A4 portrait artículos: 210 mm.
 			 *
-			 * No se muestra para presupuesto ni pedido online: su PDF es SIEMPRE una hoja A4 vertical
-			 * con 200 mm útiles (no lee el ancho, el margen ni el tipo de hoja del diseño), así que
-			 * editarlos no cambiaría el PDF y solo dejaría sumar columnas de más, que se saldrían de
-			 * la hoja. El valor igual viaja en el payload (la API lo exige): un diseño nuevo de esos
-			 * modelos arranca en 210/210/5 (ver `apply_article_a4_defaults()` del editor).
+			 * Solo se muestra para artículo. Venta, presupuesto y pedido online eligen la hoja en el
+			 * diseñador de PDF (A4, Carta, Oficio o A5): su PDF de siempre es una hoja A4 vertical con
+			 * 200 mm útiles, y el diseño con cajas usa la hoja que se elige ahí. El valor igual viaja
+			 * en el payload (la API lo exige): un diseño nuevo de presupuesto o pedido arranca en
+			 * 210/210/5 (ver `apply_article_a4_defaults()` del editor).
 			 */
 			text: 'Ancho hoja (mm)',
 			key: 'paper_width_mm',
 			type: 'number',
 			value: 297,
-			show_when_model_name: ['sale', 'article'],
+			show_when_model_name: ['article'],
 		},
 		{
 			/**
 			 * Ancho útil de la hoja antes de márgenes laterales (A4: 210 mm).
-			 * El espacio para columnas = imprimible − (margen × 2).
+			 * El espacio para columnas = imprimible − (margen × 2). Solo artículo (ver arriba); el
+			 * diseñador de PDF lo guarda igual al ancho de la hoja.
 			 */
 			text: 'Ancho imprimible (mm)',
 			key: 'printable_width_mm',
 			type: 'number',
 			value: 277,
-			show_when_model_name: ['sale', 'article'],
+			show_when_model_name: ['article'],
 		},
 		{
 			/**
 			 * Margen izquierdo y derecho por separado (A4 típico: 5 mm → 200 mm para columnas).
+			 * Solo artículo; en el diseñador de PDF es el margen de la hoja (los cuatro lados).
 			 */
 			text: 'Margen por lado (mm)',
 			key: 'margin_mm',
 			type: 'number',
 			value: 5,
-			show_when_model_name: ['sale', 'article'],
+			show_when_model_name: ['article'],
 		},
 		{
 			/**
 			 * Tamaño del logo en mm para el header de este comprobante (remito, factura, presupuesto
-			 * o pedido online).
-			 * Vacío = usar el tamaño global configurado en el dueño (fallback en el backend).
+			 * o pedido online). Vacío = usar el tamaño global configurado en el dueño (fallback en el
+			 * backend). Se cambia en el encabezado del diseñador de PDF, tirando de la manija del
+			 * logo (no se muestra acá).
 			 */
 			text: 'Tamaño del logo en mm (vacío = usar el global del dueño)',
 			key: 'logo_size_mm',
 			type: 'number',
-			show_when_model_name: ['sale', 'budget', 'order'],
+			show_when_model_name: [],
 		},
 		{
 			text: 'Columnas del PDF',
@@ -306,10 +316,17 @@ export default {
 			crop_aspect_ratio: 4/1,
 		},
 		{
+			/**
+			 * Texto libre del pie. Solo se muestra para artículo: en venta, presupuesto y pedido
+			 * online el texto del pie es el campo "Texto libre" del diseñador de PDF (que se pone las
+			 * veces que se quiera). El de un perfil de siempre se sigue imprimiendo igual, y el
+			 * diseñador lo muestra como un texto libre en el pie.
+			 */
 			text: 'Pie de página',
 			key: 'footer_text',
 			type: 'textarea',
 			value: '',
+			show_when_model_name: ['article'],
 		},
 		{
 			/**
@@ -345,12 +362,39 @@ export default {
 			not_show: true,
 			not_show_on_form: true,
 		},
+		{
+			/**
+			 * Diseño de la hoja armado con cajas (misión diseno-pdf-configurable, 1/10/2026): las cajas
+			 * de arriba de la tabla y del pie, en el JSON de DisenoDePaginaPdf (empresa-api). Null =
+			 * el PDF de siempre. No tiene input en este form: lo arma el diseñador de PDF
+			 * (common-vue/components/pdf/disenador-pdf/). Se declara para que getModelToSend() lo
+			 * incluya al crear/actualizar el perfil y no se pierda en el round-trip.
+			 */
+			text: 'Diseño de la hoja',
+			key: 'page_layout',
+			type: 'text',
+			value: null,
+			not_show: true,
+			not_show_on_form: true,
+		},
+		{
+			/**
+			 * Alto de la hoja en mm (null = 297, A4). Lo elige el diseñador de PDF junto con el ancho
+			 * (A4, Carta, Oficio o A5) y solo lo usa el PDF con cajas. Oculta, como page_layout.
+			 */
+			text: 'Alto de la hoja (mm)',
+			key: 'paper_height_mm',
+			type: 'number',
+			value: null,
+			not_show: true,
+			not_show_on_form: true,
+		},
 	],
 	abm_descripcion: {
-		para_que_sirve: 'Define perfiles de diseño para los PDFs del sistema: comprobantes de venta, presupuestos, pedidos online y listados de artículos.',
-		implicancias: 'Cada perfil controla qué columnas se imprimen, en qué orden y con qué ancho, y en los comprobantes de venta, los presupuestos y los pedidos online también el encabezado (logo y datos del negocio y del cliente) y el pie de página: totales, subtotal y fecha. La venta suma además comisiones y el detalle de descuentos. El perfil elegido al imprimir determina cómo sale el documento. Cada dueño ya tiene armados los diseños "Presupuesto", "Presupuesto sin precios", "Presupuesto con imágenes" y "Pedido online": podés modificarlos o duplicarlos.',
-		como_se_utiliza: 'Creá el perfil eligiendo el modelo (venta, presupuesto, pedido online o artículo), configurá las columnas y las opciones del pie, y seleccioná el perfil al imprimir: en un presupuesto o en un pedido online, el botón Imprimir lista los diseños disponibles y el marcado como por defecto va primero. Podés duplicar un perfil existente con el botón de duplicar para hacer variantes rápido. En venta, presupuesto y pedido online, el botón Diseñar header permite ubicar el logo y los datos del negocio y del cliente. En las plantillas de artículo, el botón Diseñar encabezado permite ubicar el logo, el nombre y los datos del negocio y elegir si salen en todas las hojas o solo en la primera.',
-		palabras_clave: ['comprobante', 'columnas', 'diseño', 'impresion', 'remito', 'presupuesto', 'pedido online', 'pedido', 'pdf', 'sin precios', 'con imagenes'],
+		para_que_sirve: 'Define perfiles de diseño para los PDFs del sistema: comprobantes de venta (remito y factura de ARCA), presupuestos, pedidos online y listados de artículos.',
+		implicancias: 'Cada perfil controla qué columnas tiene la tabla, en qué orden y con qué ancho. En los comprobantes de venta, los presupuestos y los pedidos online, el botón Diseñar PDF arma la hoja entera: el encabezado con el logo y los datos del negocio, cajas arriba de la tabla con los datos que quieras (del cliente, de la venta, de la cuenta corriente: saldo anterior, compra actual y saldo), y el pie con totales, subtotal, descuentos, comisiones o un texto propio; además la hoja (A4, Carta, Oficio o A5) y el margen. Los diseños que nunca se abrieron en el diseñador siguen imprimiendo como siempre. En una factura de ARCA, los datos del cliente que pide ARCA y el cuadro de importes con el QR y el CAE se pueden mover pero no sacar. El perfil elegido al imprimir determina cómo sale el documento. Cada dueño ya tiene armados los diseños "Presupuesto", "Presupuesto sin precios", "Presupuesto con imágenes" y "Pedido online": podés modificarlos o duplicarlos.',
+		como_se_utiliza: 'Creá el perfil eligiendo el modelo (venta, presupuesto, pedido online o artículo), elegí las columnas en Columnas del PDF y tocá Diseñar PDF: arrastrá cajas a la zona de arriba de la tabla o al pie, y adentro los campos de la bandeja (organizados por cliente, venta, cuenta corriente, totales y otros); tirá del borde de una caja para cambiarle el ancho, y tocá una caja o un campo para ponerle título, estilo, tamaño de letra, negrita, cursiva o alineación. Con Ver un PDF de prueba ves cómo sale con tu último comprobante, y Volver al diseño de siempre deshace el diseño con cajas. Seleccioná el perfil al imprimir: en un presupuesto o en un pedido online, el botón Imprimir lista los diseños disponibles y el marcado como por defecto va primero. Podés duplicar un perfil existente con el botón de duplicar para hacer variantes rápido. En las plantillas de artículo, el botón Diseñar encabezado permite ubicar el logo, el nombre y los datos del negocio y elegir si salen en todas las hojas o solo en la primera.',
+		palabras_clave: ['comprobante', 'columnas', 'diseño', 'impresion', 'remito', 'factura', 'presupuesto', 'pedido online', 'pedido', 'pdf', 'sin precios', 'con imagenes', 'diseñar pdf', 'cajas', 'arrastrar', 'pie de pagina', 'encabezado', 'hoja', 'margen', 'a4', 'a5', 'carta', 'oficio', 'cuenta corriente', 'saldo anterior'],
 	},
 	/**
 	 * Sin esto, model/Index.vue le pasa al formulario una COPIA no reactiva del modelo
