@@ -55,18 +55,31 @@ export function rangoDeAtajo(clave) {
 
 /**
  * Parámetros que se piden a la API para un período del store. `minimo` solo viaja en el por defecto.
+ *
+ * El por defecto NO manda `hasta`: un pago cargado con fecha posterior a hoy tiene que seguir
+ * apareciendo en la lista, como antes de que existiera el período.
+ *
+ * Los atajos se recalculan en cada pedido y no usan las fechas guardadas al hacer clic: con el modal
+ * abierto pasada la medianoche, un `getModels` posterior pediría un `hasta` de ayer. Solo el
+ * personalizado respeta las fechas que el usuario eligió.
  */
 export function paramsDePeriodo(periodo) {
 	if (periodo.modo == 'defecto') {
-		let rango = rangoDeAtajo('defecto')
-		return { desde: rango.desde, hasta: rango.hasta, minimo: MINIMO_POR_DEFECTO }
+		return { desde: rangoDeAtajo('defecto').desde, minimo: MINIMO_POR_DEFECTO }
 	}
-	let params = { desde: periodo.desde }
-	if (periodo.hasta) {
-		params.hasta = periodo.hasta
+	let rango = periodo.modo == 'atajo' ? rangoDeAtajo(periodo.clave) : periodo
+	let params = { desde: rango.desde }
+	if (rango.hasta) {
+		params.hasta = rango.hasta
 	}
 	return params
 }
+
+// Contador de pedidos de getModels a nivel de módulo (no de estado: no hace falta que sea
+// reactivo). Gana la última respuesta PEDIDA, no la última en llegar: si se elige "Todo el
+// historial" y enseguida "Este mes", o se cambia de cuenta rápido, la respuesta lenta del primer
+// pedido no puede pisar a la del segundo.
+let ultimo_pedido = 0
 
 function periodoPorDefecto() {
 	return { modo: 'defecto', clave: 'defecto', desde: null, hasta: null }
@@ -176,6 +189,10 @@ export default {
 		},
 		set_periodo(state, value) {
 			state.periodo = value
+			// El período efectivo anterior ya no corresponde. Es seguro limpiarlo porque quien cambia
+			// el período recarga en el mismo tick (getModels pone loading en true antes del render),
+			// y mientras carga el texto muestra lo pedido, no "Últimos 10 movimientos".
+			state.periodo_efectivo = null
 		},
 		set_periodo_efectivo(state, value) {
 			state.periodo_efectivo = value
@@ -256,6 +273,7 @@ export default {
 	actions: {
 		getModels({ commit, state }) {
 			commit('setLoading', true)
+			let pedido = ++ultimo_pedido
 			// return axios.get(`/api/${generals.methods.routeString(state.model_name)}/${state.from_model_name}/${state.from_model.id}/${state.months_ago}`)
 			// La ruta no cambia: el segmento de cantidad queda en 10 y es el que usa una API vieja,
 			// que ignora los params de fecha.
@@ -263,12 +281,18 @@ export default {
 				params: paramsDePeriodo(state.periodo),
 			})
 			.then(res => {
+				if (pedido != ultimo_pedido) {
+					return
+				}
 				commit('setLoading', false)
 				commit('set_periodo_efectivo', res.data.periodo ? res.data.periodo : null)
 				commit('setModels', res.data.models)
 				commit('setToShow')
 			})
 			.catch(err => {
+				if (pedido != ultimo_pedido) {
+					return
+				}
 				commit('setLoading', false)
 				console.log(err)
 			})
