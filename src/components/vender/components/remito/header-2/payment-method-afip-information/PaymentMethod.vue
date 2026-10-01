@@ -209,13 +209,13 @@ export default {
 				return true
 			}
 			if (
-				this.client
+				this.client 
 				&& (
 					!this.omitir_en_cuenta_corriente
 					|| this.budget
 				)
 			) {
-				return true
+				return true 
 			}
 			return false
 		},

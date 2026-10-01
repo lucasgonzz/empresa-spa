@@ -6,9 +6,9 @@ class="cont-payment-methods m-t-5 m-b-15"
 prepend="Cuotas">
 	<!-- En un presupuesto las cuotas se eligen en cada fila del reparto del cartel de guardar, no aca -->
 	<b-form-select
-	v-model="cuota_id"
+	v-model="cuota_id" 
 	:disabled="en_modo_presupuesto"
-	:options="cuotas_options"></b-form-select>
+	:options="cuotas_options"></b-form-select> 
 </b-input-group>
 
 </template>
