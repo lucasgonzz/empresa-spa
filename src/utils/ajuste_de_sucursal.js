@@ -45,7 +45,7 @@ export const RECARGO_MAXIMO = 999.99
  * ("-5%") se confunde con un guion de separacion al lado del nombre de la sucursal.
  * Va escapado para que ningun editor ni codificacion de archivo lo convierta.
  */
-const SIGNO_MENOS = '−'
+const SIGNO_MENOS = '\u2212'
 
 /**
  * El ajuste de precios de una sucursal, ya interpretado, o null si no tiene ninguno valido.
