@@ -1498,6 +1498,13 @@ export default {
 .img-det-fila--revisar
 	flex-wrap: wrap
 
+// Escritorio y tablet: con la fila en wrap, el cuerpo parte de 0 y crece (si no, un nombre largo
+// compara su ancho "ideal" contra la línea y manda las acciones a un renglón aparte). En teléfono
+// manda el piso de 160px de más abajo, que es lo que baja el cuerpo debajo de la miniatura.
+@media (min-width: 576px)
+	.img-det-fila--revisar .img-det-fila__cuerpo
+		flex-basis: 0
+
 .img-det-otras
 	flex: 0 0 100%
 	display: flex
