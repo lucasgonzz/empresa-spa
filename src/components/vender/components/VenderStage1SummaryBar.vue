@@ -310,7 +310,7 @@ export default {
 		&--descuento
 			color: var(--color-text-success-strong, #0b6b37)
 			background: rgba(0, 166, 80, 0.12)
-			border-color: var(--color-text-success-strong, #00a650)
+			border-color: var(--color-text-success-strong, #0b6b37)
 
 	/* Botón de edición (lápiz) */
 	&__chip-edit
