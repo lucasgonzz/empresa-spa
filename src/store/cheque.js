@@ -1,11 +1,115 @@
+import Vue from 'vue'
 import __base_store from '@/store/__base_store'
 
 /**
  * Store de cheques (modelo `cheque`) construido desde el factory común.
+ *
+ * Misión cheques-solapa-endosados (2/10/2026): se agregan tres piezas propias que el factory no
+ * trae, todas para que un filtro u orden de columna se aplique SOBRE la solapa en la que está
+ * parado el usuario (Recibido / Emitido / Endosado + su estado) y no sobre todos los cheques:
+ *
+ *   - mutación `limpiar_orden_de_columnas`: apaga la flecha de orden de todas las columnas.
+ *   - acción `reiniciar_busqueda_de_columnas`: deja la búsqueda en cero (criterios, orden y
+ *     resultados), para "Limpiar filtros" y para cuando se cambia de solapa.
+ *   - acción `restringir_a_ids`: escribe en `extra_filters_de_barra` el filtro `in` con los ids
+ *     de la solapa, que `runGlobalSearch` agrega a CADA request.
+ *
+ * El módulo que las usa es components/cheques/Index.vue (ver ahí cómo se orquestan).
  */
 export default __base_store({
 	state: {
 		model_name: 'cheque',
 	},
-})
+	mutations: {
+		/**
+		 * Apaga el orden de TODAS las columnas (deja `ordenar_de` en null), sin tocar los
+		 * criterios de valor ni sacar ningún filtro del array.
+		 *
+		 * Es la pieza que le faltaba a `limpiar_criterios_de_columna` del factory, que por
+		 * diseño NO toca el orden ("ordenar no es filtrar", ver su documentación). Acá sí hace
+		 * falta: al limpiar la búsqueda o cambiar de solapa la flecha de orden no puede quedar
+		 * prendida, porque el próximo filtro reenviaría ese orden viejo en silencio.
+		 *
+		 * 🔴 Va con `Vue.set` y no con `filter.ordenar_de = null`, por precaución.
+		 * `build_table_filters_from_props` (common-vue/mixins/generals.js) NO declara
+		 * `ordenar_de` al construir los filtros: la propiedad nace recién cuando el usuario
+		 * ordena (Ordenar.vue) y, según cómo haya llegado el filtro al array, puede existir
+		 * como propiedad reactiva o no existir. Una asignación directa solo notifica en el
+		 * primer caso; `Vue.set` cubre los dos (la define reactiva si faltaba y, si ya
+		 * existía, es una asignación común) y deja la flecha de la columna apagándose siempre.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @returns {void}
+		 */
+		limpiar_orden_de_columnas(state) {
+			state.filters.forEach(filter => {
+				Vue.set(filter, 'ordenar_de', null)
+			})
+		},
+	},
+	actions: {
+		/**
+		 * Deja la búsqueda de columnas en cero: sin criterios de valor, sin orden y sin
+		 * resultados. La tabla vuelve a mostrar la lista de la solapa tal cual viene de
+		 * GET cheque.
+		 *
+		 * La usan "Limpiar filtros" (NavFiltrados.vue) y el cambio de solapa o de módulo
+		 * (components/cheques/Index.vue, views/Cheques.vue).
+		 *
+		 * 🔴 NO toca `extra_filters_de_barra`. Ese filtro es la restricción a los ids de la
+		 * solapa y lo mantiene sincronizado components/cheques/Index.vue: sacarlo acá dejaría
+		 * al próximo orden o filtro de columna buscando en TODOS los cheques, que es justo el
+		 * defecto que esta misión arregla.
+		 *
+		 * 🔴 Incrementa `consulta_vigente_token` (la guarda de carrera del factory, que no se
+		 * modifica) antes de limpiar. Sin eso, una búsqueda que ya salió hacia la API cuando el
+		 * usuario cambió de solapa o apretó "Limpiar filtros" llega después y vuelve a poner
+		 * `is_filtered = true` con resultados de la solapa anterior. El incremento hace que esa
+		 * respuesta se descarte al llegar. Es lo mismo que hace `getModels` del factory.
+		 *
+		 * @param {Object} context commit
+		 * @returns {void}
+		 */
+		reiniciar_busqueda_de_columnas({commit}) {
+			// Cualquier búsqueda en vuelo deja de ser la intención vigente.
+			commit('incrementar_consulta_vigente_token')
 
+			// Criterios de valor y orden de todas las columnas (en el lugar, sin sacar filtros:
+			// si no, se caería el resaltado de las lupas y se reconstruirían las plantillas).
+			commit('limpiar_criterios_de_columna')
+			commit('limpiar_orden_de_columnas')
+
+			// Resultados y paginación de la búsqueda: la tabla vuelve a la lista de la solapa.
+			commit('setIsFiltered', false)
+			commit('setFiltered', [])
+			commit('setFilterPage', 1)
+			commit('setTotalFilterPages', null)
+			commit('setTotalFilterResults', 0)
+		},
+		/**
+		 * Restringe toda búsqueda de columna a una lista de ids, escribiendo el filtro extra
+		 * `{ key: 'id', operator: 'in', value: ids }` en `extra_filters_de_barra`.
+		 *
+		 * `runGlobalSearch` (factory) lee ese state en cada request y lo suma a los
+		 * `extra_filters` que manda a `POST global-search/cheque`, así que un filtro o un orden
+		 * de columna se aplica solo sobre esos cheques. El operador `in` lo resuelve
+		 * `ExtraFiltersHelper` de empresa-api: con una lista vacía devuelve 0 filas (una solapa
+		 * vacía filtrada muestra la tabla vacía, no todos los cheques).
+		 *
+		 * Reemplaza y no acumula: la solapa es la única fuente de verdad de esta restricción.
+		 *
+		 * @param {Object} context commit
+		 * @param {Object} payload
+		 * @param {Array<Number>} payload.ids Ids de los cheques de la solapa vigente. Cualquier
+		 *   cosa que no sea un array se toma como lista vacía.
+		 * @returns {void}
+		 */
+		restringir_a_ids({commit}, payload) {
+			/** Ids a los que se acota la búsqueda (copia, para no compartir el array del que llama). */
+			let ids = (payload && Array.isArray(payload.ids)) ? payload.ids.slice() : []
+			commit('set_extra_filters_de_barra', [
+				{key: 'id', operator: 'in', value: ids},
+			])
+		},
+	},
+})
