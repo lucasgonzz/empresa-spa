@@ -126,7 +126,7 @@ export default {
 			let es_recargo = this.ajuste_vigente.tipo == AJUSTE_RECARGO
 			let accion = es_recargo ? 'se suma al' : 'se resta del'
 			let nombre = es_recargo ? 'este recargo' : 'este descuento'
-			let texto = 'Los precios de los artículos de esta venta ya llevan ' + nombre + ': no ' + accion + ' total. Los servicios y los precios que escribas a mano no se modifican.'
+			let texto = 'Los precios de los artículos de esta venta ya llevan ' + nombre + ': no ' + accion + ' total. Los servicios y los precios fijados a mano, por una oferta de precio fijo o por la balanza no se modifican.'
 
 			/*
 				Un comprobante guardado es una foto: sus renglones (getPriceVender, rama del pivot) no se

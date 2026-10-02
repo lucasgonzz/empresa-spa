@@ -122,7 +122,7 @@ export default {
 			options: [],
 			dynamic_options_function: 'get_address_ajuste_precio_options',
 			descriptions: [
-				'Si cargás un recargo o un descuento, cuando elijas esta sucursal en Vender los precios de los artículos, combos y promociones ya lo llevan adentro. No se suma ni se resta al total de la venta. Los servicios y los precios que escribas a mano no se modifican.',
+				'Si cargás un recargo o un descuento, cuando elijas esta sucursal en Vender los precios de los artículos, combos y promociones ya lo llevan adentro. No se suma ni se resta al total de la venta. Los servicios y los precios fijados a mano, por una oferta de precio fijo o por la balanza no se modifican.',
 				'Las ventas y presupuestos que ya están guardados no cambian.',
 			],
 		},
