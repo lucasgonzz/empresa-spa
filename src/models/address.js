@@ -98,8 +98,16 @@ export default {
 			 * arma dynamic_options_function, y "Sin ajuste" va con value null: asi el ABM manda
 			 * null y la API borra las dos columnas.
 			 *
-			 * Al elegir "Sin ajuste", on_change vacia el porcentaje: el campo se oculta y no
-			 * puede viajar un porcentaje suelto sin tipo (la API exige las dos o ninguna).
+			 * 🔴 NO hay on_change ni v_if_function que oculten o vacien el porcentaje al elegir "Sin
+			 * ajuste". Se probo asi y no anda: el modelo address no declara full_reactivity, asi que
+			 * el formulario recibe una copia plana ({...model}) y el $set sobre ella no avisa a un
+			 * v_if_function que lee otra clave: el campo del porcentaje no aparecia al elegir un
+			 * tipo (misma trampa que descuento_tipo de combo.js y article_price_range.js). Tampoco
+			 * se activa full_reactivity: el formulario editaria la fila del store por referencia, y
+			 * cerrar el modal sin guardar dejaria en address.models un ajuste sin guardar que
+			 * Vender aplicaria a los precios. El porcentaje se ve SIEMPRE, y la API (que exige las
+			 * dos columnas o ninguna) responde 422 con un mensaje claro si queda un porcentaje con
+			 * "Sin ajuste" o un tipo sin porcentaje.
 			 *
 			 * 🔴 value_function: sin ella, al crear una sucursal NUEVA el motor le pone 0 a todo select
 			 * sin `value` (common-vue/mixins/display.js::getSelectAndCheckboxProps; un `value: null`
@@ -113,7 +121,6 @@ export default {
 			value_function: 'address_ajuste_precio_tipo_inicial',
 			options: [],
 			dynamic_options_function: 'get_address_ajuste_precio_options',
-			on_change: 'address_ajuste_precio_tipo_on_change',
 			descriptions: [
 				'Si cargás un recargo o un descuento, cuando elijas esta sucursal en Vender los precios de los artículos, combos y promociones ya lo llevan adentro. No se suma ni se resta al total de la venta. Los servicios y los precios que escribas a mano no se modifican.',
 				'Las ventas y presupuestos que ya están guardados no cambian.',
@@ -121,17 +128,19 @@ export default {
 		},
 		{
 			/**
-			 * Porcentaje del ajuste de arriba (addresses.ajuste_precio_porcentaje). Solo se ve
-			 * con un recargo o un descuento elegido. La API lo devuelve como string decimal
-			 * ("10.00") y acepta coma o punto al guardar (el ABM ya convierte la coma).
+			 * Porcentaje del ajuste de arriba (addresses.ajuste_precio_porcentaje). Se ve siempre, con
+			 * o sin tipo elegido (ver el porque en el comentario de "Ajuste de precios"): con "Sin
+			 * ajuste" hay que dejarlo vacio, y si no la API responde con un 422 que el ABM muestra
+			 * en el aviso del modal. La API lo devuelve como string decimal ("10.00") y acepta coma
+			 * o punto al guardar (el ABM ya convierte la coma).
 			 */
 			text: 'Porcentaje del ajuste',
 			key: 'ajuste_precio_porcentaje',
 			type: 'number',
 			value: null,
-			v_if_function: 'address_tiene_ajuste_de_precios_v_if_function',
 			descriptions: [
 				'Porcentaje que se aplica sobre el precio de cada artículo, combo y promoción cuando se vende desde esta sucursal. Por ejemplo, con 10: un artículo de $1.000 se vende a $1.100 si es un recargo, o a $900 si es un descuento.',
+				'Dejalo vacío si elegís "Sin ajuste".',
 			],
 		},
 		{

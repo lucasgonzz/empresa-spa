@@ -1520,43 +1520,6 @@ export default {
         address_ajuste_precio_tipo_inicial() {
             return null
         },
-        /**
-         * v_if_function del campo "Porcentaje del ajuste" de la sucursal: el porcentaje solo se
-         * muestra cuando hay un recargo o un descuento elegido. Sin tipo no hay nada que ajustar.
-         *
-         * @param {Object} prop Definicion del campo (no se usa).
-         * @param {Object} model Sucursal que se esta editando.
-         * @returns {Boolean}
-         */
-        address_tiene_ajuste_de_precios_v_if_function(prop, model) {
-            return !!model
-                && (model.ajuste_precio_tipo === AJUSTE_RECARGO || model.ajuste_precio_tipo === AJUSTE_DESCUENTO)
-        },
-        /**
-         * on_change del select "Ajuste de precios" de la sucursal: al volver a "Sin ajuste" se
-         * vacia el porcentaje.
-         *
-         * 🔴 Es necesario porque el porcentaje se oculta (address_tiene_ajuste_de_precios_v_if_function)
-         * pero SIGUE EN EL MODELO, y el ABM manda el modelo entero: un porcentaje suelto sin tipo
-         * viajaria a la API, que exige las dos columnas o ninguna, y el usuario veria un error
-         * sobre un campo que ya no ve.
-         *
-         * @param {Object} prop Definicion del campo (no se usa).
-         * @param {Object} model Sucursal que se esta editando.
-         * @returns {void}
-         */
-        address_ajuste_precio_tipo_on_change(prop, model) {
-
-            if (!model) {
-                return
-            }
-
-            let tiene_ajuste = model.ajuste_precio_tipo === AJUSTE_RECARGO || model.ajuste_precio_tipo === AJUSTE_DESCUENTO
-
-            if (!tiene_ajuste && model.ajuste_precio_porcentaje !== null && typeof model.ajuste_precio_porcentaje != 'undefined') {
-                this.$set(model, 'ajuste_precio_porcentaje', null)
-            }
-        },
         aplicar_descuento_metodo_de_pago(item, price) {
             if (this.current_acount_payment_method_discounts.length 
                 && this.current_acount_payment_method_id) {
