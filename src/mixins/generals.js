@@ -5,6 +5,8 @@ import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/u
 import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado, redondear_a_centavos } from '@/utils/recargos_en_precios'
 /* Precio de un combo segun la lista de precios de la venta (mision combos-calculados). */
 import { precio_de_combo_para_lista } from '@/utils/precio_de_combo'
+/* Recargo o descuento propio de la sucursal, adentro del precio de cada renglon (mision sucursal-recargo-descuento). */
+import { ajuste_de_sucursal, renglon_lleva_ajuste_de_sucursal } from '@/utils/ajuste_de_sucursal'
 /* IVA en los precios de VENDER: los dos checks y el estado de partida (mision iva-a-articulos-sin-iva-en-vender). */
 import { estado_de_iva, estado_de_partida_de_iva, precio_del_item_incluye_iva, ajustar_precio_por_iva } from '@/utils/iva_en_vender'
 export default {
@@ -787,6 +789,52 @@ export default {
                 return precio_con_recargos
             }
 
+            /*
+                🔴 RECARGO O DESCUENTO DE LA SUCURSAL ADENTRO DEL PRECIO (mision
+                sucursal-recargo-descuento, 2/10/2026). La sucursal elegida en VENDER puede llevar un
+                porcentaje propio (utils/ajuste_de_sucursal.js) y se mete en el precio de CADA renglon,
+                no en el total: mismo lugar y misma idea que el descuento por metodo de pago, que
+                tambien va siempre adentro del precio del catalogo.
+
+                Se llama SOLO en las dos ramas que PARTEN DEL CATALOGO, y NO es un olvido que falte en
+                las otras dos:
+                  - Precio personalizado: es lo que el vendedor escribio a mano, lo que fijo una
+                    oferta de precio fijo o lo que puso la balanza. Es el precio final y no se toca
+                    (decision de Lucas, 2/10/2026).
+                  - Pivot (comprobante guardado): el precio guardado YA TRAE el ajuste adentro, igual
+                    que un descuento por metodo de pago. Reaplicarlo lo cobraria DOS VECES al reabrir
+                    una venta o un presupuesto. NO UNIFICAR ESTAS RAMAS "PARA QUE TODAS AJUSTEN".
+                Tampoco a los servicios (renglon_lleva_ajuste_de_sucursal): Lucas pidio "a cada
+                articulo". Una sucursal sin ajuste, o una API vieja que no devuelve las columnas, deja
+                el precio EXACTAMENTE como estaba.
+
+                🔴 El precio con ajuste se redondea a centavos ACA, en este paso, y no al final. Asi el
+                "precio de catalogo para esta sucursal" es un numero de 2 decimales y todo lo que viene
+                despues -recargos de venta, cuotas, IVA, moneda, oferta- trabaja sobre el. Por eso la
+                base price_vender_sin_recargos (el precio final dividido por el factor de recargos, mas
+                abajo) queda bien definida e incluye el ajuste, y apagar los recargos de venta devuelve
+                cada precio exacto. NO agregar un segundo redondeo al final: seria un redondeo sin
+                factor de recargos, que este metodo evita a proposito (ver el
+                `// price = this.redondear(price)` del flujo normal).
+
+                @param {Number|String} precio_de_catalogo Precio del catalogo, ya con lista de precios y
+                                                          descuento por metodo de pago si correspondia.
+                @returns {Number} El precio con el ajuste de la sucursal, o el mismo si no hay ajuste.
+            */
+            let ajustar_por_sucursal = precio_de_catalogo => {
+
+                let ajuste = this.ajuste_de_sucursal_vigente()
+
+                if (ajuste === null || !renglon_lleva_ajuste_de_sucursal(item)) {
+                    return precio_de_catalogo
+                }
+
+                let con_ajuste = redondear_a_centavos(Number(precio_de_catalogo) * ajuste.factor)
+                item_des.push('Ajuste de sucursal (' + ajuste.texto + '): ' + this.price(precio_de_catalogo) + ' -> ' + this.price(con_ajuste))
+
+                return con_ajuste
+            }
+
             if (item.price_vender_personalizado) {
 
                 price = item.price_vender_personalizado
@@ -797,6 +845,9 @@ export default {
                     opcion esta apagada: ahi el recargo se le suma al pie. Con la opcion prendida
                     se le suma adentro, y el total es el mismo (salvo el redondeo a centavos del
                     final, ver mas abajo).
+
+                    Y NO lleva el ajuste de la sucursal: lo escrito a mano es el precio final (ver
+                    ajustar_por_sucursal, mas arriba).
                 */
                 price = recargar(price)
 
@@ -844,6 +895,12 @@ export default {
 
                 // Unica rama donde el precio viene del pivot: ya esta en la moneda de la venta.
                 price_desde_pivot = true
+
+                /*
+                    🔴 Sin ajuste de sucursal, a proposito: el precio guardado YA lo trae adentro
+                    (ver ajustar_por_sucursal, mas arriba). Reaplicarlo cobraria el recargo o el
+                    descuento dos veces al reabrir una venta o un presupuesto.
+                */
 
                 if (this.$store.state.vender.recargos_en_precios_sin_registro) {
 
@@ -909,6 +966,9 @@ export default {
                     item_des.push('Precio en blanco (sin AFIP): ' + this.price(price))
                 }
 
+                // Recargo o descuento de la sucursal, adentro del precio (antes de los recargos de venta)
+                price = ajustar_por_sucursal(price)
+
                 price = recargar(price)
 
                 // Ajuste IVA sobre el precio en blanco
@@ -937,6 +997,9 @@ export default {
                 if (Number(price) !== Number(price_before_pm)) {
                     item_des.push('Descuento metodo de pago: ' + this.price(price_before_pm) + ' -> ' + this.price(price))
                 }
+
+                // Recargo o descuento de la sucursal, adentro del precio (antes de los recargos de venta)
+                price = ajustar_por_sucursal(price)
 
                 // Recargos de venta aplicados directo al item
                 price = recargar(price)
@@ -1008,6 +1071,10 @@ export default {
                 mismo contexto de IVA y moneda que `price`. El numero de antes de recargar() no lo
                 es (le faltarian el IVA, la moneda y la oferta). Si algun dia se agrega un paso
                 ADITIVO despues de recargar() -un monto fijo-, esta division deja de ser exacta.
+
+                El ajuste de la sucursal va ANTES de recargar() y ya viene redondeado a centavos
+                (ajustar_por_sucursal), asi que la base INCLUYE el ajuste: es el precio que el
+                renglon tiene con los recargos de venta apagados en ESTA sucursal.
 
                 Sin recargos adentro (opcion apagada, servicio sin recargos en servicios, o
                 renglon de un comprobante legado) viaja null, que es lo que dice la invariante.
@@ -1387,6 +1454,38 @@ export default {
                 this.surcahges_models_vender
                     .filter(surchage => surchage)
                     .map(surchage => surchage.percentage)
+            )
+        },
+        /**
+         * El recargo o descuento propio de la sucursal elegida en VENDER, ya interpretado
+         * (utils/ajuste_de_sucursal.js), o null si no hay sucursal elegida, no tiene ajuste o lo que
+         * trae no es valido. Con null nadie ajusta nada y el precio queda exactamente como siempre.
+         *
+         * Lee la sucursal de $store.state.address.models -la que trae TODAS las columnas- cruzando
+         * con vender.address_id. Es un metodo del mixin global, y no un computed de un componente,
+         * para que getPriceVender() y los componentes de VENDER que muestran el ajuste
+         * (Address.vue, VenderStage1SummaryBar.vue) lean lo mismo y no puedan decir una cosa distinta
+         * a la que se cobra. Desde un render o un computed el store queda como dependencia reactiva:
+         * si cambia la sucursal, o se edita su ajuste, quien lo llame se recalcula solo.
+         *
+         * @returns {{tipo: String, porcentaje: Number, factor: Number, texto: String, texto_corto: String, marca: String}|null}
+         */
+        ajuste_de_sucursal_vigente() {
+
+            let address_id = this.$store.state.vender.address_id
+
+            if (!address_id) {
+                return null
+            }
+
+            let addresses = this.$store.state.address.models
+
+            if (!Array.isArray(addresses)) {
+                return null
+            }
+
+            return ajuste_de_sucursal(
+                addresses.find(address => address.id == address_id)
             )
         },
         aplicar_descuento_metodo_de_pago(item, price) {
