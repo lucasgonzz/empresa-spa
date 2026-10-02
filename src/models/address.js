@@ -100,11 +100,17 @@ export default {
 			 *
 			 * Al elegir "Sin ajuste", on_change vacia el porcentaje: el campo se oculta y no
 			 * puede viajar un porcentaje suelto sin tipo (la API exige las dos o ninguna).
+			 *
+			 * 🔴 value_function: sin ella, al crear una sucursal NUEVA el motor le pone 0 a todo select
+			 * sin `value` (common-vue/mixins/display.js::getSelectAndCheckboxProps; un `value: null`
+			 * es falsy y no alcanza) y la API rechaza un tipo 0 con un 422. Mismo patron que
+			 * descuento_tipo de combo.js.
 			 */
 			text: 'Ajuste de precios',
 			key: 'ajuste_precio_tipo',
 			type: 'select',
 			value: null,
+			value_function: 'address_ajuste_precio_tipo_inicial',
 			options: [],
 			dynamic_options_function: 'get_address_ajuste_precio_options',
 			on_change: 'address_ajuste_precio_tipo_on_change',

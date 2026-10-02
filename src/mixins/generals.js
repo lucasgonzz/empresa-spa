@@ -1510,6 +1510,17 @@ export default {
             ]
         },
         /**
+         * value_function del select "Ajuste de precios" en una sucursal NUEVA. Sin esto, el motor le
+         * pone 0 a todo select sin `value` (common-vue/mixins/display.js::getSelectAndCheckboxProps)
+         * y la API recibiria un tipo 0 que no existe y respondería 422 al crear la sucursal. null =
+         * sin ajuste. Calcado de combo_descuento_tipo_inicial (mixins/model_functions.js).
+         *
+         * @returns {null}
+         */
+        address_ajuste_precio_tipo_inicial() {
+            return null
+        },
+        /**
          * v_if_function del campo "Porcentaje del ajuste" de la sucursal: el porcentaje solo se
          * muestra cuando hay un recargo o un descuento elegido. Sin tipo no hay nada que ajustar.
          *
