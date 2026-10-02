@@ -53,13 +53,50 @@ export default {
 			 * formularios): aca se marca desde donde conviene sacar mercaderia
 			 * cuando el sistema sugiere movimientos entre sucursales. Puede haber
 			 * varias sucursales marcadas, o ninguna (y todo funciona como siempre).
+			 *
+			 * Desde la misión deposito-madre (2/10/2026), si hay un depósito madre
+			 * (es_deposito_madre, abajo) el madre manda: esta marca solo ordena los
+			 * orígenes de respaldo, que se usan cuando el madre no alcanza o no
+			 * tiene el artículo. Sin madre, todo sigue exactamente como antes.
 			 */
 			text: 'Deposito de origen para sugerencias',
 			key: 'es_deposito_origen',
 			type: 'checkbox',
 			value: 0,
 			if_has_extencion: 'sugerencias_inteligentes',
-			description: 'Si se marca, las sugerencias inteligentes de stock van a preferir esta sucursal como origen de los movimientos. Si ninguna sucursal esta marcada, el origen se elige por stock como siempre.',
+			description: 'Si se marca, las sugerencias inteligentes de stock van a preferir esta sucursal como origen de los movimientos. Si ninguna sucursal está marcada, el origen se elige por stock como siempre. Si hay un depósito madre, esta marca se usa solo cuando el madre no alcanza o no tiene el artículo: entre las sucursales a las que les sobra stock, primero se saca de las marcadas acá.',
+		},
+		{
+			/**
+			 * Depósito madre de las sugerencias inteligentes de stock (columna
+			 * addresses.es_deposito_madre, misión deposito-madre, 2/10/2026).
+			 *
+			 * A diferencia de es_deposito_origen (que puede estar en varias
+			 * sucursales), el madre es UNO solo: lo garantiza empresa-api, que al
+			 * marcar una sucursal desmarca las demás en la base. Con madre, las
+			 * sugerencias salen primero desde acá y, cuando no alcanza para todas,
+			 * se reparte primero a las sucursales que más venden (el criterio es
+			 * sugerencias_prioridad_destino, en src/models/user.js).
+			 *
+			 * Como la notificación de modelo del backend está apagada, el tilde
+			 * viejo de la sucursal que dejó de ser madre lo saca del store la
+			 * mutación add de src/store/address.js.
+			 *
+			 * Gateo con if_has_alguna_extencion (OR, el mismo mecanismo que usan
+			 * peso y medidas en article.js): lo ve quien tenga
+			 * sugerencias_inteligentes o asistente_ia, porque las sugerencias de
+			 * stock también salen en la carpeta Stock del mostrador.
+			 */
+			text: 'Depósito madre',
+			key: 'es_deposito_madre',
+			type: 'checkbox',
+			value: 0,
+			if_has_alguna_extencion: ['sugerencias_inteligentes', 'asistente_ia'],
+			descriptions: [
+				'Solo una sucursal puede ser el depósito madre: si marcás otra, esta deja de serlo.',
+				'Las sugerencias de stock salen primero desde acá hacia las demás sucursales. Si el depósito madre no alcanza o no tiene el artículo, se completa con las sucursales a las que les sobra.',
+				'Cuando no alcanza para todas, se reparte primero a las sucursales que más venden. Cómo se mide eso lo elegís en Configuración general, en el grupo "Sugerencias inteligentes de stock".',
+			],
 		},
 		{
 			/**
