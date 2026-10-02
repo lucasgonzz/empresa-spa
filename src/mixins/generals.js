@@ -1485,7 +1485,7 @@ export default {
             }
 
             return ajuste_de_sucursal(
-                store_address.models.find(address => address.id == address_id)
+                store_address.models.find(address => address && address.id == address_id)
             )
         },
         /**
