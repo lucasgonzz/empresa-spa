@@ -36,7 +36,10 @@ export default {
 		saveService() {
 			if (this.check() && !this.loading) {
 				this.loading = true 
-				this.$api.post('service', this.service)
+				this.$api.post('service', {
+					...this.service,
+					price: this.precioNormalizado(),
+				})
 				.then(res => {
 					this.loading = false 
 					let service = {
@@ -59,15 +62,30 @@ export default {
 				})
 				.catch(err => {
 					this.loading = false 
-					this.$toast.error('Error al guardar servicio')
+					let errores = err.response && err.response.data && err.response.data.errors
+					if (errores && errores.price) {
+						this.$toast.error(errores.price[0])
+					} else {
+						this.$toast.error('Error al guardar servicio')
+					}
 					console.log(err)
 				})
 			}
 		},
+		precioNormalizado() {
+			// Sin espacios y con punto decimal: el usuario puede tipear "3500,50".
+			return String(this.service.price).trim().replace(',', '.')
+		},
 		check() {
-			if (this.service.price == '') {
+			if (String(this.service.price).trim() == '') {
 				this.$toast.warning('Ingrese un precio para el servicio')
 				return false	
+			}
+			// Solo un número (con signo y decimales opcionales). Evita mandar "3500}" o "12abc",
+			// que la base rechaza al guardar.
+			if (!/^-?\d+(\.\d+)?$/.test(this.precioNormalizado())) {
+				this.$toast.warning('El precio debe ser un número, por ejemplo 3500 o 3500,50')
+				return false
 			}
 			return true 
 		}
