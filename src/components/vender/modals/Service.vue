@@ -87,6 +87,11 @@ export default {
 				this.$toast.warning('El precio debe ser un número, por ejemplo 3500 o 3500,50')
 				return false
 			}
+			// "3.500" sería 3500 para quien lo tipea, pero se guardaría como 3,5: se pide sin separador de miles.
+			if (/\.\d{3}$/.test(this.precioNormalizado())) {
+				this.$toast.warning('Ingrese el precio sin separador de miles, por ejemplo 3500')
+				return false
+			}
 			return true 
 		}
 	}
