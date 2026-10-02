@@ -6,7 +6,7 @@ import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargo
 /* Precio de un combo segun la lista de precios de la venta (mision combos-calculados). */
 import { precio_de_combo_para_lista } from '@/utils/precio_de_combo'
 /* Recargo o descuento propio de la sucursal, adentro del precio de cada renglon (mision sucursal-recargo-descuento). */
-import { ajuste_de_sucursal, renglon_lleva_ajuste_de_sucursal } from '@/utils/ajuste_de_sucursal'
+import { ajuste_de_sucursal, renglon_lleva_ajuste_de_sucursal, AJUSTE_RECARGO, AJUSTE_DESCUENTO } from '@/utils/ajuste_de_sucursal'
 /* IVA en los precios de VENDER: los dos checks y el estado de partida (mision iva-a-articulos-sin-iva-en-vender). */
 import { estado_de_iva, estado_de_partida_de_iva, precio_del_item_incluye_iva, ajustar_precio_por_iva } from '@/utils/iva_en_vender'
 export default {
@@ -1487,6 +1487,64 @@ export default {
             return ajuste_de_sucursal(
                 addresses.find(address => address.id == address_id)
             )
+        },
+        /**
+         * Opciones del select "Ajuste de precios" del formulario de sucursal
+         * (address.ajuste_precio_tipo, src/models/address.js), via dynamic_options_function.
+         *
+         * No se usan `options` fijas en el modelo porque getOptions() les antepone una opcion
+         * `0 "Seleccione ..."` que aca sobra. "Sin ajuste" va con value null (mismo patron que
+         * "Sin especificar" de la facturacion por defecto): el ABM manda null y la API quita el
+         * ajuste, las dos columnas a la vez.
+         *
+         * getOptions() la llama con (prop, model, model_name), la firma comun de las
+         * dynamic_options_function: aca no se usa ninguno, las opciones son fijas.
+         *
+         * @returns {Array<{value: String|null, text: String}>}
+         */
+        get_address_ajuste_precio_options() {
+            return [
+                { value: null, text: 'Sin ajuste' },
+                { value: AJUSTE_RECARGO, text: 'Recargo' },
+                { value: AJUSTE_DESCUENTO, text: 'Descuento' },
+            ]
+        },
+        /**
+         * v_if_function del campo "Porcentaje del ajuste" de la sucursal: el porcentaje solo se
+         * muestra cuando hay un recargo o un descuento elegido. Sin tipo no hay nada que ajustar.
+         *
+         * @param {Object} prop Definicion del campo (no se usa).
+         * @param {Object} model Sucursal que se esta editando.
+         * @returns {Boolean}
+         */
+        address_tiene_ajuste_de_precios_v_if_function(prop, model) {
+            return !!model
+                && (model.ajuste_precio_tipo === AJUSTE_RECARGO || model.ajuste_precio_tipo === AJUSTE_DESCUENTO)
+        },
+        /**
+         * on_change del select "Ajuste de precios" de la sucursal: al volver a "Sin ajuste" se
+         * vacia el porcentaje.
+         *
+         * 🔴 Es necesario porque el porcentaje se oculta (address_tiene_ajuste_de_precios_v_if_function)
+         * pero SIGUE EN EL MODELO, y el ABM manda el modelo entero: un porcentaje suelto sin tipo
+         * viajaria a la API, que exige las dos columnas o ninguna, y el usuario veria un error
+         * sobre un campo que ya no ve.
+         *
+         * @param {Object} prop Definicion del campo (no se usa).
+         * @param {Object} model Sucursal que se esta editando.
+         * @returns {void}
+         */
+        address_ajuste_precio_tipo_on_change(prop, model) {
+
+            if (!model) {
+                return
+            }
+
+            let tiene_ajuste = model.ajuste_precio_tipo === AJUSTE_RECARGO || model.ajuste_precio_tipo === AJUSTE_DESCUENTO
+
+            if (!tiene_ajuste && model.ajuste_precio_porcentaje !== null && typeof model.ajuste_precio_porcentaje != 'undefined') {
+                this.$set(model, 'ajuste_precio_porcentaje', null)
+            }
         },
         aplicar_descuento_metodo_de_pago(item, price) {
             if (this.current_acount_payment_method_discounts.length 

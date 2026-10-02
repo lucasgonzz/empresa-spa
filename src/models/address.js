@@ -87,6 +87,49 @@ export default {
 		},
 		{
 			/**
+			 * Recargo o descuento propio de la sucursal (columnas addresses.ajuste_precio_tipo y
+			 * addresses.ajuste_precio_porcentaje, mision sucursal-recargo-descuento). Cuando en
+			 * Vender se elige esta sucursal, el porcentaje se mete en el precio de CADA articulo,
+			 * combo y promocion (mixins/generals.js::getPriceVender), no en el total.
+			 *
+			 * options: [] intencional, igual que default_afip_information_id y modo_redondeo de
+			 * user.js: con `options` fijas getOptions() antepone una opcion `0 "Seleccione ..."`
+			 * que aca sobra y que la API rechazaria (tipo desconocido). Las opciones reales las
+			 * arma dynamic_options_function, y "Sin ajuste" va con value null: asi el ABM manda
+			 * null y la API borra las dos columnas.
+			 *
+			 * Al elegir "Sin ajuste", on_change vacia el porcentaje: el campo se oculta y no
+			 * puede viajar un porcentaje suelto sin tipo (la API exige las dos o ninguna).
+			 */
+			text: 'Ajuste de precios',
+			key: 'ajuste_precio_tipo',
+			type: 'select',
+			value: null,
+			options: [],
+			dynamic_options_function: 'get_address_ajuste_precio_options',
+			on_change: 'address_ajuste_precio_tipo_on_change',
+			descriptions: [
+				'Si cargás un recargo o un descuento, cuando elijas esta sucursal en Vender los precios de los artículos, combos y promociones ya lo llevan adentro. No se suma ni se resta al total de la venta. Los servicios y los precios que escribas a mano no se modifican.',
+				'Las ventas y presupuestos que ya están guardados no cambian.',
+			],
+		},
+		{
+			/**
+			 * Porcentaje del ajuste de arriba (addresses.ajuste_precio_porcentaje). Solo se ve
+			 * con un recargo o un descuento elegido. La API lo devuelve como string decimal
+			 * ("10.00") y acepta coma o punto al guardar (el ABM ya convierte la coma).
+			 */
+			text: 'Porcentaje del ajuste',
+			key: 'ajuste_precio_porcentaje',
+			type: 'number',
+			value: null,
+			v_if_function: 'address_tiene_ajuste_de_precios_v_if_function',
+			descriptions: [
+				'Porcentaje que se aplica sobre el precio de cada artículo, combo y promoción cuando se vende desde esta sucursal. Por ejemplo, con 10: un artículo de $1.000 se vende a $1.100 si es un recargo, o a $900 si es un descuento.',
+			],
+		},
+		{
+			/**
 			 * Logo propio de la sucursal (columna addresses.image_url, tarea 17).
 			 * La subida la resuelve el endpoint generico set-image/{prop}, el mismo que
 			 * usa la imagen de una marca (src/models/brand.js): por eso alcanza con
@@ -103,9 +146,9 @@ export default {
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Registra las sucursales y depósitos del negocio con sus datos de contacto.',
-		implicancias: 'Las sucursales estructuran gran parte del sistema: el stock se maneja por sucursal, las ubicaciones de artículos pertenecen a una sucursal, las cajas por defecto pueden diferenciarse por sucursal y cada una puede tener su facturación ARCA por defecto. El depósito por defecto es el que se ofrece al cargar artículos.',
-		como_se_utiliza: 'Creá cada sucursal con nombre, domicilio y contacto. Marcá una como depósito por defecto y, si corresponde, asignale su punto de venta ARCA por defecto.',
-		palabras_clave: ['deposito', 'locales', 'domicilio', 'puntos de venta'],
+		implicancias: 'Las sucursales estructuran gran parte del sistema: el stock se maneja por sucursal, las ubicaciones de artículos pertenecen a una sucursal, las cajas por defecto pueden diferenciarse por sucursal y cada una puede tener su facturación ARCA por defecto. Además, una sucursal puede llevar un recargo o un descuento en porcentaje: cuando se elige en Vender, los precios de los artículos, combos y promociones ya lo llevan adentro (no se aplica al total). El depósito por defecto es el que se ofrece al cargar artículos.',
+		como_se_utiliza: 'Creá cada sucursal con nombre, domicilio y contacto. Marcá una como depósito por defecto y, si corresponde, asignale su punto de venta ARCA por defecto. Si en esa sucursal se vende más caro o más barato, elegí Recargo o Descuento en "Ajuste de precios" y cargá el porcentaje.',
+		palabras_clave: ['deposito', 'locales', 'domicilio', 'puntos de venta', 'recargo', 'descuento', 'ajuste de precios'],
 	},
 	singular_model_name_spanish: 'Sucursal',
 	plural_model_name_spanish: 'Sucursales',
