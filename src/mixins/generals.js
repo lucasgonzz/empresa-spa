@@ -1478,14 +1478,14 @@ export default {
                 return null
             }
 
-            let addresses = this.$store.state.address.models
+            let store_address = this.$store.state.address
 
-            if (!Array.isArray(addresses)) {
+            if (!store_address || !Array.isArray(store_address.models)) {
                 return null
             }
 
             return ajuste_de_sucursal(
-                addresses.find(address => address.id == address_id)
+                store_address.models.find(address => address.id == address_id)
             )
         },
         /**
