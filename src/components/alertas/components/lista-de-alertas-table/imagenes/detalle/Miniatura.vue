@@ -59,7 +59,10 @@ export default {
 			type: String,
 			default: '',
 		},
-		/** 'grande' (a revisar), 'chica' (asignadas) o 'mini' (candidatas del diagnóstico). */
+		/**
+		 * 'grande' (a revisar), 'chica' (asignadas), 'mini' (candidatas del diagnóstico) o 'visor'
+		 * (la imagen elegida, en grande, cuando se despliegan las otras de un artículo a revisar).
+		 */
 		tamano: {
 			type: String,
 			default: 'chica',
@@ -94,6 +97,16 @@ export default {
 		/** La misma instancia se reusa con otra imagen (paginación): se vuelve a intentar. */
 		url() {
 			this.rota = false
+		},
+	},
+	methods: {
+		/**
+		 * El <img> no cargó: se muestra el ícono y se avisa (`fallo`) por si quien la usa tiene otra
+		 * versión de la misma imagen a mano (la miniatura del buscador cuando el original no abre).
+		 */
+		al_fallar() {
+			this.rota = true
+			this.$emit('fallo')
 		},
 	},
 }
@@ -136,6 +149,11 @@ export default {
 	width: 88px
 	height: 88px
 	border-radius: 8px
+
+// La imagen elegida, grande, al desplegar las otras de un artículo.
+.img-det-mini--visor
+	width: 260px
+	height: 260px
 
 // Boton: sin el trato de boton de Bootstrap ni la sombra global de _inputs.sass.
 .img-det-mini--boton
@@ -185,4 +203,11 @@ export default {
 	.img-det-mini--mini
 		width: 76px
 		height: 76px
+
+	// Teléfono: el visor ocupa el ancho de la tarjeta (con tope) y se mantiene cuadrado.
+	.img-det-mini--visor
+		width: 100%
+		max-width: 320px
+		height: auto
+		aspect-ratio: 1
 </style>
