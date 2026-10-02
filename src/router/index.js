@@ -71,9 +71,14 @@ const routes = [
     },
     {
         // Misión cheques-endoso-y-bancos (21/9/2026): el módulo de Cheques sale de Reportes y
-        // pasa a Tesorería > Cheques con ruta propia. sub_view es recibido|emitido y
-        // sub_sub_view la solapa (pendientes, disponibles-para-cobrar, endosados...); la vista
-        // completa las dos si faltan.
+        // pasa a Tesorería > Cheques con ruta propia.
+        //
+        // Misión cheques-solapa-endosados (2/10/2026): sub_view es recibido|emitido|endosado.
+        // sub_sub_view es el estado dentro de recibido/emitido (pendientes,
+        // disponibles-para-cobrar, pronto-a-vencerse, vencidos, cobrados, rechazados) y
+        // `endosado` NO lo lleva (es una sola lista). La vista (views/Cheques.vue) normaliza la
+        // ruta con components/cheques/solapas.js: completa lo que falte, descarta lo que sobre
+        // y redirige la URL vieja /cheques/recibido/endosados a /cheques/endosado.
         path: '/cheques/:sub_view?/:sub_sub_view?',
         name: 'cheque',
         component: () => import('@/views/Cheques')
