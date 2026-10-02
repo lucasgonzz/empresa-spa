@@ -649,7 +649,7 @@ export default {
 				'Decide quién se lleva el stock del depósito madre cuando no alcanza para todas las sucursales, y en qué orden aparecen los movimientos en el informe de stock.',
 				'LA SUCURSAL QUE MÁS VENDE: primero la sucursal que más plata facturó en los últimos 90 días, contando las ventas en pesos ya terminadas (las ventas en dólares no suman).',
 				'LA SUCURSAL QUE MÁS VENDE ESE ARTÍCULO: para cada artículo, primero la sucursal donde ese artículo se vende más rápido, mirando los últimos 90 días y, si hay historia, comparándolos con la misma época del año pasado.',
-				'En la lista del informe van primero los artículos que la sucursal de destino efectivamente vende; los que ahí no se venden quedan al final.',
+				'Con cualquiera de las dos opciones, tanto al repartir el stock como en la lista del informe van primero las sucursales que venden ese artículo: las que no lo venden reciben y aparecen después, aunque facturen más.',
 				'Solo se usa si marcaste una sucursal como depósito madre (en Sucursales). Sin depósito madre, las sugerencias funcionan como siempre.',
 			],
 		},

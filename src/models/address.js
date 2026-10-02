@@ -204,9 +204,9 @@ export default {
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Registra las sucursales y depósitos del negocio con sus datos de contacto.',
-		implicancias: 'Las sucursales estructuran gran parte del sistema: el stock se maneja por sucursal, las ubicaciones de artículos pertenecen a una sucursal, las cajas por defecto pueden diferenciarse por sucursal y cada una puede tener su facturación ARCA por defecto. Además, una sucursal puede llevar un recargo o un descuento en porcentaje: cuando se elige en Vender, los precios de los artículos, combos y promociones ya lo llevan adentro (no se aplica al total). El depósito por defecto es el que se ofrece al cargar artículos.',
-		como_se_utiliza: 'Creá cada sucursal con nombre, domicilio y contacto. Marcá una como depósito por defecto y, si corresponde, asignale su punto de venta ARCA por defecto. Si en esa sucursal se vende más caro o más barato, elegí Recargo o Descuento en "Ajuste de precios" y cargá el porcentaje.',
-		palabras_clave: ['deposito', 'locales', 'domicilio', 'puntos de venta', 'recargo', 'descuento', 'ajuste de precios'],
+		implicancias: 'Las sucursales estructuran gran parte del sistema: el stock se maneja por sucursal, las ubicaciones de artículos pertenecen a una sucursal, las cajas por defecto pueden diferenciarse por sucursal y cada una puede tener su facturación ARCA por defecto. Además, una sucursal puede llevar un recargo o un descuento en porcentaje: cuando se elige en Vender, los precios de los artículos, combos y promociones ya lo llevan adentro (no se aplica al total). El depósito por defecto es el que se ofrece al cargar artículos. Una sola sucursal puede ser el depósito madre: las sugerencias de stock salen primero desde ahí y se reparten primero a las sucursales que más venden.',
+		como_se_utiliza: 'Creá cada sucursal con nombre, domicilio y contacto. Marcá una como depósito por defecto y, si corresponde, asignale su punto de venta ARCA por defecto. Si en esa sucursal se vende más caro o más barato, elegí Recargo o Descuento en "Ajuste de precios" y cargá el porcentaje. Si tenés un depósito central que abastece a las demás, marcalo como "Depósito madre".',
+		palabras_clave: ['deposito', 'locales', 'domicilio', 'puntos de venta', 'recargo', 'descuento', 'ajuste de precios', 'depósito madre', 'deposito madre', 'depósito central'],
 	},
 	singular_model_name_spanish: 'Sucursal',
 	plural_model_name_spanish: 'Sucursales',
