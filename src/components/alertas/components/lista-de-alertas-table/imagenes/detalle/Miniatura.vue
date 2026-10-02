@@ -11,7 +11,7 @@ class="img-det-mini img-det-mini--boton"
 	:alt="alt"
 	loading="lazy"
 	:referrerpolicy="externa ? 'no-referrer' : null"
-	@error="rota = true">
+	@error="al_fallar">
 	<span
 	class="img-det-mini__ampliar"
 	aria-hidden="true">
@@ -28,7 +28,7 @@ class="img-det-mini"
 	:alt="alt"
 	loading="lazy"
 	:referrerpolicy="externa ? 'no-referrer' : null"
-	@error="rota = true">
+	@error="al_fallar">
 	<i
 	v-else
 	class="bi bi-image"
