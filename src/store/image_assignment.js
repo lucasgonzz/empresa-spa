@@ -425,12 +425,17 @@ export default {
 		 * en la tienda) y el item queda `aprobada`. 422 si ya no estaba para revisar o si el
 		 * artículo se borró; el interceptor global muestra el motivo.
 		 *
+		 * Con una imagen elegida a mano entre las que se encontraron, se manda su `clave` (la de
+		 * `alternativas` del item) y la API asigna ESA en vez de la propuesta. Sin ella, la propuesta.
+		 *
 		 * @param {Object} context
-		 * @param {Number} item_id
+		 * @param {Number|Object} datos El id del item, o {id, candidata} para aprobar otra imagen.
 		 * @returns {Promise<Object>} ItemPayload.
 		 */
-		aprobar(context, item_id) {
-			return axios.post('/api/image-assignment-items/' + item_id + '/aprobar', {}, opciones())
+		aprobar(context, datos) {
+			let item_id = datos !== null && typeof datos === 'object' ? datos.id : datos
+			let cuerpo = datos !== null && typeof datos === 'object' && datos.candidata ? { candidata: datos.candidata } : {}
+			return axios.post('/api/image-assignment-items/' + item_id + '/aprobar', cuerpo, opciones())
 				.then(res => (res.data ? res.data.model : null))
 				.catch(relanzar_marcando_la_cancelacion)
 		},
