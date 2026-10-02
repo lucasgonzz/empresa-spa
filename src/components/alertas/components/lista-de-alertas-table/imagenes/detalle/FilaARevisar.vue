@@ -10,7 +10,8 @@ class="img-det-fila img-det-fila--revisar"
 	class="img-det-fila__tilde"
 	:data-testid="'imagenes-tilde-' + item.id"
 	:checked="seleccionado"
-	:disabled="procesando"
+	:disabled="procesando || !!elegida"
+	:title="elegida ? 'Con otra imagen elegida, aprobala con el botón Aprobar de esta tarjeta' : null"
 	:aria-label="'Seleccionar ' + nombre"
 	@change="$emit('seleccionar', $event)"></b-form-checkbox>
 
@@ -459,6 +460,11 @@ export default {
 		 */
 		elegir(clave) {
 			this.elegida_clave = clave
+			// Aprobar en lote asigna la propuesta del sistema: con otra elegida, la tarjeta sale de la
+			// selección (si no, la elección se perdería en silencio) y se aprueba con su propio botón.
+			if (clave && this.seleccionado) {
+				this.$emit('seleccionar', false)
+			}
 		},
 		/** El original de la elegida no abrió (hotlink, caído): se la ve con la miniatura del buscador. */
 		al_fallar_el_original() {
