@@ -69,9 +69,16 @@ address_store.mutations.add = function (state, value) {
 	}
 
 	sucursales.forEach(sucursal => {
+		// Las copias sin id se saltean: en un ALTA, cuando vuelve el POST, `state.model` todavía es
+		// el formulario de la sucursal nueva con `id` null (distinto del id de la respuesta), y
+		// apagarle el tilde lo hacía parpadear mientras se cierra el modal. Una copia sin id no
+		// puede ser "otra" sucursal ya guardada como madre.
+		if (!sucursal || sucursal.id == null) {
+			return
+		}
 		// Solo se apagan las que hoy tienen el tilde: la clave ya existe en el objeto y la
 		// asignación directa es reactiva (no hace falta Vue.set).
-		if (sucursal && sucursal.id != value.id && sucursal.es_deposito_madre) {
+		if (sucursal.id != value.id && sucursal.es_deposito_madre) {
 			sucursal.es_deposito_madre = 0
 		}
 	})
