@@ -1507,6 +1507,9 @@ export default {
 
 .img-det-otras
 	flex: 0 0 100%
+	// min-width/max-width: sin esto la tira (nowrap en teléfono) ensancha el panel más allá de la tarjeta.
+	min-width: 0
+	max-width: 100%
 	display: flex
 	align-items: flex-start
 	gap: 18px
