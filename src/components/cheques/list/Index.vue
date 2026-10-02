@@ -34,7 +34,7 @@
 	</div>
 </template>
 <script>
-import { cheques_de_la_solapa } from '@/components/cheques/solapas'
+import { cheques_de_la_solapa, acotar_a_la_solapa } from '@/components/cheques/solapas'
 
 export default {
 	components: {
@@ -98,15 +98,7 @@ export default {
 				return this.cheques_de_esta_solapa
 			}
 
-			/** Ids de los cheques de la solapa vigente, para consultar si un resultado pertenece. */
-			let ids_de_la_solapa = new Set()
-			this.cheques_de_esta_solapa.forEach(function (cheque) {
-				ids_de_la_solapa.add(cheque.id)
-			})
-
-			return this.filtered.filter(function (cheque) {
-				return ids_de_la_solapa.has(cheque.id)
-			})
+			return acotar_a_la_solapa(this.filtered, this.cheques_de_esta_solapa)
 		},
 		/**
 		 * Columnas permitidas para la tabla según la solapa (Recibido / Emitido / Endosado). Valen

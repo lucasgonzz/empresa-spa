@@ -80,9 +80,15 @@ export default __base_store({
 			commit('limpiar_orden_de_columnas')
 
 			// Resultados y paginación de la búsqueda: la tabla vuelve a la lista de la solapa.
+			//
+			// 🔴 NO se vuelve a la página 1 (`setFilterPage`). Ese número lo lee la barra de
+			// paginación de la tabla con un watcher que, al cambiar, lanza una búsqueda nueva: con el
+			// usuario parado en la página 2 o más, "Limpiar filtros" o cambiar de solapa dispararía
+			// una búsqueda fantasma que vuelve a prender el filtro con los resultados recortados.
+			// No hace falta resetearla: toda búsqueda nueva (`filtrar` de la tabla, o la que
+			// re-ejecuta components/cheques/Index.vue) pide explícitamente `page: 1`.
 			commit('setIsFiltered', false)
 			commit('setFiltered', [])
-			commit('setFilterPage', 1)
 			commit('setTotalFilterPages', null)
 			commit('setTotalFilterResults', 0)
 		},

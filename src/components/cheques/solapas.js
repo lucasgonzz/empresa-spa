@@ -16,7 +16,10 @@
  *   - components/cheques/Index.vue         -> decide si se puede dibujar (`solapa_es_valida`) y
  *                                             saca los ids de la solapa (`cheques_de_la_solapa`).
  *   - components/cheques/NavComponent.vue  -> arma las dos filas y sus contadores.
- *   - components/cheques/list/Index.vue    -> la lista que se muestra y su red de seguridad.
+ *   - components/cheques/list/Index.vue    -> la lista que se muestra y su red de seguridad
+ *                                             (`acotar_a_la_solapa`).
+ *   - components/cheques/NavFiltrados.vue  -> el Total y el Excel del resultado filtrado, que
+ *                                             usan la misma red de seguridad.
  * Si la regla estuviera repetida en cada uno, bastaría que un archivo se olvide de `endosado`
  * para que la tabla muestre una solapa y las pestañas otra.
  *
@@ -29,14 +32,6 @@
  *     emitido:  {pendientes, ..., rechazados} }
  * Antes de cargar, el store nace como `[]` (no como objeto con esas claves).
  */
-
-/**
- * Solapas de primer nivel, en el orden en que se dibujan. Son los valores válidos de
- * `$route.params.sub_view`.
- *
- * @type {Array<String>}
- */
-export const SOLAPAS_DE_PRIMER_NIVEL = Object.freeze(['recibido', 'emitido', 'endosado'])
 
 /** Solapa a la que se cae cuando la ruta no trae una válida (la de siempre). */
 export const SOLAPA_POR_DEFECTO = 'recibido'
@@ -98,9 +93,10 @@ export function es_solapa_de_primer_nivel(sub_view) {
  * Busca, dentro de una solapa, el estado que corresponde al segundo nivel de la ruta.
  *
  * La comparación es exacta contra la forma de la URL (`ruta`, con guion medio): una forma con
- * guion bajo (`disponibles_para_cobrar`) NO cuenta como válida, así `ruta_normalizada` la lleva
- * a la forma canónica y la pestaña activa (que compara contra `routeString(nombre)`) coincide
- * con la URL.
+ * guion bajo (`disponibles_para_cobrar`) NO cuenta como válida y `ruta_normalizada` la manda a
+ * Pendientes (no a la forma canónica). Ningún link interno genera esa forma: solo la podría
+ * traer un favorito escrito a mano. Lo que importa es que la pestaña activa (que compara contra
+ * `routeString(nombre)`) siempre coincida con la URL.
  *
  * @param {*} sub_view Solapa de primer nivel.
  * @param {*} sub_sub_view Valor de `$route.params.sub_sub_view`.
@@ -178,6 +174,38 @@ export function cheques_de_la_solapa(models, sub_view, sub_sub_view) {
 		return []
 	}
 	return grupo[estado.clave]
+}
+
+/**
+ * Deja de un resultado filtrado solo los cheques que pertenecen a la solapa vigente.
+ *
+ * Es la red de seguridad de la búsqueda de columnas: la API nueva ya acota el resultado a los
+ * ids de la solapa (operador `in` de ExtraFiltersHelper), pero la API que corre en producción
+ * hasta el release ignora ese operador en silencio y devuelve cheques de TODAS las solapas. Con
+ * este recorte la tabla, el Total y el Excel nunca incluyen un cheque de otra solapa. Con la
+ * API nueva no saca nada.
+ *
+ * @param {Array<Object>} filtrados Resultado de la búsqueda (`state.cheque.filtered`).
+ * @param {Array<Object>} cheques_de_esta_solapa Lo que devuelve `cheques_de_la_solapa`.
+ * @returns {Array<Object>} Los filtrados que están en la solapa, en el mismo orden. `[]` si
+ *   `filtrados` no es un array.
+ */
+export function acotar_a_la_solapa(filtrados, cheques_de_esta_solapa) {
+	if (!Array.isArray(filtrados)) {
+		return []
+	}
+
+	/** Ids de la solapa vigente, para consultar si un resultado pertenece. */
+	let ids_de_la_solapa = new Set()
+	if (Array.isArray(cheques_de_esta_solapa)) {
+		cheques_de_esta_solapa.forEach(function (cheque) {
+			ids_de_la_solapa.add(cheque.id)
+		})
+	}
+
+	return filtrados.filter(function (cheque) {
+		return ids_de_la_solapa.has(cheque.id)
+	})
 }
 
 /**

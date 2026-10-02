@@ -140,6 +140,7 @@ export default {
 		ids_de_la_solapa() {
 			/** Cheques de la solapa que marca la ruta (`[]` si no hay una válida). */
 			let cheques_de_esta_solapa = cheques_de_la_solapa(this.cheques, this.sub_view, this.sub_sub_view)
+			/** Ids en el mismo orden que la lista de la solapa. */
 			let ids = []
 			cheques_de_esta_solapa.forEach(function (cheque) {
 				ids.push(cheque.id)

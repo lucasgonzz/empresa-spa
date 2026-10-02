@@ -36,6 +36,7 @@
 </template>
 <script>
 import { env } from '@/runtime_config'
+import { cheques_de_la_solapa, acotar_a_la_solapa } from '@/components/cheques/solapas'
 export default {
 	computed: {
 		/**
@@ -51,8 +52,18 @@ export default {
 			})
 			return this.price(total)
 		},
+		/**
+		 * El resultado filtrado, acotado a la solapa vigente: son las mismas filas que dibuja la
+		 * tabla (list/Index.vue). Con la API nueva coincide con `state.cheque.filtered`; con una API
+		 * vieja, que ignora el filtro de ids y devuelve cheques de todas las solapas, evita que el
+		 * Total y el Excel incluyan cheques que la tabla no muestra.
+		 *
+		 * @returns {Array<Object>}
+		 */
 		filtered() {
-			return this.$store.state.cheque.filtered
+			/** Cheques de la solapa que marca la ruta. */
+			let cheques_de_esta_solapa = cheques_de_la_solapa(this.$store.state.cheque.models, this.sub_view, this.sub_sub_view)
+			return acotar_a_la_solapa(this.$store.state.cheque.filtered, cheques_de_esta_solapa)
 		},
 		/**
 		 * Cantidad de cheques que cumplen la búsqueda en TODA la solapa vigente, sin importar
@@ -69,7 +80,7 @@ export default {
 	methods: {
 		/**
 		 * Abre en una pestaña nueva la ruta web que genera y descarga el Excel de forma síncrona.
-		 * Envía los IDs de `cheque.filtered` (mismas filas visibles en la tabla).
+		 * Envía los IDs de las filas visibles en la tabla (el resultado filtrado, acotado a la solapa).
 		 */
 		export_excel() {
 			let ids = []
