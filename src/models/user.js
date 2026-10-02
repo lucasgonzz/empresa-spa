@@ -539,7 +539,8 @@ export default {
 		 * defecto con los que se calculan los movimientos de stock sugeridos. Persisten
 		 * en columnas sugerencias_* de users via UserController@update, el mismo camino
 		 * que usar_condicion_fiscal_en_costeo. Sin la extension, el grupo entero
-		 * desaparece de Configuracion general.
+		 * desaparece de Configuracion general (salvo con asistente_ia: ver
+		 * sugerencias_prioridad_destino, que se gatea con un OR de las dos).
 		 *
 		 * Desde la mision "modulo-ia-mostrador" (14/9/2026) estos tres defaults
 		 * (modo, origen, limite del origen) los lee TAMBIEN la carpeta Stock del
@@ -619,6 +620,37 @@ export default {
 				'MINIMO: no se mueve stock si eso deja al origen por debajo de su stock minimo.',
 				'IDEAL: se puede vaciar el origen hasta su nivel ideal.',
 				'SIN LIMITE: se puede mover todo el stock necesario, aunque el origen quede vacio.',
+			],
+		},
+		{
+			/*
+			 * Criterio de reparto desde el depósito madre (columna
+			 * users.sugerencias_prioridad_destino, misión deposito-madre, 2/10/2026).
+			 * Viaja en el PUT del usuario como los otros sugerencias_*; empresa-api
+			 * acepta solo 'ventas_sucursal' | 'ventas_articulo' (default
+			 * 'ventas_sucursal') e ignora cualquier otro valor.
+			 *
+			 * Solo tiene efecto si alguna sucursal está marcada como depósito madre
+			 * (es_deposito_madre en src/models/address.js); sin madre, las
+			 * sugerencias se ordenan por urgencia como siempre.
+			 *
+			 * Mismo gateo OR que el checkbox del madre (if_has_alguna_extencion):
+			 * con asistente_ia solo, este campo aparece y los tres de arriba no.
+			 */
+			text: 'Prioridad al repartir desde el depósito madre',
+			key: 'sugerencias_prioridad_destino',
+			type: 'select',
+			options: [
+				{text: 'La sucursal que más vende', value: 'ventas_sucursal'},
+				{text: 'La sucursal que más vende ese artículo', value: 'ventas_articulo'},
+			],
+			if_has_alguna_extencion: ['sugerencias_inteligentes', 'asistente_ia'],
+			descriptions: [
+				'Decide quién se lleva el stock del depósito madre cuando no alcanza para todas las sucursales, y en qué orden aparecen los movimientos en el informe de stock.',
+				'LA SUCURSAL QUE MÁS VENDE: primero la sucursal que más plata facturó en los últimos 90 días, contando las ventas en pesos ya terminadas (las ventas en dólares no suman).',
+				'LA SUCURSAL QUE MÁS VENDE ESE ARTÍCULO: para cada artículo, primero la sucursal donde ese artículo se vende más rápido, mirando los últimos 90 días y, si hay historia, comparándolos con la misma época del año pasado.',
+				'Con cualquiera de las dos opciones, tanto al repartir el stock como en la lista del informe van primero las sucursales que venden ese artículo: las que no lo venden reciben y aparecen después, aunque facturen más.',
+				'Solo se usa si marcaste una sucursal como depósito madre (en Sucursales). Sin depósito madre, las sugerencias funcionan como siempre.',
 			],
 		},
 
