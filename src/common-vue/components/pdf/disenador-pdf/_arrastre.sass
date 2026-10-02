@@ -1,0 +1,87 @@
+// Arrastre del diseñador de PDF: el hueco, lo levantado y el destello (misión
+// diseno-pdf-configurable, 1/10/2026). Lo comparten la hoja, las zonas, las cajas, los campos y la
+// bandeja; se importa una sola vez, desde Index.vue. Mismo lenguaje que el editor de Diseños de
+// Vender (EtapaDelEditor.vue). Sin depender de ningún ancestro: el clon que sigue al puntero
+// cuelga de <body>. Colores solo por token.
+
+// El HUECO es lo que se está moviendo, en el lugar donde caería: una caja punteada del mismo ancho,
+// sin contenido (como en Vender). Como lleva data-cols, al pasar por una zona ya ocupa las columnas
+// que va a ocupar al soltarlo.
+.dpdf-caja.dpdf-hueco .dpdf-caja__tarjeta,
+.dpdf-fijo.dpdf-hueco .dpdf-fijo__tarjeta,
+.dpdf-salto.dpdf-hueco .dpdf-salto__tarjeta,
+.dpdf-fuente.dpdf-hueco .dpdf-fuente__tarjeta,
+.dpdf-bandeja__campo.dpdf-hueco .dpdf-bandeja__tarjeta
+	border: 2px dashed var(--color-primary)
+	background: var(--bg-nav-hover)
+	box-shadow: none
+
+	> *
+		visibility: hidden
+
+.dpdf-caja.dpdf-hueco
+	.dpdf-caja__manija,
+	.dpdf-caja__insignia
+		display: none
+
+.dpdf-fijo.dpdf-hueco
+	.dpdf-fijo__manija,
+	.dpdf-fijo__insignia
+		display: none
+
+// Un campo como hueco: un renglón punteado
+.dpdf-campo.dpdf-hueco
+	background: var(--bg-nav-hover)
+	outline: 2px dashed var(--color-primary)
+	outline-offset: -2px
+	box-shadow: none
+
+	> *
+		visibility: hidden
+
+// Un campo de la bandeja que entra a una caja: el hueco es un renglón finito, no la tarjeta entera
+.dpdf-caja__campos > .dpdf-bandeja__campo.dpdf-hueco .dpdf-bandeja__tarjeta
+	height: 24px
+	padding: 0
+	overflow: hidden
+
+// Lo LEVANTADO que sigue al puntero: lo único del diseñador que lleva sombra
+.dpdf-caja.dpdf-levantado .dpdf-caja__tarjeta,
+.dpdf-fijo.dpdf-levantado .dpdf-fijo__tarjeta,
+.dpdf-salto.dpdf-levantado .dpdf-salto__tarjeta,
+.dpdf-fuente.dpdf-levantado .dpdf-fuente__tarjeta,
+.dpdf-bandeja__campo.dpdf-levantado .dpdf-bandeja__tarjeta
+	border-color: var(--color-primary)
+	box-shadow: 0 14px 32px var(--shadow-color)
+	cursor: grabbing
+
+.dpdf-caja.dpdf-levantado
+	.dpdf-caja__manija,
+	.dpdf-caja__boton--ancho
+		visibility: hidden
+
+.dpdf-fijo.dpdf-levantado
+	.dpdf-fijo__manija,
+	.dpdf-fijo__boton--ancho
+		visibility: hidden
+
+.dpdf-campo.dpdf-levantado
+	background: var(--bg-card)
+	box-shadow: 0 0 0 1px var(--color-primary), 0 14px 32px var(--shadow-color)
+	cursor: grabbing
+
+// El clon cuelga de <body>, fuera de la lista que le daba el gutter; Sortable le copia el ancho del
+// original (padding incluido), así que sin este padding la tarjeta se vería 16px más ancha.
+.dpdf-item-de-zona.dpdf-levantado
+	padding: 0 8px
+
+// Recién agregado: un destello del borde para encontrarlo
+@keyframes dpdf-destello
+	0%
+		box-shadow: 0 0 0 0 var(--metodo-pago-focus-ring)
+		border-color: var(--color-primary)
+	30%
+		box-shadow: 0 0 0 6px var(--metodo-pago-focus-ring)
+		border-color: var(--color-primary)
+	100%
+		box-shadow: 0 0 0 0 var(--metodo-pago-focus-ring)

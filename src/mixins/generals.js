@@ -5,6 +5,10 @@ import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/u
 import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado, redondear_a_centavos } from '@/utils/recargos_en_precios'
 /* Precio de un combo segun la lista de precios de la venta (mision combos-calculados). */
 import { precio_de_combo_para_lista } from '@/utils/precio_de_combo'
+/* Recargo o descuento propio de la sucursal, adentro del precio de cada renglon (mision sucursal-recargo-descuento). */
+import { ajuste_de_sucursal, renglon_lleva_ajuste_de_sucursal, AJUSTE_RECARGO, AJUSTE_DESCUENTO } from '@/utils/ajuste_de_sucursal'
+/* IVA en los precios de VENDER: los dos checks y el estado de partida (mision iva-a-articulos-sin-iva-en-vender). */
+import { estado_de_iva, estado_de_partida_de_iva, precio_del_item_incluye_iva, ajustar_precio_por_iva } from '@/utils/iva_en_vender'
 export default {
     computed: {
         has_online() {
@@ -586,42 +590,44 @@ export default {
             return parsed_percentage
         },
         /*
-            Obtiene el contexto de iva_aplicado actual y guardado.
-            Se usa para evitar doble descuento al editar ventas previas.
+            Obtiene el estado de IVA actual de VENDER y el estado de partida del renglon.
+            Mision iva-a-articulos-sin-iva-en-vender (1/10/2026): ademas de "Precios con IVA"
+            (iva_aplicado) lleva "Sumar IVA a los articulos sin IVA" (iva_en_articulos_sin_iva).
+            La regla de que estado de partida corresponde vive en utils/iva_en_vender.js
+            (estado_de_partida_de_iva); aca solo se lee el store.
+
+            @param {boolean} from_pivot Si el precio sale del pivot de una venta/presupuesto guardado.
+            @returns {{estado_actual: Object, estado_de_partida: Object}}
         */
         get_iva_aplicado_context(from_pivot) {
-            // Valor actual del checkbox iva_aplicado en store vender.
-            let current_iva_aplicado = this.$store.state.vender.iva_aplicado == 1 ? 1 : 0
+            // Flags actuales de los dos checks de VENDER, normalizados a 0/1.
+            let estado_actual = estado_de_iva(this.$store.state.vender.iva_aplicado, this.$store.state.vender.iva_en_articulos_sin_iva)
             // Venta previa cargada en store al actualizar una venta existente.
             let previus_sale = this.$store.state.vender.previus_sales.previus_sale
             // Presupuesto cargado en vender al usar "Actualizar en VENDER" u operar sobre un budget existente.
             let budget = this.$store.state.vender.budget
-            // Define si hay una venta previa real sobre la que comparar flags.
-            let has_previus_sale = from_pivot && previus_sale && previus_sale.id
-            // Misma idea que la venta previa: ítems desde pivot al editar un presupuesto ya guardado.
-            let has_previus_budget = from_pivot && budget && budget.id
-            // Valor de iva_aplicado persistido en la venta o presupuesto que se esta editando.
-            let saved_iva_aplicado = current_iva_aplicado
-
-            if (has_previus_sale) {
-                saved_iva_aplicado = previus_sale.iva_aplicado == 1 ? 1 : 0
-            } else if (has_previus_budget) {
-                if (typeof budget.iva_aplicado !== 'undefined' && budget.iva_aplicado !== null) {
-                    saved_iva_aplicado = budget.iva_aplicado == 1 ? 1 : 0
-                }
-            }
 
             return {
-                current_iva_aplicado,
-                saved_iva_aplicado,
+                estado_actual,
+                estado_de_partida: estado_de_partida_de_iva(from_pivot, estado_actual, previus_sale, budget),
             }
         },
         /*
-            Ajusta el precio segun iva_aplicado actual vs guardado.
-            Permite alternar IVA en nuevas ventas y en actualizacion sin doble descuento.
+            Ajusta el precio de un renglon segun los checks de IVA de VENDER.
+
+            precio = precio_de_partida × factor(estado actual) / factor(estado de partida), con el
+            factor de utils/iva_en_vender.js: depende de si el precio del listado del renglon ya
+            incluye el IVA (precio_del_item_incluye_iva: articulo con aplicar_iva apagado -> no; el
+            resto, y todo en Monotributista -> si). Asi se pueden prender y apagar los dos checks en
+            ventas y presupuestos nuevos o guardados sin descontar ni sumar el IVA dos veces.
+
+            @param {Object} item Renglon de VENDER.
+            @param {number|string} price Precio de partida.
+            @param {boolean} from_pivot Si el precio sale del pivot de una venta/presupuesto guardado.
+            @returns {number|string}
         */
         ajustar_precio_segun_iva_aplicado(item, price, from_pivot = false) {
-            // Contexto actual/guardado del flag iva_aplicado.
+            // Estado actual y de partida de los dos checks de IVA.
             let iva_context = this.get_iva_aplicado_context(from_pivot)
             // Alicuota de IVA del item, en porcentaje.
             let iva_percentage = this.get_item_iva_percentage(item)
@@ -630,25 +636,58 @@ export default {
                 return price
             }
 
-            // Multiplicador para convertir entre neto y precio con IVA.
-            let iva_multiplier = 1 + (iva_percentage / 100)
+            return ajustar_precio_por_iva(
+                price,
+                iva_percentage,
+                precio_del_item_incluye_iva(item, this.es_monotributista_del_negocio()),
+                iva_context.estado_actual,
+                iva_context.estado_de_partida,
+            )
+        },
+        /*
+            Dice si esta cuenta puede usar "Sumar IVA a los artículos sin IVA" en VENDER (ademas de
+            la extension y el permiso de "Precios con IVA", que mira el componente).
 
-            if (iva_context.saved_iva_aplicado == iva_context.current_iva_aplicado) {
-                if (!from_pivot && iva_context.current_iva_aplicado == 0) {
-                    return Number(price) / iva_multiplier
-                }
-                return price
+            Solo en la configuracion VIEJA (owner.usar_condicion_fiscal_en_costeo apagado): ahi el
+            listado deja apagar "Aplicar IVA" por articulo. En una cuenta migrada el control del
+            listado queda bloqueado en Si, asi que no hay articulos sin IVA a los que sumarselo.
+            Y nunca en Monotributista, que siempre incorpora el IVA al precio. Para un empleado se
+            mira el owner (la configuracion es del negocio).
+
+            @returns {boolean}
+        */
+        cuenta_admite_iva_en_articulos_sin_iva() {
+            if (!this.owner) {
+                return false
             }
+            return !this.owner.usar_condicion_fiscal_en_costeo && !this.es_monotributista_del_negocio()
+        },
+        /*
+            Condicion Monotributista del NEGOCIO, para la regla de IVA de VENDER.
 
-            if (iva_context.saved_iva_aplicado == 1 && iva_context.current_iva_aplicado == 0) {
-                return Number(price) / iva_multiplier
+            La computed global es_monotributista lee this.user, que para un empleado es SU fila de
+            users: la condicion fiscal se configura en el dueño y nada garantiza que la fila del
+            empleado la tenga (la columna nace en RRII). La API arma los precios con la del dueño
+            (ArticlePricesHelper::es_monotributista_para_costeo). Si VENDER mirara la del empleado,
+            un empleado de un Monotributista veria el check nuevo y le sumaria el IVA a precios que
+            ya lo traen. Por eso se mira tambien el owner.
+
+            @returns {boolean}
+        */
+        es_monotributista_del_negocio() {
+            if (this.es_monotributista) {
+                return true
             }
+            return !!(this.owner && this.owner.condicion_iva_precios == 'MT')
+        },
+        /*
+            v_if_function del campo iva_en_articulos_sin_iva de src/models/budget.js: el dato solo
+            se muestra en las cuentas donde el check existe en VENDER.
 
-            if (iva_context.saved_iva_aplicado == 0 && iva_context.current_iva_aplicado == 1) {
-                return Number(price) * iva_multiplier
-            }
-
-            return price
+            @returns {boolean}
+        */
+        cuenta_admite_iva_en_articulos_sin_iva_v_if_function() {
+            return this.cuenta_admite_iva_en_articulos_sin_iva()
         },
         /**
          * Nombre a mostrar de un ítem en vender (remito, totales, etc.).
@@ -750,6 +789,52 @@ export default {
                 return precio_con_recargos
             }
 
+            /*
+                🔴 RECARGO O DESCUENTO DE LA SUCURSAL ADENTRO DEL PRECIO (mision
+                sucursal-recargo-descuento, 2/10/2026). La sucursal elegida en VENDER puede llevar un
+                porcentaje propio (utils/ajuste_de_sucursal.js) y se mete en el precio de CADA renglon,
+                no en el total: mismo lugar y misma idea que el descuento por metodo de pago, que
+                tambien va siempre adentro del precio del catalogo.
+
+                Se llama SOLO en las dos ramas que PARTEN DEL CATALOGO, y NO es un olvido que falte en
+                las otras dos:
+                  - Precio personalizado: es lo que el vendedor escribio a mano, lo que fijo una
+                    oferta de precio fijo o lo que puso la balanza. Es el precio final y no se toca
+                    (decision de Lucas, 2/10/2026).
+                  - Pivot (comprobante guardado): el precio guardado YA TRAE el ajuste adentro, igual
+                    que un descuento por metodo de pago. Reaplicarlo lo cobraria DOS VECES al reabrir
+                    una venta o un presupuesto. NO UNIFICAR ESTAS RAMAS "PARA QUE TODAS AJUSTEN".
+                Tampoco a los servicios (renglon_lleva_ajuste_de_sucursal): Lucas pidio "a cada
+                articulo". Una sucursal sin ajuste, o una API vieja que no devuelve las columnas, deja
+                el precio EXACTAMENTE como estaba.
+
+                🔴 El precio con ajuste se redondea a centavos ACA, en este paso, y no al final. Asi el
+                "precio de catalogo para esta sucursal" es un numero de 2 decimales y todo lo que viene
+                despues -recargos de venta, cuotas, IVA, moneda, oferta- trabaja sobre el. Por eso la
+                base price_vender_sin_recargos (el precio final dividido por el factor de recargos, mas
+                abajo) queda bien definida e incluye el ajuste, y apagar los recargos de venta devuelve
+                cada precio exacto. NO agregar un segundo redondeo al final: seria un redondeo sin
+                factor de recargos, que este metodo evita a proposito (ver el
+                `// price = this.redondear(price)` del flujo normal).
+
+                @param {Number|String} precio_de_catalogo Precio del catalogo, ya con lista de precios y
+                                                          descuento por metodo de pago si correspondia.
+                @returns {Number} El precio con el ajuste de la sucursal, o el mismo si no hay ajuste.
+            */
+            let ajustar_por_sucursal = precio_de_catalogo => {
+
+                let ajuste = this.ajuste_de_sucursal_vigente()
+
+                if (ajuste === null || !renglon_lleva_ajuste_de_sucursal(item)) {
+                    return precio_de_catalogo
+                }
+
+                let con_ajuste = redondear_a_centavos(Number(precio_de_catalogo) * ajuste.factor)
+                item_des.push('Ajuste de sucursal (' + ajuste.texto + '): ' + this.price(precio_de_catalogo) + ' -> ' + this.price(con_ajuste))
+
+                return con_ajuste
+            }
+
             if (item.price_vender_personalizado) {
 
                 price = item.price_vender_personalizado
@@ -760,6 +845,9 @@ export default {
                     opcion esta apagada: ahi el recargo se le suma al pie. Con la opcion prendida
                     se le suma adentro, y el total es el mismo (salvo el redondeo a centavos del
                     final, ver mas abajo).
+
+                    Y NO lleva el ajuste de la sucursal: lo escrito a mano es el precio final (ver
+                    ajustar_por_sucursal, mas arriba).
                 */
                 price = recargar(price)
 
@@ -807,6 +895,12 @@ export default {
 
                 // Unica rama donde el precio viene del pivot: ya esta en la moneda de la venta.
                 price_desde_pivot = true
+
+                /*
+                    🔴 Sin ajuste de sucursal, a proposito: el precio guardado YA lo trae adentro
+                    (ver ajustar_por_sucursal, mas arriba). Reaplicarlo cobraria el recargo o el
+                    descuento dos veces al reabrir una venta o un presupuesto.
+                */
 
                 if (this.$store.state.vender.recargos_en_precios_sin_registro) {
 
@@ -872,6 +966,9 @@ export default {
                     item_des.push('Precio en blanco (sin AFIP): ' + this.price(price))
                 }
 
+                // Recargo o descuento de la sucursal, adentro del precio (antes de los recargos de venta)
+                price = ajustar_por_sucursal(price)
+
                 price = recargar(price)
 
                 // Ajuste IVA sobre el precio en blanco
@@ -900,6 +997,9 @@ export default {
                 if (Number(price) !== Number(price_before_pm)) {
                     item_des.push('Descuento metodo de pago: ' + this.price(price_before_pm) + ' -> ' + this.price(price))
                 }
+
+                // Recargo o descuento de la sucursal, adentro del precio (antes de los recargos de venta)
+                price = ajustar_por_sucursal(price)
 
                 // Recargos de venta aplicados directo al item
                 price = recargar(price)
@@ -971,6 +1071,10 @@ export default {
                 mismo contexto de IVA y moneda que `price`. El numero de antes de recargar() no lo
                 es (le faltarian el IVA, la moneda y la oferta). Si algun dia se agrega un paso
                 ADITIVO despues de recargar() -un monto fijo-, esta division deja de ser exacta.
+
+                El ajuste de la sucursal va ANTES de recargar() y ya viene redondeado a centavos
+                (ajustar_por_sucursal), asi que la base INCLUYE el ajuste: es el precio que el
+                renglon tiene con los recargos de venta apagados en ESTA sucursal.
 
                 Sin recargos adentro (opcion apagada, servicio sin recargos en servicios, o
                 renglon de un comprobante legado) viaja null, que es lo que dice la invariante.
@@ -1351,6 +1455,70 @@ export default {
                     .filter(surchage => surchage)
                     .map(surchage => surchage.percentage)
             )
+        },
+        /**
+         * El recargo o descuento propio de la sucursal elegida en VENDER, ya interpretado
+         * (utils/ajuste_de_sucursal.js), o null si no hay sucursal elegida, no tiene ajuste o lo que
+         * trae no es valido. Con null nadie ajusta nada y el precio queda exactamente como siempre.
+         *
+         * Lee la sucursal de $store.state.address.models -la que trae TODAS las columnas- cruzando
+         * con vender.address_id. Es un metodo del mixin global, y no un computed de un componente,
+         * para que getPriceVender() y los componentes de VENDER que muestran el ajuste
+         * (Address.vue, VenderStage1SummaryBar.vue) lean lo mismo y no puedan decir una cosa distinta
+         * a la que se cobra. Desde un render o un computed el store queda como dependencia reactiva:
+         * si cambia la sucursal, o se edita su ajuste, quien lo llame se recalcula solo.
+         *
+         * @returns {{tipo: String, porcentaje: Number, factor: Number, texto: String, texto_corto: String, marca: String}|null}
+         */
+        ajuste_de_sucursal_vigente() {
+
+            let address_id = this.$store.state.vender.address_id
+
+            if (!address_id) {
+                return null
+            }
+
+            let store_address = this.$store.state.address
+
+            if (!store_address || !Array.isArray(store_address.models)) {
+                return null
+            }
+
+            return ajuste_de_sucursal(
+                store_address.models.find(address => address && address.id == address_id)
+            )
+        },
+        /**
+         * Opciones del select "Ajuste de precios" del formulario de sucursal
+         * (address.ajuste_precio_tipo, src/models/address.js), via dynamic_options_function.
+         *
+         * No se usan `options` fijas en el modelo porque getOptions() les antepone una opcion
+         * `0 "Seleccione ..."` que aca sobra. "Sin ajuste" va con value null (mismo patron que
+         * "Sin especificar" de la facturacion por defecto): el ABM manda null y la API quita el
+         * ajuste, las dos columnas a la vez.
+         *
+         * getOptions() la llama con (prop, model, model_name), la firma comun de las
+         * dynamic_options_function: aca no se usa ninguno, las opciones son fijas.
+         *
+         * @returns {Array<{value: String|null, text: String}>}
+         */
+        get_address_ajuste_precio_options() {
+            return [
+                { value: null, text: 'Sin ajuste' },
+                { value: AJUSTE_RECARGO, text: 'Recargo' },
+                { value: AJUSTE_DESCUENTO, text: 'Descuento' },
+            ]
+        },
+        /**
+         * value_function del select "Ajuste de precios" en una sucursal NUEVA. Sin esto, el motor le
+         * pone 0 a todo select sin `value` (common-vue/mixins/display.js::getSelectAndCheckboxProps)
+         * y la API recibiria un tipo 0 que no existe y respondería 422 al crear la sucursal. null =
+         * sin ajuste. Calcado de combo_descuento_tipo_inicial (mixins/model_functions.js).
+         *
+         * @returns {null}
+         */
+        address_ajuste_precio_tipo_inicial() {
+            return null
         },
         aplicar_descuento_metodo_de_pago(item, price) {
             if (this.current_acount_payment_method_discounts.length 

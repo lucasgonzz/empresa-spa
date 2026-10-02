@@ -96,6 +96,22 @@ export default {
 
 			this.$store.commit('vender/set_modal_payment_methods', [])
 
+			/*
+				🔴 El cobro de un presupuesto (mision presupuesto-contado-o-cuenta-corriente,
+				1/10/2026) tambien se limpia ACA, no solo cuando el guardado sale bien.
+
+				Un presupuesto "de contado" deja en el store cuatro cosas que una venta nunca
+				deberia heredar: el reparto de metodos de pago (los dos de arriba), el
+				"omitir en cuenta corriente" en 1 (mas abajo se vuelve a poner en 0 y despues en el
+				default del comercio) y la marca de que el modal de reparto lo abrio el cartel del
+				presupuesto. Si esa marca sobreviviera, el "Listo" del boton verde de la venta
+				SIGUIENTE --de otro cliente-- guardaria un presupuesto en vez de cerrar el modal.
+				Es la misma clase de fuga entre ventas del defecto A del 9/9/2026
+				(aplicar_recargos_directo_a_items): un valor que se prende para un comprobante y
+				nadie apaga al salir.
+			*/
+			this.$store.commit('vender/set_budget_cobro_pendiente', false)
+
 			this.$store.commit('vender/setDiscountsInServices', 0)
 			this.$store.commit('vender/setSurchagesInServices', 0)
 
@@ -184,6 +200,8 @@ export default {
 			this.$store.commit('vender/set_discount_stock', 1)
 			// Al limpiar vender, iva_aplicado vuelve al valor por defecto (true)
 			this.$store.commit('vender/set_iva_aplicado', 1)
+			// Y "Sumar IVA a los artículos sin IVA" vuelve a apagado (precios tal cual el listado)
+			this.$store.commit('vender/set_iva_en_articulos_sin_iva', 0)
 
 			this.$store.commit('vender/clearPendingAttachments')
 			this.$store.commit('vender/setSaleAttachments', [])

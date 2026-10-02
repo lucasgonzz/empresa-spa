@@ -469,6 +469,23 @@ export default {
 		*/
 		this.$root.$off(this.model_name + ':save-retry', this.guardar_de_nuevo_con)
 	},
+	watch: {
+		/*
+			🔴 El listener de `<model_name>:save-retry` se arma en `mounted()` con el nombre de ESE
+			momento, pero hay pantallas que reusan esta misma instancia y le cambian el modelo: el ABM
+			(`common-vue/views/Abm.vue`) intercambia el `model_name` del view-component con las
+			solapas sin volver a montar nada. Sin este watch el listener se quedaba con el nombre
+			de la solapa con la que se entro (ej. `category:save-retry`): un `price_type:save-retry`
+			no lo escuchaba nadie (el boton "Sincronizar articulos" de la lista de precios no
+			guardaba), y al salir el `$off` del `beforeDestroy` sacaba el nombre nuevo y dejaba el
+			viejo colgado de una instancia destruida (mision sincronizar-margen-lista-precios,
+			1/10/2026). Se mueve el listener al nombre nuevo cada vez que cambia.
+		*/
+		model_name(nuevo, viejo) {
+			this.$root.$off(viejo + ':save-retry', this.guardar_de_nuevo_con)
+			this.$root.$on(nuevo + ':save-retry', this.guardar_de_nuevo_con)
+		},
+	},
 	methods: {
 		/**
 		 * Vuelve a guardar el modelo agregandole props que no salen del formulario.

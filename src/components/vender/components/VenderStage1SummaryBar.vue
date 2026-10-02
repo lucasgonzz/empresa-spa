@@ -15,6 +15,18 @@
 		class="vender-summary-bar__chip">
 			<i class="icon-clipboard vender-summary-bar__chip-icon"></i>
 			<span class="vender-summary-bar__chip-text">{{ selected_address.street }}</span>
+			<!--
+				Marca del recargo o descuento de la sucursal (`+10%` / `−5%`), para que se vea aunque la
+				etapa 1 este plegada. Va en su propio span, separado del nombre: el nombre se corta con
+				puntos suspensivos a los 140px, y la marca no tiene que quedar adentro de ese corte.
+				Sin ajuste no se dibuja nada y el chip queda identico.
+			-->
+			<span
+			v-if="ajuste_de_sucursal"
+			class="vender-summary-bar__chip-ajuste"
+			:class="'vender-summary-bar__chip-ajuste--' + ajuste_de_sucursal.tipo"
+			data-testid="chip-sucursal-ajuste"
+			:title="ajuste_de_sucursal.texto + ' en los precios de esta venta'">{{ ajuste_de_sucursal.marca }}</span>
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Editar sucursal"
@@ -118,6 +130,19 @@ export default {
 			if (!address_id) return null
 			const addresses = this.$store.state.address.models
 			return addresses.find(a => a.id == address_id) || null
+		},
+
+		/**
+		 * Recargo o descuento propio de la sucursal elegida, o null si no tiene (o no es valido).
+		 *
+		 * Sale de ajuste_de_sucursal_vigente() (mixins/generals.js), el mismo metodo con el que
+		 * getPriceVender() precia los renglones: la marca del chip no puede decir otra cosa que lo
+		 * que se cobra. Es un computed para que Vue siga el store y el chip se actualice solo.
+		 *
+		 * @returns {{tipo: String, porcentaje: Number, factor: Number, texto: String, texto_corto: String, marca: String}|null}
+		 */
+		ajuste_de_sucursal() {
+			return this.ajuste_de_sucursal_vigente()
 		},
 
 		/**
@@ -259,6 +284,33 @@ export default {
 		white-space: nowrap
 		overflow: hidden
 		text-overflow: ellipsis
+
+	// Marca del recargo o descuento de la sucursal dentro de su chip (`+10%` / `−5%`). Ambar para
+	// un recargo y verde para un descuento, la misma paleta y los mismos tokens que la pastilla de
+	// Address.vue (ahi esta el detalle de por que cada color): --color-text-warning-strong y
+	// --color-text-success-strong solo existen en oscuro, en claro cae al literal de fallback; los
+	// fondos son translucidos para apoyarse sobre el chip en los dos modos. No se achica ni se
+	// corta (flex-shrink 0, nowrap): lo que se corta con puntos suspensivos es el nombre.
+	&__chip-ajuste
+		flex-shrink: 0
+		padding: 0 6px
+		border: 1px solid transparent
+		border-radius: 10px
+		font-size: 0.72rem
+		font-weight: 600
+		line-height: 1.4
+		white-space: nowrap
+		cursor: help
+
+		&--recargo
+			color: var(--color-text-warning-strong, #9a4a00)
+			background: var(--bg-warning-soft, rgba(194, 94, 0, 0.12))
+			border-color: var(--color-text-warning-strong, #c25e00)
+
+		&--descuento
+			color: var(--color-text-success-strong, #0b6b37)
+			background: rgba(0, 166, 80, 0.12)
+			border-color: var(--color-text-success-strong, #0b6b37)
 
 	/* Botón de edición (lápiz) */
 	&__chip-edit

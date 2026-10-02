@@ -41,7 +41,8 @@ export default {
 				this.loadModel('article', this.article.id)
 			})
 			.catch(err => {
-				this.$store.commit('article/edit_variants_stock/set_variants_to_update', [])
+				// La cola NO se vacia: el stock tipeado sigue en pantalla y el boton tiene que seguir
+				// ahi para poder reintentar (vaciarla dejaba valores sin guardar y sin boton).
 				console.log(err)
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')

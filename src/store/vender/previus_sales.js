@@ -183,6 +183,8 @@ export default {
 			discount_stock: info.discount_stock,
 			// Indica si los precios enviados en la actualización incluyen IVA
 			iva_aplicado: info.iva_aplicado,
+			// Indica si a los artículos sin IVA aplicado se les sumó el IVA (solo con iva_aplicado en 1)
+			iva_en_articulos_sin_iva: info.iva_en_articulos_sin_iva,
 			// Array de descripciones del cálculo del precio final, serializado como JSON
 			price_description: info.price_description,
 			// Indica si se debe enviar correo al cliente

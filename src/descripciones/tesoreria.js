@@ -4,7 +4,7 @@
  * Cheques (Tesorería > Cheques). Misión cheques-endoso-y-bancos del 21/9/2026.
  *
  * Lo que más importa acá son los `repercute` del endoso: elegir un cheque recibido en una fila
- * de pago lo SACA DE CARTERA (pasa a Endosados), cancela deuda del proveedor o paga el gasto por
+ * de pago lo SACA DE CARTERA (pasa a la solapa Endosado), cancela deuda del proveedor o paga el gasto por
  * su monto, y NO mueve caja. Cada afirmación sale del contrato de la §4 del plan y de
  * ChequeHelper::endosar de empresa-api; no inventar acá.
  */
@@ -27,7 +27,7 @@ export default {
 		que_hace: 'Abre "Tu cartera de cheques": los cheques recibidos que todavía están disponibles para endosar, como tarjetas con el diseño de un cheque (banco, número, monto, fecha de pago y el cliente que lo entregó). Se filtra por banco (horizontal nav) o se busca por cliente, banco o número.',
 		repercute: [
 			'Un clic sobre una tarjeta elige ese cheque y cierra la cartera: la fila queda con sus datos, de solo lectura.',
-			'El cheque recibido sale de cartera: pasa a Tesorería > Cheques > Recibidos > Endosados, con el proveedor o el gasto al que fue.',
+			'El cheque recibido sale de cartera: pasa a Tesorería > Cheques > Endosado (y deja de estar en Recibido), con el proveedor o el gasto al que fue.',
 			'Aparece una copia en Emitidos, con el mismo número, banco, monto y fechas, y desde qué cliente vino.',
 			'El proveedor queda pagado (o el gasto registrado) por el monto del cheque: el monto de la fila se fija en ese valor y no se puede cambiar. Se endosa entero, no hay endoso parcial.',
 			'No mueve ninguna caja: la plata nunca entró ni salió del comercio, cambió de mano el papel.',

@@ -52,7 +52,9 @@ export default {
 
 				let total_item = item.price_vender * unidades_devueltas
 				
-				if (item.pivot.discount) {
+				// `pivot` puede faltar en un renglón armado a mano; en compra llega con discount 0
+				// porque el costo unitario ya trae el descuento del renglón aplicado.
+				if (item.pivot && item.pivot.discount) {
 
 					total_item -= total_item * item.pivot.discount / 100
 				}	
@@ -106,7 +108,8 @@ export default {
 				devolucion_discounts.forEach(discount => {
 					this.total_articles -= this.total_articles * Number(discount.percentage) / 100 
 
-					if (this.sale.discounts_in_services) {
+					// En modo compra no hay venta (ni descuentos): la guarda es por las dudas.
+					if (this.sale && this.sale.discounts_in_services) {
 						this.total_services -= this.total_services * Number(discount.percentage) / 100 
 					}
 				})
@@ -130,7 +133,7 @@ export default {
 				devolucion_surchages.forEach(surchage => {
 					this.total_articles += this.total_articles * Number(surchage.percentage) / 100 
 
-					if (this.sale.surchages_in_services) {
+					if (this.sale && this.sale.surchages_in_services) {
 						this.total_services += this.total_services * Number(surchage.percentage) / 100 
 					}
 				})

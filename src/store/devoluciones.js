@@ -6,10 +6,27 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
 export default {
 	namespaced: true,
 	state: {
+		/*
+			Sobre qué se hace la nota de crédito: 'venta' (devolución de un cliente, el camino de
+			siempre) o 'compra' (devolución a un proveedor, misión devoluciones-compras-y-rediseno).
+			Arranca en 'venta' porque es lo que el módulo hacía antes de existir el selector, y los
+			specs de e2e entran a /devoluciones esperando encontrar el buscador de venta.
+		*/
+		tipo: 'venta',
+
 		num_sale: '',
 		client: null,
-		
+
 		sale: null,
+
+		/*
+			Lado compra. `provider_order` es la compra traída de
+			GET devoluciones/search-provider-order/{num}; `provider` es el proveedor, venga de esa
+			compra o elegido a mano para una nota de crédito libre (sin compra de origen).
+		*/
+		num_provider_order: '',
+		provider: null,
+		provider_order: null,
 
 		discounts_id: [],
 		surchages_id: [],
@@ -28,6 +45,18 @@ export default {
 		aplicar_recargos_directo_a_items: 0,
 	},
 	mutations: {
+		set_tipo(state, value) {
+			state.tipo = value
+		},
+		set_num_provider_order(state, value) {
+			state.num_provider_order = value
+		},
+		set_provider(state, value) {
+			state.provider = value
+		},
+		set_provider_order(state, value) {
+			state.provider_order = value
+		},
 		set_update_unidades_devueltas(state, value) {
 			state.update_unidades_devueltas = value
 		},
