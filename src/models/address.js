@@ -121,6 +121,10 @@ export default {
 			value_function: 'address_ajuste_precio_tipo_inicial',
 			options: [],
 			dynamic_options_function: 'get_address_ajuste_precio_options',
+			// not_show solo saca la columna de la tabla del ABM y de las tarjetas (ahi se veria el valor
+			// crudo, "recargo" / "10.00"; el selector de columnas la sigue ofreciendo). NO oculta el
+			// campo del formulario: ModelForm no lee not_show, igual que descuento_tipo de combo.js.
+			not_show: true,
 			descriptions: [
 				'Si cargás un recargo o un descuento, cuando elijas esta sucursal en Vender los precios de los artículos, combos y promociones ya lo llevan adentro. No se suma ni se resta al total de la venta. Los servicios y los precios fijados a mano, por una oferta de precio fijo o por la balanza no se modifican.',
 				'Las ventas y presupuestos que ya están guardados no cambian.',
@@ -138,6 +142,8 @@ export default {
 			key: 'ajuste_precio_porcentaje',
 			type: 'number',
 			value: null,
+			// Misma razon que not_show de "Ajuste de precios": fuera de la tabla, dentro del formulario.
+			not_show: true,
 			descriptions: [
 				'Porcentaje que se aplica sobre el precio de cada artículo, combo y promoción cuando se vende desde esta sucursal. Por ejemplo, con 10: un artículo de $1.000 se vende a $1.100 si es un recargo, o a $900 si es un descuento.',
 				'Dejalo vacío si elegís "Sin ajuste".',
