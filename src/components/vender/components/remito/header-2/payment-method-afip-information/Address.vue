@@ -2,6 +2,7 @@
 	<b-input-group
 	v-if="addresses.length >= 1"
 	class="vender-address"
+	:class="{'vender-address--con-ajuste': ajuste_vigente}"
 	prepend="Sucursal">
 
 		<!--
@@ -217,8 +218,19 @@ export default {
 // fondo, borde y color a cualquier append, y una sola clase perderia contra esa regla.
 //
 // Angosto: el texto es corto (`Recargo +10%`), la letra chica y el ancho tiene tope con
-// puntos suspensivos, asi en un celular (360 px) el select de al lado conserva lugar. Nunca puede
-// empujar la fila para afuera: el select tiene min-width 0 y se achica antes.
+// puntos suspensivos. Si no entra junto al select, baja a una segunda linea (ver
+// .vender-address--con-ajuste, mas abajo): nunca aplasta al select ni empuja la fila para afuera.
+// Ancho minimo del select de sucursal CUANDO HAY PASTILLA. Sin esto Bootstrap lo deja con
+// `min-width: 0` y base 1%, asi que la pastilla nunca baja de linea: solo lo achica. Medido a 820 px
+// con la sucursal "Recargo 10": al select le quedaban 43 px (solo "zz" y la flecha), mientras que a
+// 768 px, donde la pastilla ya bajaba sola, se leia bien. Con un minimo, cuando no entran el select y la
+// pastilla juntos, la pastilla pasa SOLA a una segunda linea (el input-group de Bootstrap es flex-wrap)
+// y queda como una etiqueta debajo del select. 7rem alcanza para ver el comienzo del nombre; el nombre
+// completo esta en el chip de la barra de resumen. Solo con ajuste: sin pastilla el select se comporta
+// exactamente como siempre. Tres clases de selector para ganarle a `.input-group > .custom-select`.
+.vender-address--con-ajuste.input-group > .custom-select
+	min-width: 7rem
+
 .vender-address .input-group-text.vender-address-ajuste
 	min-width: 0
 	max-width: 9.5rem
@@ -239,7 +251,7 @@ export default {
 .vender-address .input-group-text.vender-address-ajuste--descuento
 	color: var(--color-text-success-strong, #0b6b37)
 	background-color: rgba(0, 166, 80, 0.12)
-	border-color: var(--color-text-success-strong, #00a650)
+	border-color: var(--color-text-success-strong, #0b6b37)
 
 // El texto va en su propio span: el .input-group-text es flex, y un flex no corta con puntos suspensivos.
 .vender-address-ajuste__texto
