@@ -21,6 +21,32 @@
 		{{ variant.variant_description }}
 	</td>
 
+	<!--
+		Codigo de barras de la variante: es el que se escanea en Vender para agregar esta variante
+		puntual a la venta (el back lo resuelve en VenderController@search_bar_code).
+
+		- type="text" y NO "number": hay codigos con ceros a la izquierda (el automatico es '0'+id) y
+		  un input numerico los perderia o los mostraria distinto de como estan guardados.
+		- maxlength="20": es el largo de la columna article_variants.bar_code; el back tambien lo
+		  valida, pero asi ni se llega a tipear de mas.
+		- v-model contra un valor LOCAL (bar_code_local) y no contra variant.bar_code, a diferencia
+		  del precio: el back puede rechazar el codigo (repetido, mas de 20), y si se mutara el store
+		  mientras se tipea, un rechazo dejaria el codigo equivocado visible como si estuviera
+		  guardado. El store solo cambia cuando el back confirma (ver updateVariant).
+	-->
+	<td class="variant-row__bar-code-cell">
+		<b-form-input
+		type="text"
+		size="sm"
+		maxlength="20"
+		autocomplete="off"
+		class="variant-row__input"
+		placeholder="Código"
+		title="Código de barras de la variante: es el que se usa al escanear en Vender. Si lo dejas vacío se restituye el código automático."
+		v-model="bar_code_local"
+		@change="onBarCodeChange"></b-form-input>
+	</td>
+
 	<!-- Disponible: toggle estilo iPhone. Disponible = !oculta (ver computed). -->
 	<td class="variant-row__available-cell">
 		<b-form-checkbox
@@ -94,6 +120,16 @@ export default {
 			default: () => [],
 		},
 	},
+	data() {
+		return {
+			/**
+			 * Codigo de barras que se muestra y se edita en el input. Es una copia LOCAL de
+			 * variant.bar_code (arranca igual) y no se bindea directo al store: ver el comentario del
+			 * <td> del codigo. Se actualiza con el watch de abajo y con la respuesta del back.
+			 */
+			bar_code_local: this.variant.bar_code || '',
+		}
+	},
 	computed: {
 		/**
 		 * Disponibilidad "positiva" para el toggle visible (el campo real en DB es `oculta`,
@@ -107,6 +143,20 @@ export default {
 				this.variant.oculta = !value
 				this.updateVariant(value ? 'Habilitando variante' : 'Ocultando variante')
 			},
+		},
+	},
+	watch: {
+		/**
+		 * Refresca el input cuando el store reemplaza la variante por otra copia con un codigo
+		 * distinto (respuesta de un PUT, accion masiva de disponibilidad, recarga del modal). Sin
+		 * esto el input seguiria mostrando lo que se tipeo aunque la base tenga otro codigo.
+		 *
+		 * Ojo: solo dispara si el valor CAMBIA. Por eso updateVariant tambien lo vuelca a mano al
+		 * confirmar o rechazar: si el back viejo ignora el codigo y devuelve el de antes, el watch no
+		 * se entera y el input se quedaria con lo tipeado.
+		 */
+		'variant.bar_code'(nuevo) {
+			this.bar_code_local = nuevo || ''
 		},
 	},
 	methods: {
@@ -136,31 +186,98 @@ export default {
 			return variant_address
 		},
 		/**
-		 * Persiste price/image_url/oculta de la variante (endpoint puntual de ArticleVariantController@update).
+		 * Persiste price/image_url/oculta de la variante (endpoint puntual de ArticleVariantController@update)
+		 * y, solo cuando se lo pide, tambien su codigo de barras.
 		 * El stock por deposito NO se toca aca: sigue el flujo de "Actualizar Stock" por lote.
 		 *
+		 * 🔴 El codigo de barras viaja UNICAMENTE cuando `con_codigo` es true (o sea, cuando el usuario
+		 * acaba de editar el input del codigo). No se manda siempre "ya que esta": el back valida que el
+		 * codigo no este repetido y, si lo rechaza, devuelve 422 SIN guardar nada (ni el precio ni la
+		 * disponibilidad). Si viajara en cada PUT, una variante con un codigo repetido heredado (de antes
+		 * de la validacion) no podria guardar nunca su precio ni habilitarse, porque cada intento
+		 * arrastraria el codigo malo. Y mandarlo solo al editarlo es ademas lo que mantiene compatible a
+		 * la SPA con un back viejo: este simplemente no manda la clave y el back no toca el codigo.
+		 *
 		 * @param {String} mensaje Texto del indicador global de carga mientras se guarda.
+		 * @param {Boolean} con_codigo Si es true, el PUT incluye `bar_code` con el valor del input.
 		 */
-		updateVariant(mensaje) {
+		updateVariant(mensaje, con_codigo = false) {
 			this.$store.commit('auth/setMessage', mensaje)
 			this.$store.commit('auth/setLoading', true)
 
-			this.$api.put('article-variant/'+this.variant.id, {
+			// Cuerpo de siempre. El back pisa price/image_url/oculta con lo que llegue, asi que aunque
+			// el usuario solo haya tocado el codigo se mandan los tres con el valor actual del store.
+			let datos = {
 				price: this.variant.price,
 				image_url: this.variant.image_url,
 				oculta: this.variant.oculta,
-			})
+			}
+
+			if (con_codigo) {
+				datos.bar_code = this.bar_code_local
+			}
+
+			this.$api.put('article-variant/'+this.variant.id, datos)
 			.then(res => {
 				this.$store.commit('article_variant/add', res.data.model)
+
+				// Se vuelca a mano lo que el back dejo guardado (y no se confia en el watch): si el back
+				// es una version vieja que ignora `bar_code`, devuelve el codigo de antes, que es igual al
+				// del store, el watch no dispara y el input se quedaria mostrando lo que se tipeo como si
+				// se hubiera guardado. Tambien refleja el codigo automatico si se dejo vacio.
+				if (con_codigo) {
+					this.bar_code_local = res.data.model.bar_code || ''
+				}
+
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
 			})
 			.catch(err => {
 				console.log(err)
-				this.$toast.error('No se pudo actualizar la variante')
+
+				// Rechazado (ej: codigo repetido): el input vuelve al codigo que SI esta guardado, que es el
+				// del store (no se modifico). Si no, quedaria el codigo rechazado a la vista.
+				if (con_codigo) {
+					this.bar_code_local = this.variant.bar_code || ''
+				}
+
+				// Cuando el back explica el motivo (response.data.message, ej: "El codigo ya lo usa otra
+				// variante"), el manejador global de errores (main.js -> errorEvent) ya lo mostro como aviso.
+				// Agregar aca el toast generico lo duplicaria y, peor, taparia el motivo con un mensaje que
+				// no dice nada. Solo si no hay motivo (red caida, error sin cuerpo) se avisa con el generico.
+				let back_explico_el_error = err && err.response && err.response.data && err.response.data.message
+
+				if (!back_explico_el_error) {
+					this.$toast.error('No se pudo actualizar la variante')
+				}
+
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
 			})
+		},
+		/**
+		 * Se dispara al terminar de editar el codigo de barras (change: al salir del input o con Enter).
+		 * Limpia los espacios de los costados, y si el codigo cambio de verdad lo guarda mandando SOLO el
+		 * codigo (con_codigo = true en updateVariant).
+		 *
+		 * Un codigo vacio no se valida aca: es la forma de pedir que se restituya el codigo automatico
+		 * ('0' + id de la variante) y esa decision es del back, que es quien conoce el id definitivo.
+		 */
+		onBarCodeChange() {
+			// El back tambien recorta, pero se hace aca para comparar contra el codigo guardado y para que
+			// el input muestre lo mismo que se va a guardar.
+			let nuevo = (this.bar_code_local || '').trim()
+			let actual = this.variant.bar_code || ''
+
+			this.bar_code_local = nuevo
+
+			// Sin cambios (se entro al input y se salio, o solo se agregaron espacios): no hay nada que
+			// guardar ni motivo para prender el indicador de carga.
+			if (nuevo === actual) {
+				return
+			}
+
+			this.updateVariant('Guardando código de barras', true)
 		},
 		/**
 		 * Se dispara al tocar el stock de la variante: la cantidad global (negocio sin sucursales) o
@@ -236,6 +353,14 @@ export default {
 		color: var(--color-text-primary, #1d1d1f)
 	&__available-cell
 		text-align: center
+	// Codigo de barras: mas ancho que precio y stock porque tiene hasta 20 caracteres. El input
+	// ocupa el ancho de la celda; si la suma de columnas no entra (telefono 360-390px) quien
+	// scrollea es el recuadro de la tabla (variant-grid__table-wrapper, overflow-x: auto) y no
+	// la pagina, igual que hoy con las columnas de deposito. 170px minimo: con el padding de la celda
+	// y del input un EAN-13 (13 digitos) entra completo; con 130px el ultimo digito quedaba cortado.
+	&__bar-code-cell
+		width: 190px
+		min-width: 170px
 	&__price-cell
 		width: 110px
 		min-width: 96px

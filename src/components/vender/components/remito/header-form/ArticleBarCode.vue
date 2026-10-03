@@ -244,23 +244,71 @@ export default {
 					*/
 					await this.set_article_from_plu(codigo)
 
-				} else if (this.usa_tickets_por_balanzas) {
-
-					/*
-						"Por balanza" sin conexion (mision balanzas-configurables, 3/10/2026). Con la
-						vieja extension de importe, sin conexion el ticket daba "No se encontro".
-
-						Sin `await` A PROPOSITO (regla del repo: nada de async/await nuevo en src/):
-						se DEVUELVE la promesa. Esta rama es lo ultimo que hace set_finded_article(),
-						asi que devolverla es lo mismo que esperarla: la promesa de esta funcion async
-						adopta la devuelta, y set_article_from_barcode() espera a que el ticket quede
-						agregado antes de mirar from_balanza.
-					*/
-					return this.leer_ticket_por_balanzas_sin_conexion(codigo)
-
 				} else {
 
 					this.finded_article = undefined
+				}
+
+				/*
+					Respaldo por API: las VARIANTES no estan en el indice local. La cache (Dexie) guarda
+					articulos y se busca por articles.bar_code, asi que el codigo de una variante nunca
+					aparece ahi: con "Usar cache de articulos" el escaneo de una variante terminaba en
+					"No se encontro articulo" aunque estuviera cargada.
+
+					Se le pregunta a la API solo si TODO esto se cumple:
+					- el lookup local no encontro nada (finded_article sigue undefined) y tampoco era
+					  una pesada de balanza (from_balanza: set_article_from_plu ya agrego el item por su
+					  cuenta y deja finded_article en undefined, preguntarle a la API seria agregarlo
+					  dos veces);
+					- hay conexion de verdad (offline no puede llamar a nadie y queda como siempre);
+					- el usuario tiene la extension article_variants (sin ella no existen variantes, y
+					  un codigo que la cache no conoce sigue siendo "no encontrado": no cambia nada).
+					Un articulo normal que la cache SI tiene se resuelve arriba y nunca toca la API.
+
+					Es un return y no un await a proposito: es la ultima accion de la rama y el async de
+					la funcion espera la promesa igual (el que llama hace await de set_finded_article),
+					sin sumar un await nuevo al archivo.
+				*/
+				if (
+					typeof this.finded_article == 'undefined'
+					&& !this.from_balanza
+					&& this.$store.state.auth.online
+					&& this.hasExtencion('article_variants')
+				) {
+
+					return this.getArticleFromApi(codigo)
+				}
+
+				/*
+					"Por balanza" sin conexion, o con la cache de articulos (mision
+					balanzas-configurables, 3/10/2026). Con la vieja extension de importe, aca el ticket
+					daba "No se encontro articulo".
+
+					🔴 Es LO ULTIMO que se intenta, despues del codigo de barras local, del PLU y del
+					respaldo por API de las variantes (bloque de arriba), y tiene que quedar asi:
+					- Una variante encontrada no puede caer en la lectura de balanza: un codigo de
+					  variante que empezara con el codigo de una balanza se leeria como ticket. Con
+					  conexion y la extension article_variants, el bloque de arriba ya le pregunto a la
+					  API, que busca primero el articulo y la variante y recien despues lee la balanza,
+					  asi que ahi el ticket tambien queda resuelto (con su misma regla) y no se llega
+					  hasta aca.
+					- Si estuviera ANTES de ese bloque (como antes del merge con la mision
+					  codigo-de-barras-de-variantes), su `return` le cortaria el paso al respaldo de
+					  variantes a toda cuenta con "Por balanza".
+
+					Sin `await` A PROPOSITO (regla del repo: nada de async/await nuevo en src/): se DEVUELVE
+					la promesa. Es la ultima accion de la rama, asi que devolverla es lo mismo que
+					esperarla: la promesa de esta funcion async adopta la devuelta, y
+					set_article_from_barcode() espera a que el ticket quede agregado antes de mirar
+					from_balanza.
+				*/
+				if (
+					typeof this.finded_article == 'undefined'
+					&& !this.from_balanza
+					&& this.usa_tickets_por_balanzas
+				) {
+
+					return this.leer_ticket_por_balanzas_sin_conexion(codigo)
 				}
 
 
@@ -350,12 +398,58 @@ export default {
 						Prompt 525 (depende del 520): el back distingue 3 casos al escanear.
 						- variant_id presente (mas abajo): se encontro una variante puntual, se
 						  agrega directo via set_item_vender (ya sabe traducir variant_id a
-						  article_variant_id).
+						  article_variant_id). Con el back actual ese caso llega ademas como
+						  variant_row (ver el bloque siguiente) y es el que se usa.
 						- has_variants:true: el articulo escaneado tiene variantes disponibles
 						  pero el codigo no identifica una en particular -> hay que abrir el
 						  selector (SelectVariant) en vez de agregar el padre sin variante.
 						- has_variants:false (u omitido): flujo de siempre, articulo sin variantes.
 					*/
+
+					/*
+						El codigo escaneado fue de una VARIANTE puntual: el back manda, ademas de
+						`article`/`variant_id`/`variant` (que siguen igual y que usa la consultora de
+						precios), `variant_row`: la misma fila que devuelve la busqueda por nombre
+						(is_variant, variant_id, variant_description, final_price, name, article, images,
+						addresses). Esa fila es EL formato con el que una variante entra al remito.
+
+						🔴 Por eso finded_article lleva encima la variant_row (mas abajo se explica como se
+						arma) y NO se hace la asignacion de `variant_id` del final sobre `article`: ese
+						camino se veia bien pero perdia la variante. El `article` que escanea no trae
+						`is_variant`, y add_item_to_sale (mixins/vender/index.js) calcula
+						    article_variant_id = is_variant ? variant_id : 0
+						asi que la linea quedaba con article_variant_id en 0 y sin variant_description
+						(que es lo que muestra la columna "Variante" de la tabla de items): se vendia el
+						articulo "pelado" aunque se hubiera escaneado una variante. Con la fila de la
+						variante ambas cosas llegan armadas, igual que cuando se elige por nombre.
+
+						Con un back viejo `variant_row` no existe: se sigue de largo al camino de siempre,
+						que queda intacto (selector de variantes, articulo suelto, etc.).
+					*/
+					if (res.data.variant_row) {
+
+						/*
+							Se arma como el ARTICULO COMPLETO con lo propio de la variante encima, y no
+							como la fila sola. La fila (build_row) es plana: no trae cost, costo_real,
+							cost_in_dollars, unidades_individuales, iva_id, article_variants, descuentos,
+							etc. en la raiz, y el guardado de la venta (SaleHelper::getCost) lee cost y
+							costo_real de la RAIZ del item: con la fila sola la linea saldria con costo
+							null y ganancia igual al precio (antes de este cambio el escaneo devolvia el
+							articulo entero y el costo si viajaba). La moneda del costo
+							(cost_in_dollars) tambien se lee de la raiz.
+
+							Object.assign copia el articulo y despues la fila, asi que is_variant,
+							variant_id, variant_description, final_price, precios_por_metodo_pago,
+							price_types, bar_code, name, images, addresses, stock y el `article` anidado
+							son los de la VARIANTE (los pisa la fila) y todo lo demas sigue siendo el del
+							articulo. Es el mismo criterio que SelectVariant (que hace ...article) y
+							se hace sobre {} para no mutar res.data.article.
+						*/
+						this.finded_article = Object.assign({}, res.data.article, res.data.variant_row)
+
+						return
+					}
+
 					if (res.data.has_variants) {
 
 						this.opening_variant_selector = true

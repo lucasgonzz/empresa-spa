@@ -320,9 +320,32 @@ export default {
 			fields = fields.concat(this.dynamic_table_fields)
 
 			if (this.hasExtencion('article_variants')) {
-				fields.push({
+
+				let columna_variante = {
 					key: 'article_variant_id', label: 'Variante'
-				})
+				}
+
+				/*
+					La columna Variante va pegada a la derecha de "Nombre" y no al final del bloque
+					configurable: la variante es parte de la identidad del renglon (es lo que distingue
+					"Zapatilla Azul 36" de "Zapatilla Rojo 38") y tiene que verse junto al nombre.
+					Al final, con las columnas configurables de una cuenta real (precio, descuento,
+					total, cantidad, fechas...) la tabla se ensancha mas que la pantalla y "Variante"
+					quedaba fuera de vista hasta scrollear de costado: medido en vivo, 1727 px de tabla
+					contra 1308 px visibles a 1440 px de ancho.
+
+					Si el usuario saco "Nombre" de sus columnas configurables no hay a donde pegarla y
+					se agrega al final del bloque, como se hacia antes. El gate (extension), el key y el
+					label no cambian: el slot #cell(article_variant_id) y dedicated_keys dependen de
+					ellos.
+				*/
+				let index_nombre = fields.findIndex(field => field.key == 'name')
+
+				if (index_nombre != -1) {
+					fields.splice(index_nombre + 1, 0, columna_variante)
+				} else {
+					fields.push(columna_variante)
+				}
 			}
 
 			// if (this.hasExtencion('unidades_individuales_en_articulos')) {
