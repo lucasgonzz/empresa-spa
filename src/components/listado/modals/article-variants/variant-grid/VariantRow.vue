@@ -356,10 +356,11 @@ export default {
 	// Codigo de barras: mas ancho que precio y stock porque tiene hasta 20 caracteres. El input
 	// ocupa el ancho de la celda; si la suma de columnas no entra (telefono 360-390px) quien
 	// scrollea es el recuadro de la tabla (variant-grid__table-wrapper, overflow-x: auto) y no
-	// la pagina, igual que hoy con las columnas de deposito.
+	// la pagina, igual que hoy con las columnas de deposito. 170px minimo: con el padding de la celda
+	// y del input un EAN-13 (13 digitos) entra completo; con 130px el ultimo digito quedaba cortado.
 	&__bar-code-cell
-		width: 150px
-		min-width: 130px
+		width: 190px
+		min-width: 170px
 	&__price-cell
 		width: 110px
 		min-width: 96px
