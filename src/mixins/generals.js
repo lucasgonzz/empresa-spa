@@ -708,14 +708,45 @@ export default {
 
             let name = item.name || ''
 
+            /*
+                Descripcion de la variante a sumarle al nombre: la del item o, en una venta ya
+                guardada, la del pivot.
+            */
+            let variant_description = ''
+
             if (item.variant_description) {
-                name += ' ' + item.variant_description
+                variant_description = String(item.variant_description)
             } else if (
                 from_pivot
                 && item.pivot
                 && item.pivot.variant_description
             ) {
-                name += ' ' + item.pivot.variant_description
+                variant_description = String(item.pivot.variant_description)
+            }
+
+            /*
+                🔴 Solo se suma si el nombre NO la trae ya. La fila de una variante que arma el back
+                (VenderSearchHelper::build_row, tanto la del buscador por nombre como la `variant_row`
+                del escaneo) ya viene con `name` = "<articulo> <variante>" Y ademas con
+                `variant_description` aparte; sumarla de nuevo mostraba "Zapatilla Azul 36 Azul 36".
+                En cambio un item que viene del articulo pelado (selector de variantes, ventas viejas)
+                trae el nombre sin la variante y SI hay que sumarsela: es la razon de este chequeo en
+                vez de sacar el `+=`.
+
+                Se compara el final del nombre (slice y no endsWith, por compatibilidad) y ademas
+                exigiendo que lo anterior sea un espacio o el inicio: sin eso, un articulo llamado
+                "Camisa XL" con la variante "L" se tomaba por ya incluida (termina en "L") y
+                perdia la variante. Talles de una letra (S, M, L) y colores cortos son comunes.
+            */
+            if (variant_description) {
+
+                let sufijo = ' ' + variant_description
+                let ya_incluida = String(name) === variant_description
+                    || String(name).slice(-sufijo.length) === sufijo
+
+                if (!ya_incluida) {
+                    name += sufijo
+                }
             }
 
             return name
