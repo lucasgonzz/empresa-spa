@@ -59,8 +59,18 @@ export default {
 			required: true,
 			search_from_api: true,
 			route_to_search: 'vender/buscar-articulo-por-nombre/1',
+			/*
+				La recomendacion del segundo renglon no es de estilo: un ticket con importe de un
+				articulo que ya esta en la venta CON SU PROPIO PRECIO (de lista) no se le puede sumar a
+				ese renglon sin borrarle el precio, asi que va en un renglon aparte del mismo articulo
+				(ArticleBarCode.vue::linea_para_otro_precio). Dos renglones del mismo articulo sin
+				variante son la misma linea para el store de VENDER (es_la_misma_linea), y borrar o
+				cambiarle la cantidad a uno puede tocar al otro. Con un articulo generico sin precio
+				-el caso de Panchito- eso no pasa nunca.
+			*/
 			descriptions: [
 				'El artículo al que se le imputa cada ticket de esta balanza, por ejemplo "Carnicería".',
+				'Si la balanza imprime el importe, usá un artículo general sin precio (por ejemplo "Carnicería", "Verdulería"): el precio lo pone cada ticket. Si imprime el peso, usá el artículo que se pesa, con su precio por kilo.',
 			],
 		},
 		{
