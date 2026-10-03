@@ -59,6 +59,12 @@
 <script>
 import abm from '@/mixins/abm'
 import routes from '@/router/routes'
+/*
+	Gate por configuración del dueño de las views del ABM (misión balanzas-configurables, 3/10/2026):
+	una view puede declarar `if_config_del_dueno` (ver src/mixins/abm.js, la de Balanzas) además del
+	`if_has_extencion` de siempre. Las views que no la declaran no cambian.
+*/
+import { cumple_config_del_dueno } from '@/common-vue/mixins/generals'
 export default {
 	mixins: [abm],
 	components: {
@@ -80,7 +86,12 @@ export default {
 		views() {
 			let views = []
 			this.abm_views.forEach(view => {
-				 
+
+				// Gate ADITIVO por configuración del dueño: sin la clave no hace nada.
+				if (!cumple_config_del_dueno(this, view)) {
+					return
+				}
+
 				if (view.if_has_extencion) {
 					if (this.hasExtencion(view.if_has_extencion)) {
 
@@ -249,6 +260,11 @@ export default {
 				if (v.if_has_extencion && !self.hasExtencion(v.if_has_extencion)) {
 					continue
 				}
+				// Mismo gate que `views`: una view escondida por la configuración del dueño no se
+				// resuelve tampoco entrando por la URL.
+				if (!cumple_config_del_dueno(self, v)) {
+					continue
+				}
 				if (self.routeString(v.view) !== route_view) {
 					continue
 				}
@@ -278,6 +294,10 @@ export default {
 			for (i = 0; i < self.abm_views.length; i++) {
 				var v = self.abm_views[i]
 				if (v.if_has_extencion && !self.hasExtencion(v.if_has_extencion)) {
+					continue
+				}
+				// Mismo gate que `views` (configuración del dueño). Sin la clave no hace nada.
+				if (!cumple_config_del_dueno(self, v)) {
 					continue
 				}
 				if (self.routeString(v.view) !== route_view) {

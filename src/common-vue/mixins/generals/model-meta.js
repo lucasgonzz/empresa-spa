@@ -1,4 +1,15 @@
 import { add_article_dynamic_columns } from '@/common-vue/helpers/article_dynamic_table_columns'
+/*
+	Gate por configuración del dueño (misión balanzas-configurables, 3/10/2026). La función vive en
+	generals.js, al lado de cumple_alguna_extencion(), y se importa de ahí para que las dos copias de
+	check_extencions usen exactamente la misma regla.
+
+	Es un import circular (generals.js importa este archivo) y es seguro: acá la función solo se usa
+	adentro de un método, o sea en tiempo de ejecución, cuando los dos módulos ya terminaron de
+	cargarse. Nada de este archivo la llama mientras se evalúa el módulo. Si algún día hiciera falta
+	usarla al cargar el módulo, hay que moverla a un helper propio.
+*/
+import { cumple_config_del_dueno } from '@/common-vue/mixins/generals'
 
 export default {
     methods: {
@@ -38,6 +49,16 @@ export default {
             let props_result = []
 
             props.forEach(prop => {
+                /*
+                    Bloque ADITIVO (misión balanzas-configurables, 3/10/2026): mismo gate que en la
+                    copia de generals.js (que es la que pisa a esta en los componentes, porque los
+                    métodos propios de un mixin le ganan a los de sus mixins). Se mantiene igual en las
+                    dos para que no diverjan. Sin `if_config_del_dueno` no cambia nada.
+                */
+                if (!cumple_config_del_dueno(this, prop)) {
+                    return
+                }
+
                 if (prop.if_has_extencion) {
                     if (this.hasExtencion(prop.if_has_extencion)) {
                         props_result.push(prop)

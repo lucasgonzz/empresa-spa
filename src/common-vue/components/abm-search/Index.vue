@@ -57,6 +57,8 @@
 </template>
 <script>
 import abm from '@/mixins/abm'
+// Gate por configuración del dueño de las views del ABM (misión balanzas-configurables, 3/10/2026).
+import { cumple_config_del_dueno } from '@/common-vue/mixins/generals'
 export default {
 	// Buscador tipo Google del modulo ABM: matchea recursos por nombre, palabras clave
 	// y descripcion, y al elegir uno navega a su grupo y submodelo (auto-seleccion).
@@ -75,14 +77,18 @@ export default {
 		},
 		/**
 		 * Indice de busqueda: un item por cada recurso visible del ABM.
-		 * Respeta la misma visibilidad que Abm.vue: extension del grupo (if_has_extencion)
-		 * y la misma regla de modelo (check_model), asi el buscador nunca ofrece un recurso
-		 * que las pestanias no muestran.
+		 * Respeta la misma visibilidad que Abm.vue: extension del grupo (if_has_extencion),
+		 * configuracion del dueño (if_config_del_dueno) y la misma regla de modelo
+		 * (check_model), asi el buscador nunca ofrece un recurso que las pestanias no muestran.
 		 */
 		indice() {
 			let items = []
 			this.abm_views.forEach(view => {
 				if (view.if_has_extencion && !this.hasExtencion(view.if_has_extencion)) {
+					return
+				}
+				// Bloque ADITIVO (mision balanzas-configurables, 3/10/2026): sin la clave no hace nada.
+				if (!cumple_config_del_dueno(this, view)) {
 					return
 				}
 				view.models.forEach(model_name => {
