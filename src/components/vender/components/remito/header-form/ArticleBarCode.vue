@@ -246,12 +246,41 @@ export default {
 						Prompt 525 (depende del 520): el back distingue 3 casos al escanear.
 						- variant_id presente (mas abajo): se encontro una variante puntual, se
 						  agrega directo via set_item_vender (ya sabe traducir variant_id a
-						  article_variant_id).
+						  article_variant_id). Con el back actual ese caso llega ademas como
+						  variant_row (ver el bloque siguiente) y es el que se usa.
 						- has_variants:true: el articulo escaneado tiene variantes disponibles
 						  pero el codigo no identifica una en particular -> hay que abrir el
 						  selector (SelectVariant) en vez de agregar el padre sin variante.
 						- has_variants:false (u omitido): flujo de siempre, articulo sin variantes.
 					*/
+
+					/*
+						El codigo escaneado fue de una VARIANTE puntual: el back manda, ademas de
+						`article`/`variant_id`/`variant` (que siguen igual y que usa la consultora de
+						precios), `variant_row`: la misma fila que devuelve la busqueda por nombre
+						(is_variant, variant_id, variant_description, final_price, name, article, images,
+						addresses). Esa fila es EL formato con el que una variante entra al remito.
+
+						🔴 Por eso finded_article pasa a ser variant_row y NO se hace la asignacion de
+						`variant_id` de mas abajo sobre `article`: ese camino se veia bien pero perdia la
+						variante. El `article` que escanea no trae `is_variant`, y add_item_to_sale
+						(mixins/vender/index.js) calcula
+						    article_variant_id = is_variant ? variant_id : 0
+						asi que la linea quedaba con article_variant_id en 0 y sin variant_description
+						(que es lo que muestra la columna "Variante" de la tabla de items): se vendia el
+						articulo "pelado" aunque se hubiera escaneado una variante. Con la fila de la
+						variante ambas cosas llegan armadas, igual que cuando se elige por nombre.
+
+						Con un back viejo `variant_row` no existe: se sigue de largo al camino de siempre,
+						que queda intacto (selector de variantes, articulo suelto, etc.).
+					*/
+					if (res.data.variant_row) {
+
+						this.finded_article = res.data.variant_row
+
+						return
+					}
+
 					if (res.data.has_variants) {
 
 						this.opening_variant_selector = true
