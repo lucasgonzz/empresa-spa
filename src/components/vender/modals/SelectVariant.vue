@@ -68,6 +68,11 @@ export default {
 				is_article: true,
 				is_variant: true,
 				variant_id: variant.variant_id,
+				// Descripcion de la variante ("Azul 36"): sin ella la columna "Variante" del remito
+				// queda vacia y el nombre sale sin la variante, porque el articulo padre no la trae.
+				// El nombre del item es solo el del articulo, asi que getItemDisplayName
+				// (mixins/generals.js) se la suma al mostrarlo.
+				variant_description: variant.variant_description,
 			}
 
 			this.$bvModal.hide('select-variant')
