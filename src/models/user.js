@@ -280,6 +280,42 @@ export default {
 			type: 'checkbox',
 		},
 		/*
+		 * Tickets de balanza (mision balanzas-configurables, 3/10/2026). Reemplaza a las extensiones
+		 * `plu_balanza_bar_code` y `balanza_bar_code`, que ya no hacen nada: el comando
+		 * balanzas:migrar-desde-extensiones de la API pasa a cada dueño a la dinamica que usaba.
+		 *
+		 * - 'plu': el codigo trae el PLU del articulo y el peso (La Martina). Muestra el campo PLU
+		 *   en la ficha del articulo (src/models/article.js) y VENDER lo lee igual que siempre.
+		 * - 'balanzas': cada balanza tiene un codigo de ticket propio y un articulo (Panchito).
+		 *   Muestra la solapa ABM -> Balanzas (src/mixins/abm.js).
+		 * - 'ninguno' (o NULL, nunca configurado): VENDER no lee tickets de balanza.
+		 *
+		 * Solo lo ve el dueño, igual que aplicar_descuentos_proveedor_al_asignar: es preferencia del
+		 * comercio y vive en la fila del dueño, que es de donde la leen VENDER, la ficha del articulo
+		 * y el ABM (owner.tickets_de_balanza). El empleado tiene su propia columna, que nadie escribe,
+		 * asi que el select le mostraria siempre vacio. Ojo: esto es para que no vea un control que le
+		 * miente, NO es la proteccion. ModelForm postea el modelo entero, props ocultas incluidas;
+		 * quien impide que el empleado le pise la preferencia al dueño es el guard de
+		 * UserController::update() (que ademas solo acepta estos tres valores).
+		 */
+		{
+			text: 'Tickets de balanza',
+			key: 'tickets_de_balanza',
+			type: 'select',
+			options: [
+				{text: 'No uso balanzas', value: 'ninguno'},
+				{text: 'Por PLU', value: 'plu'},
+				{text: 'Por balanza', value: 'balanzas'},
+			],
+			v_if_function: 'is_owner_v_if_function',
+			descriptions: [
+				'Define cómo lee VENDER los tickets que imprime la balanza cuando se escanean con el lector de códigos de barras.',
+				'Por PLU: el código del ticket trae el PLU del artículo y el peso. A cada artículo que se pesa cargale su PLU en la ficha (campo "PLU") y VENDER lo agrega con la cantidad que marcó la balanza.',
+				'Por balanza: cada balanza imprime tickets que empiezan con un código propio (por ejemplo 22) y se imputan siempre al mismo artículo (por ejemplo "Carnicería"). Las balanzas se cargan en ABM → Balanzas: el código, el artículo y si el ticket trae el importe o el peso.',
+				'Por balanza, con importe: si el artículo ya está en la venta, el importe del ticket se suma como un precio más del mismo renglón; si no está, se agrega con ese importe.',
+			],
+		},
+		/*
 		 * Permite habilitar o deshabilitar el trabajo en modo offline del sistema.
 		 * Si está desactivado, no se ejecuta la sincronización local de artículos/ventas.
 		 */

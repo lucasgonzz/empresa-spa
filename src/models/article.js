@@ -136,7 +136,16 @@ export default {
 			key: 'plu',
 			type: 'text',
 			not_show: true,
-			if_has_extencion: 'plu_balanza_bar_code',
+			/*
+				Mision balanzas-configurables (3/10/2026): el campo aparece segun la configuracion
+				del dueño ("Por PLU" en Configuracion -> Modulo de VENDER -> Tickets de balanza) y
+				ya no por la extension `plu_balanza_bar_code`, que dejo de hacer nada. El comando
+				balanzas:migrar-desde-extensiones de la API deja en 'plu' a todo dueño que tenia esa
+				extension, asi que a nadie se le esconde el campo al desplegar. El gate lo resuelve
+				cumple_config_del_dueno() (common-vue/mixins/generals.js) en el formulario, la tabla,
+				los filtros y el modal de columnas.
+			*/
+			if_config_del_dueno: { key: 'tickets_de_balanza', value: 'plu' },
 			description: 'Codigo del articulo en la balanza',
 		},
 		{
