@@ -9,12 +9,17 @@
 				`#articles`). La lista son los movimientos con el stock TODAVIA SIN MOVER del empleado
 				(`en_curso`): al mover el stock desde una fila, BtnMoverStock refresca `en_curso` y el
 				movimiento sale de aca.
+
+				`:show_actualizar_option="false"`: sin la opcion masiva "Actualizar", por el mismo
+				motivo que en el modal del listado (guarda por `update/deposit_movement`, sin las
+				guardas de permisos ni el bloqueo de depositos del PUT del movimiento).
 			-->
 			<view-component 
 			model_name="deposit_movement"
 			show_models_if_empty
 			:show_btn_create="false"
 			:show_btn_delete="false"
+			:show_actualizar_option="false"
 			:show_btn_save="mostrar_btn_guardar"
 			:check_permissions="false"
 			:models_to_show="models_to_show"

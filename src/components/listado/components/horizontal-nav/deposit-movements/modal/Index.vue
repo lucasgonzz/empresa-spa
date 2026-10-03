@@ -5,11 +5,22 @@
 	size="lg"
 	id="deposit-movements">
 		<div>
+			<!--
+				`:show_actualizar_option="false"` (ajuste del 3/10/2026, mision
+				movimientos-deposito-auditoria): sin la opcion masiva "Actualizar" de los desplegables
+				de filtrados y de seleccion. Esa opcion guarda por `update/deposit_movement`, que NO
+				pasa por las guardas del PUT del movimiento: por ahi un empleado sin permiso de edicion
+				podia cambiar los depositos de un movimiento cuyo stock ya se movio. Lo que se edita de
+				un movimiento se edita desde su formulario, donde estan los bloqueos. Mismo recurso que
+				ya usa Ventas.vue. "Eliminar" masivo queda: el backend frena con 422 el de un
+				movimiento con el stock movido.
+			-->
 			<view-component 
 			model_name="deposit_movement"
 			order_list_by="deposit_movement_status"
 			change_from_dates_option
 			:check_permissions="false"
+			:show_actualizar_option="false"
 			:show_btn_save="mostrar_btn_guardar"
 			:show_btn_delete="mostrar_btn_eliminar"
 			:show_previus_days="show_previus_days">
