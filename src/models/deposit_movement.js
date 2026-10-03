@@ -13,6 +13,9 @@ export default {
 			value: 0,
 			use_store_models: true,
 			filter_modal_position: 2,
+			// Mision movimientos-deposito-auditoria (3/10/2026): de solo lectura en un movimiento ya
+			// creado si el usuario no tiene `deposit_movement.update` (ver src/mixins/model_functions.js).
+			disabled_function: 'deposit_movement_datos_bloqueados',
 		},
 		{
 			text: 'Estado',
@@ -21,6 +24,10 @@ export default {
 			value: 1,
 			not_show: true,
 			filter_modal_position: 3,
+			// El estado es una etiqueta: cambiarlo no mueve stock (eso lo hace el boton "Mover
+			// stock"). Por eso se sigue pudiendo cambiar aunque el stock ya se haya movido; solo se
+			// bloquea sin el permiso `deposit_movement.update`.
+			disabled_function: 'deposit_movement_datos_bloqueados',
 		},
 		{
 			text: 'Deposito ORIGEN',
@@ -33,6 +40,8 @@ export default {
 			value: 0,
 			show: true,
 			filter_modal_position: 4,
+			// Con el stock ya movido el traslado se hizo entre ESTOS depositos: no se cambian mas.
+			disabled_function: 'deposit_movement_depositos_bloqueados',
 		},
 		{
 			text: 'Deposito DESTINO',
@@ -45,6 +54,8 @@ export default {
 			value: 0,
 			show: true,
 			filter_modal_position: 5,
+			// Mismo criterio que el deposito de origen.
+			disabled_function: 'deposit_movement_depositos_bloqueados',
 		},
 		{
 			text: 'Articulos',
@@ -53,6 +64,11 @@ export default {
 			type: 'search',
 			search_from_api_function: 'search_from_api_in_provider_order',
 			key: 'articles',
+			// Apaga el buscador cuando los articulos quedan bloqueados (stock ya movido, o sin el
+			// permiso `deposit_movement.update_articles`). La tabla de la relacion no tiene modo de
+			// solo lectura: el modal del listado y el de alertas la cambian por ArticulosSoloLectura
+			// con el slot `#articles` (ver deposit-movements/modal/Index.vue).
+			disabled_function: 'deposit_movement_articulos_bloqueados',
 			belongs_to_many: {
 				model_name: 'article',
 				check_ya_esta_agregado: false,
@@ -115,6 +131,7 @@ export default {
 			type: 'textarea',
 			value: '',
 			show: true,
+			disabled_function: 'deposit_movement_datos_bloqueados',
 		},
 	],
 	singular_model_name_spanish: 'Movimiento de deposito',
