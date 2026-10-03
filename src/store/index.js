@@ -114,6 +114,8 @@ import article_pre_import_range from '@/store/article_pre_import_range'
 import unidad_medida from '@/store/unidad_medida'
 import cheque from '@/store/cheque'
 import cheque_banco from '@/store/cheque_banco'
+// Balanzas que imprimen tickets con codigo de barras (mision balanzas-configurables, 3/10/2026).
+import balanza from '@/store/balanza'
 import expense from '@/store/expense'
 import expense_concept from '@/store/expense_concept'
 import current_acount_payment_method_discount from '@/store/current_acount_payment_method_discount'
@@ -410,6 +412,7 @@ export default new Vuex.Store({
         unidad_medida,
         cheque,
         cheque_banco,
+        balanza,
         expense,
         expense_concept,
         current_acount_payment_method_discount,
