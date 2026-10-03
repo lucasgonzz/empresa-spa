@@ -52,6 +52,7 @@ import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout
 import {
 	leer_modo_tickets_de_balanza,
 	leer_ticket_por_balanzas,
+	nombre_de_la_balanza,
 	cantidad_desde_peso,
 	precio_tipeado_pendiente,
 	cantidad_de_la_fila_pendiente,
@@ -566,7 +567,9 @@ export default {
 		 * es de esta cuenta): sonido de error, toast que dice donde arreglarlo y codigo de barras
 		 * vacio para seguir escaneando.
 		 *
-		 * @param {String|null} nombre Nombre de la balanza (puede venir vacio: es opcional).
+		 * @param {String|null} nombre Nombre de la balanza, o su codigo si no tiene nombre (asi lo
+		 *        manda la API en balanza_nombre, y nombre_de_la_balanza() sin conexion). Si igual
+		 *        llegara vacio, el aviso dice "La balanza de este ticket".
 		 * @returns {void}
 		 */
 		avisar_balanza_sin_articulo(nombre) {
@@ -668,10 +671,16 @@ export default {
 
 			let article_id = Number(lectura.balanza.article_id)
 
+			/*
+				El nombre del aviso es el mismo que manda la API en balanza_nombre: el nombre de la
+				balanza, o su codigo si no tiene nombre.
+			*/
+			let nombre_para_el_aviso = nombre_de_la_balanza(lectura.balanza)
+
 			if (!article_id) {
 				self.from_balanza = true
 				self.finded_article = undefined
-				self.avisar_balanza_sin_articulo(lectura.balanza.nombre)
+				self.avisar_balanza_sin_articulo(nombre_para_el_aviso)
 				return Promise.resolve()
 			}
 
@@ -683,7 +692,7 @@ export default {
 
 				if (typeof articulo == 'undefined') {
 					self.finded_article = undefined
-					self.avisar_balanza_sin_articulo(lectura.balanza.nombre)
+					self.avisar_balanza_sin_articulo(nombre_para_el_aviso)
 					return
 				}
 

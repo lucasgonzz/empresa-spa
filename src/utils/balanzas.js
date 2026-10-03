@@ -28,6 +28,13 @@ export const DIGITOS_POR_DEFECTO = {
 }
 
 /**
+ * Digitos aceptados para una balanza: de 1 a DIGITOS_MAXIMO. Es el rango que guarda la API
+ * (BalanzaController): fuera de el guarda null, o sea el default. Aca se aplica el mismo rango al
+ * leer, para que un valor que la API no hubiera guardado se interprete igual que alla.
+ */
+export const DIGITOS_MAXIMO = 12
+
+/**
  * unidad_medida_id del Gramo: el peso de un articulo que se vende por gramo NO se divide por 1000.
  * Misma regla que el PLU (set_article_from_plu de ArticleBarCode.vue y la API).
  */
@@ -73,7 +80,8 @@ function normalizar_prefijo(prefijo) {
 
 /**
  * Cuantos digitos del ticket son el importe o el peso para una balanza: los suyos, o los de
- * DIGITOS_POR_DEFECTO si estan vacios (o no son un entero positivo).
+ * DIGITOS_POR_DEFECTO si estan vacios o fuera del rango que acepta la API (un entero de 1 a
+ * DIGITOS_MAXIMO). La API manda null cuando corresponde el default.
  *
  * @param {Object} balanza
  * @param {String} tipo_dato 'importe' | 'peso'
@@ -88,11 +96,40 @@ function digitos_de_la_balanza(balanza, tipo_dato) {
 
 	let numero = Number(digitos)
 
-	if (isNaN(numero) || numero < 1 || Math.floor(numero) !== numero) {
+	if (
+		isNaN(numero)
+		|| numero < 1
+		|| numero > DIGITOS_MAXIMO
+		|| Math.floor(numero) !== numero
+	) {
 		return DIGITOS_POR_DEFECTO[tipo_dato]
 	}
 
 	return numero
+}
+
+/**
+ * Como se nombra una balanza en el aviso de "no tiene un articulo valido": su nombre, o su codigo
+ * si no tiene nombre (el nombre es opcional). Es lo mismo que manda la API en `balanza_nombre`, que
+ * nunca llega vacio; esto lo replica para el aviso que se arma sin conexion.
+ *
+ * @param {Object} balanza
+ * @returns {String}
+ */
+export function nombre_de_la_balanza(balanza) {
+	if (!balanza) {
+		return ''
+	}
+
+	let nombre = balanza.nombre === null || typeof balanza.nombre == 'undefined'
+		? ''
+		: String(balanza.nombre).trim()
+
+	if (nombre !== '') {
+		return nombre
+	}
+
+	return normalizar_prefijo(balanza.prefijo)
 }
 
 /**
@@ -102,7 +139,7 @@ function digitos_de_la_balanza(balanza, tipo_dato) {
  *   1. El codigo tiene que ser solo digitos.
  *   2. Candidatas: las balanzas cuyo prefijo es el comienzo del codigo. Gana el prefijo MAS LARGO
  *      (con 22 y 2203 cargadas, el ticket 2203... es de la 2203); empate -> la de id mas chico.
- *   3. Digitos: los de la balanza, o 7 (importe) / 5 (peso).
+ *   3. Digitos: los de la balanza (de 1 a 12), o 7 (importe) / 5 (peso) si vienen en null.
  *   4. Si el codigo es mas corto que prefijo + digitos + 1, no es un ticket de esa balanza: no se
  *      lee (no se prueba con otra balanza de prefijo mas corto).
  *   5. El valor son los `digitos` caracteres ANTERIORES AL ULTIMO (el ultimo es el verificador),

@@ -12,8 +12,11 @@
 	son los `digitos` números anteriores al último (que es el verificador): 7 para el importe y 5 para
 	el peso si se deja vacío.
 
-	El prefijo repetido para el mismo dueño lo rechaza la API con un 422 y un mensaje propio, que el
-	formulario muestra en su aviso (common-vue/components/model/Index.vue::setSaveErrorFromApi).
+	El prefijo lo valida la API, con un 422 y un mensaje propio que el formulario muestra en su aviso
+	(common-vue/components/model/Index.vue::setSaveErrorFromApi) y el handler global en un toast:
+	le saca lo que no es numero y exige de 1 a 6 numeros ("El código de la balanza tiene que tener
+	entre 1 y 6 números."), y no deja repetirlo para el mismo dueño ("Ya tenés otra balanza con el
+	código XX"). `digitos` lo guarda de 1 a 12; vacio o fuera de rango queda null (el default).
 */
 export default {
 	properties: [
@@ -83,8 +86,8 @@ export default {
 			type: 'number',
 			value: '',
 			descriptions: [
-				'Cuántos números del ticket son el importe o el peso. Se cuentan hacia atrás desde el anteúltimo número del código, porque el último es el dígito verificador.',
-				'Dejalo vacío si no lo sabés: se usan 7 para el importe y 5 para el peso, que es lo más común.',
+				'Cuántos números del ticket son el importe o el peso, de 1 a 12. Se cuentan hacia atrás desde el anteúltimo número del código, porque el último es el dígito verificador.',
+				'Dejalo vacío si no lo sabés: se usan 7 para el importe y 5 para el peso, que es lo más común. Un número fuera de 1 a 12 también queda vacío.',
 			],
 		},
 	],
