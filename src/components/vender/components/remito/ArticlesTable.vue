@@ -269,13 +269,19 @@ import vender_set_total from '@/mixins/vender_set_total'
 import previus_sales from '@/mixins/vender/previus_sale/index'
 import check_stock from '@/mixins/vender/check_stock'
 /*
+	"Varios precios" (agregar una fila, recalcular el renglon) vive en un mixin desde la mision
+	balanzas-configurables (3/10/2026): lo comparte con el ticket de balanza de ArticleBarCode.vue. El
+	foco despues del Enter sigue siendo de este componente (foco_despues_de_varios_precios).
+*/
+import varios_precios from '@/mixins/vender/varios_precios'
+/*
 	El foco de vuelta al codigo de barras (al sacar un renglon, al terminar de personalizar un
 	precio) va a la primera entrada A LA VISTA: con los diseños de Vender el codigo de barras puede
 	estar sacado o plegado. Ver layout/foco.js.
 */
 import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout/foco'
 export default {
-	mixins: [vender, vender_set_total, previus_sales, check_stock],
+	mixins: [vender, vender_set_total, previus_sales, check_stock, varios_precios],
 	components: {
 		PriceType: () => import('@/components/vender/components/remito/table-slots/PriceType'),
 		ItemAttachments: () => import('@/components/vender/components/remito/table-slots/ItemAttachments'),
@@ -580,50 +586,63 @@ export default {
 			}
 			return ''
 		},
+		/**
+		 * Enter en el input "Personalizado" (extension varios_precios): el precio tipeado pasa a ser
+		 * una fila mas del renglon.
+		 *
+		 * La fila y el recalculo los hace agregar_otro_precio() (mixins/vender/varios_precios.js),
+		 * que es lo mismo que pasaba aca: fila adelante, recalculo del renglon, replceItem y
+		 * setTotal(). Despues el foco de este componente y recien ahi se vacia el input, en el mismo
+		 * orden de siempre. Lo unico distinto es el id de la fila (ver siguiente_id_de_otro_precio).
+		 *
+		 * @param {Object} item Renglon del remito.
+		 * @param {Boolean} [hacer_caso=false] Lo pasa en true el @keyup.enter del input.
+		 * @returns {void}
+		 */
 		add_varios_precios(item, hacer_caso = false) {
 			if (
 				hacer_caso
 				&& this.hasExtencion('varios_precios')
 			) {
 
-				if (typeof item.varios_precios == 'undefined') {
-					item.varios_precios = []
-				}
+				this.agregar_otro_precio(item, item.price_vender_personalizado)
 
-				item.varios_precios.unshift({
-					price_vender: item.price_vender_personalizado,
-					amount: '',
-					id: item.varios_precios.length,
-					// article_id: item.id,
-				})
+				// Hago foco en bar_code o en price-personalizado
+				this.foco_despues_de_varios_precios(item)
 
-				// Actualizo el item, calculo total de la venta, y hago foco en bar_code o en price-personalizado
-				this.calculate_price_vender(item)
 				item.price_vender_personalizado = ''
 			}
 		},
 		enter_amount(item) {
 			this.calculate_price_vender(item)
 		},
+		/**
+		 * Recalcula el renglon con varios precios (Enter en el precio o en la cantidad de una fila,
+		 * o despues de borrar una fila) y devuelve el foco como siempre. La cuenta vive en
+		 * recalcular_varios_precios() (mixins/vender/varios_precios.js).
+		 *
+		 * @param {Object} item Renglon del remito con `varios_precios`.
+		 * @returns {void}
+		 */
 		calculate_price_vender(item) {
-			let calculated_price_vender = 0
-			let amount = 1
 
-			item.varios_precios.forEach(otro_precio => {
-				if (otro_precio.amount != '') {
-					amount = Number(otro_precio.amount)
-				} else {
-					amount = 1
-				}
-				calculated_price_vender += (Number(otro_precio.price_vender) * amount)
-			})
+			this.recalcular_varios_precios(item)
 
-			item.calculated_price_vender = calculated_price_vender
-			this.$store.commit('vender/replceItem', item)
-
-			this.setTotal()
-			// this.$store.commit('vender/setTotal')
-
+			this.foco_despues_de_varios_precios(item)
+		},
+		/**
+		 * El foco despues de tocar los varios precios de un renglon: con el articulo marcado para
+		 * personalizar el precio en VENDER vuelve a la primera entrada de articulos (para seguir
+		 * cargando); si no, al input "Personalizado" del renglon, para tipear el proximo precio.
+		 *
+		 * Es exactamente el foco que tenia calculate_price_vender() antes de la mision
+		 * balanzas-configurables; se separo porque el ticket de balanza reusa el calculo pero NO
+		 * este foco (siempre vuelve al codigo de barras para el proximo ticket).
+		 *
+		 * @param {Object} item Renglon del remito.
+		 * @returns {void}
+		 */
+		foco_despues_de_varios_precios(item) {
 
 			if (item.personalizar_price_en_vender) {
 
