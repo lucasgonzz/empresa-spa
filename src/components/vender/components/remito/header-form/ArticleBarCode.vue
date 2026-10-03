@@ -51,6 +51,8 @@ import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout
 */
 import {
 	leer_modo_tickets_de_balanza,
+	leer_ticket_por_balanzas,
+	cantidad_desde_peso,
 	precio_tipeado_pendiente,
 	cantidad_de_la_fila_pendiente,
 } from '@/utils/balanzas'
@@ -127,6 +129,23 @@ export default {
 		 */
 		usa_tickets_por_plu() {
 			return this.modo_tickets_de_balanza == 'plu'
+		},
+		/**
+		 * "Por balanza": cada balanza del dueño (ABM -> Balanzas) tiene un codigo de ticket propio
+		 * y un articulo. Con conexion lo resuelve la API; esto se usa para leer sin conexion.
+		 *
+		 * @returns {Boolean}
+		 */
+		usa_tickets_por_balanzas() {
+			return this.modo_tickets_de_balanza == 'balanzas'
+		},
+		/**
+		 * Las balanzas del dueño, del store (se descargan al arrancar, ver mixins/call_methods.js).
+		 *
+		 * @returns {Array}
+		 */
+		balanzas_del_dueno() {
+			return this.$store.state.balanza ? this.$store.state.balanza.models : []
 		},
 	},
 	data() {
@@ -221,6 +240,20 @@ export default {
 						La lectura del ticket (set_article_from_plu) no cambia.
 					*/
 					await this.set_article_from_plu(codigo)
+
+				} else if (this.usa_tickets_por_balanzas) {
+
+					/*
+						"Por balanza" sin conexion (mision balanzas-configurables, 3/10/2026). Con la
+						vieja extension de importe, sin conexion el ticket daba "No se encontro".
+
+						Sin `await` A PROPOSITO (regla del repo: nada de async/await nuevo en src/):
+						se DEVUELVE la promesa. Esta rama es lo ultimo que hace set_finded_article(),
+						asi que devolverla es lo mismo que esperarla: la promesa de esta funcion async
+						adopta la devuelta, y set_article_from_barcode() espera a que el ticket quede
+						agregado antes de mirar from_balanza.
+					*/
+					return this.leer_ticket_por_balanzas_sin_conexion(codigo)
 
 				} else {
 
@@ -599,10 +632,95 @@ export default {
 
 			} else {
 				this.finded_article = undefined
-				return 
+				return
 			}
-		    
-		}
+
+		},
+		/**
+		 * "Por balanza" SIN CONEXION, o con "Utilizar articulos descargados para buscar por codigo
+		 * de barras" (mision balanzas-configurables, 3/10/2026).
+		 *
+		 * El ticket se lee con las balanzas del store y la misma regla que la API
+		 * (leer_ticket_por_balanzas de src/utils/balanzas.js), y el articulo se trae de la base local
+		 * (Dexie) por su id. Despues va por el mismo camino que con conexion:
+		 *   - importe -> agregar_ticket_de_importe(), el mismo manejador que set_from_balanza();
+		 *   - peso    -> agregar_ticket_de_peso_sin_conexion(), el mismo camino que un PLU sin conexion.
+		 * Si la balanza no tiene articulo o no esta en la base local, el mismo aviso que manda la API
+		 * con balanza_sin_articulo.
+		 *
+		 * Devuelve una promesa (sin async/await, regla del repo): set_finded_article() la devuelve
+		 * para que set_article_from_barcode() la espere.
+		 *
+		 * @param {String} codigo Codigo escaneado, ya sin espacios.
+		 * @returns {Promise}
+		 */
+		leer_ticket_por_balanzas_sin_conexion(codigo) {
+
+			let self = this
+
+			let lectura = leer_ticket_por_balanzas(codigo, self.balanzas_del_dueno)
+
+			// No es un ticket de ninguna balanza: sigue como cualquier codigo no encontrado.
+			if (!lectura) {
+				self.finded_article = undefined
+				return Promise.resolve()
+			}
+
+			let article_id = Number(lectura.balanza.article_id)
+
+			if (!article_id) {
+				self.from_balanza = true
+				self.finded_article = undefined
+				self.avisar_balanza_sin_articulo(lectura.balanza.nombre)
+				return Promise.resolve()
+			}
+
+			return db.table('articles').get(article_id)
+			.then(articulo => {
+
+				// El ticket es de una balanza: desde aca el aviso generico de "no encontrado" no va.
+				self.from_balanza = true
+
+				if (typeof articulo == 'undefined') {
+					self.finded_article = undefined
+					self.avisar_balanza_sin_articulo(lectura.balanza.nombre)
+					return
+				}
+
+				if (lectura.tipo_dato == 'peso') {
+					self.agregar_ticket_de_peso_sin_conexion(articulo, lectura.valor)
+				} else {
+					self.agregar_ticket_de_importe(articulo, lectura.valor)
+				}
+			})
+			.catch(err => {
+				// Mismo criterio que el catch de getArticleFromApi(): se avisa y se sigue.
+				console.log('Error al leer el ticket de balanza sin conexion')
+				console.log(err)
+				self.finded_article = undefined
+				self.$toast.error('Error al leer el ticket de balanza: '+err)
+			})
+		},
+		/**
+		 * Ticket de balanza con PESO leido sin conexion. Mismo camino que un ticket PLU sin conexion
+		 * (set_article_from_plu): el articulo va a la cabecera con la cantidad del ticket y entra por
+		 * add_item_vender(), que si ya esta en la venta le suma esa cantidad. Con conexion la API manda
+		 * el peso con las claves del PLU (from_balanza_plu) y entra por el camino del PLU online.
+		 *
+		 * @param {Object} articulo Articulo de la base local (Dexie): es una copia, se puede modificar.
+		 * @param {Number} valor Peso como lo marca la balanza (gramos).
+		 * @returns {void}
+		 */
+		agregar_ticket_de_peso_sin_conexion(articulo, valor) {
+
+			articulo.is_article = true
+
+			// En kilos, salvo que el articulo se venda por gramo (misma regla que el PLU).
+			articulo.amount = cantidad_desde_peso(valor, articulo)
+
+			this.$store.commit('vender/setItem', articulo)
+			this.add_item_vender()
+		},
 	}
 }
 </script>
