@@ -273,7 +273,7 @@ import check_stock from '@/mixins/vender/check_stock'
 	balanzas-configurables (3/10/2026): lo comparte con el ticket de balanza de ArticleBarCode.vue. El
 	foco despues del Enter sigue siendo de este componente (foco_despues_de_varios_precios).
 */
-import varios_precios from '@/mixins/vender/varios_precios'
+import varios_precios, { tiene_varios_precios } from '@/mixins/vender/varios_precios'
 /*
 	El foco de vuelta al codigo de barras (al sacar un renglon, al terminar de personalizar un
 	precio) va a la primera entrada A LA VISTA: con los diseños de Vender el codigo de barras puede
@@ -595,6 +595,13 @@ export default {
 		 * setTotal(). Despues el foco de este componente y recien ahi se vacia el input, en el mismo
 		 * orden de siempre. Lo unico distinto es el id de la fila (ver siguiente_id_de_otro_precio).
 		 *
+		 * Funciona con la extension `varios_precios` O si el renglon YA tiene varios precios (mision
+		 * balanzas-configurables, 3/10/2026). Con "Por balanza" un renglon que recibio tickets queda
+		 * en modo varios precios aunque la cuenta no tenga la extension, y su total pasa a ser solo
+		 * la suma de las filas (getTotalItem suma calculated_price_vender): sin esto, tipear un
+		 * precio y apretar Enter en ese renglon no hacia nada, y el precio tampoco sumaba. Sin la
+		 * extension y sin varios precios, todo igual que antes: el Enter no hace nada.
+		 *
 		 * @param {Object} item Renglon del remito.
 		 * @param {Boolean} [hacer_caso=false] Lo pasa en true el @keyup.enter del input.
 		 * @returns {void}
@@ -602,7 +609,10 @@ export default {
 		add_varios_precios(item, hacer_caso = false) {
 			if (
 				hacer_caso
-				&& this.hasExtencion('varios_precios')
+				&& (
+					this.hasExtencion('varios_precios')
+					|| tiene_varios_precios(item)
+				)
 			) {
 
 				this.agregar_otro_precio(item, item.price_vender_personalizado)
