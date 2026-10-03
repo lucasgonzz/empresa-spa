@@ -34,9 +34,9 @@
 	</div>
 </template>
 <script>
-import vender from '@/mixins/vender/index'
-import guardar_venta from '@/mixins/vender/guardar_venta/index'
-import sonido_error from '@/mixins/sonido_error'
+import vender from '@/mixins/vender/index' 
+import guardar_venta from '@/mixins/vender/guardar_venta/index' 
+import sonido_error from '@/mixins/sonido_error' 
 import vender_set_total from '@/mixins/vender_set_total'
 /*
 	"Varios precios" (mision balanzas-configurables, 3/10/2026): un ticket de balanza con importe de
@@ -231,7 +231,7 @@ export default {
 				if (typeof finded != 'undefined') {
 
 					this.finded_article = finded
-
+				
 				} else if (this.usa_tickets_por_plu) {
 
 					/*
@@ -632,9 +632,9 @@ export default {
 
 			} else {
 				this.finded_article = undefined
-				return
+				return 
 			}
-
+		    
 		},
 		/**
 		 * "Por balanza" SIN CONEXION, o con "Utilizar articulos descargados para buscar por codigo

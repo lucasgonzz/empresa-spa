@@ -86,7 +86,7 @@ export default {
 		views() {
 			let views = []
 			this.abm_views.forEach(view => {
-
+				 
 				// Gate ADITIVO por configuración del dueño: sin la clave no hace nada.
 				if (!cumple_config_del_dueno(this, view)) {
 					return
