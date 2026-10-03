@@ -21,15 +21,21 @@
 		size="lg"
 		:title="titulo"
 		:id="id"
-		@show="cargar_modificaciones">
+		@show="al_mostrar"
+		@hidden="al_ocultar">
 			<p
 			class="text-muted">
 				Cada fila es una vez que alguien agregó, quitó o cambió la cantidad de algún artículo de
 				este movimiento después de crearlo.
 			</p>
 
+			<!--
+				Spinner mientras se pide el historial Y mientras todavia no se sabe de que movimiento
+				es (`id_cargado` en null): sin esto, en el instante entre abrir el modal y que llegue
+				el movimiento por prop se veia "no tiene modificaciones", que es mentira.
+			-->
 			<b-table
-			v-if="!loading"
+			v-if="!mostrar_spinner"
 			head-variant="dark"
 			responsive
 			show-empty
@@ -83,10 +89,70 @@ export default {
 		return {
 			modificaciones: [],
 			modificacion_elegida: null,
+			/**
+			 * Hay un pedido del historial en vuelo.
+			 */
 			loading: false,
+			/**
+			 * El modal esta abierto (true entre su `show` y su `hidden`). El `watch` del movimiento
+			 * solo carga con el modal abierto.
+			 */
+			visible: false,
+			/**
+			 * Id del movimiento cuyo historial esta cargado o pidiendose. null = todavia nada (al
+			 * abrir, o despues de cerrar). Sirve para no pedir dos veces lo mismo y para descartar
+			 * la respuesta de un pedido que ya no corresponde.
+			 */
+			id_cargado: null,
 		}
 	},
+	watch: {
+		/**
+		 * 🔴 Por que hace falta este watch (defecto visto en vivo en s8, 3/10/2026): la pantalla
+		 * que monta el historial setea el movimiento y abre el modal en el `$nextTick`, pero este
+		 * componente vive adentro del contenido de otro b-modal (`#deposit-movements`), que
+		 * BootstrapVue lleva por su portal y re-renderiza un tick mas tarde. Resultado: el `show`
+		 * llegaba ANTES que el prop, la carga salia por "no hay movimiento" y el modal mostraba
+		 * "no tiene modificaciones" aunque el backend devolviera una. La segunda vez andaba porque
+		 * el prop ya estaba.
+		 *
+		 * En vez de adivinar cuantos ticks esperar, la carga se dispara por los dos lados y gana
+		 * el que llegue con el dato: el `show` si el movimiento ya esta, y este watch si el
+		 * movimiento llega (o cambia) con el modal ya abierto. `cargar_modificaciones()` no repite
+		 * un pedido para el mismo id.
+		 *
+		 * @param {Number|null} id id del movimiento nuevo.
+		 * @returns {void}
+		 */
+		id_del_movimiento(id) {
+			if (this.visible && id) {
+				this.cargar_modificaciones(id)
+			}
+		},
+	},
 	computed: {
+		/**
+		 * Id del movimiento que llega por prop, o null si todavia no hay ninguno. Se observa el id
+		 * y no el objeto: si el store reemplaza la fila por otra con el mismo id (por ejemplo al
+		 * guardar el movimiento), no hay nada nuevo que pedir.
+		 *
+		 * @returns {Number|null}
+		 */
+		id_del_movimiento() {
+			if (this.deposit_movement && this.deposit_movement.id) {
+				return this.deposit_movement.id
+			}
+			return null
+		},
+		/**
+		 * Spinner en vez de la tabla: mientras hay un pedido en vuelo, o mientras todavia no se
+		 * sabe de que movimiento es el historial.
+		 *
+		 * @returns {Boolean}
+		 */
+		mostrar_spinner() {
+			return this.loading || !this.id_cargado
+		},
 		/**
 		 * Titulo del modal con el numero del movimiento.
 		 *
@@ -149,32 +215,73 @@ export default {
 	},
 	methods: {
 		/**
-		 * Trae el historial al abrirse el modal. La dispara el `@show` del propio <b-modal> (show,
-		 * no shown: el spinner tiene que estar desde el primer pintado).
+		 * `@show` del propio <b-modal> (show, no shown: el spinner tiene que estar desde el primer
+		 * pintado). Marca el modal como abierto y, si el movimiento ya llego por prop, pide su
+		 * historial. Si todavia no llego, lo pide el watch de `id_del_movimiento` cuando llegue.
 		 *
 		 * 🔴 No se usa `this.$root.$on('bv::modal::show')`: darlo de baja con un `$off` sin handler
 		 * borra del bus global los listeners de ese evento de TODOS los componentes (es la fuga
 		 * que quedo documentada en ventas/modals/sale-modifications/Index.vue). Un evento del propio
 		 * modal muere con el componente y no necesita baja ninguna.
 		 *
-		 * Vacia la lista antes de pedir, para que no se vea un instante el historial del movimiento
-		 * que se abrio antes.
+		 * @returns {void}
+		 */
+		al_mostrar() {
+			this.visible = true
+			if (this.id_del_movimiento) {
+				this.cargar_modificaciones(this.id_del_movimiento)
+			}
+		},
+		/**
+		 * `@hidden` del propio <b-modal>: lo marca cerrado y olvida lo cargado, asi la proxima vez
+		 * que se abra (aunque sea el mismo movimiento) se pide el historial de nuevo, con lo ultimo
+		 * que haya. Si quedo un pedido en vuelo, su respuesta se descarta (ver
+		 * `cargar_modificaciones`).
 		 *
 		 * @returns {void}
 		 */
-		cargar_modificaciones() {
-			if (this.loading || !this.deposit_movement || !this.deposit_movement.id) {
+		al_ocultar() {
+			this.visible = false
+			this.id_cargado = null
+			this.loading = false
+			this.modificaciones = []
+		},
+		/**
+		 * Pide el historial de un movimiento: `GET deposit-movement-modifications/{id}`.
+		 *
+		 * - Si ese id ya esta cargado o pidiendose, no hace nada: el `show` y el watch pueden
+		 *   llegar los dos con el mismo movimiento y no tiene que salir dos veces el mismo pedido.
+		 * - Vacia la lista antes de pedir y prende el spinner, para que no se vea ni un instante el
+		 *   historial del movimiento anterior ni el texto de "no tiene modificaciones".
+		 * - Si mientras tanto se pidio OTRO movimiento (o se cerro el modal), la respuesta de este
+		 *   pedido se descarta: `id_cargado` ya no es este id. Puede pasar si el `show` llega con el
+		 *   movimiento anterior todavia en el prop y el nuevo llega despues por el watch.
+		 *
+		 * Los errores 4xx los muestra el manejador global (common-vue/components/error/Index.vue).
+		 *
+		 * @param {Number} deposit_movement_id id del movimiento.
+		 * @returns {void}
+		 */
+		cargar_modificaciones(deposit_movement_id) {
+			if (!deposit_movement_id || this.id_cargado == deposit_movement_id) {
 				return
 			}
 			let self = this
+			this.id_cargado = deposit_movement_id
 			this.modificaciones = []
 			this.loading = true
-			this.$api.get('deposit-movement-modifications/' + this.deposit_movement.id)
+			this.$api.get('deposit-movement-modifications/' + deposit_movement_id)
 			.then(function (res) {
+				if (self.id_cargado != deposit_movement_id) {
+					return
+				}
 				self.loading = false
 				self.modificaciones = res.data.models
 			})
 			.catch(function (err) {
+				if (self.id_cargado != deposit_movement_id) {
+					return
+				}
 				self.loading = false
 				console.log(err)
 			})

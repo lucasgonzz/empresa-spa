@@ -138,8 +138,11 @@ export default {
 		 * Abre el historial de modificaciones de articulos de un movimiento. La dispara el boton
 		 * "Modificaciones (N)" de la fila.
 		 *
-		 * El `$nextTick` es para que el modal ya tenga el movimiento nuevo en su prop cuando se
-		 * dispare su `@show`, que es el que pide el historial al backend.
+		 * El `$nextTick` NO garantiza que el historial ya tenga el movimiento en su prop cuando se
+		 * dispara su `@show`: este modal viaja por el portal de BootstrapVue y el prop puede llegar
+		 * un tick despues (visto en vivo el 3/10/2026). Por eso el historial pide los datos tanto
+		 * en su `show` como cuando le cambia el movimiento con el modal abierto: anda en cualquier
+		 * orden (ver modificaciones/Index.vue).
 		 *
 		 * @param {Object} deposit_movement el movimiento de la fila.
 		 * @returns {void}
