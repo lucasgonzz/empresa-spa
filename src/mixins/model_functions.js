@@ -423,6 +423,141 @@ export default {
 
             return options
         },
+
+        /*
+           Movimientos de deposito (mision movimientos-deposito-auditoria, 3/10/2026).
+
+           Funciones globales que consumen src/models/deposit_movement.js (disabled_function) y
+           src/models/deposit_movement_status.js (form_disabled_to_edit_function y nota_function),
+           mas los componentes de src/components/listado/components/horizontal-nav/deposit-movements/.
+
+           🔴 Los nombres llevan el prefijo `deposit_movement_` a proposito: este archivo es un mixin
+           GLOBAL, y un metodo de un mixin local con el mismo nombre pisa al global en silencio.
+
+           La guarda real esta en el backend (DepositMovementController@update y @move_stock); estas
+           funciones solo reflejan en la pantalla lo que el backend va a aceptar, para que el
+           usuario no edite algo que despues le van a rechazar.
+        */
+
+        /**
+         * Si los DATOS de un movimiento de deposito ya creado (empleado, estado y notas) quedan
+         * de solo lectura.
+         *
+         * Se bloquean cuando el movimiento ya existe y el usuario no tiene el permiso
+         * `deposit_movement.update` ("Editar movimientos de deposito (estado, depositos y notas)").
+         * En un alta nunca se bloquean: crear un movimiento no pide ese permiso. El dueño pasa
+         * siempre, porque `can()` le devuelve true.
+         *
+         * @param {Object} model el movimiento de deposito que muestra el formulario.
+         * @returns {Boolean} true si los campos tienen que quedar deshabilitados.
+         */
+        deposit_movement_datos_bloqueados(model) {
+            if (!model || !model.id) {
+                return false
+            }
+            return !this.can('deposit_movement.update')
+        },
+
+        /**
+         * Si los depositos de ORIGEN y DESTINO de un movimiento ya creado quedan de solo lectura.
+         *
+         * Igual que los datos (sin permiso de edicion) y, ademas, cuando el stock del movimiento
+         * ya se movio: el traslado se hizo entre ESOS dos depositos, y cambiarlos dejaria el
+         * registro diciendo algo que no paso. El backend lo rechaza con un 422.
+         *
+         * @param {Object} model el movimiento de deposito que muestra el formulario.
+         * @returns {Boolean} true si los selects de deposito tienen que quedar deshabilitados.
+         */
+        deposit_movement_depositos_bloqueados(model) {
+            if (!model || !model.id) {
+                return false
+            }
+            if (this.deposit_movement_datos_bloqueados(model)) {
+                return true
+            }
+            return !!model.stock_moved_at
+        },
+
+        /**
+         * Si los ARTICULOS de un movimiento ya creado quedan bloqueados (no se agregan, no se
+         * quitan, no se cambian cantidades).
+         *
+         * Se bloquean por cualquiera de dos motivos:
+         * - el stock del movimiento ya se movio (boton "Mover stock"): los articulos son el
+         *   registro de lo que se traslado, y a partir de ahi no cambian nunca mas;
+         * - el usuario no tiene el permiso `deposit_movement.update_articles`.
+         *
+         * La consume el prop `articles` del modelo (apaga el buscador) y los slots `#articles` del
+         * modal del listado y de las alertas, que en ese caso cambian la tabla editable por una de
+         * solo lectura (ArticulosSoloLectura.vue).
+         *
+         * @param {Object} model el movimiento de deposito.
+         * @returns {Boolean} true si los articulos no se pueden tocar.
+         */
+        deposit_movement_articulos_bloqueados(model) {
+            if (!model || !model.id) {
+                return false
+            }
+            if (model.stock_moved_at) {
+                return true
+            }
+            return !this.can('deposit_movement.update_articles')
+        },
+
+        /**
+         * Texto de cuando y quien movio el stock de un movimiento: "el 03/10/2026 14:35 por Juan".
+         *
+         * Sin nombre cuando no se sabe quien fue: los movimientos viejos que ya habian trasladado
+         * stock antes de que existiera el boton quedaron marcados como movidos por la migracion,
+         * con el usuario en NULL. Para esos sale solo la fecha ("el 03/10/2026 14:35").
+         *
+         * La fecha llega de Laravel en ISO con zona (UTC); moment la pasa a la hora del navegador.
+         *
+         * @param {Object} model el movimiento de deposito.
+         * @returns {String} el texto, o '' si el stock todavia no se movio.
+         */
+        deposit_movement_stock_movido_texto(model) {
+            if (!model || !model.stock_moved_at) {
+                return ''
+            }
+            let texto = 'el ' + moment(model.stock_moved_at).format('DD/MM/YYYY HH:mm')
+            if (model.stock_moved_user && model.stock_moved_user.name) {
+                texto += ' por ' + model.stock_moved_user.name
+            }
+            return texto
+        },
+
+        /**
+         * Si un estado de movimiento de deposito es uno de los FIJOS del sistema ("En proceso" y
+         * "Recibido"): las filas globales con `user_id` en NULL.
+         *
+         * Esos dos no se renombran ni se borran: en las bases compartidas los usan muchos comercios
+         * a la vez. La consume src/models/deposit_movement_status.js como
+         * `form_disabled_to_edit_function` (deja todo el formulario de solo lectura) y
+         * src/common-vue/views/Abm.vue para esconder Guardar y Eliminar. El backend igual
+         * responde 403 si alguien lo intenta.
+         *
+         * @param {Object} model el estado de movimiento de deposito.
+         * @returns {Boolean} true si es un estado fijo ya guardado.
+         */
+        deposit_movement_status_es_fijo(model) {
+            return !!(model && model.id && !model.user_id)
+        },
+
+        /**
+         * Nota permanente debajo del campo "Nombre" de un estado de movimiento de deposito
+         * (`nota_function` de src/models/deposit_movement_status.js): avisa por que un estado fijo
+         * no se deja editar. Para los estados propios no dice nada.
+         *
+         * @param {Object} model el estado de movimiento de deposito.
+         * @returns {String} el aviso, o '' si el estado es propio o todavia no se guardo.
+         */
+        deposit_movement_status_nota_fijo(model) {
+            if (this.deposit_movement_status_es_fijo(model)) {
+                return 'Este estado viene con el sistema: no se puede cambiar ni eliminar.'
+            }
+            return ''
+        },
         /**
          * Opciones del select "Estado" de cada insumo de una ruta de receta.
          *
