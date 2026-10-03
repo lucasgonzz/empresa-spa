@@ -125,12 +125,14 @@ export default {
 		},
 		/**
 		 * Si el formulario muestra "Eliminar": no, si el stock del movimiento ya se movio (borrarlo
-		 * no devuelve el stock, y el backend lo rechaza con un 422).
+		 * no devuelve el stock, y el backend lo rechaza con un 422). "Ya se movio" incluye el
+		 * `recibido_at` del frente viejo: criterio unico en `deposit_movement_stock_movido`
+		 * (src/mixins/model_functions.js).
 		 *
 		 * @returns {Boolean}
 		 */
 		mostrar_btn_eliminar() {
-			return !this.model.stock_moved_at
+			return !this.deposit_movement_stock_movido(this.model)
 		},
 	},
 	methods: {

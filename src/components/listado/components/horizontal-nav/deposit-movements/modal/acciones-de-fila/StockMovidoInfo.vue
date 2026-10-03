@@ -2,10 +2,12 @@
 	<!--
 		Distintivo "Stock movido" de la fila de un movimiento de deposito (mision
 		movimientos-deposito-auditoria, 3/10/2026): en verde, con cuando y quien lo movio. Ocupa el
-		lugar del boton "Mover stock" una vez que el stock ya se movio.
+		lugar del boton "Mover stock" una vez que el stock ya se movio, por el boton o por el frente
+		viejo al pasarlo a "Recibido" (criterio unico en `deposit_movement_stock_movido`,
+		src/mixins/model_functions.js).
 	-->
 	<div
-	v-if="model.stock_moved_at"
+	v-if="deposit_movement_stock_movido(model)"
 	class="stock-movido-info"
 	:data-testid="'stock-movido-deposito-'+model.id">
 		<b-badge

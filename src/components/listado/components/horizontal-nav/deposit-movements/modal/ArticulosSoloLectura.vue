@@ -42,13 +42,14 @@ export default {
 	},
 	computed: {
 		/**
-		 * Por que los articulos no se pueden tocar. Si el stock ya se movio, ese es el motivo (aunque
-		 * el usuario ademas no tenga el permiso): es el que no cambia nunca mas.
+		 * Por que los articulos no se pueden tocar. Si el stock ya se movio (por el boton o por el
+		 * frente viejo, ver `deposit_movement_stock_movido`), ese es el motivo aunque el usuario
+		 * ademas no tenga el permiso: es el que no cambia nunca mas.
 		 *
 		 * @returns {String}
 		 */
 		aviso() {
-			if (this.model.stock_moved_at) {
+			if (this.deposit_movement_stock_movido(this.model)) {
 				return 'El stock de este movimiento ya se movió ' + this.deposit_movement_stock_movido_texto(this.model)
 					+ '. Los artículos quedan bloqueados: no se pueden agregar, quitar ni cambiar cantidades.'
 			}

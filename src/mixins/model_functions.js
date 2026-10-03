@@ -440,6 +440,26 @@ export default {
         */
 
         /**
+         * Si el stock de un movimiento de deposito YA SE MOVIO. Es el UNICO criterio de "stock
+         * movido" de la SPA: lo usan los bloqueos de abajo, el boton "Mover stock", el distintivo
+         * de la fila, el aviso del formulario, la tabla de solo lectura y el boton Eliminar.
+         *
+         * 🔴 Cuenta `stock_moved_at` O `recibido_at`, igual que el backend (ajuste del 3/10/2026,
+         * compatibilidad con el frente viejo). Mientras un cliente tenga los dos frentes andando
+         * sobre la misma base, el frente con el codigo anterior traslada el stock al pasar el
+         * movimiento a "Recibido" y solo escribe `recibido_at`: no conoce `stock_moved_at`. Si aca
+         * se mirara solo `stock_moved_at`, ese movimiento seguiria mostrando "Mover stock" y se
+         * podria trasladar dos veces. Al reves tambien esta cubierto: el "Mover stock" nuevo llena
+         * `recibido_at`, que es lo que el frente viejo mira para no volver a trasladar.
+         *
+         * @param {Object} model el movimiento de deposito.
+         * @returns {Boolean} true si el stock ya se movio por cualquiera de los dos caminos.
+         */
+        deposit_movement_stock_movido(model) {
+            return !!(model && (model.stock_moved_at || model.recibido_at))
+        },
+
+        /**
          * Si los DATOS de un movimiento de deposito ya creado (empleado, estado y notas) quedan
          * de solo lectura.
          *
@@ -462,8 +482,9 @@ export default {
          * Si los depositos de ORIGEN y DESTINO de un movimiento ya creado quedan de solo lectura.
          *
          * Igual que los datos (sin permiso de edicion) y, ademas, cuando el stock del movimiento
-         * ya se movio: el traslado se hizo entre ESOS dos depositos, y cambiarlos dejaria el
-         * registro diciendo algo que no paso. El backend lo rechaza con un 422.
+         * ya se movio (`deposit_movement_stock_movido`): el traslado se hizo entre ESOS dos
+         * depositos, y cambiarlos dejaria el registro diciendo algo que no paso. El backend lo
+         * rechaza con un 422.
          *
          * @param {Object} model el movimiento de deposito que muestra el formulario.
          * @returns {Boolean} true si los selects de deposito tienen que quedar deshabilitados.
@@ -475,7 +496,7 @@ export default {
             if (this.deposit_movement_datos_bloqueados(model)) {
                 return true
             }
-            return !!model.stock_moved_at
+            return this.deposit_movement_stock_movido(model)
         },
 
         /**
@@ -483,8 +504,9 @@ export default {
          * quitan, no se cambian cantidades).
          *
          * Se bloquean por cualquiera de dos motivos:
-         * - el stock del movimiento ya se movio (boton "Mover stock"): los articulos son el
-         *   registro de lo que se traslado, y a partir de ahi no cambian nunca mas;
+         * - el stock del movimiento ya se movio (`deposit_movement_stock_movido`: boton "Mover
+         *   stock", o "Recibido" desde el frente viejo): los articulos son el registro de lo que
+         *   se traslado, y a partir de ahi no cambian nunca mas;
          * - el usuario no tiene el permiso `deposit_movement.update_articles`.
          *
          * La consume el prop `articles` del modelo (apaga el buscador) y los slots `#articles` del
@@ -498,7 +520,7 @@ export default {
             if (!model || !model.id) {
                 return false
             }
-            if (model.stock_moved_at) {
+            if (this.deposit_movement_stock_movido(model)) {
                 return true
             }
             return !this.can('deposit_movement.update_articles')
@@ -507,24 +529,36 @@ export default {
         /**
          * Texto de cuando y quien movio el stock de un movimiento: "el 03/10/2026 14:35 por Juan".
          *
-         * Sin nombre cuando no se sabe quien fue: los movimientos viejos que ya habian trasladado
-         * stock antes de que existiera el boton quedaron marcados como movidos por la migracion,
-         * con el usuario en NULL. Para esos sale solo la fecha ("el 03/10/2026 14:35").
+         * - Con `stock_moved_at` (boton "Mover stock"): esa fecha, y "por Nombre" si se sabe quien
+         *   fue. Los movimientos viejos que la migracion marco como movidos tienen el usuario en
+         *   NULL: para esos sale solo la fecha ("el 03/10/2026 14:35").
+         * - Con solo `recibido_at` (el frente viejo lo traslado al pasarlo a "Recibido", ver
+         *   `deposit_movement_stock_movido`): esa fecha, sin "por", porque el frente viejo no
+         *   registra quien.
          *
-         * La fecha llega de Laravel en ISO con zona (UTC); moment la pasa a la hora del navegador.
+         * Las dos columnas no estan casteadas en el modelo de Laravel, asi que llegan como texto
+         * "AAAA-MM-DD hh:mm:ss" en la hora de la app (Argentina) y moment las lee como hora local
+         * del navegador. Si algun dia se castean, llegan en ISO con zona y moment las convierte
+         * igual: el texto no cambia.
          *
          * @param {Object} model el movimiento de deposito.
          * @returns {String} el texto, o '' si el stock todavia no se movio.
          */
         deposit_movement_stock_movido_texto(model) {
-            if (!model || !model.stock_moved_at) {
+            if (!model) {
                 return ''
             }
-            let texto = 'el ' + moment(model.stock_moved_at).format('DD/MM/YYYY HH:mm')
-            if (model.stock_moved_user && model.stock_moved_user.name) {
-                texto += ' por ' + model.stock_moved_user.name
+            if (model.stock_moved_at) {
+                let texto = 'el ' + moment(model.stock_moved_at).format('DD/MM/YYYY HH:mm')
+                if (model.stock_moved_user && model.stock_moved_user.name) {
+                    texto += ' por ' + model.stock_moved_user.name
+                }
+                return texto
             }
-            return texto
+            if (model.recibido_at) {
+                return 'el ' + moment(model.recibido_at).format('DD/MM/YYYY HH:mm')
+            }
+            return ''
         },
 
         /**

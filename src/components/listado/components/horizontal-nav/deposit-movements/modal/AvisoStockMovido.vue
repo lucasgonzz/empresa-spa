@@ -3,10 +3,11 @@
 		Aviso arriba del formulario de un movimiento de deposito cuyo stock ya se movio (mision
 		movimientos-deposito-auditoria, 3/10/2026): "Stock movido el dd/mm/aaaa hh:mm por Nombre".
 		Lo monta el slot `#model_modal_header` del modal del listado y del de alertas. Con el stock
-		sin mover no dibuja nada.
+		sin mover no dibuja nada. "Movido" incluye el `recibido_at` del frente viejo (ver
+		`deposit_movement_stock_movido` en src/mixins/model_functions.js).
 	-->
 	<b-alert
-	v-if="model && model.stock_moved_at"
+	v-if="deposit_movement_stock_movido(model)"
 	show
 	variant="success"
 	data-testid="aviso-stock-movido-deposito">

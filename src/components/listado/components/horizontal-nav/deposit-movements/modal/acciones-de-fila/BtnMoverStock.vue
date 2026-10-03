@@ -33,10 +33,14 @@ export default {
 		 * tiene el permiso `deposit_movement.move_stock` (el dueño siempre lo tiene: `can()` le
 		 * devuelve true). El backend vuelve a chequear las dos cosas.
 		 *
+		 * "Todavia no se movio" lo decide `deposit_movement_stock_movido()`
+		 * (src/mixins/model_functions.js), que cuenta tambien `recibido_at`: un movimiento que el
+		 * frente viejo ya traslado al pasarlo a "Recibido" no tiene que ofrecer moverlo otra vez.
+		 *
 		 * @returns {Boolean}
 		 */
 		se_puede_mover() {
-			return !this.model.stock_moved_at && this.can('deposit_movement.move_stock')
+			return !this.deposit_movement_stock_movido(this.model) && this.can('deposit_movement.move_stock')
 		},
 	},
 	methods: {
@@ -97,7 +101,8 @@ export default {
 		 *
 		 * Al volver:
 		 * - reemplaza el movimiento en la lista (`deposit_movement/add`), que ahora trae
-		 *   `stock_moved_at` y `stock_moved_user`: el boton desaparece y aparece "Stock movido";
+		 *   `stock_moved_at`, `stock_moved_user` y `recibido_at`: el boton desaparece y aparece
+		 *   "Stock movido";
 		 * - refresca las alertas (`en_curso` son los movimientos con el stock sin mover: este sale
 		 *   de la lista).
 		 *
