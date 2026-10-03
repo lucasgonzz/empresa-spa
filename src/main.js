@@ -129,7 +129,8 @@ observar_estado_del_broadcast(Vue.prototype.Echo)
  *
  * El token vigente vive acá (variable de módulo). El interceptor de request de más abajo se lo
  * engancha a cualquier pedido que no traiga uno propio ya seteado; el `router.beforeEach` de acá
- * abajo lo cancela y renueva en cada navegación.
+ * abajo lo cancela y renueva cuando se ABANDONA la pantalla (no cuando solo cambian los parámetros
+ * de la misma ruta).
  */
 let cancel_token_source = axios.CancelToken.source()
 
@@ -142,8 +143,8 @@ let cancel_token_source = axios.CancelToken.source()
  * enganchado sus propios pedidos al token viejo — quedarían cancelados también. Yendo antes,
  * cuando la pantalla nueva monte va a enganchar sus pedidos al token ya renovado.
  *
- * @param {Object} to destino de navegación (sin uso acá, lo pide la firma de Vue Router).
- * @param {Object} from origen de navegación (sin uso acá, lo pide la firma de Vue Router).
+ * @param {Object} to destino de navegación (se compara su `name` con el de `from`).
+ * @param {Object} from origen de navegación (si tiene el mismo `name` que `to`, no se cancela nada).
  * @param {Function} next callback para continuar la navegación.
  * @returns {void}
  */
