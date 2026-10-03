@@ -21,6 +21,24 @@ import vender_set_total from '@/mixins/vender_set_total'
 */
 
 /**
+ * Si un renglon esta en modo "varios precios": tiene al menos una fila.
+ *
+ * 🔴 Un array VACIO cuenta como "sin varios precios", a proposito. Queda asi cuando el vendedor
+ * borra todas las filas con el tachito (remove_otro_precio): calculated_price_vender vuelve a 0 y
+ * getTotalItem() vuelve a sumar precio x cantidad, o sea que el renglon vuelve a valer su precio de
+ * lista. Tratarlo como "ya tiene varios precios" (Array.isArray a secas) haria que un ticket de
+ * balanza le borre ese precio sin aviso.
+ *
+ * @param {Object} item Renglon del remito.
+ * @returns {Boolean}
+ */
+export function tiene_varios_precios(item) {
+	return !!item
+		&& Array.isArray(item.varios_precios)
+		&& item.varios_precios.length > 0
+}
+
+/**
  * El id de la proxima fila de `varios_precios`: el mayor que ya hay + 1 (0 si no hay ninguna).
  *
  * Antes era `varios_precios.length`, y despues de borrar una fila se repetian ids: con las filas

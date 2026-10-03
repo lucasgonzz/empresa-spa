@@ -61,12 +61,13 @@ export default {
 			route_to_search: 'vender/buscar-articulo-por-nombre/1',
 			/*
 				La recomendacion del segundo renglon no es de estilo: un ticket con importe de un
-				articulo que ya esta en la venta CON SU PROPIO PRECIO (de lista) no se le puede sumar a
-				ese renglon sin borrarle el precio, asi que va en un renglon aparte del mismo articulo
-				(ArticleBarCode.vue::linea_para_otro_precio). Dos renglones del mismo articulo sin
-				variante son la misma linea para el store de VENDER (es_la_misma_linea), y borrar o
-				cambiarle la cantidad a uno puede tocar al otro. Con un articulo generico sin precio
-				-el caso de Panchito- eso no pasa nunca.
+				articulo que ya esta en la venta CON SU PROPIO PRECIO (de lista) se suma a ESE renglon
+				(un ticket nunca crea un segundo renglon del mismo articulo sin variante: para el store
+				de VENDER serian la misma linea, es_la_misma_linea), y para no perder ese precio lo pasa
+				a la primera fila de varios precios (ArticleBarCode.vue::pasar_precio_del_renglon_a_fila).
+				Desde ahi el renglon queda con su precio fijo: ya no lo recalculan la lista, el metodo de
+				pago ni las ofertas por cantidad. Con un articulo general sin precio -el caso de
+				Panchito- eso no pasa nunca: el renglon arranca en $0 y cada ticket es una fila.
 			*/
 			descriptions: [
 				'El artículo al que se le imputa cada ticket de esta balanza, por ejemplo "Carnicería".',

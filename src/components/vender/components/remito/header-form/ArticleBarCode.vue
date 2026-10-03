@@ -43,7 +43,7 @@ import vender_set_total from '@/mixins/vender_set_total'
 	un articulo que ya esta en la venta se suma como un precio mas de ese renglon, lo mismo que pasa
 	al escribir un precio en "Personalizado" y apretar Enter. Ver set_from_balanza().
 */
-import varios_precios from '@/mixins/vender/varios_precios'
+import varios_precios, { tiene_varios_precios } from '@/mixins/vender/varios_precios'
 import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout/foco'
 /*
 	Tickets de balanza (mision balanzas-configurables, 3/10/2026): la dinamica la elige el dueño en
@@ -56,6 +56,8 @@ import {
 	cantidad_desde_peso,
 	precio_tipeado_pendiente,
 	cantidad_de_la_fila_pendiente,
+	cantidad_del_renglon_para_fila,
+	precio_sin_recargos_del_renglon,
 } from '@/utils/balanzas'
 
 import db from '@/offline/db'
@@ -411,11 +413,21 @@ export default {
 		/**
 		 * Suma a la venta un ticket de balanza con importe, reutilizando "varios precios".
 		 *
-		 * - Si el articulo YA ESTA en la venta (ver linea_para_otro_precio), el importe es una fila
-		 *   mas de sus varios precios. Si ese renglon tenia un precio tipeado en "Personalizado"
-		 *   sin Enter, primero se confirma como fila, igual que el Enter: si no, se perderia, porque
-		 *   con varios precios el renglon vale solo la suma de sus filas.
-		 * - Si NO ESTA, se agrega con ese importe (agregar_linea_de_ticket).
+		 * - Si el articulo YA ESTA en la venta sin variante (ver linea_para_otro_precio), el importe
+		 *   es una fila mas de los varios precios de ESE renglon. Antes, lo que el renglon ya sumaba
+		 *   pasa a ser una fila, para que no se pierda: con varios precios el renglon vale solo la
+		 *   suma de sus filas (getTotalItem suma calculated_price_vender y la API guarda solo las
+		 *   filas).
+		 *     - Precio tipeado en "Personalizado" sin Enter: se confirma como fila, igual que el Enter.
+		 *     - Precio propio (de lista, o el de un renglon de una venta o presupuesto que se esta
+		 *       editando): pasa a ser la primera fila (pasar_precio_del_renglon_a_fila).
+		 * - Si NO ESTA (o solo esta con variante), se agrega con ese importe (agregar_linea_de_ticket).
+		 *
+		 * 🔴 Un ticket NUNCA crea un segundo renglon del mismo articulo sin variante. Para el store
+		 * de VENDER dos renglones asi son LA MISMA linea (es_la_misma_linea en store/vender/vender.js;
+		 * replceItem, removeItem y updateItem toman el primero que coincide, y repetidos.js tambien):
+		 * borrar el viejo borraba el del ticket, y un Enter en el precio del viejo lo pisaba con el
+		 * ticket adentro.
 		 *
 		 * Lo usan el ticket que lee la API (set_from_balanza) y el que se lee sin conexion.
 		 *
@@ -434,41 +446,97 @@ export default {
 
 			let linea = this.linea_para_otro_precio(articulo)
 
-			if (linea) {
-
-				let pendiente = precio_tipeado_pendiente(linea)
-
-				if (pendiente !== null) {
-					this.agregar_otro_precio(linea, pendiente, cantidad_de_la_fila_pendiente(linea))
-					linea.price_vender_personalizado = ''
-				}
-
-				this.agregar_otro_precio(linea, importe)
-
-				// Vacia el codigo de barras (y el item de la cabecera) y devuelve el foco ahi.
-				this.limpiar_item()
-
+			if (!linea) {
+				this.agregar_linea_de_ticket(articulo, importe)
 				return
 			}
 
-			this.agregar_linea_de_ticket(articulo, importe)
+			let pendiente = precio_tipeado_pendiente(linea)
+
+			if (pendiente !== null) {
+
+				/*
+					Precio tipeado sin Enter: se confirma como fila, igual que el Enter. La cantidad
+					es la del renglon solo si el renglon todavia no tiene varios precios (ver
+					cantidad_de_la_fila_pendiente).
+				*/
+				this.agregar_otro_precio(linea, pendiente, cantidad_de_la_fila_pendiente(linea))
+				linea.price_vender_personalizado = ''
+
+			} else if (
+				!tiene_varios_precios(linea)
+				&& Number(this.getTotalItem(linea, false))
+			) {
+
+				// Renglon que suma plata propia: esa plata pasa a ser la primera fila.
+				this.pasar_precio_del_renglon_a_fila(linea)
+			}
+
+			this.agregar_otro_precio(linea, importe)
+
+			// Vacia el codigo de barras (y el item de la cabecera) y devuelve el foco ahi.
+			this.limpiar_item()
+		},
+		/**
+		 * Pasa lo que un renglon suma hoy (su precio x su cantidad) a la PRIMERA fila de sus varios
+		 * precios, sin que cambie su total. Lo usa el ticket de balanza con importe cuando el articulo
+		 * ya esta en la venta con un precio propio: el de lista, o el de un renglon de una venta o un
+		 * presupuesto que se esta editando.
+		 *
+		 * La fila lleva el precio SIN recargos de venta (precio_sin_recargos_del_renglon), porque
+		 * set_varios_precios_con_recargos() le vuelve a aplicar el factor: con "Aplicar los recargos
+		 * de esta venta a los precios" prendida o apagada, el renglon suma lo mismo antes y despues.
+		 * La cantidad es la del renglon (vacia si es 1, como el Enter). El descuento del renglon se
+		 * sigue aplicando sobre la suma de las filas (getTotalItem).
+		 *
+		 * 🔴 EL COSTO, aceptado a proposito: desde aca ese renglon queda con su precio FIJO, como
+		 * cualquier precio escrito a mano. Si despues se cambia la lista de precios, el metodo de pago
+		 * o la cantidad (ofertas por cantidad, lista por rango), ese precio ya no se recalcula; para
+		 * corregirlo se borra su fila con el tachito o se tipea otra. Es preferible a la alternativa,
+		 * que era un SEGUNDO renglon del mismo articulo para el ticket: el store de VENDER no distingue
+		 * dos renglones del mismo articulo sin variante (es_la_misma_linea), y borrar o tocar uno
+		 * pisaba al otro -el ticket desaparecia y el precio viejo contaba dos veces-. Un precio que
+		 * queda fijo se ve en pantalla y se corrige; un ticket que desaparece, no. Para no llegar a
+		 * esto, la ayuda del campo Articulo de la balanza (models/balanza.js) recomienda un articulo
+		 * general sin precio.
+		 *
+		 * @param {Object} linea Renglon del remito sin varios precios y que suma algo.
+		 * @returns {void}
+		 */
+		pasar_precio_del_renglon_a_fila(linea) {
+
+			/*
+				Precios al dia antes de leerlos: es el mismo primer paso de setTotal(), y deja
+				price_vender y price_vender_sin_recargos calculados juntos, en la misma pasada.
+			*/
+			this.setItemsPrices(false, this.from_pivot)
+
+			let factor = this.factor_recargos_de_venta(linea)
+
+			this.agregar_otro_precio(
+				linea,
+				precio_sin_recargos_del_renglon(linea, factor),
+				cantidad_del_renglon_para_fila(linea)
+			)
 		},
 		/**
 		 * El renglon de la venta al que un ticket con importe se le suma como un precio mas, o null
-		 * si el ticket tiene que ir en un renglon propio.
+		 * si el articulo no esta en la venta sin variante (ahi el ticket va en un renglon nuevo).
 		 *
 		 * Candidatos: los renglones del mismo articulo (is_article, mismo id) SIN variante. Entre
 		 * ellos, en este orden:
-		 *   1. Uno que ya tenga varios precios (el ticket anterior de la misma balanza, o precios
-		 *      cargados a mano con Enter).
-		 *   2. Uno con un precio tipeado en "Personalizado" todavia sin Enter, o uno que no suma nada
-		 *      (el "Carniceria" por defecto de Panchito, con precio 0).
+		 *   a. Uno que ya tenga varios precios, con al menos una fila (el ticket anterior de la
+		 *      misma balanza, o precios cargados a mano con Enter). Un renglon con varios_precios
+		 *      vacio (le borraron todas las filas) NO cuenta: vuelve a sumar su precio de lista
+		 *      (ver tiene_varios_precios).
+		 *   b. Uno con un precio tipeado en "Personalizado" todavia sin Enter.
+		 *   c. Uno que no suma nada (el "Carniceria" por defecto de Panchito, con precio 0).
+		 *   d. Si no hay ninguno de esos, EL PRIMERO de los que quedan: uno que suma plata propia.
+		 *      agregar_ticket_de_importe() le pasa esa plata a la primera fila antes de sumarle el
+		 *      ticket (pasar_precio_del_renglon_a_fila), asi no se pierde.
 		 *
-		 * 🔴 Un renglon que suma plata propia -el precio de lista, o el de un renglon de una venta o
-		 * un presupuesto que se esta editando- NO se toma. Pasarlo a varios precios con solo el
-		 * ticket le borraria ese precio sin avisar: con varios precios el renglon vale solo la suma
-		 * de sus filas (getTotalItem) y la API guarda solo las filas. Ahi el ticket va en un renglon
-		 * propio y el que estaba queda como estaba.
+		 * Nunca devuelve null si el articulo ya esta sin variante: un ticket no crea un segundo
+		 * renglon del mismo articulo sin variante (el porque, en agregar_ticket_de_importe).
 		 *
 		 * @param {Object} articulo Articulo del ticket.
 		 * @returns {Object|null} El renglon (objeto del store vender.items), o null.
@@ -481,37 +549,49 @@ export default {
 					&& !Number(item.article_variant_id)
 			})
 
-			let con_varios_precios = lineas.find(linea => Array.isArray(linea.varios_precios))
+			if (!lineas.length) {
+				return null
+			}
+
+			// a. Con varios precios (al menos una fila).
+			let con_varios_precios = lineas.find(linea => tiene_varios_precios(linea))
 
 			if (con_varios_precios) {
 				return con_varios_precios
 			}
 
-			let disponible = lineas.find(linea => {
-				return precio_tipeado_pendiente(linea) !== null
-					|| !Number(this.getTotalItem(linea, false))
-			})
+			// b. Con un precio tipeado sin Enter.
+			let con_precio_pendiente = lineas.find(linea => precio_tipeado_pendiente(linea) !== null)
 
-			return disponible || null
+			if (con_precio_pendiente) {
+				return con_precio_pendiente
+			}
+
+			// c. Que no suma nada.
+			let sin_valor = lineas.find(linea => !Number(this.getTotalItem(linea, false)))
+
+			if (sin_valor) {
+				return sin_valor
+			}
+
+			// d. El primero, que suma plata propia.
+			return lineas[0]
 		},
 		/**
-		 * Agrega el articulo del ticket como renglon propio: cantidad 1 y el importe como su unico
+		 * Agrega el articulo del ticket como renglon nuevo: cantidad 1 y el importe como su unico
 		 * precio (varios precios de una fila), asi el proximo ticket del mismo articulo se le suma.
 		 *
-		 * Entra por set_item_vender(articulo, false, false), el mismo camino que un ticket PLU: los
-		 * controles de stock de siempre y sin preguntar la cantidad.
+		 * Solo se llega aca si el articulo NO esta en la venta, o esta solamente con variante
+		 * (linea_para_otro_precio devolvio null). Por eso entra siempre por
+		 * set_item_vender(copia, false, false), el mismo camino que un ticket PLU: los controles de
+		 * stock de siempre y sin preguntar la cantidad. add_item_vender() no lo fusiona con nada: el
+		 * unico renglon del mismo articulo que podria encontrar tiene variante, y ese no se fusiona.
 		 *
 		 * La copia lleva personalizar_price_en_vender = false A PROPOSITO: con esa marca,
 		 * add_item_to_sale() le manda el foco al input de precio del renglon a los 500 ms
 		 * (check_foco_to_precio_personalizado). El precio ya lo puso la balanza y el foco tiene que
 		 * quedar en el codigo de barras para el proximo ticket. Es solo la copia que va a la venta:
 		 * el articulo no cambia.
-		 *
-		 * El unico caso que no entra por set_item_vender es cuando ya hay un renglon del mismo
-		 * articulo que linea_para_otro_precio() no tomo (suma un precio propio): add_item_vender()
-		 * lo encontraria como repetido y le sumaria 1 a su cantidad (o le mandaria el foco a su
-		 * precio) en vez de agregar el ticket. Ahi se hace lo mismo que set_item_vender salvo ese
-		 * chequeo de repetido.
 		 *
 		 * @param {Object} articulo Articulo del ticket.
 		 * @param {Number} importe Importe que trae el ticket.
@@ -533,34 +613,7 @@ export default {
 				personalizar_price_en_vender: false,
 			}
 
-			/*
-				Misma pregunta que se hace add_item_vender() (repetidos.js: get_item_repetido +
-				ya_esta_en_la_venta): el primer renglon de articulo con este id, si no tiene variante,
-				es el que fusionaria.
-			*/
-			let repetido = this.items.find(item => item.is_article && item.id == articulo.id)
-			let lo_fusionaria = typeof repetido != 'undefined' && !repetido.article_variant_id
-
-			if (!lo_fusionaria) {
-				this.set_item_vender(copia, false, false)
-				return
-			}
-
-			copia.article_variant_id = 0
-
-			if (!this.check_stock_mayor_a_cero(copia)) {
-				return
-			}
-
-			this.$store.commit('vender/setItem', copia)
-
-			if (this.check_stock_disponible(this.item_vender)) {
-
-				// Igual que add_item_vender() para un articulo nuevo: limpia y devuelve el foco adentro.
-				this.add_item_to_sale()
-
-				this.setTotal()
-			}
+			this.set_item_vender(copia, false, false)
 		},
 		/**
 		 * Aviso de que el ticket es de una balanza cuyo articulo no sirve (no existe, se borro o no

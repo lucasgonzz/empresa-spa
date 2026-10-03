@@ -260,17 +260,18 @@ export function precio_tipeado_pendiente(linea) {
 }
 
 /**
- * La cantidad con la que un precio tipeado pendiente pasa a ser fila de varios precios.
+ * La cantidad de un renglon SIN varios precios, llevada a una fila de varios precios.
  *
  * El Enter de "Personalizado" crea la fila con la cantidad vacia (= 1). Aca se respeta eso cuando
  * el renglon tiene cantidad 1 (o vacia), que es el caso de siempre; si el renglon tiene otra
- * cantidad se la lleva la fila, porque con varios precios la cantidad del renglon deja de contar y
- * el renglon cambiaria de total sin que nadie lo pida (con 2 a $5.000 pasaria a sumar $5.000).
+ * cantidad se la lleva la fila, porque al pasar a varios precios la cantidad del renglon deja de
+ * contar y el renglon cambiaria de total sin que nadie lo pida (con 2 a $5.000 pasaria a sumar
+ * $5.000).
  *
  * @param {Object} linea Renglon del remito.
  * @returns {Number|String} '' para cantidad 1 o vacia; si no, la cantidad del renglon.
  */
-export function cantidad_de_la_fila_pendiente(linea) {
+export function cantidad_del_renglon_para_fila(linea) {
 	let cantidad = linea ? linea.amount : ''
 
 	if (
@@ -283,4 +284,70 @@ export function cantidad_de_la_fila_pendiente(linea) {
 	}
 
 	return cantidad
+}
+
+/**
+ * La cantidad con la que un precio tipeado pendiente pasa a ser fila de varios precios.
+ *
+ *   - Si el renglon YA tiene varios precios (al menos una fila): vacia, igual que el Enter manual.
+ *     Ahi la cantidad del renglon no cuenta para su total (getTotalItem() suma
+ *     calculated_price_vender), asi que llevarla multiplicaria el precio tipeado por un numero que
+ *     no se esta cobrando.
+ *   - Si no, la del renglon: cantidad_del_renglon_para_fila().
+ *
+ * @param {Object} linea Renglon del remito.
+ * @returns {Number|String}
+ */
+export function cantidad_de_la_fila_pendiente(linea) {
+
+	/*
+		Misma regla que tiene_varios_precios() de mixins/vender/varios_precios.js (un array vacio NO
+		cuenta como varios precios). Va escrita aca para que este archivo siga sin imports.
+	*/
+	if (linea && Array.isArray(linea.varios_precios) && linea.varios_precios.length > 0) {
+		return ''
+	}
+
+	return cantidad_del_renglon_para_fila(linea)
+}
+
+/**
+ * El precio de un renglon SIN los recargos de venta: la base con la que el precio que suma hoy pasa
+ * a ser una fila de varios precios sin que cambie el total del renglon.
+ *
+ * Una fila de varios precios guarda el precio SIN recargos y set_varios_precios_con_recargos()
+ * (mixins/vender/set_items_prices.js) le vuelve a aplicar el factor y lo redondea a centavos. Por
+ * eso la base tiene que ser la que deja getPriceVender() (mixins/generals.js):
+ *
+ *   - Sin factor (opcion "Aplicar los recargos de esta venta a los precios" apagada, o renglon sin
+ *     recargos): price_vender tal cual. Ahi el recargo, si hay, va al pie y no se toca.
+ *   - Con factor: price_vender_sin_recargos, que getPriceVender() calcula como precio / factor ANTES
+ *     de redondear. Al volver a multiplicarla por el factor y redondear da exactamente el
+ *     price_vender redondeado. Si no viniera un numero, price_vender / factor, que da lo mismo.
+ *
+ * @param {Object} linea Renglon del remito (con price_vender y price_vender_sin_recargos al dia).
+ * @param {Number|null} factor factor_recargos_de_venta(linea) del mixin general.
+ * @returns {Number}
+ */
+export function precio_sin_recargos_del_renglon(linea, factor) {
+
+	let precio = Number(linea.price_vender)
+
+	if (factor === null || typeof factor == 'undefined' || !Number(factor)) {
+		return precio
+	}
+
+	let base = linea.price_vender_sin_recargos
+
+	if (
+		base !== null
+		&& typeof base != 'undefined'
+		&& base !== ''
+		&& !isNaN(Number(base))
+		&& isFinite(Number(base))
+	) {
+		return Number(base)
+	}
+
+	return precio / Number(factor)
 }
