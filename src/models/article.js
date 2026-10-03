@@ -174,6 +174,16 @@ export default {
 				key: 'cost_in_dollars',
 				equal_to: 1
 			},
+			// Mision masiva-costo-neto-o-bruto (3/10/2026): en la actualizacion masiva el costo puede
+			// declararse como "Costo base (sin IVA)" o como "Costo bruto (con IVA)", igual que en la
+			// importacion de Excel. Esta propiedad es SOLO la bandera declarativa: el componente comun
+			// de la masiva (opciones-filtrados-seleccion/Update.vue) no sabe de costos, y asi ningun
+			// otro modelo ni otra propiedad cambia de comportamiento. La condicion fiscal (el
+			// Monotributista no ve el selector porque su costo es el que paga y no hay bruto/neto) NO se
+			// declara aca: Update.vue la resuelve leyendo el OWNER de la cuenta, porque la computed
+			// global `es_monotributista` lee `this.user` y para un empleado discrepa con el backend
+			// (mismo criterio que modal-props/CostInput.vue).
+			update_selector_neto_bruto: true,
 			// table_position: 8,
 		},
 		
