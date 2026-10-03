@@ -55,6 +55,49 @@
 					</b-button>
 				</b-button-group>
 
+				<!--
+					Mision masiva-costo-neto-o-bruto (3/10/2026): declaracion de si el numero que se
+					esta actualizando es el costo base (neto) o el bruto (con IVA). Solo aparece si el
+					prop lo pidio (`update_selector_neto_bruto`, hoy unicamente article.cost) y la
+					cuenta no es Monotributista, y solo cuando hay un modo elegido: con "No modificar"
+					no hay nada que declarar. Se ve en los tres modos a proposito (decision de Lucas).
+					Los testid usan `prop_key` y nunca `uid`, que cambia entre renders.
+				-->
+				<div
+				v-if="field_card.selector_neto_bruto && field_card.active_mode"
+				class="m-b-10">
+					<b-button-group
+					class="update-field-card__mode-group w-100">
+						<b-button
+						:data-testid="'masiva-costo-iva-'+field_card.prop_key+'-neto'"
+						size="sm"
+						:variant="!field_card.cost_incluye_iva ? 'primary' : 'outline-primary'"
+						@click="field_card.cost_incluye_iva = false">
+							Costo base (sin IVA)
+						</b-button>
+						<b-button
+						:data-testid="'masiva-costo-iva-'+field_card.prop_key+'-bruto'"
+						size="sm"
+						:variant="field_card.cost_incluye_iva ? 'primary' : 'outline-primary'"
+						@click="field_card.cost_incluye_iva = true">
+							Costo bruto (con IVA)
+						</b-button>
+					</b-button-group>
+					<p class="update-field-card__hint text-muted m-t-8 m-b-0">
+						<span v-if="field_card.cost_incluye_iva">
+							El sistema le saca el IVA con la alícuota de cada artículo y guarda siempre el
+							costo sin IVA. Un artículo Exento, No Gravado o con alícuota 0% se guarda tal cual.
+							<span v-if="field_card.active_mode != 'set'">
+								Si tildás «Redondear resultado», se redondea el costo con IVA.
+							</span>
+						</span>
+						<span v-else>
+							El valor es sobre el costo base, el que está guardado sin IVA. Elegí «Costo bruto»
+							si el número que tenés es el que incluye IVA.
+						</span>
+					</p>
+				</div>
+
 				<div
 				v-if="field_card.active_mode == 'decrement'"
 				class="update-field-card__input-block">
@@ -408,39 +451,94 @@ export default {
 			}
 			return true
 		},
+		/**
+		 * Suma al item del formulario plano la declaracion neto/bruto del costo.
+		 *
+		 * Mision masiva-costo-neto-o-bruto (3/10/2026). Contrato con la API: el item suma el campo
+		 * OPCIONAL `cost_incluye_iva` (true = el % o el valor es sobre el costo BRUTO; false = neto,
+		 * como siempre). Se envia solo cuando la tarjeta tiene el selector visible: sin selector
+		 * (Monotributista, o cualquier otra propiedad/modelo) el item sale exactamente igual que
+		 * antes, sin la clave. Esa ausencia es lo que mantiene compatible a la API con una SPA vieja
+		 * y a esta SPA con cualquier otro modelo.
+		 *
+		 * Si es bruto, el label lo aclara porque ese texto es el que queda en el historial de
+		 * actualizaciones masivas y alli no se vera el selector.
+		 *
+		 * @param {Object} item Item del formulario plano ya armado.
+		 * @param {Object} field_card Tarjeta numerica de la que sale el item.
+		 * @param {String} sufijo_bruto Texto que se agrega al label cuando se eligio bruto.
+		 * @returns {Object} El mismo item, con `cost_incluye_iva` si corresponde.
+		 */
+		sumar_costo_iva(item, field_card, sufijo_bruto) {
+			if (!field_card.selector_neto_bruto) {
+				return item
+			}
+
+			item.cost_incluye_iva = field_card.cost_incluye_iva ? true : false
+
+			if (item.cost_incluye_iva) {
+				item.label = item.label + sufijo_bruto
+			}
+
+			return item
+		},
+		/**
+		 * Indica si a una propiedad numerica se le muestra el selector Costo base / Costo bruto.
+		 *
+		 * Requiere el flag declarativo `update_selector_neto_bruto` en el prop (hoy solo article.cost)
+		 * y que la cuenta NO sea Monotributista: su costo es el que le pasa su proveedor, no existe la
+		 * distincion bruto/neto y a el no se le manda nada nuevo.
+		 *
+		 * 🔴 La condicion fiscal se lee del OWNER y no de `this.user` (ni de la computed global
+		 * `es_monotributista`, que lee `this.user`): si un EMPLEADO abre el modal, this.user es el
+		 * empleado y no tiene condicion_iva_precios, asi que el front decidiria "Responsable
+		 * Inscripto" mientras el backend decide por el owner. Mismo criterio que CostInput.vue.
+		 * Sin owner resuelto (aun no cargo el usuario) se muestra: es el caso por defecto, y
+		 * set_form() se vuelve a correr cuando el modal se abre (`shown`).
+		 *
+		 * @param {Object} prop Propiedad del modelo.
+		 * @returns {Boolean}
+		 */
+		debe_mostrar_selector_neto_bruto(prop) {
+			if (!prop || !prop.update_selector_neto_bruto) {
+				return false
+			}
+
+			return !(this.owner && this.owner.condicion_iva_precios == 'MT')
+		},
 		build_flat_form() {
 			let flat_form = []
 
 			this.form_field_cards.forEach(field_card => {
 				if (field_card.kind == 'number') {
 					if (this.form_value_should_apply(field_card.decrement_value, 'number')) {
-						flat_form.push({
+						flat_form.push(this.sumar_costo_iva({
 							label: 'Disminuir el '+field_card.label,
 							key: 'decrement_'+field_card.prop_key,
 							type: 'number',
 							placeholder: 'Porcentaje para disminuir '+field_card.label,
 							value: field_card.decrement_value,
 							round: field_card.round_decrement,
-						})
+						}, field_card, ' (sobre el costo bruto, con IVA)'))
 					}
 					if (this.form_value_should_apply(field_card.increment_value, 'number')) {
-						flat_form.push({
+						flat_form.push(this.sumar_costo_iva({
 							label: 'Aumentar el '+field_card.label,
 							key: 'increment_'+field_card.prop_key,
 							type: 'number',
 							placeholder: 'Porcentaje para aumentar '+field_card.label,
 							value: field_card.increment_value,
 							round: field_card.round_increment,
-						})
+						}, field_card, ' (sobre el costo bruto, con IVA)'))
 					}
 					if (this.form_value_should_apply(field_card.set_value, 'number')) {
-						flat_form.push({
+						flat_form.push(this.sumar_costo_iva({
 							label: 'Setear el '+field_card.label,
 							key: 'set_'+field_card.prop_key,
 							type: 'number',
 							placeholder: 'Valor para setear '+field_card.label,
 							value: field_card.set_value,
-						})
+						}, field_card, ' (cargado como bruto, con IVA)'))
 					}
 				} else if (field_card.kind == 'select') {
 					if (!this.form_value_should_apply(field_card.value, 'select')) {
@@ -516,6 +614,12 @@ export default {
 						set_value: '',
 						round_decrement: 0,
 						round_increment: 0,
+						// Selector Costo base / Costo bruto (mision masiva-costo-neto-o-bruto). Sin el
+						// flag en el prop queda en false y la tarjeta se comporta como siempre.
+						selector_neto_bruto: this.debe_mostrar_selector_neto_bruto(prop),
+						// false = neto. Cada apertura del modal arranca en neto porque set_form()
+						// rearma las tarjetas.
+						cost_incluye_iva: false,
 					})
 				} else if (prop.type == 'select') {
 					form_field_cards.push({
@@ -667,6 +771,10 @@ export default {
 			field_card.set_value = ''
 			field_card.round_decrement = 0
 			field_card.round_increment = 0
+			// 🔴 NO se resetea `cost_incluye_iva` al cambiar de modo: es una declaracion sobre el
+			// costo (si el numero que tiene la persona es neto o bruto), no sobre el modo. Si pasara
+			// a neto en silencio, quien eligio bruto y salta de Setear a Aumentar % guardaria un
+			// resultado distinto del que cree. Solo set_form() lo vuelve a neto.
 		},
 		/**
 		 * Placeholder del input numérico según modo activo.
