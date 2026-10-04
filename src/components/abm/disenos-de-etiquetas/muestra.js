@@ -282,7 +282,8 @@ export function hay_articulos_a_mano(vm) {
 }
 
 /**
- * Los ids de los articulos para "Imprimir una prueba": hasta 6, los completos primero.
+ * Los ids de los articulos para "Imprimir una prueba": hasta 6, en el orden de articulos_ordenados()
+ * (completos, despues con nombre y precio, despues el resto).
  *
  * @param {Object} vm
  * @param {Array} [extra] articulos traidos de la API

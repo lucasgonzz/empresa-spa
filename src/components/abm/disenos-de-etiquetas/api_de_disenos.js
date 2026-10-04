@@ -32,10 +32,10 @@ export const BUSCANDO_ARTICULOS_PARA_PROBAR = 'Buscando artículos para la prueb
 /* Si la busqueda en la API fallo (sin conexion, error del servidor) */
 export const NO_SE_PUDIERON_TRAER_ARTICULOS = 'No se pudieron traer artículos para la prueba. Revisá tu conexión y volvé a entrar.'
 
-/* Cuantos articulos se piden a la API para la prueba: los completos alcanzan con la hoja de prueba (6) */
-const ARTICULOS_COMPLETOS_A_PEDIR = 6
+/* Cuantos articulos con precio se piden a la API: los que entran en la hoja de prueba (6) */
+const ARTICULOS_CON_PRECIO_A_PEDIR = 6
 
-/* Si no hay ninguno completo, se piden algunos mas de cualquier tipo, para elegir los que tienen precio */
+/* Si el negocio no tiene suficientes con precio, se piden algunos mas de cualquier tipo */
 const ARTICULOS_CUALQUIERA_A_PEDIR = 12
 
 /* Ruta del recurso, relativa a $api (que ya lleva el prefijo /api) */
@@ -89,19 +89,24 @@ export function eliminar_diseno(vm, id) {
  * Va por $api directo y NO por el store: runGlobalSearch escribe `filtered` del modulo `article`, y
  * eso le pisaria al Listado la pagina que estaba mirando.
  *
+ * 🔴 Las condiciones van en `extra_filters` y nunca en `filters` (los de la lupa de cada columna):
+ * globalSearch guarda una fila en el historial de filtros del Listado cada vez que llegan filtros de
+ * columna, y entrar a esta solapa no es una busqueda del usuario.
+ *
  * @param {Object} vm componente que hace el pedido (usa su $api)
  * @param {number} cuantos per_page
- * @param {Array} filtros filtros de columna (mismo formato que los de la lupa del Listado)
+ * @param {Array} extra_filters {key, operator, value} (ExtraFiltersHelper de la API)
+ * @param {string} order_by columna por la que se ordena, de mayor a menor
  * @returns {Promise<Array>}
  */
-function pedir_articulos(vm, cuantos, filtros) {
+function pedir_articulos(vm, cuantos, extra_filters, order_by) {
 	return vm.$api.post('global-search/article?page=1', {
 		query_value: '',
 		props: [],
 		relation_props: [],
-		extra_filters: [],
-		filters: filtros,
-		order_by: 'id',
+		extra_filters: extra_filters,
+		filters: [],
+		order_by: order_by,
 		order_direction: 'DESC',
 		per_page: cuantos,
 	}, CONFIGURACION)
@@ -112,31 +117,38 @@ function pedir_articulos(vm, cuantos, filtros) {
 }
 
 /**
- * Los articulos con que probar, traidos de la API: primero los ultimos que tienen codigo de barras y
- * precio; si no llegan a llenar la hoja de prueba y `tambien_incompletos`, se suman los ultimos de
- * cualquier tipo (muestra.js saca los repetidos y pone los completos primero).
+ * Los articulos con que probar, traidos de la API: los que tienen precio, ordenados por codigo de
+ * barras de mayor a menor (en MySQL los NULL y los vacios quedan al final, asi que los que tienen
+ * codigo salen primero). Si no llegan a llenar la hoja de prueba y `tambien_incompletos`, se suman
+ * los ultimos de cualquier tipo (muestra.js saca los repetidos y pone los completos primero).
  *
- * Una API que no entendiera los filtros devuelve los ultimos articulos sin filtrar, y muestra.js
- * igual pone los completos primero.
+ * Una API que ignorara el filtro o el orden devuelve los ultimos articulos, y muestra.js igual pone
+ * los completos primero.
  *
  * @param {Object} vm
  * @param {boolean} tambien_incompletos si el store no tiene ningun articulo a mano
- * @returns {Promise<Array>} rechaza si falla el pedido
+ * @returns {Promise<Array>} rechaza si falla el pedido y no hay nada que mostrar
  */
 export function buscar_articulos_para_la_prueba(vm, tambien_incompletos) {
-	let completos = [
-		{ key: 'bar_code', type: 'text', no_en_blanco: true },
-		{ key: 'final_price', type: 'number', no_en_blanco: true },
+	let con_precio = [
+		{ key: 'final_price', operator: 'numeric_presence', value: 'positivo' },
 	]
 
-	return pedir_articulos(vm, ARTICULOS_COMPLETOS_A_PEDIR, completos)
+	return pedir_articulos(vm, ARTICULOS_CON_PRECIO_A_PEDIR, con_precio, 'bar_code')
 	.then(function (articulos) {
-		if (articulos.length >= ARTICULOS_COMPLETOS_A_PEDIR || !tambien_incompletos) {
+		if (articulos.length >= ARTICULOS_CON_PRECIO_A_PEDIR || !tambien_incompletos) {
 			return articulos
 		}
-		return pedir_articulos(vm, ARTICULOS_CUALQUIERA_A_PEDIR, [])
+		return pedir_articulos(vm, ARTICULOS_CUALQUIERA_A_PEDIR, [], 'id')
 		.then(function (cualquiera) {
 			return articulos.concat(cualquiera)
+		})
+		.catch(function (error) {
+			/* Si el segundo falla, alcanza con los del primero; sin ninguno, es un error */
+			if (articulos.length) {
+				return articulos
+			}
+			throw error
 		})
 	})
 }
