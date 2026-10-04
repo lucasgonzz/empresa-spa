@@ -84,8 +84,8 @@
 
 			<!--
 				Botón para ver los problemas (conflictos) de la importación, solo si tuvo al menos uno.
-				El número es conflicts_count: los problemas PARA REVISAR, sin los avisos que no
-				necesitan corrección (ver tipos_que_no_cuentan). El title lo dice con las mismas
+				El número es conflicts_count: los problemas PARA REVISAR, sin los avisos (ver
+				tipos_que_no_cuentan). El title lo dice con las mismas
 				palabras que el encabezado del modal, para que el botón y el modal no se contradigan.
 			-->
 			<template #cell(conflicts)="data">
@@ -249,7 +249,7 @@
 
 			<!--
 				Encabezado: fecha de la importación y cuántos problemas tuvo, separados en los que
-				hay que revisar y los avisos que no necesitan corrección (ver conteo_conflictos).
+				hay que revisar y los avisos (ver conteo_conflictos y texto_encabezado_conflictos).
 
 				🔴 Hasta el 4/10/2026 decía "N problemas detectados" con el `total` del endpoint,
 				que cuenta TODO (avisos incluidos), mientras el botón de la columna Problemas
@@ -262,9 +262,10 @@
 			</p>
 
 			<!--
-				Resumen por tipo de problema, como chips. Los avisos que no necesitan corrección
-				van en gris y no en amarillo: el amarillo le dice al usuario "esto hay que
-				arreglarlo", y una fila sobrescrita o una columna de precio no aplicada no lo son.
+				Resumen por tipo de problema, como chips. Los avisos (tipos_que_no_cuentan, los
+				que no suman al número del botón) van en gris y no en amarillo, así el color de
+				los chips acompaña al número del encabezado: amarillo lo que se cuenta como
+				problema para revisar, gris lo que va aparte como aviso.
 			-->
 			<div
 			v-if="resumen_conflictos.length"
@@ -305,16 +306,17 @@
 					<template #cell(tipo)="data">
 						{{ tipo_conflicto_label(data.item.tipo) }}
 						<span v-if="data.item.tipo === 'ambiguo' && data.item.article_ids">
-							({{ numero_es(data.item.article_ids.length) }} artículos)
+							{{ texto_cantidad_articulos(data.item.article_ids) }}
 						</span>
+						<!-- El sentido depende del campo: ver texto_fila_sobrescrita() -->
 						<span v-if="data.item.tipo === 'fila_sobrescrita' && data.item.fila_ganadora">
-							(sobrescrita por la fila {{ data.item.fila_ganadora }})
+							{{ texto_fila_sobrescrita(data.item) }}
 						</span>
 						<span v-if="data.item.tipo === 'identificador_sin_asignar' && data.item.article_ids">
-							({{ numero_es(data.item.article_ids.length) }} artículos)
+							{{ texto_cantidad_articulos(data.item.article_ids) }}
 						</span>
 						<span v-if="data.item.tipo === 'desempate_por_nombre_sin_resolver' && data.item.article_ids">
-							({{ numero_es(data.item.article_ids.length) }} artículos)
+							{{ texto_cantidad_articulos(data.item.article_ids) }}
 						</span>
 					</template>
 
@@ -326,15 +328,16 @@
 				</b-table>
 
 				<!--
-					Aviso cuando se recorta la lista a los primeros 200 problemas para no renderizar
-					tablas gigantes. Dice "problemas" y no "filas": cada renglón de esta tabla es un
-					problema, y una misma fila del Excel puede traer varios (un costo y un precio
-					inválidos son dos renglones de la misma fila).
+					Aviso cuando se recorta la lista a los primeros 200 renglones para no renderizar
+					tablas gigantes. Dice "renglones" y no "filas" ni "problemas": "filas" se lee
+					como filas del Excel (y una misma fila puede traer varios renglones, como un
+					costo y un precio inválidos), y "problemas" chocaría con el encabezado, porque
+					el total incluye los avisos que el encabezado cuenta aparte.
 				-->
 				<p
 				v-if="hay_mas_conflictos"
 				class="text-muted small">
-					Se muestran los primeros {{ numero_es(conflictos_a_mostrar.length) }} problemas de {{ numero_es(total_conflictos) }}. Corregí estos y volvé a importar para ver el resto.
+					Se muestran los primeros {{ numero_es(conflictos_a_mostrar.length) }} renglones de {{ numero_es(total_conflictos) }}. Corregí estos y volvé a importar para ver el resto.
 				</p>
 
 			</div>
@@ -345,37 +348,60 @@
 				sobrescribir artículos existentes…" que salía con cualquier tipo que no fuera
 				informativo, y era falso para casi todos: medido en demo2 con la lista de la demo,
 				las tres filas del modal SÍ se habían importado (una sin costo, una sin códigos,
-				una sin código de barras). Lo único que de verdad deja una fila afuera es
-				'ambiguo' (ProcessRow corta antes de crear o actualizar); el resto procesa la fila
-				sin el dato que no pudo usar.
+				una sin código de barras).
+
+				Cada pie afirma SOLO lo que es verdad siempre para su tipo. Lo único que seguro
+				deja una fila afuera es 'ambiguo' (ProcessRow corta antes de crear o actualizar).
+				Para los demás, el tipo dice qué dato no se cargó, pero no si la fila creó o
+				actualizó algo: puede no haber hecho nada por un camino que no deja conflicto
+				("Solo actualizar" sin coincidencia, artículo de otro proveedor, fila repetida por
+				nombre). Por eso el pie de los datos habla del dato, no de la fila.
 
 				Cada pie se decide por los tipos presentes en TODA la importación (el `resumen`,
 				ver tipos_presentes), no solo en la lista recortada a 200: si el único 'ambiguo'
 				quedó en el renglón 350, el usuario igual tiene que leer que esa fila no entró.
 				Un tipo que este componente no conoce (una API más nueva) no dispara ningún pie:
 				no se afirma nada que no se sepa.
+
+				El motivo del pie de 'ambiguo' es genérico ("no se pudo saber a qué artículo
+				corresponden") a propósito: la ambigüedad no siempre es "el código coincide con
+				más de un artículo del sistema". Puede ser por nombre, o con UN artículo que creó
+				la misma importación en otro lote.
 			-->
 			<p
 			v-if="hay_filas_no_importadas"
 			class="text-muted small m-t-15">
-				Las filas con "Código repetido" no se importaron: su código coincide con más de un
-				artículo del sistema y se dejaron afuera para no sobrescribir el que no es. Revisá
-				esos artículos o el código en el Excel, y volvé a importar solo esas filas.
+				Las filas con "Código repetido" no se importaron: no se pudo saber a qué artículo
+				corresponden, y se dejaron afuera para no sobrescribir el que no es. Revisá los
+				artículos que comparten ese código y volvé a importar solo esas filas.
 			</p>
 
 			<p
-			v-if="hay_filas_importadas_sin_un_dato"
+			v-if="hay_filas_con_un_dato_sin_usar"
 			class="text-muted small m-t-15">
-				Las filas con un valor o un código que no se pudo usar sí se importaron, pero sin
-				ese dato: en el artículo quedó el que ya tenía, o vacío si es nuevo. Corregilo en
-				el Excel y volvé a importar esas filas para completarlo.
+				En las filas con un valor o un código que no se pudo usar, ese dato no se cargó:
+				si la fila creó o actualizó un artículo, el artículo quedó sin ese dato o con el
+				que ya tenía. Corregilo en el Excel y volvé a importar esas filas para completarlo.
 			</p>
 
+			<!--
+				Dos pies para las sobrescritas, según el campo por el que se repitió la fila (ver
+				sobrescritas_solo_por_codigo): por un código queda la ÚLTIMA fila; por nombre, por
+				número o sin campo queda la PRIMERA y la de abajo se descarta. Solo cuando todas
+				son por código se puede afirmar cuál quedó.
+			-->
 			<p
-			v-if="hay_filas_sobrescritas"
+			v-if="hay_filas_sobrescritas && sobrescritas_solo_por_codigo"
 			class="text-muted small m-t-15">
-				Las filas sobrescritas no necesitan corrección: el código se repetía en el Excel y
-				quedó la última fila.
+				Las filas sobrescritas son productos que aparecían más de una vez en el Excel con
+				el mismo código: se cargaron una sola vez, con los datos de la última fila.
+			</p>
+			<p
+			v-else-if="hay_filas_sobrescritas"
+			class="text-muted small m-t-15">
+				Las filas sobrescritas son productos que aparecían más de una vez en el Excel: se
+				cargaron una sola vez. Si las filas repetidas traían datos distintos, revisá cuál
+				quedó.
 			</p>
 
 			<p
@@ -692,27 +718,30 @@ export default {
 			return this.total_conflictos > this.conflictos_a_mostrar.length
 		},
 		/*
-		 * Las tres listas de abajo contestan DOS preguntas distintas sobre un tipo de problema,
-		 * y no hay que mezclarlas (misión importacion-mensaje-de-problemas, 4/10/2026):
+		 * Las listas de abajo contestan preguntas distintas sobre un tipo de problema, y no hay
+		 * que mezclarlas (misión importacion-mensaje-de-problemas, 4/10/2026):
 		 *
 		 *   1. "¿Cuenta para el número del botón?" -> tipos_que_no_cuentan.
-		 *   2. "¿La fila se importó?"              -> tipos_que_saltean_la_fila (NO se importó)
-		 *                                             y tipos_que_se_importan_sin_un_dato (SÍ,
-		 *                                             pero sin el dato que no se pudo usar).
+		 *   2. "¿La fila quedó afuera seguro?"     -> tipos_que_saltean_la_fila.
+		 *   3. "¿Se perdió un dato de la fila?"    -> tipos_con_un_dato_sin_usar.
 		 *
-		 * Hasta esta misión había una sola lista (tipos_informativos) que intentaba contestar la
-		 * segunda, y la contestaba al revés: todo lo que no era informativo disparaba el pie de
-		 * "estas filas no se procesaron", cuando en realidad una sola cosa deja la fila afuera.
-		 * Antes de sumar o sacar un tipo, decidí cuál de las dos preguntas estás contestando.
+		 * 🔴 Ninguna contesta "¿la fila se importó?". Que una fila tenga un problema de dato no
+		 * dice si después creó o actualizó algo: puede no haber hecho nada por un camino que no
+		 * deja conflicto ("Solo actualizar" sin coincidencia, artículo de otro proveedor, fila
+		 * repetida por nombre o número que se descarta). Por eso los pies afirman solo lo que es
+		 * verdad siempre: que 'ambiguo' deja la fila afuera, y que el dato inválido no se cargó.
 		 *
-		 * 'desempate_por_nombre_sin_resolver' no está en ninguna de las tres a propósito: cuenta
-		 * para el botón (no es un aviso), la fila se importó (se aplicó a todos los candidatos) y
-		 * tiene su propio pie, porque lo que hay que corregir es el nombre, no un dato.
+		 * Hasta esta misión había una sola lista (tipos_informativos) y todo lo que no era
+		 * informativo disparaba el pie de "estas filas no se procesaron", que era falso para casi
+		 * todos los tipos. Antes de sumar o sacar un tipo, decidí cuál pregunta estás contestando.
+		 *
+		 * 'desempate_por_nombre_sin_resolver' no está en ninguna a propósito: cuenta para el botón
+		 * (no es un aviso) y tiene su propio pie, porque lo que hay que corregir es el nombre.
 		 */
 		/**
-		 * Tipos que NO suman al número del botón de la columna Problemas: son avisos que no
-		 * necesitan corrección (la fila se resolvió bien, o se aplicó todo menos una columna de
-		 * precio). Espejo de ImportConflict::TIPOS_QUE_NO_CUENTAN de empresa-api, que es lo que
+		 * Tipos que NO suman al número del botón de la columna Problemas: son avisos (una fila
+		 * repetida en el Excel que se cargó una vez, o una columna de precio que no se aplicó).
+		 * Espejo de ImportConflict::TIPOS_QUE_NO_CUENTAN de empresa-api, que es lo que
 		 * ActualizarBBDD::persistir_conflictos() deja afuera de conflicts_count.
 		 *
 		 * 🔴 Si cambia acá, tiene que cambiar allá (y al revés): si no, el número del botón y el
@@ -732,13 +761,24 @@ export default {
 			return ['ambiguo']
 		},
 		/**
-		 * Tipos cuya fila SÍ se importó, pero sin el dato que no se pudo usar: el campo
-		 * numérico inválido no se toca, el placeholder se anula, la fila sin código se busca por
-		 * nombre o se crea, el código único que coincidía con varios no se asigna.
+		 * Tipos en los que un valor o un código del Excel no se pudo usar y NO se cargó: el
+		 * campo numérico inválido no se toca, el placeholder se anula, la fila sin código se
+		 * busca por nombre o se crea sin código, el código único que coincidía con varios no se
+		 * asigna. No dicen si la fila creó o actualizó algo (ver el comentario de arriba).
 		 * @returns {Array}
 		 */
-		tipos_que_se_importan_sin_un_dato() {
+		tipos_con_un_dato_sin_usar() {
 			return ['numero_invalido', 'numero_fuera_de_rango', 'placeholder_descartado', 'sin_identificador', 'identificador_sin_asignar']
+		},
+		/**
+		 * Campos por los que una fila repetida en el Excel se MERGEA y gana la última
+		 * (ProcessRow, "la última fila gana" con bar_code/sku/provider_code). Con cualquier otro
+		 * campo (name, id, o sin campo) es al revés: queda la PRIMERA fila y la de abajo se
+		 * descarta. Lo usan la etiqueta de la celda Problema y el pie de las sobrescritas.
+		 * @returns {Array}
+		 */
+		campos_de_codigo() {
+			return ['bar_code', 'sku', 'provider_code']
 		},
 		/**
 		 * Tipos de problema presentes en la importación seleccionada, sin repetir: los del
@@ -759,11 +799,37 @@ export default {
 			return tipos
 		},
 		/**
-		 * Cuántos problemas hay para revisar y cuántos avisos que no necesitan corrección, para
-		 * el encabezado del modal. Sale del `resumen` del endpoint, que cuenta TODA la
-		 * importación (no la lista recortada a 200): avisos = la suma de los tipos de
-		 * tipos_que_no_cuentan, para_revisar = el resto. Así para_revisar es el mismo número que
-		 * muestra el botón (conflicts_count) y el botón y el modal no se contradicen.
+		 * True si la lista traída tiene TODOS los problemas de la importación (no la recortó el
+		 * limit de 200). Solo con la lista completa se puede cruzar por fila; con la recortada,
+		 * el resto viene en el `resumen`, que está agrupado por tipo y campo, no por fila.
+		 * @returns {Boolean}
+		 */
+		lista_de_conflictos_completa() {
+			return this.conflictos.length >= (Number(this.total_conflictos) || 0)
+		},
+		/**
+		 * Filas que seguro NO se importaron (las de tipos_que_saltean_la_fila), como número
+		 * (la fila puede llegar como string). Las que vienen sin número no entran: si no, dos
+		 * nulos se "encontrarían" entre sí en el cruce por fila.
+		 * @returns {Array}
+		 */
+		filas_salteadas() {
+			let saltean = this.tipos_que_saltean_la_fila
+			let es_fila_valida = this.es_fila_valida
+			let filas = []
+			this.conflictos.forEach(function(conflicto) {
+				if (saltean.indexOf(conflicto.tipo) !== -1 && es_fila_valida(conflicto.fila)) {
+					filas.push(Number(conflicto.fila))
+				}
+			})
+			return filas
+		},
+		/**
+		 * Cuántos problemas hay para revisar y cuántos avisos, para el encabezado del modal.
+		 * Sale del `resumen` del endpoint, que cuenta TODA la importación (no la lista recortada
+		 * a 200): avisos = la suma de los tipos de tipos_que_no_cuentan, para_revisar = el resto.
+		 * Así para_revisar es el mismo número que muestra el botón (conflicts_count) y el botón
+		 * y el modal no se contradicen.
 		 *
 		 * El `total` de cada renglón del resumen es un COUNT(*) y MySQL puede mandarlo como
 		 * string: se pasa por Number() antes de sumar, si no "3" + "2" da "32".
@@ -797,9 +863,11 @@ export default {
 			}
 		},
 		/**
-		 * Lo que va después de la fecha en el encabezado del modal:
-		 * "3 problemas para revisar y 2 avisos que no necesitan corrección". La parte de los
-		 * avisos solo aparece si hay alguno.
+		 * Lo que va después de la fecha en el encabezado del modal: "3 problemas para revisar y
+		 * 2 avisos". La parte de los avisos solo aparece si hay alguno.
+		 *
+		 * No dice "que no necesitan corrección": una fila repetida por nombre deja la primera y
+		 * descarta la de abajo, y si traían datos distintos puede que sí haya que corregir algo.
 		 * @returns {String}
 		 */
 		texto_encabezado_conflictos() {
@@ -807,7 +875,7 @@ export default {
 			let texto = this.texto_problemas_para_revisar(conteo.para_revisar)
 			if (conteo.avisos > 0) {
 				texto += ' y ' + this.numero_es(conteo.avisos)
-				texto += conteo.avisos == 1 ? ' aviso que no necesita corrección' : ' avisos que no necesitan corrección'
+				texto += conteo.avisos == 1 ? ' aviso' : ' avisos'
 			}
 			return texto
 		},
@@ -819,63 +887,41 @@ export default {
 			return this.hay_algun_tipo(this.tipos_que_saltean_la_fila)
 		},
 		/**
-		 * True si hay filas que se importaron sin un dato que no se pudo usar.
+		 * True si hay filas con un valor o un código que no se pudo usar, sin contar las que
+		 * quedaron afuera por 'ambiguo'.
 		 *
 		 * 🔴 Una fila 'ambiguo' puede traer además un problema de dato anterior al match (un
 		 * costo 'consultar', un placeholder): ProcessRow registra el numero_invalido y DESPUÉS
-		 * corta la fila por el código repetido. Esa fila NO se importó, así que no puede
-		 * disparar el pie de "sí se importaron, pero sin ese dato": se lo estaría afirmando
-		 * de una fila que quedó afuera.
-		 *
-		 * Por eso, cuando la lista traída está COMPLETA (no la recortó el limit de 200), se
-		 * decide por fila: cuenta un problema de dato solo si su fila no está entre las filas
-		 * que se saltearon. Un problema de dato sin número de fila no se puede cruzar con nada
-		 * y cuenta (su tipo dice que la fila se importó); las filas salteadas sin número
-		 * tampoco entran al cruce, para que dos nulos no se "encuentren" entre sí.
-		 *
-		 * Cuando la lista está RECORTADA, queda por tipo (hay_algun_tipo sobre tipos_presentes):
-		 * el resumen viene agrupado por tipo y campo, no por fila, así que con lo que no se
-		 * trajo no hay forma de saber si el problema de dato era de una fila salteada. En ese
-		 * caso puede salir el pie aunque todos los problemas de dato sean de filas ambiguas.
+		 * corta la fila por el código repetido. Para esa fila ya habla el pie de "no se
+		 * importaron", y el de los datos ("si la fila creó o actualizó un artículo…") le sumaría
+		 * ruido sobre una fila que quedó afuera. Ver hay_tipo_fuera_de_las_filas_salteadas()
+		 * para cómo se cruza por fila y qué pasa con la lista recortada.
 		 *
 		 * @returns {Boolean}
 		 */
-		hay_filas_importadas_sin_un_dato() {
-			let lista_completa = this.conflictos.length >= (Number(this.total_conflictos) || 0)
-			if (!lista_completa) {
-				return this.hay_algun_tipo(this.tipos_que_se_importan_sin_un_dato)
-			}
-
-			let saltean = this.tipos_que_saltean_la_fila
-			let sin_un_dato = this.tipos_que_se_importan_sin_un_dato
-			let es_fila_valida = function(fila) {
-				return fila !== null && typeof fila != 'undefined' && fila !== '' && !isNaN(Number(fila))
-			}
-
-			// Filas que NO se importaron, como número (la fila puede llegar como string).
-			let filas_salteadas = []
-			this.conflictos.forEach(function(conflicto) {
-				if (saltean.indexOf(conflicto.tipo) !== -1 && es_fila_valida(conflicto.fila)) {
-					filas_salteadas.push(Number(conflicto.fila))
-				}
-			})
-
-			return this.conflictos.some(function(conflicto) {
-				if (sin_un_dato.indexOf(conflicto.tipo) === -1) {
-					return false
-				}
-				if (!es_fila_valida(conflicto.fila)) {
-					return true
-				}
-				return filas_salteadas.indexOf(Number(conflicto.fila)) === -1
-			})
+		hay_filas_con_un_dato_sin_usar() {
+			return this.hay_tipo_fuera_de_las_filas_salteadas(this.tipos_con_un_dato_sin_usar)
 		},
 		/**
-		 * True si hay filas sobrescritas por otra fila del mismo Excel con el mismo código.
+		 * True si hay filas repetidas en el Excel que se cargaron una sola vez.
 		 * @returns {Boolean}
 		 */
 		hay_filas_sobrescritas() {
 			return this.hay_algun_tipo(['fila_sobrescrita'])
+		},
+		/**
+		 * True si TODAS las filas sobrescritas (del resumen y de la lista) se repitieron por un
+		 * código (campos_de_codigo): en ese caso quedó la última fila y el pie puede decirlo.
+		 * Si hay alguna por nombre, por número o sin campo, quedó la PRIMERA y la de abajo se
+		 * descartó, así que el pie no puede afirmar cuál quedó.
+		 * @returns {Boolean}
+		 */
+		sobrescritas_solo_por_codigo() {
+			let codigos = this.campos_de_codigo
+			let es_por_codigo = function(item) {
+				return item.tipo !== 'fila_sobrescrita' || codigos.indexOf(item.campo) !== -1
+			}
+			return this.resumen_conflictos.every(es_por_codigo) && this.conflictos.every(es_por_codigo)
 		},
 		/**
 		 * True si hay filas donde se ignoró una columna de precio (misión 44).
@@ -886,11 +932,17 @@ export default {
 		},
 		/**
 		 * True si hay filas donde el desempate por nombre que pidió el usuario no alcanzó
-		 * (misión desempate-por-nombre-codigo-repetido, 9/9/2026).
+		 * (misión desempate-por-nombre-codigo-repetido, 9/9/2026), sin contar las que quedaron
+		 * afuera por 'ambiguo'.
+		 *
+		 * 🔴 Con la política de saltear las filas ambiguas, la MISMA fila queda con
+		 * 'desempate_por_nombre_sin_resolver' y con 'ambiguo', y no se importó: el pie del
+		 * desempate ("sí se importaron, pero no como pediste") sería falso para ella. Mismo
+		 * cruce por fila que el pie de los datos.
 		 * @returns {Boolean}
 		 */
 		hay_desempates_sin_resolver() {
-			return this.hay_algun_tipo(['desempate_por_nombre_sin_resolver'])
+			return this.hay_tipo_fuera_de_las_filas_salteadas(['desempate_por_nombre_sin_resolver'])
 		},
 		/**
 		 * Texto del modal de confirmacion antes de revertir, con la fecha y las
@@ -1022,7 +1074,8 @@ export default {
 			return this.numero_es(numero) + ' problemas para revisar'
 		},
 		/**
-		 * True si el tipo es un aviso que no necesita corrección (ver tipos_que_no_cuentan).
+		 * True si el tipo es un aviso, de los que no suman al número del botón (ver
+		 * tipos_que_no_cuentan).
 		 * @param {String} tipo
 		 * @returns {Boolean}
 		 */
@@ -1040,6 +1093,72 @@ export default {
 			return tipos.some(function(tipo) {
 				return presentes.indexOf(tipo) !== -1
 			})
+		},
+		/**
+		 * True si la fila trae un número que se puede usar para cruzar (no null, no vacía, numérica).
+		 * @param {*} fila
+		 * @returns {Boolean}
+		 */
+		es_fila_valida(fila) {
+			return fila !== null && typeof fila != 'undefined' && fila !== '' && !isNaN(Number(fila))
+		},
+		/**
+		 * True si hay algún conflicto de los tipos pedidos en una fila que NO quedó afuera por
+		 * 'ambiguo' (ver filas_salteadas). Lo usan los pies que hablan de filas que se cargaron
+		 * (el de los datos sin usar y el del desempate), para no afirmárselo a una fila salteada.
+		 *
+		 * - Con la lista COMPLETA se decide por fila. Un conflicto sin número de fila no se puede
+		 *   cruzar con nada y cuenta: su tipo es lo único que se sabe de él.
+		 * - Con la lista RECORTADA queda por tipo (hay_algun_tipo sobre tipos_presentes): el
+		 *   resumen viene agrupado por tipo y campo, no por fila, así que con lo que no se trajo
+		 *   no hay forma de saber si el conflicto era de una fila salteada. En ese caso el pie
+		 *   puede salir aunque todos esos conflictos sean de filas ambiguas.
+		 *
+		 * @param {Array} tipos
+		 * @returns {Boolean}
+		 */
+		hay_tipo_fuera_de_las_filas_salteadas(tipos) {
+			if (!this.lista_de_conflictos_completa) {
+				return this.hay_algun_tipo(tipos)
+			}
+			let filas_salteadas = this.filas_salteadas
+			let es_fila_valida = this.es_fila_valida
+			return this.conflictos.some(function(conflicto) {
+				if (tipos.indexOf(conflicto.tipo) === -1) {
+					return false
+				}
+				if (!es_fila_valida(conflicto.fila)) {
+					return true
+				}
+				return filas_salteadas.indexOf(Number(conflicto.fila)) === -1
+			})
+		},
+		/**
+		 * Detalle de una 'fila_sobrescrita' en la celda Problema. Para los códigos
+		 * (campos_de_codigo) la última fila gana: `fila` es la pisada y `fila_ganadora` la que
+		 * quedó. Por nombre, por número o sin campo es AL REVÉS: ProcessRow descarta la fila de
+		 * abajo, así que `fila` es la que quedó y `fila_ganadora` (la que se estaba procesando)
+		 * es la que se tiró. Decirle "sobrescrita por la fila N" en ese caso era mentirle.
+		 * @param {Object} item - conflicto de tipo fila_sobrescrita
+		 * @returns {String}
+		 */
+		texto_fila_sobrescrita(item) {
+			if (this.campos_de_codigo.indexOf(item.campo) !== -1) {
+				return '(sobrescrita por la fila ' + item.fila_ganadora + ')'
+			}
+			return '(repetida en la fila ' + item.fila_ganadora + ', que se descartó)'
+		},
+		/**
+		 * "(1 artículo)" / "(N artículos)" para los conflictos que traen article_ids.
+		 * @param {Array} article_ids
+		 * @returns {String}
+		 */
+		texto_cantidad_articulos(article_ids) {
+			let cantidad = article_ids.length
+			if (cantidad == 1) {
+				return '(1 artículo)'
+			}
+			return '(' + this.numero_es(cantidad) + ' artículos)'
 		},
 		/**
 		 * Texto de un chip del resumen: "Tipo (Campo): total", o "Tipo: total" si el problema
