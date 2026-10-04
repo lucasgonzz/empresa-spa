@@ -309,6 +309,12 @@ export default {
 			selected_model: null,
 			not_show_modal: false,
 			set_first_row_selected: false,
+			/*
+				Espera armada por enfocar_input_al_cerrar_el_formulario(): `{ handler, tope }`, o
+				null si no hay ninguna. Se guarda para poder desarmarla (el $off del listener de
+				$root y el clearTimeout del tope) desde cualquiera de los tres caminos que la cierran.
+			*/
+			foco_pendiente_al_crear: null,
 		}
 	},
 	computed: {
@@ -349,6 +355,14 @@ export default {
 			this.query = this.init_query
 		}
 	},
+	beforeDestroy() {
+		/*
+			🔴 Obligatorio, no higiene: el listener de bv::modal::hidden vive en $root, que dura toda
+			la sesion. Si el buscador se destruye con la espera armada (salir de Vender justo despues
+			de crear), sin esto el listener quedaria colgado de una instancia muerta.
+		*/
+		this.cancelar_foco_pendiente_al_crear()
+	},
 	methods: {
 		/**
 		 * Reemite al consumidor del search-component el pedido de consulta AFIP desde el modal.
@@ -385,6 +399,8 @@ export default {
 				// Con el "+ <Modelo>" el formulario se abre ENCIMA del modal de busqueda, que queda
 				// abierto abajo. Desde el modal de ARCA ya estaba cerrado: ahi el hide no hace nada.
 				this.$bvModal.hide(this._id + '-search-modal')
+				// Que termine con el foco en el campo, como una seleccion normal. Ver el metodo.
+				this.enfocar_input_al_cerrar_el_formulario()
 				return
 			}
 			if (this.prop.is_between) {
@@ -426,6 +442,73 @@ export default {
 					input.focus()
 				}
 			}, 200)
+		},
+		/**
+		 * Deja el foco en el input de este campo cuando el formulario `<model>` que monta este
+		 * buscador termina de cerrarse. Lo usa la rama `elegir_al_crear` de modelSaved().
+		 *
+		 * Por que hace falta: una seleccion normal (clic o Enter sobre un resultado) cierra el modal
+		 * de busqueda y bootstrap-vue le devuelve el foco a lo que lo tenia al abrirlo, que es este
+		 * input. Al elegir por un alta el que se cierra ULTIMO es el formulario, y bootstrap-vue le
+		 * devuelve el foco al boton que lo abrio: el "+ <Modelo>" del modal de busqueda o "Crear
+		 * cliente y usar para esta venta" del modal de ARCA. Los dos ya estan ocultos, asi que el
+		 * foco no va a ningun lado y queda en BODY (medido con Playwright el 4/10/2026): un cajero
+		 * que trabaja con teclado se queda sin foco.
+		 *
+		 * 🔴 Por que esperar al `hidden` y no enfocar ya: mientras el b-modal del formulario esta
+		 * visible, bootstrap-vue fuerza el foco adentro de el (enforce focus) y se lo lleva de
+		 * vuelta. Y adentro del handler se enfoca en un $nextTick, no en el acto: bootstrap-vue
+		 * devuelve su foco tambien en un $nextTick que agenda ANTES de emitir el `hidden`
+		 * (modal.js, onAfterLeave), asi que el nuestro corre despues y queda el ultimo.
+		 *
+		 * El tope de 5 s es para que el listener de $root no quede colgado si el `hidden` nunca
+		 * llega (un guardado que no cierra el formulario). El beforeDestroy cubre el tercer caso.
+		 *
+		 * @returns {void}
+		 */
+		enfocar_input_al_cerrar_el_formulario() {
+			let self = this
+
+			// Dos altas seguidas: la espera anterior se desarma antes de armar la nueva.
+			this.cancelar_foco_pendiente_al_crear()
+
+			let handler = function(bv_event, modal_id) {
+				// El `<model>` de este componente no recibe modal_id: su b-modal tiene id = model_name.
+				if (modal_id !== self.model_name) {
+					return
+				}
+				self.cancelar_foco_pendiente_al_crear()
+				self.$nextTick(function() {
+					let input = document.getElementById(self._id)
+					if (input) {
+						input.focus()
+					}
+				})
+			}
+
+			let tope = setTimeout(function() {
+				self.cancelar_foco_pendiente_al_crear()
+			}, 5000)
+
+			this.$root.$on('bv::modal::hidden', handler)
+			this.foco_pendiente_al_crear = {
+				handler: handler,
+				tope: tope,
+			}
+		},
+		/**
+		 * Desarma la espera de enfocar_input_al_cerrar_el_formulario(), si hay una: saca el
+		 * listener de $root y corta el tope. Se puede llamar de mas sin efecto.
+		 *
+		 * @returns {void}
+		 */
+		cancelar_foco_pendiente_al_crear() {
+			if (!this.foco_pendiente_al_crear) {
+				return
+			}
+			this.$root.$off('bv::modal::hidden', this.foco_pendiente_al_crear.handler)
+			clearTimeout(this.foco_pendiente_al_crear.tope)
+			this.foco_pendiente_al_crear = null
 		},
 		clearSelected() {
 			if (this.model && this.prop && !this.set_selected_model_with_model_prop) {
