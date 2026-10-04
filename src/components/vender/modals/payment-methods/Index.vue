@@ -50,12 +50,22 @@
 </template>
 
 <script>
+/*
+    🔴 Imports estaticos y no `() => import(...)`, por lo mismo que este modal se importa estatico
+    en Vender.vue: tiene que estar entero cuando el vendedor lo abre, haya red o no. Asincronos, los
+    chunks se pedian recien al abrir el modal; sin internet fallaban y el modal aparecia SIN
+    "Listo" ni "Cancelar" (el footer es <buttons>): no habia forma de confirmar el reparto de una
+    venta offline. Medido el 4/10/2026 con la red cortada antes de abrirlo.
+*/
+import MultiPaymentMethods from '@/components/common/payment-methods/Index'
+import Buttons from '@/components/vender/modals/payment-methods/Buttons'
+import TotalRepartir from '@/components/vender/modals/payment-methods/TotalRepartir'
 export default {
     name: 'SelectPaymentMethods',
     components: {
-        MultiPaymentMethods: () => import('@/components/common/payment-methods/Index'),
-        Buttons: () => import('@/components/vender/modals/payment-methods/Buttons'),
-        TotalRepartir: () => import('@/components/vender/modals/payment-methods/TotalRepartir'),
+        MultiPaymentMethods,
+        Buttons,
+        TotalRepartir,
     },
     data() {
         return {

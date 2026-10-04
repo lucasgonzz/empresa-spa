@@ -212,13 +212,22 @@
 
 <script>
 import caja_por_defecto from '@/mixins/caja_por_defecto'
+/*
+    🔴 CheckInfo y Cuotas van estaticos: se dibujan en cada fila, y las filas aparecen recien cuando
+    se abre el reparto. Asincronos, sus chunks se pedian en ese momento y una venta de Vender sin
+    internet abria el reparto con las filas a medias (sin cuotas ni datos del cheque). Medido el
+    4/10/2026 con la red cortada. RetencionInfo queda asincrono: solo lo prende el cobro de cuenta
+    corriente (show_datos_retencion), que sin red no se puede guardar igual.
+*/
+import CheckInfo from '@/components/common/payment-methods/CheckInfo'
+import Cuotas from '@/components/common/payment-methods/Cuotas'
 export default {
     mixins: [caja_por_defecto],
     name: 'PaymentMethodsStep',
     components: {
 
-        CheckInfo: () => import('@/components/common/payment-methods/CheckInfo'),
-        Cuotas: () => import('@/components/common/payment-methods/Cuotas'),
+        CheckInfo,
+        Cuotas,
         RetencionInfo: () => import('@/components/common/payment-methods/RetencionInfo'),
     },
     props: {
