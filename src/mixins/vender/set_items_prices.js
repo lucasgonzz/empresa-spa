@@ -73,6 +73,9 @@ export default {
 		 * reexpresar_comprobante.js convierte `price_vender` de cada fila al cambiar de moneda, y un
 		 * precio guardado en otra clave quedaria en la moneda vieja.
 		 *
+		 * A esas mismas filas guardadas se les aplica tambien el ajuste de los checks de IVA, como a
+		 * un renglon suelto del pivot (ver el bloque del IVA, adentro del forEach).
+		 *
 		 * @param {Object} item
 		 */
 		set_varios_precios_con_recargos(item) {
@@ -116,12 +119,56 @@ export default {
 					factor_de_la_fila = null
 				}
 
+				// El precio de la fila con los recargos de venta adentro, o tal cual si no hay factor.
+				let precio = factor_de_la_fila === null ? precio_sin_recargos : precio_sin_recargos * factor_de_la_fila
+
+				// La base que viaja: el precio sin recargos, solo si hubo factor (ver la invariante).
+				let base = factor_de_la_fila === null ? null : precio_sin_recargos
+
+				/*
+					🔴 IVA DE LA FILA QUE VIENE DEL COMPROBANTE GUARDADO (mision
+					varios-precios-descuento-renglon, 3/10/2026). NO SACAR "PORQUE LAS FILAS TIPEADAS NO
+					LO HACEN".
+
+					Hasta que una venta o un presupuesto reabierto junto sus filas en un renglon
+					(utils/varios_precios_guardados.js), cada fila era un renglon suelto y pasaba por la
+					rama del pivot de getPriceVender() (generals.js), que despues del factor de recargos
+					-o del precio tal cual, en el legado- le aplica
+					ajustar_precio_segun_iva_aplicado(item, precio, true). Sin esto, si el vendedor
+					apaga "Precios con IVA" (o prende "Sumar IVA a los articulos sin IVA") editando, los
+					renglones sueltos se ajustan y las filas no, y se guardan con el IVA adentro en un
+					comprobante que dice que no lo tiene. Mismo orden que esa rama: precio guardado ->
+					factor (o tal cual) -> ajuste de IVA -> base = precio / factor -> redondeo a
+					centavos solo si hubo factor. Asi la fila sale exactamente como saldria ese mismo
+					precio en un renglon suelto.
+
+					- Sin tocar los checks, el ajuste devuelve el precio TAL CUAL
+					  (utils/iva_en_vender.js) y la fila sale identica a como salia antes: por eso la base
+					  se recalcula SOLO si el IVA cambio el precio. Dividir siempre (p x f / f) le
+					  agregaria ruido de coma flotante en el ultimo decimal a una base que no cambio.
+					- Las filas TIPEADAS (sin la marca) no se ajustan, como hasta ahora: que una fila
+					  tipeada siga los checks de IVA es otro tema (queda anotado en el informe).
+				*/
+				if (otro_precio.desde_comprobante_guardado) {
+
+					let precio_con_iva = this.ajustar_precio_segun_iva_aplicado(item, precio, true)
+
+					if (precio_con_iva !== precio) {
+
+						precio = Number(precio_con_iva)
+
+						if (factor_de_la_fila !== null) {
+							base = precio / factor_de_la_fila
+						}
+					}
+				}
+
 				if (factor_de_la_fila === null) {
-					otro_precio.price_vender_con_recargos = precio_sin_recargos
+					otro_precio.price_vender_con_recargos = precio
 					otro_precio.price_vender_sin_recargos = null
 				} else {
-					otro_precio.price_vender_con_recargos = redondear_a_centavos(precio_sin_recargos * factor_de_la_fila)
-					otro_precio.price_vender_sin_recargos = precio_sin_recargos
+					otro_precio.price_vender_con_recargos = redondear_a_centavos(precio)
+					otro_precio.price_vender_sin_recargos = base
 				}
 
 				calculated_price_vender += otro_precio.price_vender_con_recargos * amount
