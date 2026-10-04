@@ -101,6 +101,12 @@ export default {
 			drag_max_delta_px: 0,
 			// Tras touch, muchos navegadores disparan mouse sintético; ignorar ese mousedown hasta cierta marca de tiempo.
 			suppress_primary_mouse_down_until_ms: 0,
+			// Copia REACTIVA del tamaño de la ventana, que actualiza el resize. window.innerWidth /
+			// innerHeight no son reactivos: sin esto el estilo del botón quedaba cacheado con el
+			// tamaño viejo (la posición por defecto no se movía al achicar la ventana, y en Vender
+			// el botón podía quedar sobre la barra de acciones después de un resize).
+			viewport_width_px: typeof window !== 'undefined' ? window.innerWidth : 0,
+			viewport_height_px: typeof window !== 'undefined' ? window.innerHeight : 0,
 			// True si la sesión de arrastre actual comenzó con touchstart (para coordinar suppress de mouse sintético).
 			drag_started_with_touch: false,
 			// Nombre del canal chat.user.* actualmente suscrito (para Echo.leave al cambiar de persona).
@@ -238,8 +244,9 @@ export default {
 		 * acciones, y el apilado con el de soporte —que hace la misma cuenta— se conserva.
 		 */
 		get_default_button_position() {
-			const w = typeof window !== 'undefined' ? window.innerWidth : 0
-			const h = typeof window !== 'undefined' ? window.innerHeight : 0
+			// Del dato reactivo y no de window: así la posición por defecto sigue al resize.
+			const w = this.viewport_width_px
+			const h = this.viewport_height_px
 			const size = this.button_size_px
 			const inset = 20
 			let top_offset = 0
@@ -283,7 +290,8 @@ export default {
 			if (!reserved) {
 				return pos
 			}
-			const h = typeof window !== 'undefined' ? window.innerHeight : 0
+			// Del dato reactivo y no de window: un resize con la barra puesta vuelve a acomodar el botón.
+			const h = this.viewport_height_px
 			const m = this.button_edge_margin_px
 			// Tope de arriba del botón para que su borde inferior quede `m` px sobre la barra.
 			const max_top = Math.max(m, h - reserved - this.button_size_px - m)
@@ -387,6 +395,10 @@ export default {
 		 * vive únicamente en el fin del drag (arreglo post-chequeo).
 		 */
 		on_window_resize_for_floating_button() {
+			// Primero el tamaño reactivo, ANTES del return de abajo: sin posición guardada (botón
+			// en su lugar por defecto) también hay que recalcular dónde va.
+			this.viewport_width_px = window.innerWidth
+			this.viewport_height_px = window.innerHeight
 			if (this.button_left_px == null || this.button_top_px == null) {
 				return
 			}
