@@ -122,11 +122,20 @@
 		</div>
 	</b-modal>
 
+	<!--
+		Confirmacion antes de revertir. Mismo patron que confirm-rollback-import de ImportHistory:
+		not_show_delete_text para que el texto no quede envuelto en "¿Seguro que quiere eliminar …?",
+		y emit para que el confirm no corra su camino de borrado (que termina en el aviso "Eliminado")
+		ademas del aviso propio de revert_masive_update. El id lo usa el tour s1-listado.
+	-->
 	<confirm
-	@confirmed="revert_masive_update"
+	id="confirm-revert-masive-update"
 	text="¿Seguro que quiere revertir esta actualización masiva? Los valores guardados volverán al estado anterior."
+	not_show_delete_text
 	btn_text="Revertir"
-	id="confirm-revert-masive-update"></confirm>
+	variant="danger"
+	emit="revert_confirmado"
+	@revert_confirmado="revert_masive_update"></confirm>
 </div>
 </template>
 <script>

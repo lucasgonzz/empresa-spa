@@ -102,13 +102,27 @@ export default {
 	},
 	computed: {
 		confirm_text() {
-			if (this.not_show_delete_text) {
+			/*
+				Un texto que ya es una pregunta completa ("¿Seguro que quiere revertir…?") se muestra
+				tal cual: envolverlo en "¿Seguro que quiere eliminar …?" lo duplica, aunque el que lo
+				use se haya olvidado de not_show_delete_text (pasó en el historial de masivas, 4/10/2026).
+			*/
+			if (this.not_show_delete_text || this.text_es_pregunta) {
 				return this.text
 			} else if (this.text) {
 				return '¿Seguro que quiere eliminar '+this.text+'?'
 			} else {
 				return '¿Seguro que quiere eliminar '+this.text_delete(this.model_name)+' '+this.singular(this.model_name).toLowerCase()+'?'
 			}
+		},
+		/**
+		 * True si el texto recibido ya arranca con "¿", o sea que es una pregunta armada por quien
+		 * usa el confirm y no un fragmento para completar "¿Seguro que quiere eliminar …?".
+		 *
+		 * @returns {Boolean}
+		 */
+		text_es_pregunta() {
+			return !!this.text && this.text.trim().indexOf('¿') === 0
 		},
 	},
 	methods: {
@@ -142,8 +156,16 @@ export default {
 	                await this.$store.dispatch(this.actions[i])
 	            }
 
-	            // Si llegó acá, salieron todas bien
-	            this.$toast.success(this.toast)
+	            /*
+	            	Si llegó acá, salieron todas bien. El aviso (por defecto "Eliminado") es del
+	            	trabajo que hizo el confirm: si no corrió ninguna acción propia, lo único que hizo
+	            	fue avisarle al padre con 'confirmed', y el aviso le toca al padre. Sin esta guarda,
+	            	un confirm que no es de borrado y se olvida del emit muestra "Eliminado" encima del
+	            	aviso propio (historial de masivas, 4/10/2026).
+	            */
+	            if (this.actions.length) {
+	            	this.$toast.success(this.toast)
+	            }
 	            this.$bvModal.hide(this.id)
 	            if (this.model_name) {
 	                this.$bvModal.hide(this.model_name)
