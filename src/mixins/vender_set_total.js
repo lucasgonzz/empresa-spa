@@ -520,12 +520,51 @@ export default {
 				que no se aplico al total, y del otro lado el prorrateo de AFIP y el renglon del
 				comprobante escalarian contra una base que no existe.
 			*/
-			if (total + monto < 0) {
+			let total_con_ajuste = total + monto
+
+			/*
+				🔴 LA GUARDA MIRA CENTAVOS, NO LA SUMA CRUDA. NO VOLVER A `total + monto < 0`.
+
+				ContextBar.vue redondea el monto a centavos (la columna es decimal(22,2)), pero el
+				total trae fracciones de centavo: un precio por el 10% del metodo de pago ya tiene
+				tres decimales. Forzando a $0 una venta de $1.865,286 el monto queda en -1.865,29 y
+				la suma da -0,004. Con la comparacion cruda eso se descartaba: el vendedor tipeaba 0
+				--que la validacion del lapiz acepta a proposito-- y el total no se movia, ahora
+				ademas con un aviso que le diria que "daba negativo". Medido el 4/10/2026 en s9.
+
+				Medio centavo para abajo no es un negativo de verdad, es el redondeo del monto: se
+				aplica y se lo lleva a cero mas abajo. Un negativo de un centavo o mas se sigue
+				descartando como siempre.
+			*/
+			if (Math.round(total_con_ajuste * 100) < 0) {
 
 				this.des.push('El ajuste de '+this.price(monto)+' se descarto: con los items que quedan el total daria negativo')
 				this.des.push('Volve a forzar el total si todavia lo necesitas')
 
 				this.$store.commit('vender/set_forzar_total_monto', null)
+
+				/*
+					🔴 EL AVISO VA ACA, EN EL DESCARTE, Y NO SOLO EN LA DESCRIPCION DEL PRECIO.
+
+					`total_description` solo se ve en el modal "Ver como se calculo este total", y en
+					el Vender por etapas ese modal no tiene boton (lo abria el Total.vue del diseño
+					viejo). Sin este toast el vendedor ve desaparecer el renglon "- Total forzado"
+					sin ninguna explicacion. Medido el 3/10/2026 en demo 4.3.5.
+
+					Sale UNA sola vez sin bandera propia: el commit de arriba deja el monto en null,
+					asi que el proximo setTotal() --de este componente o de cualquier otro que tenga
+					el mixin-- corta en el `if (!monto)` del principio y no vuelve a entrar.
+
+					Va aca y no en un watcher de ContextBar.vue porque desde afuera el monto pasando
+					a null se ve igual en un descarte, en "limpiar venta" y al reforzar el total.
+
+					El texto no dice "con los articulos que quedan" a proposito: al descarte tambien se
+					llega sin tocar los items, con un descuento de venta de la etapa 3 que baja el total
+					por debajo del ajuste.
+				*/
+				this.$toast.warning('Se descartó el total forzado (ajuste de '+this.price(Math.abs(monto))+'): con la venta como quedó, el total daba negativo. Volvé a forzarlo si todavía lo necesitás.', {
+					duration: 8000,
+				})
 
 				return total
 			}
@@ -536,7 +575,15 @@ export default {
 				this.des.push('Total forzado: recargo de '+this.price(monto))
 			}
 
-			total += monto
+			/*
+				No es el clamp que prohibe el comentario de la guarda: a esta linea solo llega menos de
+				medio centavo debajo de cero (el redondeo del monto), nunca un negativo de verdad.
+			*/
+			if (total_con_ajuste < 0) {
+				total_con_ajuste = 0
+			}
+
+			total = total_con_ajuste
 
 			this.des.push('Total con el total forzado: '+this.price(total))
 
