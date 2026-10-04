@@ -1033,7 +1033,11 @@ export default {
 			console.log('afip_Data', afip_data);
             let new_model = { ...this.model };
             new_model.name = afip_data.nombre
-            new_model.razon_social = afip_data.razonSocial
+            // `razon_social` en snake_case: es la clave que manda
+            // AfipConstanciaInscripcionController de empresa-api (solo en personas juridicas). El
+            // `razonSocial` que se leia antes es el campo crudo de ARCA y no llega nunca aca, asi que
+            // la razon social se perdia siempre (mision cliente-desde-arca-en-vender, 4/10/2026).
+            new_model.razon_social = afip_data.razon_social
             new_model.address = afip_data.direccion
 
             if (afip_data.provincia) {
