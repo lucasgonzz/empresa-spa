@@ -528,8 +528,6 @@ export default {
 		callSetTotal(from_amount_input = false, item = null) {
 
 			if (from_amount_input) {
-
-				console.log('callSetTotal from_amount_input')
 				
 				let check_stock = this.check_stock_disponible(item)
 
@@ -542,16 +540,46 @@ export default {
 					&& item.is_article
 				) {
 
-					if (this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
+					/*
+						🔴 LA OFERTA POR CANTIDAD CORRE SIN EXTENSION, A PROPOSITO (mision
+						oferta-por-cantidad-en-el-renglon, 4/10/2026). Este input es el tercero de los
+						tres caminos que cambian la cantidad de un renglon (los otros dos, el alta y el
+						re-escaneo, nunca la pidieron) y era el unico con gate: la extension
+						`article_price_range`, en un else-if que ni con ella entraba si la cuenta tambien
+						tenia `lista_de_precios_por_rango_de_cantidad_vendida`. Llevar el renglon a la
+						cantidad de un tramo no aplicaba la oferta y bajarlo no la sacaba. NO VOLVER A
+						PONERLE UN hasExtencion: el precio que escribio el vendedor ya esta protegido
+						adentro de check_price_range (precio_escrito_a_mano), que es lo que hacia
+						peligroso correrla en cada tecla.
 
+						check_price_type_ranges SI sigue detras de su extension: es el gate vivo de OTRA
+						funcionalidad, y sin ella podria pisar una lista elegida a mano en el renglon
+						(PriceType.vue). Va primero, igual que en add_item_to_sale.
+					*/
+					let con_listas_por_rango = !!this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
+
+					let con_ofertas_por_cantidad = !!(
+						item.article_price_ranges
+						&& item.article_price_ranges.length
+					)
+
+					if (con_listas_por_rango) {
 						item = this.check_price_type_ranges(item)
-						this.$store.commit('vender/replceItem', item)
+					}
 
-					} else if (this.hasExtencion('article_price_range')) {
+					item = this.check_price_range(item)
 
-						item = this.check_price_range(item)
-						console.log('price_vender:')
-						console.log(item.price_vender)
+					/*
+						replceItem SOLO si corrio alguno de los dos: cada replceItem agrega una entrada
+						"item_updated" al registro de la venta (append_sale_log_entry, store/vender) y
+						este input dispara en cada tecla y en cada clic. Una cuenta sin listas por rango,
+						con un articulo sin ofertas, no tiene nada que reemplazar: no se le llena el
+						registro de la venta.
+					*/
+					if (
+						con_listas_por_rango
+						|| con_ofertas_por_cantidad
+					) {
 						this.$store.commit('vender/replceItem', item)
 					}
 				}

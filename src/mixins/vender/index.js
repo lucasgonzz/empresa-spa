@@ -149,6 +149,11 @@ export default {
 
 			item = this.check_price_type_ranges(item)
 			
+			/*
+				Primero de los tres caminos de la oferta por cantidad (el alta), sin extension
+				como los otros dos: ver el criterio unico en check_price_range
+				(mixins/vender/article_price_range.js).
+			*/
 			item = this.check_price_range(item)
 
 			/*

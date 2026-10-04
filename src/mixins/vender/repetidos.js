@@ -165,6 +165,13 @@ export default {
 
 					repetido = this.check_price_type_ranges(repetido)
 					
+					/*
+						Segundo de los tres caminos de la oferta por cantidad (el re-escaneo), sin
+						extension como los otros dos: ver check_price_range. Un precio que el vendedor
+						escribio en el renglon no se pisa ni se limpia (precio_escrito_a_mano); antes
+						de la mision oferta-por-cantidad-en-el-renglon (4/10/2026) re-escanear un
+						articulo con ofertas se lo pisaba o se lo borraba.
+					*/
 					repetido = this.check_price_range(repetido)
 
 					/*
