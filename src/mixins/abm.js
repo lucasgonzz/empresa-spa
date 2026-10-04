@@ -221,6 +221,25 @@ export default {
 						'sistema_de_puntos',
 					],
 				},
+				/*
+					Balanzas (mision balanzas-configurables, 3/10/2026): cada balanza que imprime
+					tickets con codigo de barras (codigo con el que empieza el ticket, articulo e
+					importe/peso). Ver src/models/balanza.js.
+
+					No va detras de una extension sino de la CONFIGURACION DEL DUEÑO: aparece solo si
+					eligio "Por balanza" en Configuracion -> Modulo de VENDER -> Tickets de balanza
+					(users.tickets_de_balanza). Con "Por PLU" no hace falta: ahi el codigo del ticket
+					trae el PLU del articulo y se carga en su ficha. El gate lo resuelve
+					cumple_config_del_dueno() de common-vue/mixins/generals.js, en Abm.vue y en el
+					buscador del ABM.
+				*/
+				{
+					if_config_del_dueno: { key: 'tickets_de_balanza', value: 'balanzas' },
+					view: 'balanzas',
+					models: [
+						'balanza',
+					],
+				},
 			]
 		},
 	}

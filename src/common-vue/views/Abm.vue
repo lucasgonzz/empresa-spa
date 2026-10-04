@@ -30,10 +30,20 @@
 			v-if="selected_component"
 			:is="selected_component"></component>
 
+			<!--
+				`show_btn_save` / `show_btn_delete` (mision movimientos-deposito-auditoria, 3/10/2026):
+				cambio ADITIVO filtrado por modelo, mismo criterio que los agregados de
+				`pdf_column_profile` y `price_type` de abajo. Solo se apagan con la solapa de estados de
+				movimiento de deposito abierta sobre uno de los estados FIJOS del sistema; para
+				cualquier otro modelo valen true, que es el default de view-component (lo que pasaba
+				antes, cuando estas dos props no se pasaban). Ver `abm_ocultar_guardar_y_eliminar`.
+			-->
 			<view-component
 			v-else
 			show_filter_modal
 			:check_permissions="false"
+			:show_btn_save="!abm_ocultar_guardar_y_eliminar"
+			:show_btn_delete="!abm_ocultar_guardar_y_eliminar"
 			:model_name="selected_model">
 				<template #table_left_options="{ model }">
 					<btn-duplicate-pdf-profile
@@ -59,6 +69,12 @@
 <script>
 import abm from '@/mixins/abm'
 import routes from '@/router/routes'
+/*
+	Gate por configuración del dueño de las views del ABM (misión balanzas-configurables, 3/10/2026):
+	una view puede declarar `if_config_del_dueno` (ver src/mixins/abm.js, la de Balanzas) además del
+	`if_has_extencion` de siempre. Las views que no la declaran no cambian.
+*/
+import { cumple_config_del_dueno } from '@/common-vue/mixins/generals'
 export default {
 	mixins: [abm],
 	components: {
@@ -81,6 +97,11 @@ export default {
 			let views = []
 			this.abm_views.forEach(view => {
 				 
+				// Gate ADITIVO por configuración del dueño: sin la clave no hace nada.
+				if (!cumple_config_del_dueno(this, view)) {
+					return
+				}
+
 				if (view.if_has_extencion) {
 					if (this.hasExtencion(view.if_has_extencion)) {
 
@@ -129,6 +150,32 @@ export default {
 				return null
 			}
 			return this.componentForModel(this.selected_model)
+		},
+		/**
+		 * Si el formulario del ABM tiene que esconder "Guardar y cerrar" y "Eliminar".
+		 *
+		 * Hoy hay un solo caso (mision movimientos-deposito-auditoria, 3/10/2026): la solapa de
+		 * estados de movimiento de deposito con uno de los estados FIJOS del sistema abierto ("En
+		 * proceso" y "Recibido", los que tienen `user_id` en NULL). Esos no se renombran ni se
+		 * borran --en las bases compartidas los usan muchos comercios a la vez-- y el backend
+		 * responde 403 si alguien lo intenta; esto solo evita ofrecer un boton que va a fallar. El
+		 * formulario ya queda de solo lectura por `form_disabled_to_edit_function` en
+		 * src/models/deposit_movement_status.js.
+		 *
+		 * 🔴 Compatibilidad: este archivo es de common-vue y lo usa la ruta /abm de todo el sistema.
+		 * Para cualquier otro modelo (y para un estado propio, o uno nuevo) devuelve false y el
+		 * view-component recibe true en las dos props, que es exactamente su default: nada cambia.
+		 * El store de `deposit_movement_status` se lee SOLO con esa solapa abierta.
+		 *
+		 * `deposit_movement_status_es_fijo` es un metodo global (src/mixins/model_functions.js).
+		 *
+		 * @returns {Boolean}
+		 */
+		abm_ocultar_guardar_y_eliminar() {
+			if (this.selected_model !== 'deposit_movement_status') {
+				return false
+			}
+			return this.deposit_movement_status_es_fijo(this.$store.state.deposit_movement_status.model)
 		},
 	},
 	methods: {
@@ -249,6 +296,11 @@ export default {
 				if (v.if_has_extencion && !self.hasExtencion(v.if_has_extencion)) {
 					continue
 				}
+				// Mismo gate que `views`: una view escondida por la configuración del dueño no se
+				// resuelve tampoco entrando por la URL.
+				if (!cumple_config_del_dueno(self, v)) {
+					continue
+				}
 				if (self.routeString(v.view) !== route_view) {
 					continue
 				}
@@ -278,6 +330,10 @@ export default {
 			for (i = 0; i < self.abm_views.length; i++) {
 				var v = self.abm_views[i]
 				if (v.if_has_extencion && !self.hasExtencion(v.if_has_extencion)) {
+					continue
+				}
+				// Mismo gate que `views` (configuración del dueño). Sin la clave no hace nada.
+				if (!cumple_config_del_dueno(self, v)) {
 					continue
 				}
 				if (self.routeString(v.view) !== route_view) {

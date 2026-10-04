@@ -63,6 +63,13 @@
 				<tr>
 					<th>Imagen</th>
 					<th>Variante</th>
+					<!--
+						Codigo de barras propio de la variante: es el que se escanea en Vender para que
+						la linea de la venta quede con ESTA variante elegida (ver VariantRow.vue).
+						Va entre la descripcion y "Disponible" para que el codigo quede pegado al
+						nombre de la variante que identifica.
+					-->
+					<th>Código de barras</th>
 					<th>Disponible</th>
 					<th>Precio</th>
 					<!-- Sin depositos (negocio sin sucursales) el stock es uno solo por variante -->

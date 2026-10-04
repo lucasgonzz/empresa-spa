@@ -49,6 +49,74 @@ export function cumple_alguna_extencion(vm, prop) {
 	return alguna
 }
 
+/**
+ * Gate por CONFIGURACIÓN DEL DUEÑO para props, views del ABM y cualquier definición que declare
+ * `if_config_del_dueno: { key: 'columna_de_users', value: 'valor' | ['valor', ...] }` (bloque
+ * ADITIVO de la misión balanzas-configurables, 3/10/2026).
+ *
+ * Hasta acá las props y las views solo sabían esconderse por EXTENSIÓN (`if_has_extencion`), que
+ * asigna Lucas desde el admin. Las balanzas dejaron de ser extensiones y pasaron a ser una
+ * preferencia que el dueño elige en Configuración (`users.tickets_de_balanza`): el campo PLU del
+ * artículo y la solapa ABM → Balanzas tienen que aparecer según lo que el dueño eligió, no según
+ * una extensión. Este es ese gate, declarativo como los otros, para que el próximo caso no tenga
+ * que tocar common-vue de nuevo.
+ *
+ * Devuelve true si la definición no declara la clave (no aplica el gate: TODO lo que no la declara
+ * se comporta exactamente igual que antes) o si la columna del dueño vale el valor pedido (o
+ * alguno de la lista). Si la clave viene mal armada (no es un objeto con `key`) se esconde antes
+ * que romper la pantalla: mismo criterio que cumple_alguna_extencion().
+ *
+ * La configuración se lee SIEMPRE del dueño (`vm.owner`): el empleado la recibe adentro de
+ * `user.owner` y su propia columna en `users` no la escribe nadie (el guard de
+ * UserController::update de la API solo deja escribirla al dueño).
+ *
+ * La comparación es laxa (`==`) a propósito: la API manda los booleanos como 1/0 y algunos números
+ * como string, y un gate futuro por una columna así no tiene que fallar por el tipo.
+ *
+ * 🔴 Es una función de módulo y no un método del mixin, POR EL MISMO MOTIVO que
+ * cumple_alguna_extencion(): `column_preferences_helper.js` llama `check_extencions()` con un
+ * contexto artificial que tiene `owner` pero NO los métodos de este mixin, así que un
+ * `this.otro_metodo()` adentro de `check_extencions` revienta ahí. Recibe el `vm` y solo le pide
+ * `owner`.
+ *
+ * @param {Object} vm Componente (o contexto) con la computed/getter `owner`.
+ * @param {Object} definicion Prop del modelo, view del ABM, etc.
+ * @returns {Boolean}
+ */
+export function cumple_config_del_dueno(vm, definicion) {
+	if (!definicion || typeof definicion.if_config_del_dueno == 'undefined' || definicion.if_config_del_dueno === null) {
+		return true
+	}
+
+	let condicion = definicion.if_config_del_dueno
+
+	if (typeof condicion != 'object' || Array.isArray(condicion) || !condicion.key) {
+		return false
+	}
+
+	// Sin dueño (sesión todavía no resuelta) no se puede saber la configuración: se esconde, igual
+	// que hasExtencion() devuelve falsy sin usuario autenticado.
+	let owner = vm ? vm.owner : null
+
+	if (!owner) {
+		return false
+	}
+
+	let valor_del_dueno = owner[condicion.key]
+
+	// `value` puede ser un valor suelto o una lista de valores aceptados (OR entre ellos).
+	let valores_aceptados = Array.isArray(condicion.value) ? condicion.value : [condicion.value]
+
+	let cumple = false
+	valores_aceptados.forEach(valor => {
+		if (valor_del_dueno == valor) {
+			cumple = true
+		}
+	})
+
+	return cumple
+}
+
 export default {
 	mixins: [
 		VueScreenSize.VueScreenSizeMixin,
@@ -269,6 +337,18 @@ export default {
 			let props_result = []
 
 			props.forEach(prop => {
+
+				/*
+					Bloque ADITIVO (misión balanzas-configurables, 3/10/2026): una prop que declara
+					`if_config_del_dueno` queda afuera si el dueño no tiene esa configuración. Va
+					ANTES de la cadena de extensiones y como gate aparte (no como un `else if` más)
+					para que se sume a cualquier condición de extensión que la prop también declare.
+					Sin la clave cumple_config_del_dueno() devuelve true y nada cambia. Va por la
+					función de módulo y no por un método: ver cumple_config_del_dueno().
+				*/
+				if (!cumple_config_del_dueno(this, prop)) {
+					return
+				}
 
 				if (prop.if_has_extencion) {
 
@@ -690,6 +770,16 @@ export default {
 		// --------------------------------- Model ---------------------------------
 
 		showProperty(property, model, check_if_is_empty, check_show_on_form = false) {
+			/*
+				Bloque ADITIVO (misión balanzas-configurables, 3/10/2026): gate por configuración
+				del dueño (`if_config_del_dueno`, ver cumple_config_del_dueno()). Va PRIMERO a
+				propósito: varias ramas de abajo (v_if_function, if_has_extencion) devuelven sin
+				seguir, y una prop que declare las dos cosas tiene que respetar las dos. Sin la clave
+				no hace nada.
+			*/
+			if (!cumple_config_del_dueno(this, property)) {
+				return false
+			}
 			/**
 			 * Visibilidad según model_name del registro (p. ej. campos solo de venta en pdf_column_profile).
 			 *
@@ -1419,6 +1509,14 @@ export default {
 				comercio no tiene ninguna de esas extensiones. Sin la clave, no cambia nada.
 			*/
 			if (prop.if_has_alguna_extencion && !cumple_alguna_extencion(this, prop)) {
+				return false
+			}
+			/*
+				Mismo criterio para `if_config_del_dueno` (misión balanzas-configurables,
+				3/10/2026): la prop tampoco entra a la tabla ni a las tarjetas si el dueño no tiene
+				esa configuración. Sin la clave, no cambia nada.
+			*/
+			if (!cumple_config_del_dueno(this, prop)) {
 				return false
 			}
 			return typeof prop.can == 'undefined' || this.can(prop.can)

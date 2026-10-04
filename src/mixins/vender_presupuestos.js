@@ -622,6 +622,28 @@ export default {
 
 			this.articles.forEach(article => {
 
+				/*
+					Renglon con "varios precios" (el Enter de "Personalizado" y, desde la mision
+					balanzas-configurables del 3/10/2026, cada ticket de balanza con importe): va al
+					presupuesto como VARIOS renglones, uno por precio, igual que la API guarda una venta
+					(SaleHelper::attachArticles). BudgetHelper::attachArticles acepta el mismo articulo
+					varias veces con precios distintos.
+
+					🔴 Sin esto el renglon viajaba con price_vender, que en un renglon con varios precios NO
+					es lo que se cobra sino el precio de lista (la "Carniceria" de Panchito va a $0): el
+					total que recalcula BudgetHelper::getTotal() desde los renglones no coincidia con el de
+					la pantalla, que suma calculated_price_vender, y el presupuesto no se guardaba ("El
+					total del presupuesto no corresponde con los productos ingresados").
+				*/
+				if (Array.isArray(article.varios_precios) && article.varios_precios.length) {
+
+					article.varios_precios.forEach(otro_precio => {
+						articles.push(this.renglon_de_presupuesto_desde_otro_precio(article, otro_precio))
+					})
+
+					return
+				}
+
 				let ya_estaba_cargado = typeof article.pivot != 'undefined'
 
 				// Se agregan 'name' y 'name_vender_personalizado' a nivel raíz de article_to_add
@@ -701,6 +723,70 @@ export default {
 				console.log(articles)
 			})
 			return articles
+		},
+		/**
+		 * Un renglon del presupuesto para UNA fila de "varios precios" de un articulo de VENDER.
+		 *
+		 * Replica lo que hace la API con una venta (SaleHelper::attachArticles +
+		 * precio_y_base_de_varios_precios): el precio que se guarda es price_vender_con_recargos si
+		 * vino (con "aplicar los recargos de esta venta a los precios" prendida trae el recargo
+		 * adentro; apagada, vale lo mismo que el precio tipeado), con su base en
+		 * price_vender_sin_recargos. Sin esa clave (una fila que no paso por
+		 * set_items_prices.js::set_varios_precios_con_recargos) se guarda el precio tipeado y la base
+		 * va vacia, igual que hace la API.
+		 *
+		 * 🔴 La cantidad se lee con LA MISMA expresion que set_varios_precios_con_recargos(): vacia es
+		 * 1, cualquier otra cosa es Number(). Si se leyera distinto, el total que recalcula la API no
+		 * coincidiria con el de la pantalla y el presupuesto no se guardaria.
+		 *
+		 * El descuento del renglon (bonus) va en CADA fila: BudgetHelper::totalArticle() lo aplica
+		 * renglon por renglon, y la suma de las filas descontadas es exactamente el total que muestra
+		 * VENDER (getTotalItem aplica el descuento sobre calculated_price_vender).
+		 *
+		 * @param {Object} article Renglon de articulo de VENDER, con varios_precios.
+		 * @param {Object} otro_precio Una fila de article.varios_precios.
+		 * @returns {Object} Renglon plano (sin pivot) para BudgetHelper::attachArticles().
+		 */
+		renglon_de_presupuesto_desde_otro_precio(article, otro_precio) {
+
+			let precio = otro_precio.price_vender
+			let base = null
+
+			let con_recargos = otro_precio.price_vender_con_recargos
+
+			if (
+				con_recargos !== null
+				&& typeof con_recargos != 'undefined'
+				&& con_recargos !== ''
+				&& !isNaN(Number(con_recargos))
+			) {
+				precio = con_recargos
+				base = typeof otro_precio.price_vender_sin_recargos != 'undefined' ? otro_precio.price_vender_sin_recargos : null
+			}
+
+			let cantidad = 1
+
+			if (otro_precio.amount != '') {
+				cantidad = Number(otro_precio.amount)
+			}
+
+			return {
+				id: article.id,
+				status: article.status,
+				cost_in_dollars: article.cost_in_dollars,
+				name: article.name,
+				name_vender_personalizado: article.name_vender_personalizado || null,
+				amount: cantidad,
+				price: precio,
+				cost: article.cost,
+				costo_real: article.costo_real,
+				unidades_individuales: article.unidades_individuales,
+				presentacion: article.presentacion,
+				price_type_personalizado_id: article.price_type_personalizado_id,
+				bonus: typeof article.discount != 'undefined' ? article.discount : null,
+				location: null,
+				price_vender_sin_recargos: base,
+			}
 		},
 		get_services() {
 			console.log('get_services presupuesto')
