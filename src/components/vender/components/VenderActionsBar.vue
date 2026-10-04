@@ -120,11 +120,19 @@ export default {
 		this.interval = setInterval(() => {
 			this.now = moment()
 		}, 1000)
+		/*
+			La barra reserva su franja de abajo para que los botones flotantes (asistente IA y
+			soporte) se acomoden por encima: con la barra a lo ancho de toda la pantalla, en la
+			esquina derecha tapaban WhatsApp y la punta de "Guardar venta".
+		*/
+		this.$store.commit('vender/set_actions_bar_height_px', this.$el.offsetHeight || 0)
 	},
 	beforeDestroy() {
 		if (this.interval) {
 			clearInterval(this.interval)
 		}
+		/* Fuera de Vender no hay barra: los botones flotantes vuelven a poder bajar hasta el borde */
+		this.$store.commit('vender/set_actions_bar_height_px', 0)
 	},
 	computed: {
 		/**
