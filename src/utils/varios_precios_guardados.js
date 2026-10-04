@@ -240,6 +240,9 @@ function precio_de_la_fila(pivot, legado) {
  * guarda los renglones tal cual llegan (sin descontar stock). Un renglon de varios precios perderia
  * esas cantidades (ver se_puede_reagrupar).
  *
+ * 🔴 Y si la cuenta tiene la extension ACOPIOS, tampoco: la entrega se carga por renglon al editar
+ * y la API no reparte las cantidades del padre entre las filas (el porque completo, en el cuerpo).
+ *
  * No muta lo que recibe: el renglon reagrupado es un objeto nuevo y el pivot se comparte, igual que
  * en cualquier renglon de un comprobante abierto (nadie lo muta: reexpresar_comprobante.js lo
  * reemplaza por una copia).
@@ -251,6 +254,8 @@ function precio_de_la_fila(pivot, legado) {
  * @param {*} [opciones.checked] El `checked` del comprobante (un presupuesto no lo tiene).
  * @param {Boolean} [opciones.legado] comprobante_con_recargos_en_precios_sin_registro() del
  *        comprobante (ver precio_de_la_fila).
+ * @param {Boolean} [opciones.con_acopios] Si la cuenta tiene la extension acopios: con true no se
+ *        reagrupa nada.
  * @returns {Array} Una lista NUEVA de renglones.
  */
 export function reagrupar_renglones_con_varios_precios(items, opciones) {
@@ -267,6 +272,34 @@ export function reagrupar_renglones_con_varios_precios(items, opciones) {
 		estas columnas.
 	*/
 	if (Number(config.to_check) || Number(config.checked)) {
+		return items.slice()
+	}
+
+	/*
+		🔴 Con la extension ACOPIOS tampoco se reagrupa nada: queda un renglon por fila, como hasta
+		esta mision. Los tres motivos son de hoy:
+		  - Al editar un comprobante con acopios, VENDER muestra la columna "U. Entregadas"
+		    (ArticlesTable.vue, con hasExtencion('acopios')): un input por renglon. Una venta con
+		    varias filas que todavia no tiene entregas (todas vacias) se reagruparia, y la entrega
+		    se cargaria en el renglon padre...
+		  - ...pero la API arma cada fila de varios precios desde el padre SACANDOLE las cantidades
+		    (entregada, devuelta, chequeada: decision de Lucas), asi que esa entrega se perderia al
+		    guardar, sin ningun aviso. Con un renglon por fila, cada fila tiene su input y su
+		    delivered_amount llega a la API.
+		  - Y el circuito de entregas de la API (AcopioHelper::set_delivered_amount) lee y actualiza
+		    el pivot por id de articulo (updateExistingPivot), o sea que pisa TODAS las filas del
+		    articulo: el acopio todavia no distingue filas del mismo articulo, y no le toca a esta
+		    regla taparlo.
+		Lo que se resigna con acopios es justo lo que esta regla vino a arreglar en la SPA (dos
+		renglones del mismo articulo son la misma linea para el store), y se acepta: la doble cuenta
+		de stock de los renglones repetidos la corrige la API, que junta el descuento de stock por
+		articulo + variante aunque le lleguen renglones repetidos. Una entrega perdida, en cambio,
+		no la corrige nadie.
+
+		La extension la resuelve quien llama (getItemsPreviusSale(), con hasExtencion): esta regla
+		no lee el store.
+	*/
+	if (config.con_acopios) {
 		return items.slice()
 	}
 

@@ -1003,11 +1003,19 @@ export default {
 				  comprobante legado toma el precio guardado tal cual (ver precio_de_la_fila en
 				  utils/varios_precios_guardados.js); el "no recargarla" lo resuelve
 				  set_varios_precios_con_recargos() (set_items_prices.js), que lee el store.
+				- con_acopios: con la extension acopios NO se reagrupa nada y queda un renglon por fila,
+				  como antes. Al editar, la columna "U. Entregadas" de ArticlesTable.vue es un input por
+				  renglon, y en un renglon reagrupado la entrega quedaria en el padre, que la API no
+				  reparte entre las filas: se perderia al guardar (el porque completo esta en la regla).
+				  `!!` porque hasExtencion() devuelve undefined sin usuario autenticado. hasExtencion es
+				  del mixin global (generals.js, Vue.mixin en main.js), asi que la tienen todos los
+				  componentes que mezclan este mixin, tambien BtnActualizarEnVender.vue (presupuesto).
 			*/
 			return reagrupar_renglones_con_varios_precios(items, {
 				to_check: model.to_check,
 				checked: model.checked,
 				legado: comprobante_con_recargos_en_precios_sin_registro(model),
+				con_acopios: !!this.hasExtencion('acopios'),
 			})
 		},
 		get_pivot_amount(amount) {
