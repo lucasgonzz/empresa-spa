@@ -125,10 +125,11 @@
 				{{ numero_es(sobrescrituras_count) }} fila{{ sobrescrituras_count > 1 ? 's' : '' }} se resolv{{ sobrescrituras_count > 1 ? 'ieron' : 'ió' }} como repetida{{ sobrescrituras_count > 1 ? 's' : '' }}
 			</p>
 			<ul class="small article-import-result-modal__overwrites-list m-b-0">
+				<!-- El sentido depende del campo de la repetición: ver texto_sobrescritura() -->
 				<li
 				v-for="(item, index) in sobrescrituras_a_mostrar"
 				:key="'overwrite-' + index">
-					La fila {{ item.fila }} fue sobrescrita por la fila {{ item.fila_ganadora }}
+					{{ texto_sobrescritura(item) }}
 				</li>
 			</ul>
 			<p
@@ -694,6 +695,39 @@ export default {
 	},
 
 	methods: {
+
+		/*
+		 * True si en esta sobrescritura ganó la ÚLTIMA fila (la de abajo pisó a la de arriba).
+		 *
+		 * ProcessRow mergea y deja la última fila solo cuando la repetición fue por un código
+		 * (bar_code, sku o provider_code). Por nombre, por número o sin campo es AL REVÉS: queda
+		 * la primera fila (`fila`) y la de abajo (`fila_ganadora`, la que se estaba procesando)
+		 * se descarta. Misma regla que texto_fila_sobrescrita() del historial de importaciones
+		 * (ImportHistory.vue).
+		 *
+		 * Un ítem que no trae la clave `campo` se toma como "ganó la última", que es lo que este
+		 * modal decía siempre: los del endpoint de conflictos son filas completas de
+		 * import_conflicts y la traen, pero un import_stats.sobrescrituras armado por una API
+		 * (hoy no lo manda ninguna) podría no traerla, y ahí no hay de dónde decidir.
+		 */
+		sobrescritura_gana_la_ultima(item) {
+			if (typeof item.campo == 'undefined') {
+				return true
+			}
+			return ['bar_code', 'sku', 'provider_code'].indexOf(item.campo) !== -1
+		},
+
+		/*
+		 * Renglón de la lista de sobrescrituras. Antes decía siempre "La fila N fue sobrescrita
+		 * por la fila M", que en las repeticiones por nombre o por número era al revés de lo
+		 * que pasó: la fila M (la de abajo) se descartó y quedó la N.
+		 */
+		texto_sobrescritura(item) {
+			if (this.sobrescritura_gana_la_ultima(item)) {
+				return 'La fila ' + item.fila + ' fue sobrescrita por la fila ' + item.fila_ganadora
+			}
+			return 'La fila ' + item.fila_ganadora + ' se descartó: repetía la fila ' + item.fila
+		},
 
 		/*
 		 * Ejecuta la acción del botón (mixin global_notification_functions).
