@@ -1,9 +1,15 @@
 <template>
 	<div>
+		<!--
+			usar-cliente: "Usar cliente para la venta" del modal de ARCA (el CUIT ya era de un
+			cliente cargado). El modal solo avisa; elegirlo pasa por setSelected(), igual que un clic
+			en el buscador. Ver usar_cliente_de_arca().
+		-->
 		<modal-result
 		:title="afip_modal_title"
 		:afip_data="afip_data"
-		:client_model="client_model_for_afip_modal"></modal-result>
+		:client_model="client_model_for_afip_modal"
+		@usar-cliente="usar_cliente_de_arca"></modal-result>
 
 		<!--
 			Buscador de cliente con ícono distintivo en etapa 1 de vender.
@@ -207,6 +213,22 @@ export default {
 			this.aplicar_ajustes_del_cliente(client)
 
 			this.set_afip_tipo_comprobante()
+		},
+		/**
+		 * Elige para la venta el cliente que el modal de ARCA encontró ya cargado ("Usar cliente
+		 * para la venta").
+		 *
+		 * 🔴 Pasa por setSelected() a propósito, con la misma forma que le manda el buscador
+		 * (`{ model }`): setSelected() es la única puerta para elegir el cliente de la venta desde
+		 * la interfaz de Vender. Ahí viven la caja, el tipo de comprobante y la rama de edición que
+		 * conserva la lista de precios; cuando el modal elegía por su cuenta se los salteaba
+		 * (misión cliente-desde-arca-en-vender, 4/10/2026).
+		 *
+		 * @param {Object} client Cliente que devolvió la consulta a ARCA.
+		 * @returns {void}
+		 */
+		usar_cliente_de_arca(client) {
+			this.setSelected({ model: client })
 		},
 		// Devuelve true si se está editando un comprobante ya guardado (presupuesto o venta previa),
 		// false si es una venta nueva en curso.

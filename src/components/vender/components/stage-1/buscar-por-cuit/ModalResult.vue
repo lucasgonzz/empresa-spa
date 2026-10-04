@@ -51,11 +51,13 @@
 	</b-modal>
 </template>
 <script>
-import price_types from '@/mixins/vender/price_types'
 import vender from '@/mixins/vender'
-import ajustes_del_cliente from '@/mixins/vender/ajustes_del_cliente'
+/*
+	price_types y ajustes_del_cliente se sacaron el 4/10/2026: los usaba solo useClient(), que ya no
+	elige el cliente (ver su docblock). Elegir es de SelectClient.vue, que tiene los dos mixins.
+*/
 export default {
-	mixins: [price_types, vender, ajustes_del_cliente],
+	mixins: [vender],
 	props: {
 		title: String,
 		afip_data: Object,
@@ -242,11 +244,22 @@ export default {
 
 			return null
 		},
+		/**
+		 * "Usar cliente para la venta": el CUIT ya era de un cliente cargado.
+		 *
+		 * 🔴 Este modal NO elige el cliente por su cuenta: avisa con `usar-cliente` y lo elige
+		 * SelectClient.vue, haciendolo pasar por su setSelected(), que es la unica puerta para
+		 * elegir el cliente de la venta desde la interfaz de Vender. Antes de la mision
+		 * cliente-desde-arca-en-vender (4/10/2026) esto hacia a mano `vender/setClient` +
+		 * setPriceType() + los ajustes del cliente, y se quedaba corto: no bloqueaba la caja, no
+		 * recalculaba el tipo de comprobante (con un Responsable Inscripto podia quedar el anterior)
+		 * y en una venta o presupuesto en edicion le cambiaba la lista de precios en vez de avisar y
+		 * conservarla. Volver a elegir desde aca es volver a abrir ese hueco.
+		 *
+		 * @returns {void}
+		 */
 		useClient() {
-			this.$store.commit('vender/setClient', this.client_model)
-			this.setPriceType()
-			// Mismo gesto que elegirlo en el buscador: se prenden sus descuentos y recargos.
-			this.aplicar_ajustes_del_cliente(this.client_model)
+			this.$emit('usar-cliente', this.client_model)
 			this.cerrar()
 		},
 		cerrar() {
