@@ -820,10 +820,55 @@ export default {
 		},
 		/**
 		 * True si hay filas que se importaron sin un dato que no se pudo usar.
+		 *
+		 * 🔴 Una fila 'ambiguo' puede traer además un problema de dato anterior al match (un
+		 * costo 'consultar', un placeholder): ProcessRow registra el numero_invalido y DESPUÉS
+		 * corta la fila por el código repetido. Esa fila NO se importó, así que no puede
+		 * disparar el pie de "sí se importaron, pero sin ese dato": se lo estaría afirmando
+		 * de una fila que quedó afuera.
+		 *
+		 * Por eso, cuando la lista traída está COMPLETA (no la recortó el limit de 200), se
+		 * decide por fila: cuenta un problema de dato solo si su fila no está entre las filas
+		 * que se saltearon. Un problema de dato sin número de fila no se puede cruzar con nada
+		 * y cuenta (su tipo dice que la fila se importó); las filas salteadas sin número
+		 * tampoco entran al cruce, para que dos nulos no se "encuentren" entre sí.
+		 *
+		 * Cuando la lista está RECORTADA, queda por tipo (hay_algun_tipo sobre tipos_presentes):
+		 * el resumen viene agrupado por tipo y campo, no por fila, así que con lo que no se
+		 * trajo no hay forma de saber si el problema de dato era de una fila salteada. En ese
+		 * caso puede salir el pie aunque todos los problemas de dato sean de filas ambiguas.
+		 *
 		 * @returns {Boolean}
 		 */
 		hay_filas_importadas_sin_un_dato() {
-			return this.hay_algun_tipo(this.tipos_que_se_importan_sin_un_dato)
+			let lista_completa = this.conflictos.length >= (Number(this.total_conflictos) || 0)
+			if (!lista_completa) {
+				return this.hay_algun_tipo(this.tipos_que_se_importan_sin_un_dato)
+			}
+
+			let saltean = this.tipos_que_saltean_la_fila
+			let sin_un_dato = this.tipos_que_se_importan_sin_un_dato
+			let es_fila_valida = function(fila) {
+				return fila !== null && typeof fila != 'undefined' && fila !== '' && !isNaN(Number(fila))
+			}
+
+			// Filas que NO se importaron, como número (la fila puede llegar como string).
+			let filas_salteadas = []
+			this.conflictos.forEach(function(conflicto) {
+				if (saltean.indexOf(conflicto.tipo) !== -1 && es_fila_valida(conflicto.fila)) {
+					filas_salteadas.push(Number(conflicto.fila))
+				}
+			})
+
+			return this.conflictos.some(function(conflicto) {
+				if (sin_un_dato.indexOf(conflicto.tipo) === -1) {
+					return false
+				}
+				if (!es_fila_valida(conflicto.fila)) {
+					return true
+				}
+				return filas_salteadas.indexOf(Number(conflicto.fila)) === -1
+			})
 		},
 		/**
 		 * True si hay filas sobrescritas por otra fila del mismo Excel con el mismo código.
