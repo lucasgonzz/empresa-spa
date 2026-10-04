@@ -520,23 +520,24 @@ export default {
 				que no se aplico al total, y del otro lado el prorrateo de AFIP y el renglon del
 				comprobante escalarian contra una base que no existe.
 			*/
-			let total_con_ajuste = total + monto
-
 			/*
-				🔴 LA GUARDA MIRA CENTAVOS, NO LA SUMA CRUDA. NO VOLVER A `total + monto < 0`.
+				🔴 LA COMPARACION QUEDA CRUDA A PROPOSITO. NO AGREGARLE TOLERANCIA SOLO DE ESTE LADO.
 
-				ContextBar.vue redondea el monto a centavos (la columna es decimal(22,2)), pero el
-				total trae fracciones de centavo: un precio por el 10% del metodo de pago ya tiene
-				tres decimales. Forzando a $0 una venta de $1.865,286 el monto queda en -1.865,29 y
-				la suma da -0,004. Con la comparacion cruda eso se descartaba: el vendedor tipeaba 0
-				--que la validacion del lapiz acepta a proposito-- y el total no se movia, ahora
-				ademas con un aviso que le diria que "daba negativo". Medido el 4/10/2026 en s9.
+				Tiene un caso borde conocido: ContextBar.vue redondea el monto a centavos, pero el
+				total trae fracciones (un precio por el 10% del metodo de pago tiene tres decimales).
+				Forzando a $0 una venta de $1.865,286 el monto queda en -1.865,29, la suma da -0,004
+				y el ajuste se descarta: el vendedor tipea 0 y el total no se mueve (desde el
+				4/10/2026 por lo menos le sale el aviso de abajo).
 
-				Medio centavo para abajo no es un negativo de verdad, es el redondeo del monto: se
-				aplica y se lo lleva a cero mas abajo. Un negativo de un centavo o mas se sigue
-				descartando como siempre.
+				Se probo tolerar medio centavo aca y se volvio atras el mismo dia: el back
+				(SaleHelper::aplicar_forzar_total_monto) recalcula el total sobre los renglones ya
+				redondeados a centavos y descarta en crudo, asi que lo que la SPA dejaba pasar el
+				back lo rechazaba. Un presupuesto forzado a $0 reventaba con 500 al guardarse (el
+				control de total de BudgetController) y una venta chequeada se revertia sola al
+				confirmarse (update_total_sale). El arreglo de ese borde es de las dos puntas a la
+				vez, con la misma regla de redondeo en las dos.
 			*/
-			if (Math.round(total_con_ajuste * 100) < 0) {
+			if (total + monto < 0) {
 
 				this.des.push('El ajuste de '+this.price(monto)+' se descarto: con los items que quedan el total daria negativo')
 				this.des.push('Volve a forzar el total si todavia lo necesitas')
@@ -575,15 +576,7 @@ export default {
 				this.des.push('Total forzado: recargo de '+this.price(monto))
 			}
 
-			/*
-				No es el clamp que prohibe el comentario de la guarda: a esta linea solo llega menos de
-				medio centavo debajo de cero (el redondeo del monto), nunca un negativo de verdad.
-			*/
-			if (total_con_ajuste < 0) {
-				total_con_ajuste = 0
-			}
-
-			total = total_con_ajuste
+			total += monto
 
 			this.des.push('Total con el total forzado: '+this.price(total))
 
