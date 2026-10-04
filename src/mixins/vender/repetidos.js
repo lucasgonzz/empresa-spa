@@ -1,6 +1,11 @@
 import computed from '@/mixins/vender/computed'
 import vender_set_total from '@/mixins/vender_set_total'
 import deteccion_combos from '@/mixins/vender/deteccion_combos'
+/*
+	La regla de "este renglon tiene varios precios" (un array con al menos una fila), la misma que
+	usan ArticlesTable.vue y el ticket de balanza. Ver actualizar_cantidad().
+*/
+import { tiene_varios_precios } from '@/mixins/vender/varios_precios'
 export default {
 	mixins: [computed, vender_set_total, deteccion_combos],
 	methods: {
@@ -95,6 +100,56 @@ export default {
 			// if (!is_default_article) {
 
 				let repetido = this.get_item_repetido()
+
+				/*
+					🔴 RENGLON CON VARIOS PRECIOS: NO SE LE SUMA CANTIDAD (mision
+					varios-precios-descuento-renglon, 3/10/2026). NO SACAR ESTA GUARDA.
+
+					Un renglon con varios precios vale SOLO la suma de sus filas: getTotalItem() suma
+					calculated_price_vender (no precio x cantidad), y la API guarda las filas, cada una
+					con su cantidad, y descuenta del stock la suma de esas cantidades. La cantidad del
+					renglon no cuenta en ningun lado. Sumarle la unidad escaneada, que es lo que hace el
+					resto de este metodo, la perdia sin aviso: mercaderia que salia sin cobrarse y sin
+					bajar del stock.
+
+					Pasaba con cualquier renglon de varios precios del alta (el Enter de "Personalizado",
+					los tickets de balanza con importe) y, desde que una venta reabierta junta sus filas
+					en un renglon (utils/varios_precios_guardados.js), tambien al re-escanear un articulo
+					en una venta reabierta, que antes sumaba a la primera fila (un renglon suelto) y se
+					cobraba. Esta guarda cierra los dos casos.
+
+					No se inventa un precio, a proposito: el precio de lista de un articulo generico
+					(Carniceria, Verduleria) es 0, y una fila a $0 seria peor que el aviso. Se avisa, se
+					limpia la cabecera (con "preguntar cantidad", un articulo pendiente ahi frena el
+					guardado: articulo_pendiente_de_agregar.js) y el foco va al input "Personalizado" del
+					renglon, donde el vendedor escribe el precio y aprieta Enter (agregar_otro_precio).
+					Sin el permiso de cambiar precios ese input no se dibuja y el foco queda donde lo dejo
+					limpiar_item().
+
+					Los tickets de balanza con IMPORTE no llegan aca (ArticleBarCode.vue::
+					agregar_ticket_de_importe le suma una fila al renglon). Los de PESO si (entran por
+					add_item_vender) y para ellos vale lo mismo: el peso tampoco contaria.
+				*/
+				if (tiene_varios_precios(repetido)) {
+
+					this.$toast.error('Este artículo ya está en la venta con varios precios: no se suma por cantidad. Escribí el precio en "Personalizado" y apretá Enter.', {
+						duration: 6000,
+					})
+
+					this.limpiar_item()
+
+					let id_del_renglon = repetido.id
+
+					setTimeout(() => {
+						let input_personalizado = document.getElementById('price-vender-' + id_del_renglon)
+
+						if (input_personalizado) {
+							input_personalizado.focus()
+						}
+					}, 300)
+
+					return
+				}
 
 				repetido.amount = Number(repetido.amount)
 				
