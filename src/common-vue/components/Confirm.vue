@@ -122,7 +122,7 @@ export default {
 		 * @returns {Boolean}
 		 */
 		text_es_pregunta() {
-			return !!this.text && this.text.trim().indexOf('¿') === 0
+			return typeof this.text === 'string' && this.text.trim().indexOf('¿') === 0
 		},
 	},
 	methods: {
