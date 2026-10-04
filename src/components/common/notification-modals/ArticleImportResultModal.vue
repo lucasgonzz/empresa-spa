@@ -4,7 +4,7 @@
 	size="md"
 	hide-footer
 	centered
-	title="Importacion de Excel"
+	title="Importación de Excel"
 	:modal-class="modal_wrapper_class"
 	body-class="article-import-result-modal__body"
 	@show="on_modal_show"
