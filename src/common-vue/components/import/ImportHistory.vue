@@ -82,12 +82,18 @@
 				</b-button> -->
 			</template>
 
-			<!-- Boton para ver los problemas (conflictos) de la importacion, solo si tuvo al menos uno -->
+			<!--
+				Botón para ver los problemas (conflictos) de la importación, solo si tuvo al menos uno.
+				El número es conflicts_count: los problemas PARA REVISAR, sin los avisos que no
+				necesitan corrección (ver tipos_que_no_cuentan). El title lo dice con las mismas
+				palabras que el encabezado del modal, para que el botón y el modal no se contradigan.
+			-->
 			<template #cell(conflicts)="data">
 				<b-button
 				v-if="tiene_conflictos(models[data.index])"
 				size="sm"
 				variant="warning"
+				:title="texto_problemas_para_revisar(models[data.index].conflicts_count)"
 				@click="ver_conflictos(models[data.index])">
 					{{ numero_es(models[data.index].conflicts_count) }}
 				</b-button>
@@ -178,7 +184,7 @@
 				<span
 				v-else
 				class="text-muted"
-				title="No se puede revertir una importacion que todavia esta en curso">—</span>
+				title="No se puede revertir una importación que todavía está en curso">—</span>
 			</template>
 
 
@@ -241,21 +247,34 @@
 
 		<div v-else>
 
-			<!-- Encabezado: fecha de la importacion y total de problemas detectados -->
+			<!--
+				Encabezado: fecha de la importación y cuántos problemas tuvo, separados en los que
+				hay que revisar y los avisos que no necesitan corrección (ver conteo_conflictos).
+
+				🔴 Hasta el 4/10/2026 decía "N problemas detectados" con el `total` del endpoint,
+				que cuenta TODO (avisos incluidos), mientras el botón de la columna Problemas
+				muestra conflicts_count, que no los cuenta: en demo2 el botón decía 3 y el modal
+				5. Ahora el primer número es el mismo del botón y los avisos van aparte.
+			-->
 			<p class="mb-3">
 				<strong>Importación del {{ date((import_history_conflictos || {}).created_at, true) }}</strong>
-				— {{ numero_es(total_conflictos) }} problema<span v-if="total_conflictos != 1">s</span> detectado<span v-if="total_conflictos != 1">s</span>
+				— {{ texto_encabezado_conflictos }}
 			</p>
 
-			<!-- Resumen por tipo de problema, como chips -->
+			<!--
+				Resumen por tipo de problema, como chips. Los avisos que no necesitan corrección
+				van en gris y no en amarillo: el amarillo le dice al usuario "esto hay que
+				arreglarlo", y una fila sobrescrita o una columna de precio no aplicada no lo son.
+			-->
 			<div
 			v-if="resumen_conflictos.length"
 			class="conflictos-resumen m-b-15">
 				<span
 				v-for="(item, index) in resumen_conflictos"
 				:key="'resumen-'+index"
-				class="badge badge-warning conflictos-resumen__chip">
-					{{ tipo_conflicto_label(item.tipo) }} ({{ campo_conflicto_label(item.campo) }}): {{ numero_es(item.total) }}
+				class="badge conflictos-resumen__chip"
+				:class="es_aviso(item.tipo) ? 'badge-secondary' : 'badge-warning'">
+					{{ texto_chip_resumen(item) }}
 				</span>
 			</div>
 
@@ -306,36 +325,65 @@
 
 				</b-table>
 
-				<!-- Aviso cuando se recorta la lista a las primeras 200 filas para no renderizar tablas gigantes -->
+				<!--
+					Aviso cuando se recorta la lista a los primeros 200 problemas para no renderizar
+					tablas gigantes. Dice "problemas" y no "filas": cada renglón de esta tabla es un
+					problema, y una misma fila del Excel puede traer varios (un costo y un precio
+					inválidos son dos renglones de la misma fila).
+				-->
 				<p
 				v-if="hay_mas_conflictos"
 				class="text-muted small">
-					Se muestran las primeras {{ numero_es(conflictos_a_mostrar.length) }} filas de {{ numero_es(total_conflictos) }}. Corregí estas y volvé a importar para ver el resto.
+					Se muestran los primeros {{ numero_es(conflictos_a_mostrar.length) }} problemas de {{ numero_es(total_conflictos) }}. Corregí estos y volvé a importar para ver el resto.
 				</p>
 
 			</div>
 
 			<!--
-				Mision 44: el aviso de abajo NO vale para todos los tipos. 'fila_sobrescrita' y
-				'columna_de_precio_ignorada' son filas que SI se procesaron (se resolvieron
-				bien, o se aplico todo menos una columna de precio), asi que decirles al
-				usuario que corrija codigos en el Excel lo manda a arreglar algo que no esta
-				roto. Se muestra solo si hay algun tipo que de verdad no se pudo procesar.
+				🔴 Un pie POR CASO, y no uno solo para todo (misión importacion-mensaje-de-problemas,
+				4/10/2026). Hasta acá había un único "Estas filas no se procesaron para no
+				sobrescribir artículos existentes…" que salía con cualquier tipo que no fuera
+				informativo, y era falso para casi todos: medido en demo2 con la lista de la demo,
+				las tres filas del modal SÍ se habían importado (una sin costo, una sin códigos,
+				una sin código de barras). Lo único que de verdad deja una fila afuera es
+				'ambiguo' (ProcessRow corta antes de crear o actualizar); el resto procesa la fila
+				sin el dato que no pudo usar.
+
+				Cada pie se decide por los tipos presentes en TODA la importación (el `resumen`,
+				ver tipos_presentes), no solo en la lista recortada a 200: si el único 'ambiguo'
+				quedó en el renglón 350, el usuario igual tiene que leer que esa fila no entró.
+				Un tipo que este componente no conoce (una API más nueva) no dispara ningún pie:
+				no se afirma nada que no se sepa.
 			-->
 			<p
-			v-if="hay_filas_no_procesadas"
+			v-if="hay_filas_no_importadas"
 			class="text-muted small m-t-15">
-				Estas filas no se procesaron para no sobrescribir articulos existentes con
-				datos equivocados. Corregi los codigos en el Excel y volve a importar solo
-				esas filas.
+				Las filas con "Código repetido" no se importaron: su código coincide con más de un
+				artículo del sistema y se dejaron afuera para no sobrescribir el que no es. Revisá
+				esos artículos o el código en el Excel, y volvé a importar solo esas filas.
+			</p>
+
+			<p
+			v-if="hay_filas_importadas_sin_un_dato"
+			class="text-muted small m-t-15">
+				Las filas con un valor o un código que no se pudo usar sí se importaron, pero sin
+				ese dato: en el artículo quedó el que ya tenía, o vacío si es nuevo. Corregilo en
+				el Excel y volvé a importar esas filas para completarlo.
+			</p>
+
+			<p
+			v-if="hay_filas_sobrescritas"
+			class="text-muted small m-t-15">
+				Las filas sobrescritas no necesitan corrección: el código se repetía en el Excel y
+				quedó la última fila.
 			</p>
 
 			<p
 			v-if="hay_columnas_de_precio_ignoradas"
 			class="text-muted small m-t-15">
-				Las filas marcadas como "Columna de precio no aplicada" si se importaron: se
-				aplico todo menos esa columna, porque el articulo se maneja por la otra. Para
-				cambiarle el criterio hay que hacerlo desde la ficha del articulo.
+				Las filas marcadas como "Columna de precio no aplicada" sí se importaron: se
+				aplicó todo menos esa columna, porque el artículo se maneja por la otra. Para
+				cambiarle el criterio hay que hacerlo desde la ficha del artículo.
 			</p>
 
 			<!--
@@ -350,13 +398,13 @@
 			<p
 			v-if="hay_desempates_sin_resolver"
 			class="text-muted small m-t-15">
-				Las filas marcadas como "No se pudo separar por nombre" si se importaron, pero no
-				como pediste: el nombre del Excel no alcanzo para elegir a cual de los articulos
-				que comparten ese codigo de proveedor le correspondia, asi que la fila se aplico a
-				todos ellos y quedaron con los mismos datos. Pasa cuando el proveedor cambio la
-				redaccion del nombre entre listas, cuando dos articulos tienen el mismo codigo y
+				Las filas marcadas como "No se pudo separar por nombre" sí se importaron, pero no
+				como pediste: el nombre del Excel no alcanzó para elegir a cuál de los artículos
+				que comparten ese código de proveedor le correspondía, así que la fila se aplicó a
+				todos ellos y quedaron con los mismos datos. Pasa cuando el proveedor cambió la
+				redacción del nombre entre listas, cuando dos artículos tienen el mismo código y
 				el mismo nombre, o cuando la fila vino sin nombre. Para separarlos, el nombre del
-				Excel tiene que coincidir con el del articulo — o se ajusta el nombre del articulo
+				Excel tiene que coincidir con el del artículo — o se ajusta el nombre del artículo
 				desde su ficha.
 			</p>
 
@@ -557,7 +605,7 @@ export default {
 				},
 				{
 					key: 'duration',
-					label: 'Duracion',
+					label: 'Duración',
 				},
 				{
 					key: 'operaciones',
@@ -580,7 +628,7 @@ export default {
 				},
 				{
 					key: 'rollback',
-					label: 'Revertir importacion',
+					label: 'Revertir importación',
 				},
 			]
 		},
@@ -643,52 +691,161 @@ export default {
 		hay_mas_conflictos() {
 			return this.total_conflictos > this.conflictos_a_mostrar.length
 		},
-		/**
-		 * Tipos que NO representan una fila que no se pudo procesar (mision 44), y que por eso
-		 * no disparan el pie de "estas filas no se procesaron".
+		/*
+		 * Las tres listas de abajo contestan DOS preguntas distintas sobre un tipo de problema,
+		 * y no hay que mezclarlas (misión importacion-mensaje-de-problemas, 4/10/2026):
 		 *
-		 * 🔴 Esta lista responde "¿la fila se aplico?" y NO es la misma que
-		 * $tipos_que_no_cuentan de ActualizarBBDD::persistir_conflictos(), que responde otra
-		 * pregunta: "¿esto cuenta como problema en conflicts_count?". Coincidian hasta que
-		 * aparecio 'desempate_por_nombre_sin_resolver' (mision 9/9/2026): esa fila SI se
-		 * proceso —se aplico a todos los candidatos del codigo— pero NO se aplico como el
-		 * usuario pidio, asi que alla cuenta como problema y aca es informativa. Antes de sumar
-		 * o sacar un tipo, decidi cual de las dos preguntas estas contestando.
+		 *   1. "¿Cuenta para el número del botón?" -> tipos_que_no_cuentan.
+		 *   2. "¿La fila se importó?"              -> tipos_que_saltean_la_fila (NO se importó)
+		 *                                             y tipos_que_se_importan_sin_un_dato (SÍ,
+		 *                                             pero sin el dato que no se pudo usar).
+		 *
+		 * Hasta esta misión había una sola lista (tipos_informativos) que intentaba contestar la
+		 * segunda, y la contestaba al revés: todo lo que no era informativo disparaba el pie de
+		 * "estas filas no se procesaron", cuando en realidad una sola cosa deja la fila afuera.
+		 * Antes de sumar o sacar un tipo, decidí cuál de las dos preguntas estás contestando.
+		 *
+		 * 'desempate_por_nombre_sin_resolver' no está en ninguna de las tres a propósito: cuenta
+		 * para el botón (no es un aviso), la fila se importó (se aplicó a todos los candidatos) y
+		 * tiene su propio pie, porque lo que hay que corregir es el nombre, no un dato.
+		 */
+		/**
+		 * Tipos que NO suman al número del botón de la columna Problemas: son avisos que no
+		 * necesitan corrección (la fila se resolvió bien, o se aplicó todo menos una columna de
+		 * precio). Espejo de ImportConflict::TIPOS_QUE_NO_CUENTAN de empresa-api, que es lo que
+		 * ActualizarBBDD::persistir_conflictos() deja afuera de conflicts_count.
+		 *
+		 * 🔴 Si cambia acá, tiene que cambiar allá (y al revés): si no, el número del botón y el
+		 * "N problemas para revisar" del encabezado del modal dejan de coincidir.
 		 *
 		 * @returns {Array}
 		 */
-		tipos_informativos() {
-			return ['fila_sobrescrita', 'columna_de_precio_ignorada', 'desempate_por_nombre_sin_resolver']
+		tipos_que_no_cuentan() {
+			return ['fila_sobrescrita', 'columna_de_precio_ignorada']
 		},
 		/**
-		 * True si entre los conflictos traidos hay alguno que de verdad no se pudo procesar.
+		 * Tipos cuya fila NO se importó: ProcessRow corta antes de crear o actualizar el
+		 * artículo. Espejo de ImportConflict::TIPOS_QUE_SALTEAN_LA_FILA de empresa-api.
+		 * @returns {Array}
+		 */
+		tipos_que_saltean_la_fila() {
+			return ['ambiguo']
+		},
+		/**
+		 * Tipos cuya fila SÍ se importó, pero sin el dato que no se pudo usar: el campo
+		 * numérico inválido no se toca, el placeholder se anula, la fila sin código se busca por
+		 * nombre o se crea, el código único que coincidía con varios no se asigna.
+		 * @returns {Array}
+		 */
+		tipos_que_se_importan_sin_un_dato() {
+			return ['numero_invalido', 'numero_fuera_de_rango', 'placeholder_descartado', 'sin_identificador', 'identificador_sin_asignar']
+		},
+		/**
+		 * Tipos de problema presentes en la importación seleccionada, sin repetir: los del
+		 * `resumen` (que es de TODA la importación) más los de la lista traída (que viene
+		 * recortada a 200). Con los dos, un pie no depende de si su tipo quedó dentro o fuera
+		 * del recorte, y si una API vieja no mandara el resumen, igual alcanza con la lista.
+		 * @returns {Array}
+		 */
+		tipos_presentes() {
+			let tipos = []
+			let agregar = function(item) {
+				if (item && item.tipo && tipos.indexOf(item.tipo) === -1) {
+					tipos.push(item.tipo)
+				}
+			}
+			this.resumen_conflictos.forEach(agregar)
+			this.conflictos.forEach(agregar)
+			return tipos
+		},
+		/**
+		 * Cuántos problemas hay para revisar y cuántos avisos que no necesitan corrección, para
+		 * el encabezado del modal. Sale del `resumen` del endpoint, que cuenta TODA la
+		 * importación (no la lista recortada a 200): avisos = la suma de los tipos de
+		 * tipos_que_no_cuentan, para_revisar = el resto. Así para_revisar es el mismo número que
+		 * muestra el botón (conflicts_count) y el botón y el modal no se contradicen.
+		 *
+		 * El `total` de cada renglón del resumen es un COUNT(*) y MySQL puede mandarlo como
+		 * string: se pasa por Number() antes de sumar, si no "3" + "2" da "32".
+		 *
+		 * Sin resumen (una API rara que no lo manda) no hay de dónde separar los avisos: todo el
+		 * total del endpoint va como problemas para revisar.
+		 *
+		 * @returns {{para_revisar: Number, avisos: Number}}
+		 */
+		conteo_conflictos() {
+			if (!this.resumen_conflictos.length) {
+				return {
+					para_revisar: Number(this.total_conflictos) || 0,
+					avisos: 0,
+				}
+			}
+			let no_cuentan = this.tipos_que_no_cuentan
+			let para_revisar = 0
+			let avisos = 0
+			this.resumen_conflictos.forEach(function(item) {
+				let total = Number(item.total) || 0
+				if (no_cuentan.indexOf(item.tipo) !== -1) {
+					avisos += total
+				} else {
+					para_revisar += total
+				}
+			})
+			return {
+				para_revisar: para_revisar,
+				avisos: avisos,
+			}
+		},
+		/**
+		 * Lo que va después de la fecha en el encabezado del modal:
+		 * "3 problemas para revisar y 2 avisos que no necesitan corrección". La parte de los
+		 * avisos solo aparece si hay alguno.
+		 * @returns {String}
+		 */
+		texto_encabezado_conflictos() {
+			let conteo = this.conteo_conflictos
+			let texto = this.texto_problemas_para_revisar(conteo.para_revisar)
+			if (conteo.avisos > 0) {
+				texto += ' y ' + this.numero_es(conteo.avisos)
+				texto += conteo.avisos == 1 ? ' aviso que no necesita corrección' : ' avisos que no necesitan corrección'
+			}
+			return texto
+		},
+		/**
+		 * True si hay filas que NO se importaron (hoy, solo 'ambiguo').
 		 * @returns {Boolean}
 		 */
-		hay_filas_no_procesadas() {
-			let informativos = this.tipos_informativos
-
-			return this.conflictos.some(function(conflicto) {
-				return informativos.indexOf(conflicto.tipo) === -1
-			})
+		hay_filas_no_importadas() {
+			return this.hay_algun_tipo(this.tipos_que_saltean_la_fila)
 		},
 		/**
-		 * True si hay filas donde se ignoro una columna de precio (mision 44).
+		 * True si hay filas que se importaron sin un dato que no se pudo usar.
+		 * @returns {Boolean}
+		 */
+		hay_filas_importadas_sin_un_dato() {
+			return this.hay_algun_tipo(this.tipos_que_se_importan_sin_un_dato)
+		},
+		/**
+		 * True si hay filas sobrescritas por otra fila del mismo Excel con el mismo código.
+		 * @returns {Boolean}
+		 */
+		hay_filas_sobrescritas() {
+			return this.hay_algun_tipo(['fila_sobrescrita'])
+		},
+		/**
+		 * True si hay filas donde se ignoró una columna de precio (misión 44).
 		 * @returns {Boolean}
 		 */
 		hay_columnas_de_precio_ignoradas() {
-			return this.conflictos.some(function(conflicto) {
-				return conflicto.tipo === 'columna_de_precio_ignorada'
-			})
+			return this.hay_algun_tipo(['columna_de_precio_ignorada'])
 		},
 		/**
-		 * True si hay filas donde el desempate por nombre que pidio el usuario no alcanzo
-		 * (mision desempate-por-nombre-codigo-repetido, 9/9/2026).
+		 * True si hay filas donde el desempate por nombre que pidió el usuario no alcanzó
+		 * (misión desempate-por-nombre-codigo-repetido, 9/9/2026).
 		 * @returns {Boolean}
 		 */
 		hay_desempates_sin_resolver() {
-			return this.conflictos.some(function(conflicto) {
-				return conflicto.tipo === 'desempate_por_nombre_sin_resolver'
-			})
+			return this.hay_algun_tipo(['desempate_por_nombre_sin_resolver'])
 		},
 		/**
 		 * Texto del modal de confirmacion antes de revertir, con la fecha y las
@@ -807,6 +964,53 @@ export default {
 			return Number(import_history.conflicts_count) > 0
 		},
 		/**
+		 * "1 problema para revisar" / "N problemas para revisar". Lo usan el title del botón de
+		 * la columna Problemas y el encabezado del modal, para que los dos lo digan igual.
+		 * @param {Number|String} cantidad - puede llegar como string desde la API
+		 * @returns {String}
+		 */
+		texto_problemas_para_revisar(cantidad) {
+			let numero = Number(cantidad) || 0
+			if (numero == 1) {
+				return '1 problema para revisar'
+			}
+			return this.numero_es(numero) + ' problemas para revisar'
+		},
+		/**
+		 * True si el tipo es un aviso que no necesita corrección (ver tipos_que_no_cuentan).
+		 * @param {String} tipo
+		 * @returns {Boolean}
+		 */
+		es_aviso(tipo) {
+			return this.tipos_que_no_cuentan.indexOf(tipo) !== -1
+		},
+		/**
+		 * True si alguno de los tipos pedidos está entre los presentes en la importación
+		 * (ver tipos_presentes).
+		 * @param {Array} tipos
+		 * @returns {Boolean}
+		 */
+		hay_algun_tipo(tipos) {
+			let presentes = this.tipos_presentes
+			return tipos.some(function(tipo) {
+				return presentes.indexOf(tipo) !== -1
+			})
+		},
+		/**
+		 * Texto de un chip del resumen: "Tipo (Campo): total", o "Tipo: total" si el problema
+		 * no es de un campo en particular. Antes el paréntesis iba siempre, y para
+		 * 'sin_identificador' (que no tiene campo) el chip mostraba un "()" vacío.
+		 * @param {Object} item - renglón del resumen: {tipo, campo, total}
+		 * @returns {String}
+		 */
+		texto_chip_resumen(item) {
+			let texto = this.tipo_conflicto_label(item.tipo)
+			if (item.campo) {
+				texto += ' (' + this.campo_conflicto_label(item.campo) + ')'
+			}
+			return texto + ': ' + this.numero_es(Number(item.total) || 0)
+		},
+		/**
 		 * Abre el modal de problemas y carga desde la API el detalle de conflictos
 		 * de la importacion seleccionada.
 		 * @param {Object} import_history - registro de import_histories cuyos problemas se quieren ver
@@ -833,14 +1037,17 @@ export default {
 			 */
 			this.$api.get('import-history/' + import_history.id + '/conflicts?limit=200')
 			.then(res => {
-				this.conflictos = res.data.conflicts
-				this.resumen_conflictos = res.data.resumen
-				this.total_conflictos = res.data.total
+				// Arrays siempre (aunque la API no los mande), porque las computeds del
+				// encabezado y de los pies los recorren sin preguntar; y el total como número,
+				// porque un COUNT puede llegar como string.
+				this.conflictos = Array.isArray(res.data.conflicts) ? res.data.conflicts : []
+				this.resumen_conflictos = Array.isArray(res.data.resumen) ? res.data.resumen : []
+				this.total_conflictos = Number(res.data.total) || 0
 				this.cargando_conflictos = false
 			})
 			.catch(err => {
 				this.cargando_conflictos = false
-				this.$toast.error('No se pudieron cargar los problemas de la importacion')
+				this.$toast.error('No se pudieron cargar los problemas de la importación')
 			})
 		},
 		/**
@@ -850,16 +1057,16 @@ export default {
 		 */
 		tipo_conflicto_label(tipo) {
 			let labels = {
-				ambiguo: 'Codigo repetido: la fila coincidia con mas de un articulo',
-				placeholder_descartado: "Codigo invalido: se ignoro un valor como '-' o 'S/N'",
-				sin_identificador: 'Fila sin ningun codigo utilizable',
+				ambiguo: 'Código repetido: la fila coincidía con más de un artículo',
+				placeholder_descartado: "Código inválido: se ignoró un valor como '-' o 'S/N'",
+				sin_identificador: 'Fila sin ningún código utilizable',
 				// Nuevos (grupo 229, prompt 07): parseo robusto de columnas numericas.
-				numero_invalido: 'Valor numerico invalido: no se pudo interpretar',
-				numero_fuera_de_rango: 'Valor numerico demasiado grande para la columna',
+				numero_invalido: 'Valor numérico inválido: no se pudo interpretar',
+				numero_fuera_de_rango: 'Valor numérico demasiado grande para la columna',
 				// Nuevo (grupo 265, prompt 03): repetido dentro del propio archivo, resuelto.
 				fila_sobrescrita: 'Fila sobrescrita',
 				// Nuevo (grupo 265, prompt 08): identificador unico que no se pudo asignar por match multiple.
-				identificador_sin_asignar: 'No se pudo asignar un codigo unico: coincidian varios articulos',
+				identificador_sin_asignar: 'No se pudo asignar un código único: coincidían varios artículos',
 				// Nuevo (mision 44): el articulo se maneja por la otra columna de precio, asi
 				// que la del Excel no se aplico. La fila se proceso bien: no es un error.
 				// La etiqueta es corta a proposito: el detalle esta en el pie del modal, y en
@@ -882,16 +1089,16 @@ export default {
 		 */
 		campo_conflicto_label(campo) {
 			let labels = {
-				bar_code: 'Codigo de barras',
+				bar_code: 'Código de barras',
 				sku: 'SKU',
-				provider_code: 'Codigo de proveedor',
+				provider_code: 'Código de proveedor',
 				name: 'Nombre',
 				// Nuevos (grupo 229, prompt 07): campos numericos que puede reportar
 				// registrar_conflicto_numerico() en ProcessRow.
 				cost: 'Costo',
 				price: 'Precio',
 				percentage_gain: 'Margen de ganancia',
-				stock_min: 'Stock minimo',
+				stock_min: 'Stock mínimo',
 				unidades_individuales: 'Unidades individuales',
 				medida: 'Medida',
 			}
@@ -952,7 +1159,7 @@ export default {
 			.catch(function(err) {
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
-				let mensaje = 'No se pudo revertir la importacion'
+				let mensaje = 'No se pudo revertir la importación'
 				if (err.response && err.response.data && err.response.data.message) {
 					mensaje = err.response.data.message
 				}
