@@ -5,7 +5,15 @@
 		:afip_data="afip_data"
 		:client_model="client_model_for_afip_modal"></modal-result>
 
-		<!-- Buscador de cliente con ícono distintivo en etapa 1 de vender -->
+		<!--
+			Buscador de cliente con ícono distintivo en etapa 1 de vender.
+
+			elegir_al_crear: el cliente que se crea desde acá —el "+ Cliente" del buscador o "Crear
+			cliente y usar para esta venta" del modal de ARCA (buscar-por-cuit/ModalResult.vue)— queda
+			elegido para la venta al guardar, pasando por el mismo setSelected() de abajo que un clic en
+			los resultados. Pedido de Lucas, 4/10/2026: antes volvía al buscador y había que elegirlo a
+			mano. Solo en el alta: editar el cliente desde el chip no lo vuelve a elegir.
+		-->
 		<div
 		v-if="puede_cambiar_cliente"
 		class="vender-stage__client-search">
@@ -17,6 +25,7 @@
 			model_name="client"
 			:props_to_filter="['num', 'name', 'phone', 'dni', 'cuit']"
 			show_btn_create
+			elegir_al_crear
 			search_from_api
 			:tax_id_afip_lookup_on_second_enter="true"
 			placeholder="Buscar cliente, CUIT o DNI"

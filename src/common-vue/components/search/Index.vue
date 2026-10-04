@@ -281,6 +281,25 @@ export default {
 			type: String,
 			default: null,
 		},
+		/**
+		 * En true, el modelo recien CREADO desde el formulario de este buscador (el "+ <Modelo>"
+		 * del modal, o cualquier setModel(null, model_name) que abra el `<model>` de aca) queda
+		 * elegido al guardar, como si se lo hubiera clickeado en los resultados, y el modal de
+		 * busqueda NO se vuelve a abrir.
+		 *
+		 * Lo pidio Lucas para el buscador de cliente de Vender (mision cliente-desde-arca-en-vender,
+		 * 4/10/2026): "Crear cliente y usar para esta venta" (el modal de ARCA) y el "+ Cliente"
+		 * tienen que dejar al cliente elegido para la venta. Sin esto el buscador se reabria con el
+		 * cliente en "Sugerencias" y hacia falta un clic (o dos Enter) mas.
+		 *
+		 * Default false a proposito: el resto de los buscadores del sistema (los campos de
+		 * relacion de los formularios, via FieldSearchInput) siguen volviendo al buscador despues
+		 * de crear, como siempre. Solo elige en un ALTA: ver modelSaved().
+		 */
+		elegir_al_crear: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -345,7 +364,29 @@ export default {
 		setNotShowModel(value) {
 			this.not_show_modal = value
 		},
-		modelSaved(model) {
+		/**
+		 * Respuesta al guardado del formulario `<model>` que monta este buscador.
+		 *
+		 * @param {Object} model Modelo guardado.
+		 * @param {Object} info_guardado `{ es_nuevo }` que manda model/Index.vue::callActions().
+		 *   Puede no venir (un emisor viejo): en ese caso se comporta como siempre.
+		 * @returns {void}
+		 */
+		modelSaved(model, info_guardado) {
+			/*
+				🔴 La seleccion automatica va SOLO con `es_nuevo` y no con cualquier guardado. Este
+				mismo `<model>` lo abre tambien search/SelectedInfo.vue, el chip del modelo ya elegido,
+				para EDITARLO, y ese PUT emite `modelSaved` igual que el alta. Sin el chequeo, editar
+				el telefono del cliente de la venta volveria a correr todo lo de elegir un cliente
+				(lista de precios, ajustes del cliente, tipo de comprobante), que no corresponde.
+			*/
+			if (this.elegir_al_crear && info_guardado && info_guardado.es_nuevo) {
+				this.setSelected(model)
+				// Con el "+ <Modelo>" el formulario se abre ENCIMA del modal de busqueda, que queda
+				// abierto abajo. Desde el modal de ARCA ya estaba cerrado: ahi el hide no hace nada.
+				this.$bvModal.hide(this._id + '-search-modal')
+				return
+			}
 			if (this.prop.is_between) {
 				if (this.prop.is_between.parent_model_prop) {
 					let index = this.model[this.prop.is_between.parent_model_prop][this.prop.is_between.model_prop].findIndex(_model => {
@@ -371,8 +412,19 @@ export default {
 				}
 			}
 			this.callSearchModal()
+			/*
+				Antes esto enfocaba `getElementsByClassName('input-search-modal')[0]`, una clase que
+				ya no existe en ningun archivo de src/ desde que el buscador general reemplazo al
+				input viejo del modal: cada reapertura despues de crear tiraba un TypeError adentro
+				de este setTimeout (medido el 4/10/2026). El input real del modal es el id
+				`<_id>-search-modal-input`, el mismo que enfoca callSearchModal(). La guarda es por
+				si el modal no llego a abrirse (not_show_modal arriba).
+			*/
 			setTimeout(() => {
-				document.getElementsByClassName('input-search-modal')[0].focus()
+				let input = document.getElementById(this._id + '-search-modal-input')
+				if (input) {
+					input.focus()
+				}
 			}, 200)
 		},
 		clearSelected() {
