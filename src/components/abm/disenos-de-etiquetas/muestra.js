@@ -2,10 +2,16 @@
 	Los datos con que se dibuja una etiqueta en el editor y en las miniaturas (mision
 	disenos-etiquetas-gondola, 29/9/2026).
 
-	Se usa un articulo real del negocio si hay alguno en memoria (el primero con codigo de barras y
-	precio), asi el comerciante ve SU etiqueta. Lo que a ese articulo le falte (no tiene marca, no
-	tiene foto...) se completa con un dato de muestra: en el editor el campo tiene que verse para
-	poder acomodarlo, aunque en el PDF de ESE articulo salga en blanco.
+	Se usa un articulo real del negocio si hay alguno a mano (el primero con codigo de barras y precio,
+	y si no hay, el primero con precio), asi el comerciante ve SU etiqueta. Lo que a ese articulo le
+	falte (no tiene codigo de barras, marca, foto...) se completa con un dato de muestra: en el editor
+	el campo tiene que verse para poder acomodarlo, aunque en el PDF de ESE articulo salga en blanco.
+	El articulo inventado (DE_MUESTRA) queda solo para un negocio sin ningun articulo con nombre.
+
+	"A mano" (mision etiquetas-prueba-articulos-reales, 4/10/2026) es: la pagina del Listado que se
+	estaba viendo (`article.filtered`: en la 4.x el Listado entra con el listado por defecto, que llena
+	`filtered` y nunca `models`), lo que haya en `article.models`, y los que la solapa trae de la API
+	cuando el store no tiene ninguno completo (buscar_articulos_para_la_prueba de api_de_disenos.js).
 
 	texto_del_campo() arma el texto de cada campo con las mismas reglas que el PDF (contrato §3.4):
 	precio con el "$" pegado y el formato de Numbers::price de la API ("$1.234,50", "$1.000"), rotulo
@@ -177,65 +183,143 @@ function entero_legible(unidades) {
 }
 
 /**
- * Los articulos del store en el orden en que sirven de muestra: primero los que tienen codigo de
- * barras, precio y nombre; despues el resto.
+ * Los articulos que hay a mano, sin repetir ids: primero la pagina del Listado que se estaba viendo
+ * (`filtered`), despues `models` y al final los traidos de la API.
  *
  * @param {Object} vm
+ * @param {Array} [extra] articulos traidos de la API (buscar_articulos_para_la_prueba)
  * @returns {Array}
  */
-function articulos_ordenados(vm) {
+function articulos_a_mano(vm, extra) {
 	let modulo = vm.$store.state.article
-	if (!modulo || !Array.isArray(modulo.models)) {
-		return []
+	let fuentes = []
+	if (modulo && Array.isArray(modulo.filtered)) {
+		fuentes.push(modulo.filtered)
 	}
+	if (modulo && Array.isArray(modulo.models)) {
+		fuentes.push(modulo.models)
+	}
+	if (Array.isArray(extra)) {
+		fuentes.push(extra)
+	}
+
+	let vistos = {}
+	let articulos = []
+	fuentes.forEach(function (lista) {
+		lista.forEach(function (articulo) {
+			if (!articulo || !articulo.id || vistos[articulo.id]) {
+				return
+			}
+			vistos[articulo.id] = true
+			articulos.push(articulo)
+		})
+	})
+	return articulos
+}
+
+/**
+ * Si el articulo tiene nombre y precio (lo minimo para que la etiqueta de muestra sea suya).
+ *
+ * @param {Object} articulo
+ * @returns {boolean}
+ */
+function tiene_nombre_y_precio(articulo) {
+	return !!articulo.name && Number(articulo.final_price) > 0
+}
+
+/**
+ * Si el articulo tiene todo lo que la etiqueta de siempre imprime: nombre, precio y codigo de barras.
+ *
+ * @param {Object} articulo
+ * @returns {boolean}
+ */
+function es_completo(articulo) {
+	return tiene_nombre_y_precio(articulo) && !!articulo.bar_code
+}
+
+/**
+ * Los articulos a mano en el orden en que sirven de muestra: primero los completos (codigo de
+ * barras, precio y nombre), despues los que tienen nombre y precio, y al final el resto.
+ *
+ * @param {Object} vm
+ * @param {Array} [extra]
+ * @returns {Array}
+ */
+function articulos_ordenados(vm, extra) {
 	let completos = []
+	let con_precio = []
 	let otros = []
-	modulo.models.forEach(function (articulo) {
-		if (!articulo || !articulo.id) {
-			return
-		}
-		if (articulo.bar_code && Number(articulo.final_price) > 0 && articulo.name) {
+	articulos_a_mano(vm, extra).forEach(function (articulo) {
+		if (es_completo(articulo)) {
 			completos.push(articulo)
+		} else if (tiene_nombre_y_precio(articulo)) {
+			con_precio.push(articulo)
 		} else {
 			otros.push(articulo)
 		}
 	})
-	return completos.concat(otros)
+	return completos.concat(con_precio, otros)
 }
 
 /**
- * Los ids de los articulos para "Imprimir una prueba": hasta 6 del store, los completos primero.
+ * Si el store ya tiene algun articulo completo (y no hace falta pedir a la API).
  *
  * @param {Object} vm
+ * @returns {boolean}
+ */
+export function hay_articulo_completo(vm) {
+	return articulos_a_mano(vm).some(es_completo)
+}
+
+/**
+ * Si el store tiene algun articulo, del tipo que sea.
+ *
+ * @param {Object} vm
+ * @returns {boolean}
+ */
+export function hay_articulos_a_mano(vm) {
+	return articulos_a_mano(vm).length > 0
+}
+
+/**
+ * Los ids de los articulos para "Imprimir una prueba": hasta 6, los completos primero.
+ *
+ * @param {Object} vm
+ * @param {Array} [extra] articulos traidos de la API
  * @returns {Array}
  */
-export function ids_para_la_prueba(vm) {
+export function ids_para_la_prueba(vm, extra) {
 	let ids = []
-	articulos_ordenados(vm).slice(0, TOPE_DE_LA_PRUEBA).forEach(function (articulo) {
+	articulos_ordenados(vm, extra).slice(0, TOPE_DE_LA_PRUEBA).forEach(function (articulo) {
 		ids.push(articulo.id)
 	})
 	return ids
 }
 
 /**
- * Elige el articulo de muestra: el primero del store con codigo de barras y precio.
+ * Elige el articulo de muestra: el primero a mano con nombre, en el orden de articulos_ordenados()
+ * (completo, despues con precio, despues el resto). Null si no hay ninguno con nombre.
  *
  * @param {Object} vm
+ * @param {Array} [extra]
  * @returns {Object|null}
  */
-function articulo_de_muestra(vm) {
-	let primero = articulos_ordenados(vm)[0]
-	return primero && primero.bar_code && Number(primero.final_price) > 0 && primero.name ? primero : null
+function articulo_de_muestra(vm, extra) {
+	let elegido = articulos_ordenados(vm, extra).find(function (articulo) {
+		return !!articulo.name
+	})
+	return elegido || null
 }
 
 /**
  * Arma los datos de muestra de la etiqueta.
  *
  * @param {Object} vm cualquier componente (usa su $store)
+ * @param {Array} [extra] articulos traidos de la API (sin el, solo los del store)
  * @returns {Object}
  */
-export function armar_muestra(vm) {
-	let articulo = articulo_de_muestra(vm)
+export function armar_muestra(vm, extra) {
+	let articulo = articulo_de_muestra(vm, extra)
 	let muestra = {
 		precios_por_lista: {},
 		imagen_url: null,
@@ -251,8 +335,9 @@ export function armar_muestra(vm) {
 	}
 
 	muestra.nombre = articulo.name
-	muestra.precio_final = Number(articulo.final_price)
-	muestra.codigo_barras = articulo.bar_code
+	/* Sin precio o sin codigo de barras (pasa en un catalogo de ferreteria), el de muestra */
+	muestra.precio_final = Number(articulo.final_price) > 0 ? Number(articulo.final_price) : DE_MUESTRA.precio_final
+	muestra.codigo_barras = articulo.bar_code ? String(articulo.bar_code) : DE_MUESTRA.codigo_barras
 	muestra.codigo_proveedor = articulo.provider_code || DE_MUESTRA.codigo_proveedor
 	/* El codigo interno es el `sku` del articulo ("Código interno de tu negocio" en la ficha), como en el PDF */
 	muestra.codigo_interno = articulo.sku ? String(articulo.sku) : DE_MUESTRA.codigo_interno

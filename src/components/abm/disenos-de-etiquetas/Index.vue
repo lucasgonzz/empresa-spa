@@ -56,6 +56,7 @@
 			:muestra="muestra"
 			:listas="listas"
 			:hay_articulos="ids_de_prueba.length > 0"
+			:nota_de_la_prueba="nota_de_la_prueba"
 			@editar="editar(modelo)"
 			@probar="probar(modelo)"
 			@duplicar="duplicar(modelo)"
@@ -65,7 +66,9 @@
 		<editor-de-etiqueta
 		ref="editor"
 		:muestra="muestra"
-		:listas="listas"></editor-de-etiqueta>
+		:listas="listas"
+		:ids_de_prueba="ids_de_prueba"
+		:nota_de_la_prueba="nota_de_la_prueba"></editor-de-etiqueta>
 	</div>
 </template>
 <script>
@@ -77,8 +80,17 @@ import TarjetaDeDiseno from './TarjetaDeDiseno'
 */
 import EditorDeEtiqueta from './editor/Index'
 import { normalizar_diseno, serializar_diseno } from './diseno'
-import { armar_muestra, ids_para_la_prueba } from './muestra'
-import { crear_diseno, eliminar_diseno, mensaje_de_error, abrir_prueba, SIN_ARTICULOS_PARA_PROBAR } from './api_de_disenos'
+import { armar_muestra, ids_para_la_prueba, hay_articulo_completo, hay_articulos_a_mano } from './muestra'
+import {
+	crear_diseno,
+	eliminar_diseno,
+	mensaje_de_error,
+	abrir_prueba,
+	buscar_articulos_para_la_prueba,
+	SIN_ARTICULOS_PARA_PROBAR,
+	BUSCANDO_ARTICULOS_PARA_PROBAR,
+	NO_SE_PUDIERON_TRAER_ARTICULOS,
+} from './api_de_disenos'
 import { buscar_lista } from './catalogo'
 import { avisar } from '@/components/abm/disenos-de-vender/avisos'
 
@@ -97,6 +109,14 @@ export default {
 	components: {
 		TarjetaDeDiseno,
 		EditorDeEtiqueta,
+	},
+	data() {
+		return {
+			/* Articulos traidos de la API cuando el store no tenia ninguno completo (muestra.js) */
+			articulos_de_respaldo: [],
+			/* 'sin_buscar' | 'buscando' | 'lista' | 'error': la busqueda de articulos_de_respaldo */
+			estado_de_la_busqueda: 'sin_buscar',
+		}
 	},
 	computed: {
 		/**
@@ -132,22 +152,62 @@ export default {
 		 * @returns {Object}
 		 */
 		muestra() {
-			return armar_muestra(this)
+			return armar_muestra(this, this.articulos_de_respaldo)
 		},
 		/**
-		 * Los articulos con que sale "Imprimir una prueba" (hasta 6 del store).
+		 * Los articulos con que sale "Imprimir una prueba" (hasta 6: los del Listado, los del store y
+		 * los traidos de la API).
 		 *
 		 * @returns {Array}
 		 */
 		ids_de_prueba() {
-			return ids_para_la_prueba(this)
+			return ids_para_la_prueba(this, this.articulos_de_respaldo)
+		},
+		/**
+		 * Por que "Imprimir una prueba" no tiene con que salir (se lee solo si no hay ids).
+		 *
+		 * @returns {string}
+		 */
+		nota_de_la_prueba() {
+			if (this.estado_de_la_busqueda === 'buscando') {
+				return BUSCANDO_ARTICULOS_PARA_PROBAR
+			}
+			if (this.estado_de_la_busqueda === 'error') {
+				return NO_SE_PUDIERON_TRAER_ARTICULOS
+			}
+			return SIN_ARTICULOS_PARA_PROBAR
 		},
 	},
 	created() {
 		/* Horizontal-nav no la pide para una solapa con componente propio (ver buildItem en Abm.vue) */
 		this.$store.dispatch('article_ticket_design/getModels')
+		this.buscar_articulos_de_respaldo()
 	},
 	methods: {
+		/**
+		 * Si el store no tiene ningun articulo completo (se entro sin pasar por el Listado, o el Listado
+		 * no tenia codigos de barras), pide unos a la API para la muestra y la prueba. Si el store no
+		 * tiene ninguno de ningun tipo, la API tambien trae los incompletos.
+		 *
+		 * @returns {void}
+		 */
+		buscar_articulos_de_respaldo() {
+			let self = this
+			if (hay_articulo_completo(this)) {
+				return
+			}
+
+			this.estado_de_la_busqueda = 'buscando'
+			buscar_articulos_para_la_prueba(this, !hay_articulos_a_mano(this))
+			.then(function (articulos) {
+				self.articulos_de_respaldo = articulos
+				self.estado_de_la_busqueda = 'lista'
+			})
+			.catch(function (error) {
+				console.log(error)
+				self.estado_de_la_busqueda = 'error'
+			})
+		},
 		/**
 		 * Abre el editor para crear un diseño (arranca con el diseño de siempre).
 		 *
@@ -166,14 +226,14 @@ export default {
 			this.$refs.editor.abrir(modelo)
 		},
 		/**
-		 * "Imprimir una prueba": el PDF con este diseño y algunos articulos del store.
+		 * "Imprimir una prueba": el PDF con este diseño y hasta 6 articulos (ids_de_prueba).
 		 *
 		 * @param {Object} modelo
 		 * @returns {void}
 		 */
 		probar(modelo) {
 			if (!abrir_prueba(modelo.id, this.ids_de_prueba)) {
-				avisar(this, 'info', SIN_ARTICULOS_PARA_PROBAR)
+				avisar(this, 'info', this.nota_de_la_prueba)
 			}
 		},
 		/**

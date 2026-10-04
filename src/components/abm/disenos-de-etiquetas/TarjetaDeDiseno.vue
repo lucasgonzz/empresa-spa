@@ -49,13 +49,13 @@
 				</b-button>
 
 				<!--
-					"Imprimir una prueba": el PDF con este diseño y algunos articulos que ya estan en memoria.
-					Sin articulos, deshabilitado; el motivo va en el envoltorio (un boton deshabilitado no
-					muestra su title) y en el texto de abajo.
+					"Imprimir una prueba": el PDF con este diseño y algunos articulos (los del Listado, o los
+					que la solapa trae de la API). Sin articulos, deshabilitado; el motivo va en el envoltorio
+					(un boton deshabilitado no muestra su title) y en el texto de abajo.
 				-->
 				<span
 				class="tarjeta-de-etiqueta__envoltorio"
-				:title="hay_articulos ? 'Abre el PDF con este diseño y algunos de tus artículos' : SIN_ARTICULOS_PARA_PROBAR">
+				:title="hay_articulos ? 'Abre el PDF con este diseño y algunos de tus artículos' : nota_de_la_prueba">
 					<b-button
 					size="sm"
 					variant="outline-secondary"
@@ -89,7 +89,7 @@
 
 			<p
 			v-if="!hay_articulos"
-			class="tarjeta-de-etiqueta__nota">{{ SIN_ARTICULOS_PARA_PROBAR }}</p>
+			class="tarjeta-de-etiqueta__nota">{{ nota_de_la_prueba }}</p>
 		</div>
 	</article>
 </template>
@@ -134,16 +134,16 @@ export default {
 				return []
 			},
 		},
-		/* Si hay articulos en memoria para "Imprimir una prueba" */
+		/* Si hay articulos para "Imprimir una prueba" */
 		hay_articulos: {
 			type: Boolean,
 			default: false,
 		},
-	},
-	data() {
-		return {
-			SIN_ARTICULOS_PARA_PROBAR: SIN_ARTICULOS_PARA_PROBAR,
-		}
+		/* Por que no hay (buscando, no se pudieron traer, no hay ninguno): lo arma la solapa */
+		nota_de_la_prueba: {
+			type: String,
+			default: SIN_ARTICULOS_PARA_PROBAR,
+		},
 	},
 	computed: {
 		/**
