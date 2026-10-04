@@ -21,7 +21,7 @@
  * Regla PURA: sin store, sin `this` y con imports RELATIVOS (nada de `@/`), para que un harness de
  * node la pueda cargar tal cual, sin webpack.
  */
-import { numero_o_null, precio_sin_recargos_guardado } from './recargos_en_precios'
+import { numero_o_null, precio_sin_recargos_guardado, redondear_a_centavos } from './recargos_en_precios'
 
 /**
  * Si una cantidad de deposito, de devolucion o de acopio (checked_amount, returned_amount,
@@ -93,8 +93,26 @@ function nombre_normalizado(valor) {
 }
 
 /**
+ * La IDENTIDAD de un renglon de articulo en VENDER: id + variante normalizada. Es el criterio de
+ * es_la_misma_linea() del store (store/vender/vender.js), que es con el que replceItem, removeItem y
+ * updateItem eligen QUE renglon tocar: dos renglones con la misma identidad son, para el store, la
+ * misma linea. La regla de reagrupar decide por identidad, todo o nada (ver
+ * reagrupar_renglones_con_varios_precios).
+ *
+ * @param {Object} item Renglon de articulo armado por getItemsPreviusSale().
+ * @returns {String}
+ */
+function identidad_del_renglon(item) {
+	return JSON.stringify([
+		Number(item.id),
+		id_opcional_normalizado(item.article_variant_id),
+	])
+}
+
+/**
  * La clave con la que se juntan las filas: dos renglones guardados son filas del MISMO renglon de
- * varios precios si coinciden en todo lo que la API copia del renglon a cada fila.
+ * varios precios si coinciden en todo lo que la API copia del renglon a cada fila. Para reagrupar
+ * una identidad, TODOS sus renglones tienen que tener la misma clave.
  *
  *   - id y variante: la identidad del renglon en VENDER (es_la_misma_linea).
  *   - descuento: cada fila guarda el descuento del renglon. Dos filas con descuentos distintos NO
@@ -124,25 +142,19 @@ function clave_de_agrupacion(item) {
 }
 
 /**
- * Si un renglon guardado puede pasar a ser una fila de varios precios.
+ * Si un renglon guardado puede ser una fila de varios precios. Si UNO de los renglones de una
+ * identidad no puede, no se reagrupa NINGUNO de esa identidad (ver
+ * reagrupar_renglones_con_varios_precios).
  *
- * 🔴 NO se reagrupa un renglon que tenga cantidad chequeada, devuelta o entregada, aunque comparta
- * la clave con otros. Esas cantidades son del renglon (deposito, nota de credito, acopio) y una fila
- * de varios precios no las lleva: la API arma cada fila desde el renglon padre y le saca las
- * cantidades a proposito (decision de Lucas: "las cantidades NO se copian"). Juntarlo las borraria en
- * silencio al guardar: la mercaderia chequeada o entregada dejaria de constar y la devuelta volveria
- * a figurar como vendida. Queda como renglon suelto, igual que hasta esta mision.
+ * 🔴 No puede un renglon que tenga cantidad chequeada, devuelta o entregada. Esas cantidades son del
+ * renglon (deposito, nota de credito, acopio) y una fila de varios precios no las lleva: la API arma
+ * cada fila desde el renglon padre y le saca las cantidades a proposito (decision de Lucas: "las
+ * cantidades NO se copian"). Juntarlo las borraria en silencio al guardar: la mercaderia chequeada o
+ * entregada dejaria de constar y la devuelta volveria a figurar como vendida.
  *
- * 🔴 Tampoco uno con cantidad 0 (o sin cantidad): en una fila de varios precios la cantidad vacia
- * cuenta como 1, en la SPA (`amount != ''`, y en javascript 0 == '') y en la API (`amount == ''`,
- * que en PHP 7.4 tambien es cierto para el 0). Una fila guardada con cantidad 0 suma 0, y como fila
- * de varios precios pasaria a sumar su precio una vez: abrir y guardar sin tocar nada subiria el
- * total. Es un caso raro (una fila tipeada con cantidad "0", o el unico renglon de un articulo que
- * la API adjunta igual en check_que_este_el_articulos()), pero el total de un comprobante guardado
- * no se mueve solo por abrirlo.
- *
- * Y tampoco uno sin precio guardado en el pivot: la fila toma su precio del pivot, y sin el no hay
- * de donde sacarlo (getPriceVender() tampoco lo usaria: cae al precio del catalogo).
+ * Tampoco uno sin precio guardado en el pivot (la fila toma su precio del pivot, y getPriceVender()
+ * tampoco lo usaria: cae al precio del catalogo) ni uno sin cantidad que sea un numero. La cantidad
+ * 0 SI puede: viaja como texto (ver cantidad_de_la_fila).
  *
  * @param {Object} item Renglon armado por getItemsPreviusSale().
  * @returns {Boolean}
@@ -162,15 +174,41 @@ function se_puede_reagrupar(item) {
 		return false
 	}
 
-	let cantidad = numero_o_null(item.amount)
-
-	if (cantidad === null || cantidad === 0) {
+	if (numero_o_null(item.amount) === null) {
 		return false
 	}
 
 	return cantidad_vacia(item.checked_amount)
 		&& cantidad_vacia(item.returned_amount)
 		&& cantidad_vacia(item.delivered_amount)
+}
+
+/**
+ * La cantidad de la fila de varios precios que sale de un renglon guardado: la del renglon, y el 0
+ * como TEXTO '0'.
+ *
+ * 🔴 NO "LIMPIAR" EL '0' A UN 0 NUMERICO. En una fila de varios precios la cantidad VACIA cuenta como
+ * 1, en las dos puntas, y el 0 numerico es "vacio" en las dos:
+ *   - SPA: `amount != ''` (set_varios_precios_con_recargos, recalcular_varios_precios y la fila del
+ *     presupuesto). En javascript `0 != ''` es false (cuenta 1) y `'0' != ''` es true (Number('0'),
+ *     o sea 0).
+ *   - API: SaleHelper::cantidad_de_fila_de_varios_precios(), `amount == ''`. En PHP 7.4 `0 == ''` es
+ *     true (cuenta 1) y `'0' == ''` es false (guarda 0, y el stock suma 0). El JSON lleva el texto
+ *     tal cual hasta ahi.
+ * Una fila guardada con cantidad 0 suma 0; con el 0 numerico pasaria a sumar su precio una vez, y
+ * abrir y guardar sin tocar nada subiria el total. Con el texto suma 0 en VENDER y se vuelve a
+ * guardar con 0.
+ *
+ * @param {Number} cantidad La cantidad del renglon guardado (ya con Number()).
+ * @returns {Number|String}
+ */
+function cantidad_de_la_fila(cantidad) {
+
+	if (cantidad === 0) {
+		return '0'
+	}
+
+	return cantidad
 }
 
 /**
@@ -211,29 +249,105 @@ function precio_de_la_fila(pivot, legado) {
 }
 
 /**
+ * Las filas del renglon reagrupado de UNA identidad (id + variante), o null si esa identidad no se
+ * reagrupa.
+ *
+ * Se reagrupa SOLO si todos sus renglones del comprobante caben en un unico renglon de varios
+ * precios:
+ *   - son dos o mas (uno solo es un renglon suelto, y pasarlo a varios precios le dejaria el precio
+ *     fijo: no se volveria a calcular con la lista ni con la cantidad);
+ *   - todos se pueden reagrupar (se_puede_reagrupar) y tienen la misma clave (clave_de_agrupacion:
+ *     mismo descuento, nombre personalizado y lista personalizada). Si UNO no entra, no se reagrupa
+ *     NINGUNO: el motivo esta en reagrupar_renglones_con_varios_precios.
+ *   - 🔴 y la suma de sus filas (precio x cantidad), redondeada a centavos, NO da 0. Con varios
+ *     precios, getTotalItem() (mixins/model_functions.js) suma calculated_price_vender solo si es
+ *     "verdadero", y con 0 cae al precio del renglon x su cantidad: filas de 100 y -100 se veian
+ *     como 100 en vez de 0. Esa cuenta no se toca desde aca; la guarda va en la regla.
+ *
+ * Las filas van en el orden del pivot, con ids 0, 1, 2... (no se repiten y son exactamente los que
+ * daria siguiente_id_de_otro_precio() de mixins/vender/varios_precios.js agregandolas de a una; no
+ * se importa porque ese mixin trae imports `@/` y esta regla tiene que cargarse sola).
+ *
+ * @param {Array} renglones Los renglones de articulo de una identidad, en el orden del pivot.
+ * @param {Boolean} legado comprobante_con_recargos_en_precios_sin_registro() del comprobante.
+ * @returns {Array|null}
+ */
+function filas_del_renglon_reagrupado(renglones, legado) {
+
+	if (renglones.length < 2) {
+		return null
+	}
+
+	let clave = clave_de_agrupacion(renglones[0])
+
+	let todos_caben_en_un_renglon = renglones.every(renglon => {
+		return se_puede_reagrupar(renglon) && clave_de_agrupacion(renglon) === clave
+	})
+
+	if (!todos_caben_en_un_renglon) {
+		return null
+	}
+
+	let filas = []
+
+	// Lo que el renglon reagrupado sumaria antes de recargos: la cuenta de recalcular_varios_precios().
+	let suma_de_las_filas = 0
+
+	renglones.forEach((renglon, indice) => {
+
+		let precio = precio_de_la_fila(renglon.pivot, legado)
+		let cantidad = Number(renglon.amount)
+
+		suma_de_las_filas += precio * cantidad
+
+		filas.push({
+			id: indice,
+			price_vender: precio,
+			amount: cantidad_de_la_fila(cantidad),
+			desde_comprobante_guardado: true,
+		})
+	})
+
+	if (redondear_a_centavos(suma_de_las_filas) === 0) {
+		return null
+	}
+
+	return filas
+}
+
+/**
  * Junta en UN renglon con `varios_precios` los renglones de articulo de un comprobante guardado que
  * salieron de un mismo renglon de varios precios (ver el encabezado de este archivo).
  *
- * Dos o mas renglones que se pueden reagrupar (se_puede_reagrupar) y que tienen la misma clave
- * (clave_de_agrupacion) pasan a ser UN renglon:
- *   - es el PRIMERO del grupo, con su `pivot` (que en la API congela el costo de las filas, como en
- *     cualquier renglon editado) y todo lo demas que armo getItemsPreviusSale();
+ * Se decide por IDENTIDAD (id + variante, identidad_del_renglon), TODO O NADA: los renglones de una
+ * identidad pasan a ser UN renglon solo si todos caben en el (filas_del_renglon_reagrupado). Ese
+ * renglon:
+ *   - es el PRIMERO de la identidad, con su `pivot` (que en la API congela el costo de las filas,
+ *     como en cualquier renglon editado) y todo lo demas que armo getItemsPreviusSale();
  *   - con `varios_precios`: una fila por renglon, en el orden del pivot, con
- *     `{id, price_vender, amount, desde_comprobante_guardado: true}` (precio_de_la_fila);
+ *     `{id, price_vender, amount, desde_comprobante_guardado: true}` (precio_de_la_fila y
+ *     cantidad_de_la_fila);
  *   - con `amount: 1`, como el renglon que arma un ticket de balanza: con varios precios la cantidad
  *     del renglon no cuenta para su total (getTotalItem() suma calculated_price_vender) y la API la
  *     ignora (guarda las filas y descuenta del stock la suma de sus cantidades);
  *   - con `price_vender_personalizado: ''`: un precio "Personalizado" pendiente se tomaria como una
  *     fila sin confirmar (balanzas.js::precio_tipeado_pendiente) y getPriceVender() lo usaria como
  *     precio del renglon;
- *   - y queda en la POSICION del primero del grupo. El resto de los renglones (sueltos, servicios,
- *     combos, promociones, los que no se pueden reagrupar) no se tocan ni cambian de orden.
+ *   - y queda en la POSICION del primero de la identidad. El resto de los renglones (los de una
+ *     identidad que no se reagrupa, servicios, combos, promociones) no se tocan ni cambian de orden.
  *
- * Los ids de las filas son 0, 1, 2... en el orden del pivot: no se repiten y son exactamente los que
- * daria siguiente_id_de_otro_precio() (mixins/vender/varios_precios.js, el mayor + 1) agregando las
- * filas de a una. Una fila que el vendedor agregue despues nace con el siguiente (el mayor + 1).
- * No se importa esa funcion a proposito: vive en un mixin que trae media SPA con imports `@/`, y
- * esta regla tiene que poder cargarse sola.
+ * 🔴 TODO O NADA, Y NO "LO QUE SE PUEDA". NO VOLVER A REAGRUPAR UNA PARTE DE LA IDENTIDAD. Hasta el
+ * 3/10/2026 esta regla reagrupaba los renglones que podia y dejaba suelto al que no (una fila
+ * devuelta, una con otro descuento, una con cantidad 0): quedaban DOS renglones con la misma
+ * identidad, y el store de VENDER no los distingue. El tacho de una fila
+ * (ArticlesTable.vue::remove_otro_precio) hace `vender/replceItem` con el renglon reagrupado, y
+ * replceItem reemplaza el PRIMER renglon que coincide (es_la_misma_linea): si el suelto estaba antes,
+ * lo pisa con el reagrupado, que queda DOS VECES en vender.items. Medido con el codigo real: alta con
+ * filas 30 x "0", 50 x 1 y 100 x 2 al 10 % = 225; al reabrir y tachar la fila de 50, VENDER mostraba
+ * 360 en vez de 180, y al guardar quedaban filas duplicadas y el stock mal. Lo mismo con dos grupos de
+ * la misma identidad con descuentos distintos (dos renglones reagrupados con la misma identidad). Con
+ * todo o nada, el reagrupado nunca crea dos renglones con la misma identidad; si una identidad no
+ * cabe en un renglon queda como antes de esta mision (un renglon por fila).
  *
  * 🔴 Si el comprobante esta en el circuito de DEPOSITO (`to_check` o `checked`), NO se reagrupa
  * nada. Ahi cada renglon es lo que el deposito chequea, con su propia cantidad chequeada, y la API
@@ -306,66 +420,69 @@ export function reagrupar_renglones_con_varios_precios(items, opciones) {
 	let legado = Boolean(config.legado)
 
 	/*
-		Primera pasada: los renglones que se pueden reagrupar, por clave, en el orden en que llegan
-		(que es el del pivot).
+		Primera pasada: TODOS los renglones de articulo por identidad (id + variante), en el orden en
+		que llegan, que es el del pivot. Tambien los que no se pueden reagrupar: uno solo de esos deja
+		a toda su identidad sin reagrupar.
 	*/
-	let renglones_por_clave = {}
+	let renglones_por_identidad = {}
 
 	items.forEach(item => {
 
-		if (!se_puede_reagrupar(item)) {
+		if (!item || !item.is_article) {
 			return
 		}
 
-		let clave = clave_de_agrupacion(item)
+		let identidad = identidad_del_renglon(item)
 
-		if (!renglones_por_clave[clave]) {
-			renglones_por_clave[clave] = []
+		if (!renglones_por_identidad[identidad]) {
+			renglones_por_identidad[identidad] = []
 		}
 
-		renglones_por_clave[clave].push(item)
+		renglones_por_identidad[identidad].push(item)
+	})
+
+	// Las filas de cada identidad que se reagrupa (las demas no aparecen aca).
+	let filas_por_identidad = {}
+
+	Object.keys(renglones_por_identidad).forEach(identidad => {
+
+		let filas = filas_del_renglon_reagrupado(renglones_por_identidad[identidad], legado)
+
+		if (filas) {
+			filas_por_identidad[identidad] = filas
+		}
 	})
 
 	/*
-		Segunda pasada: se arma la lista final respetando el orden. El renglon reagrupado entra donde
-		estaba el primero de su grupo, y los demas del grupo se saltean. Un grupo de UN renglon queda
-		como estaba: un renglon suelto no es un renglon de varios precios, y pasarlo a uno le dejaria
-		el precio fijo (no se volveria a calcular con la lista ni con la cantidad).
+		Segunda pasada: la lista final, respetando el orden. El renglon reagrupado entra donde estaba
+		el primero de su identidad y los demas de esa identidad se saltean; todo lo que no se
+		reagrupa entra tal cual.
 	*/
 	let resultado = []
 
 	items.forEach(item => {
 
-		if (!se_puede_reagrupar(item)) {
+		if (!item || !item.is_article) {
 			resultado.push(item)
 			return
 		}
 
-		let grupo = renglones_por_clave[clave_de_agrupacion(item)]
+		let identidad = identidad_del_renglon(item)
 
-		if (grupo.length < 2) {
+		let filas = filas_por_identidad[identidad]
+
+		if (!filas) {
 			resultado.push(item)
 			return
 		}
 
-		if (grupo[0] !== item) {
+		if (renglones_por_identidad[identidad][0] !== item) {
 			// Ya entro como fila del renglon reagrupado, en la posicion del primero.
 			return
 		}
 
-		let varios_precios = []
-
-		grupo.forEach((renglon, indice) => {
-			varios_precios.push({
-				id: indice,
-				price_vender: precio_de_la_fila(renglon.pivot, legado),
-				amount: Number(renglon.amount),
-				desde_comprobante_guardado: true,
-			})
-		})
-
 		resultado.push(Object.assign({}, item, {
-			varios_precios,
+			varios_precios: filas,
 			amount: 1,
 			price_vender_personalizado: '',
 		}))
