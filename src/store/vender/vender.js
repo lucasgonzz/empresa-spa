@@ -330,6 +330,16 @@ export default {
 		*/
 		limite_credito_excedido: null,
 
+		/*
+			Alto en px de la franja de abajo que ocupa la barra fija de acciones de Vender
+			(VenderActionsBar.vue). La publica la barra al montarse y la vuelve a 0 al
+			desmontarse (salir de Vender). La leen los botones flotantes —el del asistente IA y
+			el de soporte— para quedarse POR ENCIMA de la barra: si no, en la esquina derecha
+			tapaban el botón de WhatsApp y la punta de "Guardar venta" (medido el 3/10/2026).
+			Vive solo en memoria: no se persiste.
+		*/
+		actions_bar_height_px: 0,
+
 		discounts_id: [],
 		surchages_id: [],
 
@@ -1006,6 +1016,15 @@ export default {
 		},
 		set_limite_credito_excedido(state, value) {
 			state.limite_credito_excedido = value
+		},
+		/**
+		 * Alto de la barra fija de acciones de Vender (0 cuando no está en pantalla).
+		 *
+		 * @param {Object} state
+		 * @param {number} value alto en px
+		 */
+		set_actions_bar_height_px(state, value) {
+			state.actions_bar_height_px = value
 		},
 		setSale(state, value) {
 			state.sale = value

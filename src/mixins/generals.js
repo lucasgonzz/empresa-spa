@@ -829,9 +829,10 @@ export default {
 
                 Se llama SOLO en las dos ramas que PARTEN DEL CATALOGO, y NO es un olvido que falte en
                 las otras dos:
-                  - Precio personalizado: es lo que el vendedor escribio a mano, lo que fijo una
-                    oferta de precio fijo o lo que puso la balanza. Es el precio final y no se toca
-                    (decision de Lucas, 2/10/2026).
+                  - Precio personalizado: es lo que el vendedor escribio a mano o lo que fijo una
+                    oferta de precio fijo (el ticket de balanza ya no lo escribe desde la mision
+                    balanzas-configurables, 3/10/2026: suma filas de varios precios). Es el precio
+                    final y no se toca (decision de Lucas, 2/10/2026).
                   - Pivot (comprobante guardado): el precio guardado YA TRAE el ajuste adentro, igual
                     que un descuento por metodo de pago. Reaplicarlo lo cobraria DOS VECES al reabrir
                     una venta o un presupuesto. NO UNIFICAR ESTAS RAMAS "PARA QUE TODAS AJUSTEN".
@@ -866,6 +867,14 @@ export default {
                 return con_ajuste
             }
 
+            /*
+                🔴 Esta condicion -personalizado truthy, un '0' tipeado incluido- es la MISMA que usa
+                precio_escrito_a_mano() (mixins/vender/article_price_range.js) para decidir si la
+                oferta por cantidad puede tocar el precio del renglon (mision
+                oferta-por-cantidad-en-el-renglon, 4/10/2026). Si se cambia aca, se cambia alla: si
+                difieren, la oferta pisaria o limpiaria un precio que este metodo cobra como
+                personalizado, o al reves.
+            */
             if (item.price_vender_personalizado) {
 
                 price = item.price_vender_personalizado
@@ -1074,11 +1083,15 @@ export default {
                 YA TIENE el descuento adentro, asi que aplicarlo de nuevo lo descontaria dos veces
                 al editar una venta previa.
 
-                Tampoco se aplica sobre un precio personalizado. Ese campo es el MISMO que usa el
-                modo de precio fijo de la oferta (check_price_range lo escribe), asi que cuando la
-                oferta gana por precio fijo el porcentaje ya viene en null y no hay conflicto; si
-                el numero lo escribio el vendedor a mano (o lo puso la balanza), manda el, igual
-                que manda el precio fijo sobre el porcentaje en el criterio unico.
+                🔴 Tampoco se aplica sobre un precio personalizado, y esa condicion NO es redundante.
+                Ese campo es el MISMO que usa el modo de precio fijo de la oferta (check_price_range
+                lo escribe), y cuando la oferta gana por precio fijo el porcentaje ya viene en null.
+                Pero si el numero lo escribio el vendedor a mano, check_price_range no lo toca y
+                deja el porcentaje resuelto para la cantidad actual (mision
+                oferta-por-cantidad-en-el-renglon, 4/10/2026): los dos pueden venir juntos, y es
+                esta condicion la que hace que mande el precio escrito, igual que manda el precio
+                fijo sobre el porcentaje en el criterio unico. Si el vendedor lo borra, el
+                porcentaje que queda es el de la cantidad que tiene el renglon.
             */
             if (!price_desde_pivot && !item.price_vender_personalizado) {
 
