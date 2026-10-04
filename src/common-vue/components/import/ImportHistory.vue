@@ -363,17 +363,20 @@
 				Un tipo que este componente no conoce (una API más nueva) no dispara ningún pie:
 				no se afirma nada que no se sepa.
 
-				El motivo del pie de 'ambiguo' es genérico ("no se pudo saber a qué artículo
-				corresponden") a propósito: la ambigüedad no siempre es "el código coincide con
-				más de un artículo del sistema". Puede ser por nombre, o con UN artículo que creó
-				la misma importación en otro lote.
+				El pie de 'ambiguo' (y su rótulo, ver tipo_conflicto_label) no dice "código
+				repetido" ni "coincide con más de un artículo" a propósito: la ambigüedad no
+				siempre es esa. Puede ser por NOMBRE (fila sin código cuyo nombre coincide con
+				varios artículos) o con UN solo artículo que creó la misma importación en otro
+				lote (caso Servian). Por eso nombra el rótulo tal cual y manda a mirar el código o
+				el nombre que muestra la tabla.
 			-->
 			<p
 			v-if="hay_filas_no_importadas"
 			class="text-muted small m-t-15">
-				Las filas con "Código repetido" no se importaron: no se pudo saber a qué artículo
-				corresponden, y se dejaron afuera para no sobrescribir el que no es. Revisá los
-				artículos que comparten ese código y volvé a importar solo esas filas.
+				Las filas marcadas como "No se pudo saber a qué artículo corresponde" no se
+				importaron: se dejaron afuera para no sobrescribir un artículo que no es. Revisá
+				los artículos con los que coinciden (por el código o por el nombre que muestra la
+				tabla) y volvé a importar solo esas filas.
 			</p>
 
 			<p
@@ -420,14 +423,20 @@
 				comparten el codigo— y el codigo no hay que corregirlo: el codigo repetido lo
 				manda el proveedor y es justamente el motivo de la opcion. Lo unico que puede
 				destrabarlo es el NOMBRE.
+
+				El pie dice que esos artículos "pueden haber quedado con los datos de otra fila" y
+				no que "quedaron con los mismos datos" (4/10/2026): eso último vale al actualizar,
+				pero en el camino de CREACIÓN
+				(ActualizarBBDD::registrar_desempate_de_creacion_sin_resolver) el primer artículo
+				se lleva todo y el otro queda en cero.
 			-->
 			<p
 			v-if="hay_desempates_sin_resolver"
 			class="text-muted small m-t-15">
 				Las filas marcadas como "No se pudo separar por nombre" sí se importaron, pero no
 				como pediste: el nombre del Excel no alcanzó para elegir a cuál de los artículos
-				que comparten ese código de proveedor le correspondía, así que la fila se aplicó a
-				todos ellos y quedaron con los mismos datos. Pasa cuando el proveedor cambió la
+				que comparten ese código de proveedor le correspondía, así que esos artículos
+				pueden haber quedado con los datos de otra fila. Pasa cuando el proveedor cambió la
 				redacción del nombre entre listas, cuando dos artículos tienen el mismo código y
 				el mismo nombre, o cuando la fila vino sin nombre. Para separarlos, el nombre del
 				Excel tiene que coincidir con el del artículo — o se ajusta el nombre del artículo
@@ -1221,7 +1230,11 @@ export default {
 		 */
 		tipo_conflicto_label(tipo) {
 			let labels = {
-				ambiguo: 'Código repetido: la fila coincidía con más de un artículo',
+				// Genérico a propósito (4/10/2026): "Código repetido: la fila coincidía con más
+				// de un artículo" era falso cuando la ambigüedad es por nombre (campo 'name') o
+				// cuando choca con UN artículo creado por la misma importación en otro lote. La
+				// cantidad "(N artículos)" de la celda sigue diciendo con cuántos chocó.
+				ambiguo: 'No se pudo saber a qué artículo corresponde',
 				placeholder_descartado: "Código inválido: se ignoró un valor como '-' o 'S/N'",
 				sin_identificador: 'Fila sin ningún código utilizable',
 				// Nuevos (grupo 229, prompt 07): parseo robusto de columnas numericas.
