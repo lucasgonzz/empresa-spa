@@ -829,9 +829,10 @@ export default {
 
                 Se llama SOLO en las dos ramas que PARTEN DEL CATALOGO, y NO es un olvido que falte en
                 las otras dos:
-                  - Precio personalizado: es lo que el vendedor escribio a mano, lo que fijo una
-                    oferta de precio fijo o lo que puso la balanza. Es el precio final y no se toca
-                    (decision de Lucas, 2/10/2026).
+                  - Precio personalizado: es lo que el vendedor escribio a mano o lo que fijo una
+                    oferta de precio fijo (el ticket de balanza ya no lo escribe desde la mision
+                    balanzas-configurables, 3/10/2026: suma filas de varios precios). Es el precio
+                    final y no se toca (decision de Lucas, 2/10/2026).
                   - Pivot (comprobante guardado): el precio guardado YA TRAE el ajuste adentro, igual
                     que un descuento por metodo de pago. Reaplicarlo lo cobraria DOS VECES al reabrir
                     una venta o un presupuesto. NO UNIFICAR ESTAS RAMAS "PARA QUE TODAS AJUSTEN".

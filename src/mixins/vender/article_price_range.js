@@ -116,9 +116,9 @@ export default {
 		 * borraba al vendedor el precio que acababa de tipear (las ramas sin precio fijo dejan el
 		 * personalizado en null): ya pasaba en las cuentas con la extension, y en todas al
 		 * re-escanear. Con la marca, el numero de la oferta se recalcula y el del vendedor se respeta.
-		 * Si el vendedor borra el suyo, la oferta vuelve a manejar el renglon en el acto: el @keyup
-		 * de "Personalizado" vuelve a llamar a esta funcion cuando el campo queda vacio
-		 * (ArticlesTable.vue::callSetTotal con el renglon).
+		 * Si el vendedor borra el suyo, la oferta vuelve a manejar el renglon cuando confirma el
+		 * campo vacio -al salir del campo o con Enter, nunca en cada tecla-
+		 * (ArticlesTable.vue::personalizado_confirmado), o en el proximo cambio de cantidad.
 		 *
 		 * @param {Object} item Renglon del remito (o el item que se esta por agregar).
 		 * @returns {Object} El mismo item, marcado.
@@ -191,11 +191,12 @@ export default {
 					personalizado getPriceVender() no lo aplica (la oferta porcentual de generals.js
 					pide !item.price_vender_personalizado), asi que no cambia ningun precio. No puede
 					quedar uno de una cantidad vieja: se vuelve a resolver en cada cambio de cantidad
-					de los tres caminos, igual que en las otras ramas. Cuando el vendedor vacia su
-					precio, callSetTotal (con el renglon) vuelve a correr esta funcion entera en el
-					acto: con porcentaje sale el descuento, con precio fijo el campo se vuelve a
-					llenar con el numero de la oferta. El precio fijo no se puede dejar armado aca
-					porque vive en el mismo campo que el del vendedor.
+					de los tres caminos, igual que en las otras ramas. Y sirve en el acto: si el
+					vendedor vacia su precio, el @keyup de siempre del campo recalcula el renglon
+					(callSetTotal(false) -> setTotal) y sale con el porcentaje de la cantidad que
+					tiene AHORA. El precio fijo no se puede dejar armado asi porque vive en el mismo
+					campo que el del vendedor: vuelve cuando el vendedor confirma el campo vacio
+					(personalizado_confirmado, ArticlesTable.vue) o en el proximo cambio de cantidad.
 				*/
 				item.precio_fijo_de_oferta_por_cantidad = null
 				item.porcentaje_oferta_por_cantidad = modo === MODO_PORCENTAJE ? Number(range.porcentaje) : null
