@@ -12,8 +12,9 @@ import {
 import { tiene_varios_precios } from '@/mixins/vender/varios_precios'
 
 /**
- * Si el precio "Personalizado" de un renglon lo escribio alguien que NO es la oferta por cantidad:
- * el vendedor a mano (o la balanza), y no check_price_range() con el precio fijo de un tramo.
+ * Si el precio "Personalizado" de un renglon lo escribio el vendedor a mano en ese input, y no
+ * check_price_range() con el precio fijo de un tramo. (El ticket de balanza ya no escribe este
+ * campo desde la mision balanzas-configurables, 3/10/2026: suma filas de varios precios.)
  *
  * Mientras de true, la oferta no le toca el precio al renglon (decision de Lucas, 4/10/2026: gana
  * el precio que escribio el vendedor). Ver check_price_range().
@@ -85,13 +86,19 @@ export default {
 		 * unico (utils/criterio_de_oferta_por_cantidad.js). Filtrar por modo antes del desempate
 		 * daria otro precio en el borde exacto de dos tramos.
 		 *
-		 * Deja el item marcado de una de estas tres formas, y NUNCA con las dos marcas juntas:
+		 * Deja el item marcado de una de estas tres formas, y la oferta NUNCA deja las dos marcas
+		 * juntas:
 		 *
 		 *   - `price_vender_personalizado`      -> precio fijo, el numero absoluto del tramo (y
 		 *                                          `precio_fijo_de_oferta_por_cantidad` con ese
 		 *                                          mismo numero)
 		 *   - `porcentaje_oferta_por_cantidad`  -> porcentaje, que aplica getPriceVender() AL FINAL
 		 *   - las dos en null                   -> la oferta no aplica, la linea va al precio normal
+		 *
+		 * La unica excepcion es el precio escrito a mano (ver mas abajo): ahi conviven el
+		 * personalizado del vendedor, que NO lo escribio la oferta, y el porcentaje resuelto para la
+		 * cantidad actual. Manda el personalizado: getPriceVender() no aplica el porcentaje mientras
+		 * haya uno.
 		 *
 		 * 🔴 Limpiar las DOS marcas en todas las ramas es obligatorio: si no, un item que dejo de
 		 * calificar (bajo la cantidad, o el tramo quedo sin valor usable) se queda con el
@@ -108,9 +115,10 @@ export default {
 		 * CADA @keyup y en CADA @click. Sin saber quien escribio el numero, un clic en Cantidad le
 		 * borraba al vendedor el precio que acababa de tipear (las ramas sin precio fijo dejan el
 		 * personalizado en null): ya pasaba en las cuentas con la extension, y en todas al
-		 * re-escanear. Con la marca, el numero de la oferta se recalcula y el del vendedor se respeta;
-		 * si el vendedor borra el suyo, la oferta vuelve a manejar el renglon en el proximo cambio de
-		 * cantidad.
+		 * re-escanear. Con la marca, el numero de la oferta se recalcula y el del vendedor se respeta.
+		 * Si el vendedor borra el suyo, la oferta vuelve a manejar el renglon en el acto: el @keyup
+		 * de "Personalizado" vuelve a llamar a esta funcion cuando el campo queda vacio
+		 * (ArticlesTable.vue::callSetTotal con el renglon).
 		 *
 		 * @param {Object} item Renglon del remito (o el item que se esta por agregar).
 		 * @returns {Object} El mismo item, marcado.
@@ -172,23 +180,22 @@ export default {
 				/*
 					🔴 PRECIO ESCRITO A MANO: GANA EL (decision de Lucas, 4/10/2026). Aca NO se
 					escribe ni se limpia price_vender_personalizado ni price_vender: es el numero
-					que tipeo el vendedor (o que puso la balanza), y un clic en Cantidad no se lo
-					puede borrar ni pisar.
+					que tipeo el vendedor, y un clic en Cantidad no se lo puede borrar ni pisar.
 
 					La marca queda en null: el personalizado ya no es el numero de la oferta. Si
 					quedara la vieja, el dia que el vendedor tipee justo ese mismo numero se lo
 					tomaria como de la oferta y el proximo cambio de cantidad se lo podria limpiar.
 
 					El porcentaje, en cambio, SI se deja resuelto para la cantidad actual (y no en
-					null), a proposito. Mientras haya personalizado getPriceVender() no lo aplica (la
-					oferta porcentual de generals.js pide !item.price_vender_personalizado), asi que
-					no cambia ningun precio. Pero si el vendedor borra su precio, el @keyup de
-					"Personalizado" recalcula el renglon en el acto (callSetTotal(false) ->
-					setTotal) y sale con el porcentaje de la cantidad que tiene AHORA, sin esperar a
-					que toque la cantidad. No puede quedar uno de una cantidad vieja: se vuelve a
-					resolver en cada cambio de cantidad de los tres caminos, igual que en las otras
-					ramas. El precio fijo no se puede dejar armado asi porque vive en el mismo campo
-					que el del vendedor: ese vuelve en el proximo cambio de cantidad.
+					null): es el que tendria el renglon sin el precio del vendedor, y mientras haya
+					personalizado getPriceVender() no lo aplica (la oferta porcentual de generals.js
+					pide !item.price_vender_personalizado), asi que no cambia ningun precio. No puede
+					quedar uno de una cantidad vieja: se vuelve a resolver en cada cambio de cantidad
+					de los tres caminos, igual que en las otras ramas. Cuando el vendedor vacia su
+					precio, callSetTotal (con el renglon) vuelve a correr esta funcion entera en el
+					acto: con porcentaje sale el descuento, con precio fijo el campo se vuelve a
+					llenar con el numero de la oferta. El precio fijo no se puede dejar armado aca
+					porque vive en el mismo campo que el del vendedor.
 				*/
 				item.precio_fijo_de_oferta_por_cantidad = null
 				item.porcentaje_oferta_por_cantidad = modo === MODO_PORCENTAJE ? Number(range.porcentaje) : null

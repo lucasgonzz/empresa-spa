@@ -27,7 +27,7 @@
 							<b-form-input
 							placeholder="Personalizado"
 							@keyup.enter="add_varios_precios(items[data.index], true)"
-							@keyup="callSetTotal(false)" 
+							@keyup="callSetTotal(false, items[data.index])" 
 							type="number"
 							:data-testid="'venta-item-precio-'+items[data.index].id"
 							:id="'price-vender-'+items[data.index].id"
@@ -592,6 +592,43 @@ export default {
 					por el "3".
 				*/
 				this.programar_deteccion_de_combos()
+
+			} else if (
+				item
+				&& item.is_article
+				&& item.article_price_ranges
+				&& item.article_price_ranges.length
+				&& !item.price_vender_personalizado
+				&& !tiene_varios_precios(item)
+			) {
+
+				/*
+					🔴 EL VENDEDOR VACIO EL "PERSONALIZADO" DE UN RENGLON CON OFERTAS: LA OFERTA VUELVE
+					EN EL ACTO (mision oferta-por-cantidad-en-el-renglon, 4/10/2026). Lucas aprobo
+					"si el vendedor borra su precio, la oferta vuelve a aplicar". Con la oferta
+					porcentual ya pasaba sola (check_price_range deja el porcentaje resuelto y
+					getPriceVender lo aplica apenas el campo queda vacio), pero con la de precio fijo
+					no: precio fijo $1.500 desde 10, renglon a 10, el vendedor escribe 1400 y lo
+					borra (o borra el 1500 que puso la oferta) y el renglon quedaba a precio de LISTA
+					hasta que tocara la Cantidad. Guardando en ese momento se cobraba de mas. Por eso
+					este input le pasa el renglon a callSetTotal y aca se vuelve a correr la oferta.
+
+					Consecuencia visible, a proposito: con precio fijo, al vaciar el campo la oferta
+					lo vuelve a llenar con su numero (el mismo que muestra al agregar el articulo);
+					con porcentaje el campo queda vacio y el precio sale con el descuento. Si el
+					vendedor quiere vender a otro precio, lo escribe encima: borrandolo hasta dejarlo
+					vacio, el campo se vuelve a llenar.
+
+					Solo con el campo VACIO (falsy, el mismo criterio de verdad que
+					precio_escrito_a_mano y getPriceVender) y no en cada tecla: con un valor, el
+					numero es del vendedor o es el de la oferta, y check_price_range lo dejaria como
+					esta; correrla igual solo sumaria una entrada al registro de la venta por cada
+					tecla (replceItem). Y no con varios precios: despues del Enter de "varios
+					precios" el campo queda en '' pero el renglon ya tiene filas, y vale solo la suma
+					de ellas (check_price_range tampoco lo tocaria).
+				*/
+				item = this.check_price_range(item)
+				this.$store.commit('vender/replceItem', item)
 			}
 			this.setTotal()
 		},

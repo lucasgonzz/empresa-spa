@@ -1085,11 +1085,11 @@ export default {
                 🔴 Tampoco se aplica sobre un precio personalizado, y esa condicion NO es redundante.
                 Ese campo es el MISMO que usa el modo de precio fijo de la oferta (check_price_range
                 lo escribe), y cuando la oferta gana por precio fijo el porcentaje ya viene en null.
-                Pero si el numero lo escribio el vendedor a mano (o lo puso la balanza),
-                check_price_range no lo toca y deja el porcentaje resuelto para la cantidad actual
-                (mision oferta-por-cantidad-en-el-renglon, 4/10/2026): los dos pueden venir juntos,
-                y es esta condicion la que hace que mande el precio escrito, igual que manda el
-                precio fijo sobre el porcentaje en el criterio unico. Si el vendedor lo borra, el
+                Pero si el numero lo escribio el vendedor a mano, check_price_range no lo toca y
+                deja el porcentaje resuelto para la cantidad actual (mision
+                oferta-por-cantidad-en-el-renglon, 4/10/2026): los dos pueden venir juntos, y es
+                esta condicion la que hace que mande el precio escrito, igual que manda el precio
+                fijo sobre el porcentaje en el criterio unico. Si el vendedor lo borra, el
                 porcentaje que queda es el de la cantidad que tiene el renglon.
             */
             if (!price_desde_pivot && !item.price_vender_personalizado) {
