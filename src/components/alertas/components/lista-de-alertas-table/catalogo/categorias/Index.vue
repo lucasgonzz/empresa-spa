@@ -371,12 +371,20 @@ export default {
 		 * dicho en `estado_de_actual` y la pantalla lo muestra. Con la corrida lista, avisa que el
 		 * dueño la vio.
 		 *
+		 * 🔴 El pedido puede volver DESPUÉS de que la persona salió de la pantalla (B-07): en ese caso
+		 * este componente ya está destruido y no tiene que armar nada. Si armara el refresco acá,
+		 * nadie volvería a limpiarlo (`beforeDestroy` ya corrió) y quedaría pidiendo `actual` cada 30
+		 * segundos hasta recargar la página.
+		 *
 		 * @returns {Promise<String>} Lo que pasó (ver la acción `get_actual`).
 		 */
 		cargar() {
 			let self = this
 			return self.$store.dispatch('category_proposal/get_actual')
 			.then(resultado => {
+				if (self._isDestroyed) {
+					return resultado
+				}
 				if (resultado === 'listo') {
 					self.avisar_que_se_vio()
 					self.programar_refresco()
@@ -426,12 +434,33 @@ export default {
 			.then(() => this.$store.dispatch('category_proposal/get_resumen'))
 		},
 		/**
+		 * ¿Tiene sentido refrescar sola la pantalla? Solo mientras la corrida se prepara o se aplica.
+		 *
+		 * @returns {Boolean}
+		 */
+		refresco_hace_falta() {
+			return this.vista === 'preparando' || this.vista === 'aplicando'
+		},
+		/**
 		 * Arma o desarma el refresco automático: solo mientras la corrida se prepara o se aplica, y
 		 * solo si la pestaña del navegador está a la vista.
+		 *
+		 * 🔴 Cierra el hueco de B-07, en dos puntos:
+		 *  - Un componente destruido no arma nada: `beforeDestroy` ya limpió y nadie volvería a hacerlo.
+		 *    (`vista` es un computed que Vue deja congelado al destruir el componente, así que no
+		 *    sirve para darse cuenta: se mira `_isDestroyed`.)
+		 *  - Cada vuelta del intervalo vuelve a mirar si el componente sigue vivo y si el refresco
+		 *    sigue haciendo falta; si no, se apaga solo en vez de pedir `actual` para siempre.
+		 *
+		 * Este refresco hoy casi no se ve: con la API nueva el dueño no recibe la corrida mientras se
+		 * prepara (`actual` contesta `run: null`) ni mientras se aplica (es transitorio). Se deja,
+		 * seguro, por si la API vuelve a mostrar esos estados.
 		 */
 		programar_refresco() {
-			let hace_falta = this.vista === 'preparando' || this.vista === 'aplicando'
-			if (!hace_falta) {
+			if (this._isDestroyed) {
+				return
+			}
+			if (!this.refresco_hace_falta()) {
 				clearInterval(this.timer_refresco)
 				this.timer_refresco = null
 				return
@@ -440,6 +469,11 @@ export default {
 				return
 			}
 			this.timer_refresco = setInterval(() => {
+				if (this._isDestroyed || !this.refresco_hace_falta()) {
+					clearInterval(this.timer_refresco)
+					this.timer_refresco = null
+					return
+				}
 				if (typeof document !== 'undefined' && document.hidden) {
 					return
 				}
