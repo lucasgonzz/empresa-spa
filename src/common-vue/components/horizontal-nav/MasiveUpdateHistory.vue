@@ -91,7 +91,34 @@
 			</p>
 
 			<h6 class="m-t-15 m-b-10">Criterios utilizados</h6>
-			<pre class="masive-update-criteria">{{ criteria_summary }}</pre>
+			<!--
+				Renglones legibles armados desde `criteria` (ver criterios_utilizados). Hasta el
+				4/10/2026 esto era un <pre> con el JSON crudo, que solo podia leer alguien del equipo.
+			-->
+			<div
+			class="masive-update-criteria"
+			data-testid="masiva-criterios">
+				<p
+				v-if="!criterios_utilizados.length"
+				class="text-muted m-b-0">
+					Sin criterios registrados.
+				</p>
+				<div
+				v-for="seccion in criterios_utilizados"
+				:key="'masive-crit-'+seccion.clave"
+				class="masive-update-criteria__seccion">
+					<p class="masive-update-criteria__titulo m-b-0">
+						{{ seccion.titulo }}
+					</p>
+					<ul class="masive-update-criteria__lista">
+						<li
+						v-for="(renglon, index) in seccion.renglones"
+						:key="'masive-crit-'+seccion.clave+'-'+index">
+							{{ renglon }}
+						</li>
+					</ul>
+				</div>
+			</div>
 
 			<h6
 			v-if="detail_articles.length"
@@ -179,15 +206,21 @@ export default {
 			]
 		},
 		/**
-		 * Propiedades del modelo para resolver labels en español en el detalle.
+		 * Propiedades del modelo para resolver labels en español en el detalle: las columnas de los
+		 * filtros de "Criterios utilizados" y las propiedades de los artículos modificados.
+		 *
+		 * Antes leía solo las de `article` (el único modelo con artículos modificados), pero los
+		 * filtros los tiene cualquier modelo con masivas. Si el modelo no se puede leer, ninguna:
+		 * los labels caen en la key legible (get_prop_label).
 		 *
 		 * @returns {Array}
 		 */
 		model_properties_for_labels() {
-			if (this.model_name !== 'article') {
+			try {
+				return this.modelPropertiesFromName(this.model_name) || []
+			} catch (e) {
 				return []
 			}
-			return require('@/models/article').default.properties || []
 		},
 		items() {
 			let items = []
@@ -204,14 +237,79 @@ export default {
 			})
 			return items
 		},
-		criteria_summary() {
-			if (!this.detail_model || !this.detail_model.criteria) {
-				return '—'
+		/**
+		 * "Criterios utilizados" del detalle en renglones legibles, agrupados en tres secciones
+		 * (Alcance / Filtros / Cambios). Reemplaza al JSON crudo que se mostraba antes (decisión de
+		 * Lucas, 4/10/2026).
+		 *
+		 * Forma de `criteria` (la arma empresa-api, CommonLaravel/UpdateController.php):
+		 * {from_filter, used_filters: [{key, operator, value, type}], update_form: [{label, key,
+		 * type, value, options?, store?, round?, cost_incluye_iva?}], models_id,
+		 * resolved_models_id, filter_form}. Una reversión trae solo {revert_of_masive_update_id}.
+		 *
+		 * 🔴 Es un registro guardado: puede venir de una versión vieja o con una forma rara. Nada de
+		 * esto puede romper la vista ni mostrar JSON o "[object Object]": cada renglón se arma por
+		 * separado (renglones_de_filtros / renglones_de_cambios), el que no se puede leer se omite, y
+		 * si no queda ninguno el template dice "Sin criterios registrados.".
+		 *
+		 * @returns {Array} [{clave, titulo, renglones: [String]}], solo las secciones con renglones.
+		 */
+		criterios_utilizados() {
+			if (!this.detail_model) {
+				return []
+			}
+
+			let criteria = this.detail_model.criteria
+			if (typeof criteria == 'string') {
+				try {
+					criteria = JSON.parse(criteria)
+				} catch (e) {
+					return []
+				}
+			}
+			if (!criteria || typeof criteria != 'object' || Array.isArray(criteria)) {
+				return []
+			}
+
+			let secciones = []
+			try {
+				let alcance = this.renglones_de_alcance(criteria)
+				if (alcance.length) {
+					secciones.push({ clave: 'alcance', titulo: 'Alcance', renglones: alcance })
+				}
+			} catch (e) {
+				// Sin alcance legible se muestran igual los filtros y los cambios.
+			}
+
+			let filtros = this.renglones_de_filtros(criteria)
+			if (filtros.length) {
+				secciones.push({ clave: 'filtros', titulo: 'Filtros', renglones: filtros })
+			}
+
+			let cambios = this.renglones_de_cambios(criteria)
+			if (cambios.length) {
+				secciones.push({ clave: 'cambios', titulo: 'Cambios', renglones: cambios })
+			}
+
+			return secciones
+		},
+		/**
+		 * Renglón de alcance de una masiva por filtro. Para artículos va escrito a mano porque el
+		 * plural del modelo está sin tilde ("Articulos"); para el resto se arma con el plural y el
+		 * género del modelo (el `text_delete`, 'la' / 'esta' = femenino).
+		 *
+		 * @returns {String}
+		 */
+		texto_alcance_filtrado() {
+			if (this.model_name == 'article') {
+				return 'Artículos filtrados'
 			}
 			try {
-				return JSON.stringify(this.detail_model.criteria, null, 2)
+				let articulo = String(this.text_delete(this.model_name) || '').toLowerCase()
+				let femenino = articulo == 'la' || articulo == 'esta'
+				return this.plural(this.model_name) + (femenino ? ' filtradas' : ' filtrados')
 			} catch (e) {
-				return '—'
+				return 'Registros filtrados'
 			}
 		},
 	},
@@ -284,9 +382,7 @@ export default {
 		 * @returns {String}
 		 */
 		get_prop_label(prop_key) {
-			let prop = this.model_properties_for_labels.find(model_prop => {
-				return model_prop && model_prop.key == prop_key
-			})
+			let prop = this.propiedad_del_modelo(prop_key)
 			if (prop) {
 				return this.propText(prop)
 			}
@@ -359,6 +455,426 @@ export default {
 			}
 			return this.numero_es(String(value))
 		},
+		/**
+		 * Propiedad del modelo con esa key, o null.
+		 *
+		 * @param {String} prop_key
+		 * @returns {Object|null}
+		 */
+		propiedad_del_modelo(prop_key) {
+			let prop = this.model_properties_for_labels.find(model_prop => {
+				return model_prop && model_prop.key == prop_key
+			})
+			return prop || null
+		},
+		/**
+		 * True para los valores con los que el backend guarda un "sí" (1, '1', true, 'true').
+		 *
+		 * @param {*} valor
+		 * @returns {Boolean}
+		 */
+		es_verdadero(valor) {
+			return valor === true || valor === 1 || valor === '1' || valor === 'true'
+		},
+		/**
+		 * Texto de un valor guardado, o null si no hay nada mostrable.
+		 *
+		 * 🔴 Es el único lugar por donde un valor del registro se convierte en texto, y es el que
+		 * garantiza que nunca salga "[object Object]": un objeto se muestra solo si trae un texto
+		 * propio (text / label / name / nombre) y un array nunca. Con null, quien llama omite el
+		 * renglón.
+		 *
+		 * @param {*} valor
+		 * @returns {String|null}
+		 */
+		texto_escalar(valor) {
+			if (valor === null || typeof valor == 'undefined') {
+				return null
+			}
+			if (typeof valor == 'string') {
+				return valor.trim() === '' ? null : valor.trim()
+			}
+			if (typeof valor == 'number') {
+				return isFinite(valor) ? String(valor) : null
+			}
+			if (typeof valor == 'boolean') {
+				return valor ? 'Sí' : 'No'
+			}
+			if (typeof valor == 'object' && !Array.isArray(valor)) {
+				let campos = ['text', 'label', 'name', 'nombre']
+				for (let i = 0; i < campos.length; i++) {
+					let campo = valor[campos[i]]
+					if ((typeof campo == 'string' && campo.trim() !== '') || (typeof campo == 'number' && isFinite(campo))) {
+						return String(campo).trim()
+					}
+				}
+			}
+			return null
+		},
+		/**
+		 * Un número para mostrar con los separadores en español.
+		 *
+		 * El N° del registro (`id` / `num`) va sin separador de miles: es un identificador y no una
+		 * medida, "N° es 12.345" se leería como otra cosa. Lo que no es número sale tal cual.
+		 *
+		 * @param {String} texto Valor ya pasado por texto_escalar.
+		 * @param {String} clave Key de la propiedad.
+		 * @returns {String}
+		 */
+		texto_de_numero(texto, clave) {
+			if (isNaN(Number(texto)) || clave == 'id' || clave == 'num') {
+				return texto
+			}
+			return this.numero_es(texto)
+		},
+		/**
+		 * Una fecha guardada como dato (AAAA-MM-DD...) en el formato de la app. Lo que no tenga esa
+		 * forma sale tal cual, para no mostrar "Invalid date".
+		 *
+		 * @param {String} texto
+		 * @returns {String}
+		 */
+		texto_de_fecha(texto) {
+			if (/^\d{4}-\d{2}-\d{2}/.test(texto)) {
+				return this.date(texto)
+			}
+			return texto
+		},
+		/**
+		 * Texto de la opción de un select con opciones fijas, con el mismo criterio que getOptions
+		 * (common-vue/mixins/generals.js) para que se lea igual que en el formulario.
+		 *
+		 * @param {Array} opciones
+		 * @param {*} valor
+		 * @returns {String|null}
+		 */
+		texto_de_opcion(opciones, valor) {
+			let opcion = opciones.find(_opcion => {
+				if (_opcion && typeof _opcion == 'object' && !Array.isArray(_opcion)) {
+					return String(_opcion.value) === String(valor)
+				}
+				return String(_opcion) === String(valor)
+			})
+			if (typeof opcion == 'undefined' || opcion === null) {
+				return null
+			}
+			if (typeof opcion == 'object') {
+				return this.texto_escalar(opcion.text) || this.texto_escalar(opcion.label) || this.texto_escalar(opcion.value)
+			}
+			return String(opcion).replaceAll('_', ' ').toUpperCase()
+		},
+		/**
+		 * Store del modelo relacionado a partir de la key ("category_id" -> "category"), o null.
+		 *
+		 * @param {String} clave
+		 * @returns {String|null}
+		 */
+		store_de_la_clave(clave) {
+			if (typeof clave == 'string' && clave.length > 3 && clave.substring(clave.length - 3) == '_id') {
+				return clave.substring(0, clave.length - 3)
+			}
+			return null
+		},
+		/**
+		 * Nombre del registro `id` en el store `store`, si está cargado. null si el store no
+		 * existe, no tiene ese registro o el registro no tiene nombre.
+		 *
+		 * @param {String} store
+		 * @param {*} id
+		 * @returns {String|null}
+		 */
+		nombre_de_registro(store, id) {
+			if (typeof store != 'string' || !store) {
+				return null
+			}
+			let modulo = this.$store.state[store]
+			if (!modulo || !Array.isArray(modulo.models)) {
+				return null
+			}
+			let registro = modulo.models.find(model => {
+				return model && model.id == id
+			})
+			if (!registro) {
+				return null
+			}
+
+			// El campo que se muestra en los selects de ese modelo, si declara uno.
+			let campo = null
+			try {
+				let prop_select = this.getPropToUseInSelect(store)
+				if (prop_select) {
+					campo = prop_select.key
+				}
+			} catch (e) {
+				campo = null
+			}
+
+			return (campo ? this.texto_escalar(registro[campo]) : null)
+				|| this.texto_escalar(registro.name)
+				|| this.texto_escalar(registro.nombre)
+		},
+		/**
+		 * Texto del valor de una relación (select o search), que se guarda como id: la opción fija
+		 * si el select las tiene, si no el nombre del registro en su store si está cargado, y si no
+		 * "#id".
+		 *
+		 * @param {String} clave Key de la propiedad.
+		 * @param {*} valor Id guardado.
+		 * @param {Array|null} opciones Opciones fijas del select, si las tiene.
+		 * @param {String|null} store Store del modelo relacionado; sin él se deduce de la key.
+		 * @returns {String|null}
+		 */
+		texto_de_relacion(clave, valor, opciones, store) {
+			let texto = this.texto_escalar(valor)
+			if (texto === null) {
+				return null
+			}
+			// Un objeto con texto propio ya es el nombre: no hay id que buscar.
+			if (typeof valor == 'object') {
+				return texto
+			}
+			if (Array.isArray(opciones) && opciones.length) {
+				let de_la_opcion = this.texto_de_opcion(opciones, valor)
+				if (de_la_opcion) {
+					return de_la_opcion
+				}
+			}
+			let nombre = this.nombre_de_registro(store || this.store_de_la_clave(clave), valor)
+			if (nombre) {
+				return nombre
+			}
+			return '#' + texto
+		},
+		/**
+		 * Renglones de la sección "Alcance": sobre qué registros corrió la masiva.
+		 *
+		 * @param {Object} criteria
+		 * @returns {Array<String>}
+		 */
+		renglones_de_alcance(criteria) {
+			let id_revertida = criteria.revert_of_masive_update_id
+			if (!id_revertida && this.detail_model.action == 'revert') {
+				id_revertida = this.detail_model.parent_masive_update_id
+			}
+			if (id_revertida && (typeof id_revertida == 'number' || typeof id_revertida == 'string')) {
+				// La revertida se busca en la lista del historial, que ya está cargada (el detalle se
+				// abre desde ahí). Si no está (quedó fuera de las últimas 50), se nombra por su número.
+				let revertida = this.models.find(model => {
+					return model && model.id == id_revertida
+				})
+				if (revertida && revertida.created_at) {
+					return ['Revierte la actualización del ' + this.date(revertida.created_at, true)]
+				}
+				return ['Revierte la actualización #' + id_revertida]
+			}
+
+			let from_filter = typeof criteria.from_filter != 'undefined' ? criteria.from_filter : this.detail_model.from_filter
+			if (this.es_verdadero(from_filter)) {
+				return [this.texto_alcance_filtrado]
+			}
+
+			let cantidad = 0
+			if (Array.isArray(criteria.resolved_models_id) && criteria.resolved_models_id.length) {
+				cantidad = criteria.resolved_models_id.length
+			} else if (Array.isArray(criteria.models_id) && criteria.models_id.length) {
+				cantidad = criteria.models_id.length
+			}
+			if (cantidad) {
+				return ['Selección manual (' + this.numero_es(cantidad) + ')']
+			}
+			return ['Selección manual']
+		},
+		/**
+		 * Renglones de la sección "Filtros", uno por filtro de columna aplicado.
+		 *
+		 * @param {Object} criteria
+		 * @returns {Array<String>}
+		 */
+		renglones_de_filtros(criteria) {
+			let renglones = []
+			if (!Array.isArray(criteria.used_filters)) {
+				return renglones
+			}
+			criteria.used_filters.forEach(filtro => {
+				try {
+					let renglon = this.renglon_de_filtro(filtro)
+					if (renglon) {
+						renglones.push(renglon)
+					}
+				} catch (e) {
+					// Un filtro que no se puede leer se omite: no tumba el resto del detalle.
+				}
+			})
+			return renglones
+		},
+		/**
+		 * "<columna> <operador> <valor>" de un filtro de `used_filters`
+		 * (Helpers/ColumnFiltersHelper.php de empresa-api), o null si no se muestra.
+		 *
+		 * @param {Object} filtro {key, operator, value, type}
+		 * @returns {String|null}
+		 */
+		renglon_de_filtro(filtro) {
+			if (!filtro || typeof filtro != 'object' || Array.isArray(filtro)) {
+				return null
+			}
+			// Ordenar no es filtrar, y "Seleccion manual" es la marca que deja el backend cuando no
+			// hubo filtro (eso ya lo dice el alcance).
+			if (filtro.operator == 'order_by' || filtro.key == 'Seleccion manual') {
+				return null
+			}
+			if (typeof filtro.key != 'string' || !filtro.key) {
+				return null
+			}
+
+			let prop = this.propiedad_del_modelo(filtro.key)
+			let columna = this.get_prop_label(filtro.key)
+			let operador = filtro.operator
+			let tipo = filtro.type || (prop ? prop.type : null)
+
+			// La columna de imágenes se filtra por presencia y el filtro la nombra así (EnBlanco.vue):
+			// "Imagenes está vacío" no lo diría nadie.
+			if (operador == 'en_blanco') {
+				return tipo == 'images' ? 'Sin imágenes' : columna + ' está vacío'
+			}
+			if (operador == 'no_en_blanco') {
+				return tipo == 'images' ? 'Con imágenes' : columna + ' no está vacío'
+			}
+			if (operador == 'checkbox') {
+				if (this.es_verdadero(filtro.value)) {
+					return columna + ': Sí'
+				}
+				if (filtro.value === 0 || filtro.value === '0' || filtro.value === false || filtro.value === 'false') {
+					return columna + ': No'
+				}
+				return null
+			}
+
+			let valor = null
+			if (tipo == 'select' || tipo == 'search') {
+				let store = null
+				if (prop) {
+					try {
+						store = this.modelNameFromRelationKey(prop)
+					} catch (e) {
+						store = null
+					}
+				}
+				valor = this.texto_de_relacion(filtro.key, filtro.value, prop ? prop.options : null, store)
+			} else {
+				valor = this.texto_escalar(filtro.value)
+				if (valor !== null && tipo == 'date') {
+					valor = this.texto_de_fecha(valor)
+				} else if (valor !== null && tipo == 'number') {
+					valor = this.texto_de_numero(valor, filtro.key)
+				}
+			}
+			if (valor === null) {
+				return null
+			}
+
+			let es_texto = tipo == 'text' || tipo == 'textarea'
+			if (operador == 'que_contenga') {
+				return columna + ' contiene "' + valor + '"'
+			}
+			if (operador == 'igual_que') {
+				return columna + ' es ' + (es_texto ? '"' + valor + '"' : valor)
+			}
+			if (operador == 'menor_que') {
+				return columna + ' menor que ' + valor
+			}
+			if (operador == 'mayor_que') {
+				return columna + ' mayor que ' + valor
+			}
+			return columna + ': ' + valor
+		},
+		/**
+		 * Renglones de la sección "Cambios", uno por ítem de `update_form`.
+		 *
+		 * @param {Object} criteria
+		 * @returns {Array<String>}
+		 */
+		renglones_de_cambios(criteria) {
+			let renglones = []
+			let items = criteria.update_form
+			// Un array asociativo de PHP llega como objeto: se toman sus valores.
+			if (items && typeof items == 'object' && !Array.isArray(items)) {
+				items = Object.keys(items).map(clave => {
+					return items[clave]
+				})
+			}
+			if (!Array.isArray(items)) {
+				return renglones
+			}
+			items.forEach(item => {
+				try {
+					let renglon = this.renglon_de_cambio(item)
+					if (renglon) {
+						renglones.push(renglon)
+					}
+				} catch (e) {
+					// Un ítem que no se puede leer se omite: no tumba el resto del detalle.
+				}
+			})
+			return renglones
+		},
+		/**
+		 * Renglón de un ítem de `update_form` (lo arma build_flat_form de
+		 * opciones-filtrados-seleccion/Update.vue). El `label` ya viene legible, p. ej. "Aumentar
+		 * el Costo base (sobre el costo bruto, con IVA)"; acá solo se le suma el valor.
+		 *
+		 * @param {Object} item {label, key, type, value, options?, store?, round?}
+		 * @returns {String|null}
+		 */
+		renglon_de_cambio(item) {
+			if (!item || typeof item != 'object' || Array.isArray(item)) {
+				return null
+			}
+			let clave = typeof item.key == 'string' ? item.key : ''
+			let label = this.texto_escalar(item.label)
+
+			// Registros viejos, de antes de que el ítem guardara el label: la clave tal cual.
+			if (!label) {
+				let valor_crudo = this.texto_escalar(item.value)
+				if (!clave || valor_crudo === null) {
+					return null
+				}
+				return clave + ': ' + valor_crudo
+			}
+
+			if (item.type == 'checkbox') {
+				if (this.es_verdadero(item.value)) {
+					return label + ': Activar'
+				}
+				if (item.value === 0 || item.value === '0' || item.value === false) {
+					return label + ': Desactivar'
+				}
+				return null
+			}
+			if (item.type == 'select' || item.type == 'search') {
+				let relacion = this.texto_de_relacion(clave, item.value, item.options, item.store)
+				if (relacion === null) {
+					return null
+				}
+				return label + ': ' + relacion
+			}
+
+			let valor = this.texto_escalar(item.value)
+			if (valor === null) {
+				return null
+			}
+			if (clave.indexOf('increment_') === 0 || clave.indexOf('decrement_') === 0) {
+				let renglon = label + ': ' + this.texto_de_numero(valor, clave) + ' %'
+				if (this.es_verdadero(item.round)) {
+					renglon += ' (redondeado)'
+				}
+				return renglon
+			}
+			if (clave.indexOf('set_') === 0) {
+				return label + ': ' + this.texto_de_numero(valor, clave)
+			}
+			return label + ': ' + valor
+		},
 		clear_detail() {
 			this.detail_model = null
 			this.detail_articles = []
@@ -396,13 +912,22 @@ export default {
 }
 </script>
 <style scoped lang="sass">
+// Panel de "Criterios utilizados": renglones con el mismo tamaño de letra que el resto del
+// detalle (antes era un <pre> monoespaciado y más chico, con scroll propio).
 .masive-update-criteria
-	max-height: 200px
-	overflow: auto
-	font-size: 0.8rem
 	background: var(--bg-section, #f5f7fa)
-	padding: 10px
+	padding: 10px 12px
 	border-radius: 6px
+
+.masive-update-criteria__seccion + .masive-update-criteria__seccion
+	margin-top: 8px
+
+.masive-update-criteria__titulo
+	font-weight: 600
+
+.masive-update-criteria__lista
+	margin: 2px 0 0
+	padding-left: 18px
 
 .masive-update-article-block
 	border: 1px solid var(--color-border-secondary, #e8ecf0)
