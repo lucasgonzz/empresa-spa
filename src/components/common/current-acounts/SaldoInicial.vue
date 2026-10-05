@@ -71,14 +71,17 @@ export default {
 					self.$toast.success('Saldo inicial registrado')
 					self.$bvModal.hide('saldo-inicial')
 					self.clear()
-					self.$store.dispatch('current_acount/getModels')
 					// La franja "Saldo actual" lee la cuenta guardada al abrir el modal: se le pasa el
 					// saldo nuevo para que no siga diciendo $0 al lado del saldo inicial recien cargado.
+					// 🔴 ANTES de pedir los movimientos, no despues: si el store reacciona al cambio de
+					// cuenta (por ejemplo, volviendo el filtro a su valor por defecto), el pedido tiene
+					// que salir ya con ese estado y no con el de antes.
 					if (res.data.credit_account && self.from_credit_account.id == res.data.credit_account.id) {
 						self.$store.commit('current_acount/set_from_credit_account', Object.assign({}, self.from_credit_account, {
 							saldo: res.data.credit_account.saldo,
 						}))
 					}
+					self.$store.dispatch('current_acount/getModels')
 					// El cliente o proveedor del listado, con su saldo nuevo: lo mismo que hacen el pago
 					// y las notas de credito y debito. (Antes llamaba a updateClient con un
 					// `this.model_name` que este componente no tiene, asi que no corria nunca.)

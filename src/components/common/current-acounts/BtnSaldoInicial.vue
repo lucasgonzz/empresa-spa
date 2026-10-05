@@ -89,7 +89,13 @@ export default {
 		},
 	},
 	watch: {
-		credit_account_id() {
+		/**
+		 * La cuenta como OBJETO, no solo su id: guardar el saldo inicial la reemplaza por otra con el
+		 * mismo id y el saldo nuevo, y ahi hay que volver a preguntar. Si solo se mirara el id, con la
+		 * lista filtrada a un periodo que no incluye hoy la cantidad seguiria en 0 y el boton volveria
+		 * a aparecer sobre una cuenta que ya tiene su saldo inicial.
+		 */
+		from_credit_account() {
 			this.actualizar()
 		},
 		cantidad_cargada() {
