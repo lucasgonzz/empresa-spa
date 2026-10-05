@@ -2772,6 +2772,18 @@ export default {
 					options.push({ value: `price_type_${id}_final_price`, text: `$ Final: ${name}` })
 					options.push({ value: `price_type_${id}_percentage`,  text: `%: ${name}` })
 					options.push({ value: `price_type_${id}_setear`,      text: `Setear precio final: ${name}` })
+
+					/*
+					 * Mision catalogo-por-lista-tienda (5/10/2026): "Visible en la tienda" de ESTA
+					 * lista (Si/No), que escribe article_price_type.visible_en_tienda. Solo con la
+					 * extension online y la lista restringida en la tienda: en una lista sin
+					 * restriccion la columna no cambia nada de lo que se ve, y ofrecerla solo
+					 * agregaria ruido al select. Comparacion SUELTA (`== 1`): la columna llega
+					 * como 0/1, null o "1" segun el driver.
+					 */
+					if (this.hasExtencion('online') && pt.catalogo_restringido_en_tienda == 1) {
+						options.push({ value: `price_type_${id}_visible_en_tienda`, text: `Visible en la tienda (Si/No): ${name}` })
+					}
 				})
 			}
 
@@ -4931,8 +4943,12 @@ export default {
 				return system_property
 			}
 
-			/* Propiedad codificada de lista de precio: price_type_{id}_{final_price|percentage|setear}. */
-			let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear)$/)
+			/*
+			 * Propiedad codificada de lista de precio:
+			 * price_type_{id}_{final_price|percentage|setear|visible_en_tienda}. `visible_en_tienda`
+			 * es de la mision catalogo-por-lista-tienda (5/10/2026).
+			 */
+			let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear|visible_en_tienda)$/)
 			if (pt_match) {
 				const pt_id    = parseInt(pt_match[1])
 				const sub_type = pt_match[2]
@@ -4941,6 +4957,7 @@ export default {
 					if (sub_type === 'final_price') return '$ Final: ' + pt.name
 					if (sub_type === 'percentage')  return '%: ' + pt.name
 					if (sub_type === 'setear')      return 'Setear: ' + pt.name
+					if (sub_type === 'visible_en_tienda') return 'Visible en tienda: ' + pt.name
 				}
 				return system_property
 			}
@@ -5039,8 +5056,14 @@ export default {
 					return
 				}
 
-				/* Traducir propiedades codificadas de listas de precio a las claves planas de ProcessRow. */
-				let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear)$/)
+				/*
+				 * Traducir propiedades codificadas de listas de precio a las claves planas de ProcessRow.
+				 * `visible_en_tienda` (mision catalogo-por-lista-tienda, contrato C2) viaja como la
+				 * columna plana `visible_en_tienda_<nombre de la lista normalizado>`, con el MISMO
+				 * normalizado que las otras tres (minusculas, espacios a `_`): ProcessRow arma el
+				 * nombre del lado de la API igual, y si los dos no coinciden la columna se ignora.
+				 */
+				let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear|visible_en_tienda)$/)
 				if (pt_match) {
 					const pt_id    = parseInt(pt_match[1])
 					const sub_type = pt_match[2]
@@ -5050,6 +5073,7 @@ export default {
 						if (sub_type === 'final_price') columns['$_final_' + name_key]             = column_position
 						if (sub_type === 'percentage')  columns['%_' + name_key]                   = column_position
 						if (sub_type === 'setear')      columns['setear_precio_final_' + name_key] = column_position
+						if (sub_type === 'visible_en_tienda') columns['visible_en_tienda_' + name_key] = column_position
 					}
 					return
 				}

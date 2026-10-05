@@ -276,6 +276,8 @@ export default {
 		    percentage: '% Ganancia',
 		    final_price: 'Precio final',
 		    setear_precio_final: 'Setear precio final',
+		    // Mision catalogo-por-lista-tienda (5/10/2026): la columna Si/No por lista de la tienda.
+		    visible_en_tienda: 'Visible en la tienda',
 		  }
 		  return map[field] || field.replaceAll('_', ' ')
 		},
