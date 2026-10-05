@@ -128,6 +128,7 @@
 </template>
 <script>
 import { conteo, entero_es, promedio_es } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
+import { destino_de_imagenes, es_ruta_de_imagenes } from '@/components/alertas/solapas'
 
 /**
  * Resumen corto que aparece al terminar una asignación de imágenes que lanzó esta pestaña (lo abre
@@ -275,9 +276,13 @@ export default {
 			this.visible_proxy = false
 		},
 		/**
-		 * Cierra y lleva a Alertas → Imágenes con esta asignación abierta. Con `solapa`, abre el
-		 * detalle en esa solapa (el botón "Sin imagen" pide la de no asignadas). Sin asignación
-		 * (camino de respaldo) no hay id: lleva a la solapa y listo.
+		 * Cierra y lleva a Alertas → Catálogo → Imágenes con esta asignación abierta. Con `solapa`,
+		 * abre el detalle en esa solapa (el botón "Sin imagen" pide la de no asignadas). Sin
+		 * asignación (camino de respaldo) no hay id: lleva a la solapa y listo.
+		 *
+		 * El destino y la pregunta "¿ya estoy ahí?" salen de components/alertas/solapas.js: desde la
+		 * misión categorizacion-tres-modelos la solapa Imágenes es una sub-solapa de Catálogo
+		 * (/alertas/catalogo/imagenes) y la ruta ya no dice `view === 'imagenes'`.
 		 *
 		 * @param {String|null} solapa no_asignadas | a_revisar | asignadas
 		 * @return {void}
@@ -291,11 +296,12 @@ export default {
 				}
 			}
 			this.visible_proxy = false
-			let destino = { name: 'alertas', params: { view: 'imagenes' }, query: query }
+			let destino = destino_de_imagenes(query)
 			// Si ya se está en Alertas → Imágenes, `replace`: con `push` quedaban dos entradas
 			// iguales en el historial (la de antes y la que deja el cierre del detalle), y el
-			// botón Atrás parecía no hacer nada.
-			let ya_esta_ahi = this.$route && this.$route.name === 'alertas' && this.$route.params.view === 'imagenes'
+			// botón Atrás parecía no hacer nada. Con la URL canónica, `params.view === 'imagenes'`
+			// da falso siempre: por eso se pregunta con `es_ruta_de_imagenes`.
+			let ya_esta_ahi = es_ruta_de_imagenes(this.$route)
 			let navegacion = ya_esta_ahi ? this.$router.replace(destino) : this.$router.push(destino)
 			navegacion.catch(() => {
 				// Ya estaba en esa misma URL (NavigationDuplicated): no hay nada que hacer.
