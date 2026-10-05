@@ -3,21 +3,39 @@
 	<span class="ai-desc-btn-wrapper">
 
 		<!-- Boton secundario "Generar con IA". Deshabilitado hasta que el articulo tenga id (este guardado). -->
-		<b-button
-		size="sm"
-		variant="outline-primary"
-		:disabled="loading || !article_saved"
-		v-b-tooltip.hover="!article_saved ? 'Guardá el artículo primero' : ''"
-		@click="generate_preview">
-			<b-spinner
-			v-if="loading"
-			small
-			class="m-r-5"></b-spinner>
-			<i
-			v-else
-			class="bi bi-stars m-r-5"></i>
-			{{ loading ? 'Buscando información...' : 'Generar con IA' }}
-		</b-button>
+		<!--
+			🔴 El globo "Guardá el artículo primero" va en este <span> y NO en el <b-button> (5/10/2026).
+			No lo "simplifiques" devolviendo el v-b-tooltip al botón: BootstrapVue 2.23 no abre ningún globo
+			sobre un target deshabilitado (bootstrap-vue/src/components/tooltip/helpers/bv-tooltip.js,
+			handleEvent corta con isDisabled(target)), así que el mouse pasaba por encima del botón apagado
+			y no salía nada: la persona no se enteraba de por qué no podía generar. El <span> nunca se
+			deshabilita, entonces sí recibe el hover; y mientras el artículo no está guardado el botón lleva
+			ai-desc-btn-sin-guardar (pointer-events: none) para que el puntero, y el toque en un teléfono,
+			le peguen al <span> aunque el navegador no despache eventos sobre un control deshabilitado.
+			.noninteractive: el globo lleva pointer-events: none y se cierra apenas el mouse sale, así no
+			tapa ni se come los clics de "Agregar Descripcion" ni de la tabla de arriba (mismo criterio que
+			DropdownOptionItem.vue). Con el artículo guardado disabled_reason es '' y BootstrapVue no muestra
+			ningún globo con el título vacío (bv-tooltip.js, show()).
+		-->
+		<span
+		class="ai-desc-btn-tooltip-target"
+		v-b-tooltip.hover.noninteractive="disabled_reason">
+			<b-button
+			size="sm"
+			variant="outline-primary"
+			:class="{ 'ai-desc-btn-sin-guardar': !article_saved }"
+			:disabled="loading || !article_saved"
+			@click="generate_preview">
+				<b-spinner
+				v-if="loading"
+				small
+				class="m-r-5"></b-spinner>
+				<i
+				v-else
+				class="bi bi-stars m-r-5"></i>
+				{{ loading ? 'Buscando información...' : 'Generar con IA' }}
+			</b-button>
+		</span>
 
 		<!-- Modal de preview: muestra la ficha generada para que la persona la lea/edite antes de guardar. -->
 		<b-modal
@@ -149,6 +167,17 @@ export default {
 		 */
 		article_saved() {
 			return Boolean(this.parent_model && this.parent_model.id)
+		},
+		/**
+		 * Texto del globo de ayuda del botón "Generar con IA". Sin artículo guardado explica por qué
+		 * el botón está apagado; con el artículo guardado devuelve '' y BootstrapVue no abre ningún
+		 * globo (bv-tooltip.js, show(): con el título vacío no muestra nada). Se evalúa sobre el <span>
+		 * que envuelve al botón, no sobre el botón (ver el comentario del template).
+		 *
+		 * @return {String}
+		 */
+		disabled_reason() {
+			return this.article_saved ? '' : 'Guardá el artículo primero'
 		},
 		/**
 		 * Texto explicativo del badge de confianza, segun el nivel devuelto por la IA.
@@ -319,6 +348,17 @@ export default {
 <style scoped lang="sass">
 .ai-desc-btn-wrapper
 	display: inline-block
+
+// Abraza al boton "Generar con IA" sin moverlo: es el target del globo de ayuda (el boton
+// deshabilitado no puede serlo, BootstrapVue no abre globos sobre un target disabled).
+.ai-desc-btn-tooltip-target
+	display: inline-block
+
+// Boton apagado por falta de guardado: no recibe el puntero, asi el mouse (y el toque en un
+// telefono) le pega al span de arriba aunque el navegador no despache eventos sobre un
+// control deshabilitado. Con el articulo guardado la clase no se pone y el boton conserva sus eventos.
+.ai-desc-btn-sin-guardar
+	pointer-events: none
 
 .ai-desc-preview
 	display: flex
