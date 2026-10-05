@@ -61,6 +61,17 @@
 					<sincronizar-margen-de-lista
 					v-if="selected_model === 'price_type' && prop.key === 'percentage'"
 					:model="model"></sincronizar-margen-de-lista>
+
+					<!--
+						Mision catalogo-por-lista-tienda (5/10/2026): el contador "X habilitados de Y"
+						y el aviso permanente debajo del interruptor "En la tienda, mostrar solo los
+						articulos habilitados para esta lista". Mismo criterio aditivo que el de
+						arriba: filtrado por modelo y por key, ningun otro formulario cambia. La key
+						solo existe con la extension `online`, asi que sin ella esto no se monta.
+					-->
+					<habilitados-en-tienda-de-lista
+					v-if="selected_model === 'price_type' && prop.key === 'catalogo_restringido_en_tienda'"
+					:model="model"></habilitados-en-tienda-de-lista>
 				</template>
 			</view-component>
 		</b-col>
@@ -83,6 +94,7 @@ export default {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnDuplicatePdfProfile: () => import('@/common-vue/components/pdf/BtnDuplicatePdfProfile'),
 		SincronizarMargenDeLista: () => import('@/components/abm/sincronizar-margen-de-lista/Index'),
+		HabilitadosEnTiendaDeLista: () => import('@/components/abm/habilitados-en-tienda-de-lista/Index'),
 	},
 	data() {
 		return {
