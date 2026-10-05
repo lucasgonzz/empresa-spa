@@ -1,6 +1,6 @@
 <template>
 	<b-dropdown-item
-	v-b-tooltip.hover
+	v-b-tooltip.hover.noninteractive.right
 	:title="tooltip"
 	:class="option_classes"
 	:data-testid="testid"
@@ -20,6 +20,14 @@
 <script>
 /**
  * Ítem de menú con ícono alineado y label legible para dropdowns de seleccionados/filtrados.
+ *
+ * 🔴 El globo de un ítem deshabilitado va `noninteractive` y a la derecha (5/10/2026). BootstrapVue
+ * 2.23 arma los tooltips INTERACTIVOS por defecto: si el mouse pasa del ítem al globo, el globo no
+ * se cierra y recibe el clic. Sin lugar arriba, el globo de "Eliminar" caía abajo, justo encima de
+ * "Hacer Factura" en el menú de seleccionados de Ventas: el clic le pegaba al globo, el menú se
+ * cerraba y "Emitir facturas" no se abría nunca. Con `noninteractive` el globo lleva
+ * `pointer-events: none` (el clic pasa al ítem de abajo) y se cierra apenas el mouse sale del ítem;
+ * a la derecha (o a la izquierda, si no entra) queda al costado del menú en vez de taparle opciones.
  */
 export default {
 	props: {
