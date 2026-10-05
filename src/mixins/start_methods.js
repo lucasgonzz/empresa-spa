@@ -16,9 +16,9 @@ export default {
 				Misión eliminar-sucursal-con-stock (5/10/2026): a esta altura las sucursales todavía NO
 				llegaron (las baja el panel de recursos, que arranca ~1 segundo después de montarse), así
 				que lo de arriba pudo haber tomado una sucursal que ya no existe. Se valida apenas
-				carguen. Ver `validar_address_id_de_vender`.
+				carguen y en cada cambio de la lista. Ver `vigilar_la_sucursal_de_vender`.
 			*/
-			this.validar_address_id_de_vender_cuando_carguen_las_sucursales()
+			this.vigilar_la_sucursal_de_vender()
 
 			// this.checkUpdateFeaturesCookie()
 
@@ -398,9 +398,13 @@ export default {
 			return sucursales.some(sucursal => sucursal.id == address_id)
 		},
 		/**
-		 * Corrige lo que `init_vender_address_id` dejó en Vender y en la cookie si resulta que esa
-		 * sucursal ya no existe, ahora que las sucursales sí cargaron.
+		 * Corrige lo que quedó en Vender, en la cookie y en el usuario apuntando a una sucursal que ya no
+		 * existe, ahora que las sucursales sí cargaron. Se llama de nuevo en CADA cambio de
+		 * `address.models` (ver `vigilar_la_sucursal_de_vender`).
 		 *
+		 * - Usuario (`auth.user.address_id`) con una sucursal muerta: pasa a null. La API ya lo pasó a otra
+		 *   sucursal o lo dejó sin sucursal, pero esta sesión no sabe a cuál; null es lo seguro y el
+		 *   próximo login trae el valor real.
 		 * - Vender con una sucursal muerta: se pone en 0 y se vuelve a resolver desde el usuario o la cookie
 		 *   (esta vez validando de verdad). Si no queda ninguna, Vender queda sin sucursal.
 		 * - Cookie con una sucursal muerta aunque Vender esté bien (la cookie se escribió en otra sesión):
@@ -414,6 +418,11 @@ export default {
 
 			if (!Array.isArray(sucursales) || !sucursales.length) {
 				return false
+			}
+
+			if (this.user && this.user.address_id && !this.address_id_es_vigente(this.user.address_id)) {
+				console.log('el usuario tenia una sucursal que ya no existe: se deja sin sucursal')
+				this.$store.commit('auth/setUser', Object.assign({}, this.user, { address_id: null }))
 			}
 
 			let address_id_de_vender = this.$store.state.vender.address_id
@@ -435,34 +444,34 @@ export default {
 			return true
 		},
 		/**
-		 * Corre `validar_address_id_de_vender` en cuanto las sucursales estén cargadas: ya mismo si ya
-		 * lo están, o apenas llegue la primera lista no vacía.
+		 * Valida la sucursal de Vender ya mismo (si las sucursales ya cargaron) y se queda vigilando
+		 * `address.models` para volver a validarla CADA VEZ que la lista cambia.
 		 *
-		 * Se queda escuchando `address.models` con un watcher programático que se da de baja solo después
-		 * de validar (la lista llega con `setModels` y también cambia con cada alta o baja). La función
-		 * para darlo de baja se guarda en una propiedad de la instancia, FUERA de `data` a propósito: no
-		 * tiene por qué ser reactiva, y si `startMethods` vuelve a correr (otro login sin recargar la
-		 * página) se descarta el watcher anterior en vez de acumular uno por cada login.
+		 * Esto último es lo que cubre los borrados que NO pasan por el modal de eliminar: el broadcast
+		 * `deleted_model` de otra pestaña o de otra sesión, y el fin de una eliminación en segundo plano
+		 * (el 202), que saca la sucursal de la lista sin que nadie llame a `limpiar_referencias_locales`.
+		 * Antes el watcher se daba de baja después de la primera validación y esos casos dejaban a Vender
+		 * vendiendo contra el id muerto. Una lista vacía no valida nada (ver `address_id_es_vigente`).
+		 *
+		 * La función para darlo de baja se guarda en una propiedad de la instancia, FUERA de `data` a
+		 * propósito: no tiene por qué ser reactiva, y si `startMethods` vuelve a correr (otro login sin
+		 * recargar la página) se descarta el watcher anterior en vez de acumular uno por cada login. El
+		 * watcher muere con la instancia (App.vue).
 		 *
 		 * @returns {void}
 		 */
-		validar_address_id_de_vender_cuando_carguen_las_sucursales() {
+		vigilar_la_sucursal_de_vender() {
 			if (this.unwatch_sucursales_de_vender) {
 				this.unwatch_sucursales_de_vender()
 				this.unwatch_sucursales_de_vender = null
 			}
 
-			if (this.validar_address_id_de_vender()) {
-				return
-			}
+			this.validar_address_id_de_vender()
 
 			this.unwatch_sucursales_de_vender = this.$watch(
 				() => this.$store.state.address.models,
 				() => {
-					if (this.validar_address_id_de_vender()) {
-						this.unwatch_sucursales_de_vender()
-						this.unwatch_sucursales_de_vender = null
-					}
+					this.validar_address_id_de_vender()
 				}
 			)
 		},
