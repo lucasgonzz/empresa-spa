@@ -1,3 +1,5 @@
+import axios from 'axios'
+import VueCookies from 'vue-cookies'
 import __base_store from '@/store/__base_store'
 
 /**
@@ -81,6 +83,133 @@ address_store.mutations.add = function (state, value) {
 		if (sucursal.id != value.id && sucursal.es_deposito_madre) {
 			sucursal.es_deposito_madre = 0
 		}
+	})
+}
+
+/**
+ * Misión eliminar-sucursal-con-stock (5/10/2026): borra una sucursal con la decisión que tomó el
+ * usuario en el modal de ABM → Sucursales (components/abm/eliminar-sucursal/Index.vue).
+ *
+ * Por qué una acción propia y no la `delete` del factory: la `delete` base hace un DELETE pelado,
+ * sin parámetros, y espera un 200 vacío. Acá el DELETE lleva la decisión (qué hacer con el stock,
+ * con los empleados y con lo que la sucursal tenía configurado) y la API puede contestar de dos
+ * maneras distintas que el factory no distingue:
+ *
+ *  - 200 `{eliminada: true, resumen}`: la sucursal ya no existe. Se saca de la memoria y se limpia
+ *    todo lo que la SPA recordaba de ella (ver `limpiar_referencias_locales`).
+ *  - 202 `{queued: true, ...}`: eran tantos artículos que la API lo encoló. La sucursal TODAVÍA
+ *    existe y el stock se está moviendo: sacarla de la lista (o limpiar la cookie) acá mostraría
+ *    algo que todavía no pasó, y si el proceso falla la sucursal seguiría ahí sin que se la pueda
+ *    ver. No se toca nada; el panel de procesos en segundo plano muestra el avance.
+ *
+ * Los errores (422 con el motivo, 404, 5xx, sin conexión) NO los muestra el interceptor global:
+ * van con `skip_global_error_event` y `skip_global_validation_toast` y los muestra el modal adentro
+ * de sí mismo, que es donde está mirando el usuario. Sin las banderas aparecía además un toast de
+ * 10 segundos con el mismo texto. Mismo criterio que components/abm/disenos-de-vender.
+ *
+ * @param {Object} contexto Contexto de Vuex (commit, dispatch).
+ * @param {Object} payload
+ * @param {Number} payload.address_id Sucursal a eliminar.
+ * @param {Object} [payload.params] Parámetros del contrato (stock_accion, stock_destino_id,
+ *   usuarios_accion, usuarios_destino_id, reemplazo_id). Vacío = el DELETE de siempre.
+ * @returns {Promise<Object>} La respuesta de axios. Rechaza con el error de axios si la API no
+ *   aceptó el borrado.
+ */
+address_store.actions.eliminar_con_decision = function ({ commit, dispatch }, payload) {
+	/** Sucursal que se está borrando. */
+	let address_id = payload.address_id
+	/** Parámetros de la decisión, tal cual los armó el modal. */
+	let params = payload.params ? payload.params : {}
+
+	return axios.delete('/api/address/' + address_id, {
+		params: params,
+		skip_global_error_event: true,
+		skip_global_validation_toast: true,
+	})
+	.then(res => {
+		/** La API encoló el borrado (202): la sucursal sigue existiendo por ahora. */
+		let en_segundo_plano = res.status === 202 || (res.data && res.data.queued)
+		if (en_segundo_plano) {
+			return res
+		}
+
+		// 200: ya no existe. La mutación `delete` del factory lee `state.delete.id`.
+		commit('setDelete', { id: address_id })
+		commit('delete')
+
+		return dispatch('limpiar_referencias_locales', {
+			address_id: address_id,
+			usuarios_destino_id: params.usuarios_accion === 'reasignar' ? params.usuarios_destino_id : null,
+		})
+		.then(() => res)
+	})
+}
+
+/**
+ * Deja la SPA sin ninguna referencia a una sucursal que ya no existe.
+ *
+ * La sucursal elegida se recuerda en tres lugares además de la lista, y los tres seguían
+ * apuntando al id muerto después de borrarla: la sucursal de Vender (`vender.address_id`), la
+ * cookie `address_id` (3 años) y la sucursal del usuario (`auth.user.address_id`). Con eso Vender
+ * seguía armando ventas contra una sucursal que no existe, que fue el origen de la misión (3DTisk:
+ * el empleado seguía vendiendo con `address_id = 3` después de que se borró el depósito 3).
+ *
+ * Qué se hace con cada una:
+ *
+ *  - `auth.user.address_id`: si era la borrada, pasa al destino de los empleados (si el modal los
+ *    reasignó) o a null (si se los dejó sin sucursal). Es lo mismo que va a leer la API en el
+ *    próximo login, así que la sesión actual y la siguiente coinciden.
+ *  - `vender.address_id` y la cookie: si eran la borrada, toman la sucursal NUEVA del usuario
+ *    (misma regla que `init_vender_address_id` al loguearse: primero la del usuario). Si el usuario
+ *    no tiene ninguna, Vender vuelve a 0 y la cookie se borra: Vender pide "Indique la SUCURSAL"
+ *    en vez de seguir usando el id viejo. Vender y cookie se mantienen siempre iguales porque
+ *    mixins/vender/cajas.js elige la caja por defecto leyendo la COOKIE, no el store.
+ *  - Si Vender o la cookie apuntaban a OTRA sucursal (válida), no se tocan.
+ *  - `employee`: se vuelve a pedir, porque la API les cambió el `address_id` a los empleados que
+ *    tenían esta sucursal y la lista del store seguía con el viejo. No bloquea ni rechaza: si falla
+ *    la recarga, el próximo arranque la corrige.
+ *
+ * @param {Object} contexto Contexto de Vuex (rootState, commit, dispatch).
+ * @param {Object} payload
+ * @param {Number} payload.address_id Sucursal borrada.
+ * @param {Number|null} payload.usuarios_destino_id Sucursal a la que se pasaron los empleados, o
+ *   null si se los dejó sin sucursal (o no había).
+ * @returns {Promise}
+ */
+address_store.actions.limpiar_referencias_locales = function ({ rootState, commit, dispatch }, payload) {
+	/** Sucursal borrada. */
+	let address_id = payload.address_id
+	/** Usuario logueado (puede ser null si la sesión se cayó justo ahora). */
+	let user = rootState.auth ? rootState.auth.user : null
+	/** Sucursal que le queda al usuario logueado, o null. */
+	let address_id_del_usuario = user ? user.address_id : null
+
+	if (user && user.address_id == address_id) {
+		address_id_del_usuario = payload.usuarios_destino_id ? payload.usuarios_destino_id : null
+		// Se reemplaza el objeto entero (mismo patrón que auth/setDarkMode): no hace falta
+		// una mutación nueva en el store de auth.
+		commit('auth/setUser', Object.assign({}, user, { address_id: address_id_del_usuario }), { root: true })
+	}
+
+	/** Sucursal con la que tienen que quedar Vender y la cookie si apuntaban a la borrada. */
+	let address_id_de_reemplazo = address_id_del_usuario ? address_id_del_usuario : 0
+
+	if (rootState.vender && rootState.vender.address_id == address_id) {
+		commit('vender/setAddressId', address_id_de_reemplazo, { root: true })
+	}
+
+	if (VueCookies.get('address_id') == address_id) {
+		if (address_id_de_reemplazo) {
+			// -1 = igual que init_vender_address_id cuando la sucursal sale del usuario.
+			VueCookies.set('address_id', address_id_de_reemplazo, -1)
+		} else {
+			VueCookies.remove('address_id')
+		}
+	}
+
+	return Promise.resolve(dispatch('employee/getModels', null, { root: true }))
+	.catch(err => {
+		console.log(err)
 	})
 }
 
