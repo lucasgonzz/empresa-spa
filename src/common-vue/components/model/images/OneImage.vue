@@ -6,14 +6,16 @@
 	de ancho completo debajo de la foto: es un circulo en la esquina de la imagen, como en el carrusel.
 -->
 <div class="images-field">
+	<!--
+		El confirm solo pregunta: va por `emit`, así que no corre `actions` ni muestra su `toast`
+		(por eso no se le pasan). El borrado y su aviso viven en deleteFromHasMany.
+	-->
     <confirm
     text="la imagen"
-    :actions="actions"
     :id="'delete-'+model_name+'-image-'+prop.key"
     :model_name="model_name"
     emit="deleteFromHasMany"
-    @deleteFromHasMany="deleteFromHasMany"
-    toast="Imagen eliminada"></confirm>
+    @deleteFromHasMany="deleteFromHasMany"></confirm>
 
 	<div
 	v-if="model[prop.key]"
@@ -121,20 +123,42 @@ export default {
 			this.$store.commit(this.model_name+'/setDeleteImageProp', this.prop.key)
 			this.$bvModal.show('delete-'+this.model_name+'-image-'+this.prop.key)
 		},
+		/**
+		 * Lo que pasa al confirmar el borrado de la imagen.
+		 *
+		 * - Imagen de un registro de un has_many (`has_many_parent_model`): se quita localmente y se
+		 *   guarda recién cuando se guarda el registro padre. Todavía no se borró nada, no hay aviso.
+		 * - Imagen del registro mismo: se despacha la acción de borrado y se la ESPERA. Antes se
+		 *   despachaba sin esperar y, como el confirm va por `emit`, su toast "Imagen eliminada" no
+		 *   salía nunca: el borrado no avisaba nada, ni bien ni mal. Ahora avisa según el resultado
+		 *   (la acción rechaza si el DELETE falla, ver deleteImageProp en store/__base_store.js) y el
+		 *   modal del registro se cierra solo si salió bien, igual que el camino de borrado de
+		 *   Confirm.vue.
+		 *
+		 * @returns {void}
+		 */
 		deleteFromHasMany() {
-			console.log('deleteFromHasMany')
 			if (this.has_many_parent_model) {
 				let model = this.has_many_parent_model[this.has_many_prop.key].find(_model => {
 					return _model.id == this.model.id 
 				})
 				model[this.prop.key] = null
-			} else {
-				this.actions.forEach(action => {
-					console.log('dispatch '+action)
-					this.$store.dispatch(action)
-				})
-				this.$bvModal.hide(this.model_name)
+				return
 			}
+
+			let self = this
+			let borrados = this.actions.map(action => {
+				return self.$store.dispatch(action)
+			})
+			Promise.all(borrados)
+			.then(() => {
+				self.$toast.success('Imagen eliminada')
+				self.$bvModal.hide(self.model_name)
+			})
+			.catch(() => {
+				// El interceptor global ya mostró el error del servidor; esto dice qué fue lo que no se hizo.
+				self.$toast.error('No se pudo eliminar la imagen')
+			})
 		}
 	}
 }
