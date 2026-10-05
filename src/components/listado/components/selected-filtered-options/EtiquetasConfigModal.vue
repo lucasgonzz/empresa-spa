@@ -221,30 +221,53 @@
 
 			<hr>
 
-			<!-- Sección 3: preview orientativo -->
+			<!--
+				Sección 3: vista previa. Dibuja la misma disposición que el PDF (disposicion.js, port de
+				DisposicionDeEtiquetaIndividual de la API), en px a la escala de la medida, con el artículo real.
+			-->
 			<h6 class="m-b-10">Vista previa</h6>
-			<div class="etiqueta-preview-wrapper d-flex justify-content-center m-b-20">
+			<div
+			v-if="articulos_seleccionados.length > 1"
+			class="etiqueta-preview-paginador d-flex align-items-center justify-content-center m-b-10">
+				<b-button
+				size="sm"
+				variant="link"
+				title="Artículo anterior"
+				:disabled="preview_indice <= 0"
+				@click="preview_articulo_anterior">
+					‹
+				</b-button>
+				<span class="small text-muted">
+					{{ preview_indice + 1 }} de {{ articulos_seleccionados.length }}
+				</span>
+				<b-button
+				size="sm"
+				variant="link"
+				title="Artículo siguiente"
+				:disabled="preview_indice >= articulos_seleccionados.length - 1"
+				@click="preview_articulo_siguiente">
+					›
+				</b-button>
+			</div>
+			<div class="etiqueta-preview-wrapper d-flex justify-content-center m-b-10">
 				<div
 				class="etiqueta-preview-box"
 				:style="preview_box_style">
 					<div
-					class="etiqueta-preview-content"
-					:style="preview_content_style">
-					<div
-					v-for="item in propiedades_items"
-					:key="'preview-'+item.key"
-					class="etiqueta-preview-line"
-					:style="preview_line_style(item)">
-						<template v-if="item.key === 'codigo_barras'">
-							<span class="etiqueta-preview-barcode">▮▮▮ código de barras ▮▮▮</span>
-						</template>
-						<template v-else>
-							<span :style="preview_text_style(item)">{{ preview_texto_propiedad(item.key) }}</span>
-						</template>
-					</div>
-					</div>
+					v-for="elemento in preview_elementos"
+					:key="elemento.id"
+					:class="elemento.clase"
+					:style="elemento.style">{{ elemento.texto }}</div>
 				</div>
 			</div>
+			<p
+			v-if="preview_nota"
+			class="etiqueta-preview-nota small text-muted text-center m-b-20">
+				{{ preview_nota }}
+			</p>
+			<div
+			v-else
+			class="m-b-20"></div>
 
 			<div class="d-flex justify-content-end">
 				<b-button
@@ -268,13 +291,29 @@
 import axios from 'axios'
 import draggable from 'vuedraggable'
 import { env } from '@/runtime_config'
+import {
+	MM_POR_PT,
+	calcular_disposicion,
+	frases_de_ajuste,
+	resolver_codigo_barras_alto,
+	resolver_interlineado,
+	resolver_propiedades,
+	textos_de_articulo,
+	tiene_codigo_de_barras,
+} from '@/components/listado/components/selected-filtered-options/etiquetas-individuales/disposicion'
+
+/** Interlineado por defecto entre bloques (mm), igual que el PDF. */
+const DEFAULT_INTERLINEADO = 1
+
+/** Ancho máximo de la vista previa, en px. */
+const PREVIEW_ANCHO_MAXIMO_PX = 260
+
+/** Alto máximo de la vista previa, en px. */
+const PREVIEW_ALTO_MAXIMO_PX = 170
 
 /**
  * Propiedades que el usuario puede incluir en la etiqueta (clave API / PDF).
  */
-/** Interlineado por defecto entre bloques (px), igual que el PDF. */
-const DEFAULT_INTERLINEADO = 1
-
 const PROPIEDADES_DISPONIBLES = [
 	{ key: 'nombre', label: 'Nombre' },
 	{ key: 'codigo_barras', label: 'Código de barras' },
@@ -317,6 +356,8 @@ export default {
 			propiedades_items: [],
 			codigo_barras_alto: 10,
 			interlineado: DEFAULT_INTERLINEADO,
+			// Posición (en articulos_seleccionados) del artículo que muestra la vista previa
+			preview_indice: 0,
 		}
 	},
 	watch: {
@@ -325,6 +366,12 @@ export default {
 		 */
 		medida_seleccionada_id() {
 			this.aplicar_default_codigo_barras_alto()
+		},
+		/**
+		 * Con otra selección de artículos, la vista previa vuelve al primero.
+		 */
+		articulos_seleccionados() {
+			this.preview_indice = 0
 		},
 	},
 	computed: {
@@ -357,20 +404,157 @@ export default {
 			return found
 		},
 		/**
-		 * Escala proporcional del preview (máx. 200px de ancho).
+		 * Ancho de la etiqueta en mm, entero como lo toma el PDF.
+		 *
+		 * @returns {number}
+		 */
+		preview_ancho_mm() {
+			if (!this.medida_seleccionada) {
+				return 0
+			}
+			return parseInt(this.medida_seleccionada.ancho, 10) || 0
+		},
+		/**
+		 * Alto de la etiqueta en mm, entero como lo toma el PDF.
+		 *
+		 * @returns {number}
+		 */
+		preview_alto_mm() {
+			if (!this.medida_seleccionada) {
+				return 0
+			}
+			return parseInt(this.medida_seleccionada.alto, 10) || 0
+		},
+		/**
+		 * Escala de la vista previa, en px por mm: la etiqueta entera entra en 260 × 170 px.
+		 *
+		 * @returns {number}
+		 */
+		preview_escala() {
+			if (!this.preview_ancho_mm || !this.preview_alto_mm) {
+				return 1
+			}
+			return Math.min(PREVIEW_ANCHO_MAXIMO_PX / this.preview_ancho_mm, PREVIEW_ALTO_MAXIMO_PX / this.preview_alto_mm)
+		},
+		/**
+		 * Tamaño de la caja de la vista previa: la etiqueta a escala, sin padding (el borde va por fuera).
+		 *
+		 * @returns {object}
 		 */
 		preview_box_style() {
-			if (!this.medida_seleccionada) {
+			if (!this.preview_ancho_mm || !this.preview_alto_mm) {
 				return { width: '120px', height: '60px' }
 			}
-			let max_width = 200
-			let ancho = this.medida_seleccionada.ancho
-			let alto = this.medida_seleccionada.alto
-			let escala = max_width / ancho
 			return {
-				width: Math.round(ancho * escala) + 'px',
-				height: Math.round(alto * escala) + 'px',
+				width: (this.preview_ancho_mm * this.preview_escala) + 'px',
+				height: (this.preview_alto_mm * this.preview_escala) + 'px',
 			}
+		},
+		/**
+		 * Artículo real que muestra la vista previa (el del paginador).
+		 *
+		 * @returns {object|null}
+		 */
+		preview_articulo() {
+			if (!this.articulos_seleccionados.length) {
+				return null
+			}
+			if (this.preview_indice >= 0 && this.preview_indice < this.articulos_seleccionados.length) {
+				return this.articulos_seleccionados[this.preview_indice]
+			}
+			return this.articulos_seleccionados[0]
+		},
+		/**
+		 * Alto del código de barras que va a pedir el PDF, resuelto como en la API (vacío → default de la medida).
+		 *
+		 * @returns {number}
+		 */
+		preview_codigo_alto_pedido() {
+			return resolver_codigo_barras_alto(this.codigo_barras_alto, this.preview_alto_mm)
+		},
+		/**
+		 * Disposición de la etiqueta del artículo de la vista previa: la misma que calcula el PDF con la
+		 * medida, las fuentes, la negrita, el orden, el código y el interlineado elegidos.
+		 *
+		 * @returns {object|null} null si todavía no hay medida, propiedades o artículo.
+		 */
+		preview_disposicion() {
+			if (!this.preview_ancho_mm || !this.preview_alto_mm || !this.propiedades_items.length || !this.preview_articulo) {
+				return null
+			}
+			return calcular_disposicion({
+				ancho: this.preview_ancho_mm,
+				alto: this.preview_alto_mm,
+				propiedades: resolver_propiedades(this.propiedades_items),
+				codigo_alto: this.preview_codigo_alto_pedido,
+				interlineado: resolver_interlineado(this.interlineado),
+				textos: textos_de_articulo(this.preview_articulo, this.owner),
+				tiene_codigo: tiene_codigo_de_barras(this.preview_articulo),
+			})
+		},
+		/**
+		 * Elementos a dibujar en la caja (una entrada por línea de texto y una por código de barras),
+		 * en posición absoluta y en px.
+		 *
+		 * @returns {Array<{id: string, clase: string, texto: string, style: object}>}
+		 */
+		preview_elementos() {
+			let elementos = []
+			// Disposición calculada (en mm)
+			let disposicion = this.preview_disposicion
+			if (!disposicion) {
+				return elementos
+			}
+			// px por mm
+			let escala = this.preview_escala
+			// Ancho de cada línea de texto: la etiqueta entera, como la Cell del PDF
+			let ancho_linea_px = this.preview_ancho_mm * escala
+			disposicion.bloques.forEach(bloque => {
+				if (bloque.tipo === 'codigo') {
+					elementos.push({
+						id: 'codigo-' + bloque.key,
+						clase: 'etiqueta-preview-codigo',
+						texto: '',
+						style: {
+							top: (bloque.y * escala) + 'px',
+							left: (bloque.x * escala) + 'px',
+							width: (bloque.ancho * escala) + 'px',
+							height: (bloque.alto * escala) + 'px',
+						},
+					})
+					return
+				}
+				// Letra en px: pt → mm → px
+				let letra_px = bloque.tamano * MM_POR_PT * escala
+				// Alto de cada línea en px
+				let alto_linea_px = bloque.alto_linea * escala
+				bloque.lineas.forEach((linea, indice) => {
+					elementos.push({
+						id: bloque.key + '-' + indice,
+						clase: 'etiqueta-preview-linea',
+						texto: linea,
+						style: {
+							top: ((bloque.y + indice * bloque.alto_linea) * escala) + 'px',
+							left: '0px',
+							width: ancho_linea_px + 'px',
+							height: alto_linea_px + 'px',
+							lineHeight: alto_linea_px + 'px',
+							fontSize: letra_px + 'px',
+							fontWeight: bloque.negrita ? 'bold' : 'normal',
+						},
+					})
+				})
+			})
+			return elementos
+		},
+		/**
+		 * Nota debajo de la vista previa cuando el PDF tuvo que ajustar la etiqueta para que entre.
+		 *
+		 * @returns {string} Vacío si no hubo ajuste.
+		 */
+		preview_nota() {
+			let frases = frases_de_ajuste(this.preview_disposicion, this.preview_codigo_alto_pedido, key => this.label_propiedad(key))
+			return frases.join(' ')
 		},
 		/**
 		 * Valida que haya artículos, medida y al menos una propiedad.
@@ -404,28 +588,6 @@ export default {
 				return '10'
 			}
 			return String(this.calcular_default_codigo_barras_alto(this.medida_seleccionada.alto))
-		},
-		/**
-		 * Escala del preview respecto a la medida real (para márgenes proporcionales).
-		 */
-		preview_escala() {
-			if (!this.medida_seleccionada) {
-				return 1
-			}
-			return 200 / this.medida_seleccionada.ancho
-		},
-		/**
-		 * Centra el bloque de contenido en el preview (como el PDF).
-		 */
-		preview_content_style() {
-			return {
-				display: 'flex',
-				flexDirection: 'column',
-				justifyContent: 'center',
-				alignItems: 'center',
-				width: '100%',
-				height: '100%',
-			}
 		},
 	},
 	methods: {
@@ -497,32 +659,29 @@ export default {
 			this.aplicar_default_codigo_barras_alto()
 		},
 		/**
-		 * Estilo de cada línea del preview (espacio e alto de barras).
-		 *
-		 * @param {string} key
-		 * @returns {object}
-		 */
-		preview_line_style(item) {
-			let margin_px = Math.round((this.interlineado || 0) * this.preview_escala)
-			let style = {
-				marginBottom: margin_px + 'px',
-			}
-			if (item.key === 'codigo_barras') {
-				let alto_px = Math.round((this.codigo_barras_alto || 10) * this.preview_escala)
-				style.minHeight = alto_px + 'px'
-				style.display = 'flex'
-				style.alignItems = 'center'
-				style.justifyContent = 'center'
-			}
-			return style
-		},
-		/**
-		 * Al abrir el modal, recarga medidas desde la API.
+		 * Al abrir el modal, recarga medidas desde la API y la vista previa vuelve al primer artículo.
 		 */
 		on_modal_show() {
+			this.preview_indice = 0
 			this.aplicar_valores_por_defecto_impresion()
 			this.inicializar_propiedades_items()
 			this.cargar_medidas()
+		},
+		/**
+		 * Muestra en la vista previa el artículo anterior de la selección.
+		 */
+		preview_articulo_anterior() {
+			if (this.preview_indice > 0) {
+				this.preview_indice--
+			}
+		},
+		/**
+		 * Muestra en la vista previa el artículo siguiente de la selección.
+		 */
+		preview_articulo_siguiente() {
+			if (this.preview_indice < this.articulos_seleccionados.length - 1) {
+				this.preview_indice++
+			}
 		},
 		/**
 		 * Restaura propiedades activas con estilos por defecto.
@@ -584,19 +743,6 @@ export default {
 				}
 			})
 			return found
-		},
-		/**
-		 * Estilo de texto en el preview según fuente y negrita del campo.
-		 *
-		 * @param {object} item
-		 * @returns {object}
-		 */
-		preview_text_style(item) {
-			let font_px = Math.max(7, Math.round((item.font_size || 10) * this.preview_escala))
-			return {
-				fontSize: font_px + 'px',
-				fontWeight: item.negrita ? 'bold' : 'normal',
-			}
 		},
 		/**
 		 * GET /api/etiqueta-medidas
@@ -722,24 +868,6 @@ export default {
 			return label
 		},
 		/**
-		 * Texto de ejemplo para el preview según la propiedad.
-		 */
-		preview_texto_propiedad(key) {
-			if (key === 'nombre') {
-				return 'Nombre del artículo'
-			}
-			if (key === 'precio') {
-				return '$ 1.234,00'
-			}
-			if (key === 'fecha_actual') {
-				return new Date().toLocaleDateString('es-AR')
-			}
-			if (key === 'nombre_negocio') {
-				return (this.owner && this.owner.company_name) ? this.owner.company_name : 'Mi negocio'
-			}
-			return this.label_propiedad(key)
-		},
-		/**
 		 * Abre el PDF con ids, medida y propiedades en query string.
 		 */
 		generar_pdf() {
@@ -781,25 +909,36 @@ export default {
 .etiqueta-preview-wrapper
 	min-height: 80px
 
+// La etiqueta a escala: sin padding (el borde va por fuera) y como papel, también en tema oscuro
 .etiqueta-preview-box
-	border: 1px dashed rgba(0, 0, 0, .4)
-	background: #fafafa
-	padding: 4px
+	position: relative
 	overflow: hidden
+	box-sizing: content-box
+	padding: 0
+	flex-shrink: 0
+	border: 1px dashed rgba(0, 0, 0, .4)
+	background: #fff
+	color: #000
+	font-family: Arial, Helvetica, 'Liberation Sans', sans-serif
 
-.etiqueta-preview-content
-	box-sizing: border-box
-
-.etiqueta-preview-line
-	font-size: 10px
-	line-height: 1.2
+// Cada línea de texto ocupa el ancho de la etiqueta, centrada, en la `y` que calculó la disposición
+.etiqueta-preview-linea
+	position: absolute
+	margin: 0
+	padding: 0
+	white-space: nowrap
 	text-align: center
-	width: 100%
-	word-break: break-word
+	color: #000
 
-.etiqueta-preview-barcode
-	font-size: 9px
-	letter-spacing: 1px
+// El código de barras: barras dibujadas por CSS del tamaño que tiene en el PDF
+.etiqueta-preview-codigo
+	position: absolute
+	background: repeating-linear-gradient(90deg, #000 0, #000 2px, #fff 2px, #fff 3px, #000 3px, #000 4px, #fff 4px, #fff 6px, #000 6px, #000 9px, #fff 9px, #fff 10px, #000 10px, #000 11px, #fff 11px, #fff 13px)
+
+.etiqueta-preview-nota
+	max-width: 420px
+	margin-left: auto
+	margin-right: auto
 
 .propiedades-orden-table-wrapper
 	border-radius: 4px
