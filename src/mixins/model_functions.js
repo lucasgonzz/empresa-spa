@@ -267,6 +267,11 @@ export default {
                     pivot: {
                         incluir_en_excel_para_clientes: price_type.incluir_en_lista_de_precios_de_excel,
                         setear_precio_final: price_type.setear_precio_final,
+                        // Mision catalogo-por-lista-tienda (5/10/2026): un articulo nuevo nace sin
+                        // habilitar en la tienda para ninguna lista. Mismo default que el otro
+                        // constructor de este pivote (init_article_price_type de
+                        // components/listado/components/price-type-input/Index.vue).
+                        visible_en_tienda: 0,
                     }
                 })
             })

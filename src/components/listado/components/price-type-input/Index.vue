@@ -26,6 +26,44 @@
 			:price_type_store="price_type_store"
 			:article_price_type="article_price_type"></options-price-type>
 		</div>
+
+		<!--
+			Mision catalogo-por-lista-tienda (5/10/2026): "Visible en la tienda para esta lista".
+			Escribe `pivot.visible_en_tienda` del articulo para ESTA lista (columna
+			`article_price_type.visible_en_tienda`, contrato C1): con la lista restringida, la
+			tienda le muestra el articulo a los compradores de esta lista solo si esta en 1.
+
+			🔴 Va aca, DESPUES del v-if/v-else, y no adentro de OptionsPriceType: asi el mismo bloque
+			cubre las dos ramas, la normal y la de `ventas_en_dolares` (PriceTypeMonedas, que ni
+			siquiera recibe `price_type_store` y no se toca).
+
+			Solo aparece con la extension `online` Y la lista restringida (ver
+			`mostrar_visible_en_tienda`): una cuenta sin tienda, o una lista sin restriccion, ve la
+			tarjeta exactamente como antes.
+
+			🔴 El `data-testid` va en el div envolvente y NO en el b-form-checkbox: ese componente
+			baja los atributos sueltos al <input>, que en Bootstrap 4 es el control invisible detras
+			del label (mismo problema que se midio con el `data-tour` de PriceTypeMonedas). El
+			discriminante va ADELANTE y el id de la lista al final: la tarjeta se dibuja una vez por
+			lista, asi que cada valor sale una sola vez en pantalla.
+		-->
+		<div
+		v-if="mostrar_visible_en_tienda"
+		:data-testid="'visible-en-tienda-lista-'+price_type.id"
+		class="price-type-card__tienda"
+		:class="{ 'price-type-card__tienda--separada': tienda_lleva_separador }">
+			<b-form-checkbox
+			variant="success"
+			:value="1"
+			:unchecked-value="0"
+			v-model="article_price_type.pivot.visible_en_tienda"
+			size="sm">
+				Visible en la tienda para esta lista
+			</b-form-checkbox>
+			<div class="price-type-card__tienda-ayuda">
+				Esta lista muestra en la tienda solo los artículos habilitados
+			</div>
+		</div>
 	</div>
 </template>
 <script>
@@ -63,6 +101,43 @@ export default {
 		},
 		price_type_store() {
 			return this.$store.state.price_type.models.find(p => p.id == this.price_type.id)
+		},
+		/**
+		 * ¿Se muestra el check "Visible en la tienda para esta lista"? (mision catalogo-por-lista-tienda)
+		 *
+		 * Solo si la cuenta tiene tienda (`online`) y ESTA lista esta restringida en la tienda. Con
+		 * cualquiera de las dos en falso la tarjeta queda como estaba.
+		 *
+		 * 🔴 Comparacion SUELTA (`== 1`) a proposito: la columna llega de la API como 0/1, null o
+		 * string ("1") segun el driver. Con `=== 1` un "1" string esconderia el check. Nunca
+		 * `!= 0`: NULL tambien es "sin restriccion" (contrato C1).
+		 *
+		 * @returns {Boolean}
+		 */
+		mostrar_visible_en_tienda() {
+			if (!this.hasExtencion('online') || !this.price_type_store) {
+				return false
+			}
+			return this.price_type_store.catalogo_restringido_en_tienda == 1
+		},
+		/**
+		 * ¿El bloque de la tienda lleva su propia linea separadora arriba?
+		 *
+		 * Se busca no apilar dos separadores ni dejar el check pegado a los datos calculados:
+		 * - con `ventas_en_dolares` lo que queda arriba es el <hr> con el que PriceTypeMonedas
+		 *   cierra cada moneda: ya hay separador;
+		 * - con "Incluir en Excel" visible (OptionsPriceType, extension
+		 *   `elegir_si_incluir_lista_de_precios_de_excel`), ese bloque ya trae su linea arriba y
+		 *   los dos checks quedan juntos debajo de ella, como un solo grupo de opciones;
+		 * - si no hay ninguna de las dos, arriba quedan los datos calculados y la linea hace falta.
+		 *
+		 * @returns {Boolean}
+		 */
+		tienda_lleva_separador() {
+			if (this.hasExtencion('ventas_en_dolares')) {
+				return false
+			}
+			return !this.hasExtencion('elegir_si_incluir_lista_de_precios_de_excel')
 		},
 		indicar_percentage() {
 			if (this.article_price_type.pivot.setear_precio_final) {
@@ -115,7 +190,16 @@ export default {
 						percentage: '',
 						final_price: '',
 						setear_precio_final: this.price_type_store.setear_precio_final,
-						incluir_en_excel_para_clientes: 1
+						incluir_en_excel_para_clientes: 1,
+						/*
+							Mision catalogo-por-lista-tienda (5/10/2026): un articulo NUEVO arranca sin
+							habilitar en la tienda para ninguna lista (decision de Lucas: en una lista
+							restringida los articulos nacen sin habilitar). Va en 0 y no ausente para
+							que el check arranque destildado y el valor viaje explicito; en una lista
+							sin restriccion el 0 no cambia nada. El otro constructor de este pivote en
+							memoria (set_article_price_types de mixins/model_functions.js) hace lo mismo.
+						*/
+						visible_en_tienda: 0
 					}
 				}
 			}
@@ -263,6 +347,23 @@ html.dark-mode
 
 	.price-type-card__excel
 		margin-top: 8px
+		padding-top: 8px
+		border-top: 1px solid var(--color-border-secondary, rgba(0, 0, 0, .08))
+
+	// "Visible en la tienda para esta lista" (mision catalogo-por-lista-tienda). Hermano de
+	// __excel pero SIN linea propia por defecto: la lleva solo con el modificador --separada, que
+	// decide `tienda_lleva_separador` (con "Incluir en Excel" arriba o con el <hr> de las monedas
+	// ya hay una, y dos seguidas se leen como un corte de mas).
+	.price-type-card__tienda
+		width: 100%
+		margin-top: 8px
+
+		.price-type-card__tienda-ayuda
+			font-size: 0.75em
+			color: var(--color-text-secondary, rgba(0, 0, 0, .55))
+			margin-top: 2px
+
+	.price-type-card__tienda--separada
 		padding-top: 8px
 		border-top: 1px solid var(--color-border-secondary, rgba(0, 0, 0, .08))
 
