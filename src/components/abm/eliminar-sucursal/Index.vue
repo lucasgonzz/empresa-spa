@@ -146,12 +146,12 @@ data-testid="modal-eliminar-sucursal"
 				{{ texto_stock }}
 			</p>
 			<p
-			v-if="Number(stock.filas_negativas) > 0"
+			v-if="Number(resumen_de_stock.filas_negativas) > 0"
 			class="eliminar-sucursal__nota">
 				{{ texto_stock_negativo }}
 			</p>
 			<p
-			v-if="Number(stock.articulos_en_papelera) > 0"
+			v-if="Number(resumen_de_stock.articulos_en_papelera) > 0"
 			class="eliminar-sucursal__nota">
 				{{ texto_stock_en_papelera }}
 			</p>
@@ -217,7 +217,7 @@ data-testid="modal-eliminar-sucursal"
 				class="eliminar-sucursal__alerta"
 				data-testid="eliminar-sucursal-aviso-descartar">
 					El stock total de cada artículo baja en lo que tenía esta sucursal. Queda un movimiento "Eliminación de sucursal" en cada artículo.
-					<template v-if="Number(stock.filas_negativas) > 0">
+					<template v-if="Number(resumen_de_stock.filas_negativas) > 0">
 						Los que tenían stock negativo acá suben en esa cantidad.
 					</template>
 				</b-alert>
@@ -444,8 +444,17 @@ export default {
 		es_la_ultima() {
 			return !!(this.resumen && this.resumen.es_la_ultima) || !this.otras_sucursales.length
 		},
-		/* El stock de la sucursal, con ceros por defecto para que el template no pregunte por cada clave. */
-		stock() {
+		/*
+			El stock de la sucursal, con ceros por defecto para que el template no pregunte por cada clave.
+
+			🔴 NO se llama `stock` a propósito: mixins/generals.js (mixin GLOBAL, ver `stock(article, formated)`)
+			ya define un MÉTODO con ese nombre en todos los componentes, y Vue descarta la computada que
+			choca ("The computed property "stock" is already defined as a method"): `this.stock` pasaba a
+			ser esa función y `this.stock.filas` daba undefined, o sea que el resumen no mostraba el stock.
+			Se vio en la verificación en vivo del 5/10/2026 (en los tests de lógica sin DOM no se nota
+			porque no cargan el mixin global).
+		*/
+		resumen_de_stock() {
 			return Object.assign({
 				articulos: 0,
 				variantes: 0,
@@ -458,7 +467,7 @@ export default {
 		},
 		/* `filas` cuenta renglones de stock de artículos Y de variantes con cantidad distinta de cero. */
 		hay_stock() {
-			return Number(this.stock.filas) > 0
+			return Number(this.resumen_de_stock.filas) > 0
 		},
 		usuarios() {
 			return this.resumen && Array.isArray(this.resumen.usuarios) ? this.resumen.usuarios : []
@@ -629,20 +638,20 @@ export default {
 		/* Textos del resumen en criollo */
 		texto_stock() {
 			let partes = []
-			if (Number(this.stock.articulos) > 0) {
-				partes.push(this.cantidad_y_texto(this.stock.articulos, 'artículo', 'artículos'))
+			if (Number(this.resumen_de_stock.articulos) > 0) {
+				partes.push(this.cantidad_y_texto(this.resumen_de_stock.articulos, 'artículo', 'artículos'))
 			}
-			if (Number(this.stock.variantes) > 0) {
-				partes.push(this.cantidad_y_texto(this.stock.variantes, 'variante', 'variantes'))
+			if (Number(this.resumen_de_stock.variantes) > 0) {
+				partes.push(this.cantidad_y_texto(this.resumen_de_stock.variantes, 'variante', 'variantes'))
 			}
-			return 'Tiene stock en ' + partes.join(' y ') + ' (' + this.texto_de_unidades(this.stock.unidades) + ' en total).'
+			return 'Tiene stock en ' + partes.join(' y ') + ' (' + this.texto_de_unidades(this.resumen_de_stock.unidades) + ' en total).'
 		},
 		texto_stock_negativo() {
-			return 'Hay ' + this.cantidad_y_texto(this.stock.filas_negativas, 'artículo o variante con stock negativo', 'artículos o variantes con stock negativo')
-				+ ' (' + this.texto_de_unidades(this.stock.unidades_negativas) + '). Si pasás el stock a otra sucursal, la de destino baja lo mismo.'
+			return 'Hay ' + this.cantidad_y_texto(this.resumen_de_stock.filas_negativas, 'artículo o variante con stock negativo', 'artículos o variantes con stock negativo')
+				+ ' (' + this.texto_de_unidades(this.resumen_de_stock.unidades_negativas) + '). Si pasás el stock a otra sucursal, la de destino baja lo mismo.'
 		},
 		texto_stock_en_papelera() {
-			return 'De esos, ' + this.cantidad_y_texto(this.stock.articulos_en_papelera, 'artículo está', 'artículos están')
+			return 'De esos, ' + this.cantidad_y_texto(this.resumen_de_stock.articulos_en_papelera, 'artículo está', 'artículos están')
 				+ ' en la papelera: su stock también se mueve, pero no queda un movimiento en su historial.'
 		},
 		nombres_de_usuarios() {
