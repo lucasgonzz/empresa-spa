@@ -154,6 +154,12 @@ const REFRESCO_MS = 30000
 const ESPERA_SINCRONIZACION_MS = 600
 
 /**
+ * Las acciones de Vuex que vuelven a traer las categorías y las subcategorías del negocio a la sesión (las
+ * mismas que pide `update_articles_after_import` de mixins/global_notification_functions.js).
+ */
+const ACCIONES_QUE_RECARGAN_CATEGORIAS = ['category/getModels', 'sub_category/getModels']
+
+/**
  * Sub-solapa Categorías de Alertas → Catálogo (misión categorizacion-tres-modelos, 5/10/2026): el
  * dueño ve los sistemas de categorías que ComercioCity armó con IA para su catálogo, elige el que más
  * le gusta y revisa lo que la IA no tenía claro.
@@ -213,6 +219,11 @@ export default {
 			timer_refresco: null,
 			/** Timer de la sincronización después de revisar (ver `al_revisar`). */
 			timer_sincronizacion: null,
+			/**
+			 * true si se aprobó algo y todavía no se volvieron a pedir las categorías de la sesión (ver
+			 * `refrescar_categorias_de_la_sesion`): aprobar puede crear categorías y subcategorías.
+			 */
+			categorias_por_refrescar: false,
 		}
 	},
 	computed: {
@@ -481,16 +492,44 @@ export default {
 			}, REFRESCO_MS)
 		},
 		/**
-		 * Vuelve a pedir lo que cambia con una elección o un cambio de sistema: la corrida vigente y el
-		 * número rojo. Las dos acciones resuelven siempre.
+		 * Vuelve a pedir lo que cambia con una elección o un cambio de sistema: la corrida vigente, el
+		 * número rojo y las categorías de la sesión. Las dos primeras acciones resuelven siempre.
+		 *
+		 * Las categorías de la sesión se piden de fondo y no se esperan (ver
+		 * `refrescar_categorias_de_la_sesion`): el cargando global no tiene por qué seguir prendido por
+		 * ellas. Se piden también después de un pedido que falló, porque si falló por tiempo de espera o
+		 * por un error del servidor puede haberse aplicado igual.
 		 *
 		 * @returns {Promise}
 		 */
 		recargar_todo() {
+			this.refrescar_categorias_de_la_sesion()
 			return Promise.all([
 				this.$store.dispatch('category_proposal/get_actual'),
 				this.$store.dispatch('category_proposal/get_resumen'),
 			])
+		},
+		/**
+		 * Vuelve a pedir las categorías y subcategorías de la sesión (los stores `category` y
+		 * `sub_category`).
+		 *
+		 * 🔴 B-08: elegir, volver atrás y aprobar crean o quitan categorías y subcategorías REALES, pero
+		 * esos stores se cargan una sola vez y no se enteran: los filtros del Listado y los selects de la
+		 * ficha de un artículo seguían mostrando lo de antes (faltaban las nuevas y sobraban las que
+		 * fueron a la papelera). Es el mismo pedido que hace `update_articles_after_import` después de
+		 * importar artículos.
+		 *
+		 * Es silencioso y de fondo: no espera la respuesta, no muestra ningún aviso y, si algo falla, no
+		 * rompe la pantalla (las acciones del store atrapan sus errores; el `catch` es por si un store no
+		 * tuviera la acción).
+		 */
+		refrescar_categorias_de_la_sesion() {
+			let self = this
+			ACCIONES_QUE_RECARGAN_CATEGORIAS.forEach(function (accion) {
+				Promise.resolve(self.$store.dispatch(accion)).catch(function (err) {
+					console.log(err)
+				})
+			})
 		},
 		/**
 		 * Se tocó "Elegir este" en una tarjeta: abre la confirmación con los números. Si ya hay una
@@ -644,8 +683,18 @@ export default {
 		 * La revisión aprobó o rechazó algo: se piden los números frescos (número rojo y, si todavía se
 		 * podía cambiar de sistema, la corrida: la API deja de permitirlo con la primera revisión). Un
 		 * rato después de la última acción, para pedirlo una sola vez al final de la racha.
+		 *
+		 * Si lo que se hizo fue aprobar, también se anota que hay que volver a pedir las categorías de la
+		 * sesión: aprobar crea la categoría o subcategoría sugerida si todavía no existía. Rechazar no
+		 * crea nada, así que no lo pide. Con el mismo retraso, de a muchos o de a uno, se pide UNA sola
+		 * vez al final.
+		 *
+		 * @param {Object} [detalle] `{accion}` de lo que se hizo (aprobar | rechazar), como lo manda la revisión.
 		 */
-		al_revisar() {
+		al_revisar(detalle) {
+			if (detalle && detalle.accion === 'aprobar') {
+				this.categorias_por_refrescar = true
+			}
 			clearTimeout(this.timer_sincronizacion)
 			this.timer_sincronizacion = setTimeout(() => {
 				this.timer_sincronizacion = null
@@ -655,12 +704,17 @@ export default {
 		/**
 		 * Pide el número rojo y, solo si el cartel todavía ofrece "Cambiar de sistema", la corrida (que
 		 * es lo único que puede cambiar ahí). Después de la primera revisión `puede_cambiar` es false y
-		 * deja de pedirse: la corrida entera trae todos los árboles y no hace falta repetirla.
+		 * deja de pedirse: la corrida entera trae todos los árboles y no hace falta repetirla. Si se
+		 * aprobó algo, también vuelve a pedir las categorías de la sesión (B-08).
 		 */
 		sincronizar() {
 			this.$store.dispatch('category_proposal/get_resumen')
 			if (this.run && this.run.puede_cambiar) {
 				this.$store.dispatch('category_proposal/get_actual')
+			}
+			if (this.categorias_por_refrescar) {
+				this.categorias_por_refrescar = false
+				this.refrescar_categorias_de_la_sesion()
 			}
 		},
 		/**

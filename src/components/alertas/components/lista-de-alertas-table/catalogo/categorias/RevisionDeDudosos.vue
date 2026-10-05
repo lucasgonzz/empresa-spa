@@ -144,7 +144,9 @@ const SOLAPAS_VALIDAS = ['a_revisar', 'asignados', 'sin_categoria']
  * Props: `run_id` (la corrida elegida), `conteos` (los vivos que mantiene el store) y
  * `puede_gestionar`. Evento: `revisado`, cada vez que se aprobó o rechazó algo, para que Index.vue
  * refresque el número rojo y el cartel de arriba (después del primer aprobado ya no se puede cambiar
- * de sistema).
+ * de sistema). Va con `{ accion }` (aprobar | rechazar): aprobar puede crear categorías y subcategorías
+ * reales, y Index.vue vuelve a pedir las de la sesión (B-08); rechazar no crea nada. Sale también si el
+ * pedido falló, porque un fallo por tiempo de espera puede haberse aplicado igual.
  */
 export default {
 	components: {
@@ -561,7 +563,7 @@ export default {
 				if (self.solapa === solapa_de_la_accion) {
 					self.sacar_item(item.id)
 				}
-				self.$emit('revisado')
+				self.$emit('revisado', { accion: accion })
 				return true
 			})
 			.catch(err => {
@@ -570,7 +572,7 @@ export default {
 				if (!es_cancelacion(err) && self.solapa === solapa_de_la_accion) {
 					self.cargar_items({ silencioso: true })
 				}
-				self.$emit('revisado')
+				self.$emit('revisado', { accion: accion })
 				return false
 			})
 		},
@@ -645,7 +647,7 @@ export default {
 					self.avisar_resultado_del_lote(accion, respuesta)
 					self.seleccionados = []
 					self.cargar_items()
-					self.$emit('revisado')
+					self.$emit('revisado', { accion: accion })
 				})
 				.catch(err => {
 					console.log(err)
@@ -655,7 +657,7 @@ export default {
 					if (!es_cancelacion(err)) {
 						self.cargar_items({ silencioso: true })
 					}
-					self.$emit('revisado')
+					self.$emit('revisado', { accion: accion })
 				})
 			})
 		},
