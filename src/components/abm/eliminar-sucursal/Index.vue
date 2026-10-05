@@ -687,7 +687,16 @@ export default {
 			}
 			let ultimo = partes.pop()
 			let lista = partes.length ? partes.join(', ') + ' y ' + ultimo : ultimo
-			return 'Tiene ' + lista + ' asignados a esta sucursal.'
+			// Concordancia del participio: con UNA sola cosa va en su género ("1 caja asignada", "1 cliente
+			// asignado"); con varias de géneros distintos, "asignados" (el masculino plural que ya usaba).
+			let total = this.cantidad_de_cajas + this.cantidad_de_puntos_de_venta + this.cantidad_de_clientes
+			let participio = 'asignados'
+			if (total === 1) {
+				participio = this.cantidad_de_cajas > 0 ? 'asignada' : 'asignado'
+			} else if (this.cantidad_de_cajas > 0 && !this.cantidad_de_puntos_de_venta && !this.cantidad_de_clientes) {
+				participio = 'asignadas'
+			}
+			return 'Tiene ' + lista + ' ' + participio + ' a esta sucursal.'
 		},
 	},
 	watch: {
