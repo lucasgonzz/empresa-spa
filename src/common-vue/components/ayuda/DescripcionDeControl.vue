@@ -7,7 +7,7 @@
 	triggers=""
 	:placement="placement"
 	boundary="window"
-	custom-class="descripcion-de-control-popover">
+	:custom-class="clases_popover">
 		<div
 		class="descripcion-de-control-popover__inner"
 		@mouseenter="cancelar_ocultar()"
@@ -105,14 +105,41 @@ function lado_pedido(el) {
 	return LADOS_VALIDOS.indexOf(pedido) !== -1 ? pedido : LADO_POR_DEFECTO
 }
 
+/*
+	Si la ayuda del control es interactiva (se puede pasar el mouse a ella para leerla o
+	scrollearla) o no. Por defecto lo es; un control la pide NO interactiva con el atributo
+	`data-ayuda-no-interactiva` (sin valor).
+
+	Para qué sirve (misión ayuda-eliminar-individual-y-masivo, 5/10/2026). Adentro de un menú
+	desplegable el popover puede no entrar a ningún costado (BootstrapVue deja 50 px de margen
+	contra el borde de la ventana: en una tablet o un teléfono el menú ocupa casi todo el ancho),
+	se da vuelta y queda ENCIMA de las otras opciones del menú. Interactivo, si el mouse pasa del
+	ítem al popover este no se cierra y se come el clic de la opción de abajo: la misma clase de
+	defecto que el globo de DropdownOptionItem (misión tooltip-eliminar-tapa-facturar). No
+	interactivo, el popover lleva `pointer-events: none`: se superpone igual, pero no intercepta
+	nada, el mouse nunca "entra" a él y se cierra solo al salir del control. Es opt-in: un
+	control sin el atributo sigue igual que antes.
+*/
+const ATRIBUTO_NO_INTERACTIVA = 'data-ayuda-no-interactiva'
+
+/**
+ * Si el control deja que su ayuda reciba el mouse: false cuando trae `data-ayuda-no-interactiva`.
+ *
+ * @param {HTMLElement} el Control que tiene el data-testid.
+ * @returns {Boolean}
+ */
+function ayuda_interactiva(el) {
+	return !(el && typeof el.hasAttribute == 'function' && el.hasAttribute(ATRIBUTO_NO_INTERACTIVA))
+}
+
 export default {
 	name: 'DescripcionDeControl',
 	data() {
 		return {
 			/*
 				El control que tiene la descripción abierta (o a punto de abrirse):
-				{ el: HTMLElement, testid: String, descripcion: Object, placement: String }.
-				Es null cuando no hay ninguno.
+				{ el: HTMLElement, testid: String, descripcion: Object, placement: String,
+				interactiva: Boolean }. Es null cuando no hay ninguno.
 			*/
 			control_activo: null,
 			visible: false,
@@ -132,6 +159,19 @@ export default {
 		 */
 		placement() {
 			return this.control_activo && this.control_activo.placement ? this.control_activo.placement : LADO_POR_DEFECTO
+		},
+		/**
+		 * Clases del popover del control activo: la de siempre, más la que le saca el mouse
+		 * cuando el control pidió la ayuda no interactiva (ver ATRIBUTO_NO_INTERACTIVA).
+		 *
+		 * @returns {Array}
+		 */
+		clases_popover() {
+			let clases = ['descripcion-de-control-popover']
+			if (this.control_activo && this.control_activo.interactiva === false) {
+				clases.push('descripcion-de-control-popover--no-interactiva')
+			}
+			return clases
 		},
 	},
 	mounted() {
@@ -167,7 +207,7 @@ export default {
 		 * documentado todavía --que es el caso de la enorme mayoría de los controles--.
 		 *
 		 * @param {EventTarget} target Elemento donde ocurrió el evento.
-		 * @returns {Object|null} { el, testid, descripcion, placement } o null.
+		 * @returns {Object|null} { el, testid, descripcion, placement, interactiva } o null.
 		 */
 		control_documentado(target) {
 			if (!target || typeof target.closest != 'function') {
@@ -182,7 +222,13 @@ export default {
 			if (!descripcion) {
 				return null
 			}
-			return { el: el, testid: testid, descripcion: descripcion, placement: lado_pedido(el) }
+			return {
+				el: el,
+				testid: testid,
+				descripcion: descripcion,
+				placement: lado_pedido(el),
+				interactiva: ayuda_interactiva(el),
+			}
 		},
 		al_entrar(event) {
 			let control = this.control_documentado(event.target)
@@ -278,6 +324,16 @@ export default {
 		&.show
 			opacity: 1
 			transform: scale(1) translateY(0)
+
+// Ayuda pedida NO interactiva con data-ayuda-no-interactiva (ver ATRIBUTO_NO_INTERACTIVA):
+// el popover entero deja pasar el mouse, asi que no puede tapar ni interceptar el clic de lo que
+// queda debajo cuando se superpone a un menu. !important para que alcance tambien a los hijos
+// (.popover-body, el inner) aunque algun estilo de popover les devuelva el puntero.
+.descripcion-de-control-popover--no-interactiva
+	pointer-events: none !important
+
+	*
+		pointer-events: none !important
 
 .descripcion-de-control-popover__inner
 	padding: 16px 18px

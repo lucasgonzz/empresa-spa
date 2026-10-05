@@ -5,6 +5,7 @@
 	:class="option_classes"
 	:data-testid="testid"
 	data-ayuda-placement="right"
+	data-ayuda-no-interactiva
 	:id="id"
 	:disabled="disabled"
 	@click="on_click">
@@ -36,10 +37,12 @@
  * 🔴 La ayuda de DescripcionDeControl también se pide a la derecha (`data-ayuda-placement="right"`).
  * Es un popover INTERACTIVO (el `mouseenter` sobre él cancela el cierre) y por defecto se abre
  * abajo: en este menú quedaba encima de las opciones de abajo del ítem y podía comerse su clic,
- * la misma clase de defecto que el globo de arriba. BootstrapVue pasa el atributo al
- * `<a class="dropdown-item">`, que es el mismo elemento que lleva el `data-testid` que
- * `DescripcionDeControl` encuentra con `closest('[data-testid]')`. Misión
- * ayuda-eliminar-individual-y-masivo, 5/10/2026.
+ * la misma clase de defecto que el globo de arriba. Además se pide no interactiva
+ * (`data-ayuda-no-interactiva`) porque en tablet/teléfono puede no haber lugar a ningún costado y
+ * se superpone igual: con `pointer-events: none` no intercepta nada y se cierra al salir del ítem.
+ * BootstrapVue pasa los dos atributos al `<a class="dropdown-item">`, que es el mismo elemento
+ * que lleva el `data-testid` que `DescripcionDeControl` encuentra con `closest('[data-testid]')`.
+ * Misión ayuda-eliminar-individual-y-masivo, 5/10/2026.
  */
 export default {
 	props: {
