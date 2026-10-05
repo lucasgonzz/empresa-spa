@@ -7,8 +7,9 @@
 	"..." y, como ultimo recurso, se dejan afuera los bloques de abajo.
 
 	🔴 Es un port 1:1 de DisposicionDeEtiquetaIndividual de empresa-api (la clase que usa el PDF).
-	Mismos nombres, mismas operaciones y en el mismo orden, para que los dos lados den los mismos
-	numeros (los mismos dobles). Si cambia algo aca, cambia alla, y viceversa: la vista previa del
+	Mismo algoritmo, mismas operaciones y en el mismo orden, para que los dos lados den los mismos
+	numeros (los mismos dobles); algunos nombres cambian (armar / armar_intento, ancho_de_texto /
+	ancho_texto, normalizar / normalizar_texto, resultado / armar_resultado). Si cambia algo aca, cambia alla, y viceversa: la vista previa del
 	modal "Configurar etiquetas" tiene que ser lo que sale en el PDF.
 
 	Las medidas van en mm y los tamaños de letra en puntos (pt). El ancho de los textos se mide con
@@ -228,7 +229,7 @@ export function armar_intento(parametros, modo, factor, codigo_alto, recortes, o
 	let ancho_codigo = calcular_ancho_codigo(ancho)
 	// Bloques del intento, en el orden de las propiedades
 	let bloques = []
-	// Si algun texto de una sola palabra quedo partido por letras en este intento
+	// Si alguna palabra quedo partida por letras en este intento (y a la letra minima entraria)
 	let parte_una_palabra = false
 	parametros.propiedades.forEach(propiedad => {
 		let key = propiedad.key
@@ -257,12 +258,17 @@ export function armar_intento(parametros, modo, factor, codigo_alto, recortes, o
 		// Tamaño de la letra del intento, en pt
 		let pt = (modo === 'normal') ? propiedad.font_size : Math.max(FUENTE_MINIMA, propiedad.font_size * factor)
 		let lineas = envolver(texto, pt, negrita, ancho - 2)
-		// Un texto de UNA sola palabra (precio, SKU, codigo, fecha) que no entra en el ancho queda
-		// partido por letras ("$15.432,1" / "0"). Mientras la letra se pueda achicar eso no cuenta
-		// como que entra (ver entra_sin_partir_palabras).
-		if (texto.indexOf(' ') === -1 && lineas.length > 1) {
-			parte_una_palabra = true
-		}
+		// Una palabra mas ancha que la etiqueta queda partida por letras: "$15.432,1" / "0" en un
+		// precio, o "ESP" / "ATUL" / "A" en un nombre. Mientras la letra se pueda achicar eso no
+		// cuenta como que entra (ver entra_sin_partir_palabras). Si esa palabra ni a FUENTE_MINIMA
+		// entra, se parte igual: no tiene sentido llevar todas las letras al minimo por ella.
+		// (envolver corta por letras exactamente las palabras mas anchas que la linea.)
+		texto.split(' ').forEach(palabra => {
+			if (ancho_texto(palabra, pt, negrita) > ancho - 2
+				&& ancho_texto(palabra, FUENTE_MINIMA, negrita) <= ancho - 2) {
+				parte_una_palabra = true
+			}
+		})
 		let recortado = false
 		if (Object.prototype.hasOwnProperty.call(recortes, key) && lineas.length > recortes[key]) {
 			lineas = lineas.slice(0, recortes[key])
@@ -330,8 +336,8 @@ function todas_las_letras_en_minima(intento) {
 }
 
 /**
- * Indica si un intento de los pasos 1 y 2 sirve: entra en el alto y no parte por letras un texto
- * de una sola palabra. Lo segundo se perdona recien con todas las letras en el minimo, porque ahi
+ * Indica si un intento de los pasos 1 y 2 sirve: entra en el alto y no parte por letras una palabra
+ * que a la letra minima entraria. Lo segundo se perdona recien con todas las letras en el minimo, porque ahi
  * ya no hay letra mas chica que probar (y un codigo de 13 digitos en una etiqueta angosta tiene que
  * salir igual). Misma regla que DisposicionDeEtiquetaIndividual::entra_sin_partir_palabras.
  *
@@ -357,12 +363,15 @@ function entra_sin_partir_palabras(intento, alto) {
 function armar_resultado(parametros, intento, ajustado) {
 	// Donde arranca el primer bloque para que el contenido quede centrado en vertical
 	let y_inicio = (parametros.alto - intento.alto_total) / 2
-	// `y` del bloque que sigue
-	let y = y_inicio
+	// Suma de (alto + interlineado) de los bloques ya ubicados: la `y` de cada bloque es
+	// y_inicio + acumulado, en ese orden, igual que en PHP (asi dan el mismo doble)
+	let acumulado = 0
 	// Si algun bloque quedo recortado con "..."
 	let recortado = false
 	let bloques = []
 	intento.bloques.forEach(bloque => {
+		// `y` de este bloque
+		let y = y_inicio + acumulado
 		if (bloque.tipo === 'codigo') {
 			bloques.push({
 				tipo: bloque.tipo,
@@ -388,7 +397,7 @@ function armar_resultado(parametros, intento, ajustado) {
 				recortado = true
 			}
 		}
-		y = y + (bloque.alto + intento.interlineado)
+		acumulado = acumulado + (bloque.alto + intento.interlineado)
 	})
 	return {
 		bloques: bloques,
