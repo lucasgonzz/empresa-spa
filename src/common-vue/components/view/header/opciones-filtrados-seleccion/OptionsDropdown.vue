@@ -296,32 +296,20 @@ export default {
 			return 'sin_criterio'
 		},
 		/**
-		 * Plural del modelo en minuscula para los globos ("artículos", "clientes"). Si el modelo no
-		 * se puede leer, "registros", que es lo que decia el texto de siempre.
+		 * Como se nombran los registros en los globos: "artículos" en el Listado y "registros" en
+		 * cualquier otro modelo, como el texto del buscador general.
+		 *
+		 * 🔴 No sale de `plural(model_name)`: el plural de los modelos esta escrito sin tilde
+		 * ("Articulos") y sin genero, y armado con eso el globo decia "varios articulos" (y para un
+		 * modelo femenino habria dicho "varios ventas").
 		 *
 		 * @returns {String}
 		 */
 		plural_para_globo() {
-			try {
-				return this.plural(this.model_name).toLowerCase()
-			} catch (e) {
-				return 'registros'
+			if (this.model_name == 'article') {
+				return 'artículos'
 			}
-		},
-		/**
-		 * Si el modelo es femenino ("las ventas", "las compras"), para que el globo no diga "varios
-		 * ventas". El genero sale del `text_delete` del modelo ('la' / 'esta'), que es el mismo dato
-		 * con el que Confirm.vue arma "¿Seguro que quiere eliminar la venta?".
-		 *
-		 * @returns {Boolean}
-		 */
-		modelo_es_femenino() {
-			try {
-				let articulo = String(this.text_delete(this.model_name) || '').toLowerCase()
-				return articulo == 'la' || articulo == 'esta'
-			} catch (e) {
-				return false
-			}
+			return 'registros'
 		},
 		/**
 		 * Globo de Actualizar/Eliminar cuando la masiva por filtro esta apagada, segun el motivo
@@ -332,18 +320,16 @@ export default {
 		 */
 		texto_masiva_por_filtro_apagada() {
 			let motivo = this.motivo_masiva_por_filtro_apagada
-			let varios = this.modelo_es_femenino ? 'varias' : 'varios'
-			let filtrar = this.modelo_es_femenino ? 'filtralas' : 'filtralos'
 
 			if (motivo == 'buscador') {
 				return this.texto_disabled_buscador_general
 			}
 
 			if (motivo == 'sucursal') {
-				return 'No disponible mientras haya una sucursal elegida. Para actualizar o eliminar '+varios+' '+this.plural_para_globo+' a la vez, sacá la sucursal y usá el filtro de columnas.'
+				return 'No disponible mientras haya una sucursal elegida. Para actualizar o eliminar varios '+this.plural_para_globo+' a la vez, sacá la sucursal y usá el filtro de columnas.'
 			}
 
-			return 'Para actualizar o eliminar '+varios+' '+this.plural_para_globo+' a la vez, '+filtrar+' primero con el filtro de columnas.'
+			return 'Para actualizar o eliminar varios '+this.plural_para_globo+' a la vez, filtralos primero con el filtro de columnas.'
 		},
 		/**
 		 * Texto del tooltip cuando Actualizar/Eliminar por filtro estan deshabilitados por venir
