@@ -366,4 +366,168 @@ export default {
 		],
 		nota_interna: 'Vive en la fila del modal de procesos en segundo plano (Fila.vue), pero se documenta acá porque lleva a esta pestaña: descripciones/procesos.js no estaba en el alcance de la misión.',
 	},
+
+	/* ------------------------------------------------------------------ catálogo: categorías */
+
+	/*
+	 * Alertas → Catálogo → Categorías (misión categorizacion-tres-modelos, 5/10/2026). Los `repercute`
+	 * salen de las reglas de negocio del plan de la misión (§4) y del código de la SPA: no hay spec de
+	 * exploración que los mida todavía (la suite la corre Lucas).
+	 *
+	 * Vocabulario: cada tarjeta es un "sistema de categorías"; "propuesta" es palabra de la API y no se
+	 * le muestra al cliente.
+	 */
+
+	'categorias-elegir-*': {
+		titulo: 'Elegir este sistema de categorías',
+		que_hace: 'Abre la confirmación para organizar tu catálogo con este sistema de categorías. Antes de aplicar nada, la confirmación muestra los números de lo que va a pasar.',
+		repercute: [
+			'Al confirmar se crean las categorías y subcategorías del sistema (si ya tenés una con el mismo nombre, se usa esa) y cada artículo que la IA ubicó con seguridad queda en su categoría.',
+			'Los artículos que la IA no tiene claros quedan sin categoría hasta que los apruebes en la revisión.',
+			'Mientras nadie revise ni cambie nada a mano, se puede volver atrás con "Cambiar de sistema".',
+		],
+		requiere: 'Ser el dueño del negocio o entrar con el acceso maestro. Si el negocio usa márgenes o listas de precios por categoría, o está conectado a Tienda Nube, los sistemas nuevos no se pueden elegir: queda la opción de mantener las categorías que ya tiene.',
+		nota_interna: 'Botón de TarjetaSistema.vue. POST category-proposal-runs/{id}/elegir (plan §6.4): sincrónico, una transacción, todo o nada; 422 bloqueado_por_margenes / bloqueado_por_tienda_nube.',
+	},
+
+	'categorias-modal-confirmar': {
+		titulo: 'Confirmar la elección',
+		que_hace: 'Aplica a tu catálogo el sistema de categorías elegido, con los números que muestra esta pantalla.',
+		repercute: [
+			'Crea las categorías que falten y le asigna a cada artículo seguro su categoría, todo junto: si algo falla, no se aplica nada.',
+			'Puede tardar un momento en catálogos grandes: la pantalla queda en espera hasta que termina.',
+			'Los artículos dudosos quedan sin categoría hasta que los apruebes.',
+		],
+		nota_interna: 'Dispara POST category-proposal-runs/{id}/elegir con {propuesta_id, eliminar_categorias_vacias}. El botón se apaga al primer clic: elegir dos veces la misma propuesta es inofensivo del lado de la API (200 con ya_estaba), pero no hace falta darle la oportunidad.',
+	},
+
+	'categorias-modal-cancelar': {
+		titulo: 'Cancelar',
+		que_hace: 'Cierra la confirmación sin elegir nada: tu catálogo no cambia.',
+	},
+
+	'categorias-modal-eliminar-vacias': {
+		titulo: 'Eliminar las categorías anteriores que queden vacías',
+		que_hace: 'Si está tildada, las categorías que el negocio ya tenía y que se queden sin artículos al elegir el sistema se quitan.',
+		repercute: [
+			'Así el menú de la tienda online no muestra categorías vacías.',
+			'Solo se quitan las que quedan sin un solo artículo (ni en la categoría ni en sus subcategorías): una que todavía tiene artículos no se toca.',
+			'Solo aparece con un sistema nuevo y si el negocio ya tenía categorías.',
+		],
+		nota_interna: 'Viaja como eliminar_categorias_vacias en el POST de elegir. La API las manda a la papelera (soft delete) y las anota en categorias_eliminadas para poder restaurarlas si se cambia de sistema.',
+	},
+
+	'categorias-cambiar-sistema': {
+		titulo: 'Cambiar de sistema',
+		que_hace: 'Deshace la elección y deja elegir otro sistema de categorías.',
+		repercute: [
+			'Los artículos vuelven a la categoría que tenían antes, las categorías que se crearon al elegir se quitan y las que se habían eliminado se restauran.',
+			'Después se puede elegir cualquiera de los sistemas, incluido el mismo.',
+		],
+		requiere: 'Que nadie haya revisado artículos ni cambiado a mano categorías o artículos desde que se eligió. Si ya no se puede, el botón no aparece y el cartel de arriba dice por qué.',
+		nota_interna: 'POST category-proposal-runs/{id}/volver-atras. Que se pueda lo decide la API (run.puede_cambiar y run.motivo_no_puede_cambiar, la misma función que valida el pedido): la SPA no lo deduce.',
+	},
+
+	'categorias-arbol-toggle-*': {
+		titulo: 'Ver las categorías',
+		que_hace: 'Muestra u oculta el árbol de categorías de este sistema, con la cantidad de artículos de cada una y las subcategorías que se despliegan.',
+		repercute: [
+			'Es solo para mirar: no cambia nada en tu catálogo.',
+		],
+	},
+
+	'categorias-menu-toggle-*': {
+		titulo: 'Cómo se vería en tu tienda',
+		que_hace: 'Muestra un ejemplo del menú de categorías de tu tienda online con este sistema.',
+		repercute: [
+			'Es una vista previa: no cambia nada hasta que elijas el sistema.',
+			'Muestra solo las categorías que tendrían artículos ubicados con seguridad; los dudosos no cuentan hasta que se aprueben.',
+		],
+	},
+
+	'categorias-base-toggle-*': {
+		titulo: 'En qué se basa',
+		que_hace: 'Muestra en qué se basó ComercioCity para armar este sistema de categorías y para qué tipo de negocio sirve.',
+	},
+
+	'categorias-actualizar': {
+		titulo: 'Actualizar',
+		que_hace: 'Vuelve a preguntar si los sistemas de categorías ya están listos para elegir.',
+		repercute: [
+			'No cambia nada en tu catálogo. La pantalla también se actualiza sola cada tanto mientras se están preparando.',
+		],
+	},
+
+	'categorias-reintentar': {
+		titulo: 'Reintentar',
+		que_hace: 'Vuelve a pedir los sistemas de categorías después de un error de conexión.',
+	},
+
+	'categorias-items-reintentar': {
+		titulo: 'Reintentar',
+		que_hace: 'Vuelve a pedir los artículos de la solapa después de un error de conexión.',
+	},
+
+	'categorias-buscador': {
+		titulo: 'Buscar artículos en la revisión',
+		que_hace: 'Filtra los artículos de la solapa abierta por nombre, código de barras o código de proveedor.',
+		repercute: [
+			'Busca solo entre los artículos del sistema que elegiste, no en todo el catálogo.',
+		],
+	},
+
+	'categorias-por-pagina': {
+		titulo: 'Artículos por página',
+		que_hace: 'Cambia cuántos artículos se ven por página en la solapa: 25, 50 o 100.',
+	},
+
+	'categorias-aprobar-*': {
+		titulo: 'Aprobar la sugerencia',
+		que_hace: 'Le asigna al artículo la categoría que sugirió la IA.',
+		repercute: [
+			'Si la categoría o la subcategoría todavía no existen, se crean en ese momento.',
+			'El artículo queda en esa categoría en todo el sistema, también en tu tienda online.',
+			'Después de aprobar o rechazar un artículo ya no se puede cambiar de sistema.',
+		],
+		nota_interna: 'POST category-proposal-items/{id}/aprobar. Solo ítems en estado a_revisar; la primera revisión setea revision_iniciada_at, que cierra la regla de volver atrás.',
+	},
+
+	'categorias-rechazar-*': {
+		titulo: 'Rechazar la sugerencia',
+		que_hace: 'Descarta la categoría que sugirió la IA: el artículo sigue sin categoría y pasa a la solapa Sin categoría.',
+		repercute: [
+			'No se crea ninguna categoría.',
+			'Después de aprobar o rechazar un artículo ya no se puede cambiar de sistema.',
+		],
+	},
+
+	'categorias-seleccionar-pagina': {
+		titulo: 'Seleccionar la página',
+		que_hace: 'Tilda todos los artículos para revisar de la página que se ve, para aprobarlos o rechazarlos juntos.',
+		repercute: [
+			'Solo toma los de esta página: los de las páginas siguientes no se tildan.',
+		],
+	},
+
+	'categorias-tilde-*': {
+		titulo: 'Seleccionar este artículo',
+		que_hace: 'Lo suma a los que se van a aprobar o rechazar juntos.',
+	},
+
+	'categorias-lote-aprobar': {
+		titulo: 'Aprobar los seleccionados',
+		que_hace: 'Aprueba de una vez todos los artículos tildados, después de confirmar.',
+		repercute: [
+			'A cada uno se le asigna la categoría que sugirió la IA, igual que al aprobarlos de a uno; las que todavía no existen se crean.',
+			'Si alguno ya no estaba para revisar, se avisa cuántos; los demás se aprueban igual.',
+		],
+	},
+
+	'categorias-lote-rechazar': {
+		titulo: 'Rechazar los seleccionados',
+		que_hace: 'Descarta de una vez la sugerencia de todos los artículos tildados, después de confirmar.',
+		repercute: [
+			'Esos artículos siguen sin categoría y pasan a la solapa Sin categoría.',
+		],
+	},
 }
