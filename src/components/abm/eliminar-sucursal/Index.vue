@@ -1209,6 +1209,12 @@ export default {
 // Mismo lenguaje que el resto de los modales "nuevos" (ver la nota igual en agenda/ModalCompletar.vue):
 // radio de 8px y foco suave en vez del default global de _inputs.sass. Scopeado por el id del modal.
 #eliminar-sucursal
+	// _inputs.sass pone TODOS los select en 1.4rem (pensado para los formularios grandes del ABM). En
+	// este modal compacto el texto va a 1rem y un select de 22px se ve desproporcionado al lado
+	// (medido en la verificación en vivo del 5/10/2026): se baja solo acá, por el id del modal.
+	select.custom-select
+		font-size: 1rem
+
 	.form-control,
 	.custom-select,
 	textarea.form-control
