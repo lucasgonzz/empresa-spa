@@ -77,6 +77,12 @@
 					role="alert">
 						La fecha desde no puede ser posterior a la fecha hasta.
 					</p>
+					<p
+					v-else-if="fecha_fuera_de_rango"
+					class="cc-periodo__error"
+					role="alert">
+						Las fechas tienen que estar entre los años 2000 y 2099.
+					</p>
 					<b-button
 					class="cc-toolbar__btn cc-toolbar__btn--acento cc-periodo__aplicar"
 					variant="primary"
@@ -234,6 +240,12 @@ export default {
 		},
 		rango_invertido() {
 			return !!(this.desde_input && this.hasta_input && this.desde_input > this.hasta_input)
+		},
+		// Una fecha escrita con un año fuera de 2000-2099 (el input de Chrome deja tipear 5 o 6
+		// dígitos): se avisa en vez de dejar "Aplicar" deshabilitado sin explicación.
+		fecha_fuera_de_rango() {
+			return !!(this.desde_input && this.hasta_input) && !this.rango_invertido
+				&& !(this.fecha_valida(this.desde_input) && this.fecha_valida(this.hasta_input))
 		},
 		personalizado_valido() {
 			// Año de 4 dígitos entre 2000 y 2099: si no, la API rechaza la fecha y cae en silencio
