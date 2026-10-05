@@ -299,6 +299,7 @@ import {
 	resolver_interlineado,
 	resolver_propiedades,
 	textos_de_articulo,
+	texto_como_el_pdf,
 	tiene_codigo_de_barras,
 } from '@/components/listado/components/selected-filtered-options/etiquetas-individuales/disposicion'
 
@@ -532,7 +533,8 @@ export default {
 					elementos.push({
 						id: bloque.key + '-' + indice,
 						clase: 'etiqueta-preview-linea',
-						texto: linea,
+						// Lo que el PDF no puede imprimir (€, emoji…) sale como '?', igual que en el PDF
+						texto: texto_como_el_pdf(linea),
 						style: {
 							top: ((bloque.y + indice * bloque.alto_linea) * escala) + 'px',
 							left: '0px',

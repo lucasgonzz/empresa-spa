@@ -104,6 +104,23 @@ export function ancho_texto(texto, pt, negrita) {
 }
 
 /**
+ * Texto tal como lo imprime el PDF: FPDF pasa el texto por utf8_decode, que deja cada caracter
+ * fuera de Latin-1 (codigo > 255: €, comillas tipograficas, emoji, acentos combinados) como un '?'.
+ * La disposicion ya los mide como '?'; esto es para que la vista previa tambien los MUESTRE asi.
+ *
+ * @param {string} texto Texto de una linea.
+ * @returns {string} El mismo texto con '?' en lugar de cada caracter que el PDF no puede imprimir.
+ */
+export function texto_como_el_pdf(texto) {
+	// Caracteres (puntos de codigo, no unidades UTF-16) ya convertidos
+	let caracteres = []
+	Array.from(String(texto)).forEach(caracter => {
+		caracteres.push(caracter.codePointAt(0) > 255 ? '?' : caracter)
+	})
+	return caracteres.join('')
+}
+
+/**
  * Normaliza el texto de una propiedad: toda secuencia de espacios en blanco (incluidos los saltos
  * de linea) pasa a ser un espacio, y se sacan los de las puntas. Un texto vacio no genera bloque.
  *
@@ -882,7 +899,15 @@ export function frases_de_ajuste(disposicion, codigo_alto_pedido, label_de_key) 
 		return frases
 	}
 	if (disposicion.factor < 1) {
-		frases.push('Para que entre en la etiqueta, el PDF achica la letra al ' + Math.round(disposicion.factor * 100) + ' %.')
+		// Si alguna letra quedo en el piso, el "N %" no es lo que le paso a esa letra: se aclara
+		let hay_letra_en_el_minimo = false
+		disposicion.bloques.forEach(bloque => {
+			if (bloque.tipo === 'texto' && bloque.tamano === FUENTE_MINIMA) {
+				hay_letra_en_el_minimo = true
+			}
+		})
+		frases.push('Para que entre en la etiqueta, el PDF achica la letra al ' + Math.round(disposicion.factor * 100) + ' %'
+			+ (hay_letra_en_el_minimo ? ', sin bajar de ' + FUENTE_MINIMA + ' pt' : '') + '.')
 	} else if (disposicion.modo === 'compacto') {
 		frases.push('Para que entre en la etiqueta, el PDF junta las líneas.')
 	}
