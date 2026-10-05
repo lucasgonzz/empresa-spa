@@ -160,8 +160,12 @@ data-testid="modal-eliminar-sucursal"
 					</span>
 				</b-form-radio>
 
+				<!--
+					El destino se ve siempre, colgado de la opción de pasar el stock. Elegir una sucursal acá ya
+					es elegir "pasar el stock" (no hace falta tocar antes el radio), y con "descartar" queda
+					deshabilitado: no se puede pasar a una sucursal y descartar a la vez.
+				-->
 				<b-form-group
-				v-if="stock_accion === 'transferir'"
 				label="Sucursal de destino"
 				label-for="eliminar-sucursal-stock-destino"
 				class="eliminar-sucursal__campo">
@@ -169,7 +173,9 @@ data-testid="modal-eliminar-sucursal"
 					id="eliminar-sucursal-stock-destino"
 					v-model="stock_destino_id"
 					:options="opciones_de_destino"
-					data-testid="eliminar-sucursal-stock-destino"></b-form-select>
+					:disabled="stock_accion === 'descartar'"
+					data-testid="eliminar-sucursal-stock-destino"
+					@change="stock_accion = 'transferir'"></b-form-select>
 				</b-form-group>
 
 				<b-form-radio
@@ -657,7 +663,7 @@ export default {
 
 			this.reiniciar()
 			this.address_id = sucursal.id
-			this.nombre_sucursal = sucursal.street ? sucursal.street : ''
+			this.nombre_sucursal = sucursal.street ? sucursal.street : 'esta sucursal'
 
 			this.consulta_actual++
 			let consulta = this.consulta_actual

@@ -210,16 +210,27 @@ export default {
 		 * El `selected_model` se vuelve a mirar por si el evento llega con otra solapa abierta; la
 		 * sucursal sale del formulario abierto (`address.model`), que es la que tiene el boton.
 		 *
+		 * Si el modal todavia no esta disponible (es un componente asincrono y su chunk puede no haber
+		 * llegado, por ejemplo sin conexion en la primera visita) NO se deja el boton sin respuesta: se
+		 * cae al confirm generico de siempre (`delete-address`, el que monta model/Index.vue), que es
+		 * exactamente lo que pasaba antes de esta mision.
+		 *
 		 * Mision eliminar-sucursal-con-stock (5/10/2026). Cambio aditivo: no corre para ningun otro
 		 * modelo.
 		 *
 		 * @returns {void}
 		 */
 		al_apretar_eliminar() {
-			if (this.selected_model !== 'address' || !this.$refs.eliminar_sucursal) {
+			if (this.selected_model !== 'address') {
 				return
 			}
-			this.$refs.eliminar_sucursal.abrir_eliminar_sucursal(this.$store.state.address.model)
+			let sucursal = this.$store.state.address.model
+			if (!this.$refs.eliminar_sucursal) {
+				this.$store.commit('address/setDelete', sucursal)
+				this.$bvModal.show('delete-address')
+				return
+			}
+			this.$refs.eliminar_sucursal.abrir_eliminar_sucursal(sucursal)
 		},
 		setSelectedView(item) {
 			let view = this.abm_views.find(_view => this.routeString(_view.view) == this.view)
