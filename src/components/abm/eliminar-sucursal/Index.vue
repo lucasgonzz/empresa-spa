@@ -19,19 +19,22 @@
 	Lo que NO se pregunta y se avisa: las ventas, presupuestos y compras que ya la nombran se
 	conservan tal cual (la historia no se reescribe); solo van a figurar sin sucursal.
 
-	Tres caminos de salida, y los tres están pensados porque la SPA y la API no llegan a producción
-	al mismo tiempo:
+	Caminos de salida, pensados porque la SPA y la API no llegan a producción al mismo tiempo:
 
 	- API NUEVA, todo en línea: 200, la sucursal se saca de la lista y se limpia lo que la SPA
-		recordaba de ella (Vender, cookie, usuario: ver `limpiar_referencias_locales` en
-		src/store/address.js).
+		recordaba de ella (Vender, cookie, usuario) y se vuelven a pedir las cajas, los puntos de venta y
+		las marcas que cambiaron (ver `dar_por_eliminada` en src/store/address.js).
 	- API NUEVA, muchos artículos: 202. La API lo encoló y la sucursal SIGUE EXISTIENDO hasta que el
 		proceso termina: no se saca de la lista. El avance se ve en el panel de procesos de arriba a la
-		derecha.
-	- API VIEJA (el resumen da 404) o sin conexión al abrir: MODO CLÁSICO. Se muestra el aviso de
-		siempre ("se eliminará la sucursal y su stock se dará de baja") y se manda el DELETE sin
-		parámetros, que la API vieja resuelve como siempre y la nueva rechaza con un 422 si hay algo
-		que decidir (se muestra acá adentro).
+		derecha, y cuando termina el watcher de mixins/start_methods.js limpia Vender, la cookie y el usuario.
+	- API NUEVA, 404 "la sucursal no existe" (al consultar o al borrar): un 202 anterior ya la borró y el
+		broadcast nunca llegó. Se da por eliminada, se limpia igual que un 200 y se avisa.
+	- API VIEJA (el resumen da 404 de ruta inexistente): MODO CLÁSICO. Se muestra el aviso de siempre
+		("se eliminará la sucursal y su stock se dará de baja") y se manda el DELETE sin parámetros, que
+		la API vieja resuelve como siempre y la nueva rechaza con un 422 si hay algo que decidir (se
+		muestra acá adentro).
+	- Cualquier otro error al consultar (500, 403, sin conexión): el mensaje y un botón "Reintentar".
+		NO se ofrece el borrado clásico: sin saber qué tiene la sucursal, no se borra a ciegas.
 
 	Un 422 (o cualquier error) del borrado NO lo muestra el interceptor global: se muestra en el pie
 	de esta ventana, que queda abierta con lo elegido para corregir. El pie y no el cuerpo, porque el
@@ -63,6 +66,22 @@ data-testid="modal-eliminar-sucursal"
 		<p class="eliminar-sucursal__nota">
 			No pudimos consultar el detalle de lo que tiene cargado, así que se elimina de la forma de siempre.
 		</p>
+	</div>
+
+	<!--
+		ERROR AL CONSULTAR el resumen (500, 403, sin conexión): se dice qué pasó y solo se ofrece
+		"Reintentar". No se ofrece borrar: sin saber qué tiene la sucursal, una baja a ciegas es lo
+		que esta ventana viene a evitar.
+	-->
+	<div
+	v-else-if="error_consulta"
+	data-testid="eliminar-sucursal-error-consulta">
+		<b-alert
+		show
+		variant="danger"
+		class="m-b-0">
+			{{ error_consulta }}
+		</b-alert>
 	</div>
 
 	<div v-else-if="resumen">
@@ -135,6 +154,11 @@ data-testid="modal-eliminar-sucursal"
 			v-if="Number(stock.articulos_en_papelera) > 0"
 			class="eliminar-sucursal__nota">
 				{{ texto_stock_en_papelera }}
+			</p>
+			<p
+			class="eliminar-sucursal__nota"
+			data-testid="eliminar-sucursal-aviso-minimos-maximos">
+				Se pierden los mínimos y máximos de stock que esta sucursal tenía cargados.
 			</p>
 
 			<!--
@@ -311,6 +335,14 @@ data-testid="modal-eliminar-sucursal"
 					Cancelar
 				</b-button>
 				<b-button
+				v-if="error_consulta"
+				variant="primary"
+				data-testid="btn-reintentar-eliminar-sucursal"
+				@click="reintentar_consulta">
+					Reintentar
+				</b-button>
+				<b-button
+				v-else
 				variant="danger"
 				:disabled="!puede_confirmar"
 				data-testid="btn-confirmar-eliminar-sucursal"
@@ -330,6 +362,7 @@ data-testid="modal-eliminar-sucursal"
 </template>
 <script>
 import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
+import { es_error_de_sucursal_inexistente } from '@/store/address'
 
 /*
 	El id del b-modal. 🔴 Tiene que ser único en toda la app: esta ventana se abre ENCIMA del
@@ -340,6 +373,9 @@ const ID_MODAL = 'eliminar-sucursal'
 
 /* Id del formulario de la sucursal (el `model_name` del ABM), que se cierra junto con esta ventana. */
 const ID_MODAL_FORMULARIO = 'address'
+
+/* El aviso cuando la API dice que la sucursal ya no existe (un borrado en segundo plano que ya terminó). */
+const AVISO_YA_ELIMINADA = 'Esa sucursal ya estaba eliminada: la sacamos de la lista.'
 
 /* Cómo se nombra cada marca que devuelve la API en `marcas` (los nombres de los campos de la sucursal). */
 const TEXTO_DE_MARCAS = {
@@ -367,8 +403,11 @@ export default {
 			// true si no se pudo consultar el resumen (API vieja, sin conexión): aviso y DELETE de siempre
 			modo_clasico: false,
 
-			// true mientras el DELETE está en vuelo
+			// true mientras el DELETE está en vuelo (y hasta que la ventana termina de cerrarse: ver `confirmar_eliminar`)
 			eliminando: false,
+
+			// El mensaje de un error al CONSULTAR el resumen (500, 403, sin conexión). '' = ninguno. Muestra "Reintentar".
+			error_consulta: '',
 
 			// El mensaje del último error del borrado (422, 404, 5xx, sin conexión). '' = ninguno.
 			error_api: '',
@@ -449,6 +488,14 @@ export default {
 				|| this.cantidad_de_cajas > 0
 				|| this.cantidad_de_puntos_de_venta > 0
 				|| this.cantidad_de_clientes > 0
+		},
+		/*
+			El borrado va a cambiar cosas que viven en OTROS stores de la SPA (cajas, puntos de venta ARCA,
+			clientes, marcas de depósito): después de un 200 hay que volver a pedirlas. Ver
+			`recargar_configuracion_de_sucursales` en src/store/address.js.
+		*/
+		cambia_la_configuracion_de_otras() {
+			return this.hay_para_heredar
 		},
 		/* La API exige reemplazo (hoy: es depósito por defecto, madre o de origen y quedan otras sucursales) */
 		requiere_reemplazo() {
@@ -542,6 +589,7 @@ export default {
 			if (this.modo_clasico) {
 				return true
 			}
+			// Con el resumen sin poder consultarse no hay nada que confirmar: solo "Reintentar"
 			return !!this.resumen
 				&& !this.esta_bloqueada
 				&& this.stock_resuelto
@@ -648,10 +696,19 @@ export default {
 	methods: {
 		/**
 		 * Abre la ventana para una sucursal. Pide el resumen a la API ANTES de abrirla, con el
-		 * indicador global de carga; si no se puede consultarlo, la abre en modo clásico.
+		 * indicador global de carga, y según cómo conteste:
+		 *
+		 * - 200 con el resumen: abre la ventana con las decisiones.
+		 * - 404 "la sucursal no existe" (API nueva): ya no está en el servidor (un borrado en segundo
+		 *   plano terminó y el broadcast nunca llegó). No hay nada que preguntar: se la saca de la lista
+		 *   y se avisa (`dar_por_eliminada` en src/store/address.js).
+		 * - 404 de ruta inexistente (API VIEJA): abre en modo clásico, el aviso y el DELETE de siempre.
+		 * - Cualquier otro error (500, 403, sin conexión): abre la ventana con el mensaje y un botón
+		 *   "Reintentar". NO se ofrece el borrado clásico: sin saber qué tiene la sucursal, una baja a
+		 *   ciegas es justo lo que esta misión viene a evitar.
 		 *
 		 * Lo llama src/common-vue/views/Abm.vue por ref cuando el botón "Eliminar" del formulario de
-		 * la sucursal emite `press_delete_btn`.
+		 * la sucursal emite `press_delete_btn`, y el botón "Reintentar" de esta misma ventana.
 		 *
 		 * @param {Object} sucursal La sucursal del formulario ({id, street}).
 		 * @return {void}
@@ -673,9 +730,9 @@ export default {
 			this.$store.commit('auth/setLoading', true)
 
 			/*
-				skip_global_error_event: contra una API vieja la ruta no existe y da 404; el interceptor
-				global lo mostraría como un aviso de 10 segundos que no le dice nada al usuario. Acá un
-				error de cualquier tipo no es un error: es el modo clásico.
+				skip_global_error_event: el error lo maneja esta ventana (modo clásico, "ya eliminada" o el
+				mensaje con "Reintentar"); el interceptor global mostraría además un aviso de 10 segundos
+				que no le dice nada al usuario.
 			*/
 			this.$api.get('address/' + sucursal.id + '/eliminar-resumen', {
 				skip_global_error_event: true,
@@ -690,10 +747,10 @@ export default {
 
 				/*
 					Una respuesta sin `address` no es el contrato (un proxy, una página de error que
-					devolvió 200): se trata como si no existiera el endpoint.
+					devolvió 200): no se sabe qué tiene la sucursal, así que no se ofrece borrarla.
 				*/
 				if (!res.data || !res.data.address) {
-					self.entrar_en_modo_clasico()
+					self.mostrar_error_de_consulta('La respuesta del servidor no tiene el formato esperado.')
 					return
 				}
 
@@ -709,8 +766,57 @@ export default {
 					return
 				}
 
-				self.entrar_en_modo_clasico()
+				// La API nueva dice que la sucursal ya no existe: no hay nada que preguntar ni borrar.
+				if (es_error_de_sucursal_inexistente(err)) {
+					self.dar_por_eliminada_al_consultar()
+					return
+				}
+
+				// Un 404 sin ese mensaje es la ruta que no existe: una API vieja. Modo clásico.
+				if (err && err.response && err.response.status === 404) {
+					self.entrar_en_modo_clasico()
+					return
+				}
+
+				self.mostrar_error_de_consulta(self.mensaje_de_error_de_consulta(err))
 			})
+		},
+		/**
+		 * La consulta del resumen dijo que la sucursal ya no existe: se saca de la lista, se limpia lo que
+		 * la SPA recordaba de ella, se cierra el formulario de la sucursal (que estaba abierto detrás) y
+		 * se avisa. No se abre esta ventana.
+		 *
+		 * @return {void}
+		 */
+		dar_por_eliminada_al_consultar() {
+			this.$store.dispatch('address/dar_por_eliminada', {
+				address_id: this.address_id,
+				usuarios_destino_id: null,
+				// No se sabe qué heredaron las cajas, los puntos de venta y las marcas: se vuelven a pedir.
+				recargar_configuracion: true,
+			})
+			this.$toast.info(AVISO_YA_ELIMINADA)
+			this.$bvModal.hide(ID_MODAL_FORMULARIO)
+		},
+		/**
+		 * Abre la ventana con el mensaje de un error al CONSULTAR el resumen y el botón "Reintentar".
+		 *
+		 * @param {String} mensaje
+		 * @return {void}
+		 */
+		mostrar_error_de_consulta(mensaje) {
+			this.resumen = null
+			this.modo_clasico = false
+			this.error_consulta = mensaje
+			this.$bvModal.show(ID_MODAL)
+		},
+		/**
+		 * "Reintentar" del error de consulta: vuelve a pedir el resumen de la misma sucursal.
+		 *
+		 * @return {void}
+		 */
+		reintentar_consulta() {
+			this.abrir_eliminar_sucursal({ id: this.address_id, street: this.nombre_sucursal })
 		},
 		/**
 		 * Guarda el resumen que devolvió la API y deja el formulario en su estado inicial.
@@ -749,8 +855,14 @@ export default {
 		},
 		/**
 		 * Manda el borrado con lo elegido. En un 200 cierra las dos ventanas; en un 202 (la API lo
-		 * encoló) también, pero sin sacar la sucursal de la lista porque todavía existe; en un error
+		 * encoló) también, pero sin sacar la sucursal de la lista porque todavía existe; en un 404 "ya
+		 * no existe" (un 202 anterior que terminó) la da por eliminada y avisa; en cualquier otro error
 		 * deja la ventana abierta con el mensaje en el pie.
+		 *
+		 * 🔴 `eliminando` NO se apaga en los caminos que cierran la ventana: se apaga en `@hidden`
+		 * (`reiniciar`), cuando termina la animación de cierre. Apagarlo antes dejaba el botón activo
+		 * durante esos ~300 ms y un segundo clic mandaba un segundo DELETE. En el error sí se apaga ya,
+		 * porque la ventana sigue abierta para corregir.
 		 *
 		 * @return {void}
 		 */
@@ -769,13 +881,15 @@ export default {
 			this.$store.dispatch('address/eliminar_con_decision', {
 				address_id: this.address_id,
 				params: this.parametros_para_enviar(),
+				recargar_configuracion: this.cambia_la_configuracion_de_otras,
 			})
 			.then(res => {
-				self.eliminando = false
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
 
-				if (res.status === 202 || (res.data && res.data.queued)) {
+				if (res.ya_eliminada) {
+					self.$toast.info(AVISO_YA_ELIMINADA)
+				} else if (res.status === 202 || (res.data && res.data.queued)) {
 					self.$toast.info('La eliminación se está procesando en segundo plano. Podés seguir el avance arriba a la derecha: la sucursal desaparece de la lista cuando termina.')
 
 					/*
@@ -814,19 +928,17 @@ export default {
 				return params
 			}
 
-			if (this.hay_stock) {
-				if (this.es_la_ultima) {
-					/*
-						No hay a dónde pasarlo y no hay nada que elegir. Se manda `descartar` porque es lo
-						único que tiene sentido nombrar, y la API lo resuelve como "la única sucursal":
-						los artículos conservan su stock total y se borra solo el detalle por sucursal.
-					*/
-					params.stock_accion = 'descartar'
-				} else {
-					params.stock_accion = this.stock_accion
-					if (this.stock_accion === 'transferir') {
-						params.stock_destino_id = this.stock_destino_id
-					}
+			/*
+				Con la única sucursal que queda NO se manda `stock_accion`: no hay a dónde pasar el stock ni
+				nada que elegir, y la API (guarda D6) conserva el stock total de los artículos sin pedirlo.
+				Mandar `descartar` por las dudas era peor: si entre que se abrió la ventana y se confirmó
+				alguien creó otra sucursal, la API lo ejecutaría como una baja real del stock; sin la clave
+				responde 422 `requiere_decision` con el motivo, y la ventana lo muestra en el pie.
+			*/
+			if (this.hay_stock && !this.es_la_ultima) {
+				params.stock_accion = this.stock_accion
+				if (this.stock_accion === 'transferir') {
+					params.stock_destino_id = this.stock_destino_id
 				}
 			}
 
@@ -880,6 +992,27 @@ export default {
 
 			return 'No se pudo eliminar la sucursal. Volvé a intentar; si sigue pasando, avisanos.'
 		},
+		/**
+		 * El texto de un error al CONSULTAR el resumen: el `message` de la API si trae uno, y si no un
+		 * texto según el caso. A diferencia del de un borrado, acá no hay nada a medias: el usuario solo
+		 * puede reintentar.
+		 *
+		 * @param {Object} err Error de axios.
+		 * @return {String}
+		 */
+		mensaje_de_error_de_consulta(err) {
+			let datos = err && err.response && err.response.data ? err.response.data : null
+
+			if (datos && typeof datos === 'object' && datos.message) {
+				return datos.message
+			}
+
+			if (!err || !err.response) {
+				return 'No pudimos conectarnos con el servidor para consultar la sucursal. Revisá tu conexión y volvé a intentar.'
+			}
+
+			return 'No se pudo consultar qué tiene la sucursal. Volvé a intentar; si sigue pasando, avisanos.'
+		},
 		cerrar_modal() {
 			if (this.eliminando) {
 				return
@@ -898,6 +1031,7 @@ export default {
 			this.modo_clasico = false
 			this.eliminando = false
 			this.error_api = ''
+			this.error_consulta = ''
 			this.stock_accion = null
 			this.stock_destino_id = null
 			this.usuarios_destino_id = null
