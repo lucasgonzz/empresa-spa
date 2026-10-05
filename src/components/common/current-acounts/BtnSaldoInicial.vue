@@ -78,6 +78,26 @@ export default {
 			return this.$store.state.current_acount.loading
 		},
 		/**
+		 * Si la cuenta abierta es del cliente o proveedor que dice el titulo del modal.
+		 *
+		 * 🔴 No siempre lo es: hay caminos que abren el modal cambiando el modelo pero NO la cuenta
+		 * (`showProviderCurrentAcount()` de Alertas, al 5/10/2026), y queda la ultima que se abrio,
+		 * que puede ser la de otro cliente. Ofrecer el saldo inicial ahi lo grabaria en esa otra
+		 * cuenta (la API igual lo rechaza, pero el boton no tiene que invitar a hacerlo).
+		 *
+		 * @returns {Boolean}
+		 */
+		cuenta_es_del_modelo() {
+			let cuenta = this.from_credit_account
+			if (!cuenta || !this.from_model) {
+				return false
+			}
+			if (cuenta.model_id && this.from_model.id) {
+				return cuenta.model_id == this.from_model.id && cuenta.model_name == this.from_model_name
+			}
+			return true
+		},
+		/**
 		 * @returns {Boolean}
 		 */
 		mostrar() {
@@ -86,6 +106,7 @@ export default {
 				&& this.cuenta_consultada_id == this.credit_account_id
 				&& this.cantidad_cargada == 0
 				&& !this.cargando
+				&& this.cuenta_es_del_modelo
 		},
 	},
 	watch: {
