@@ -195,6 +195,7 @@ export default {
 			})
 			.catch((err) => {
 				console.log(err)
+				return Promise.reject(err)
 			})
 		},
 		deleteImage({ commit, state }) {
@@ -204,6 +205,7 @@ export default {
 			})
 			.catch((err) => {
 				console.log(err)
+				return Promise.reject(err)
 			})
 		},
 		deletePropModel({ commit, state }) {
@@ -213,6 +215,7 @@ export default {
 			})
 			.catch(err => {
 				console.log(err)
+				return Promise.reject(err)
 			})
 		}
 	},

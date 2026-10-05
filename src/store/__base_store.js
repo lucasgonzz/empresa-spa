@@ -860,6 +860,7 @@ export default function __base_store(options = {}) {
 			})
 			.catch((err) => {
 				console.log(err)
+				return Promise.reject(err)
 			})
 		},
 		deleteImageModel({ commit, state }) {
@@ -869,6 +870,7 @@ export default function __base_store(options = {}) {
 			})
 			.catch((err) => {
 				console.log(err)
+				return Promise.reject(err)
 			})
 		},
 		deletePropModel({ commit, state }) {
@@ -878,6 +880,7 @@ export default function __base_store(options = {}) {
 			})
 			.catch(err => {
 				console.log(err)
+				return Promise.reject(err)
 			})
 		},
 
