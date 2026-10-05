@@ -117,6 +117,7 @@ import BarraDeRevision from '@/components/alertas/components/lista-de-alertas-ta
 import FilaDeRevision from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/FilaDeRevision'
 import PaginacionDeRevision from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/PaginacionDeRevision'
 import { SOLAPAS, cantidad_de, entero_es } from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/textos'
+import { avisar } from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/avisos'
 import { es_cancelacion } from '@/store/category_proposal'
 
 /** Espera antes de buscar mientras se escribe (lo mismo que el buscador del detalle de imágenes). */
@@ -672,11 +673,14 @@ export default {
 				? (procesados === 1 ? 'aprobado' : 'aprobados')
 				: (procesados === 1 ? 'rechazado' : 'rechazados')
 
+			// Todo aviso pasa por `avisar()` (escapa el mensaje entero: el toast lo pinta como HTML, B-01).
 			if (procesados > 0) {
-				this.$toast.success(entero_es(procesados) + (procesados === 1 ? ' artículo ' : ' artículos ') + participio)
+				avisar(this, 'success', entero_es(procesados) + (procesados === 1 ? ' artículo ' : ' artículos ') + participio)
 			}
 			if (omitidos > 0) {
-				this.$toast.warning(
+				avisar(
+					this,
+					'warning',
 					(omitidos === 1 ? '1 no se pudo ' : entero_es(omitidos) + ' no se pudieron ')
 					+ (accion === 'aprobar' ? 'aprobar' : 'rechazar') + ' porque ya se habían resuelto.',
 					{ duration: 8000 }

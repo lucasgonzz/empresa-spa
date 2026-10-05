@@ -141,6 +141,7 @@ import TarjetaSistema from '@/components/alertas/components/lista-de-alertas-tab
 import ModalElegir from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/ModalElegir'
 import ResumenDeEleccion from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/ResumenDeEleccion'
 import { TEXTOS, cantidad_de, entero_es, texto_de_motivo_de_bloqueo } from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/textos'
+import { avisar } from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/avisos'
 import { es_cancelacion } from '@/store/category_proposal'
 
 /** Cada cuánto se refresca sola la pantalla mientras la corrida se está preparando o aplicando. */
@@ -400,7 +401,7 @@ export default {
 			.then(resultados => {
 				self.actualizando = false
 				if (resultados[0] === 'error' || resultados[0] === 'no_disponible') {
-					self.$toast.warning('No pudimos actualizar. Probá de nuevo en un rato.')
+					avisar(self, 'warning', 'No pudimos actualizar. Probá de nuevo en un rato.')
 				}
 			})
 			.catch(err => {
@@ -498,10 +499,14 @@ export default {
 			})
 			.then(respuesta => {
 				if (respuesta.ya_estaba) {
-					self.$toast.success('Ese sistema ya estaba elegido.')
+					avisar(self, 'success', 'Ese sistema ya estaba elegido.')
 				} else {
 					let asignados = respuesta.resultado ? respuesta.resultado.articulos_asignados : 0
-					self.$toast.success(
+					// 🔴 `nombre` lo escribió la IA: el toast lo interpreta como HTML, así que el mensaje
+					// pasa por `avisar()`, que lo escapa entero (B-01; ver avisos.js).
+					avisar(
+						self,
+						'success',
 						'Listo: elegiste «' + nombre + '».' + (asignados > 0 ? ' Se ubicaron ' + cantidad_de(asignados, 'artículo', 'artículos') + ' en su categoría.' : ''),
 						{ duration: 6000 }
 					)
@@ -582,7 +587,7 @@ export default {
 
 				return self.$store.dispatch('category_proposal/volver_atras', id_de_la_corrida)
 				.then(() => {
-					self.$toast.success('Listo: volviste atrás. Ya podés elegir otro sistema.')
+					avisar(self, 'success', 'Listo: volviste atrás. Ya podés elegir otro sistema.')
 					return self.recargar_todo()
 				})
 				.then(() => {
