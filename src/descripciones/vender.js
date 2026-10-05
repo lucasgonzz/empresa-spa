@@ -235,6 +235,20 @@ export default {
 		],
 	},
 
+	'btn-eliminar-sale': {
+		titulo: 'Eliminar esta venta',
+		que_hace: 'Borra la venta abierta, y solo esa. Antes pide confirmación.',
+		repercute: [
+			'Devuelve al stock lo que la venta había descontado.',
+			'Si es de un cliente, saca la venta de su cuenta corriente y le recalcula el saldo. También borra las comisiones de vendedor que había generado.',
+			'Si se cobró con caja, la confirmación trae tildado "Compensar caja": así sale de la caja la plata que había entrado. Sin tildar, la plata queda en la caja.',
+			'Si el cliente ganó o usó puntos con esta venta, se le sacan los que ganó y se le devuelven los que usó.',
+			'La venta va a la papelera, desde donde el dueño de la cuenta la puede restaurar.',
+		],
+		requiere: 'Para compensar la caja, las cajas por las que entró la plata tienen que estar abiertas: con alguna cerrada, la venta no se borra.',
+		nota_interna: 'El boton es BtnDelete.vue (borrado individual). Hasta el 5/10/2026 caia en el comodin btn-eliminar-* con el texto del borrado masivo, que le decia al operador "NO compensa la caja": lo contrario de este camino. El stock y la caja (1 y 3) estan medidos por e2e/tests/circuito-venta-contado.spec.js ("borrar la venta devuelve el stock y saca la plata de la caja"); el resto esta LEIDO en el codigo, no medido por diferencia como el resto de este archivo: SaleController::destroy (422 con cajas cerradas) y DeleteSaleHelper::ejecutar_baja (cuenta corriente salvo nota de credito de ARCA, comisiones solo con cliente, PuntosCanjeHelper::deshacer y PuntosAcumulacionHelper::revertir_venta, soft delete), PapeleraController::restaurar, SaleModal.vue (el checkbox de caja sale solo si la venta tiene metodos de pago; el boton no aparece si la venta tiene factura) y Confirm.vue (tildado por defecto). La mision venta-facturada-no-se-borra (5/10/2026, empresa-api) agrega el rechazo del borrado de una venta facturada del lado de la API.',
+	},
+
 	'confirm-compensar-caja': {
 		titulo: 'Compensar la caja',
 		que_hace: 'Al borrar una venta, decide si además sale de la caja la plata que había entrado.',

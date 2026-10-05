@@ -86,14 +86,45 @@ export default {
 		],
 	},
 
-	'btn-eliminar-*': {
+	'masiva-opcion-eliminar-seleccion': {
 		titulo: 'Eliminar los seleccionados',
-		que_hace: 'Borra en conjunto todo lo seleccionado.',
+		que_hace: 'Borra de una vez todos los registros tildados. Antes pide confirmación con la cantidad.',
 		repercute: [
-			'Repone el stock de lo que se borra, pero NO compensa la caja: la plata que había entrado queda adentro.',
+			'Si son más de uno, el borrado sigue en segundo plano: se puede seguir trabajando y, cuando termina, un aviso dice cuántos se eliminaron.',
+			'Los artículos borrados van a la papelera, desde donde el dueño de la cuenta los puede restaurar.',
 		],
-		requiere: 'En VENTAS esta opción está deshabilitada a propósito. Una venta se borra de a una, desde la venta, porque ese camino ofrece compensar la caja y este no lo hace.',
-		nota_interna: 'La opcion esta deshabilitada en la interfaz (OptionsDropdown.vue) desde el 1/9/2026, pero el endpoint PUT delete/sale sigue aceptando el borrado masivo. Cerrarlo tambien del lado del servidor toca el borrado masivo generico y quedo esperando decision.',
+		nota_interna: 'Es el item Eliminar del menu de seleccionados (OptionsDropdown.vue). Hasta el 5/10/2026 su texto vivia en la clave btn-eliminar-*, que en realidad matchea el Eliminar del formulario de UN registro (BtnDelete.vue), y este item no tenia ayuda. En VENTAS el item esta deshabilitado a proposito (el masivo no compensa la caja: DeleteModelsHelper llama al destroy de la venta con un Request vacio) y un item deshabilitado NO abre este popover (medido: el motivo lo dice el globo del item); el endpoint PUT delete/sale igual acepta el borrado masivo. Con mas de un registro va por ProcessDeleteModelsJob (DeleteModelsHelper::BACKGROUND_THRESHOLD = 1); con uno solo es sincronico y la SPA no lee not_deleted. Solo provider_order respeta el rechazo de su destroy (MODELOS_QUE_RESPETAN_RECHAZO).',
+	},
+
+	'masiva-opcion-eliminar-filtrados': {
+		titulo: 'Eliminar todo lo filtrado',
+		que_hace: 'Borra de una vez todos los registros que deja el filtro. Antes pide confirmación con la cantidad.',
+		repercute: [
+			'Alcanza a TODO lo filtrado, no solo a lo que se ve en la página: la cantidad está en el botón del menú.',
+			'Si son más de uno, el borrado sigue en segundo plano: se puede seguir trabajando y, cuando termina, un aviso dice cuántos se eliminaron.',
+			'Los artículos borrados van a la papelera, desde donde el dueño de la cuenta los puede restaurar.',
+		],
+		nota_interna: 'Es el item Eliminar del menu de filtrados (OptionsDropdown.vue). Se apaga sin filtro de columnas (listado por defecto, buscador general o sucursal elegida: ver motivo_masiva_por_filtro_apagada) y apagado no abre este popover; el servidor tambien lo frena con 422 si no hay filtros efectivos (DeleteController). En articulos, el servidor no deja borrar si el conjunto son TODOS los activos. Ver la nota de masiva-opcion-eliminar-seleccion.',
+	},
+
+	/* ------------------------------------------------------------ borrar un registro */
+
+	'btn-eliminar-*': {
+		titulo: 'Eliminar este registro',
+		que_hace: 'Borra este registro, y solo este. Antes pide confirmación.',
+		nota_interna: 'Comodin del Eliminar del formulario de UN registro: el testid btn-eliminar-<modelo> lo pone BtnDelete.vue y nadie mas. Hasta el 5/10/2026 esta clave tenia el texto del borrado MASIVO ("Eliminar los seleccionados", "NO compensa la caja"), que en el detalle de una venta decia lo contrario de lo que hace ese boton; el masivo es masiva-opcion-eliminar-*. Los modelos con efectos que le importan al operador tienen su clave exacta, que le gana a esta: btn-eliminar-article (aca) y btn-eliminar-sale (vender.js). No lleva repercute porque lo que mueve un borrado depende del modelo. Todos los caminos piden confirmacion (tambien promociones de vinoteca, que usan solo_emitir_delete y abren su propio confirm).',
+	},
+
+	'btn-eliminar-article': {
+		titulo: 'Eliminar este artículo',
+		que_hace: 'Borra el artículo abierto, y solo ese. Antes pide confirmación.',
+		repercute: [
+			'Va a la papelera, desde donde el dueño de la cuenta lo puede restaurar.',
+			'Si está publicado en Tienda Nube, se borra también de ahí.',
+			'Si se fabrica con una receta, la receta se borra con él.',
+			'Si es insumo de la receta de otro artículo, se recalcula el costo de esa receta.',
+		],
+		nota_interna: 'Leido en el codigo el 5/10/2026, no medido por diferencia: ArticleController::destroy (soft delete; check_delete_tienda_nube solo con USA_TIENDA_NUBE y tiendanube_product_id; ArticleHelper::check_article_recipe_to_delete y check_recipes_despues_de_eliminar_articulo), PapeleraController::restaurar y la entrada Papelera del menu (router/routes.js, check_is_owner). Tambien borra los articulos espejo de las cuentas con inventory linkage (InventoryLinkageHelper); no se le dice al operador porque aplica a muy pocas cuentas.',
 	},
 
 	/* ------------------------------------------------------------------- importacion */
