@@ -96,6 +96,54 @@ export default {
 		nota_interna: 'La opcion esta deshabilitada en la interfaz (OptionsDropdown.vue) desde el 1/9/2026, pero el endpoint PUT delete/sale sigue aceptando el borrado masivo. Cerrarlo tambien del lado del servidor toca el borrado masivo generico y quedo esperando decision.',
 	},
 
+	/* ------------------------------------------- catalogo de la tienda por lista de precios */
+
+	/*
+		Mision catalogo-por-lista-tienda (5/10/2026). Los cuatro controles existen solo con la
+		extension online y con al menos una lista que tiene activado "En la tienda, mostrar solo
+		los articulos habilitados para esta lista".
+	*/
+
+	'visible-en-tienda-lista-*': {
+		titulo: 'Visible en la tienda para esta lista',
+		que_hace: 'Habilita este artículo en la tienda online para los clientes que tienen esta lista de precios.',
+		repercute: [
+			'Esta lista muestra en la tienda SOLO los artículos habilitados: sin el tilde, sus clientes no ven el artículo, no lo pueden agregar al carrito ni comprarlo.',
+			'No cambia el precio ni lo que ven los clientes de las otras listas.',
+			'Los artículos nuevos nacen sin habilitar.',
+		],
+		requiere: 'Aparece solo en las listas que tienen activado "En la tienda, mostrar solo los artículos habilitados para esta lista" (ABM de listas de precios).',
+		nota_interna: 'Escribe article_price_type.visible_en_tienda (1 habilitado; 0 y NULL no). La tienda aplica la restriccion recien cuando corre una version de tienda-api que la conoce (CatalogoPorListaHelper). Escrito desde el contrato de la mision, falta medirlo en vivo.',
+	},
+
+	'masiva-campo-visible_en_tienda_lista_*': {
+		titulo: 'Visible en la tienda para una lista',
+		que_hace: 'Habilita o deja sin habilitar en la tienda, para esa lista de precios, todos los artículos alcanzados.',
+		repercute: [
+			'"Activar": los clientes de esa lista pasan a ver estos artículos en la tienda. "Desactivar": dejan de verlos.',
+			'Se puede revertir desde el historial de actualizaciones masivas.',
+		],
+		nota_interna: 'Viaja como key visible_en_tienda_lista_<id>, type checkbox (contrato C2). La API valida que la lista sea del dueño y registra el valor anterior para el revert (MasiveUpdateHelper).',
+	},
+
+	'masiva-checkbox-visible_en_tienda_lista_*': {
+		titulo: 'Visible en la tienda para una lista',
+		que_hace: '"No modificar" deja todo como está; "Activar" habilita los artículos alcanzados para esa lista en la tienda; "Desactivar" los deja sin habilitar.',
+		repercute: [
+			'Solo cambia lo que ven en la tienda los clientes de esa lista: el precio y las otras listas no se tocan.',
+		],
+	},
+
+	'habilitados-en-tienda-de-lista': {
+		titulo: 'Artículos habilitados en la tienda',
+		que_hace: 'Cuántos artículos están habilitados en la tienda para esta lista, sobre el total de artículos cargados.',
+		repercute: [
+			'Con la opción activada, los clientes de esta lista ven en la tienda solo esos artículos. Con cero habilitados, no ven ninguno.',
+		],
+		requiere: 'El número aparece con la lista ya guardada.',
+		nota_interna: 'GET price-type/{id}/habilitados-en-tienda -> {habilitados, total} (contrato C2).',
+	},
+
 	/* ------------------------------------------------------------------- importacion */
 
 	'btn-importar-excel': {
