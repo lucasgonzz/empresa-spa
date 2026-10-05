@@ -16,10 +16,13 @@
 			tapa ni se come los clics de "Agregar Descripcion" ni de la tabla de arriba (mismo criterio que
 			DropdownOptionItem.vue). Con el artículo guardado disabled_reason es '' y BootstrapVue no muestra
 			ningún globo con el título vacío (bv-tooltip.js, show()).
+			.bottom: el globo sale DEBAJO del botón. Arriba, en un teléfono, está "Agregar Descripcion" (baja de
+			renglón y queda justo encima de este botón) y el globo por defecto (top) lo tapaba; abajo no hay
+			ningún control (medido el 5/10/2026 a 1366, 900 y 375 px). Si abajo no hay lugar, popper lo da vuelta solo.
 		-->
 		<span
 		class="ai-desc-btn-tooltip-target"
-		v-b-tooltip.hover.noninteractive="disabled_reason">
+		v-b-tooltip.hover.noninteractive.bottom="disabled_reason">
 			<b-button
 			size="sm"
 			variant="outline-primary"
