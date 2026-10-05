@@ -228,6 +228,8 @@ export function armar_intento(parametros, modo, factor, codigo_alto, recortes, o
 	let ancho_codigo = calcular_ancho_codigo(ancho)
 	// Bloques del intento, en el orden de las propiedades
 	let bloques = []
+	// Si algun texto de una sola palabra quedo partido por letras en este intento
+	let parte_una_palabra = false
 	parametros.propiedades.forEach(propiedad => {
 		let key = propiedad.key
 		if (omitidos.indexOf(key) !== -1) {
@@ -255,6 +257,12 @@ export function armar_intento(parametros, modo, factor, codigo_alto, recortes, o
 		// Tamaño de la letra del intento, en pt
 		let pt = (modo === 'normal') ? propiedad.font_size : Math.max(FUENTE_MINIMA, propiedad.font_size * factor)
 		let lineas = envolver(texto, pt, negrita, ancho - 2)
+		// Un texto de UNA sola palabra (precio, SKU, codigo, fecha) que no entra en el ancho queda
+		// partido por letras ("$15.432,1" / "0"). Mientras la letra se pueda achicar eso no cuenta
+		// como que entra (ver entra_sin_partir_palabras).
+		if (texto.indexOf(' ') === -1 && lineas.length > 1) {
+			parte_una_palabra = true
+		}
 		let recortado = false
 		if (Object.prototype.hasOwnProperty.call(recortes, key) && lineas.length > recortes[key]) {
 			lineas = lineas.slice(0, recortes[key])
@@ -289,6 +297,8 @@ export function armar_intento(parametros, modo, factor, codigo_alto, recortes, o
 		codigo_alto: codigo_alto,
 		interlineado: inter,
 		omitidos: omitidos.slice(),
+		// Solo para decidir si el intento sirve; no viaja al resultado
+		parte_una_palabra: parte_una_palabra,
 	}
 }
 
@@ -317,6 +327,23 @@ function todas_las_letras_en_minima(intento) {
 		}
 	})
 	return todas
+}
+
+/**
+ * Indica si un intento de los pasos 1 y 2 sirve: entra en el alto y no parte por letras un texto
+ * de una sola palabra. Lo segundo se perdona recien con todas las letras en el minimo, porque ahi
+ * ya no hay letra mas chica que probar (y un codigo de 13 digitos en una etiqueta angosta tiene que
+ * salir igual). Misma regla que DisposicionDeEtiquetaIndividual::entra_sin_partir_palabras.
+ *
+ * @param {object} intento Lo que devuelve armar_intento.
+ * @param {number} alto Alto de la etiqueta en mm.
+ * @returns {boolean}
+ */
+function entra_sin_partir_palabras(intento, alto) {
+	if (!entra_en_la_etiqueta(intento, alto)) {
+		return false
+	}
+	return !intento.parte_una_palabra || todas_las_letras_en_minima(intento)
 }
 
 /**
@@ -405,7 +432,7 @@ export function calcular_disposicion(parametros) {
 
 	// 1. Modo normal, letra y codigo como los pidio el usuario
 	let intento_normal = armar_intento(parametros, 'normal', 1, codigo_pedido, {}, [])
-	if (entra_en_la_etiqueta(intento_normal, alto)) {
+	if (entra_sin_partir_palabras(intento_normal, alto)) {
 		return armar_resultado(parametros, intento_normal, false)
 	}
 
@@ -432,7 +459,7 @@ export function calcular_disposicion(parametros) {
 			let factor = (100 - 5 * k) / 100
 			intento = armar_intento(parametros, 'compacto', factor, codigo_pedido, {}, [])
 			factor_final = factor
-			if (entra_en_la_etiqueta(intento, alto)) {
+			if (entra_sin_partir_palabras(intento, alto)) {
 				return armar_resultado(parametros, intento, true)
 			}
 			if (todas_las_letras_en_minima(intento) || factor <= 0.05) {
