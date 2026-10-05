@@ -164,12 +164,15 @@ export default {
 		 * Clases del popover del control activo: la de siempre, más la que le saca el mouse
 		 * cuando el control pidió la ayuda no interactiva (ver ATRIBUTO_NO_INTERACTIVA).
 		 *
-		 * @returns {Array}
+		 * Va como texto y no como arreglo: el prop `custom-class` de b-popover (BootstrapVue 2.23)
+		 * es de tipo String, y con un Array Vue tira "Invalid prop: type check failed" en desarrollo.
+		 *
+		 * @returns {String}
 		 */
 		clases_popover() {
-			let clases = ['descripcion-de-control-popover']
+			let clases = 'descripcion-de-control-popover'
 			if (this.control_activo && this.control_activo.interactiva === false) {
-				clases.push('descripcion-de-control-popover--no-interactiva')
+				clases += ' descripcion-de-control-popover--no-interactiva'
 			}
 			return clases
 		},
