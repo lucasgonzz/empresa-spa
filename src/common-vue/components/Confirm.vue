@@ -107,13 +107,20 @@ export default {
 				tal cual: envolverlo en "¿Seguro que quiere eliminar …?" lo duplica, aunque el que lo
 				use se haya olvidado de not_show_delete_text (pasó en el historial de masivas, 4/10/2026).
 			*/
-			if (this.not_show_delete_text || this.text_es_pregunta) {
+			/*
+				`not_show_delete_text` muestra el texto tal cual SOLO si hay texto. Sin texto cae en la
+				pregunta por defecto del modelo: antes devolvía el `text` vacío y el cartel quedaba en
+				blanco, con solo el botón Eliminar (pasó con el plan de pago, 4/10/2026).
+			*/
+			if (this.text_es_pregunta || (this.not_show_delete_text && this.text)) {
 				return this.text
 			} else if (this.text) {
 				return '¿Seguro que quiere eliminar '+this.text+'?'
-			} else {
+			} else if (this.model_name) {
 				return '¿Seguro que quiere eliminar '+this.text_delete(this.model_name)+' '+this.singular(this.model_name).toLowerCase()+'?'
 			}
+			// Sin texto ni modelo no hay pregunta que armar (el require del modelo reventaría).
+			return this.text
 		},
 		/**
 		 * True si el texto recibido ya arranca con "¿", o sea que es una pregunta armada por quien
