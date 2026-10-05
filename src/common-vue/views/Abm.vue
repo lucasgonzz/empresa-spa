@@ -38,12 +38,24 @@
 				cualquier otro modelo valen true, que es el default de view-component (lo que pasaba
 				antes, cuando estas dos props no se pasaban). Ver `abm_ocultar_guardar_y_eliminar`.
 			-->
+			<!--
+				`solo_emitir_delete` + `@press_delete_btn` (mision eliminar-sucursal-con-stock,
+				5/10/2026): cambio ADITIVO filtrado por modelo, mismo criterio que
+				`abm_ocultar_guardar_y_eliminar`. Solo para sucursales, el boton "Eliminar" del
+				formulario NO abre el confirm generico ("¿Seguro que quiere eliminar?") sino que
+				avisa con `press_delete_btn` para abrir el modal que pregunta que hacer con el
+				stock y los empleados (ver `al_apretar_eliminar`). Para cualquier otro modelo la
+				prop vale false, que es su default (BtnDelete la lee con un `if` y el null del
+				default y el false son lo mismo): el confirm de siempre, sin ningun cambio.
+			-->
 			<view-component
 			v-else
 			show_filter_modal
 			:check_permissions="false"
 			:show_btn_save="!abm_ocultar_guardar_y_eliminar"
 			:show_btn_delete="!abm_ocultar_guardar_y_eliminar"
+			:solo_emitir_delete="selected_model === 'address'"
+			@press_delete_btn="al_apretar_eliminar"
 			:model_name="selected_model">
 				<template #table_left_options="{ model }">
 					<btn-duplicate-pdf-profile
@@ -63,6 +75,15 @@
 					:model="model"></sincronizar-margen-de-lista>
 				</template>
 			</view-component>
+
+			<!--
+				El modal de "Eliminar sucursal" (mision eliminar-sucursal-con-stock, 5/10/2026). Se
+				monta SOLO con la solapa de sucursales abierta: para cualquier otro modelo ni
+				existe. Lo abre `al_apretar_eliminar`.
+			-->
+			<eliminar-sucursal
+			v-if="selected_model === 'address'"
+			ref="eliminar_sucursal"></eliminar-sucursal>
 		</b-col>
 	</b-row>
 </template>
@@ -83,6 +104,7 @@ export default {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnDuplicatePdfProfile: () => import('@/common-vue/components/pdf/BtnDuplicatePdfProfile'),
 		SincronizarMargenDeLista: () => import('@/components/abm/sincronizar-margen-de-lista/Index'),
+		EliminarSucursal: () => import('@/components/abm/eliminar-sucursal/Index'),
 	},
 	data() {
 		return {
@@ -179,6 +201,26 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * El usuario apretó "Eliminar" en el formulario de una sucursal (el evento
+		 * `press_delete_btn` solo se emite para `address`: ver la prop `solo_emitir_delete` del
+		 * template). En vez del confirm generico abre el modal que pregunta que hacer con el stock,
+		 * los empleados y lo que la sucursal tenia configurado.
+		 *
+		 * El `selected_model` se vuelve a mirar por si el evento llega con otra solapa abierta; la
+		 * sucursal sale del formulario abierto (`address.model`), que es la que tiene el boton.
+		 *
+		 * Mision eliminar-sucursal-con-stock (5/10/2026). Cambio aditivo: no corre para ningun otro
+		 * modelo.
+		 *
+		 * @returns {void}
+		 */
+		al_apretar_eliminar() {
+			if (this.selected_model !== 'address' || !this.$refs.eliminar_sucursal) {
+				return
+			}
+			this.$refs.eliminar_sucursal.abrir_eliminar_sucursal(this.$store.state.address.model)
+		},
 		setSelectedView(item) {
 			let view = this.abm_views.find(_view => this.routeString(_view.view) == this.view)
 			let model_name = view.models[0]
