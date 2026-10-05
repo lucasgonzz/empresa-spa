@@ -51,11 +51,13 @@
 	</b-modal>
 </template>
 <script>
-import price_types from '@/mixins/vender/price_types'
 import vender from '@/mixins/vender'
-import ajustes_del_cliente from '@/mixins/vender/ajustes_del_cliente'
+/*
+	price_types y ajustes_del_cliente se sacaron el 4/10/2026: los usaba solo useClient(), que ya no
+	elige el cliente (ver su docblock). Elegir es de SelectClient.vue, que tiene los dos mixins.
+*/
 export default {
-	mixins: [price_types, vender, ajustes_del_cliente],
+	mixins: [vender],
 	props: {
 		title: String,
 		afip_data: Object,
@@ -86,48 +88,96 @@ export default {
 		format_afip_label(key) {
 			return key.replaceAll('_', ' ')
 		},
-		async setCreateClient() {
+		/**
+		 * Abre el formulario de cliente nuevo precargado con lo que devolvio ARCA.
+		 *
+		 * El formulario lo monta el buscador de cliente de Vender (search/Index.vue, por
+		 * `show_btn_create`) y ese buscador tiene `elegir_al_crear`: al guardar, el cliente queda
+		 * elegido para la venta sin volver al buscador (ver SelectClient.vue).
+		 *
+		 * Con promesas encadenadas por .then() y `let self = this`, que es la regla de src/:
+		 * localidad y provincia se resuelven juntas con Promise.all.
+		 * getLocalidad()/getProvincia() devuelven a veces un id suelto y a veces una promesa, y por
+		 * eso cada una va envuelta en Promise.resolve.
+		 *
+		 * @returns {void}
+		 */
+		setCreateClient() {
+			let self = this
 			this.loading = true
-			let location_id = await this.getLocalidad()
-			let provincia_id = await this.getProvincia()
 
-			let properties_to_override = [
-				{
-					key: 'name',
-					value: this.afip_data.nombre+' '+this.afip_data.apellido,
-				},
-				{
-					key: 'address',
-					value: this.afip_data.direccion,
-				},
-				{
-					key: 'cuit',
-					value: this.afip_data.cuit,
-				},
-				{
-					key: 'location_id',
-					value: location_id,
-				},
-				{
-					key: 'provincia_id',
-					value: provincia_id,
-				},
-				{
-					key: 'iva_condition_id',
-					value: this.afip_data.condicion_iva == 'RESPONSABLE INSCRIPTO' ? 1 : this.afip_data.condicion_iva == 'MONOTRIBUTO' ? 2 : 3,
-				},
-			]
+			Promise.all([
+				Promise.resolve(this.getLocalidad()),
+				Promise.resolve(this.getProvincia()),
+			])
+			.then(function(ids) {
+				let location_id = ids[0]
+				let provincia_id = ids[1]
 
-			if (this.afip_data.dni) {
-				properties_to_override.push({
-					key: 'dni',
-					value: this.afip_data.dni,
-				})
-			}
-			this.cerrar()
+				/*
+					Nombre sin "undefined" y sin el espacio colgando: en una persona juridica el
+					backend manda la razon social en `nombre` y `apellido` en '', y antes el nombre
+					se guardaba con un espacio al final.
+				*/
+				let nombre = self.afip_data.nombre || ''
+				let apellido = self.afip_data.apellido || ''
 
-			this.setModel(null, 'client', properties_to_override, true, false)
-			this.loading = false
+				let properties_to_override = [
+					{
+						key: 'name',
+						value: (nombre + ' ' + apellido).trim(),
+					},
+					{
+						key: 'address',
+						value: self.afip_data.direccion,
+					},
+					{
+						key: 'cuit',
+						value: self.afip_data.cuit,
+					},
+					{
+						key: 'location_id',
+						value: location_id,
+					},
+					{
+						key: 'provincia_id',
+						value: provincia_id,
+					},
+					{
+						key: 'iva_condition_id',
+						value: self.afip_data.condicion_iva == 'RESPONSABLE INSCRIPTO' ? 1 : self.afip_data.condicion_iva == 'MONOTRIBUTO' ? 2 : 3,
+					},
+				]
+
+				/*
+					🔴 La clave es `razon_social`, en snake_case, porque es la que arma
+					AfipConstanciaInscripcionController::get_constancia_inscripcion() de empresa-api
+					(no el `razonSocial` crudo de ARCA). Viene solo en personas juridicas: en una
+					persona fisica no hay razon social y el campo queda como venga del formulario.
+				*/
+				if (self.afip_data.razon_social) {
+					properties_to_override.push({
+						key: 'razon_social',
+						value: self.afip_data.razon_social,
+					})
+				}
+
+				if (self.afip_data.dni) {
+					properties_to_override.push({
+						key: 'dni',
+						value: self.afip_data.dni,
+					})
+				}
+				self.cerrar()
+
+				self.setModel(null, 'client', properties_to_override, true, false)
+				self.loading = false
+			})
+			.catch(function(err) {
+				console.log(err)
+				self.loading = false
+				self.$toast.error('No se pudo abrir el formulario del cliente')
+			})
 		},
 		getProvincia() {
 			if (this.afip_data.provincia) {
@@ -148,6 +198,9 @@ export default {
 						})
 						.catch(err => {
 							console.log(err)
+							// Sin este resolve la promesa no terminaba nunca y el boton "Crear
+							// cliente" quedaba cargando para siempre. Se sigue sin provincia.
+							resolve(null)
 						})
 					})
 				}
@@ -179,6 +232,9 @@ export default {
 						})
 						.catch(err => {
 							console.log(err)
+							// Mismo motivo que en getProvincia(): sin resolve el boton quedaba
+							// cargando para siempre. Se sigue sin localidad.
+							resolve(null)
 						})
 
 					})
@@ -188,11 +244,22 @@ export default {
 
 			return null
 		},
+		/**
+		 * "Usar cliente para la venta": el CUIT ya era de un cliente cargado.
+		 *
+		 * 🔴 Este modal NO elige el cliente por su cuenta: avisa con `usar-cliente` y lo elige
+		 * SelectClient.vue, haciendolo pasar por su setSelected(), que es la unica puerta para
+		 * elegir el cliente de la venta desde la interfaz de Vender. Antes de la mision
+		 * cliente-desde-arca-en-vender (4/10/2026) esto hacia a mano `vender/setClient` +
+		 * setPriceType() + los ajustes del cliente, y se quedaba corto: no bloqueaba la caja, no
+		 * recalculaba el tipo de comprobante (con un Responsable Inscripto podia quedar el anterior)
+		 * y en una venta o presupuesto en edicion le cambiaba la lista de precios en vez de avisar y
+		 * conservarla. Volver a elegir desde aca es volver a abrir ese hueco.
+		 *
+		 * @returns {void}
+		 */
 		useClient() {
-			this.$store.commit('vender/setClient', this.client_model)
-			this.setPriceType()
-			// Mismo gesto que elegirlo en el buscador: se prenden sus descuentos y recargos.
-			this.aplicar_ajustes_del_cliente(this.client_model)
+			this.$emit('usar-cliente', this.client_model)
 			this.cerrar()
 		},
 		cerrar() {

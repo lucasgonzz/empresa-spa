@@ -1,6 +1,6 @@
 <template>
     <b-modal
-    title="Múltiples métodos de pago"
+    :title="titulo_del_modal"
         no-close-on-backdrop
     hide-header-close
     @show="on_modal_show"
@@ -50,18 +50,36 @@
 </template>
 
 <script>
+/*
+    🔴 Imports estaticos y no `() => import(...)`, por lo mismo que este modal se importa estatico
+    en Vender.vue: tiene que estar entero cuando el vendedor lo abre, haya red o no. Asincronos, los
+    chunks se pedian recien al abrir el modal; sin internet fallaban y el modal aparecia SIN
+    "Listo" ni "Cancelar" (el footer es <buttons>): no habia forma de confirmar el reparto de una
+    venta offline. Medido el 4/10/2026 con la red cortada antes de abrirlo.
+*/
+import MultiPaymentMethods from '@/components/common/payment-methods/Index'
+import Buttons from '@/components/vender/modals/payment-methods/Buttons'
+import TotalRepartir from '@/components/vender/modals/payment-methods/TotalRepartir'
 export default {
     name: 'SelectPaymentMethods',
     components: {
-        MultiPaymentMethods: () => import('@/components/common/payment-methods/Index'),
-        Buttons: () => import('@/components/vender/modals/payment-methods/Buttons'),
-        TotalRepartir: () => import('@/components/vender/modals/payment-methods/TotalRepartir'),
+        MultiPaymentMethods,
+        Buttons,
+        TotalRepartir,
     },
     data() {
         return {
             payment_methods_with_discounts: [],
             selected_payment_methods_: [],
             payment_methods_key: 0,
+            /*
+                Titulo del modal. Se decide al ABRIRLO (on_modal_show) y no se calcula en vivo: el
+                reparto lo abre el boton verde de una venta o el cartel de guardar un presupuesto, y
+                la marca que los distingue se apaga apenas se aprieta "Listo". Calculado en vivo, el
+                titulo volveria a "Múltiples métodos de pago" mientras el modal todavia se esta
+                desvaneciendo.
+            */
+            titulo_del_modal: 'Múltiples métodos de pago',
         }
     },
     computed: {
@@ -107,6 +125,14 @@ export default {
     },
     methods: {
         on_modal_show() {
+            /*
+                En un presupuesto lo que se reparte no es una venta que se esta cobrando ahora sino
+                lo que el cliente va a pagar cuando se confirme: el titulo lo dice.
+            */
+            this.titulo_del_modal = this.$store.state.vender.budget_cobro_pendiente
+                ? 'Cobro del presupuesto'
+                : 'Múltiples métodos de pago'
+
             // ✅ fuerza remount del MultiPaymentMethods
             this.payment_methods_key += 1
             

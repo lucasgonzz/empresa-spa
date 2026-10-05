@@ -4,8 +4,10 @@
 v-if="paga_con_credito && cuotas.length"
 class="cont-payment-methods m-t-5 m-b-15"
 prepend="Cuotas">
+	<!-- En un presupuesto las cuotas se eligen en cada fila del reparto del cartel de guardar, no aca -->
 	<b-form-select
 	v-model="cuota_id" 
+	:disabled="en_modo_presupuesto"
 	:options="cuotas_options"></b-form-select> 
 </b-input-group>
 
@@ -16,6 +18,10 @@ import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
 	mixins: [select_payment_methods, cuotas],
 	computed: {
+		/* true cuando lo que se arma es un presupuesto (toggle prendido o presupuesto cargado). */
+		en_modo_presupuesto() {
+			return this.$store.getters['vender/en_modo_presupuesto']
+		},
 		/*
 		 * Prompt 266 (Fase 2, Capa 3): metodo de pago unico seleccionado en VENDER. Habilita el
 		 * filtro por `cuota.payment_method_id` definido en mixins/cuotas.

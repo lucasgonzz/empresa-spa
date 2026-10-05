@@ -117,6 +117,11 @@ export default [
     // cheque lo lee en cualquier pago a proveedor o gasto, así que tiene que estar desde el
     // arranque. Es un catálogo chico (una fila por banco) y entra por recursos-iniciales.
     'cheque_banco',
+    // Balanzas (mision balanzas-configurables, 3/10/2026): VENDER las necesita SIN CONEXION para
+    // leer los tickets con "Por balanza" (src/utils/balanzas.js), asi que tienen que estar desde el
+    // arranque. Va SIN condicion a proposito: es una configuracion del dueño y no una extension, y
+    // entra por recursos-iniciales en la misma request; para quien no usa balanzas es una lista vacia.
+    'balanza',
     'article_pre_import_range',
     'unidad_medida',
     'article_property_type',

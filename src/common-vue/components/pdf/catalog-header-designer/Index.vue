@@ -161,7 +161,7 @@ import {
  * - Si el perfil todavía no fue creado (sin id): solo actualiza el modelo en memoria;
  *   se persiste cuando el usuario guarde el ABM completo.
  *
- * Mismo patrón que el diseñador de header de ventas (header-designer/Index.vue). Se
+ * Mismo patrón que el diseñador de PDF de ventas (disenador-pdf/guardado_del_disenador.js). Se
  * abre desde el padre vía `this.$refs.catalog_header_designer.open()`.
  */
 export default {

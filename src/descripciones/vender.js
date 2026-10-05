@@ -47,9 +47,11 @@ export default {
 		titulo: 'Guardar como presupuesto',
 		que_hace: 'Guarda la operación como presupuesto en vez de como venta.',
 		repercute: [
-			'NO toca el stock y NO toca la cuenta corriente. Un presupuesto no mueve nada hasta que se confirma.',
-			'Al confirmarlo después, recién ahí nace la venta, baja el stock y aparece la deuda.',
+			'NO toca el stock, NO toca la cuenta corriente y NO toca la caja. Un presupuesto no mueve nada hasta que se confirma.',
+			'Al guardarlo, un cartel pregunta si el presupuesto pasa a la cuenta corriente del cliente. Si contestás que sí, al confirmarlo recién ahí nace la venta, baja el stock y aparece la deuda.',
+			'Si contestás que no, se abre el reparto de métodos de pago (con sus descuentos, recargos, cuotas y cajas) y queda guardado con el presupuesto. El total del presupuesto incluye el ajuste de esos métodos de pago. Al confirmarlo nace la venta ya cobrada: baja el stock, entra la plata a las cajas elegidas y no queda deuda en la cuenta corriente.',
 		],
+		requiere: 'Un cliente elegido. Si el presupuesto va a cobrarse al confirmar, el reparto tiene que sumar el total y cada método de pago con caja necesita una caja abierta.',
 	},
 
 	'venta-omitir-cuenta-corriente': {
@@ -233,6 +235,21 @@ export default {
 		],
 	},
 
+	'btn-eliminar-sale': {
+		titulo: 'Eliminar esta venta',
+		que_hace: 'Borra la venta abierta, y solo esa. Antes pide confirmación.',
+		repercute: [
+			'Devuelve al stock lo que la venta había descontado.',
+			'Si es de un cliente, saca la venta de su cuenta corriente y le recalcula el saldo. Lo que ya había pagado de esa venta, y las notas de crédito de sus devoluciones, le quedan en la cuenta.',
+			'Las comisiones de vendedor que generó se borran solo si la venta es de un cliente.',
+			'Si se cobró con caja, la confirmación trae tildado "Compensar caja": así sale de la caja la plata que había entrado. Sin tildar, la plata queda en la caja.',
+			'Si el cliente ganó o usó puntos con esta venta, se le sacan los que ganó y se le devuelven los que usó.',
+			'La venta va a la papelera, desde donde el dueño de la cuenta la puede restaurar. Si al borrarla se compensó la caja, al restaurarla esa plata no vuelve a entrar.',
+		],
+		requiere: 'Para compensar la caja, las cajas por las que entró la plata tienen que estar abiertas: con alguna cerrada, la venta no se borra.',
+		nota_interna: 'El boton es BtnDelete.vue (borrado individual). Hasta el 5/10/2026 caia en el comodin btn-eliminar-* con el texto del borrado masivo, que le decia al operador "NO compensa la caja": lo contrario de este camino. El stock y la caja (1 y 4) estan medidos por e2e/tests/circuito-venta-contado.spec.js ("borrar la venta devuelve el stock y saca la plata de la caja"); el resto esta LEIDO en el codigo, no medido por diferencia como el resto de este archivo: SaleController::destroy (422 con cajas cerradas) y DeleteSaleHelper::ejecutar_baja (cuenta corriente salvo nota de credito de ARCA, comisiones solo con cliente, PuntosCanjeHelper::deshacer y PuntosAcumulacionHelper::revertir_venta, soft delete), PapeleraController::restaurar, SaleModal.vue (el checkbox de caja sale solo si la venta tiene metodos de pago; el boton no aparece si la venta tiene factura) y Confirm.vue (tildado por defecto). La mision venta-facturada-no-se-borra (empresa-api, en curso al 5/10/2026, sin mergear) agregaria el rechazo del borrado de una venta facturada del lado de la API. SaleHelper::deleteCurrentAcountFromSale borra solo el debito (whereNull haber) y libera los pagos dirigidos (to_pay_id), que quedan en la cuenta; deleteSellerCommissionsFromSale esta dentro del if de client_id; RestoreSaleFromPapeleraHelper rehace stock, compras, cuenta corriente, comisiones y puntos pero NO la caja. El caso del articulo con stock global quedo cerrado el 5/9/2026 (ver la nota de confirm-compensar-caja).',
+	},
+
 	'confirm-compensar-caja': {
 		titulo: 'Compensar la caja',
 		que_hace: 'Al borrar una venta, decide si además sale de la caja la plata que había entrado.',
@@ -240,6 +257,6 @@ export default {
 			'Tildado, la caja vuelve al saldo que tenía antes de la venta.',
 			'Sin tildar, el stock vuelve igual pero la plata QUEDA en la caja. Es la opción correcta solo si esa plata ya se justificó por otro lado.',
 		],
-		nota_interna: 'Defecto abierto (exploracion 1/9/2026, reportado): si un renglon de la venta es de un articulo con stock GLOBAL (sin depositos cargados), borrar la venta le PISA el stock con solo lo repuesto -- de 19 unidades puede quedar 1. La reposicion entra por deposito (CheckToAddress attachea la sucursal de la venta) y el stock global se recalcula desde los depositos. Como se llega al estado (medido 2/9/2026): la ACTUALIZACION MASIVA del listado sobre el campo Stock escribe la columna sin tocar address_article. El modal de movimiento de stock NO sirve: exige deposito si la cuenta tiene alguno (Form.vue:223). Lo fija tests/Feature/Sales/16_..._Test.php::borrar_la_venta_de_un_articulo_con_stock_global_pisa_el_stock. NO contarselo al operador hasta que Lucas decida: ese test se pone rojo el dia que se corrija.',
+		nota_interna: 'El defecto del stock global (borrar la venta de un articulo sin depositos le pisaba el stock: de 19 podia quedar 1) se cerro en la auditoria de stock del 5/9/2026: DeleteSaleHelper::regresar_stock solo repone por deposito si el articulo tiene depositos. Lo fija tests/Feature/Sales/17_Actualizar_venta_stock_y_precio_congelado_Test.php::borrar_la_venta_de_un_articulo_con_stock_global_repone_el_stock.',
 	},
 }

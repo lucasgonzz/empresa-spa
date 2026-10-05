@@ -129,7 +129,8 @@ observar_estado_del_broadcast(Vue.prototype.Echo)
  *
  * El token vigente vive acá (variable de módulo). El interceptor de request de más abajo se lo
  * engancha a cualquier pedido que no traiga uno propio ya seteado; el `router.beforeEach` de acá
- * abajo lo cancela y renueva en cada navegación.
+ * abajo lo cancela y renueva cuando se ABANDONA la pantalla (no cuando solo cambian los parámetros
+ * de la misma ruta).
  */
 let cancel_token_source = axios.CancelToken.source()
 
@@ -142,14 +143,28 @@ let cancel_token_source = axios.CancelToken.source()
  * enganchado sus propios pedidos al token viejo — quedarían cancelados también. Yendo antes,
  * cuando la pantalla nueva monte va a enganchar sus pedidos al token ya renovado.
  *
- * @param {Object} to destino de navegación (sin uso acá, lo pide la firma de Vue Router).
- * @param {Object} from origen de navegación (sin uso acá, lo pide la firma de Vue Router).
+ * @param {Object} to destino de navegación (se compara su `name` con el de `from`).
+ * @param {Object} from origen de navegación (si tiene el mismo `name` que `to`, no se cancela nada).
  * @param {Function} next callback para continuar la navegación.
  * @returns {void}
  */
 router.beforeEach((to, from, next) => {
-    cancel_token_source.cancel('Navegación a otra pantalla')
-    cancel_token_source = axios.CancelToken.source()
+    /*
+     * 🔴 Solo se cancela si SE ABANDONA la pantalla. Una navegación que cambia únicamente los
+     * parámetros dentro de la misma ruta (`$router.push({params: {view: ...}})` de los
+     * horizontal-nav, `sub_view` de Comprobantes, etc.) deja al usuario donde estaba, y lo que
+     * esa pantalla tiene en vuelo sigue siendo suyo. Sin esta excepción, entrar a Comprobantes
+     * cancelaba el listado de Notas de crédito: la pantalla lanza los pedidos de sus listas y
+     * enseguida empuja sus propios parámetros de ruta, y cada empujón cancelaba los pedidos
+     * recién lanzados (axios devolvía el corte, el store lo dejaba en un console.log y el módulo
+     * quedaba vacío aunque la NC estuviera guardada: Fenix, 3/10/2026, 499 en el nginx).
+     * `from.name` es null en la primera navegación: ahí no hay pantalla previa, se cancela igual.
+     */
+    const misma_pantalla = !!from.name && to.name === from.name
+    if (!misma_pantalla) {
+        cancel_token_source.cancel('Navegación a otra pantalla')
+        cancel_token_source = axios.CancelToken.source()
+    }
     next()
 })
 

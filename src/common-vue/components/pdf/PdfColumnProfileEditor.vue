@@ -4,7 +4,7 @@
 		v-if="!model.model_name"
 		show
 		variant="warning">
-			Seleccioná el tipo de modelo (Venta o Artículo) para configurar las columnas.
+			Seleccioná el tipo de modelo (Venta, Presupuesto, Pedido online o Artículo) para configurar las columnas.
 		</b-alert>
 
 		<template v-else>
@@ -22,19 +22,29 @@
 			</b-alert>
 
 			<template v-else>
-				<!-- Botón de acceso al diseñador visual del header (prompt 441). Solo tiene
-				     sentido para perfiles de venta (comprobantes): los perfiles de artículo
-				     tienen su propio diseñador, el del encabezado del catálogo (abajo). -->
+				<!--
+					Botón del diseñador de PDF (misión diseno-pdf-configurable, 1/10/2026): para los
+					perfiles de comprobantes -- venta, presupuesto y pedido online -- arma la hoja entera
+					con cajas (encabezado, zona de arriba de la tabla, pie, hoja y margen). Reemplaza al
+					viejo "Diseñar header", que ahora es el encabezado de ese mismo diseñador. Los perfiles
+					de artículo siguen con su propio diseñador, el del encabezado del catálogo (abajo).
+
+					Debajo, en gris, si el perfil imprime con el PDF de siempre o con cajas.
+				-->
 				<div
-				v-if="model.model_name === 'sale'"
+				v-if="tiene_disenador_de_pdf"
 				class="m-b-10">
 					<b-button
 					size="sm"
 					variant="outline-primary"
-					@click="open_header_designer">
+					data-testid="abrir-disenador-pdf"
+					@click="abrir_disenador_de_pdf">
 						<i class="icon-configuration"></i>
-						Diseñar header
+						Diseñar PDF
 					</b-button>
+					<p class="pdf-column-profile-editor__estado-del-diseno">
+						{{ tiene_diseno_de_cajas ? 'Diseño armado con cajas' : 'Diseño de siempre' }}
+					</p>
 				</div>
 
 				<!-- Diseñador del encabezado del catálogo (misión catalogo-pdf-encabezado):
@@ -68,12 +78,12 @@
 					La suma de anchos visibles supera el ancho disponible ({{ available_width_mm }}mm, imprimible menos márgenes) por {{ Math.abs(remaining_width_mm) }}mm.
 				</b-alert>
 
-				<!-- Diseñador visual del header (modal aparte): recibe el mismo model
-				     que edita este ABM y persiste header_layout + logo_size_mm -->
-				<header-designer
-				v-if="model.model_name === 'sale'"
-				ref="header_designer"
-				:model="model"></header-designer>
+				<!-- Diseñador de PDF (modal aparte): recibe el mismo model que edita este ABM y
+				     persiste page_layout, la hoja, header_layout y logo_size_mm -->
+				<disenador-pdf
+				v-if="tiene_disenador_de_pdf"
+				ref="disenador_de_pdf"
+				:model="model"></disenador-pdf>
 
 				<!-- Diseñador del encabezado del catálogo (modal aparte): recibe el mismo model
 				que edita este ABM y persiste catalog_header_layout -->
@@ -88,11 +98,18 @@
 
 <script>
 import PdfColumnsPreferencesConfigModal from '@/common-vue/components/pdf/PdfColumnsPreferencesConfigModal.vue'
-import HeaderDesigner from '@/common-vue/components/pdf/header-designer/Index.vue'
+/*
+	El diseñador va importado de forma directa (no con () => import), como el editor de Diseños de
+	Vender: se abre con this.$refs.disenador_de_pdf.abrir(), y un componente asíncrono no tiene ref
+	hasta que termina de cargar. Este editor ya se carga diferido desde ModelForm.vue.
+*/
+import DisenadorPdf from '@/common-vue/components/pdf/disenador-pdf/Index.vue'
+import { tiene_diseno } from '@/common-vue/components/pdf/disenador-pdf/estado_del_disenador'
 import CatalogHeaderDesigner from '@/common-vue/components/pdf/catalog-header-designer/Index.vue'
 
 /**
- * Editor de columnas PDF para ABM de pdf_column_profile (ventas o artículos).
+ * Editor de columnas PDF para ABM de pdf_column_profile (ventas, presupuestos, pedidos online
+ * o artículos).
  *
  * Recibe el modelo del perfil como prop y muestra todas las columnas del catálogo,
  * mezclando el estado visible/ancho/orden de los pivots ya guardados.
@@ -100,7 +117,7 @@ import CatalogHeaderDesigner from '@/common-vue/components/pdf/catalog-header-de
 export default {
 	components: {
 		PdfColumnsPreferencesConfigModal,
-		HeaderDesigner,
+		DisenadorPdf,
 		CatalogHeaderDesigner,
 	},
 	props: {
@@ -142,6 +159,27 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Si el perfil en edición es de un comprobante que se diseña con el diseñador de PDF:
+		 * venta, presupuesto o pedido online (decisión de Lucas en la Fase 2 de la misión
+		 * diseno-pdf-configurable). Los perfiles de artículo no: tienen su propio diseñador del
+		 * encabezado del catálogo.
+		 *
+		 * @returns {boolean}
+		 */
+		tiene_disenador_de_pdf() {
+			const model_name = this.model && this.model.model_name
+			return model_name === 'sale' || model_name === 'budget' || model_name === 'order'
+		},
+		/**
+		 * Si el perfil ya imprime con cajas (tiene page_layout): para la línea gris de debajo del
+		 * botón "Diseñar PDF". Sin diseño, sale el PDF de siempre.
+		 *
+		 * @returns {boolean}
+		 */
+		tiene_diseno_de_cajas() {
+			return !!(this.model && tiene_diseno(this.model.page_layout))
+		},
 		/**
 		 * Suma de anchos de columnas visibles (mm).
 		 *
@@ -279,20 +317,26 @@ export default {
 				})
 		},
 		/**
-		 * Alinea perfiles de artículo A4: imprimible 210 mm y margen 5 mm por lado (200 mm para columnas).
-		 * Corrige el valor legacy printable_width_mm=200 que el validador trataba como bruto.
+		 * Alinea perfiles A4 de artículo, presupuesto y pedido online: imprimible 210 mm y margen
+		 * 5 mm por lado (200 mm para columnas). Para artículo, además corrige el valor legacy
+		 * printable_width_mm=200 que el validador trataba como bruto.
+		 *
+		 * Presupuesto y pedido online se suman a la corrección de un perfil NUEVO: su PDF es una hoja
+		 * A4 vertical de 210 mm, y con los defaults del formulario (297/277) el editor dejaría sumar
+		 * columnas hasta 267 mm y el PDF se saldría de la hoja. La venta queda como estaba.
 		 *
 		 * @return {void}
 		 */
 		apply_article_a4_defaults() {
-			if (!this.model || this.model.model_name !== 'article') {
+			const a4_model_names = ['article', 'budget', 'order']
+			if (!this.model || a4_model_names.indexOf(this.model.model_name) === -1) {
 				return
 			}
 
 			const paper_width_mm = Number(this.model.paper_width_mm || 0)
 			const printable_width_mm = Number(this.model.printable_width_mm || 0)
 			const margin_mm = Number(this.model.margin_mm == null || this.model.margin_mm === '' ? 5 : this.model.margin_mm)
-			const is_legacy_net_printable = paper_width_mm === 210 && printable_width_mm === 200 && margin_mm === 5
+			const is_legacy_net_printable = this.model.model_name === 'article' && paper_width_mm === 210 && printable_width_mm === 200 && margin_mm === 5
 			const is_new_profile = !this.model.id
 
 			if (!is_new_profile && !is_legacy_net_printable) {
@@ -450,13 +494,13 @@ export default {
 			this.$set(this.model, 'pdf_column_options', payload)
 		},
 		/**
-		 * Abre el diseñador visual del header (prompt 441) para el perfil actual.
+		 * Abre el diseñador de PDF para el perfil actual (venta, presupuesto o pedido online).
 		 *
 		 * @return {void}
 		 */
-		open_header_designer() {
-			if (this.$refs.header_designer) {
-				this.$refs.header_designer.open()
+		abrir_disenador_de_pdf() {
+			if (this.$refs.disenador_de_pdf) {
+				this.$refs.disenador_de_pdf.abrir()
 			}
 		},
 		/**
@@ -477,4 +521,10 @@ export default {
 .pdf-column-profile-editor
 	width: 100%
 	max-width: 100%
+
+// La línea gris debajo de "Diseñar PDF": si el perfil imprime con el PDF de siempre o con cajas
+.pdf-column-profile-editor__estado-del-diseno
+	margin: 4px 0 0
+	color: var(--color-text-secondary)
+	font-size: 0.75rem
 </style>

@@ -34,7 +34,7 @@ tabindex="0"
 		</p>
 
 		<p class="proceso-fila__meta">
-			{{ texto_tiempo }}<template v-if="lanzado_por"> · {{ lanzado_por }}</template>
+			{{ texto_tiempo }}<template v-if="texto_duracion"> · <span class="proceso-fila__duracion" data-testid="proceso-fila-duracion">{{ texto_duracion }}</span></template><template v-if="lanzado_por"> · {{ lanzado_por }}</template>
 		</p>
 
 		<template v-if="activo">
@@ -104,7 +104,7 @@ tabindex="0"
 </template>
 <script>
 import moment from 'moment'
-import { tipo_de, es_de_importacion, esta_activo, asignacion_de_imagenes } from '@/components/common/procesos-en-segundo-plano/tipos'
+import { tipo_de, es_de_importacion, esta_activo, asignacion_de_imagenes, duracion_de, espera_de, formatear_duracion } from '@/components/common/procesos-en-segundo-plano/tipos'
 
 /**
  * Una fila (tarjeta) del modal de procesos en segundo plano: icono por tipo, titulo, detalle,
@@ -183,8 +183,8 @@ export default {
 			}
 		},
 		/**
-		 * "Iniciado hace 4 minutos · 12:03" mientras corre; "Terminado hace 2 minutos · 12:10"
-		 * (o "Falló ...") cuando termino. Lee `ahora` solo para depender de el.
+		 * "Iniciado hace 4 minutos · 12:03" mientras corre; "Terminado hace 2 minutos · 12:10 ·
+		 * tardó 3 min 20 s" (o "Falló ...") cuando termino. Lee `ahora` solo para depender de el.
 		 */
 		texto_tiempo() {
 			// eslint-disable-next-line no-unused-vars
@@ -194,6 +194,22 @@ export default {
 				return this.describir_momento('Iniciado', this.proceso.started_at)
 			}
 			return this.describir_momento(this.fallo ? 'Falló' : 'Terminado', this.proceso.finished_at)
+		},
+		/**
+		 * "tardó 3 min 20 s" una vez cerrado. Si se cerró sin haber llegado a correr (duración
+		 * cero y una espera en cola que se nota), dice cuánto esperó en vez de "tardó menos de
+		 * 1 s". Va en su propio span para que el salto de línea no parta la frase.
+		 */
+		texto_duracion() {
+			let duracion = duracion_de(this.proceso)
+			if (duracion === null) {
+				return ''
+			}
+			let espera = espera_de(this.proceso)
+			if (duracion < 1 && espera !== null && espera >= 5) {
+				return 'esperó ' + formatear_duracion(espera) + ' en cola'
+			}
+			return 'tardó ' + formatear_duracion(duracion)
 		},
 		/**
 		 * Debajo de la barra: medible -> "3 de 12 lotes · 41 %"; no medible -> la etapa.
@@ -338,6 +354,9 @@ export default {
 	font-size: 12px
 	color: var(--color-text-secondary, #6c757d)
 	font-variant-numeric: tabular-nums
+
+.proceso-fila__duracion
+	white-space: nowrap
 
 .proceso-fila__barra
 	margin-top: 10px

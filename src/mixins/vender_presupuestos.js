@@ -1,7 +1,38 @@
 import vender_mixin from '@/mixins/vender'
 import limpiar_vender from '@/mixins/vender/limpiar_vender'
+
+/*
+	Id del cartel "¿Pasar a la cuenta corriente?" (components/vender/modals/budget-cobro/Index.vue).
+	Se exporta para que el cartel y quien lo abre usen el mismo y no se desfasen.
+*/
+export const ID_MODAL_COBRO_DEL_PRESUPUESTO = 'budget-cobro-modal'
+
+/*
+	Id del modal de reparto de metodos de pago de Vender, el mismo que abre el boton verde de una
+	venta (components/vender/modals/payment-methods/Index.vue).
+*/
+export const ID_MODAL_REPARTO_DE_PAGOS = 'payment-method-modal'
+
 export default {
 	mixins: [vender_mixin, limpiar_vender],
+	data() {
+		return {
+			/*
+				Lo que tenia la venta en curso en el instante en que el vendedor contesto el cartel
+				"¿Pasar a la cuenta corriente?", antes de que la respuesta lo cambie. null = no hay
+				ninguna pregunta en curso.
+
+				Sirve para dos cosas: volver la pantalla a como estaba si el vendedor cancela el
+				reparto o si el guardado falla (deshacer_cobro_del_presupuesto), y devolverle la caja
+				a la venta siguiente cuando el guardado sale bien (cerrar_cobro_del_presupuesto).
+
+				Vive en la instancia que guarda --el cartel, que se monta UNA sola vez--, no en el
+				store: BtnGuardar se monta en mas de un lugar y cada copia de este mixin tiene su
+				propio data, pero solo el cartel llega a llenarlo.
+			*/
+			cobro_previo_al_presupuesto: null,
+		}
+	},
 	computed: {
 		client() {
 			return this.$store.state.vender.client
@@ -73,7 +104,49 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Punto de entrada de "Guardar presupuesto": el boton de la barra inferior y el atajo de
+		 * teclado (que hace click sobre ese mismo boton) terminan aca.
+		 *
+		 * 🔴 YA NO GUARDA: abre el cartel "¿Pasar a la cuenta corriente?" y el guardado de verdad
+		 * (guardar_presupuesto_ahora) lo dispara la respuesta. Va aca y no en el boton para que
+		 * ningun camino --click, atajo, un llamador futuro-- se salte la pregunta.
+		 *
+		 * El cartel se monta UNA sola vez, en views/Vender.vue: BtnGuardar se monta en mas de un
+		 * lugar (la barra inferior y el bloque del total) y un id de modal repetido rompe.
+		 * Este metodo solo le pide que se abra, por id.
+		 *
+		 * 🔴 No hace nada mientras el reparto de metodos de pago de ESTE presupuesto esta abierto
+		 * (la marca `budget_cobro_pendiente` prendida). El atajo de teclado de guardar es un listener
+		 * global (views/Vender.vue, fase de captura) que hace click sobre el boton sin mirar que
+		 * modales hay abiertos: con el reparto en pantalla abria el cartel ENCIMA, y contestarlo
+		 * pisaba el reparto a medias. El guard esta aca, en el unico embudo, y no en el handler del
+		 * atajo (mixins/vender/keyboard_shortcuts.js), para que lo cubra tambien el click de otros
+		 * llamadores. Con el cartel ya abierto no hace falta nada: `show` de un modal visible es un
+		 * no-op.
+		 *
+		 * La marca sola no alcanza como prueba de que el reparto esta a la vista: si alguna vez
+		 * quedara prendida sin modal, "Guardar presupuesto" no haria nada y sin ningun aviso. Por eso
+		 * se mira ademas que `payment-method-modal` exista en el DOM (un b-modal no estatico solo
+		 * existe mientras esta visible o animandose); si no esta, la marca se descarta y se sigue.
+		 */
 		guardar_presupuesto() {
+			if (this.$store.state.vender.budget_cobro_pendiente) {
+				if (document.getElementById(ID_MODAL_REPARTO_DE_PAGOS)) {
+					return
+				}
+
+				this.$store.commit('vender/set_budget_cobro_pendiente', false)
+			}
+
+			this.$bvModal.show(ID_MODAL_COBRO_DEL_PRESUPUESTO)
+		},
+		/**
+		 * Guarda el presupuesto con lo que ya quedo en el store despues de la respuesta del cartel
+		 * (omitir en cuenta corriente, reparto de metodos de pago y total). Lo llama el cartel:
+		 * directo con "Sí", y con "No" cuando el vendedor termina el reparto ("Listo").
+		 */
+		guardar_presupuesto_ahora() {
 			this.$store.commit('auth/setMessage', 'Guardando Presupuesto')
 			this.$store.commit('auth/setLoading', true)
 			if (this.budget) {
@@ -82,7 +155,142 @@ export default {
 				this.crear()
 			}
 		},
+
+		/**
+		 * Foto de lo que tiene la venta en curso, tomada ANTES de aplicar la respuesta del cartel.
+		 * Las referencias se guardan tal cual: el store reemplaza estos arreglos, no los muta.
+		 */
+		recordar_cobro_previo_al_presupuesto() {
+			let vender = this.$store.state.vender
+
+			this.cobro_previo_al_presupuesto = {
+				omitir_en_cuenta_corriente: vender.omitir_en_cuenta_corriente,
+				current_acount_payment_method_id: vender.current_acount_payment_method_id,
+				caja_id: vender.caja_id,
+				selected_payment_methods: vender.selected_payment_methods,
+				modal_payment_methods: vender.modal_payment_methods,
+			}
+		},
+		/**
+		 * Deja la pantalla exactamente como estaba antes de preguntar. Se usa cuando el vendedor
+		 * cancela el reparto de metodos de pago (el boton Cancelar o cerrarlo con Esc) y cuando el
+		 * guardado falla.
+		 *
+		 * 🔴 Si no se deshace, lo que la respuesta toco se queda: "omitir en cuenta corriente" en
+		 * 1, un reparto a medias y el total con el ajuste de ese reparto. Alcanza con que el
+		 * vendedor destilde "Guardar como presupuesto" para que eso se convierta en una VENTA
+		 * comun con el cobro de un presupuesto que nunca se guardo.
+		 *
+		 * Es idempotente: sin foto (no hay pregunta en curso) solo apaga la marca.
+		 */
+		deshacer_cobro_del_presupuesto() {
+			let previo = this.cobro_previo_al_presupuesto
+
+			this.cobro_previo_al_presupuesto = null
+			this.$store.commit('vender/set_budget_cobro_pendiente', false)
+
+			if (!previo) {
+				return
+			}
+
+			this.$store.commit('vender/set_omitir_en_cuenta_corriente', previo.omitir_en_cuenta_corriente)
+			this.$store.commit('vender/setCurrentAcountPaymentMethodId', previo.current_acount_payment_method_id)
+			this.$store.commit('vender/set_caja_id', previo.caja_id)
+			this.$store.commit('vender/setSelectedPaymentMethods', previo.selected_payment_methods)
+			this.$store.commit('vender/set_modal_payment_methods', previo.modal_payment_methods)
+
+			// El total vuelve a ser el que se veia: con el ajuste del reparto anterior, si lo habia.
+			this.setTotal()
+		},
+		/**
+		 * Cierra la pregunta cuando el guardado salio bien. Va ANTES de limpiar_vender().
+		 *
+		 * La caja de la venta en curso se devuelve a lo que tenia: la rama "No" la puso en 0 para
+		 * que el reparto no heredara una caja del metodo unico, y limpiar_vender() --a proposito--
+		 * no toca la caja. Sin esto la venta SIGUIENTE arrancaba sin caja. Tiene que ir antes y no
+		 * despues porque set_caja_id marca la venta como inicializada, y la ultima linea de
+		 * limpiar_vender() es la que apaga esa marca.
+		 *
+		 * Todo lo demas (reparto, omitir, metodo de pago, marca) lo deja limpiar_vender().
+		 */
+		cerrar_cobro_del_presupuesto() {
+			let previo = this.cobro_previo_al_presupuesto
+
+			this.cobro_previo_al_presupuesto = null
+			this.$store.commit('vender/set_budget_cobro_pendiente', false)
+
+			if (previo) {
+				this.$store.commit('vender/set_caja_id', previo.caja_id)
+			}
+		},
+
+		/**
+		 * Las filas del reparto de metodos de pago que viajan con el presupuesto, o [] si va a la
+		 * cuenta corriente.
+		 *
+		 * Las filas conservan TODO lo que traen --incluidos discount_amount y surchage_amount--: la
+		 * API deriva de ahi el ajuste del total por metodo de pago y no tiene otra fuente. Solo se
+		 * saca el __row_id, que es la identidad de la fila en el modal y no le sirve a nadie mas.
+		 *
+		 * @returns {Array}
+		 */
+		get_selected_payment_methods() {
+			if (!this.omitir_en_cuenta_corriente) {
+				return []
+			}
+
+			let filas = []
+
+			this.$store.state.vender.selected_payment_methods.forEach(fila => {
+				let copia = Object.assign({}, fila)
+				delete copia.__row_id
+				filas.push(copia)
+			})
+
+			return filas
+		},
+		/**
+		 * ¿Este presupuesto viaja de contado? Es la misma regla que aplica la API: "omitir en
+		 * cuenta corriente" prendido Y al menos una fila de reparto. Un omitir en 1 sin reparto es
+		 * cuenta corriente para la API, y mandarlo asi dispararia el aviso de "API vieja" de
+		 * avisar_si_la_api_no_guardo_el_cobro() por nada.
+		 *
+		 * @param {Array} filas Lo que devolvio get_selected_payment_methods().
+		 * @returns {boolean}
+		 */
+		viaja_de_contado(filas) {
+			return !!this.omitir_en_cuenta_corriente && filas.length > 0
+		},
+		/**
+		 * Avisa cuando se pidio un cobro de contado y el servidor lo guardo a la cuenta corriente.
+		 *
+		 * Pasa con una API anterior a esta funcion (ignora las claves nuevas y guarda
+		 * omitir_en_cuenta_corriente en 0) o con la columna sin migrar. Sin el aviso el vendedor
+		 * creeria que el presupuesto quedo para cobrar al confirmar, y al confirmarlo la deuda
+		 * aparecería en la cuenta corriente del cliente.
+		 *
+		 * @param {Object} model El presupuesto que devolvio la API.
+		 * @param {boolean} se_pidio_de_contado Si el payload iba de contado.
+		 */
+		avisar_si_la_api_no_guardo_el_cobro(model, se_pidio_de_contado) {
+			if (!se_pidio_de_contado) {
+				return
+			}
+
+			if (model && Number(model.omitir_en_cuenta_corriente)) {
+				return
+			}
+
+			this.$toast.warning('El presupuesto se guardó a la cuenta corriente: el servidor todavía no soporta cobrar presupuestos. Al confirmarlo se va a generar la deuda del cliente.', {
+				duration: 20000,
+			})
+		},
+
 		actualizar() {
+			// Se calculan una vez y se usan en el payload y en la respuesta: lo que se mando es lo que se compara.
+			let selected_payment_methods = this.get_selected_payment_methods()
+			let de_contado = this.viaja_de_contado(selected_payment_methods)
+
 			this.$api.put('budget/'+this.budget.id, {
 				// Cliente actualmente seleccionado en VENDER (refleja un cambio de cliente hecho
 				// en la edición); si por algún motivo no hay cliente en store, se usa el original
@@ -131,9 +339,39 @@ export default {
 				'forzar_total_monto'		: this.forzar_total_monto,
 
 				'moneda_id'              	: this.moneda_id,
-				// Un presupuesto va siempre a la cuenta corriente (decision de Lucas, 18/9/2026): viaja 0
-				// pase lo que pase con el store, y el back lo fija en 0 igual.
-				'omitir_en_cuenta_corriente'              	: 0,
+
+				/*
+					La cotizacion viaja tambien al actualizar, no solo al crear: ahora que el presupuesto
+					se puede pasar de $ a USD (o al reves) editandolo, los precios de los renglones ya
+					estan en la moneda nueva y la API tiene que guardar la cotizacion con la que se
+					convirtieron. Sin ella el presupuesto quedaba en USD con la cotizacion vieja (o
+					NULL) y al confirmarlo la venta nacia mal cotizada. Es la del campo USD de VENDER:
+					la guardada en el presupuesto, o el dolar del sistema si no tenia, y editable.
+					Una API vieja ignora la clave: queda la cotizacion anterior, como siempre.
+				*/
+				'valor_dolar'				: this.valor_dolar,
+
+				/*
+					🔴 Cuenta corriente o cobro al confirmar (cambio del 1/10/2026 sobre la decision del
+					18/9/2026).
+
+					El 18/9 Lucas decidio que un presupuesto iba SIEMPRE a la cuenta corriente, y este
+					campo viajaba 0 fijo: el presupuesto no guardaba ningun dato de cobro, asi que la
+					venta que nacia al confirmarlo de contado quedaba sin metodo de pago ni caja. El
+					1/10 el presupuesto pasa a guardar el reparto de metodos de pago, y el vendedor
+					elige al tocar "Guardar presupuesto" (cartel components/vender/modals/budget-cobro).
+
+					Viaja 1 solo si el reparto trae al menos una fila; el default sigue siendo la
+					cuenta corriente (0 y sin reparto), que es lo que entiende una API anterior.
+				*/
+				'omitir_en_cuenta_corriente'              	: de_contado ? 1 : 0,
+
+				/*
+					El reparto tal cual lo armo el modal, con discount_amount / surchage_amount por fila:
+					de ahi deriva la API el ajuste del total (descuento por transferencia, recargo por
+					cuotas). `total`, mas arriba, ya viaja NETO: es el del store, con ese ajuste adentro.
+				*/
+				'selected_payment_methods'	: selected_payment_methods,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : this.budget.budget_status_id,
@@ -147,22 +385,34 @@ export default {
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
+				// "Sumar IVA a los artículos sin IVA" (0/1): el presupuesto lo guarda igual que iva_aplicado
+				'iva_en_articulos_sin_iva'	: this.iva_en_articulos_sin_iva,
 			})
 			.then(res => {
+				// Primero, antes de cualquier cosa que pueda tirar un error: si algo de abajo falla, el
+				// .catch no tiene que "deshacer" un cobro que el servidor ya guardo.
+				this.cerrar_cobro_del_presupuesto()
+
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.success('Presupuesto actualizado')
+				this.avisar_si_la_api_no_guardo_el_cobro(res.data.model, de_contado)
 				this.$store.commit('budget/add', res.data.model)
 				/*
 					limpiar_vender() vuelve a poner el metodo de pago por defecto (lo hace adentro
 					desde esta mision): abrir un presupuesto para editarlo lo deja en 0, y sin eso
-					la venta siguiente arrancaba en "Seleccione metodo de pago".
+					la venta siguiente arrancaba en "Seleccione metodo de pago". Tambien deja en cero el
+					reparto y el "omitir en cuenta corriente" del cobro de este presupuesto.
 				*/
 				this.limpiar_vender()
 			})
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
+
+				// El guardado fallo: la pantalla vuelve a como estaba antes del cartel, para que el
+				// reparto de este intento no se le pegue a lo que el vendedor haga despues.
+				this.deshacer_cobro_del_presupuesto()
 
 				/*
 					Si el backend mando un mensaje, ACA NO SE MUESTRA NADA: ya lo mostro el handler
@@ -200,6 +450,10 @@ export default {
 			})
 		},
 		crear() {
+			// Se calculan una vez y se usan en el payload y en la respuesta: lo que se mando es lo que se compara.
+			let selected_payment_methods = this.get_selected_payment_methods()
+			let de_contado = this.viaja_de_contado(selected_payment_methods)
+
 			this.$api.post('budget', {
 				'client_id'                 : this.client.id,
 				'price_type_id'				: this.get_price_type_id(),	
@@ -222,9 +476,14 @@ export default {
 				'forzar_total_monto'		: this.forzar_total_monto,
 
 				'valor_dolar'				: this.valor_dolar,
-				// Un presupuesto va siempre a la cuenta corriente (decision de Lucas, 18/9/2026): viaja 0
-				// pase lo que pase con el store, y el back lo fija en 0 igual.
-				'omitir_en_cuenta_corriente'              	: 0,
+
+				// Cuenta corriente o cobro al confirmar: ver el comentario largo en actualizar() (cambio
+				// del 1/10/2026 sobre la decision del 18/9/2026). Viaja 1 solo con un reparto no vacio.
+				'omitir_en_cuenta_corriente'              	: de_contado ? 1 : 0,
+
+				// El reparto de metodos de pago, con discount_amount / surchage_amount por fila. `total`
+				// (mas arriba) ya viaja NETO.
+				'selected_payment_methods'	: selected_payment_methods,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : 1, 
@@ -238,6 +497,8 @@ export default {
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
+				// "Sumar IVA a los artículos sin IVA" (0/1): el presupuesto lo guarda igual que iva_aplicado
+				'iva_en_articulos_sin_iva'	: this.iva_en_articulos_sin_iva,
 			}, {
 				/*
 					El aviso global del interceptor se apaga: el catch de abajo ya muestra el
@@ -248,15 +509,23 @@ export default {
 				skip_global_error_event: true,
 			})
 			.then(res => {
+				// Primero, antes de cualquier cosa que pueda tirar un error (ver actualizar()).
+				this.cerrar_cobro_del_presupuesto()
+
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.success('Presupuesto guardado')
+				this.avisar_si_la_api_no_guardo_el_cobro(res.data.model, de_contado)
 				this.$store.commit('budget/add', res.data.model)
 				this.limpiar_vender()
 			})
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
+
+				// El guardado fallo: la pantalla vuelve a como estaba antes del cartel (ver actualizar()).
+				this.deshacer_cobro_del_presupuesto()
+
 				console.log(err)
 
 				/*
@@ -353,6 +622,33 @@ export default {
 
 			this.articles.forEach(article => {
 
+				/*
+					Renglon con "varios precios" (el Enter de "Personalizado" y, desde la mision
+					balanzas-configurables del 3/10/2026, cada ticket de balanza con importe): va al
+					presupuesto como VARIOS renglones, uno por precio, igual que la API guarda una venta
+					(SaleHelper::attachArticles). BudgetHelper::attachArticles acepta el mismo articulo
+					varias veces con precios distintos.
+
+					🔴 Sin esto el renglon viajaba con price_vender, que en un renglon con varios precios NO
+					es lo que se cobra sino el precio de lista (la "Carniceria" de Panchito va a $0): el
+					total que recalcula BudgetHelper::getTotal() desde los renglones no coincidia con el de
+					la pantalla, que suma calculated_price_vender, y el presupuesto no se guardaba ("El
+					total del presupuesto no corresponde con los productos ingresados").
+				*/
+				if (Array.isArray(article.varios_precios) && article.varios_precios.length) {
+
+					/*
+						for_update viaja hasta cada fila: al actualizar, las filas de un renglon ya cargado
+						van bajo `pivot`, como el renglon, para que la API no les vuelva a calcular el
+						costo (ver renglon_de_presupuesto_desde_otro_precio).
+					*/
+					article.varios_precios.forEach(otro_precio => {
+						articles.push(this.renglon_de_presupuesto_desde_otro_precio(article, otro_precio, for_update))
+					})
+
+					return
+				}
+
 				let ya_estaba_cargado = typeof article.pivot != 'undefined'
 
 				// Se agregan 'name' y 'name_vender_personalizado' a nivel raíz de article_to_add
@@ -432,6 +728,136 @@ export default {
 				console.log(articles)
 			})
 			return articles
+		},
+		/**
+		 * Un renglon del presupuesto para UNA fila de "varios precios" de un articulo de VENDER.
+		 *
+		 * Replica lo que hace la API con una venta (SaleHelper::attachArticles +
+		 * precio_y_base_de_varios_precios): el precio que se guarda es price_vender_con_recargos si
+		 * vino (con "aplicar los recargos de esta venta a los precios" prendida trae el recargo
+		 * adentro; apagada, vale lo mismo que el precio tipeado), con su base en
+		 * price_vender_sin_recargos. Sin esa clave (una fila que no paso por
+		 * set_items_prices.js::set_varios_precios_con_recargos) se guarda el precio tipeado y la base
+		 * va vacia, igual que hace la API.
+		 *
+		 * 🔴 La cantidad se lee con LA MISMA expresion que set_varios_precios_con_recargos(): vacia es
+		 * 1, cualquier otra cosa es Number(). Si se leyera distinto, el total que recalcula la API no
+		 * coincidiria con el de la pantalla y el presupuesto no se guardaria.
+		 *
+		 * El descuento del renglon (bonus) va en CADA fila: BudgetHelper::totalArticle() lo aplica
+		 * renglon por renglon, y la suma de las filas descontadas es exactamente el total que muestra
+		 * VENDER (getTotalItem aplica el descuento sobre calculated_price_vender).
+		 *
+		 * Al ACTUALIZAR, cada fila de un renglon ya cargado (con `pivot`: un renglon reabierto, o el
+		 * que reagrupo utils/varios_precios_guardados.js) viaja bajo `pivot`, con la misma forma que
+		 * el renglon ya cargado, sea guardada o nueva: ver el bloque de abajo. El alta y los
+		 * renglones que se agregaron en la edicion (sin pivot), planos como siempre.
+		 *
+		 * @param {Object} article Renglon de articulo de VENDER, con varios_precios.
+		 * @param {Object} otro_precio Una fila de article.varios_precios.
+		 * @param {Boolean} [for_update=false] El de get_articles(): true al actualizar un presupuesto.
+		 * @returns {Object} Renglon para BudgetHelper::attachArticles(): plano, o con `pivot` si el
+		 *          renglon ya estaba cargado y se esta actualizando el presupuesto.
+		 */
+		renglon_de_presupuesto_desde_otro_precio(article, otro_precio, for_update = false) {
+
+			let precio = otro_precio.price_vender
+			let base = null
+
+			let con_recargos = otro_precio.price_vender_con_recargos
+
+			if (
+				con_recargos !== null
+				&& typeof con_recargos != 'undefined'
+				&& con_recargos !== ''
+				&& !isNaN(Number(con_recargos))
+			) {
+				precio = con_recargos
+				base = typeof otro_precio.price_vender_sin_recargos != 'undefined' ? otro_precio.price_vender_sin_recargos : null
+			}
+
+			let cantidad = 1
+
+			if (otro_precio.amount != '') {
+				cantidad = Number(otro_precio.amount)
+			}
+
+			/*
+				🔴 AL ACTUALIZAR, TODA FILA DE UN RENGLON YA CARGADO (con `pivot`) VA BAJO `pivot`, NO
+				PLANA: la que vino del presupuesto guardado Y la que se tipeo en esta edicion (mision
+				varios-precios-descuento-renglon, 3/10/2026). NO "UNIFICAR" CON EL RETURN PLANO DE ABAJO.
+
+				Espeja lo que hace la API con una VENTA: SaleHelper::fila_de_varios_precios() le copia a
+				cada fila el `pivot` del renglon padre, asi que al editar una venta el costo queda
+				congelado en todas las filas del renglon, nuevas incluidas. El presupuesto tiene que
+				comportarse igual, y aca, a diferencia de la venta, las filas se arman a mano.
+
+				Por que una fila PLANA de un renglon reabierto es un error: su costo (article.cost) es el
+				del pivot guardado (getItemsPreviusSale(): `item.cost = Number(article.pivot.cost)`), o sea
+				que YA es el costo unitario y YA esta cotizado. SaleHelper::getCost() devuelve tal cual el
+				`pivot.cost` de un renglon (lo congela), pero a un renglon PLANO lo trata como costo de
+				catalogo: lo vuelve a dividir por unidades_individuales, lo vuelve a cotizar si el
+				articulo esta en dolares, y le vuelve a aplicar los descuentos y recargos del comprobante
+				si el comercio tiene aplicar_descuentos_de_venta_a_costos. Con 10 unidades individuales y
+				costo unitario 100, cada "Actualizar en VENDER" + guardar dividia el costo por 10
+				(100 -> 10 -> 1) y la ganancia del presupuesto quedaba inflada. Pasaba con las filas que
+				arma el reagrupado al abrir el presupuesto (utils/varios_precios_guardados.js), y pasaba
+				desde antes con cualquier precio que se tipeara en "Personalizado" sobre un renglon
+				reabierto: el costo de esa fila nueva tambien es el del pivot.
+
+				Es la misma forma que la rama `for_update && ya_estaba_cargado` de get_articles(), con el
+				precio, la cantidad y la base de la fila: BudgetHelper::attachArticles() lee amount,
+				price, bonus y location del pivot, y la base primero en el pivot y despues en la raiz.
+
+				- En el alta (for_update false) no hay nada cargado, y un renglon que se agrego en esta
+				  edicion no tiene pivot: su costo es el del catalogo y la API lo tiene que calcular. Los
+				  dos siguen planos, como siempre.
+				- `cost: article.cost` y no un costo por fila guardado aparte: article.cost es lo que
+				  reexpresar_comprobante.js convierte cuando el vendedor cambia la moneda del
+				  presupuesto, y un costo guardado en otra clave quedaria en la moneda vieja.
+			*/
+			if (
+				for_update
+				&& typeof article.pivot != 'undefined'
+			) {
+				return {
+					id: article.id,
+					status: article.status,
+					cost_in_dollars: article.cost_in_dollars,
+					name: article.name,
+					name_vender_personalizado: article.name_vender_personalizado || null,
+					pivot: {
+						amount: cantidad,
+						price: precio,
+						cost: article.cost,
+						costo_real: article.costo_real,
+						unidades_individuales: article.unidades_individuales,
+						presentacion: article.presentacion,
+						price_type_personalizado_id: article.price_type_personalizado_id,
+						bonus: typeof article.discount != 'undefined' ? article.discount : null,
+						location: null,
+						price_vender_sin_recargos: base,
+					},
+				}
+			}
+
+			return {
+				id: article.id,
+				status: article.status,
+				cost_in_dollars: article.cost_in_dollars,
+				name: article.name,
+				name_vender_personalizado: article.name_vender_personalizado || null,
+				amount: cantidad,
+				price: precio,
+				cost: article.cost,
+				costo_real: article.costo_real,
+				unidades_individuales: article.unidades_individuales,
+				presentacion: article.presentacion,
+				price_type_personalizado_id: article.price_type_personalizado_id,
+				bonus: typeof article.discount != 'undefined' ? article.discount : null,
+				location: null,
+				price_vender_sin_recargos: base,
+			}
 		},
 		get_services() {
 			console.log('get_services presupuesto')

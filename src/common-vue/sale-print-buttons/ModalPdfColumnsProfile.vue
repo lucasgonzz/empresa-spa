@@ -32,7 +32,23 @@
 			</b-col>
 		</b-form-row>
 
-		<b-form-row class="m-b-0">
+		<!--
+			Misión diseno-pdf-configurable (1/10/2026): si el perfil ya está armado con cajas, la hoja,
+			el margen, los totales, las comisiones, los costos y el texto del pie se deciden en el
+			diseñador de PDF del ABM, no acá (se esconden abajo). Con un perfil de siempre, todo igual.
+		-->
+		<p
+		v-if="con_diseno_de_cajas"
+		class="modal-pdf-columns-profile__con-cajas">
+			<i
+			class="bi bi-info-circle"
+			aria-hidden="true"></i>
+			<span>Las cajas, el pie y la hoja de este diseño se arman en ABM → Diseño de PDF → Diseñar PDF.</span>
+		</p>
+
+		<b-form-row
+		v-if="!con_diseno_de_cajas"
+		class="m-b-0">
 			<b-col md="4">
 				<b-form-group>
 					<label class="form-label">
@@ -81,7 +97,10 @@
 				Factura de ARCA
 			</b-form-checkbox>
 		</b-col>
-		<b-col md="4" class="d-flex align-items-center">
+		<b-col
+		v-if="!con_diseno_de_cajas"
+		md="4"
+		class="d-flex align-items-center">
 			<b-form-checkbox
 			v-model="local_show_total_in_footer">
 				Mostrar Total en el pie de pagina
@@ -127,13 +146,19 @@
 				Imprimir con fecha actual
 			</b-form-checkbox>
 		</b-col>
-		<b-col md="4" class="d-flex align-items-center">
+		<b-col
+		v-if="!con_diseno_de_cajas"
+		md="4"
+		class="d-flex align-items-center">
 			<b-form-checkbox
 			v-model="local_show_comissions">
 				Mostrar comisiones
 			</b-form-checkbox>
 		</b-col>
-		<b-col md="4" class="d-flex align-items-center">
+		<b-col
+		v-if="!con_diseno_de_cajas"
+		md="4"
+		class="d-flex align-items-center">
 			<b-form-checkbox
 			v-model="local_show_total_costs">
 				Mostrar total costos
@@ -141,7 +166,9 @@
 		</b-col>
 	</b-form-row>
 
-	<b-form-row class="m-b-0">
+	<b-form-row
+	v-if="!con_diseno_de_cajas"
+	class="m-b-0">
 		<b-col md="12">
 			<b-form-group>
 				<label class="form-label">
@@ -181,6 +208,8 @@
 </template>
 
 <script>
+import { tiene_diseno } from '@/common-vue/components/pdf/disenador-pdf/estado_del_disenador'
+
 export default {
 	components: {
 		PdfColumnsPreferencesConfigModal: () => import('@/common-vue/components/pdf/PdfColumnsPreferencesConfigModal.vue'),
@@ -188,6 +217,15 @@ export default {
 	props: {
 		sale: Object,
 		modal_id: String,
+		/**
+		 * El perfil que se está editando (misión diseno-pdf-configurable). Solo se lee su
+		 * `page_layout`: si está armado con cajas, el modal esconde lo que ahora se decide en el
+		 * diseñador de PDF. Sin pasarlo (null), el modal se ve como siempre.
+		 */
+		perfil: {
+			type: Object,
+			default: null,
+		},
 		pdf_config_rows: {
 			type: Array,
 			default() {
@@ -285,6 +323,17 @@ export default {
 		},
 	},
 	computed: {
+		/**
+		 * Si el perfil que se edita tiene un diseño armado con cajas (page_layout). En ese caso la
+		 * hoja, el margen, el total en el pie, las comisiones, los costos y el texto del pie no se
+		 * muestran: se deciden en ABM → Diseño de PDF → Diseñar PDF (decisión 9 del plan de la misión).
+		 * Sus valores igual viajan al guardar, tal cual los tiene el perfil.
+		 *
+		 * @returns {boolean}
+		 */
+		con_diseno_de_cajas() {
+			return !!(this.perfil && tiene_diseno(this.perfil.page_layout))
+		},
 		/**
 		 * Proxy local para ancho de hoja.
 		 */
@@ -485,3 +534,24 @@ export default {
 	},
 }
 </script>
+<style lang="sass">
+// La línea que avisa que el perfil se diseña con cajas (misión diseno-pdf-configurable). Sin
+// `scoped`: el b-modal se monta colgando de <body>. Colores solo por token.
+.modal-pdf-columns-profile__con-cajas
+	display: flex
+	align-items: flex-start
+	gap: 8px
+	margin: 0 0 12px
+	padding: 10px 12px
+	border: 1px solid var(--color-border)
+	border-radius: 8px
+	background: var(--bg-section)
+	color: var(--color-text-primary)
+	font-size: 0.85rem
+	line-height: 1.4
+
+	i
+		flex: 0 0 auto
+		margin-top: 2px
+		color: var(--color-primary)
+</style>

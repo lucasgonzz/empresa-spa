@@ -423,6 +423,175 @@ export default {
 
             return options
         },
+
+        /*
+           Movimientos de deposito (mision movimientos-deposito-auditoria, 3/10/2026).
+
+           Funciones globales que consumen src/models/deposit_movement.js (disabled_function) y
+           src/models/deposit_movement_status.js (form_disabled_to_edit_function y nota_function),
+           mas los componentes de src/components/listado/components/horizontal-nav/deposit-movements/.
+
+           🔴 Los nombres llevan el prefijo `deposit_movement_` a proposito: este archivo es un mixin
+           GLOBAL, y un metodo de un mixin local con el mismo nombre pisa al global en silencio.
+
+           La guarda real esta en el backend (DepositMovementController@update y @move_stock); estas
+           funciones solo reflejan en la pantalla lo que el backend va a aceptar, para que el
+           usuario no edite algo que despues le van a rechazar.
+        */
+
+        /**
+         * Si el stock de un movimiento de deposito YA SE MOVIO. Es el UNICO criterio de "stock
+         * movido" de la SPA: lo usan los bloqueos de abajo, el boton "Mover stock", el distintivo
+         * de la fila, el aviso del formulario, la tabla de solo lectura y el boton Eliminar.
+         *
+         * 🔴 Cuenta `stock_moved_at` O `recibido_at`, igual que el backend (ajuste del 3/10/2026,
+         * compatibilidad con el frente viejo). Mientras un cliente tenga los dos frentes andando
+         * sobre la misma base, el frente con el codigo anterior traslada el stock al pasar el
+         * movimiento a "Recibido" y solo escribe `recibido_at`: no conoce `stock_moved_at`. Si aca
+         * se mirara solo `stock_moved_at`, ese movimiento seguiria mostrando "Mover stock" y se
+         * podria trasladar dos veces. Al reves tambien esta cubierto: el "Mover stock" nuevo llena
+         * `recibido_at`, que es lo que el frente viejo mira para no volver a trasladar.
+         *
+         * @param {Object} model el movimiento de deposito.
+         * @returns {Boolean} true si el stock ya se movio por cualquiera de los dos caminos.
+         */
+        deposit_movement_stock_movido(model) {
+            return !!(model && (model.stock_moved_at || model.recibido_at))
+        },
+
+        /**
+         * Si los DATOS de un movimiento de deposito ya creado (empleado, estado y notas) quedan
+         * de solo lectura.
+         *
+         * Se bloquean cuando el movimiento ya existe y el usuario no tiene el permiso
+         * `deposit_movement.update` ("Editar movimientos de deposito (estado, depositos y notas)").
+         * En un alta nunca se bloquean: crear un movimiento no pide ese permiso. El dueño pasa
+         * siempre, porque `can()` le devuelve true.
+         *
+         * @param {Object} model el movimiento de deposito que muestra el formulario.
+         * @returns {Boolean} true si los campos tienen que quedar deshabilitados.
+         */
+        deposit_movement_datos_bloqueados(model) {
+            if (!model || !model.id) {
+                return false
+            }
+            return !this.can('deposit_movement.update')
+        },
+
+        /**
+         * Si los depositos de ORIGEN y DESTINO de un movimiento ya creado quedan de solo lectura.
+         *
+         * Igual que los datos (sin permiso de edicion) y, ademas, cuando el stock del movimiento
+         * ya se movio (`deposit_movement_stock_movido`): el traslado se hizo entre ESOS dos
+         * depositos, y cambiarlos dejaria el registro diciendo algo que no paso. El backend lo
+         * rechaza con un 422.
+         *
+         * @param {Object} model el movimiento de deposito que muestra el formulario.
+         * @returns {Boolean} true si los selects de deposito tienen que quedar deshabilitados.
+         */
+        deposit_movement_depositos_bloqueados(model) {
+            if (!model || !model.id) {
+                return false
+            }
+            if (this.deposit_movement_datos_bloqueados(model)) {
+                return true
+            }
+            return this.deposit_movement_stock_movido(model)
+        },
+
+        /**
+         * Si los ARTICULOS de un movimiento ya creado quedan bloqueados (no se agregan, no se
+         * quitan, no se cambian cantidades).
+         *
+         * Se bloquean por cualquiera de dos motivos:
+         * - el stock del movimiento ya se movio (`deposit_movement_stock_movido`: boton "Mover
+         *   stock", o "Recibido" desde el frente viejo): los articulos son el registro de lo que
+         *   se traslado, y a partir de ahi no cambian nunca mas;
+         * - el usuario no tiene el permiso `deposit_movement.update_articles`.
+         *
+         * La consume el prop `articles` del modelo (apaga el buscador) y los slots `#articles` del
+         * modal del listado y de las alertas, que en ese caso cambian la tabla editable por una de
+         * solo lectura (ArticulosSoloLectura.vue).
+         *
+         * @param {Object} model el movimiento de deposito.
+         * @returns {Boolean} true si los articulos no se pueden tocar.
+         */
+        deposit_movement_articulos_bloqueados(model) {
+            if (!model || !model.id) {
+                return false
+            }
+            if (this.deposit_movement_stock_movido(model)) {
+                return true
+            }
+            return !this.can('deposit_movement.update_articles')
+        },
+
+        /**
+         * Texto de cuando y quien movio el stock de un movimiento: "el 03/10/2026 14:35 por Juan".
+         *
+         * - Con `stock_moved_at` (boton "Mover stock"): esa fecha, y "por Nombre" si se sabe quien
+         *   fue. Los movimientos viejos que la migracion marco como movidos tienen el usuario en
+         *   NULL: para esos sale solo la fecha ("el 03/10/2026 14:35").
+         * - Con solo `recibido_at` (el frente viejo lo traslado al pasarlo a "Recibido", ver
+         *   `deposit_movement_stock_movido`): esa fecha, sin "por", porque el frente viejo no
+         *   registra quien.
+         *
+         * Las dos columnas no estan casteadas en el modelo de Laravel, asi que llegan como texto
+         * "AAAA-MM-DD hh:mm:ss" en la hora de la app (Argentina) y moment las lee como hora local
+         * del navegador. Si algun dia se castean, llegan en ISO con zona y moment las convierte
+         * igual: el texto no cambia.
+         *
+         * @param {Object} model el movimiento de deposito.
+         * @returns {String} el texto, o '' si el stock todavia no se movio.
+         */
+        deposit_movement_stock_movido_texto(model) {
+            if (!model) {
+                return ''
+            }
+            if (model.stock_moved_at) {
+                let texto = 'el ' + moment(model.stock_moved_at).format('DD/MM/YYYY HH:mm')
+                if (model.stock_moved_user && model.stock_moved_user.name) {
+                    texto += ' por ' + model.stock_moved_user.name
+                }
+                return texto
+            }
+            if (model.recibido_at) {
+                return 'el ' + moment(model.recibido_at).format('DD/MM/YYYY HH:mm')
+            }
+            return ''
+        },
+
+        /**
+         * Si un estado de movimiento de deposito es uno de los FIJOS del sistema ("En proceso" y
+         * "Recibido"): las filas globales con `user_id` en NULL.
+         *
+         * Esos dos no se renombran ni se borran: en las bases compartidas los usan muchos comercios
+         * a la vez. La consume src/models/deposit_movement_status.js como
+         * `form_disabled_to_edit_function` (deja todo el formulario de solo lectura) y
+         * src/common-vue/views/Abm.vue para esconder Guardar y Eliminar. El backend igual
+         * responde 403 si alguien lo intenta.
+         *
+         * @param {Object} model el estado de movimiento de deposito.
+         * @returns {Boolean} true si es un estado fijo ya guardado.
+         */
+        deposit_movement_status_es_fijo(model) {
+            return !!(model && model.id && !model.user_id)
+        },
+
+        /**
+         * Nota permanente debajo del campo "Nombre" de un estado de movimiento de deposito
+         * (`nota_function` de src/models/deposit_movement_status.js): avisa por que un estado fijo
+         * no se deja editar. Para los estados propios no dice nada.
+         *
+         * @param {Object} model el estado de movimiento de deposito.
+         * @returns {String} el aviso, o '' si el estado es propio o todavia no se guardo.
+         */
+        deposit_movement_status_nota_fijo(model) {
+            if (this.deposit_movement_status_es_fijo(model)) {
+                return 'Este estado viene con el sistema: no se puede cambiar ni eliminar.'
+            }
+            return ''
+        },
         /**
          * Opciones del select "Estado" de cada insumo de una ruta de receta.
          *
@@ -1068,6 +1237,99 @@ export default {
             if (sale.afip_ticket) {
                 return this.price(sale.afip_ticket.importe_total)
             }
+        },
+        /**
+         * Costo total de un renglón de una venta: costo unitario congelado × cantidad vendida.
+         * Devuelve null si el renglón no tiene costo (la celda muestra "-", no un costo cero).
+         *
+         * @param {Object} item  Artículo con su pivot de la venta (pivot.cost, pivot.amount).
+         * @return {number|null}
+         */
+        get_sale_item_cost_total(item) {
+            if (!item || !item.pivot || this.pivot_value_is_empty(item.pivot.cost)) {
+                return null
+            }
+            return Number(item.pivot.cost) * Number(item.pivot.amount)
+        },
+        /**
+         * Precio unitario CON IVA de un renglón de venta. `article_sale.price` ya se guarda con IVA
+         * incluido (el neto sale de dividirlo, ver SaleHelper::get_price_sin_iva en la API), así que
+         * es el mismo valor que la columna "Precio unitario": se ofrece con el nombre explícito.
+         *
+         * @param {Object} item  Artículo con su pivot de la venta.
+         * @return {number|null}
+         */
+        get_sale_item_price_con_iva(item) {
+            if (!item || !item.pivot || this.pivot_value_is_empty(item.pivot.price)) {
+                return null
+            }
+            return Number(item.pivot.price)
+        },
+        /**
+         * Precio total CON IVA de un renglón: unitario × cantidad menos el descuento de línea.
+         * Es el mismo cálculo que la columna "Precio total" (getTotalItem).
+         *
+         * @param {Object} item  Artículo con su pivot de la venta.
+         * @return {number|null}
+         */
+        get_sale_item_price_con_iva_total(item) {
+            if (!item || !item.pivot || this.pivot_value_is_empty(item.pivot.price)) {
+                return null
+            }
+            return this.getTotalItem(item)
+        },
+        /**
+         * Precio unitario SIN IVA de un renglón de venta. Usa el neto congelado al vender
+         * (pivot.price_sin_iva); en ventas viejas que no lo tienen lo calcula con la alícuota
+         * congelada (pivot.iva_percentage). Si tampoco hay alícuota devuelve null: no se inventa un
+         * IVA para restar. Una alícuota no numérica (Exento / No Gravado) deja el precio como está.
+         *
+         * @param {Object} item  Artículo con su pivot de la venta.
+         * @return {number|null}
+         */
+        get_sale_item_price_sin_iva(item) {
+            if (!item || !item.pivot) {
+                return null
+            }
+            const pivot = item.pivot
+            if (!this.pivot_value_is_empty(pivot.price_sin_iva)) {
+                return Number(pivot.price_sin_iva)
+            }
+            if (this.pivot_value_is_empty(pivot.price) || this.pivot_value_is_empty(pivot.iva_percentage)) {
+                return null
+            }
+            const alicuota = Number(pivot.iva_percentage)
+            if (isNaN(alicuota) || alicuota == 0) {
+                return Number(pivot.price)
+            }
+            return Number(pivot.price) / (1 + alicuota / 100)
+        },
+        /**
+         * Precio total SIN IVA de un renglón: neto unitario × cantidad menos el descuento de línea.
+         *
+         * @param {Object} item  Artículo con su pivot de la venta.
+         * @return {number|null}
+         */
+        get_sale_item_price_sin_iva_total(item) {
+            const unitario = this.get_sale_item_price_sin_iva(item)
+            if (unitario === null) {
+                return null
+            }
+            let total = unitario * Number(item.pivot.amount)
+            if (!this.pivot_value_is_empty(item.pivot.discount)) {
+                total -= total * Number(item.pivot.discount) / 100
+            }
+            return total
+        },
+        /**
+         * Informa si un valor del pivot viene vacío (null, undefined o ''). El 0 NO es vacío:
+         * un costo de 0 es un dato, no una ausencia.
+         *
+         * @param {*} value
+         * @return {boolean}
+         */
+        pivot_value_is_empty(value) {
+            return value === null || typeof value === 'undefined' || value === ''
         },
         getTotalItem(item, from_pivot = true) {
             let price 

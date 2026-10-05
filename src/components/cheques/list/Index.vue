@@ -34,6 +34,8 @@
 	</div>
 </template>
 <script>
+import { cheques_de_la_solapa, acotar_a_la_solapa } from '@/components/cheques/solapas'
+
 export default {
 	components: {
 		TableComponent: () => import('@/common-vue/components/display/table/Index'),
@@ -51,16 +53,57 @@ export default {
 			return this.$store.state.cheque.models 
 		},
 		filtered() {
-			return this.$store.state.cheque.filtered 
-		},
-		cheques_to_show() {
-			if (this.filtered.length) {
-				return this.filtered
-			}
-			return this.cheques[this.sub_view][this.sub_sub_view.replaceAll('-', '_')]
+			return this.$store.state.cheque.filtered
 		},
 		/**
-		 * Columnas permitidas para la tabla según recibido/emitido/endosados o resultados filtrados.
+		 * Hay una búsqueda de columnas puesta (filtro u orden): la tabla muestra `filtered`.
+		 *
+		 * Es `is_filtered` y NO `filtered.length`: un filtro que no encuentra nada deja
+		 * `filtered = []`, y con el largo la tabla volvía a mostrar la lista completa de la
+		 * solapa como si no hubiera filtro.
+		 *
+		 * @returns {Boolean}
+		 */
+		is_filtered() {
+			return this.$store.state.cheque.is_filtered
+		},
+		/**
+		 * Cheques de la solapa que marca la ruta (Recibido / Emitido + estado, o Endosado). La
+		 * regla de qué lista corresponde a cada solapa vive en components/cheques/solapas.js, la
+		 * misma que usan las pestañas y el filtro de ids.
+		 *
+		 * @returns {Array<Object>}
+		 */
+		cheques_de_esta_solapa() {
+			return cheques_de_la_solapa(this.cheques, this.sub_view, this.sub_sub_view)
+		},
+		/**
+		 * Filas de la tabla: los cheques de la solapa o, con una búsqueda de columnas puesta, el
+		 * resultado de esa búsqueda.
+		 *
+		 * Misión cheques-solapa-endosados (2/10/2026): el resultado de la búsqueda sale de
+		 * `POST global-search/cheque`, que se acota a la solapa con el filtro `in` de ids que
+		 * escribe components/cheques/Index.vue. Igual se vuelve a acotar acá, antes de mostrarlo.
+		 *
+		 * 🔴 Es una red de seguridad contra una API vieja: la que corre en producción hasta el
+		 * release ignora en silencio el operador `in` y devuelve cheques de TODAS las solapas.
+		 * Sin este recorte, con SPA nueva y API vieja un filtro u orden mostraría cheques de otra
+		 * solapa (por ejemplo, un endosado dentro de Recibido). Con la API nueva el recorte no
+		 * saca nada. A lo sumo, con la API vieja, una página queda con menos filas.
+		 *
+		 * @returns {Array<Object>}
+		 */
+		cheques_to_show() {
+			if (!this.is_filtered) {
+				return this.cheques_de_esta_solapa
+			}
+
+			return acotar_a_la_solapa(this.filtered, this.cheques_de_esta_solapa)
+		},
+		/**
+		 * Columnas permitidas para la tabla según la solapa (Recibido / Emitido / Endosado). Valen
+		 * también con una búsqueda de columnas puesta: antes, con un filtro, se devolvían todas
+		 * las columnas (también las que en esa solapa no tienen sentido).
 		 * No incluye aún orden ni visibilidad personalizados (eso aplica `properties_to_show`).
 		 *
 		 * Este camino NO pasa por las preferencias de columnas (column_preferences_helper), así
@@ -69,23 +112,25 @@ export default {
 		 *
 		 * Las dos columnas de endoso (`endosado_a_provider_id`: a un proveedor;
 		 * `endosado_en_expense_id`: en un gasto, decisión 1 de Lucas) solo tienen sentido en la
-		 * solapa Endosados de recibidos: en el resto siempre están vacías.
+		 * solapa Endosado: en el resto siempre están vacías.
+		 *
+		 * Por solapa:
+		 *   - Recibido: sin Proveedor ni columnas de endoso ni "desde cliente".
+		 *   - Emitido: sin Cliente ni las columnas de endoso a proveedor/gasto (queda "Endozado
+		 *     desde cliente": la copia emitida guarda de qué cliente vino el cheque).
+		 *   - Endosado: las de endoso, sin Proveedor ni "desde cliente".
 		 */
 		base_properties_for_cheques_list() {
 			let props = this.modelPropertiesFromName('cheque').filter(prop => !prop.not_show_on_table)
 
-			if (this.filtered.length == 0) {
+			if (this.sub_view == 'recibido') {
+				return props.filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_en_expense_id' && prop.key != 'endosado_desde_client_id')
+			} else if (this.sub_view == 'emitido') {
+				return props.filter(prop => prop.key != 'client_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_en_expense_id')
+			} else if (this.sub_view == 'endosado') {
+				return props.filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_desde_client_id')
+			}
 
-				if (this.sub_view == 'recibido') {
-					if (this.sub_sub_view == 'endosados') {
-						return props.filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_desde_client_id')
-					} 
-					return props.filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_en_expense_id' && prop.key != 'endosado_desde_client_id')
-				} else if (this.sub_view == 'emitido') {
-					return props.filter(prop => prop.key != 'client_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_en_expense_id')
-				}
-			} 
-			
 			return props
 		},
 		/**

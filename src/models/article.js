@@ -136,7 +136,16 @@ export default {
 			key: 'plu',
 			type: 'text',
 			not_show: true,
-			if_has_extencion: 'plu_balanza_bar_code',
+			/*
+				Mision balanzas-configurables (3/10/2026): el campo aparece segun la configuracion
+				del dueño ("Por PLU" en Configuracion -> Modulo de VENDER -> Tickets de balanza) y
+				ya no por la extension `plu_balanza_bar_code`, que dejo de hacer nada. El comando
+				balanzas:migrar-desde-extensiones de la API deja en 'plu' a todo dueño que tenia esa
+				extension, asi que a nadie se le esconde el campo al desplegar. El gate lo resuelve
+				cumple_config_del_dueno() (common-vue/mixins/generals.js) en el formulario, la tabla,
+				los filtros y el modal de columnas.
+			*/
+			if_config_del_dueno: { key: 'tickets_de_balanza', value: 'plu' },
 			description: 'Codigo del articulo en la balanza',
 		},
 		{
@@ -174,6 +183,16 @@ export default {
 				key: 'cost_in_dollars',
 				equal_to: 1
 			},
+			// Mision masiva-costo-neto-o-bruto (3/10/2026): en la actualizacion masiva el costo puede
+			// declararse como "Costo base (sin IVA)" o como "Costo bruto (con IVA)", igual que en la
+			// importacion de Excel. Esta propiedad es SOLO la bandera declarativa: el componente comun
+			// de la masiva (opciones-filtrados-seleccion/Update.vue) no sabe de costos, y asi ningun
+			// otro modelo ni otra propiedad cambia de comportamiento. La condicion fiscal (el
+			// Monotributista no ve el selector porque su costo es el que paga y no hay bruto/neto) NO se
+			// declara aca: Update.vue la resuelve leyendo el OWNER de la cuenta, porque la computed
+			// global `es_monotributista` lee `this.user` y para un empleado discrepa con el backend
+			// (mismo criterio que modal-props/CostInput.vue).
+			update_selector_neto_bruto: true,
 			// table_position: 8,
 		},
 		
@@ -192,12 +211,12 @@ export default {
 			description: 'Alicuota de IVA que tiene este articulo, coloque el VALOR REAL ya que este dato sera usado en caso de hacer una FACTURA por la venta de este articulo',
 		},
 		{
-			// Prompt 612: solo se muestra (y se puede ver) para cuentas Responsable Inscripto, donde
-			// queda siempre activado y bloqueado (el usuario no lo puede apagar; los articulos
-			// exentos se resuelven por la alicuota de IVA, no apagando este control). En
+			// Prompt 612: solo se muestra (y se puede ver) para cuentas Responsable Inscripto. En
 			// Monotributista se oculta por completo. El render se reemplaza por un componente propio
-			// (slot "#aplicar_iva" en src/views/Listado.vue -> AplicarIvaInput.vue), que fuerza el
-			// valor a 1 y agrega la aclaracion siempre visible.
+			// (slot "#aplicar_iva" en src/views/Listado.vue -> AplicarIvaInput.vue): en la cuenta
+			// MIGRADA a precios por condicion fiscal queda activado y bloqueado (lo fuerza a 1); en la
+			// cuenta con configuracion VIEJA es un check normal que se prende y se apaga (mision
+			// iva-a-articulos-sin-iva-en-vender, 1/10/2026).
 			text: 'Aplicar iva',
 			key: 'aplicar_iva',
 			type: 'checkbox',

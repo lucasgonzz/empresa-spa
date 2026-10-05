@@ -139,15 +139,13 @@
 				</b-dropdown-item>
 			</b-dropdown>
 
-			<b-button
-			v-if="from_model.current_acounts_count == 0"
-			class="cc-toolbar__btn"
-			variant="light"
-			title="Cargar el saldo con el que arranca esta cuenta"
-			@click="saldoInicial">
-				<i class="bi bi-flag"></i>
-				Saldo inicial
-			</b-button>
+			<!--
+				Solo en una cuenta sin movimientos. Quien decide eso es el componente, no un
+				`v-if` aca: antes era `from_model.current_acounts_count == 0` y no aparecia nunca,
+				porque ese conteo no viene en el cliente ni en el proveedor (ver BtnSaldoInicial.vue).
+			-->
+			<btn-saldo-inicial
+			class="cc-toolbar__btn"></btn-saldo-inicial>
 
 			<btn-loader
 			class="cc-toolbar__btn"
@@ -188,6 +186,7 @@ export default {
 	mixins: [current_acounts],
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
+		BtnSaldoInicial: () => import('@/components/common/current-acounts/BtnSaldoInicial'),
 	},
 	data() {
 		return {

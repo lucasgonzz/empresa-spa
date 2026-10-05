@@ -280,6 +280,88 @@ export function esta_activo(proceso) {
 }
 
 /**
+ * Segundos entre dos fechas ISO. Null si falta alguna, si no se pueden leer o si la diferencia
+ * da negativa (relojes desfasados entre el worker y el servidor web).
+ *
+ * @param {String|null} desde
+ * @param {String|null} hasta
+ * @returns {Number|null}
+ */
+function segundos_entre(desde, hasta) {
+	if (!desde || !hasta) {
+		return null
+	}
+	let inicio = new Date(desde).getTime()
+	let fin = new Date(hasta).getTime()
+	if (isNaN(inicio) || isNaN(fin)) {
+		return null
+	}
+	return Math.max(0, Math.round((fin - inicio) / 1000))
+}
+
+/**
+ * Cuánto tardó en EJECUTARSE un proceso ya terminado, en segundos; null si sigue abierto.
+ *
+ * Usa `duracion_segundos` que manda la API. Con una API anterior a ese campo lo calcula con
+ * `started_at` y `finished_at`, que ya viajaban.
+ *
+ * @param {Object} proceso
+ * @returns {Number|null}
+ */
+export function duracion_de(proceso) {
+	if (!proceso || esta_activo(proceso)) {
+		return null
+	}
+	if (typeof proceso.duracion_segundos === 'number') {
+		return proceso.duracion_segundos
+	}
+	return segundos_entre(proceso.started_at, proceso.finished_at)
+}
+
+/**
+ * Cuánto esperó en la cola antes de que un worker lo levantara, en segundos. Null si todavía
+ * está pendiente o si la API no lo informa (no se puede calcular sin `created_at`).
+ *
+ * @param {Object} proceso
+ * @returns {Number|null}
+ */
+export function espera_de(proceso) {
+	if (!proceso || proceso.status === 'pendiente') {
+		return null
+	}
+	if (typeof proceso.espera_segundos === 'number') {
+		return proceso.espera_segundos
+	}
+	return null
+}
+
+/**
+ * "45 s", "3 min 20 s", "1 h 5 min". Menos de un segundo se muestra como "menos de 1 s".
+ *
+ * @param {Number|null} segundos
+ * @returns {String} Cadena vacía si no hay valor.
+ */
+export function formatear_duracion(segundos) {
+	if (segundos === null || typeof segundos === 'undefined' || isNaN(segundos)) {
+		return ''
+	}
+	segundos = Math.round(segundos)
+	if (segundos < 1) {
+		return 'menos de 1 s'
+	}
+	if (segundos < 60) {
+		return segundos + ' s'
+	}
+	let horas = Math.floor(segundos / 3600)
+	let minutos = Math.floor((segundos % 3600) / 60)
+	let resto = segundos % 60
+	if (horas > 0) {
+		return horas + ' h' + (minutos > 0 ? ' ' + minutos + ' min' : '')
+	}
+	return minutos + ' min' + (resto > 0 ? ' ' + resto + ' s' : '')
+}
+
+/**
  * "sin_procesar_por_cuota" -> "Sin procesar por cuota". Para las claves de `resultado` que no
  * tienen etiqueta propia: mejor eso que mostrar la clave cruda.
  *

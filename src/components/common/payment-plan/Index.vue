@@ -4,7 +4,6 @@
     :show_btn_remove_belongs_to_many="false"
     :prop_to_send_on_save="prop_to_send_on_save"
     check_permissions
-    not_show_delete_text
     model_name="payment_plan">
 
     	<template #model_modal_header>

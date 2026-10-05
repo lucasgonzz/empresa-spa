@@ -113,7 +113,7 @@
 					variant="outline-secondary"
 					class="editor-etiqueta__prueba"
 					:disabled="guardando"
-					:title="ids_de_prueba.length ? 'Abre el PDF con este diseño y algunos de tus artículos' : SIN_ARTICULOS_PARA_PROBAR"
+					:title="ids_de_prueba.length ? 'Abre el PDF con este diseño y algunos de tus artículos' : nota_de_la_prueba"
 					@click="imprimir_prueba">
 						<i class="bi bi-printer"></i>
 						Imprimir una prueba
@@ -164,7 +164,6 @@ import {
 	lugar_libre,
 } from '../diseno'
 import { crear_diseno, actualizar_diseno, mensaje_de_error, abrir_prueba, SIN_ARTICULOS_PARA_PROBAR } from '../api_de_disenos'
-import { ids_para_la_prueba } from '../muestra'
 import { avisar } from '@/components/abm/disenos-de-vender/avisos'
 
 /* Nombre que se sugiere al crear un diseño */
@@ -205,10 +204,24 @@ export default {
 				return []
 			},
 		},
+		/*
+			Los articulos con que sale "Imprimir una prueba" (hasta 6). Los arma la solapa, que es la que
+			los busca en la API si el store no tiene (muestra.js / api_de_disenos.js).
+		*/
+		ids_de_prueba: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
+		/* Por que no hay articulos para la prueba (buscando, no se pudieron traer, no hay ninguno) */
+		nota_de_la_prueba: {
+			type: String,
+			default: SIN_ARTICULOS_PARA_PROBAR,
+		},
 	},
 	data() {
 		return {
-			SIN_ARTICULOS_PARA_PROBAR: SIN_ARTICULOS_PARA_PROBAR,
 			/* id del b-modal (tambien scopea los estilos, ver el <style>) */
 			id_del_modal: 'editor-etiqueta-gondola',
 			/* true entre el show y el hidden del modal */
@@ -287,14 +300,6 @@ export default {
 		 */
 		lleno() {
 			return !!this.diseno && this.diseno.elementos.length >= TOPE_DE_CAMPOS
-		},
-		/**
-		 * Los articulos con que sale "Imprimir una prueba".
-		 *
-		 * @returns {Array}
-		 */
-		ids_de_prueba() {
-			return ids_para_la_prueba(this)
 		},
 		/**
 		 * Si hay cambios sin guardar (nombre o diseño).
@@ -731,7 +736,7 @@ export default {
 			})
 		},
 		/**
-		 * "Imprimir una prueba": abre el PDF con el diseño guardado y hasta 6 articulos del store. Con
+		 * "Imprimir una prueba": abre el PDF con el diseño guardado y hasta 6 articulos (ids_de_prueba). Con
 		 * cambios sin guardar, primero pide guardar (la prueba sale con lo guardado).
 		 *
 		 * @returns {void}
@@ -742,7 +747,7 @@ export default {
 				return
 			}
 			if (!abrir_prueba(this.modelo_id, this.ids_de_prueba)) {
-				avisar(this, 'info', SIN_ARTICULOS_PARA_PROBAR)
+				avisar(this, 'info', this.nota_de_la_prueba)
 			}
 		},
 		/**

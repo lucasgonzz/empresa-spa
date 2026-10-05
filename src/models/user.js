@@ -280,6 +280,42 @@ export default {
 			type: 'checkbox',
 		},
 		/*
+		 * Tickets de balanza (mision balanzas-configurables, 3/10/2026). Reemplaza a las extensiones
+		 * `plu_balanza_bar_code` y `balanza_bar_code`, que ya no hacen nada: el comando
+		 * balanzas:migrar-desde-extensiones de la API pasa a cada dueño a la dinamica que usaba.
+		 *
+		 * - 'plu': el codigo trae el PLU del articulo y el peso (La Martina). Muestra el campo PLU
+		 *   en la ficha del articulo (src/models/article.js) y VENDER lo lee igual que siempre.
+		 * - 'balanzas': cada balanza tiene un codigo de ticket propio y un articulo (Panchito).
+		 *   Muestra la solapa ABM -> Balanzas (src/mixins/abm.js).
+		 * - 'ninguno' (o NULL, nunca configurado): VENDER no lee tickets de balanza.
+		 *
+		 * Solo lo ve el dueño, igual que aplicar_descuentos_proveedor_al_asignar: es preferencia del
+		 * comercio y vive en la fila del dueño, que es de donde la leen VENDER, la ficha del articulo
+		 * y el ABM (owner.tickets_de_balanza). El empleado tiene su propia columna, que nadie escribe,
+		 * asi que el select le mostraria siempre vacio. Ojo: esto es para que no vea un control que le
+		 * miente, NO es la proteccion. ModelForm postea el modelo entero, props ocultas incluidas;
+		 * quien impide que el empleado le pise la preferencia al dueño es el guard de
+		 * UserController::update() (que ademas solo acepta estos tres valores).
+		 */
+		{
+			text: 'Tickets de balanza',
+			key: 'tickets_de_balanza',
+			type: 'select',
+			options: [
+				{text: 'No uso balanzas', value: 'ninguno'},
+				{text: 'Por PLU', value: 'plu'},
+				{text: 'Por balanza', value: 'balanzas'},
+			],
+			v_if_function: 'is_owner_v_if_function',
+			descriptions: [
+				'Define cómo lee VENDER los tickets que imprime la balanza cuando se escanean con el lector de códigos de barras.',
+				'Por PLU: el código del ticket trae el PLU del artículo y el peso. A cada artículo que se pesa cargale su PLU en la ficha (campo "PLU") y VENDER lo agrega con la cantidad que marcó la balanza.',
+				'Por balanza: cada balanza imprime tickets que empiezan con un código propio (por ejemplo 22) y se imputan siempre al mismo artículo (por ejemplo "Carnicería"). Las balanzas se cargan en ABM → Balanzas: el código, el artículo y si el ticket trae el importe o el peso.',
+				'Por balanza, con importe: si el artículo ya está en la venta, el importe del ticket se suma como un precio más del mismo renglón; si no está, se agrega con ese importe.',
+			],
+		},
+		/*
 		 * Permite habilitar o deshabilitar el trabajo en modo offline del sistema.
 		 * Si está desactivado, no se ejecuta la sincronización local de artículos/ventas.
 		 */
@@ -539,7 +575,8 @@ export default {
 		 * defecto con los que se calculan los movimientos de stock sugeridos. Persisten
 		 * en columnas sugerencias_* de users via UserController@update, el mismo camino
 		 * que usar_condicion_fiscal_en_costeo. Sin la extension, el grupo entero
-		 * desaparece de Configuracion general.
+		 * desaparece de Configuracion general (salvo con asistente_ia: ver
+		 * sugerencias_prioridad_destino, que se gatea con un OR de las dos).
 		 *
 		 * Desde la mision "modulo-ia-mostrador" (14/9/2026) estos tres defaults
 		 * (modo, origen, limite del origen) los lee TAMBIEN la carpeta Stock del
@@ -619,6 +656,37 @@ export default {
 				'MINIMO: no se mueve stock si eso deja al origen por debajo de su stock minimo.',
 				'IDEAL: se puede vaciar el origen hasta su nivel ideal.',
 				'SIN LIMITE: se puede mover todo el stock necesario, aunque el origen quede vacio.',
+			],
+		},
+		{
+			/*
+			 * Criterio de reparto desde el depósito madre (columna
+			 * users.sugerencias_prioridad_destino, misión deposito-madre, 2/10/2026).
+			 * Viaja en el PUT del usuario como los otros sugerencias_*; empresa-api
+			 * acepta solo 'ventas_sucursal' | 'ventas_articulo' (default
+			 * 'ventas_sucursal') e ignora cualquier otro valor.
+			 *
+			 * Solo tiene efecto si alguna sucursal está marcada como depósito madre
+			 * (es_deposito_madre en src/models/address.js); sin madre, las
+			 * sugerencias se ordenan por urgencia como siempre.
+			 *
+			 * Mismo gateo OR que el checkbox del madre (if_has_alguna_extencion):
+			 * con asistente_ia solo, este campo aparece y los tres de arriba no.
+			 */
+			text: 'Prioridad al repartir desde el depósito madre',
+			key: 'sugerencias_prioridad_destino',
+			type: 'select',
+			options: [
+				{text: 'La sucursal que más vende', value: 'ventas_sucursal'},
+				{text: 'La sucursal que más vende ese artículo', value: 'ventas_articulo'},
+			],
+			if_has_alguna_extencion: ['sugerencias_inteligentes', 'asistente_ia'],
+			descriptions: [
+				'Decide quién se lleva el stock del depósito madre cuando no alcanza para todas las sucursales, y en qué orden aparecen los movimientos en el informe de stock.',
+				'LA SUCURSAL QUE MÁS VENDE: primero la sucursal que más plata facturó en los últimos 90 días, contando las ventas en pesos ya terminadas (las ventas en dólares no suman).',
+				'LA SUCURSAL QUE MÁS VENDE ESE ARTÍCULO: para cada artículo, primero la sucursal donde ese artículo se vende más rápido, mirando los últimos 90 días y, si hay historia, comparándolos con la misma época del año pasado.',
+				'Con cualquiera de las dos opciones, tanto al repartir el stock como en la lista del informe van primero las sucursales que venden ese artículo: las que no lo venden reciben y aparecen después, aunque facturen más.',
+				'Solo se usa si marcaste una sucursal como depósito madre (en Sucursales). Sin depósito madre, las sugerencias funcionan como siempre.',
 			],
 		},
 

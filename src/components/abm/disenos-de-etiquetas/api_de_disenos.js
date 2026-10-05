@@ -18,8 +18,25 @@ import { env } from '@/runtime_config'
 
 export { mensaje_de_error } from '@/components/abm/disenos-de-vender/api_de_disenos'
 
-/* Lo que se dice cuando no hay articulos en memoria para "Imprimir una prueba" */
-export const SIN_ARTICULOS_PARA_PROBAR = 'Abrí el Listado para tener artículos con qué probar.'
+/*
+	Lo que se dice cuando no hay articulos para "Imprimir una prueba". Desde la mision
+	etiquetas-prueba-articulos-reales (4/10/2026) la solapa los busca sola en la API, asi que llegar
+	aca es que el negocio no tiene ninguno cargado (antes decia "Abrí el Listado...", que con el
+	listado de la 4.x no alcanzaba: ver muestra.js).
+*/
+export const SIN_ARTICULOS_PARA_PROBAR = 'Todavía no tenés artículos cargados con qué probar.'
+
+/* Mientras la solapa busca articulos en la API */
+export const BUSCANDO_ARTICULOS_PARA_PROBAR = 'Buscando artículos para la prueba…'
+
+/* Si la busqueda en la API fallo (sin conexion, error del servidor) */
+export const NO_SE_PUDIERON_TRAER_ARTICULOS = 'No se pudieron traer artículos para la prueba. Revisá tu conexión y volvé a entrar.'
+
+/* Cuantos articulos con precio se piden a la API: los que entran en la hoja de prueba (6) */
+const ARTICULOS_CON_PRECIO_A_PEDIR = 6
+
+/* Si el negocio no tiene suficientes con precio, se piden algunos mas de cualquier tipo */
+const ARTICULOS_CUALQUIERA_A_PEDIR = 12
 
 /* Ruta del recurso, relativa a $api (que ya lleva el prefijo /api) */
 const RUTA = 'article-ticket-design'
@@ -62,6 +79,78 @@ export function actualizar_diseno(vm, id, datos) {
  */
 export function eliminar_diseno(vm, id) {
 	return vm.$api.delete(RUTA + '/' + id, CONFIGURACION)
+}
+
+/**
+ * Pide unos articulos del negocio al buscador general (`global-search/article`), para la muestra del
+ * lienzo y para "Imprimir una prueba" cuando el store no tiene ninguno completo (se entro a la
+ * solapa sin pasar por el Listado, o el Listado que se vio no tenia codigos de barras).
+ *
+ * Va por $api directo y NO por el store: runGlobalSearch escribe `filtered` del modulo `article`, y
+ * eso le pisaria al Listado la pagina que estaba mirando.
+ *
+ * 🔴 Las condiciones van en `extra_filters` y nunca en `filters` (los de la lupa de cada columna):
+ * globalSearch guarda una fila en el historial de filtros del Listado cada vez que llegan filtros de
+ * columna, y entrar a esta solapa no es una busqueda del usuario.
+ *
+ * @param {Object} vm componente que hace el pedido (usa su $api)
+ * @param {number} cuantos per_page
+ * @param {Array} extra_filters {key, operator, value} (ExtraFiltersHelper de la API)
+ * @param {string} order_by columna por la que se ordena, de mayor a menor
+ * @returns {Promise<Array>}
+ */
+function pedir_articulos(vm, cuantos, extra_filters, order_by) {
+	return vm.$api.post('global-search/article?page=1', {
+		query_value: '',
+		props: [],
+		relation_props: [],
+		extra_filters: extra_filters,
+		filters: [],
+		order_by: order_by,
+		order_direction: 'DESC',
+		per_page: cuantos,
+	}, CONFIGURACION)
+	.then(function (respuesta) {
+		let modelos = respuesta.data && respuesta.data.models ? respuesta.data.models.data : null
+		return Array.isArray(modelos) ? modelos : []
+	})
+}
+
+/**
+ * Los articulos con que probar, traidos de la API: los que tienen precio, ordenados por codigo de
+ * barras de mayor a menor (en MySQL los NULL y los vacios quedan al final, asi que los que tienen
+ * codigo salen primero). Si no llegan a llenar la hoja de prueba y `tambien_incompletos`, se suman
+ * los ultimos de cualquier tipo (muestra.js saca los repetidos y pone los completos primero).
+ *
+ * Una API que ignorara el filtro o el orden devuelve los ultimos articulos, y muestra.js igual pone
+ * los completos primero.
+ *
+ * @param {Object} vm
+ * @param {boolean} tambien_incompletos si el store no tiene ningun articulo a mano
+ * @returns {Promise<Array>} rechaza si falla el pedido y no hay nada que mostrar
+ */
+export function buscar_articulos_para_la_prueba(vm, tambien_incompletos) {
+	let con_precio = [
+		{ key: 'final_price', operator: 'numeric_presence', value: 'positivo' },
+	]
+
+	return pedir_articulos(vm, ARTICULOS_CON_PRECIO_A_PEDIR, con_precio, 'bar_code')
+	.then(function (articulos) {
+		if (articulos.length >= ARTICULOS_CON_PRECIO_A_PEDIR || !tambien_incompletos) {
+			return articulos
+		}
+		return pedir_articulos(vm, ARTICULOS_CUALQUIERA_A_PEDIR, [], 'id')
+		.then(function (cualquiera) {
+			return articulos.concat(cualquiera)
+		})
+		.catch(function (error) {
+			/* Si el segundo falla, alcanza con los del primero; sin ninguno, es un error */
+			if (articulos.length) {
+				return articulos
+			}
+			throw error
+		})
+	})
 }
 
 /**

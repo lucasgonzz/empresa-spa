@@ -1,6 +1,7 @@
 <template>
 	<div
 	class="header-designer-preview"
+	:class="{ 'header-designer-preview--embebido': ancho_completo }"
 	:style="preview_box_style">
 
 		<!-- Bloque emisor: logo a la izquierda de todo, cuadrante izquierdo (ancho
@@ -70,17 +71,30 @@
 			group="receptor"
 			empty_text="Arrastrá campos del cliente acá"></quadrant-list>
 
-			<div class="header-designer-preview__col header-designer-preview__col--side header-designer-preview__receptor-fixed">
+			<!--
+				Cuenta corriente: es un bloque de la VENTA (saldo del cliente). El presupuesto y el
+				pedido online no lo tienen: ahí el lado derecho del bloque del cliente queda vacío, y se
+				deja una columna vacía del mismo ancho (el v-else de abajo) para que el cuadrante
+				izquierdo siga ocupando la mitad de la hoja, como en el PDF, y no se estire.
+			-->
+			<div
+			v-if="is_sale"
+			class="header-designer-preview__col header-designer-preview__col--side header-designer-preview__receptor-fixed">
 				<p class="header-designer-preview__col-title text-muted small m-b-5">Receptor · Derecha</p>
 				<div class="header-designer-preview__receptor-fixed-box text-muted small">
 					Cuenta corriente
 					<small class="d-block">(fijo, no editable)</small>
 				</div>
 			</div>
+
+			<div
+			v-else
+			class="header-designer-preview__col header-designer-preview__col--side"
+			aria-hidden="true"></div>
 		</div>
 
 		<p
-		v-else
+		v-else-if="is_sale && mostrar_receptor"
 		class="small text-muted font-italic m-t-15 m-b-0">
 			El bloque receptor no se muestra en perfiles fiscales: el recibo es siempre a nombre del comprador de la venta.
 		</p>
@@ -95,9 +109,15 @@ import { PREVIEW_PX_PER_MM, LOGO_SIZE_MM_MIN, LOGO_SIZE_MM_MAX } from '@/common-
 /**
  * Previsualización visual del header del PDF (prompt 441), con la forma real de la
  * hoja: cuadrantes de emisor (izquierda/centro/derecha) y, si el perfil no es
- * fiscal, cuadrante de receptor. Orquesta los QuadrantList (drag & drop) y la
+ * fiscal, cuadrante de receptor. Sirve a los perfiles de venta, presupuesto y pedido
+ * online (prop `model_name`). Orquesta los QuadrantList (drag & drop) y la
  * manija de redimensionado del logo; el estado del layout vive en el componente
- * padre (Index.vue del diseñador) y se muta por referencia.
+ * padre y se muta por referencia.
+ *
+ * Desde la misión diseno-pdf-configurable (1/10/2026) también lo embebe el diseñador de PDF
+ * (disenador-pdf/HojaDelDisenador.vue) con tres props opcionales: `px_per_mm` (la escala de su
+ * hoja), `ancho_completo` (100% de ancho y sin marco propio) y `mostrar_receptor` en false (el
+ * cliente va en cajas). Sin esas props se ve y se comporta exactamente como antes.
  */
 export default {
 	name: 'HeaderDesignerHeaderPreview',
@@ -145,24 +165,68 @@ export default {
 			type: Number,
 			default: 210,
 		},
+		/**
+		 * Modelo del perfil en edición ('sale' | 'budget' | 'order'). Define qué bloques atados
+		 * a la venta se muestran (cuenta corriente, aviso del comprador de la venta). Default
+		 * 'sale' para que cualquier uso que no lo pase se comporte como siempre.
+		 */
+		model_name: {
+			type: String,
+			default: 'sale',
+		},
+		/**
+		 * Factor de escala px -> mm de la previsualización (misión diseno-pdf-configurable): el
+		 * diseñador de PDF pasa la escala de su hoja para que el logo se vea del tamaño que tiene
+		 * en esa hoja. Sin pasarlo, el de siempre (PREVIEW_PX_PER_MM).
+		 */
+		px_per_mm: {
+			type: Number,
+			default: PREVIEW_PX_PER_MM,
+		},
+		/**
+		 * true = la previsualización ocupa el 100% de su contenedor y sin marco propio (el diseñador
+		 * de PDF la embebe adentro de su hoja, que ya tiene el ancho y el marco). Default false: el
+		 * ancho del papel × px_per_mm y el recuadro de siempre.
+		 */
+		ancho_completo: {
+			type: Boolean,
+			default: false,
+		},
+		/**
+		 * false = no se muestra el bloque del cliente (receptor) ni su aviso: en un diseño con
+		 * cajas los datos del cliente los ponen las cajas. Default true: como siempre.
+		 */
+		mostrar_receptor: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	data() {
 		return {
 			/** Topes de tamaño de logo (mm), tomados del catálogo compartido */
 			logo_size_mm_min: LOGO_SIZE_MM_MIN,
 			logo_size_mm_max: LOGO_SIZE_MM_MAX,
-			/** Factor de escala px -> mm de la previsualización */
-			px_per_mm: PREVIEW_PX_PER_MM,
 		}
 	},
 	computed: {
 		/**
-		 * Muestra el bloque receptor editable solo en perfiles no fiscales (remito negro).
+		 * Si el perfil es de venta. Los textos y bloques propios de la venta (cuenta corriente
+		 * del cliente, "comprador de la venta") solo se muestran para este modelo; el presupuesto
+		 * y el pedido online comparten el resto del diseñador pero no esos bloques.
+		 *
+		 * @return {boolean}
+		 */
+		is_sale() {
+			return this.model_name === 'sale'
+		},
+		/**
+		 * Muestra el bloque receptor editable solo en perfiles no fiscales (remito negro), y nunca
+		 * si quien lo usa pidió no mostrarlo (prop mostrar_receptor, el diseñador de PDF).
 		 *
 		 * @return {boolean}
 		 */
 		show_receptor() {
-			return !this.is_afip
+			return this.mostrar_receptor && !this.is_afip
 		},
 		/**
 		 * Nombre del negocio a mostrar como elemento estructural fijo (solo contexto visual).
@@ -188,6 +252,12 @@ export default {
 		 * @return {Object}
 		 */
 		preview_box_style() {
+			/* Embebido en el diseñador de PDF: el ancho lo da la hoja que lo contiene */
+			if (this.ancho_completo) {
+				return {
+					width: '100%',
+				}
+			}
 			const width_mm = Number(this.paper_width_mm || 210)
 			return {
 				width: Math.round(width_mm * this.px_per_mm) + 'px',
@@ -299,4 +369,26 @@ export default {
 	flex-direction: column
 	align-items: center
 	justify-content: center
+
+// Embebido en la hoja del diseñador de PDF (prop ancho_completo): sin marco propio, sobre el papel
+// de la hoja, y con colores por token (la hoja también se ve en modo oscuro). Solo aplica con la
+// prop en true: quien no la pasa ve el recuadro de siempre.
+.header-designer-preview--embebido
+	max-width: none
+	padding: 0
+	border: 0
+	border-radius: 0
+	background: transparent
+
+	.header-designer-preview__business-name
+		color: var(--color-text-primary)
+
+	.header-designer-preview__letter-box
+		border-color: var(--color-text-primary)
+		color: var(--color-text-primary)
+
+	.header-designer-preview__logo
+		border-color: var(--color-border)
+		background: var(--bg-section)
+		color: var(--color-text-secondary)
 </style>

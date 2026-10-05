@@ -7,7 +7,7 @@
     show_compensar_caja_checkbox
     @confirmed_final="model_deleted"
     id="delete-current-acount"
-    toast="Cuenta corriente eliminada"></confirm>
+    toast="Movimiento eliminado"></confirm>
     
     <send-afip-tickets></send-afip-tickets>
     
@@ -186,11 +186,29 @@ export default {
         delete() {
             return this.$store.state.current_acount.delete
         },
+        /**
+         * Lo que se borra desde la fila es un MOVIMIENTO de la cuenta (pago, nota de crédito sin
+         * factura, nota de débito o saldo inicial: ver canDelete de List.vue), no la cuenta. Decía
+         * "este cuenta con saldo de $X", y el saldo ni siquiera es lo que se borra.
+         *
+         * Se nombra por su detalle y su importe: el haber si es mayor a 0 (pagos y notas de
+         * crédito), si no el debe. Confirm le antepone "¿Seguro que quiere eliminar …?".
+         *
+         * @returns {String}
+         */
         delete_text() {
-            if (this.delete) {
-                return 'este cuenta con saldo de $'+this.delete.saldo
+            if (!this.delete) {
+                return ''
             }
-            return ''
+            let importe = Number(this.delete.haber) > 0 ? this.delete.haber : this.delete.debe
+            let texto = 'el movimiento'
+            if (this.delete.detalle) {
+                texto += ' "'+this.delete.detalle+'"'
+            }
+            if (importe !== null && typeof importe != 'undefined' && importe !== '') {
+                texto += ' por '+this.price(importe)
+            }
+            return texto
         },
         actions() {
             return [

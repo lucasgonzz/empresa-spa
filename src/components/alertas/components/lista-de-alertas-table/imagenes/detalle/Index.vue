@@ -148,7 +148,7 @@
 						:seleccionado="esta_seleccionado(item.id)"
 						:procesando="esta_procesando(item.id)"
 						@seleccionar="al_seleccionar(item, $event)"
-						@aprobar="aprobar(item)"
+						@aprobar="aprobar(item, $event)"
 						@rechazar="rechazar(item)"
 						@ampliar="ampliar"></fila-a-revisar>
 					</transition-group>
@@ -836,9 +836,11 @@ export default {
 		 * interceptor global muestra el motivo y la lista se vuelve a pedir para mostrar lo real.
 		 *
 		 * @param {Object} item
+		 * @param {String|null} candidata Clave de la imagen que se eligió entre las que se
+		 *        encontraron (de `alternativas` del item); null = la que propuso el sistema.
 		 */
-		aprobar(item) {
-			this.resolver_uno(item, 'aprobar', 'a_revisar', 'asignadas')
+		aprobar(item, candidata) {
+			this.resolver_uno(item, 'aprobar', 'a_revisar', 'asignadas', candidata)
 		},
 		/**
 		 * Rechaza la imagen: se descarta y el artículo queda sin imagen (pasa a "No asignadas").
@@ -861,9 +863,10 @@ export default {
 		 * @param {String} accion aprobar | rechazar | quitar (acción del store).
 		 * @param {String} desde Solapa de la que sale.
 		 * @param {String} hacia Solapa a la que pasa.
+		 * @param {String|null} candidata Solo al aprobar: la imagen elegida entre las encontradas.
 		 * @returns {Promise<Boolean>} true si la API la resolvió.
 		 */
-		resolver_uno(item, accion, desde, hacia) {
+		resolver_uno(item, accion, desde, hacia, candidata) {
 			let self = this
 			if (!self.asignacion || self.esta_procesando(item.id)) {
 				return Promise.resolve(false)
@@ -872,7 +875,10 @@ export default {
 			let solapa_de_la_accion = self.solapa
 			self.marcar_procesando(item.id, true)
 
-			return self.$store.dispatch('image_assignment/' + accion, item.id)
+			// Al aprobar otra imagen que la propuesta, el store recibe {id, candidata}; en todo lo demás, el id.
+			let datos = accion === 'aprobar' && candidata ? { id: item.id, candidata: candidata } : item.id
+
+			return self.$store.dispatch('image_assignment/' + accion, datos)
 			.then(() => {
 				self.marcar_procesando(item.id, false)
 				if (self.sigue_siendo(id_de_la_asignacion, solapa_de_la_accion)) {
@@ -1426,6 +1432,15 @@ export default {
 	font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace
 	font-size: 0.78rem
 	font-variant-numeric: tabular-nums
+	overflow-wrap: anywhere
+
+// "Cód. barras" / "Cód. proveedor": el rótulo va en la tipografía común, apagado, para que el número se lea primero.
+.img-det-fila__rotulo
+	font-family: inherit
+	font-size: 0.72rem
+	margin-right: 4px
+	color: var(--color-text-secondary, #6c757d)
+	opacity: .85
 
 .img-det-fila__detalle
 	margin: 2px 0 0
@@ -1478,6 +1493,92 @@ export default {
 	flex: 0 0 auto
 	align-self: center
 	gap: 8px
+
+// A revisar: debajo de la fila de siempre puede abrirse el panel con las otras imágenes.
+.img-det-fila--revisar
+	flex-wrap: wrap
+
+// Escritorio y tablet: con la fila en wrap, el cuerpo parte de 0 y crece (si no, un nombre largo
+// compara su ancho "ideal" contra la línea y manda las acciones a un renglón aparte). En teléfono
+// manda el piso de 160px de más abajo, que es lo que baja el cuerpo debajo de la miniatura.
+@media (min-width: 576px)
+	.img-det-fila--revisar .img-det-fila__cuerpo
+		flex-basis: 0
+
+.img-det-otras
+	flex: 0 0 100%
+	// min-width/max-width: sin esto la tira (nowrap en teléfono) ensancha el panel más allá de la tarjeta.
+	min-width: 0
+	max-width: 100%
+	display: flex
+	align-items: flex-start
+	gap: 18px
+	margin-top: 2px
+	padding-top: 12px
+	border-top: 1px dashed var(--color-border-secondary, #e9ecef)
+
+.img-det-otras__visor
+	display: flex
+	flex-direction: column
+	flex: 0 0 auto
+	gap: 6px
+	max-width: 100%
+
+.img-det-otras__nota
+	margin: 0
+	max-width: 260px
+	font-size: 0.75rem
+	line-height: 1.35
+	color: var(--color-text-secondary, #6c757d)
+
+// La tira de miniaturas: la propuesta primero y después las otras, con la elegida marcada.
+.img-det-otras__tira
+	display: flex
+	flex-wrap: wrap
+	flex: 1 1 auto
+	align-content: flex-start
+	gap: 8px
+	min-width: 0
+	margin: 0
+	padding: 0
+	list-style: none
+
+.img-det-opcion
+	display: flex
+	flex-direction: column
+	align-items: center
+	gap: 4px
+	width: 78px
+	padding: 3px
+	border: 2px solid transparent
+	border-radius: 10px
+	background: transparent
+	box-shadow: none
+	cursor: pointer
+	transition: border-color .15s ease
+
+	&:hover:not(:disabled)
+		border-color: var(--color-border-secondary, #e9ecef)
+
+	&:focus-visible
+		outline: 2px solid var(--color-primary, #007bff)
+		outline-offset: 2px
+
+	&:disabled
+		cursor: default
+		opacity: .6
+
+// Dos clases a propósito: tiene que ganarle al :hover de arriba.
+.img-det-opcion.img-det-opcion--seleccionada
+	border-color: var(--color-primary, #007bff)
+
+.img-det-opcion__rotulo
+	max-width: 100%
+	overflow: hidden
+	text-overflow: ellipsis
+	white-space: nowrap
+	font-size: 0.7rem
+	color: var(--color-text-secondary, #6c757d)
 
 // Fila tildada: el celeste de siempre (--bg-nav-hover, con su variante oscura en el token).
 .img-det-fila--seleccionada
@@ -1543,6 +1644,24 @@ export default {
 	.img-det-fila__cuerpo
 		// Al lado de la miniatura, pero con un piso: si no entra, baja entero.
 		flex-basis: 160px
+
+	// Teléfono: el visor arriba, a lo ancho, y la tira de miniaturas debajo, con scroll horizontal.
+	.img-det-otras
+		flex-direction: column
+		gap: 12px
+
+	.img-det-otras__visor
+		width: 100%
+
+	.img-det-otras__tira
+		flex-wrap: nowrap
+		width: 100%
+		overflow-x: auto
+		padding-bottom: 6px
+		-webkit-overflow-scrolling: touch
+
+		li
+			flex: 0 0 auto
 
 	.img-det-fila__acciones
 		width: 100%

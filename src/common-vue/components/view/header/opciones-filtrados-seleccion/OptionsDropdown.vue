@@ -23,7 +23,7 @@
 		id="btn_actualizar"
 		icon="icon-undo"
 		:disabled="ocultar_actualizar_eliminar_por_filtro"
-		:tooltip="ocultar_actualizar_eliminar_por_filtro ? texto_disabled_buscador_general : ''"
+		:tooltip="ocultar_actualizar_eliminar_por_filtro ? texto_masiva_por_filtro_apagada : ''"
 		@click="setUpdate">
 			Actualizar
 		</dropdown-option-item>
@@ -246,15 +246,95 @@ export default {
 			}
 
 			if (this.ocultar_actualizar_eliminar_por_filtro) {
-				return this.texto_disabled_buscador_general
+				return this.texto_masiva_por_filtro_apagada
 			}
 
 			return ''
 		},
 		/**
+		 * Por que la masiva por filtro esta apagada, leido del mismo modulo de store que mira
+		 * `ocultar_actualizar_eliminar_por_filtro` (papelera o no). El flag dice SI se apaga; esto
+		 * dice POR QUE, para que el globo no le hable del buscador general a quien nunca lo uso
+		 * (Lucas, 4/10/2026: entrar al Listado y abrir el dropdown mostraba ese texto sin haber
+		 * buscado nada).
+		 *
+		 * El orden es el de las causas en runGlobalSearch (__base_store.js): primero el criterio del
+		 * buscador (texto o filtros fijos), despues el filtro de barra, y si no hay ninguno es que
+		 * falta un filtro de columna con valor. Se lee defensivo: un store que no tenga estos campos
+		 * cae en 'sin_criterio', que es el texto que vale para cualquiera.
+		 *
+		 * @returns {String} 'buscador' | 'sucursal' | 'sin_criterio'
+		 */
+		motivo_masiva_por_filtro_apagada() {
+			let module_state = null
+			if (this.papelera) {
+				module_state = this.$store.state.papelera ? this.$store.state.papelera[this.model_name] : null
+			} else {
+				module_state = this.$store.state[this.model_name]
+			}
+			if (!module_state) {
+				return 'sin_criterio'
+			}
+
+			let payload = module_state.global_search_payload
+			if (payload) {
+				let hay_texto = !!(payload.query_value && String(payload.query_value).trim() !== '')
+				let hay_filtros_fijos = Array.isArray(payload.extra_filters) && payload.extra_filters.length > 0
+				if (hay_texto || hay_filtros_fijos) {
+					return 'buscador'
+				}
+			}
+
+			// 🔴 Hoy el unico control de barra que comparte pantalla con este dropdown es el select de
+			// sucursal del Listado (store/article.js). Cheques tambien escribe extra_filters_de_barra
+			// (la restriccion a la solapa), pero no monta este dropdown. Si otra pantalla con masivas
+			// suma un filtro de barra, este texto deja de ser cierto y hay que distinguirlo aca.
+			if (Array.isArray(module_state.extra_filters_de_barra) && module_state.extra_filters_de_barra.length) {
+				return 'sucursal'
+			}
+
+			return 'sin_criterio'
+		},
+		/**
+		 * Como se nombran los registros en los globos: "artículos" en el Listado y "registros" en
+		 * cualquier otro modelo, como el texto del buscador general.
+		 *
+		 * 🔴 No sale de `plural(model_name)`: el plural de los modelos esta escrito sin tilde
+		 * ("Articulos") y sin genero, y armado con eso el globo decia "varios articulos" (y para un
+		 * modelo femenino habria dicho "varios ventas").
+		 *
+		 * @returns {String}
+		 */
+		plural_para_globo() {
+			if (this.model_name == 'article') {
+				return 'artículos'
+			}
+			return 'registros'
+		},
+		/**
+		 * Globo de Actualizar/Eliminar cuando la masiva por filtro esta apagada, segun el motivo
+		 * (ver motivo_masiva_por_filtro_apagada). Vale para los dos items; Eliminar sigue
+		 * priorizando el motivo de ventas (texto_eliminar_deshabilitado).
+		 *
+		 * @returns {String}
+		 */
+		texto_masiva_por_filtro_apagada() {
+			let motivo = this.motivo_masiva_por_filtro_apagada
+
+			if (motivo == 'buscador') {
+				return this.texto_disabled_buscador_general
+			}
+
+			if (motivo == 'sucursal') {
+				return 'No disponible mientras haya una sucursal elegida. Para actualizar o eliminar varios '+this.plural_para_globo+' a la vez, sacá la sucursal y usá el filtro de columnas.'
+			}
+
+			return 'Para actualizar o eliminar varios '+this.plural_para_globo+' a la vez, filtralos primero con el filtro de columnas.'
+		},
+		/**
 		 * Texto del tooltip cuando Actualizar/Eliminar por filtro estan deshabilitados por venir
-		 * de una busqueda del buscador general (ver ocultar_actualizar_eliminar_por_filtro). Explica
-		 * el motivo en vez de ocultar los botones sin mas.
+		 * de una busqueda del buscador general (motivo 'buscador' de
+		 * motivo_masiva_por_filtro_apagada). Explica el motivo en vez de ocultar los botones sin mas.
 		 *
 		 * @returns {String}
 		 */

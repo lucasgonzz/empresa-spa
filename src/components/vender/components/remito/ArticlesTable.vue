@@ -28,6 +28,7 @@
 							placeholder="Personalizado"
 							@keyup.enter="add_varios_precios(items[data.index], true)"
 							@keyup="callSetTotal(false)" 
+							@change="personalizado_confirmado(items[data.index])"
 							type="number"
 							:data-testid="'venta-item-precio-'+items[data.index].id"
 							:id="'price-vender-'+items[data.index].id"
@@ -269,13 +270,19 @@ import vender_set_total from '@/mixins/vender_set_total'
 import previus_sales from '@/mixins/vender/previus_sale/index'
 import check_stock from '@/mixins/vender/check_stock'
 /*
+	"Varios precios" (agregar una fila, recalcular el renglon) vive en un mixin desde la mision
+	balanzas-configurables (3/10/2026): lo comparte con el ticket de balanza de ArticleBarCode.vue. El
+	foco despues del Enter sigue siendo de este componente (foco_despues_de_varios_precios).
+*/
+import varios_precios, { tiene_varios_precios } from '@/mixins/vender/varios_precios'
+/*
 	El foco de vuelta al codigo de barras (al sacar un renglon, al terminar de personalizar un
 	precio) va a la primera entrada A LA VISTA: con los diseños de Vender el codigo de barras puede
 	estar sacado o plegado. Ver layout/foco.js.
 */
 import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout/foco'
 export default {
-	mixins: [vender, vender_set_total, previus_sales, check_stock],
+	mixins: [vender, vender_set_total, previus_sales, check_stock, varios_precios],
 	components: {
 		PriceType: () => import('@/components/vender/components/remito/table-slots/PriceType'),
 		ItemAttachments: () => import('@/components/vender/components/remito/table-slots/ItemAttachments'),
@@ -314,9 +321,32 @@ export default {
 			fields = fields.concat(this.dynamic_table_fields)
 
 			if (this.hasExtencion('article_variants')) {
-				fields.push({
+
+				let columna_variante = {
 					key: 'article_variant_id', label: 'Variante'
-				})
+				}
+
+				/*
+					La columna Variante va pegada a la derecha de "Nombre" y no al final del bloque
+					configurable: la variante es parte de la identidad del renglon (es lo que distingue
+					"Zapatilla Azul 36" de "Zapatilla Rojo 38") y tiene que verse junto al nombre.
+					Al final, con las columnas configurables de una cuenta real (precio, descuento,
+					total, cantidad, fechas...) la tabla se ensancha mas que la pantalla y "Variante"
+					quedaba fuera de vista hasta scrollear de costado: medido en vivo, 1727 px de tabla
+					contra 1308 px visibles a 1440 px de ancho.
+
+					Si el usuario saco "Nombre" de sus columnas configurables no hay a donde pegarla y
+					se agrega al final del bloque, como se hacia antes. El gate (extension), el key y el
+					label no cambian: el slot #cell(article_variant_id) y dedicated_keys dependen de
+					ellos.
+				*/
+				let index_nombre = fields.findIndex(field => field.key == 'name')
+
+				if (index_nombre != -1) {
+					fields.splice(index_nombre + 1, 0, columna_variante)
+				} else {
+					fields.push(columna_variante)
+				}
 			}
 
 			// if (this.hasExtencion('unidades_individuales_en_articulos')) {
@@ -499,8 +529,6 @@ export default {
 		callSetTotal(from_amount_input = false, item = null) {
 
 			if (from_amount_input) {
-
-				console.log('callSetTotal from_amount_input')
 				
 				let check_stock = this.check_stock_disponible(item)
 
@@ -513,16 +541,46 @@ export default {
 					&& item.is_article
 				) {
 
-					if (this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
+					/*
+						🔴 LA OFERTA POR CANTIDAD CORRE SIN EXTENSION, A PROPOSITO (mision
+						oferta-por-cantidad-en-el-renglon, 4/10/2026). Este input es el tercero de los
+						tres caminos que cambian la cantidad de un renglon (los otros dos, el alta y el
+						re-escaneo, nunca la pidieron) y era el unico con gate: la extension
+						`article_price_range`, en un else-if que ni con ella entraba si la cuenta tambien
+						tenia `lista_de_precios_por_rango_de_cantidad_vendida`. Llevar el renglon a la
+						cantidad de un tramo no aplicaba la oferta y bajarlo no la sacaba. NO VOLVER A
+						PONERLE UN hasExtencion: el precio que escribio el vendedor ya esta protegido
+						adentro de check_price_range (precio_escrito_a_mano), que es lo que hacia
+						peligroso correrla en cada tecla.
 
+						check_price_type_ranges SI sigue detras de su extension: es el gate vivo de OTRA
+						funcionalidad, y sin ella podria pisar una lista elegida a mano en el renglon
+						(PriceType.vue). Va primero, igual que en add_item_to_sale.
+					*/
+					let con_listas_por_rango = !!this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
+
+					let con_ofertas_por_cantidad = !!(
+						item.article_price_ranges
+						&& item.article_price_ranges.length
+					)
+
+					if (con_listas_por_rango) {
 						item = this.check_price_type_ranges(item)
-						this.$store.commit('vender/replceItem', item)
+					}
 
-					} else if (this.hasExtencion('article_price_range')) {
+					item = this.check_price_range(item)
 
-						item = this.check_price_range(item)
-						console.log('price_vender:')
-						console.log(item.price_vender)
+					/*
+						replceItem SOLO si corrio alguno de los dos: cada replceItem agrega una entrada
+						"item_updated" al registro de la venta (append_sale_log_entry, store/vender) y
+						este input dispara en cada tecla y en cada clic. Una cuenta sin listas por rango,
+						con un articulo sin ofertas, no tiene nada que reemplazar: no se le llena el
+						registro de la venta.
+					*/
+					if (
+						con_listas_por_rango
+						|| con_ofertas_por_cantidad
+					) {
 						this.$store.commit('vender/replceItem', item)
 					}
 				}
@@ -580,50 +638,140 @@ export default {
 			}
 			return ''
 		},
+		/**
+		 * El vendedor CONFIRMO el input "Personalizado" de un renglon: evento `change` de
+		 * b-form-input, que sale al dejar el campo o con Enter, y NUNCA en cada tecla.
+		 *
+		 * Si lo confirmo VACIO y el renglon tiene ofertas por cantidad, la oferta vuelve a manejar el
+		 * renglon en el acto (check_price_range): con precio fijo el campo se vuelve a llenar con el
+		 * numero de la oferta (el mismo que muestra al agregar el articulo); con porcentaje queda
+		 * vacio y el precio sale con el descuento. Si el vendedor quiere vender a otro precio, lo
+		 * escribe.
+		 *
+		 * @param {Object} item Renglon del remito.
+		 * @returns {void}
+		 */
+		personalizado_confirmado(item) {
+
+			/*
+				Solo con el campo VACIO (falsy: el mismo criterio de verdad que precio_escrito_a_mano
+				y getPriceVender). Con un valor, el numero es del vendedor o es el de la oferta, y
+				check_price_range lo dejaria como esta: correrla igual solo sumaria una entrada al
+				registro de la venta (replceItem). Y no con varios precios: despues del Enter de
+				"varios precios" el campo queda en '' pero el renglon ya tiene filas y vale solo la
+				suma de ellas (check_price_range tampoco lo tocaria).
+			*/
+			if (
+				!item
+				|| !item.is_article
+				|| !item.article_price_ranges
+				|| !item.article_price_ranges.length
+				|| item.price_vender_personalizado
+				|| tiene_varios_precios(item)
+			) {
+				return
+			}
+
+			/*
+				🔴 LA OFERTA VUELVE AL CONFIRMAR EL CAMPO VACIO, NO EN CADA TECLA (mision
+				oferta-por-cantidad-en-el-renglon, 4/10/2026).
+
+				Por que hace falta: Lucas aprobo "si el vendedor borra su precio, la oferta vuelve a
+				aplicar". Con la oferta porcentual pasa sola (check_price_range deja el porcentaje
+				resuelto y getPriceVender lo aplica en cuanto el campo queda vacio, en el @keyup de
+				siempre), pero con la de precio fijo no: precio fijo $1.500 desde 10, renglon a 10, el
+				vendedor escribe 1400 y lo borra (o borra el 1500 que puso la oferta) y el renglon
+				quedaba a precio de LISTA hasta que tocara la Cantidad. Guardando en ese momento se
+				cobraba de mas.
+
+				Por que en `change` y NO en @keyup (ni en @input): se probo en @keyup y al borrar con
+				Backspace hasta vaciar el campo, la oferta lo reescribia en esa misma tecla. El watcher
+				de `value` de b-form-input (bootstrap-vue/src/mixins/form-text.js) le pisa el valor al
+				input aunque tenga el foco, asi que el vendedor que seguia tipeando "1400" terminaba
+				con "15001400". Una tecla NUNCA reescribe este campo. NO MOVER ESTO A @keyup.
+
+				El hueco aceptado (decision del 4/10/2026): F5 guarda con un btn.click() que no le
+				saca el foco al campo (keyboard_shortcuts.js::_shortcut_guardar_venta), asi que con
+				el campo vacio y todavia enfocado no hay `change` y el renglon de precio fijo se guarda
+				a precio de lista. Es lo mismo que pasaba antes de esta mision y se ve en el renglon.
+				Con el mouse no pasa: el clic en Guardar primero saca el foco del campo, el `change`
+				corre antes que el clic y la venta sale con la oferta.
+
+				Con la extension varios_precios, un Enter con el campo vaciado dispara este `change`
+				ANTES que add_varios_precios (el navegador confirma el campo en el keypress y la fila
+				se agrega en el keyup): la oferta llena el campo y ese Enter lo pasa a una fila.
+			*/
+			item = this.check_price_range(item)
+			this.$store.commit('vender/replceItem', item)
+			this.setTotal()
+		},
+		/**
+		 * Enter en el input "Personalizado" (extension varios_precios): el precio tipeado pasa a ser
+		 * una fila mas del renglon.
+		 *
+		 * La fila y el recalculo los hace agregar_otro_precio() (mixins/vender/varios_precios.js),
+		 * que es lo mismo que pasaba aca: fila adelante, recalculo del renglon, replceItem y
+		 * setTotal(). Despues el foco de este componente y recien ahi se vacia el input, en el mismo
+		 * orden de siempre. Lo unico distinto es el id de la fila (ver siguiente_id_de_otro_precio).
+		 *
+		 * Funciona con la extension `varios_precios` O si el renglon YA tiene varios precios (mision
+		 * balanzas-configurables, 3/10/2026). Con "Por balanza" un renglon que recibio tickets queda
+		 * en modo varios precios aunque la cuenta no tenga la extension, y su total pasa a ser solo
+		 * la suma de las filas (getTotalItem suma calculated_price_vender): sin esto, tipear un
+		 * precio y apretar Enter en ese renglon no hacia nada, y el precio tampoco sumaba. Sin la
+		 * extension y sin varios precios, todo igual que antes: el Enter no hace nada.
+		 *
+		 * @param {Object} item Renglon del remito.
+		 * @param {Boolean} [hacer_caso=false] Lo pasa en true el @keyup.enter del input.
+		 * @returns {void}
+		 */
 		add_varios_precios(item, hacer_caso = false) {
 			if (
 				hacer_caso
-				&& this.hasExtencion('varios_precios')
+				&& (
+					this.hasExtencion('varios_precios')
+					|| tiene_varios_precios(item)
+				)
 			) {
 
-				if (typeof item.varios_precios == 'undefined') {
-					item.varios_precios = []
-				}
+				this.agregar_otro_precio(item, item.price_vender_personalizado)
 
-				item.varios_precios.unshift({
-					price_vender: item.price_vender_personalizado,
-					amount: '',
-					id: item.varios_precios.length,
-					// article_id: item.id,
-				})
+				// Hago foco en bar_code o en price-personalizado
+				this.foco_despues_de_varios_precios(item)
 
-				// Actualizo el item, calculo total de la venta, y hago foco en bar_code o en price-personalizado
-				this.calculate_price_vender(item)
 				item.price_vender_personalizado = ''
 			}
 		},
 		enter_amount(item) {
 			this.calculate_price_vender(item)
 		},
+		/**
+		 * Recalcula el renglon con varios precios (Enter en el precio o en la cantidad de una fila,
+		 * o despues de borrar una fila) y devuelve el foco como siempre. La cuenta vive en
+		 * recalcular_varios_precios() (mixins/vender/varios_precios.js).
+		 *
+		 * @param {Object} item Renglon del remito con `varios_precios`.
+		 * @returns {void}
+		 */
 		calculate_price_vender(item) {
-			let calculated_price_vender = 0
-			let amount = 1
 
-			item.varios_precios.forEach(otro_precio => {
-				if (otro_precio.amount != '') {
-					amount = Number(otro_precio.amount)
-				} else {
-					amount = 1
-				}
-				calculated_price_vender += (Number(otro_precio.price_vender) * amount)
-			})
+			this.recalcular_varios_precios(item)
 
-			item.calculated_price_vender = calculated_price_vender
-			this.$store.commit('vender/replceItem', item)
-
-			this.setTotal()
-			// this.$store.commit('vender/setTotal')
-
+			this.foco_despues_de_varios_precios(item)
+		},
+		/**
+		 * El foco despues de tocar los varios precios de un renglon: con el articulo marcado para
+		 * personalizar el precio en VENDER vuelve a la primera entrada de articulos (para seguir
+		 * cargando); si no, al input "Personalizado" del renglon, para tipear el proximo precio.
+		 *
+		 * Es exactamente el foco que tenia calculate_price_vender() antes de la mision
+		 * balanzas-configurables; se separo porque el ticket de balanza reusa el calculo pero NO
+		 * este foco (siempre vuelve al codigo de barras para el proximo ticket).
+		 *
+		 * @param {Object} item Renglon del remito.
+		 * @returns {void}
+		 */
+		foco_despues_de_varios_precios(item) {
 
 			if (item.personalizar_price_en_vender) {
 
