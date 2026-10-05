@@ -197,11 +197,32 @@ export default {
 					return
 				}
 
+				/*
+					Registros que la API se negó a eliminar: `not_deleted: [{id, message}]` (mision
+					eliminar-sucursal-con-stock, 5/10/2026). Antes la SPA no lo leia y mostraba "eliminados" aunque
+					la API hubiera rechazado todo (`models` vacio): con las sucursales, que tienen stock y
+					empleados que decidir, pasaba siempre. Cambio ADITIVO y para cualquier modelo que respete
+					rechazos: si la clave no viene (API vieja, o un modelo que no rechaza) no cambia nada.
+				*/
+				let no_eliminados = Array.isArray(res.data.not_deleted) ? res.data.not_deleted : []
+
 				res.data.models.forEach(model => {
 					this.$store.commit(this.model_name+'/setDelete', model)
 					this.$store.commit(this.model_name+'/delete')
 				})
-				this.$toast.success(this.plural(this.model_name)+' eliminados')
+
+				if (no_eliminados.length) {
+					let motivo = no_eliminados[0].message ? no_eliminados[0].message : 'No se pudo eliminar.'
+					if (no_eliminados.length > 1) {
+						motivo += ' (y '+(no_eliminados.length - 1)+' más sin eliminar por otros motivos)'
+					}
+					this.$toast.warning(motivo, { duration: 10000 })
+				}
+
+				// "eliminados" solo si se elimino alguno: con todo rechazado el aviso de arriba es el unico.
+				if (res.data.models.length || !no_eliminados.length) {
+					this.$toast.success(this.plural(this.model_name)+' eliminados')
+				}
 				this.$store.commit(this.model_name+'/setSelected', [])
 				// Cierra el modal de confirmación del delete (id = model_name + '-delete-models').
 				this.$bvModal.hide(this.model_name+'-delete-models')
