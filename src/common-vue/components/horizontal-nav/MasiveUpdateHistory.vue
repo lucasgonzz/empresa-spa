@@ -183,7 +183,20 @@ export default {
 			detail_articles: [],
 			revert_loading_id: null,
 			pending_revert_id: null,
+			/**
+			 * Nombres de los registros relacionados que se le pidieron a la API para los criterios
+			 * del detalle, por "<store>:<id>": el nombre, o null si no se pudo (queda "#id"). Vive
+			 * en el componente y no se limpia al cerrar el detalle, así que cada id se pide una sola
+			 * vez aunque el detalle se abra varias. Ver nombre_por_api.
+			 */
+			nombres_de_relaciones: {},
 		}
+	},
+	created() {
+		// Las claves ya pedidas (en vuelo o resueltas). NO es reactivo a propósito: se escribe
+		// mientras se evalúa `criterios_utilizados`, y lo único que tiene que redibujar el detalle
+		// es la respuesta, que llega a `nombres_de_relaciones`.
+		this.nombres_pedidos = {}
 	},
 	computed: {
 		fields() {
@@ -242,10 +255,13 @@ export default {
 		 * (Alcance / Filtros / Cambios). Reemplaza al JSON crudo que se mostraba antes (decisión de
 		 * Lucas, 4/10/2026).
 		 *
-		 * Forma de `criteria` (la arma empresa-api, CommonLaravel/UpdateController.php):
+		 * Forma de `criteria` (la arma empresa-api, MasiveUpdateHelper::encolar_actualizacion):
 		 * {from_filter, used_filters: [{key, operator, value, type}], update_form: [{label, key,
 		 * type, value, options?, store?, round?, cost_incluye_iva?}], models_id,
 		 * resolved_models_id, filter_form}. Una reversión trae solo {revert_of_masive_update_id}.
+		 * Las masivas que crea el asistente (asistente_ia/PropuestaActualizacionMasivaIaHelper)
+		 * traen el update_form SIN label y pueden traer el filtro de imagen
+		 * {key: 'imagen', operator: 'en_blanco'|'no_en_blanco', type: 'imagen'}.
 		 *
 		 * 🔴 Es un registro guardado: puede venir de una versión vieja o con una forma rara. Nada de
 		 * esto puede romper la vista ni mostrar JSON o "[object Object]": cada renglón se arma por
@@ -264,11 +280,13 @@ export default {
 				try {
 					criteria = JSON.parse(criteria)
 				} catch (e) {
-					return []
+					criteria = null
 				}
 			}
+			// Sin criteria legible se sigue con uno vacío: una reversión igual se reconoce por la
+			// columna parent_masive_update_id (renglones_de_alcance), y nada más afirma algo.
 			if (!criteria || typeof criteria != 'object' || Array.isArray(criteria)) {
-				return []
+				criteria = {}
 			}
 
 			let secciones = []
@@ -294,9 +312,9 @@ export default {
 			return secciones
 		},
 		/**
-		 * Renglón de alcance de una masiva por filtro. Para artículos va escrito a mano porque el
-		 * plural del modelo está sin tilde ("Articulos"); para el resto se arma con el plural y el
-		 * género del modelo (el `text_delete`, 'la' / 'esta' = femenino).
+		 * Renglón de alcance de una masiva por filtro: "Artículos filtrados" o, para cualquier otro
+		 * modelo, "Registros filtrados". No se arma con `plural(model_name)` porque los plurales de
+		 * los modelos están escritos sin tilde ("Articulos").
 		 *
 		 * @returns {String}
 		 */
@@ -304,13 +322,7 @@ export default {
 			if (this.model_name == 'article') {
 				return 'Artículos filtrados'
 			}
-			try {
-				let articulo = String(this.text_delete(this.model_name) || '').toLowerCase()
-				let femenino = articulo == 'la' || articulo == 'esta'
-				return this.plural(this.model_name) + (femenino ? ' filtradas' : ' filtrados')
-			} catch (e) {
-				return 'Registros filtrados'
-			}
+			return 'Registros filtrados'
 		},
 	},
 	methods: {
@@ -597,8 +609,17 @@ export default {
 			if (!registro) {
 				return null
 			}
-
-			// El campo que se muestra en los selects de ese modelo, si declara uno.
+			return this.nombre_del_registro(store, registro)
+		},
+		/**
+		 * El nombre con que se muestra un registro de `store`: el campo que usan los selects de ese
+		 * modelo si declara uno, si no `name` o `nombre`.
+		 *
+		 * @param {String} store
+		 * @param {Object} registro
+		 * @returns {String|null}
+		 */
+		nombre_del_registro(store, registro) {
 			let campo = null
 			try {
 				let prop_select = this.getPropToUseInSelect(store)
@@ -614,9 +635,108 @@ export default {
 				|| this.texto_escalar(registro.nombre)
 		},
 		/**
+		 * Si existe el modelo `store` en src/models. Evita pedirle a la API un modelo que no existe
+		 * cuando el store se dedujo de una key que no era de relación.
+		 *
+		 * @param {String} store
+		 * @returns {Boolean}
+		 */
+		existe_el_modelo(store) {
+			try {
+				this.modelPropertiesFromName(store)
+				return true
+			} catch (e) {
+				return false
+			}
+		},
+		/**
+		 * Store del modelo relacionado de una propiedad (su `store`, o la key sin `_id`), o null.
+		 *
+		 * @param {Object|null} prop
+		 * @returns {String|null}
+		 */
+		store_de_la_prop(prop) {
+			if (!prop || typeof prop.key != 'string') {
+				return null
+			}
+			try {
+				return this.modelNameFromRelationKey(prop)
+			} catch (e) {
+				return null
+			}
+		},
+		/**
+		 * Nombre del registro `id` de `store` pedido a la API, para cuando el store no lo tiene.
+		 *
+		 * 🔴 En el Listado los stores de las relaciones de búsqueda (proveedor, categoría, marca)
+		 * NO están cargados: se cargan bajo demanda. Sin esto, "Proveedor es #1" (medido en vivo,
+		 * 4/10/2026).
+		 *
+		 * Devuelve lo que ya se sabe: el nombre, o null mientras se pide o si no se pudo. La primera
+		 * vez dispara el pedido; la respuesta llega a `nombres_de_relaciones` con $set, y como
+		 * `criterios_utilizados` lee ese objeto, el renglón pasa solo de "#1" al nombre.
+		 *
+		 * @param {String} store
+		 * @param {*} id
+		 * @returns {String|null}
+		 */
+		nombre_por_api(store, id) {
+			if (typeof store != 'string' || !store || !this.existe_el_modelo(store)) {
+				return null
+			}
+			let clave = store + ':' + String(id)
+			if (Object.prototype.hasOwnProperty.call(this.nombres_de_relaciones, clave)) {
+				return this.nombres_de_relaciones[clave]
+			}
+			if (!this.nombres_pedidos[clave]) {
+				this.nombres_pedidos[clave] = true
+				this.pedir_nombre_a_la_api(store, id, clave)
+			}
+			return null
+		},
+		/**
+		 * Pide el registro por id con el mismo `POST search/<modelo>` que usa ModelForm.vue: un
+		 * filtro de columna number `igual_que` sobre `id`, que el backend acota al dueño
+		 * (SearchController::search). Sin aviso global si falla: es un dato de más, no una acción
+		 * del usuario, y el renglón queda en "#id".
+		 *
+		 * @param {String} store
+		 * @param {*} id
+		 * @param {String} clave Clave de `nombres_de_relaciones`.
+		 * @returns {void}
+		 */
+		pedir_nombre_a_la_api(store, id, clave) {
+			let self = this
+			this.$api.post('search/' + this.routeString(store), {
+				filters: [
+					{ key: 'id', type: 'number', igual_que: id },
+				],
+			}, {
+				skip_global_error_event: true,
+			})
+			.then(res => {
+				let models = res && res.data ? res.data.models : null
+				let registro = null
+				if (Array.isArray(models)) {
+					registro = models.find(model => {
+						return model && model.id == id
+					})
+				}
+				self.$set(self.nombres_de_relaciones, clave, registro ? self.nombre_del_registro(store, registro) : null)
+			})
+			.catch(err => {
+				// Cancelado por navegación (main.js): no es una respuesta, se puede volver a pedir.
+				if (err && err.__CANCEL__) {
+					delete self.nombres_pedidos[clave]
+					return
+				}
+				self.$set(self.nombres_de_relaciones, clave, null)
+			})
+		},
+		/**
 		 * Texto del valor de una relación (select o search), que se guarda como id: la opción fija
-		 * si el select las tiene, si no el nombre del registro en su store si está cargado, y si no
-		 * "#id".
+		 * si el select las tiene; si no, el nombre del registro en su store si está cargado, o el que
+		 * devuelve la API (nombre_por_api); y si no, "#id".
 		 *
 		 * @param {String} clave Key de la propiedad.
 		 * @param {*} valor Id guardado.
@@ -639,7 +759,8 @@ export default {
 					return de_la_opcion
 				}
 			}
-			let nombre = this.nombre_de_registro(store || this.store_de_la_clave(clave), valor)
+			let store_del_valor = store || this.store_de_la_clave(clave)
+			let nombre = this.nombre_de_registro(store_del_valor, valor) || this.nombre_por_api(store_del_valor, valor)
 			if (nombre) {
 				return nombre
 			}
@@ -652,8 +773,10 @@ export default {
 		 * @returns {Array<String>}
 		 */
 		renglones_de_alcance(criteria) {
+			// Sin el id en criteria (criteria nulo o vacío), la columna parent_masive_update_id: solo
+			// la tiene una reversión.
 			let id_revertida = criteria.revert_of_masive_update_id
-			if (!id_revertida && this.detail_model.action == 'revert') {
+			if (!id_revertida) {
 				id_revertida = this.detail_model.parent_masive_update_id
 			}
 			if (id_revertida && (typeof id_revertida == 'number' || typeof id_revertida == 'string')) {
@@ -673,6 +796,13 @@ export default {
 				return [this.texto_alcance_filtrado]
 			}
 
+			// Una selección que el asistente resolvió por un criterio que no es una columna (los
+			// artículos sin imagen) guarda ese criterio en used_filters en vez de la marca "Seleccion
+			// manual" (MasiveUpdateHelper::encolar_actualizacion): no la tildó nadie a mano.
+			if (this.hay_filtros_efectivos(criteria)) {
+				return [this.texto_alcance_filtrado]
+			}
+
 			let cantidad = 0
 			if (Array.isArray(criteria.resolved_models_id) && criteria.resolved_models_id.length) {
 				cantidad = criteria.resolved_models_id.length
@@ -682,7 +812,46 @@ export default {
 			if (cantidad) {
 				return ['Selección manual (' + this.numero_es(cantidad) + ')']
 			}
-			return ['Selección manual']
+
+			// Sin ids, "Selección manual" se dice solo si el registro lo dice (from_filter en false
+			// o la marca del backend). Un criteria vacío no afirma nada.
+			if (criteria.from_filter === false || criteria.from_filter === 0 || criteria.from_filter === '0' || this.tiene_marca_de_seleccion_manual(criteria)) {
+				return ['Selección manual']
+			}
+			return []
+		},
+		/**
+		 * Si `used_filters` trae algún criterio que filtra (no el orden ni la marca "Seleccion
+		 * manual").
+		 *
+		 * @param {Object} criteria
+		 * @returns {Boolean}
+		 */
+		hay_filtros_efectivos(criteria) {
+			if (!Array.isArray(criteria.used_filters)) {
+				return false
+			}
+			return criteria.used_filters.some(filtro => {
+				return !!filtro
+					&& typeof filtro == 'object'
+					&& !!filtro.operator
+					&& filtro.operator != 'order_by'
+					&& filtro.key != 'Seleccion manual'
+			})
+		},
+		/**
+		 * Si `used_filters` trae la marca que deja el backend en una selección manual.
+		 *
+		 * @param {Object} criteria
+		 * @returns {Boolean}
+		 */
+		tiene_marca_de_seleccion_manual(criteria) {
+			if (!Array.isArray(criteria.used_filters)) {
+				return false
+			}
+			return criteria.used_filters.some(filtro => {
+				return !!filtro && typeof filtro == 'object' && filtro.key == 'Seleccion manual'
+			})
 		},
 		/**
 		 * Renglones de la sección "Filtros", uno por filtro de columna aplicado.
@@ -731,14 +900,17 @@ export default {
 			let columna = this.get_prop_label(filtro.key)
 			let operador = filtro.operator
 			let tipo = filtro.type || (prop ? prop.type : null)
+			// `imagen` es el mismo filtro de presencia que arma el asistente
+			// (PropuestaActualizacionMasivaIaHelper), con otra key y otro type.
+			let es_de_imagenes = tipo == 'images' || tipo == 'imagen'
 
 			// La columna de imágenes se filtra por presencia y el filtro la nombra así (EnBlanco.vue):
 			// "Imagenes está vacío" no lo diría nadie.
 			if (operador == 'en_blanco') {
-				return tipo == 'images' ? 'Sin imágenes' : columna + ' está vacío'
+				return es_de_imagenes ? 'Sin imágenes' : columna + ' está vacío'
 			}
 			if (operador == 'no_en_blanco') {
-				return tipo == 'images' ? 'Con imágenes' : columna + ' no está vacío'
+				return es_de_imagenes ? 'Con imágenes' : columna + ' no está vacío'
 			}
 			if (operador == 'checkbox') {
 				if (this.es_verdadero(filtro.value)) {
@@ -752,15 +924,7 @@ export default {
 
 			let valor = null
 			if (tipo == 'select' || tipo == 'search') {
-				let store = null
-				if (prop) {
-					try {
-						store = this.modelNameFromRelationKey(prop)
-					} catch (e) {
-						store = null
-					}
-				}
-				valor = this.texto_de_relacion(filtro.key, filtro.value, prop ? prop.options : null, store)
+				valor = this.texto_de_relacion(filtro.key, filtro.value, prop ? prop.options : null, this.store_de_la_prop(prop))
 			} else {
 				valor = this.texto_escalar(filtro.value)
 				if (valor !== null && tipo == 'date') {
@@ -819,11 +983,40 @@ export default {
 			return renglones
 		},
 		/**
+		 * Label de un ítem de `update_form` que no lo trae (lo que crea el asistente y los registros
+		 * viejos), armado como lo arma Update.vue: el verbo del prefijo más el nombre de la
+		 * propiedad ("Setear el Costo base"), o solo el nombre para un select, search o checkbox.
+		 *
+		 * @param {Object} item
+		 * @param {String} clave
+		 * @returns {String|null}
+		 */
+		label_de_cambio(item, clave) {
+			if (!clave) {
+				return null
+			}
+			if (item.type == 'checkbox' || item.type == 'select' || item.type == 'search') {
+				return this.get_prop_label(clave)
+			}
+			let prefijos = [
+				{ prefijo: 'increment_', verbo: 'Aumentar el ' },
+				{ prefijo: 'decrement_', verbo: 'Disminuir el ' },
+				{ prefijo: 'set_', verbo: 'Setear el ' },
+			]
+			for (let i = 0; i < prefijos.length; i++) {
+				if (clave.indexOf(prefijos[i].prefijo) === 0 && clave.length > prefijos[i].prefijo.length) {
+					return prefijos[i].verbo + this.get_prop_label(clave.substring(prefijos[i].prefijo.length))
+				}
+			}
+			return this.get_prop_label(clave)
+		},
+		/**
 		 * Renglón de un ítem de `update_form` (lo arma build_flat_form de
 		 * opciones-filtrados-seleccion/Update.vue). El `label` ya viene legible, p. ej. "Aumentar
-		 * el Costo base (sobre el costo bruto, con IVA)"; acá solo se le suma el valor.
+		 * el Costo base (sobre el costo bruto, con IVA)"; acá solo se le suma el valor. Sin label
+		 * (asistente, registros viejos) se arma con label_de_cambio.
 		 *
-		 * @param {Object} item {label, key, type, value, options?, store?, round?}
+		 * @param {Object} item {label?, key, type, value, options?, store?, round?}
 		 * @returns {String|null}
 		 */
 		renglon_de_cambio(item) {
@@ -831,15 +1024,9 @@ export default {
 				return null
 			}
 			let clave = typeof item.key == 'string' ? item.key : ''
-			let label = this.texto_escalar(item.label)
-
-			// Registros viejos, de antes de que el ítem guardara el label: la clave tal cual.
+			let label = this.texto_escalar(item.label) || this.label_de_cambio(item, clave)
 			if (!label) {
-				let valor_crudo = this.texto_escalar(item.value)
-				if (!clave || valor_crudo === null) {
-					return null
-				}
-				return clave + ': ' + valor_crudo
+				return null
 			}
 
 			if (item.type == 'checkbox') {
@@ -852,7 +1039,12 @@ export default {
 				return null
 			}
 			if (item.type == 'select' || item.type == 'search') {
-				let relacion = this.texto_de_relacion(clave, item.value, item.options, item.store)
+				// Lo que no trae el ítem (el asistente no manda ni opciones ni store) sale de la
+				// propiedad del modelo.
+				let prop = this.propiedad_del_modelo(clave)
+				let opciones = Array.isArray(item.options) && item.options.length ? item.options : (prop ? prop.options : null)
+				let store = typeof item.store == 'string' && item.store ? item.store : this.store_de_la_prop(prop)
+				let relacion = this.texto_de_relacion(clave, item.value, opciones, store)
 				if (relacion === null) {
 					return null
 				}
