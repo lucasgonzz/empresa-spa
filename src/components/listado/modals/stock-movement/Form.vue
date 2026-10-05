@@ -138,16 +138,30 @@ export default {
 				&& this.can('article.edit_stock_only_sucursal') 
 				&& this.user.address_id
 			) {
-				return [
+				let options = [
 					{
 						text: 'Seleccione deposito',
 						value: 0,
 					},
-					{
-						text: this.addresses.find(a => a.id == this.user.address_id).street,
-						value: this.user.address_id
-					}
 				]
+
+				/*
+					Mision eliminar-sucursal-con-stock (5/10/2026): la sucursal del usuario puede haber
+					sido eliminada (el `user.address_id` de esta sesion quedo con el id viejo). Antes
+					el `.find(...)` devolvia undefined y `.street` tiraba un TypeError que rompia el
+					modal entero. Ahora, sin la sucursal, no se ofrece: mover stock hacia un deposito
+					que no existe es justo lo que esta mision cierra.
+				*/
+				let user_address = this.addresses.find(a => a.id == this.user.address_id)
+
+				if (user_address) {
+					options.push({
+						text: user_address.street,
+						value: this.user.address_id
+					})
+				}
+
+				return options
 			}
 			return this.getOptions({key: 'to_address_id', text: 'Deposito', store: 'address'})
 		}
