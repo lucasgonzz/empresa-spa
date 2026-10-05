@@ -192,8 +192,9 @@ export default {
 	            	El detalle del servidor ya lo mostró el interceptor global (main.js → errorEvent →
 	            	common-vue/components/error/Index.vue) cuando el error trae `response` y el pedido
 	            	no pidió `skip_global_error_event`: repetirlo acá lo mostraba dos veces (medido con
-	            	un 500, 4/10/2026). Se agrega solo cuando nadie lo mostró: un error de red sin
-	            	`response`, un pedido silenciado o un error que no vino de un pedido.
+	            	un 500, 4/10/2026). Se agrega cuando el error no trae el detalle del servidor: un error
+	            	de red (el interceptor avisa solo que no hubo conexión, no qué acción falló), un
+	            	pedido silenciado o un error que no vino de un pedido.
 	            */
 	            let ya_lo_mostro_el_interceptor = !!(err && err.response && !(err.config && err.config.skip_global_error_event))
 	            if (!ya_lo_mostro_el_interceptor) {
