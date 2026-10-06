@@ -1374,7 +1374,7 @@
 				<b-button
 				variant="outline-secondary"
 				class="m-r-10"
-				@click="step = 3">
+				@click="step = model === 'article' ? 3 : 2">
 					Volver
 				</b-button>
 				<b-button
@@ -4274,6 +4274,19 @@ export default {
 		confirmar_paso_2() {
 			let self = this
 
+			/*
+			 * La recomendación del paso 3 es de artículos (códigos de barras, códigos de
+			 * proveedor, formatos de costo y precio). Para clientes y proveedores no hay nada
+			 * que recomendar: antes igual se la pedía y la IA contestaba "el archivo contiene
+			 * 0 filas, no se importará ningún artículo" sobre un Excel de clientes bien armado.
+			 * Se salta directo a las opciones de importación, sin request.
+			 */
+			if (self.model !== 'article') {
+				self.error_message = ''
+				self.step = 4
+				return
+			}
+
 			self.loading_recomendacion = true
 			self.recomendacion_configuracion = null
 			/* El error del intento anterior no puede quedar colgado sobre el intento nuevo. */
@@ -4288,6 +4301,7 @@ export default {
 
 			self.$api.post('ai-excel-import/get-recomendacion', {
 				excel_path:                 self.excel_path,
+				model:                      self.model,
 				provider_id:                self.selected_provider_id,
 				provider_code_column_index: self.provider_code_column_index,
 				column_mapping:             self.column_mapping,
