@@ -15,7 +15,7 @@
 
 				<template #cell(proveedor)="data">
 					<b-button
-					:data-testid="'btn-alerta-pedido-proveedor-cc-'+pedidos_sin_llegar[data.index].id"
+					:data-testid="'alertas-pedidos-proveedor-cuenta-'+pedidos_sin_llegar[data.index].id"
 					:disabled="abriendo_cuenta_corriente"
 					@click="showCurrentAcounts(pedidos_sin_llegar[data.index])"
 					variant="success">
@@ -88,15 +88,9 @@ export default {
 	},
 	methods: {
 		/**
-		 * Abre la cuenta corriente del proveedor de la compra, en la MONEDA de la compra.
-		 *
-		 * 🔴 Antes llamaba a `showProviderCurrentAcount()`, que cambiaba el proveedor del modal pero no
-		 * la cuenta: quedaba abierta la ultima que se habia usado en la sesion (a veces la de un
-		 * cliente) bajo el nombre del proveedor, y "Imprimir", "Chequear saldos", los pagos y las
-		 * notas operaban sobre esa cuenta ajena. El `provider` de esta tabla no trae `credit_accounts`
-		 * (`ProviderOrder::withAll()` lo carga a secas), asi que el mixin pide el proveedor completo,
-		 * elige la cuenta de la moneda de la compra y recien ahi abre el modal: el mismo camino que
-		 * usa Compras.
+		 * Abre la cuenta corriente del proveedor de la compra, en la MONEDA de la compra. El `provider`
+		 * de esta tabla no trae `credit_accounts` (`ProviderOrder::withAll()` lo carga a secas): el mixin
+		 * pide el proveedor completo, elige la cuenta y recien ahi abre el modal, igual que Compras.
 		 *
 		 * @param {Object} provider_order Compra de la fila.
 		 * @returns {void}
@@ -107,22 +101,25 @@ export default {
 		/**
 		 * Saldo del proveedor en la moneda de la compra, con su rotulo ("USD ..." en dolares).
 		 *
-		 * 🔴 Lee `saldo_pesos` / `saldo_dolares` y no `saldo`: esa columna es de antes de las cuentas
-		 * por moneda y nada la escribe desde entonces (`CurrentAcountHelper::set_model_saldo()` solo
-		 * sincroniza las dos nuevas), asi que mostraba un valor congelado. Son las mismas que muestra
-		 * la lista de Proveedores.
+		 * 🔴 Lee `saldo_pesos` / `saldo_dolares` y no `saldo`: esa columna es de antes de las cuentas por
+		 * moneda y nada la escribe desde entonces (`CurrentAcountHelper::set_model_saldo()` solo sincroniza
+		 * las dos nuevas), asi que mostraba un valor congelado. Son las mismas que muestra la lista de
+		 * Proveedores.
 		 *
-		 * La moneda se decide como al abrir la cuenta (`cuenta_corriente_a_abrir`): 0 y null son pesos,
-		 * y los dolares cuentan solo con la extension `ventas_en_dolares`. Asi la cifra de la fila es
-		 * la de la cuenta que se abre al tocar el proveedor.
+		 * La moneda se decide como al abrir la cuenta (`cuenta_corriente_a_abrir`): 0 y null son pesos, y los
+		 * dolares cuentan solo con la extension `ventas_en_dolares`. Asi la cifra de la fila es la de la
+		 * cuenta que se abre al tocar el proveedor.
 		 *
 		 * @param {Object} provider_order Compra de la fila, con su `provider`.
 		 * @returns {String}
 		 */
 		saldo_del_proveedor(provider_order) {
+			// La compra es en dolares solo si lo dice su moneda Y el negocio trabaja con cuentas en dolares.
 			let en_dolares = (Number(provider_order.moneda_id) || 1) == 2 && this.hasExtencion('ventas_en_dolares')
+			// Saldo del proveedor en esa moneda; es NULL hasta que su cuenta tiene el primer movimiento.
 			let saldo = en_dolares ? provider_order.provider.saldo_dolares : provider_order.provider.saldo_pesos
-			if (!Number(saldo)) {
+			// Sin dato: un guion, y no "USD -", que dejaria el rotulo de la moneda solo. El cero SI se muestra.
+			if (saldo === null || typeof saldo == 'undefined') {
 				return '-'
 			}
 			return this.current_acount_simbolo_moneda({moneda_id: en_dolares ? 2 : 1}, saldo)
