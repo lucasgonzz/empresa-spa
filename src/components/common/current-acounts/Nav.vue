@@ -3,47 +3,123 @@
 	class="cc-toolbar">
 
 		<!--
-			Grupo 1: el filtro. Es lo unico de la barra que cambia lo que la tabla muestra, asi que
-			va primero y lleva la unica accion con acento.
+			Grupo 1: el período. Es lo único de la barra que cambia lo que la tabla muestra, así que va
+			primero. Reemplazó al campo "Últimos [N] movimientos" + "Buscar" (1/10/2026): ahora se elige
+			un atajo o un rango de fechas, y el período activo se ve SIEMPRE en el disparador.
 		-->
 		<div
-		class="cc-toolbar__grupo">
-			<label
-			class="cc-toolbar__label"
-			for="cc-cantidad-movimientos">
-				Ultimos
-			</label>
-			<b-form-input
-			id="cc-cantidad-movimientos"
-			v-model="cantidad_movimientos"
-			@keydown.enter="getCurrentAcounts"
-			class="cc-toolbar__input"
-			aria-label="Cantidad de movimientos a mostrar"
-			min="1"
-			type="number"></b-form-input>
+		class="cc-toolbar__grupo cc-periodo">
+			<b-dropdown
+			ref="periodo_dropdown"
+			class="cc-toolbar__dropdown cc-periodo__dropdown"
+			variant="light"
+			:toggle-attrs="{ 'aria-label': 'Período de la cuenta corriente: ' + texto_periodo }"
+			@show="prepararPersonalizado">
+				<template #button-content>
+					<i class="bi bi-calendar3"></i>
+					<span
+					class="cc-toolbar__label cc-periodo__etiqueta">
+						Período:
+					</span>
+					<span
+					class="cc-periodo__texto">
+						{{ texto_periodo }}
+					</span>
+				</template>
+				<b-dropdown-item
+				v-for="atajo in atajos"
+				:key="atajo.clave"
+				:active="periodo.clave == atajo.clave"
+				@click="elegirAtajo(atajo.clave)">
+					{{ atajo.nombre }}
+				</b-dropdown-item>
+				<b-dropdown-divider></b-dropdown-divider>
+				<!--
+					El form NO cierra el menú al tocar un campo (a diferencia de un b-dropdown-item): se
+					cierra recién al aplicar. El submit por Enter hace lo mismo que el botón.
+				-->
+				<b-dropdown-form
+				class="cc-periodo__form"
+				@submit.prevent="aplicarPersonalizado">
+					<p
+					class="cc-periodo__titulo">
+						Personalizado
+					</p>
+					<label
+					class="cc-periodo__campo"
+					for="cc-periodo-desde">
+						Desde
+						<input
+						id="cc-periodo-desde"
+						v-model="desde_input"
+						class="form-control cc-periodo__fecha"
+						aria-label="Fecha desde"
+						min="2000-01-01"
+						max="2099-12-31"
+						type="date">
+					</label>
+					<label
+					class="cc-periodo__campo"
+					for="cc-periodo-hasta">
+						Hasta
+						<input
+						id="cc-periodo-hasta"
+						v-model="hasta_input"
+						class="form-control cc-periodo__fecha"
+						aria-label="Fecha hasta"
+						min="2000-01-01"
+						max="2099-12-31"
+						type="date">
+					</label>
+					<p
+					v-if="rango_invertido"
+					class="cc-periodo__error"
+					role="alert">
+						La fecha desde no puede ser posterior a la fecha hasta.
+					</p>
+					<p
+					v-else-if="fecha_fuera_de_rango"
+					class="cc-periodo__error"
+					role="alert">
+						Las fechas tienen que estar entre los años 2000 y 2099.
+					</p>
+					<b-button
+					class="cc-toolbar__btn cc-toolbar__btn--acento cc-periodo__aplicar"
+					variant="primary"
+					type="submit"
+					:disabled="!personalizado_valido">
+						Aplicar
+					</b-button>
+				</b-dropdown-form>
+			</b-dropdown>
+
 			<!--
-				La segunda mitad de la frase NO es otro <label for=""> apuntando al mismo input:
-				dos labels al mismo campo los concatenan NVDA y JAWS pero VoiceOver lee solo el
-				primero, y se escucharia "Ultimos" a secas. El nombre accesible lo da el
-				aria-label del input; esto es texto visible y nada mas.
+				Si la API devolvió un período ampliado (por defecto, con menos de 10 movimientos en el
+				rango pedido) se avisa: de otro modo las fechas del disparador no coincidirían con las
+				del mes anterior y actual y parecería un error.
 			-->
 			<span
-			class="cc-toolbar__label"
-			aria-hidden="true">
-				movimientos
+			v-if="periodo_ampliado"
+			class="cc-periodo__aviso"
+			role="status">
+				Se amplió el período para mostrar al menos 10 movimientos.
 			</span>
-			<b-button
-			class="cc-toolbar__btn cc-toolbar__btn--acento"
-			variant="primary"
-			@click="getCurrentAcounts">
-				<i class="bi bi-search"></i>
-				Buscar
-			</b-button>
+
+			<!--
+				La API manda solo los 2000 movimientos más recientes cuando el período tiene más: se
+				avisa para que nadie crea que la tabla es el historial completo.
+			-->
+			<span
+			v-if="periodo_truncado"
+			class="cc-periodo__aviso"
+			role="status">
+				Se muestran los 2000 movimientos más recientes del período. Acotá las fechas para ver el resto.
+			</span>
 		</div>
 
 		<!--
 			Grupo 2: las acciones sobre la cuenta. Ninguna cambia lo que se ve en pantalla, asi que
-			van todas neutras: la jerarquia la marca "Buscar", que es la unica con acento.
+			van todas neutras: lo que filtra es el período de la izquierda.
 		-->
 		<div
 		class="cc-toolbar__grupo cc-toolbar__grupo--acciones">
@@ -55,6 +131,7 @@
 			class="cc-toolbar__dropdown"
 			data-tour="cuentas_corrientes.dropdown_imprimir"
 			variant="light"
+			:disabled="current_acounts.length == 0"
 			right>
 				<template #button-content>
 					<i class="bi bi-printer"></i>
@@ -68,15 +145,13 @@
 				</b-dropdown-item>
 			</b-dropdown>
 
-			<b-button
-			v-if="from_model.current_acounts_count == 0"
-			class="cc-toolbar__btn"
-			variant="light"
-			title="Cargar el saldo con el que arranca esta cuenta"
-			@click="saldoInicial">
-				<i class="bi bi-flag"></i>
-				Saldo inicial
-			</b-button>
+			<!--
+				Solo en una cuenta sin movimientos. Quien decide eso es el componente, no un
+				`v-if` aca: antes era `from_model.current_acounts_count == 0` y no aparecia nunca,
+				porque ese conteo no viene en el cliente ni en el proveedor (ver BtnSaldoInicial.vue).
+			-->
+			<btn-saldo-inicial
+			class="cc-toolbar__btn"></btn-saldo-inicial>
 
 			<btn-loader
 			class="cc-toolbar__btn"
@@ -93,25 +168,89 @@
 <script>
 import current_acounts from '@/mixins/current_acounts'
 import { env } from '@/runtime_config'
+import { FECHA_INICIO_HISTORIAL, fechaLocal, rangoDeAtajo, paramsDePeriodo } from '@/store/current_acount'
+
+// Atajos del menú de período. La clave es la que entiende rangoDeAtajo() del store.
+const ATAJOS = [
+	{ clave: 'defecto', nombre: 'Mes anterior y actual' },
+	{ clave: 'este_mes', nombre: 'Este mes' },
+	{ clave: 'mes_anterior', nombre: 'Mes anterior' },
+	{ clave: 'ultimos_30_dias', nombre: 'Últimos 30 días' },
+	{ clave: 'ultimos_3_meses', nombre: 'Últimos 3 meses' },
+	{ clave: 'este_anio', nombre: 'Este año' },
+	{ clave: 'todo', nombre: 'Todo el historial' },
+]
+
+// 'YYYY-MM-DD' -> 'DD/MM/YYYY', sin pasar por Date para que la zona horaria no corra el día.
+function fechaLegible(fecha) {
+	let partes = String(fecha).split('-')
+	return partes.length == 3 ? partes[2] + '/' + partes[1] + '/' + partes[0] : fecha
+}
+
 export default {
 	name: 'CurrentAcountsNav',
 	mixins: [current_acounts],
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
+		BtnSaldoInicial: () => import('@/components/common/current-acounts/BtnSaldoInicial'),
 	},
 	data() {
 		return {
-			checking: false
+			checking: false,
+			atajos: ATAJOS,
+			// Valores de los dos campos del rango personalizado (se precargan al abrir el menú).
+			desde_input: '',
+			hasta_input: '',
 		}
 	},
 	computed: {
-		cantidad_movimientos: {
-			set(value) {
-				this.$store.commit('current_acount/set_cantidad_movimientos', value)
-			},
-			get() {
-				return this.$store.state.current_acount.cantidad_movimientos
+		periodo() {
+			return this.$store.state.current_acount.periodo
+		},
+		periodo_efectivo() {
+			return this.$store.state.current_acount.periodo_efectivo
+		},
+		periodo_ampliado() {
+			return !!(this.periodo_efectivo && this.periodo_efectivo.ampliado)
+		},
+		periodo_truncado() {
+			return !!(this.periodo_efectivo && this.periodo_efectivo.truncado)
+		},
+		/**
+		 * Texto del período activo. Con el período efectivo que devolvió la API se ve también el
+		 * ampliado. Si la API es vieja y no manda `periodo`, NO se inventan fechas que no se
+		 * aplicaron: se dice que son los últimos 10, que es lo que esa API devuelve.
+		 */
+		texto_periodo() {
+			if (this.periodo.clave == 'todo') {
+				return 'Todo el historial'
 			}
+			let rango = this.periodo_efectivo
+			if (!rango) {
+				if (!this.loading) {
+					return 'Últimos 10 movimientos'
+				}
+				// Mientras carga se muestra lo pedido.
+				rango = paramsDePeriodo(this.periodo)
+			}
+			if (!rango.hasta) {
+				return 'Desde ' + fechaLegible(rango.desde)
+			}
+			return fechaLegible(rango.desde) + ' – ' + fechaLegible(rango.hasta)
+		},
+		rango_invertido() {
+			return !!(this.desde_input && this.hasta_input && this.desde_input > this.hasta_input)
+		},
+		// Una fecha escrita con un año fuera de 2000-2099 (el input de Chrome deja tipear 5 o 6
+		// dígitos): se avisa en vez de dejar "Aplicar" deshabilitado sin explicación.
+		fecha_fuera_de_rango() {
+			return !!(this.desde_input && this.hasta_input) && !this.rango_invertido
+				&& !(this.fecha_valida(this.desde_input) && this.fecha_valida(this.hasta_input))
+		},
+		personalizado_valido() {
+			// Año de 4 dígitos entre 2000 y 2099: si no, la API rechaza la fecha y cae en silencio
+			// al camino viejo (los últimos N), mostrando algo distinto de lo que se eligió.
+			return this.fecha_valida(this.desde_input) && this.fecha_valida(this.hasta_input) && !this.rango_invertido
 		},
 		loading() {
 			return this.$store.state.current_acount.loading
@@ -142,12 +281,72 @@ export default {
             // this.$store.commit('clients/setSaldoInicial', this.client)
             this.$bvModal.show('saldo-inicial')
         },
-		getCurrentAcounts() {
+		/**
+		 * Aplica un período y recarga al toque. El por defecto guarda las fechas en null: las calcula
+		 * el store en cada pedido, así una SPA que quedó abierta días no arrastra un "hoy" viejo.
+		 */
+		aplicarPeriodo(modo, clave, desde, hasta) {
+			this.$store.commit('current_acount/set_periodo', { modo, clave, desde, hasta })
 			this.$store.dispatch('current_acount/getModels')
 		},
+		fecha_valida(fecha) {
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha || '')) {
+				return false
+			}
+			let anio = parseInt(fecha.substring(0, 4), 10)
+			return anio >= 2000 && anio <= 2099
+		},
+		elegirAtajo(clave) {
+			if (clave == 'defecto') {
+				return this.aplicarPeriodo('defecto', 'defecto', null, null)
+			}
+			let rango = rangoDeAtajo(clave)
+			this.aplicarPeriodo('atajo', clave, rango.desde, rango.hasta)
+		},
+		/**
+		 * Precarga los campos del rango personalizado con el período que se está viendo, para que
+		 * ajustar una fecha no obligue a tipear las dos. "Todo el historial" arranca en 2000 y no
+		 * sirve de punto de partida: ahí se precarga el rango por defecto.
+		 */
+		prepararPersonalizado() {
+			let rango = null
+			if (this.periodo.clave != 'todo') {
+				rango = this.periodo_efectivo
+			}
+			if (!rango || !rango.desde) {
+				rango = rangoDeAtajo('defecto')
+			}
+			this.desde_input = rango.desde
+			// El por defecto no manda `hasta` (queda abierto hasta hoy): se precarga hoy para que
+			// "Aplicar" no arranque deshabilitado.
+			this.hasta_input = rango.hasta ? rango.hasta : fechaLocal(new Date())
+		},
+		aplicarPersonalizado() {
+			if (!this.personalizado_valido) {
+				return
+			}
+			this.aplicarPeriodo('personalizado', 'personalizado', this.desde_input, this.hasta_input)
+			this.$refs.periodo_dropdown.hide(true)
+		},
+		/**
+		 * El PDF sale con el período que se ve. La cantidad del medio es la de movimientos en
+		 * pantalla (o 10): es lo que imprime una API vieja que ignora las fechas, así el papel
+		 * coincide con la pantalla igual. "Todo el historial" va con 2000-01-01 y sin `hasta`.
+		 */
 		print(detail) {
-            let link = env('VUE_APP_API_URL')+'/current-acount/pdf/'+this.from_credit_account.id+'/'+this.cantidad_movimientos+'/'+detail
-            window.open(link)
+			let desde = FECHA_INICIO_HISTORIAL
+			let hasta = null
+			if (this.periodo.clave != 'todo') {
+				let rango = this.periodo_efectivo ? this.periodo_efectivo : paramsDePeriodo(this.periodo)
+				desde = rango.desde
+				hasta = rango.hasta
+			}
+			let cantidad = this.current_acounts.length || 10
+			let link = env('VUE_APP_API_URL')+'/current-acount/pdf/'+this.from_credit_account.id+'/'+cantidad+'/'+detail+'?desde='+desde
+			if (hasta) {
+				link += '&hasta='+hasta
+			}
+			window.open(link)
 		},
 	}
 }
@@ -206,24 +405,78 @@ export default {
 		color: var(--color-text-secondary)
 		white-space: nowrap
 
-	// El campo va con el radio de boton y no en capsula. La convencion del rediseño es explicita:
-	// la capsula es del CAMPO DE BUSQUEDA, y esto es una cantidad, no una busqueda.
+	// ─── El menú de período (1/10/2026) ────────────────────────────────────────────────────
+	// El disparador muestra el período activo, así que puede ser largo ("Período: 01/09/2026 –
+	// 01/10/2026"). En teléfono (360px) esa línea más el ícono y el caret rozan el ancho útil de
+	// la barra: se esconde la etiqueta "Período:" (el aria-label la sigue diciendo) y, si aun así no
+	// entra, el texto corta con puntos suspensivos en vez de desbordar la caja.
+	.cc-periodo
+		flex-direction: column
+		align-items: flex-start
+		gap: 4px
+		min-width: 0
+		max-width: 100%
+
+	.cc-periodo__dropdown
+		max-width: 100%
+
+		> .btn
+			max-width: 100%
+
+	.cc-periodo__texto
+		overflow: hidden
+		text-overflow: ellipsis
+
+	@media screen and (max-width: 480px)
+		.cc-periodo__etiqueta
+			display: none
+
+	// Línea chica de aviso del período ampliado.
+	.cc-periodo__aviso
+		font-size: 0.75rem
+		color: var(--color-text-secondary)
+
+	// El menú no puede quedar cortado en 360px: el min-width de Bootstrap (10rem) y el ancho del
+	// form no superan el viewport. El overflow es del menú, no de la página.
+	.cc-periodo__dropdown .dropdown-menu
+		min-width: min(280px, calc(100vw - 24px))
+		max-width: calc(100vw - 24px)
+		max-height: 70vh
+		overflow-y: auto
+		overflow-x: hidden
+
+	.cc-periodo__form
+		.b-dropdown-form
+			padding: 8px 16px
+
+	.cc-periodo__titulo
+		margin: 0 0 8px
+		font-size: 0.75rem
+		font-weight: 600
+		text-transform: uppercase
+		letter-spacing: 0.04em
+		color: var(--color-text-secondary)
+
+	.cc-periodo__campo
+		display: flex
+		flex-direction: column
+		gap: 4px
+		margin: 0 0 10px
+		font-size: 0.8125rem
+		font-weight: 500
+		color: var(--color-text-secondary)
+
+	// El campo va con el radio de boton y no en capsula. La convención del rediseño es explícita:
+	// la cápsula es del CAMPO DE BÚSQUEDA, y esto es una fecha, no una búsqueda.
 	//
-	// 🔴 El selector suma `.form-control` --que el input ya trae de bootstrap-- y no es de mas:
-	// `html.dark-mode .form-control, ...` de _dark_theme.sass es (0,2,1) y le ganaba a
-	// `.cc-toolbar .cc-toolbar__input` (0,2,0) en `background-color`. El campo quedaba en
-	// --bg-section, que es EXACTAMENTE el mismo color que el fondo de esta barra: en modo oscuro
-	// el input se fundia con la barra y lo unico que lo delimitaba era el borde. Con la clase de
-	// mas queda (0,3,0) y gana.
-	//
-	// El ancho es 88 y no 74: con `type="number"`, Chrome dibuja las flechas del spinner (~16px)
-	// al pasar el mouse, y sobre 74 menos el padding quedaban ~38px utiles, asi que el numero
-	// centrado se corria solo al aparecer las flechas.
-	.cc-toolbar__input.form-control
-		width: 88px
+	// 🔴 El selector suma `.form-control` --que el input ya trae de bootstrap-- y no es de más:
+	// `html.dark-mode .form-control, ...` de _dark_theme.sass es (0,2,1) y le ganaba a un selector
+	// de dos clases en `background-color`: en modo oscuro el campo se fundía con el menú. Con la
+	// clase de más queda (0,3,0) y gana.
+	.cc-periodo__fecha.form-control
+		width: 100%
 		height: var(--cc-control-h, 36px)
 		padding: 0 10px
-		text-align: center
 		font-size: 0.875rem
 		border-radius: var(--cc-btn-radio, 10px)
 		border: 1px solid var(--color-border)
@@ -234,6 +487,20 @@ export default {
 		&:focus
 			border-color: var(--color-primary)
 			box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15)
+
+	// El selector de fecha nativo (el ícono del calendario) se dibuja según color-scheme: sin esto
+	// en modo oscuro queda negro sobre el fondo oscuro.
+	.dark-mode &
+		.cc-periodo__fecha.form-control
+			color-scheme: dark
+
+	.cc-periodo__error
+		margin: 0 0 8px
+		font-size: 0.75rem
+		color: var(--color-text-danger-strong, #dc3545)
+
+	.cc-periodo__aplicar
+		width: 100%
 
 	// Altura unica para TODO lo que vive en la barra: botones, el BtnLoader y el disparador del
 	// dropdown. El `> .btn` del segundo selector es porque b-dropdown recibe la clase en su

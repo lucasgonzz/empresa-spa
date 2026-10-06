@@ -118,10 +118,14 @@
 						<option value="alguna">Puede aportar una palabra</option>
 						<option value="todas">Tiene que tener todas</option>
 					</select>
-					<!-- Icono de ayuda con tooltip: aclara el significado del modo elegido -->
+					<!--
+						Icono de ayuda con tooltip: aclara el significado del modo elegido. Va `noninteractive`
+						por lo mismo que DropdownOptionItem.vue: adentro de un menu el globo tapa la fila de al
+						lado, y si es interactivo se queda abierto al pasarle el mouse y se come el clic.
+					-->
 					<i
 					class="icon-help buscador-general-dropdown__row-mode-help"
-					v-b-tooltip.hover
+					v-b-tooltip.hover.noninteractive
 					:title="keyword_mode_help_de(item)"></i>
 				</span>
 
