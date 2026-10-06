@@ -386,7 +386,7 @@ export default {
 			'Los artículos que la IA no tiene claros quedan sin categoría hasta que los apruebes en la revisión.',
 			'Mientras nadie revise ni cambie nada a mano, se puede volver atrás con "Cambiar de sistema".',
 		],
-		requiere: 'Ser el dueño del negocio o entrar con el acceso maestro. Si el negocio usa márgenes o listas de precios por categoría, o está conectado a Tienda Nube, los sistemas nuevos no se pueden elegir: queda la opción de mantener las categorías que ya tiene.',
+		requiere: 'Ser el dueño del negocio o entrar con el acceso maestro. Si el negocio usa márgenes o listas de precios por categoría, o está conectado a Tienda Nube, los sistemas nuevos no se pueden elegir: queda la opción de mantener las categorías que ya tiene. Mientras siga a la vista el aviso de "no pudimos confirmar" de una acción anterior, el botón queda apagado.',
 		nota_interna: 'Botón de TarjetaSistema.vue. POST category-proposal-runs/{id}/elegir (plan §6.4): sincrónico, una transacción, todo o nada; 422 bloqueado_por_margenes / bloqueado_por_tienda_nube.',
 	},
 
@@ -425,7 +425,7 @@ export default {
 			'Después se puede elegir cualquiera de los sistemas, incluido el mismo.',
 			'Como al elegir, puede tardar unos segundos y frenar un poco las ventas y las cargas: conviene hacerlo cuando no se esté vendiendo, y que nadie edite artículos hasta que termine.',
 		],
-		requiere: 'Que nadie haya revisado artículos ni cambiado a mano categorías o artículos desde que se eligió. Si ya no se puede, el botón no aparece y el cartel de arriba dice por qué.',
+		requiere: 'Que nadie haya revisado artículos ni cambiado a mano categorías o artículos desde que se eligió. Si ya no se puede, el botón no aparece y el cartel de arriba dice por qué. Tampoco mientras siga a la vista el aviso de "no pudimos confirmar" de una acción anterior: el botón queda apagado.',
 		nota_interna: 'POST category-proposal-runs/{id}/volver-atras. Que se pueda lo decide la API (run.puede_cambiar y run.motivo_no_puede_cambiar, la misma función que valida el pedido): la SPA no lo deduce.',
 	},
 
@@ -465,8 +465,9 @@ export default {
 		repercute: [
 			'No cambia nada en tu catálogo: solo muestra el estado real.',
 			'Si la acción se había aplicado igual, la pantalla pasa a mostrar el resultado.',
+			'Si todavía no se ve ningún cambio, el aviso se queda y no se puede elegir ni cambiar de sistema: pasado un minuto desde que falló, al volver a tocar Actualizar se habilita de nuevo.',
 		],
-		nota_interna: 'Vive en el aviso de Index.vue que sale cuando elegir o volver atrás falla por tiempo de espera o error de servidor (sin respuesta o 5xx): la API pudo haberlo aplicado igual. Llama al mismo método que el "Actualizar" de la vista preparando.',
+		nota_interna: 'Vive en el aviso de Index.vue que sale cuando elegir o volver atrás falla por tiempo de espera o error de servidor (sin respuesta o 5xx): la API pudo haberlo aplicado igual. Llama al mismo método que el "Actualizar" de la vista preparando; con este aviso a la vista además vuelve a pedir las categorías de la sesión y decide si libera la pantalla (al_actualizar_sin_confirmar).',
 	},
 
 	'categorias-reintentar': {

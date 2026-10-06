@@ -7,19 +7,23 @@ data-testid="alertas-categorias"
 	<!--
 		Un pedido largo (elegir un sistema o volver atras) fallo por tiempo de espera o por un error del
 		servidor: la API pudo haberlo aplicado igual (B-04). El aviso del interceptor global dura unos
-		segundos y no dice que hacer; este se queda hasta que se actualiza o cambia lo que se ve. El boton
-		"Actualizar" va aca porque la vista con los sistemas para elegir no tiene uno.
+		segundos y no dice que hacer; este se queda hasta que cambia lo que se ve (o, si la corrida sigue igual,
+		hasta que se toca Actualizar pasado el minuto: ver `al_actualizar_sin_confirmar`) y mientras tanto no se puede elegir ni
+		cambiar de sistema (D2). El boton "Actualizar" va aca porque la vista con los sistemas para elegir no
+		tiene uno.
 	-->
 	<div
 	v-if="sin_confirmar"
 	class="cat-sistemas__sin-confirmar"
 	role="alert"
 	data-testid="categorias-sin-confirmar">
-		<p class="cat-sistemas__sin-confirmar-texto">
+		<p
+		class="cat-sistemas__sin-confirmar-texto"
+		data-testid="categorias-sin-confirmar-texto">
 			<i
 			class="bi bi-exclamation-triangle"
 			aria-hidden="true"></i>
-			{{ textos.sin_confirmar }}
+			{{ texto_sin_confirmar }}
 		</p>
 		<b-button
 		class="btn-modulo"
@@ -191,6 +195,15 @@ const ESPERA_SINCRONIZACION_MS = 600
 const ACCIONES_QUE_RECARGAN_CATEGORIAS = ['category/getModels', 'sub_category/getModels']
 
 /**
+ * Cuánto tiempo, desde que se cortó un pedido largo (elegir o volver atrás), el servidor todavía puede estar
+ * terminando de aplicarlo (D2). Mientras no pase, la pantalla no se libera aunque `actual` siga igual, porque
+ * "sigue igual" no distingue entre "todavía aplica" y "el pedido nunca llegó". Es el minuto que el propio aviso
+ * le pide esperar al dueño. Pasado ese tiempo, un "Actualizar" que sigue sin ver cambios libera las tarjetas:
+ * elegir de nuevo es inofensivo (la API es idempotente y serializa los pedidos de la misma corrida).
+ */
+const VENTANA_SIN_CONFIRMAR_MS = 60000
+
+/**
  * Sub-solapa Categorías de Alertas → Catálogo (misión categorizacion-tres-modelos, 5/10/2026): el
  * dueño ve los sistemas de categorías que ComercioCity armó con IA para su catálogo, elige el que más
  * le gusta y revisa lo que la IA no tenía claro.
@@ -214,7 +227,10 @@ const ACCIONES_QUE_RECARGAN_CATEGORIAS = ['category/getModels', 'sub_category/ge
  *  4. Mantener al día el número rojo y el cartel de la elección cuando se revisa algo.
  *  5. Si elegir o volver atrás falla por tiempo de espera o por un error del servidor, la API pudo
  *     haberlo aplicado igual: queda en pantalla el aviso "no pudimos confirmar" con su botón
- *     "Actualizar" (`sin_confirmar`), además de lo que muestre el interceptor global.
+ *     "Actualizar" (`sin_confirmar`), además de lo que muestre el interceptor global. Mientras no se sepa
+ *     cómo terminó, las tarjetas y "Cambiar de sistema" quedan apagados (D2) y "Actualizar" vuelve a pedir
+ *     también las categorías de la sesión (D2b). El aviso se va cuando la corrida cambió de estado o, si
+ *     sigue igual, cuando la persona toca "Actualizar" pasado `VENTANA_SIN_CONFIRMAR_MS` desde el corte.
  *
  * 🔴 Esta pantalla no decide nada de plata ni de permisos: si un sistema nuevo está bloqueado, si se
  * puede volver atrás, qué advertencias van en el cartel de confirmar y quién puede elegir, lo dice la
@@ -261,9 +277,18 @@ export default {
 			/**
 			 * true si el último pedido largo (elegir o volver atrás) falló por tiempo de espera o por un
 			 * error del servidor: no se sabe cómo terminó y puede haberse aplicado igual (B-04). Muestra
-			 * el aviso con su botón "Actualizar".
+			 * el aviso con su botón "Actualizar" y apaga las tarjetas y "Cambiar de sistema" (D2). Se va
+			 * cuando la corrida cambia de estado o, si sigue igual, cuando la persona toca "Actualizar"
+			 * pasado `VENTANA_SIN_CONFIRMAR_MS` desde el corte.
 			 */
 			sin_confirmar: false,
+			/**
+			 * La hora (en ms) en que se cortó ese pedido: desde ahí corre `VENTANA_SIN_CONFIRMAR_MS`, el tiempo en
+			 * que el servidor todavía puede estar aplicando y la pantalla no se libera (D2).
+			 */
+			sin_confirmar_desde: null,
+			/** true si ya se tocó "Actualizar" y la corrida seguía igual: el aviso cambia de texto (D2). */
+			sin_confirmar_reintentado: false,
 		}
 	},
 	computed: {
@@ -329,9 +354,22 @@ export default {
 			}
 			return 'otro_estado'
 		},
-		/** true mientras hay una acción grande en curso: los botones de elegir y cambiar se apagan. */
+		/**
+		 * El texto del aviso de "no pudimos confirmar": el de siempre y, si ya se tocó "Actualizar" y la corrida
+		 * seguía igual, el que dice que todavía no se ve el resultado (lo reemplaza: no se suman).
+		 *
+		 * @returns {String}
+		 */
+		texto_sin_confirmar() {
+			return this.sin_confirmar_reintentado ? TEXTOS.sin_confirmar_todavia : TEXTOS.sin_confirmar
+		},
+		/**
+		 * true mientras hay una acción grande en curso, o mientras no se sabe cómo terminó la última (D2): los
+		 * botones de elegir y cambiar se apagan. Sin esto, un "Actualizar" que lee la corrida todavía sin cambios
+		 * liberaba las tarjetas aunque el servidor siguiera aplicando.
+		 */
 		trabajando() {
-			return this.elegiendo || this.volviendo
+			return this.elegiendo || this.volviendo || this.sin_confirmar
 		},
 		/**
 		 * Los motivos por los que un sistema nuevo está bloqueado, ya traducidos a frases (los mismos
@@ -391,12 +429,17 @@ export default {
 		 * Mientras la corrida se prepara (o se aplica) la pantalla se refresca sola; con cualquier otra
 		 * vista, no. Y al llegar la corrida lista, se avisa que el dueño la vio.
 		 *
-		 * Si lo que se muestra cambió (por ejemplo, después de un "no pudimos confirmar" la pantalla
-		 * leyó que la elección sí se había aplicado), ese aviso ya no describe lo que se ve y se saca.
+		 * Si lo que se muestra cambió con el aviso de "no pudimos confirmar" a la vista (la pantalla leyó que
+		 * la elección sí se había aplicado, o que el "volver atrás" sí se había hecho), ese aviso ya no describe
+		 * lo que se ve y se saca. Y las categorías de la sesión se vuelven a pedir: la lectura que se hizo al
+		 * cortarse el pedido pudo ser anterior a ese cambio (D2b).
 		 */
 		vista(nueva) {
 			this.programar_refresco()
-			this.sin_confirmar = false
+			if (this.sin_confirmar) {
+				this.sin_confirmar = false
+				this.refrescar_categorias_de_la_sesion()
+			}
 			if (nueva === 'lista') {
 				this.avisar_que_se_vio()
 			}
@@ -450,14 +493,23 @@ export default {
 		/**
 		 * "Actualizar" de la pantalla de "preparando" y del aviso de "no pudimos confirmar": pide
 		 * `actual` y el número rojo. Es una acción de la persona, así que si no se pudo se lo dice (el
-		 * pedido de fondo no muestra nada por sí solo). Si se pudo leer cómo quedó, el aviso de "no
-		 * pudimos confirmar" ya no hace falta.
+		 * pedido de fondo no muestra nada por sí solo).
+		 *
+		 * Con el aviso de "no pudimos confirmar" a la vista (D2 y D2b) además vuelve a pedir las categorías de la
+		 * sesión y NO da el aviso por cerrado solo porque pudo leer la corrida: se sabe cómo terminó cuando la
+		 * corrida cambió de estado; si sigue igual, el servidor todavía puede estar aplicando y el aviso y las
+		 * tarjetas apagadas se quedan hasta que, pasada la ventana, se vuelva a tocar "Actualizar" (ver
+		 * `al_actualizar_sin_confirmar`).
 		 */
 		actualizar() {
 			let self = this
 			if (self.actualizando) {
 				return
 			}
+			// Si venía de un pedido largo sin confirmar, y qué vista había antes de leer: después se compara para saber
+			// si la corrida cambió de estado (ver `al_actualizar_sin_confirmar`).
+			let venia_sin_confirmar = self.sin_confirmar
+			let vista_antes = self.vista
 			self.actualizando = true
 			Promise.all([
 				self.$store.dispatch('category_proposal/get_actual'),
@@ -467,8 +519,9 @@ export default {
 				self.actualizando = false
 				if (resultados[0] === 'error' || resultados[0] === 'no_disponible') {
 					avisar(self, 'warning', 'No pudimos actualizar. Probá de nuevo en un rato.')
-				} else if (resultados[0] === 'listo') {
-					self.sin_confirmar = false
+				}
+				if (venia_sin_confirmar) {
+					self.al_actualizar_sin_confirmar(resultados[0], vista_antes)
 				}
 			})
 			.catch(err => {
@@ -603,8 +656,8 @@ export default {
 		 *
 		 * Si falló por tiempo de espera o por un error del servidor (B-04), la API pudo haberlo aplicado
 		 * igual: además de lo que muestre el interceptor (que dura unos segundos y no dice qué hacer),
-		 * queda en pantalla el aviso "no pudimos confirmar" con su botón "Actualizar" (`sin_confirmar`).
-		 * No se repite el toast del interceptor.
+		 * queda en pantalla el aviso "no pudimos confirmar" con su botón "Actualizar" (`sin_confirmar`) y las
+		 * tarjetas apagadas hasta que se sepa cómo terminó (D2). No se repite el toast del interceptor.
 		 *
 		 * @param {Object} decision `{propuesta_id, eliminar_categorias_vacias}` del modal.
 		 */
@@ -614,7 +667,6 @@ export default {
 				return
 			}
 			let nombre = self.propuesta_a_elegir ? self.propuesta_a_elegir.nombre : ''
-			self.sin_confirmar = false
 			self.elegiendo = true
 			self.$store.commit('auth/setMessage', 'Aplicando el sistema de categorías')
 			self.$store.commit('auth/setLoading', true)
@@ -652,7 +704,7 @@ export default {
 				self.$store.commit('auth/setMessage', '')
 				self.elegiendo = false
 				if (!es_cancelacion(err)) {
-					self.sin_confirmar = self.quedo_sin_confirmar(err)
+					self.marcar_sin_confirmar(err)
 					self.recargar_todo()
 				}
 			})
@@ -675,6 +727,61 @@ export default {
 			}
 			let respuesta = err.response
 			return !respuesta || Number(respuesta.status) >= 500
+		},
+		/**
+		 * Anota cómo quedó un pedido largo (elegir, volver atrás) que falló. Si no se sabe cómo terminó (ver
+		 * `quedo_sin_confirmar`), la pantalla queda "sin confirmar": con el aviso a la vista y las tarjetas y
+		 * "Cambiar de sistema" apagados. La hora del corte es la que mide la ventana en la que el servidor todavía
+		 * puede estar aplicando (`VENTANA_SIN_CONFIRMAR_MS`).
+		 *
+		 * @param {*} err Lo que rechazó el store.
+		 */
+		marcar_sin_confirmar(err) {
+			this.sin_confirmar = this.quedo_sin_confirmar(err)
+			this.sin_confirmar_desde = this.sin_confirmar ? Date.now() : null
+			this.sin_confirmar_reintentado = false
+		},
+		/**
+		 * Lo que pasa al tocar "Actualizar" con el aviso de "no pudimos confirmar" a la vista (D2 y D2b):
+		 *
+		 *  - Las categorías y subcategorías de la sesión se piden de nuevo siempre: la elección pudo aplicarse (o
+		 *    deshacerse) mientras nadie miraba y esos stores se cargan una sola vez (si no, los filtros del Listado
+		 *    y los selects de la ficha seguirían con lo de antes).
+		 *  - Si la corrida cambió de estado (elegida después de un "elegir" cortado, lista después de un "volver
+		 *    atrás" cortado), ya se sabe cómo terminó y el aviso se va.
+		 *  - Si sigue igual, `actual` no distingue "el servidor todavía aplica" de "el pedido nunca llegó": el aviso
+		 *    y las tarjetas apagadas se quedan, y el aviso dice que todavía no se ve el resultado. Recién cuando
+		 *    pasó `VENTANA_SIN_CONFIRMAR_MS` desde el corte se libera la pantalla (elegir de nuevo es inofensivo).
+		 *
+		 * @param {String} resultado Lo que contestó `get_actual` (ver la acción).
+		 * @param {String} vista_antes La vista que se mostraba al tocar "Actualizar".
+		 */
+		al_actualizar_sin_confirmar(resultado, vista_antes) {
+			this.refrescar_categorias_de_la_sesion()
+			// Si la persona salió de la pantalla mientras volvía la respuesta, no hay nada que decidir ni que mostrar
+			// (un toast acá saldría en la pantalla nueva).
+			if (this._isDestroyed) {
+				return
+			}
+			// Sin lectura (error, API vieja, pedido pisado por otro más nuevo) no hay nada nuevo que saber, y si
+			// el aviso ya se había sacado (la vista cambió y el watcher lo limpió) tampoco hay nada que decidir.
+			if (resultado !== 'listo' || !this.sin_confirmar) {
+				return
+			}
+			if (this.vista !== vista_antes) {
+				this.sin_confirmar = false
+				return
+			}
+			// Cuánto pasó desde el corte. Un reloj del equipo que retrocedió (un tiempo negativo) no puede estirar el
+			// bloqueo: se libera igual.
+			let transcurrido = Date.now() - this.sin_confirmar_desde
+			if (transcurrido < 0 || transcurrido >= VENTANA_SIN_CONFIRMAR_MS) {
+				this.sin_confirmar = false
+				// Es lo único que explica por qué se habilitaron de nuevo las tarjetas: dura como el aviso de éxito.
+				avisar(this, 'info', TEXTOS.sin_confirmar_vencido, { duration: 6000 })
+				return
+			}
+			this.sin_confirmar_reintentado = true
 		},
 		/**
 		 * Abre una caja de confirmación de a una por vez: mientras hay una abierta, un segundo clic (el
@@ -733,7 +840,6 @@ export default {
 				if (!confirmado || self.trabajando) {
 					return
 				}
-				self.sin_confirmar = false
 				self.volviendo = true
 				self.$store.commit('auth/setMessage', 'Volviendo al estado anterior')
 				self.$store.commit('auth/setLoading', true)
@@ -754,7 +860,7 @@ export default {
 					self.$store.commit('auth/setMessage', '')
 					self.volviendo = false
 					if (!es_cancelacion(err)) {
-						self.sin_confirmar = self.quedo_sin_confirmar(err)
+						self.marcar_sin_confirmar(err)
 						self.recargar_todo()
 					}
 				})
@@ -878,7 +984,8 @@ export default {
 		flex-shrink: 0
 		line-height: 1.4
 
-// Telefono: el boton baja debajo del texto, a lo ancho (es donde el dedo lo encuentra).
+// Telefono: el boton baja debajo del texto, a lo ancho y con tamano de dedo (40 px, como el "Elegir este" de las
+// tarjetas): con el aviso a la vista es la unica salida de la pantalla.
 @media (max-width: 575px)
 	.cat-sistemas__sin-confirmar
 		flex-direction: column
@@ -886,6 +993,7 @@ export default {
 
 		.btn
 			width: 100%
+			height: 40px
 
 // La grilla de tarjetas cambia de columnas en los tres anchos de la guia de estilo: una columna en
 // telefono, dos en tablet (768 a 1199 px) y tres en escritorio (desde 1200 px). `minmax(0, 1fr)` y

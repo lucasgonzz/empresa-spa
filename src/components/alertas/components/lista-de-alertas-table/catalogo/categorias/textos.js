@@ -166,8 +166,15 @@ export const TEXTOS = {
 	nota_dudosos: 'Los que la IA no tiene claro quedan sin categoría hasta que los revises.',
 	solo_el_dueno: 'Solo el dueño del negocio puede elegir un sistema de categorías.',
 	// Un pedido largo (elegir o volver atrás) falló por tiempo de espera o error del servidor: la API pudo
-	// haberlo aplicado igual (B-04). Lo que el aviso del interceptor global no dice es qué hacer.
-	sin_confirmar: 'No pudimos confirmar cómo terminó. Si tardó mucho, esperá un minuto y tocá Actualizar: puede haberse aplicado igual.',
+	// haberlo aplicado igual (B-04). Lo que el aviso del interceptor global no dice es qué hacer. Mientras no se
+	// sepa cómo terminó la pantalla no deja elegir ni cambiar de sistema (D2): el texto lo dice para que nadie
+	// se pregunte por qué están apagados los botones.
+	sin_confirmar: 'No pudimos confirmar cómo terminó. Si tardó mucho, esperá un minuto y tocá Actualizar: puede haberse aplicado igual. Mientras tanto no se puede elegir ni cambiar de sistema.',
+	// Se tocó Actualizar y la corrida sigue igual que antes: el servidor todavía puede estar aplicando (D2). Reemplaza
+	// al texto de arriba (no se suman): repite lo de que no se puede elegir ni cambiar de sistema.
+	sin_confirmar_todavia: 'Todavía no vemos el resultado: puede estar terminando de aplicarse. Esperá un poco más y volvé a tocar Actualizar. Mientras tanto no se puede elegir ni cambiar de sistema.',
+	// Pasó la ventana en la que el servidor todavía podía estar aplicando y la corrida sigue igual: se libera la pantalla.
+	sin_confirmar_vencido: 'Pasó más de un minuto y no vemos ningún cambio: ya podés volver a intentarlo.',
 }
 
 /**
