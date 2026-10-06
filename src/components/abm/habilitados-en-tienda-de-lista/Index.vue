@@ -87,6 +87,14 @@ data-testid="habilitados-en-tienda-de-lista">
 		<template v-if="es_la_lista_publica">
 			Como es la lista que ve el público, los visitantes sin cuenta también {{ verbo_de_la_tienda }} solo los habilitados.
 		</template>
+		<!--
+			🔴 Siempre, en las dos variantes: el sistema NO sabe qué versión de tienda tiene el negocio, y
+			con una tienda sin actualizar esta frase le diría al dueño en presente algo que no pasa (los
+			clientes siguen viendo todo). El mismo aviso está en el popover del interruptor, pero ese solo
+			se ve con el mouse encima: en un celular no existe, y en un notebook de 768 px de alto se
+			cortaba (verificación en vivo, 6/10/2026). Contrato: informe del chequeo, hallazgo H1.
+		-->
+		Se aplica cuando la tienda de tu negocio está actualizada a la versión que incluye esta función.
 	</p>
 </div>
 </template>

@@ -111,12 +111,14 @@ export default {
 			value: 0,
 			not_show: true,
 			descriptions: [
-				'Si lo activás, los clientes que tienen asignada esta lista ven en la tienda online SOLO los artículos que habilites para ella.',
-				'Atención: al activarlo, los clientes con esta lista dejan de ver todos los artículos en la tienda hasta que habilites los que quieras.',
-				'Los artículos se habilitan con el check "Visible en la tienda para esta lista" de la ficha del artículo, con la actualización masiva o con la importación de Excel. Los artículos nuevos nacen sin habilitar.',
-				'Si esta es la lista que la tienda usa para quien entra sin cuenta (la de número de posición mayor que no esté oculta al público), la restricción también se aplica a los visitantes.',
-				'Las listas que no tienen esta opción activada no cambian: sus clientes siguen viendo todo el catálogo.',
-				'La tienda de tu negocio tiene que estar actualizada a la versión que incluye esta función; hasta entonces sigue mostrando todo.',
+				// 🔴 Cuatro párrafos y cortos A PROPÓSITO (verificación en vivo del 6/10/2026): el cuerpo del
+				// globo de ayuda de ModelForm tiene un tope de 55vh y con seis párrafos (547 px) en un
+				// notebook de 1366×768 quedaban 125 px fuera de vista, justo la advertencia de que la tienda
+				// tiene que estar actualizada. Si se agrega texto acá, medirlo a 1366×768 (el tope es ~420 px).
+				'Los clientes con esta lista ven en la tienda online SOLO los artículos que habilites para ella; los demás dejan de verse hasta que los habilites (los artículos nuevos nacen sin habilitar).',
+				'Se habilitan con el check "Visible en la tienda para esta lista" de la ficha del artículo, con la actualización masiva o con el Excel de importación.',
+				'Requiere que la tienda de tu negocio esté actualizada a la versión que incluye esta función; hasta entonces sigue mostrando todo.',
+				'Si es la lista que ve el público (la de número de posición mayor que no esté oculta al público), también se aplica a los visitantes.',
 			]
 		},
 		{
