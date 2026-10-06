@@ -47,10 +47,12 @@ export default {
 
 
 			// Se ordena por el saldo vivo en pesos (ver saldo_en_pesos), no por la columna vieja `saldo`.
-			if (this.order_by == 'mayor-a-menor') {	
-				providers = providers.sort((a, b) => this.saldo_en_pesos(b) - this.saldo_en_pesos(a))
+			// Sobre una COPIA: `_providers` es `state.provider.models` y `sort` ordena en el lugar, asi que
+			// sin el slice() este grafico reordenaria el store de todas las pantallas que lo leen.
+			if (this.order_by == 'mayor-a-menor') {
+				providers = providers.slice().sort((a, b) => this.saldo_en_pesos(b) - this.saldo_en_pesos(a))
 			} else {
-				providers = providers.sort((a, b) => this.saldo_en_pesos(a) - this.saldo_en_pesos(b))
+				providers = providers.slice().sort((a, b) => this.saldo_en_pesos(a) - this.saldo_en_pesos(b))
 			}
 			console.log(providers)
 

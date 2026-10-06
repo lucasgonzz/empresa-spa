@@ -44,7 +44,9 @@ export default {
 			// de Clientes). La columna vieja `saldo` es de antes de las cuentas por moneda y ningun movimiento la
 			// mantiene al dia: queda congelada, o en NULL en un cliente nuevo, y el grafico mostraba deudas que no
 			// eran las reales. El grafico es en pesos: los dolares (`saldo_dolares`) no se suman ni comparten eje con ellos.
-			let clients = this.get_chart_models_ordenados('client', this.clients, 'saldo_pesos')
+			// Se le pasa una COPIA: el helper ordena en el lugar (`models.sort`) y `this.clients` es
+			// `state.client.models`, asi que sin el slice() este grafico reordenaria el store de Clientes.
+			let clients = this.get_chart_models_ordenados('client', this.clients.slice(), 'saldo_pesos')
 
 			clients.forEach(client => {
 				labels.push(client.name)
