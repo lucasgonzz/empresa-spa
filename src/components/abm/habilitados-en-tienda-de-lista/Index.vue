@@ -68,6 +68,11 @@ data-testid="habilitados-en-tienda-de-lista">
 			dejaba tres textos del mismo tema, y a 360 px eran seis u ocho lineas.
 		- El verbo va en futuro ("veran") mientras el interruptor esta prendido pero sin guardar:
 			la tienda todavia no lo aplica, y "ven" en presente decia lo contrario.
+		- Si esta lista es HOY la que la tienda le muestra al visitante sin cuenta (ver
+			`es_la_lista_publica`), se suma una linea: la restriccion tambien le llega a el, y el
+			popover del interruptor que ya lo dice se ve solo con el mouse encima, o sea nunca en un
+			celular. Es lo que mas importa si el comercio restringe su lista publica: la tienda queda
+			vacia para todo el que entra sin cuenta.
 	-->
 	<p
 	v-if="lista_restringida"
@@ -78,6 +83,9 @@ data-testid="habilitados-en-tienda-de-lista">
 		</template>
 		<template v-else>
 			Los clientes con esta lista {{ verbo_de_la_tienda }} en la tienda solo los artículos habilitados.
+		</template>
+		<template v-if="es_la_lista_publica">
+			Como es la lista que ve el público, los visitantes sin cuenta también {{ verbo_de_la_tienda }} solo los habilitados.
 		</template>
 	</p>
 </div>
@@ -188,6 +196,52 @@ export default {
 		 */
 		verbo_de_la_tienda() {
 			return this.restriccion_sin_guardar ? 'verán' : 'ven'
+		},
+		/**
+		 * ¿Esta lista es HOY la que la tienda le muestra al visitante sin cuenta?
+		 *
+		 * Es la misma regla que aplica la tienda (CatalogoPorListaHelper::eleccion_de_lista en
+		 * tienda-api): entre las listas del comercio que tienen `position` (no nula), sin contar las
+		 * ocultas al publico, la de NUMERO de posicion MAYOR.
+		 *
+		 * Se calcula con las listas GUARDADAS del store (`$store.state.price_type.models`, que ya
+		 * esta cargado en toda la app), y por eso dice lo de "hoy": no mira lo que se esta tipeando
+		 * en el formulario, que es una copia sin observar. Una lista nueva todavia no es la de nadie.
+		 *
+		 * 🔴 Con dos listas empatadas en la posicion mayor devuelve false: la tienda toma la primera
+		 * que le devuelve la base, sin desempate (distinto de Vender, que desempata por id), asi que
+		 * desde aca no se puede saber cual sera. Mejor callar que afirmar algo que puede ser falso.
+		 *
+		 * Comparaciones SUELTAS (`!= 1`, `==`): `ocultar_al_publico` llega como 0/1, null o string, y el
+		 * `id` del modelo y el de la lista del store pueden venir de tipos distintos.
+		 *
+		 * @return {Boolean}
+		 */
+		es_la_lista_publica() {
+			if (!this.lista_guardada) {
+				return false
+			}
+
+			let estado = this.$store.state.price_type
+			let listas = estado && Array.isArray(estado.models) ? estado.models : []
+
+			let candidatas = listas.filter(lista => {
+				let tiene_posicion = lista.position !== null
+					&& typeof lista.position != 'undefined'
+					&& String(lista.position).trim() !== ''
+					&& !isNaN(Number(lista.position))
+
+				return tiene_posicion && lista.ocultar_al_publico != 1
+			})
+
+			if (!candidatas.length) {
+				return false
+			}
+
+			let mayor = Math.max.apply(null, candidatas.map(lista => Number(lista.position)))
+			let con_la_mayor = candidatas.filter(lista => Number(lista.position) === mayor)
+
+			return con_la_mayor.length === 1 && con_la_mayor[0].id == this.model.id
 		},
 		/**
 		 * ¿Ya llego una respuesta valida del contador?
