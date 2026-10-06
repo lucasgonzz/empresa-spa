@@ -294,7 +294,18 @@ export default {
 			this.habilitados = null
 			this.total = null
 
-			this.$api.get('price-type/' + price_type_id + '/habilitados-en-tienda')
+			/*
+				🔴 `skip_global_error_event`: el contador es un dato de mas del formulario y su fallo ya
+				lo cuenta la linea gris de abajo. Sin la bandera, el interceptor de main.js ademas
+				despacha `errorEvent` y aparece un toast rojo de 10 s al abrir CUALQUIER lista guardada
+				de una cuenta con `online` cuya empresa-api todavia es vieja (la ruta no existe: 404 con
+				`{"message":""}`), aunque nadie toque el interruptor. El SPA nuevo y la API vieja
+				conviven hasta que se actualiza la cuenta. Mismo recurso que usa store/ai_chat.js
+				(fetchMiConsumo) para un endpoint opcional.
+			*/
+			this.$api.get('price-type/' + price_type_id + '/habilitados-en-tienda', {
+				skip_global_error_event: true,
+			})
 			.then(res => {
 				if (!self.model || self.model.id != price_type_id) {
 					return
@@ -324,8 +335,8 @@ export default {
 				if (!self.model || self.model.id != price_type_id) {
 					return
 				}
-				// Sin toast: es un dato de mas en el formulario, no una accion del usuario. La
-				// linea del error ya lo dice en su lugar.
+				// Sin toast (ver la bandera del GET): es un dato de mas en el formulario, no una
+				// accion del usuario. La linea del error ya lo dice en su lugar.
 				self.cargando_habilitados = false
 				self.error_habilitados = true
 			})
