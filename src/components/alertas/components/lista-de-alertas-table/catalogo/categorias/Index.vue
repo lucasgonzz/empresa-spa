@@ -970,6 +970,13 @@ export default {
 	.btn
 		flex: 0 0 auto
 
+		// Con el aviso a la vista es la unica salida de la pantalla (las tarjetas estan apagadas): lleva fondo de
+		// tarjeta (blanco en claro) en vez de transparente sobre el ambar, donde el gris del "outline-secondary"
+		// daba 3,8:1 (bajo el 4,5:1 de AA) y se veia como un boton apagado. Con el mouse encima, el foco o el
+		// clic manda el estilo de siempre del boton.
+		&:not(:hover):not(:focus):not(:active)
+			background: var(--bg-card, #fff)
+
 .cat-sistemas__sin-confirmar-texto
 	display: flex
 	align-items: flex-start
