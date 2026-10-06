@@ -181,6 +181,13 @@ export default {
          * otra moneda aporta su `amount_cotizado` (ya convertido a la moneda de la cuenta) y las
          * demás su `amount`. Lo que no es un número cuenta como cero.
          *
+         * Con un ajuste, para que coincida con lo que la API registra de verdad
+         * (CurrentAcountPagoMonedaHelper::valor_de_la_fila_en_la_cuenta): el `amount_cotizado` solo
+         * cuenta si la fila está en OTRA moneda, y una fila sin monto no cuenta nada. Si una fila pasa
+         * a dólares y vuelve a la moneda de la cuenta, check_moneda() de PaymentMethodsStep no le
+         * limpia el cotizado viejo: contarlo mostraría un reparto cerrado (verde, sobrante $0) que la
+         * API registra por menos.
+         *
          * OJO: se calcula DE LAS FILAS y no se reusa `pago.haber`. `haber` lo recalcula update_total()
          * con el evento `changed` del bloque compartido, y remove_payment_method()
          * (common/payment-methods/Index.vue) no lo emite: al quitar una fila `haber` se queda con el
@@ -199,14 +206,21 @@ export default {
             let rows = this.pago.current_acount_payment_methods || []
 
             rows.forEach(payment_method => {
-                // Importe de la fila ya convertido a la moneda de la cuenta; 0 si la fila ya está en esa moneda
-                let quoted_amount = Number(payment_method.amount_cotizado) || 0
+                // Importe tal como se cargó, en la moneda de la fila
+                let amount = Number(payment_method.amount) || 0
 
-                if (quoted_amount > 0) {
-                    total += quoted_amount
-                } else {
-                    total += Number(payment_method.amount) || 0
+                // Una fila sin monto no tiene efecto: ni un cotizado viejo que le haya quedado cuenta
+                if (amount <= 0) {
+                    return
                 }
+
+                // Una fila sin moneda, o en la moneda de la cuenta, vale su `amount` tal cual
+                let in_account_currency = !payment_method.moneda_id || Number(payment_method.moneda_id) === Number(this.base_moneda)
+
+                // Importe ya convertido a la moneda de la cuenta: solo cuenta si la fila está en otra moneda
+                let quoted_amount = in_account_currency ? 0 : (Number(payment_method.amount_cotizado) || 0)
+
+                total += quoted_amount > 0 ? quoted_amount : amount
             })
 
             return Math.round(total * 100) / 100

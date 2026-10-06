@@ -840,7 +840,11 @@ export default {
              * Con sobrante > 0 el comportamiento no cambia.
              */
             if (sobrante_en_base <= 0) {
-                this.$toast.info('No queda nada por repartir. Para completar esta fila, bajá antes el importe de otra.')
+                // Con una sola fila no hay otra a la que bajarle el importe: el aviso solo explica que ya está todo repartido
+                let hay_otras_filas = this.payment_methods.length > 1
+                this.$toast.info(hay_otras_filas
+                    ? 'No queda nada por repartir. Para completar esta fila, bajá antes el importe de otra.'
+                    : 'No queda nada por repartir: el total ya está cubierto.')
                 return
             }
 
