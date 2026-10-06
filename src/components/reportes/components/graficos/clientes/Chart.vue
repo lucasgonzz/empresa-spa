@@ -40,16 +40,22 @@ export default {
 			let labels = []
 			let data = []
 
-			let clients = this.get_chart_models_ordenados('client', this.clients, 'saldo')
+			// Se ordena y se grafica por `saldo_pesos`, el saldo vivo en pesos (el mismo dato que muestra la lista
+			// de Clientes). La columna vieja `saldo` es de antes de las cuentas por moneda y ningun movimiento la
+			// mantiene al dia: queda congelada, o en NULL en un cliente nuevo, y el grafico mostraba deudas que no
+			// eran las reales. El grafico es en pesos: los dolares (`saldo_dolares`) no se suman ni comparten eje con ellos.
+			let clients = this.get_chart_models_ordenados('client', this.clients, 'saldo_pesos')
 
 			clients.forEach(client => {
 				labels.push(client.name)
-				data.push(client.saldo)
+				// Los decimales llegan como string ("1234.50") o null: Number() || 0 los vuelve un numero graficable.
+				data.push(Number(client.saldo_pesos) || 0)
 			})
 
 			let bar_style = this.get_reportes_bar_dataset_style(data.length, true)
 			let datasets = [{
-				label: 'Deuda',
+				// Con la extension de dolares tambien puede haber deuda en USD: el rotulo aclara que esta barra es solo la de pesos.
+				label: this.hasExtencion('ventas_en_dolares') ? 'Deuda en pesos' : 'Deuda',
 				data: data,
 				...bar_style,
 			}]
