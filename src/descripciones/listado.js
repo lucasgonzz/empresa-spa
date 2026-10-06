@@ -168,7 +168,7 @@ export default {
 			'No cambia el precio ni lo que ven los clientes de las otras listas.',
 			'Los artículos nuevos nacen sin habilitar.',
 		],
-		requiere: 'Aparece solo en las listas que tienen activado "En la tienda, mostrar solo los artículos habilitados para esta lista" (ABM de listas de precios).',
+		requiere: 'Aparece solo en las listas que tienen activado "En la tienda, mostrar solo los artículos habilitados para esta lista" (ABM de listas de precios). La tienda de tu negocio tiene que estar actualizada a la versión que incluye esta función; hasta entonces sigue mostrando todo.',
 		nota_interna: 'Escribe article_price_type.visible_en_tienda (1 habilitado; 0 y NULL no). La tienda aplica la restriccion recien cuando corre una version de tienda-api que la conoce (CatalogoPorListaHelper). Escrito desde el contrato de la mision, falta medirlo en vivo.',
 	},
 

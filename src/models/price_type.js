@@ -116,6 +116,7 @@ export default {
 				'Los artículos se habilitan con el check "Visible en la tienda para esta lista" de la ficha del artículo, con la actualización masiva o con la importación de Excel. Los artículos nuevos nacen sin habilitar.',
 				'Si esta es la lista que la tienda usa para quien entra sin cuenta (la de número de posición mayor que no esté oculta al público), la restricción también se aplica a los visitantes.',
 				'Las listas que no tienen esta opción activada no cambian: sus clientes siguen viendo todo el catálogo.',
+				'La tienda de tu negocio tiene que estar actualizada a la versión que incluye esta función; hasta entonces sigue mostrando todo.',
 			]
 		},
 		{
