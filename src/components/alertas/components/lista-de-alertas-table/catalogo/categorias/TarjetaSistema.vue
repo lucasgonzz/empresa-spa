@@ -151,6 +151,17 @@ class="cat-tarjeta"
 			class="cat-tarjeta__bloqueo-pista">
 				Podés elegir «{{ nombre_de_mantener }}»: no cambia tus categorías y completa los artículos que no tienen ninguna.
 			</p>
+			<!--
+				Sin la tarjeta que mantiene las categorías no hay a qué sugerir: esto pasa si el margen o las listas por
+				categoría se prendieron DESPUÉS de que ComercioCity publicó los sistemas. Sin esta línea la tarjeta quedaba
+				bloqueada sin decir qué hacer (hallazgo D-1 del verificador de navegador).
+			-->
+			<p
+			v-else
+			class="cat-tarjeta__bloqueo-pista"
+			data-testid="categorias-bloqueo-sin-salida">
+				Por ahora no se puede aplicar este sistema en tu negocio. Escribinos y vemos juntos cómo ordenar tu catálogo.
+			</p>
 		</div>
 
 		<p
@@ -265,7 +276,7 @@ export default {
 				{ clave: 'categorias', rotulo: es_mantener ? 'Categorías que quedan' : 'Categorías', valor: entero_es(totales.categorias), tono: null },
 				{ clave: 'subcategorias', rotulo: es_mantener ? 'Subcategorías que quedan' : 'Subcategorías', valor: entero_es(totales.subcategorias), tono: null },
 				{ clave: 'seguros', rotulo: es_mantener ? 'Artículos que se completan' : 'Artículos que se ubican', valor: entero_es(totales.seguros), tono: null },
-				{ clave: 'dudosos', rotulo: 'Para revisar', valor: entero_es(totales.dudosos), tono: totales.dudosos > 0 ? 'aviso' : null },
+				{ clave: 'dudosos', rotulo: 'A revisar', valor: entero_es(totales.dudosos), tono: totales.dudosos > 0 ? 'aviso' : null },
 				{ clave: 'sin_asignar', rotulo: 'Sin categoría', valor: entero_es(totales.sin_asignar), tono: null },
 			]
 			if (totales.pierden_categoria > 0) {

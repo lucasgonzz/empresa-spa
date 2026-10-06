@@ -38,7 +38,7 @@ export const CONFIANZAS = {
 
 /** Estado de un artículo dentro de la revisión. */
 export const ESTADOS_DE_ITEM = {
-	a_revisar: 'Para revisar',
+	a_revisar: 'A revisar',
 	aplicada: 'Asignado',
 	aprobada: 'Aprobado',
 	rechazada: 'Rechazado',
@@ -149,7 +149,7 @@ export const TEXTOS = {
 	},
 	sin_propuestas: {
 		titulo: 'Todavía no hay sistemas de categorías para tu catálogo',
-		pista: 'Cuando ComercioCity los prepare los vas a ver acá y vas a poder elegir el que más te guste.',
+		pista: 'Si ComercioCity prepara sistemas de categorías para tu catálogo, los vas a ver acá y vas a poder elegir el que más te guste.',
 	},
 	preparando: {
 		titulo: 'Estamos preparando tus sistemas de categorías…',

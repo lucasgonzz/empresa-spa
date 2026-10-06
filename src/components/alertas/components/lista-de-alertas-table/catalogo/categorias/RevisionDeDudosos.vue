@@ -21,7 +21,7 @@ data-testid="categorias-revision">
 	</div>
 
 	<p
-	v-if="solapa === 'a_revisar'"
+	v-if="solapa === 'a_revisar' && conteo('a_revisar') > 0"
 	class="cat-revision__nota"
 	data-testid="categorias-nota-a-revisar">
 		<i
