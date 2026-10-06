@@ -261,6 +261,10 @@ import filter_history from '@/store/filter_history'
 // imagenes-catalogo-completo, 27/9/2026). No sale del factory comun: no es un ABM, es el estado de
 // lectura de un modulo con su propio contrato.
 import image_assignment from '@/store/image_assignment'
+// Sistemas de categorías con IA: la sub-solapa Alertas -> Catálogo -> Categorías y su numero rojo
+// (mision categorizacion-tres-modelos, 5/10/2026). Igual que image_assignment, no sale del factory
+// comun: no es un ABM, es el estado de lectura de un modulo con su propio contrato.
+import category_proposal from '@/store/category_proposal'
 
 import provider_order_afip_ticket_iva from '@/store/provider_order_afip_ticket_iva'
 import provider_order_discount from '@/store/provider_order_discount'
@@ -546,6 +550,7 @@ export default new Vuex.Store({
         excel_analysis,
         filter_history,
         image_assignment,
+        category_proposal,
 
         provider_order_afip_ticket_iva,
         provider_order_discount,

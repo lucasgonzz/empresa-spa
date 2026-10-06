@@ -112,7 +112,11 @@ export default {
 		    // Caso 3: stock por dirección
 			if (key === 'stock_addresses' && Array.isArray(value)) {
 			  value.forEach(addr => {
-			    const label = addr.address_name || `${this.addresses.find(add => add.id == addr.address_id).street}`
+				// Mision eliminar-sucursal-con-stock (5/10/2026): el historial de una importacion puede nombrar una
+				// sucursal que despues se elimino. Antes el `.find(...)` daba undefined y `.street` tiraba un
+				// TypeError que rompia el detalle entero; ahora ese renglon dice 'Sucursal eliminada'.
+				const sucursal_del_renglon = this.addresses.find(add => add.id == addr.address_id)
+				const label = addr.address_name || (sucursal_del_renglon ? sucursal_del_renglon.street : 'Sucursal eliminada')
 
 			    const subLines = []
 

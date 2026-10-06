@@ -55,7 +55,15 @@ const routes = [
         component: () => import('@/common-vue/views/Employee')
     },
     {
-        path: '/alertas/:view?',
+        // Misión categorizacion-tres-modelos (5/10/2026): la solapa "Imágenes" pasó a ser "Catálogo"
+        // y lleva sub-solapas (Imágenes y Categorías), así que la ruta suma un segundo nivel
+        // opcional: /alertas/catalogo/imagenes y /alertas/catalogo/categorias. Todo lo que
+        // matcheaba antes sigue matcheando (el segmento nuevo es opcional), incluida la URL de
+        // antes, /alertas/imagenes, que views/Alertas.vue lleva a la nueva con un `replace` y que
+        // sigue siendo la que usan los links viejos. Qué combinación es válida se decide en
+        // components/alertas/solapas.js; acá no hace falta ningún guard ni `redirect` (un
+        // `redirect` no se consulta al navegar por `name`, que es como entran casi todos).
+        path: '/alertas/:view?/:sub_view?',
         name: 'alertas',
         component: () => import('@/views/Alertas')
     },

@@ -73,8 +73,13 @@ export default {
 			total += Number(this.deposit_movements_en_curso.length)
 			
 			// Imagenes para revisar + busquedas de imagenes terminadas sin abrir. Sin permiso que
-			// lo condicione: la solapa "Imagenes" de Alertas tampoco lo tiene.
+			// lo condicione: la solapa "Catalogo" de Alertas tampoco lo tiene.
 			total += Number(this.imagenes_alert_count)
+
+			// Sistemas de categorias esperando que el dueño elija + articulos dudosos por revisar
+			// (mision categorizacion-tres-modelos). El numero lo arma la API y para quien no es el
+			// dueño o el acceso maestro vale 0, asi que tampoco necesita un permiso aca.
+			total += Number(this.categorias_alert_count)
 
 			return  total
 		}

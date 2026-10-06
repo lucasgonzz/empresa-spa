@@ -447,7 +447,19 @@ export default function __base_store(options = {}) {
 			let index = state.models.findIndex(model => {
 				return model.id == state.delete.id
 			})
-			state.models.splice(index, 1)
+			/*
+				🔴 Sin esta guarda, `findIndex` devuelve -1 cuando el registro NO está en memoria y
+				`splice(-1, 1)` borra el ÚLTIMO de la lista. Pasa de verdad: un borrado que llega
+				de otra sesión (broadcast o `getDeletedModels`) o un borrado de algo que el store
+				nunca cargó. En las sucursales significaba perder de la memoria una sucursal que
+				sigue existiendo (misión eliminar-sucursal-con-stock, 5/10/2026).
+
+				Cambio compatible: con el registro presente (el caso normal) hace exactamente lo de
+				siempre; solo cambia el caso que antes borraba al registro equivocado.
+			*/
+			if (index != -1) {
+				state.models.splice(index, 1)
+			}
 
 			// Filtereds
 			index = state.filtered.findIndex(model => {
@@ -461,7 +473,10 @@ export default function __base_store(options = {}) {
 				index = state.selected_model[state.plural_model_name].findIndex(model => {
 					return model.id == state.delete.id
 				})
-				state.selected_model[state.plural_model_name].splice(index, 1)
+				// Misma guarda y mismo motivo que la de `models` de arriba.
+				if (index != -1) {
+					state.selected_model[state.plural_model_name].splice(index, 1)
+				}
 			}
 		},
 		setDeleteImageProp(state, value) {
