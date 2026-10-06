@@ -53,7 +53,7 @@ export default {
 		repercute: [
 			'Con sucursales creadas aparece el grupo "Stock por depósito": el número de esa columna pasa a ser el stock final de ESA sucursal.',
 			'Con listas de precios aparece el grupo "Listas de precio": $ final, % de margen y "setear precio final" de cada lista.',
-			'Con la tienda online, cada lista que muestra en la tienda solo los artículos habilitados suma "Visible en la tienda (Si/No)": un Sí habilita el artículo para los clientes de esa lista y un No lo deja sin habilitar.',
+			'Con la tienda online, cada lista que muestra en la tienda solo los artículos habilitados suma "Visible en tienda: <lista>": un Sí habilita el artículo para los clientes de esa lista y un No lo deja sin habilitar.',
 		],
 		nota_interna: 'Los valores de sucursal viajan como address_{id}_amount/min/max y los de lista como price_type_{id}_final_price/_percentage/_setear/_visible_en_tienda (build_columns los traduce a las claves planas de ProcessRow; visible_en_tienda va como visible_en_tienda_<nombre de la lista normalizado>, mision catalogo-por-lista-tienda 5/10/2026). La opcion de visible_en_tienda solo se ofrece con la extension online y la lista con catalogo_restringido_en_tienda = 1. Si se mapean a la vez "Stock actual" y columnas de sucursal, el global se ignora sin aviso (ProcessRow::obtener_stock, líneas 3006-3035).',
 	},

@@ -2780,9 +2780,14 @@ export default {
 					 * restriccion la columna no cambia nada de lo que se ve, y ofrecerla solo
 					 * agregaria ruido al select. Comparacion SUELTA (`== 1`): la columna llega
 					 * como 0/1, null o "1" segun el driver.
+					 *
+					 * El texto es CORTO a proposito: con "(Si/No)" era el mas largo del grupo (unos
+					 * 396 px) y en el select de la importacion se cortaba perdiendo el nombre de la
+					 * lista ("...: May"), que es justo lo que distingue una opcion de otra. Es el mismo
+					 * texto que usa `get_property_label` para la columna ya mapeada.
 					 */
 					if (this.hasExtencion('online') && pt.catalogo_restringido_en_tienda == 1) {
-						options.push({ value: `price_type_${id}_visible_en_tienda`, text: `Visible en la tienda (Si/No): ${name}` })
+						options.push({ value: `price_type_${id}_visible_en_tienda`, text: `Visible en tienda: ${name}` })
 					}
 				})
 			}
