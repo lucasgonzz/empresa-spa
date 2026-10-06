@@ -666,7 +666,8 @@ export default {
 			})
 		},
 		/**
-		 * "12 artículos aprobados", y si algunos no se pudieron, cuántos.
+		 * "12 artículos aprobados", y si algunos no se pudieron, cuántos y por qué (ya estaban
+		 * resueltos o ya no existen).
 		 *
 		 * @param {String} accion aprobar | rechazar
 		 * @param {Object} respuesta {procesados, omitidos}
@@ -683,12 +684,17 @@ export default {
 			if (procesados > 0) {
 				avisar(this, 'success', entero_es(procesados) + (procesados === 1 ? ' artículo ' : ' artículos ') + participio)
 			}
+			// La API cuenta como "omitidos" los que ya estaban resueltos Y los que dejaron de existir (el
+			// artículo o la categoría sugerida): el texto tiene que ser cierto para cualquiera de las dos causas.
 			if (omitidos > 0) {
 				avisar(
 					this,
 					'warning',
 					(omitidos === 1 ? '1 no se pudo ' : entero_es(omitidos) + ' no se pudieron ')
-					+ (accion === 'aprobar' ? 'aprobar' : 'rechazar') + ' porque ya se habían resuelto.',
+					+ (accion === 'aprobar' ? 'aprobar' : 'rechazar')
+					+ (omitidos === 1
+						? ' porque ya estaba resuelto o ya no existe (el artículo o la categoría sugerida).'
+						: ' porque ya estaban resueltos o ya no existen (el artículo o la categoría sugerida).'),
 					{ duration: 8000 }
 				)
 			}
