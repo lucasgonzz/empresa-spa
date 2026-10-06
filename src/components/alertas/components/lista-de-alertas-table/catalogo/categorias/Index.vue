@@ -972,9 +972,10 @@ export default {
 
 		// Con el aviso a la vista es la unica salida de la pantalla (las tarjetas estan apagadas): lleva fondo de
 		// tarjeta (blanco en claro) en vez de transparente sobre el ambar, donde el gris del "outline-secondary"
-		// daba 3,8:1 (bajo el 4,5:1 de AA) y se veia como un boton apagado. Con el mouse encima, el foco o el
-		// clic manda el estilo de siempre del boton.
-		&:not(:hover):not(:focus):not(:active)
+		// daba 3,8:1 (bajo el 4,5:1 de AA) y se veia como un boton apagado. Con el mouse encima o apretado manda
+		// el estilo de siempre del boton. El foco de teclado NO se excluye: bootstrap no cambia los colores del
+		// boton con `:focus` (solo le suma el anillo) y excluirlo lo devolvia al transparente sobre el ambar.
+		&:not(:hover):not(:active)
 			background: var(--bg-card, #fff)
 
 .cat-sistemas__sin-confirmar-texto
