@@ -151,8 +151,12 @@ export default {
 
 	/*
 		Mision catalogo-por-lista-tienda (5/10/2026). Los cuatro controles existen solo con la
-		extension online y con al menos una lista que tiene activado "En la tienda, mostrar solo
-		los articulos habilitados para esta lista".
+		extension online, pero no todos con la misma condicion:
+		- El check de la ficha y la tarjeta de la masiva (con sus botones) aparecen solo para las
+			listas que tienen activado "En la tienda, mostrar solo los articulos habilitados para
+			esta lista".
+		- El contador (habilitados-en-tienda-de-lista) aparece en CUALQUIER lista ya guardada, la
+			tenga activada o no: cuelga del interruptor, que es lo que existe con la extension.
 	*/
 
 	'visible-en-tienda-lista-*': {
