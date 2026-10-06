@@ -62,7 +62,7 @@ data-testid="habilitados-en-tienda-de-lista">
 		Aviso con el interruptor prendido. Si ya se sabe que no hay ninguno habilitado, se dice
 		con todas las letras: es exactamente el caso en que la tienda queda vacia para esos clientes.
 
-		Dos cuidados de texto (hallazgo H8 del revisor):
+		Tres cuidados de texto (hallazgos H8 del revisor y D3 del verificador en vivo):
 		- Como se habilitan los articulos va SOLO en la variante de cero habilitados, que es cuando
 			hace falta. En la otra ya lo dicen el popover del interruptor y su descripcion: repetirlo
 			dejaba tres textos del mismo tema, y a 360 px eran seis u ocho lineas.
