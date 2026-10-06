@@ -20,6 +20,11 @@
 		cambio, queda a la vista, porque prender el interruptor con cero articulos habilitados deja a
 		esos clientes sin ver NADA en la tienda, y eso no puede depender de que alguien lea un globo.
 
+	🔴 El aviso NO lee el interruptor de `model`: se entera escuchando el evento `change` de su
+	<input>. El formulario del ABM edita una copia plana del modelo que Vue no observa, asi que un
+	computed sobre `model.catalogo_restringido_en_tienda` nunca se entera de un clic. El detalle, y
+	por que no se arregla con `full_reactivity`, estan en `data()`.
+
 	🔴 El contador se pide al montar y no se refresca solo. No hace falta: el formulario vive en un
 	b-modal sin `static`, que destruye su contenido al cerrarse, asi que cada vez que se abre la
 	lista este componente nace de nuevo y vuelve a preguntar.
@@ -69,12 +74,34 @@ data-testid="habilitados-en-tienda-de-lista">
 </div>
 </template>
 <script>
+/*
+	Id del <input> del interruptor "En la tienda, mostrar solo los articulos habilitados para esta
+	lista". Lo arma ModelForm como `model_name + '-' + prop.key` y es el mismo que usa el `for` del
+	label del toggle, asi que si algun dia cambia, el toggle deja de andar antes que este aviso.
+*/
+const ID_DEL_INTERRUPTOR = 'price_type-catalogo_restringido_en_tienda'
+
+/**
+ * ¿La lista que trae este modelo tiene el interruptor prendido?
+ *
+ * 🔴 Comparacion SUELTA a proposito: la columna llega de la API como 0/1, null o string ("1") segun
+ * el driver, y el toggle de ModelForm escribe 1/0 numerico. Con `=== 1` un "1" string se leeria como
+ * apagado. Nunca `!= 0`: NULL tambien es "sin restriccion" (contrato C1).
+ *
+ * @param {Object|null|undefined} model
+ * @return {Boolean}
+ */
+function esta_restringida(model) {
+	return !!model && model.catalogo_restringido_en_tienda == 1
+}
+
 export default {
 	props: {
 		/*
 			La lista de precios del formulario: es el `model` del scope de `prop_extras`, o sea el
-			MISMO objeto que esta editando ModelForm. Por eso `model.catalogo_restringido_en_tienda`
-			es lo que el usuario tiene en el interruptor ahora, guardado o no.
+			MISMO objeto que esta editando ModelForm. De aca salen el `id` y el valor INICIAL del
+			interruptor; lo que el usuario va dejando en el interruptor NO se lee de aca, porque ese
+			objeto no es reactivo (ver `restringida_en_el_formulario`).
 		*/
 		model: Object,
 	},
@@ -85,6 +112,30 @@ export default {
 			// null mientras no hay respuesta: distingue "todavia no se sabe" de un 0 real.
 			habilitados: null,
 			total: null,
+			/*
+				🔴 Lo que el interruptor tiene en el formulario AHORA, guardado o no. NO se lee de
+				`this.model`, y por eso es un dato propio.
+
+				El ABM le da al formulario una COPIA plana del modelo (`{...model}`, en
+				common-vue/components/model/Index.vue, porque `price_type` no declara `full_reactivity`)
+				que Vue no observa: cuando ModelForm hace `$set(model, 'catalogo_restringido_en_tienda', 1)`
+				es una asignacion muda, y un computed que lea esa clave se queda con el valor de su primer
+				calculo. Medido en vivo por el verificador el 5/10/2026: al prender el interruptor no
+				aparecia el aviso, y al apagarlo quedaba el viejo. Es el mismo motivo por el que el badge
+				Si/No de "Ocultar al publico" se queda pegado.
+
+				🔴 NO se arregla con `full_reactivity: true` en src/models/price_type.js: el ABM pasaria
+				a editar POR REFERENCIA la fila de `$store.state.price_type.models`, que leen en vivo
+				Vender y otros doce componentes (price-type-input, buscador-articulos, ExcelPriceTypes,
+				ai-excel-import, price-changes...), y cerrar el modal sin guardar dejaria una lista
+				editada a medias aplicada a los precios. Es el mismo caveat que documenta
+				src/models/address.js.
+
+				Por eso el componente se entera por su cuenta: escucha el `change` del <input> del
+				interruptor (`escuchar_el_interruptor`) y guarda el estado aca. Arranca con lo que trae
+				el modelo y, mientras el objeto sea el mismo, manda el evento.
+			*/
+			restringida_en_el_formulario: esta_restringida(this.model),
 		}
 	},
 	computed: {
@@ -97,16 +148,15 @@ export default {
 			return !!(this.model && this.model.id)
 		},
 		/**
-		 * ¿El interruptor esta prendido en el formulario?
+		 * ¿El interruptor esta prendido en el formulario AHORA (guardado o no)?
 		 *
-		 * 🔴 Comparacion SUELTA a proposito: la columna llega de la API como 0/1, null o string
-		 * ("1") segun el driver, y el toggle de ModelForm escribe 1/0 numerico. Con `=== 1` un "1"
-		 * string se leeria como apagado. Nunca `!= 0`: NULL tambien es "sin restriccion" (contrato C1).
+		 * Sale de `restringida_en_el_formulario`, que se alimenta del evento del interruptor: leer
+		 * `this.model.catalogo_restringido_en_tienda` no sirve (ver ese dato en `data()`).
 		 *
 		 * @return {Boolean}
 		 */
 		lista_restringida() {
-			return !!this.model && this.model.catalogo_restringido_en_tienda == 1
+			return this.restringida_en_el_formulario
 		},
 		/**
 		 * ¿Ya llego una respuesta valida del contador?
@@ -144,8 +194,85 @@ export default {
 			handler: 'pedir_habilitados_en_tienda',
 			immediate: true,
 		},
+		/*
+			Si el formulario pasa a mostrar OTRO objeto de modelo (otra lista, o la misma tras un
+			guardado que no cierra el modal), el interruptor vuelve a valer lo que dice ese modelo,
+			que es tambien lo que ModelForm dibuja en el <input>. Mientras el objeto sea el mismo,
+			manda el evento del interruptor (`al_cambiar_un_campo`).
+		*/
+		model(nuevo) {
+			this.restringida_en_el_formulario = esta_restringida(nuevo)
+		},
+	},
+	created() {
+		// Nodo donde se engancho el listener del interruptor. No va en `data`: es un elemento del
+		// DOM y no tiene por que ser reactivo.
+		this.contenedor_del_interruptor = null
+	},
+	mounted() {
+		this.escuchar_el_interruptor()
+	},
+	beforeDestroy() {
+		this.dejar_de_escuchar_el_interruptor()
 	},
 	methods: {
+		/**
+		 * Engancha UN listener `change` en el formulario que contiene este bloque, para enterarse
+		 * de cada clic en el interruptor (ver `restringida_en_el_formulario` en `data()`).
+		 *
+		 * Va delegado en el formulario y no sobre el <input>: el input lo dibuja ModelForm, no este
+		 * componente, y `change` burbuja hasta aca.
+		 *
+		 * Con el bloque sin dibujar (lista nueva con el interruptor apagado) `$el` es un comentario
+		 * vacio, pero igual tiene padre: es el mismo al que despues se agrega el <div> del bloque.
+		 *
+		 * @return {void}
+		 */
+		escuchar_el_interruptor() {
+			let padre = this.$el ? this.$el.parentNode : null
+
+			if (!padre) {
+				return
+			}
+
+			let formulario = typeof padre.closest == 'function' ? padre.closest('.model-form') : null
+
+			this.contenedor_del_interruptor = formulario ? formulario : padre
+			this.contenedor_del_interruptor.addEventListener('change', this.al_cambiar_un_campo)
+		},
+		/**
+		 * Saca el listener de `escuchar_el_interruptor` al destruirse el componente: si el nodo del
+		 * formulario sobrevive (se reusa), un listener colgado seguiria escribiendo en una
+		 * instancia muerta.
+		 *
+		 * @return {void}
+		 */
+		dejar_de_escuchar_el_interruptor() {
+			if (!this.contenedor_del_interruptor) {
+				return
+			}
+
+			this.contenedor_del_interruptor.removeEventListener('change', this.al_cambiar_un_campo)
+			this.contenedor_del_interruptor = null
+		},
+		/**
+		 * Handler del `change` delegado: si el campo que cambio es el interruptor, copia su estado.
+		 *
+		 * Lee `checked` del propio <input> y no `this.model`, que es justamente el dato que no se
+		 * actualiza. Es el mismo valor que ModelForm escribe en el modelo (`$event.target.checked ? 1 : 0`).
+		 *
+		 * @param {Event} event
+		 * @return {void}
+		 */
+		al_cambiar_un_campo(event) {
+			let campo = event ? event.target : null
+
+			if (!campo || campo.id !== ID_DEL_INTERRUPTOR) {
+				return
+			}
+
+			this.restringida_en_el_formulario = !!campo.checked
+		},
 		/**
 		 * Pide `{habilitados, total}` de la lista a la API (contrato C2).
 		 *
