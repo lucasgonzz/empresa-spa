@@ -160,6 +160,7 @@ export default {
 		que_hace: 'Habilita este artículo en la tienda online para los clientes que tienen esta lista de precios.',
 		repercute: [
 			'Esta lista muestra en la tienda SOLO los artículos habilitados: sin el tilde, sus clientes no ven el artículo, no lo pueden agregar al carrito ni comprarlo.',
+			'El artículo también tiene que estar «Disponible en la tienda» (solapa Tienda online) para verse.',
 			'No cambia el precio ni lo que ven los clientes de las otras listas.',
 			'Los artículos nuevos nacen sin habilitar.',
 		],
@@ -172,6 +173,7 @@ export default {
 		que_hace: 'Habilita o deja sin habilitar en la tienda, para esa lista de precios, todos los artículos alcanzados.',
 		repercute: [
 			'"Activar": los clientes de esa lista pasan a ver estos artículos en la tienda. "Desactivar": dejan de verlos.',
+			'El artículo también tiene que estar «Disponible en la tienda» (solapa Tienda online) para verse.',
 			'Se puede revertir desde el historial de actualizaciones masivas.',
 		],
 		nota_interna: 'Viaja como key visible_en_tienda_lista_<id>, type checkbox (contrato C2). La API valida que la lista sea del dueño y registra el valor anterior para el revert (MasiveUpdateHelper).',

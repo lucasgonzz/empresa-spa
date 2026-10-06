@@ -61,7 +61,7 @@
 				Visible en la tienda para esta lista
 			</b-form-checkbox>
 			<div class="price-type-card__tienda-ayuda">
-				Esta lista muestra en la tienda solo los artículos habilitados
+				Esta lista muestra en la tienda solo los artículos habilitados. El artículo también tiene que estar «Disponible en la tienda» (solapa Tienda online) para verse.
 			</div>
 		</div>
 	</div>
