@@ -20,10 +20,10 @@ export default {
 		},
 		_providers() {
 			// OJO: sigue en `.models`, no `.options`, a proposito. El chart de Acreedores
-			// (rendimiento-general/acreedores/Chart.vue) necesita provider.saldo, que el
+			// (rendimiento-general/acreedores/Chart.vue) necesita provider.saldo_pesos, que el
 			// endpoint liviano /provider/options (solo id+name, grupo 332) no trae -- pasarlo
-			// a options rompiria el chart en silencio (saldo undefined). Arreglar esto de raiz
-			// requiere sumar saldo a /provider/options en empresa-api, fuera de alcance de
+			// a options rompiria el chart en silencio (saldo_pesos undefined). Arreglar esto de raiz
+			// requiere sumar saldo_pesos a /provider/options en empresa-api, fuera de alcance de
 			// este prompt (grupo 342, 4/8/2026, ver hallazgo 20260804-acreedores-necesita-saldo-en-options).
 			// Mientras tanto, proveedores/Index.vue dispara provider/getModels al entrar a
 			// esta seccion para que este chart siga funcionando (misma limitacion de
