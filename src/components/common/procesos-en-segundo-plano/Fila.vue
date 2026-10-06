@@ -105,6 +105,7 @@ tabindex="0"
 <script>
 import moment from 'moment'
 import { tipo_de, es_de_importacion, esta_activo, asignacion_de_imagenes, duracion_de, espera_de, formatear_duracion } from '@/components/common/procesos-en-segundo-plano/tipos'
+import { destino_de_imagenes, es_ruta_de_imagenes } from '@/components/alertas/solapas'
 
 /**
  * Una fila (tarjeta) del modal de procesos en segundo plano: icono por tipo, titulo, detalle,
@@ -237,9 +238,13 @@ export default {
 	},
 	methods: {
 		/**
-		 * Cierra el modal de procesos y lleva a Alertas → Imágenes con esta búsqueda abierta.
-		 * La navegación la hace la fila y no el modal: es la única acción de la fila que sale de
-		 * él, y así el modal no tiene que saber nada de las búsquedas de imágenes.
+		 * Cierra el modal de procesos y lleva a Alertas → Catálogo → Imágenes con esta búsqueda
+		 * abierta. La navegación la hace la fila y no el modal: es la única acción de la fila que
+		 * sale de él, y así el modal no tiene que saber nada de las búsquedas de imágenes.
+		 *
+		 * El destino y la pregunta "¿ya estoy ahí?" salen de components/alertas/solapas.js: desde la
+		 * misión categorizacion-tres-modelos la solapa Imágenes es una sub-solapa de Catálogo
+		 * (/alertas/catalogo/imagenes) y la ruta ya no dice `view === 'imagenes'`.
 		 *
 		 * @return {void}
 		 */
@@ -249,11 +254,12 @@ export default {
 				return
 			}
 			this.$bvModal.hide('procesos-en-segundo-plano')
-			let destino = { name: 'alertas', params: { view: 'imagenes' }, query: { asignacion: String(id) } }
+			let destino = destino_de_imagenes({ asignacion: String(id) })
 			// Si ya se está en Alertas → Imágenes, `replace`: con `push` quedaban dos entradas
 			// iguales en el historial (la de antes y la que deja el cierre del detalle), y el
-			// botón Atrás parecía no hacer nada.
-			let ya_esta_ahi = this.$route && this.$route.name === 'alertas' && this.$route.params.view === 'imagenes'
+			// botón Atrás parecía no hacer nada. Con la URL canónica, `params.view === 'imagenes'`
+			// da falso siempre: por eso se pregunta con `es_ruta_de_imagenes`.
+			let ya_esta_ahi = es_ruta_de_imagenes(this.$route)
 			let navegacion = ya_esta_ahi ? this.$router.replace(destino) : this.$router.push(destino)
 			navegacion.catch(() => {
 				// Ya estaba en esa misma URL (NavigationDuplicated): no hay nada que hacer.
