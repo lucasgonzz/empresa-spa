@@ -117,8 +117,9 @@ function lado_pedido(el) {
 	`data-ayuda-no-interactiva` (sin valor).
 
 	Para qué sirve (misión ayuda-eliminar-individual-y-masivo, 5/10/2026). Adentro de un menú
-	desplegable el popover puede no entrar a ningún costado (BootstrapVue deja 50 px de margen
-	contra el borde de la ventana: en una tablet o un teléfono el menú ocupa casi todo el ancho),
+	desplegable el popover puede no entrar a ningún costado (en una tablet BootstrapVue deja 50 px de
+	margen contra el borde de la ventana y el menú ocupa casi todo el ancho; en un teléfono el margen es
+	el de MARGEN_EN_PANTALLA_ANGOSTA, pero el menú tampoco deja lugar a un costado),
 	se da vuelta y queda ENCIMA de las otras opciones del menú. Interactivo, si el mouse pasa del
 	ítem al popover este no se cierra y se come el clic de la opción de abajo: la misma clase de
 	defecto que el globo de DropdownOptionItem (misión tooltip-eliminar-tapa-facturar). No
@@ -200,31 +201,34 @@ function caja_que_recorta(el) {
 	return estilo.overflowX !== 'visible' || estilo.overflowY !== 'visible' ? caja : null
 }
 
-/*
-	Si la pantalla es tan angosta que la ayuda más ancha no entra con el aire de siempre.
-
-	Para qué sirve (misión ayuda-entera-en-telefono, 5/10/2026). En un teléfono de 375 px la ayuda de
-	un control que NO está en un modal que recorta salía cortada por el borde izquierdo de la pantalla
-	(quedaba en x = -50 hasta 325 y medía 375). La ayuda cuelga de <body> y su ancho se ajusta al
-	contenido hasta el ancho de la ventana, así que a 375 px llega a medir 375. b-popover le exige 50 px
-	de aire contra la ventana de cada lado (MARGEN_POR_DEFECTO) y una ayuda de 375 px no tiene dónde
-	ubicarse con 50 px de cada lado en una pantalla de 375: popper revisa primero el borde izquierdo y
-	después el derecho, y el segundo paso la deja en x = 325 - 375 = -50, o sea que se lee cortada. En
-	una tablet o en un escritorio entra entera y no hay nada que cambiar.
-
-	Por eso solo cuenta en una pantalla que no puede alojar la ayuda más ancha (ANCHO_MAXIMO_DE_LA_AYUDA)
-	con el aire de siempre de los dos lados: ahí la ayuda pasa a MARGEN_EN_PANTALLA_ANGOSTA de aire y a un
-	ancho máximo que descuenta ese aire de cada lado. En el resto no se toca nada.
-*/
-
 /**
  * Si la pantalla no puede alojar la ayuda más ancha con el aire de siempre de los dos lados: menos de
  * ANCHO_MAXIMO_DE_LA_AYUDA + 2 x MARGEN_POR_DEFECTO (420 + 2 x 50 = 520 px), o sea un teléfono. En una
  * pantalla así, la ayuda de un control sin caja que recorta usa MARGEN_EN_PANTALLA_ANGOSTA de aire y la
  * clase `--pantalla-angosta` (ver margen_del_limite y clases_popover).
  *
+ * Para qué sirve (misión ayuda-entera-en-telefono, 5/10/2026). En un teléfono de 375 px la ayuda de un
+ * control que NO está en un modal que recorta salía cortada por un borde de la pantalla. La ayuda cuelga
+ * de <body> (o del .modal-content, si el control está en un modal que no recorta) y su ancho se ajusta
+ * al contenido hasta el de ese contenedor, así que a 375 px llega a medir 375. b-popover le exige 50 px
+ * de aire contra la ventana de cada lado (MARGEN_POR_DEFECTO) y una ayuda de 375 px no tiene dónde
+ * ubicarse con 50 px de cada lado en una pantalla de 375. Popper acomoda primero el borde izquierdo y
+ * después el derecho, pero el segundo paso mira el borde derecho calculado ANTES de mover el izquierdo:
+ * si el control está hacia el centro o la derecha, la ayuda queda en x = -50 hasta 325 (cortada por la
+ * izquierda); si está pegado a la izquierda, queda en x = 50 hasta 425 (cortada por la derecha). En una
+ * tablet o en un escritorio entra entera y no hay nada que cambiar.
+ *
+ * Por eso solo cuenta en una pantalla que no puede alojar la ayuda más ancha con el aire de siempre de
+ * los dos lados: ahí la ayuda pasa a MARGEN_EN_PANTALLA_ANGOSTA de aire y a un ancho máximo que descuenta
+ * ese aire de cada lado. En el resto no se toca nada.
+ *
  * Mide `clientWidth` del documento y no `innerWidth`: no cuenta la barra de scroll, que es lo que ve el
- * usuario y contra lo que mide popper.
+ * usuario.
+ *
+ * Límite conocido: el límite `window` de popper (boundary) es el ancho del DOCUMENTO, que puede ser mayor
+ * que el de la ventana si la página desborda en horizontal (a 320 px el listado de artículos desborda
+ * 5 px y la ayuda queda con 3 px de aire contra el borde derecho en vez de 8). Con la página sin desborde,
+ * que es lo medido de 360 a 390 px, los dos coinciden. No lo introduce este cambio.
  *
  * @returns {Boolean} true si la pantalla es angosta; false si la ayuda entra con el aire de siempre.
  */
@@ -444,6 +448,10 @@ export default {
 <style lang="sass">
 // Mismo lenguaje visual que el popover de instrucciones de ModelForm: si las dos
 // ayudas del sistema se vieran distintas, parecerían dos cosas distintas.
+// El 420px de abajo es el ancho maximo de la ayuda y esta repetido a mano en otros tres lugares: en el
+// script (ANCHO_MAXIMO_DE_LA_AYUDA, de donde sale el umbral de pantalla_angosta) y en las reglas
+// --en-modal y --pantalla-angosta de mas abajo. Si se cambia, cambiar los cuatro lugares (si no, entre el
+// umbral y el ancho nuevo la ayuda vuelve a salir cortada, sin ningun error).
 .descripcion-de-control-popover
 	max-width: 420px !important
 	border: none
