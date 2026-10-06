@@ -166,12 +166,13 @@ export default {
                 return null
             }
 
-            let saldo = (Number(this.to_pay.debe) || 0) - (Number(this.to_pay.pagandose) || 0)
+            // Lo que le falta a la venta elegida: lo que debe menos lo que ya se le pagó
+            let pending_balance = (Number(this.to_pay.debe) || 0) - (Number(this.to_pay.pagandose) || 0)
 
             // A centavos, igual que el sobrante: un residuo de coma flotante no tiene que llegar a pantalla
-            saldo = Math.round(saldo * 100) / 100
+            pending_balance = Math.round(pending_balance * 100) / 100
 
-            return saldo > 0 ? saldo : null
+            return pending_balance > 0 ? pending_balance : null
         },
         /**
          * Lo que ya llevan cargado las filas de métodos de pago, en la moneda de la cuenta.
@@ -192,14 +193,17 @@ export default {
          * @returns {number}
          */
         total_repartido() {
+            // Acumulador del importe repartido, en la moneda de la cuenta
             let total = 0
-            let filas = this.pago.current_acount_payment_methods || []
+            // Filas de métodos de pago que arma el bloque compartido (vacío mientras todavía no hay ninguna)
+            let rows = this.pago.current_acount_payment_methods || []
 
-            filas.forEach(payment_method => {
-                let cotizado = Number(payment_method.amount_cotizado) || 0
+            rows.forEach(payment_method => {
+                // Importe de la fila ya convertido a la moneda de la cuenta; 0 si la fila ya está en esa moneda
+                let quoted_amount = Number(payment_method.amount_cotizado) || 0
 
-                if (cotizado > 0) {
-                    total += cotizado
+                if (quoted_amount > 0) {
+                    total += quoted_amount
                 } else {
                     total += Number(payment_method.amount) || 0
                 }

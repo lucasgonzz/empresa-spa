@@ -840,7 +840,7 @@ export default {
              * Con sobrante > 0 el comportamiento no cambia.
              */
             if (sobrante_en_base <= 0) {
-                this.$toast.info('No queda nada por repartir: el total ya está cubierto.')
+                this.$toast.info('No queda nada por repartir. Para completar esta fila, bajá antes el importe de otra.')
                 return
             }
 
