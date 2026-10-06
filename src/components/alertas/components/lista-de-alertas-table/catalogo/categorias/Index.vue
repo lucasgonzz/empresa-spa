@@ -4,6 +4,37 @@ class="cat-sistemas"
 data-testid="alertas-categorias"
 :data-vista="vista">
 
+	<!--
+		Un pedido largo (elegir un sistema o volver atras) fallo por tiempo de espera o por un error del
+		servidor: la API pudo haberlo aplicado igual (B-04). El aviso del interceptor global dura unos
+		segundos y no dice que hacer; este se queda hasta que se actualiza o cambia lo que se ve. El boton
+		"Actualizar" va aca porque la vista con los sistemas para elegir no tiene uno.
+	-->
+	<div
+	v-if="sin_confirmar"
+	class="cat-sistemas__sin-confirmar"
+	role="alert"
+	data-testid="categorias-sin-confirmar">
+		<p class="cat-sistemas__sin-confirmar-texto">
+			<i
+			class="bi bi-exclamation-triangle"
+			aria-hidden="true"></i>
+			{{ textos.sin_confirmar }}
+		</p>
+		<b-button
+		class="btn-modulo"
+		variant="outline-secondary"
+		data-testid="categorias-sin-confirmar-actualizar"
+		:disabled="actualizando"
+		@click="actualizar">
+			<b-spinner
+			v-if="actualizando"
+			small
+			class="m-r-5"></b-spinner>
+			Actualizar
+		</b-button>
+	</div>
+
 	<!-- Primera carga: todavia no hay nada para mostrar. -->
 	<div
 	v-if="vista === 'cargando'"
@@ -140,7 +171,7 @@ import EmptyState from '@/common-vue/components/display/EmptyState'
 import TarjetaSistema from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/TarjetaSistema'
 import ModalElegir from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/ModalElegir'
 import ResumenDeEleccion from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/ResumenDeEleccion'
-import { TEXTOS, cantidad_de, entero_es, texto_de_motivo_de_bloqueo } from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/textos'
+import { AVISO_DE_DEMORA, TEXTOS, cantidad_de, entero_es, texto_de_motivo_de_bloqueo } from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/textos'
 import { avisar } from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/avisos'
 import { es_cancelacion } from '@/store/category_proposal'
 
@@ -181,6 +212,9 @@ const ACCIONES_QUE_RECARGAN_CATEGORIAS = ['category/getModels', 'sub_category/ge
  *  3. "Cambiar de sistema": confirma y pide volver atrás. Si la API dice 409, el interceptor global
  *     muestra el motivo y acá se vuelve a pedir `actual` para dibujar lo real.
  *  4. Mantener al día el número rojo y el cartel de la elección cuando se revisa algo.
+ *  5. Si elegir o volver atrás falla por tiempo de espera o por un error del servidor, la API pudo
+ *     haberlo aplicado igual: queda en pantalla el aviso "no pudimos confirmar" con su botón
+ *     "Actualizar" (`sin_confirmar`), además de lo que muestre el interceptor global.
  *
  * 🔴 Esta pantalla no decide nada de plata ni de permisos: si un sistema nuevo está bloqueado, si se
  * puede volver atrás, qué advertencias van en el cartel de confirmar y quién puede elegir, lo dice la
@@ -224,6 +258,12 @@ export default {
 			 * `refrescar_categorias_de_la_sesion`): aprobar puede crear categorías y subcategorías.
 			 */
 			categorias_por_refrescar: false,
+			/**
+			 * true si el último pedido largo (elegir o volver atrás) falló por tiempo de espera o por un
+			 * error del servidor: no se sabe cómo terminó y puede haberse aplicado igual (B-04). Muestra
+			 * el aviso con su botón "Actualizar".
+			 */
+			sin_confirmar: false,
 		}
 	},
 	computed: {
@@ -350,9 +390,13 @@ export default {
 		/**
 		 * Mientras la corrida se prepara (o se aplica) la pantalla se refresca sola; con cualquier otra
 		 * vista, no. Y al llegar la corrida lista, se avisa que el dueño la vio.
+		 *
+		 * Si lo que se muestra cambió (por ejemplo, después de un "no pudimos confirmar" la pantalla
+		 * leyó que la elección sí se había aplicado), ese aviso ya no describe lo que se ve y se saca.
 		 */
 		vista(nueva) {
 			this.programar_refresco()
+			this.sin_confirmar = false
 			if (nueva === 'lista') {
 				this.avisar_que_se_vio()
 			}
@@ -404,8 +448,10 @@ export default {
 			})
 		},
 		/**
-		 * "Actualizar" de la pantalla de "preparando": pide `actual` y el número rojo. Es una acción de
-		 * la persona, así que si no se pudo se lo dice (el pedido de fondo no muestra nada por sí solo).
+		 * "Actualizar" de la pantalla de "preparando" y del aviso de "no pudimos confirmar": pide
+		 * `actual` y el número rojo. Es una acción de la persona, así que si no se pudo se lo dice (el
+		 * pedido de fondo no muestra nada por sí solo). Si se pudo leer cómo quedó, el aviso de "no
+		 * pudimos confirmar" ya no hace falta.
 		 */
 		actualizar() {
 			let self = this
@@ -421,6 +467,8 @@ export default {
 				self.actualizando = false
 				if (resultados[0] === 'error' || resultados[0] === 'no_disponible') {
 					avisar(self, 'warning', 'No pudimos actualizar. Probá de nuevo en un rato.')
+				} else if (resultados[0] === 'listo') {
+					self.sin_confirmar = false
 				}
 			})
 			.catch(err => {
@@ -553,6 +601,11 @@ export default {
 		 * Si falla, el motivo (403, 404, 409, 422 con su `message`) ya lo mostró el interceptor: acá se
 		 * apaga el cargando y se vuelve a pedir `actual` para dibujar lo real.
 		 *
+		 * Si falló por tiempo de espera o por un error del servidor (B-04), la API pudo haberlo aplicado
+		 * igual: además de lo que muestre el interceptor (que dura unos segundos y no dice qué hacer),
+		 * queda en pantalla el aviso "no pudimos confirmar" con su botón "Actualizar" (`sin_confirmar`).
+		 * No se repite el toast del interceptor.
+		 *
 		 * @param {Object} decision `{propuesta_id, eliminar_categorias_vacias}` del modal.
 		 */
 		elegir(decision) {
@@ -561,6 +614,7 @@ export default {
 				return
 			}
 			let nombre = self.propuesta_a_elegir ? self.propuesta_a_elegir.nombre : ''
+			self.sin_confirmar = false
 			self.elegiendo = true
 			self.$store.commit('auth/setMessage', 'Aplicando el sistema de categorías')
 			self.$store.commit('auth/setLoading', true)
@@ -598,9 +652,29 @@ export default {
 				self.$store.commit('auth/setMessage', '')
 				self.elegiendo = false
 				if (!es_cancelacion(err)) {
+					self.sin_confirmar = self.quedo_sin_confirmar(err)
 					self.recargar_todo()
 				}
 			})
+		},
+		/**
+		 * ¿Un pedido largo (elegir un sistema, volver atrás) que falló dejó dudas sobre si se aplicó? (B-04)
+		 *
+		 * Sí cuando la API no llegó a contestar (se agotó el tiempo de espera o se cortó la conexión con
+		 * el pedido en viaje) o cuando contestó un error del servidor (5xx, incluido el corte del proxy
+		 * al minuto): el aplicar sigue en el servidor y puede terminar bien igual. No cuando contestó un
+		 * 4xx con su motivo (403, 404, 409, 422): ese es un "no" definitivo y el interceptor global ya lo
+		 * mostró.
+		 *
+		 * @param {*} err Lo que rechazó el store.
+		 * @returns {Boolean}
+		 */
+		quedo_sin_confirmar(err) {
+			if (!err || es_cancelacion(err)) {
+				return false
+			}
+			let respuesta = err.response
+			return !respuesta || Number(respuesta.status) >= 500
 		},
 		/**
 		 * Abre una caja de confirmación de a una por vez: mientras hay una abierta, un segundo clic (el
@@ -634,6 +708,11 @@ export default {
 		 * elegir otro sistema. La API solo lo permite mientras nadie haya revisado ni editado nada a
 		 * mano; si ya no se puede (409), el interceptor global muestra el motivo y acá se vuelve a pedir
 		 * `actual` para dibujar lo real.
+		 *
+		 * Como elegir, es UN pedido que reescribe la categoría de los artículos: la confirmación avisa
+		 * que tarda, que frena un poco las ventas y las cargas y que nadie edite artículos hasta que
+		 * termine (B-04 y B-05; el texto es el de `AVISO_DE_DEMORA`). Y si falla por tiempo de espera o
+		 * por un error del servidor, queda el aviso "no pudimos confirmar" (ver `elegir`).
 		 */
 		cambiar_de_sistema() {
 			let self = this
@@ -641,7 +720,7 @@ export default {
 				return
 			}
 			let id_de_la_corrida = self.run.id
-			self.confirmar('¿Cambiar de sistema? Los artículos vuelven a la categoría que tenían, las categorías que se crearon al elegir se quitan y vas a poder elegir otro sistema.', {
+			self.confirmar('¿Cambiar de sistema? Los artículos vuelven a la categoría que tenían, las categorías que se crearon al elegir se quitan y vas a poder elegir otro sistema. ' + AVISO_DE_DEMORA.titulo + ' ' + AVISO_DE_DEMORA.texto, {
 				title: 'Cambiar de sistema',
 				okTitle: 'Cambiar',
 				okVariant: 'danger',
@@ -654,6 +733,7 @@ export default {
 				if (!confirmado || self.trabajando) {
 					return
 				}
+				self.sin_confirmar = false
 				self.volviendo = true
 				self.$store.commit('auth/setMessage', 'Volviendo al estado anterior')
 				self.$store.commit('auth/setLoading', true)
@@ -674,6 +754,7 @@ export default {
 					self.$store.commit('auth/setMessage', '')
 					self.volviendo = false
 					if (!es_cancelacion(err)) {
+						self.sin_confirmar = self.quedo_sin_confirmar(err)
 						self.recargar_todo()
 					}
 				})
@@ -764,6 +845,47 @@ export default {
 	i
 		flex-shrink: 0
 		line-height: 1.4
+
+// Aviso de "no pudimos confirmar" (un pedido largo fallo y puede haberse aplicado igual, B-04): ambar,
+// con los mismos tokens que los avisos del modal de elegir (existen solo en html.dark-mode; en claro manda
+// el literal del respaldo). Texto a la izquierda y "Actualizar" a la derecha.
+.cat-sistemas__sin-confirmar
+	display: flex
+	align-items: center
+	justify-content: space-between
+	gap: 12px
+	margin: 0 0 16px
+	padding: 12px 14px
+	border-radius: 12px
+	background: var(--bg-warning-soft, rgba(255, 193, 7, 0.16))
+	color: var(--color-text-warning-strong, #856404)
+
+	// El boton no se achica ni se parte: es el texto el que cede el lugar.
+	.btn
+		flex: 0 0 auto
+
+.cat-sistemas__sin-confirmar-texto
+	display: flex
+	align-items: flex-start
+	gap: 8px
+	flex: 1 1 auto
+	min-width: 0
+	margin: 0
+	font-size: 0.875rem
+	line-height: 1.4
+
+	i
+		flex-shrink: 0
+		line-height: 1.4
+
+// Telefono: el boton baja debajo del texto, a lo ancho (es donde el dedo lo encuentra).
+@media (max-width: 575px)
+	.cat-sistemas__sin-confirmar
+		flex-direction: column
+		align-items: stretch
+
+		.btn
+			width: 100%
 
 // La grilla de tarjetas cambia de columnas en los tres anchos de la guia de estilo: una columna en
 // telefono, dos en tablet (768 a 1199 px) y tres en escritorio (desde 1200 px). `minmax(0, 1fr)` y

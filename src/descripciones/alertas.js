@@ -395,7 +395,7 @@ export default {
 		que_hace: 'Aplica a tu catálogo el sistema de categorías elegido, con los números que muestra esta pantalla.',
 		repercute: [
 			'Crea las categorías que falten y le asigna a cada artículo seguro su categoría, todo junto: si algo falla, no se aplica nada.',
-			'Puede tardar un momento en catálogos grandes: la pantalla queda en espera hasta que termina.',
+			'Puede tardar unos segundos, según la cantidad de artículos: la pantalla queda en espera hasta que termina y, mientras tanto, el sistema puede ir más lento para vender o cargar. Conviene hacerlo cuando no se esté vendiendo, y que nadie edite artículos hasta que termine.',
 			'Los artículos dudosos quedan sin categoría hasta que los apruebes.',
 		],
 		nota_interna: 'Dispara POST category-proposal-runs/{id}/elegir con {propuesta_id, eliminar_categorias_vacias}. El botón se apaga al primer clic: elegir dos veces la misma propuesta es inofensivo del lado de la API (200 con ya_estaba), pero no hace falta darle la oportunidad.',
@@ -423,6 +423,7 @@ export default {
 		repercute: [
 			'Los artículos vuelven a la categoría que tenían antes, las categorías que se crearon al elegir se quitan y las que se habían eliminado se restauran.',
 			'Después se puede elegir cualquiera de los sistemas, incluido el mismo.',
+			'Como al elegir, puede tardar unos segundos y frenar un poco las ventas y las cargas: conviene hacerlo cuando no se esté vendiendo, y que nadie edite artículos hasta que termine.',
 		],
 		requiere: 'Que nadie haya revisado artículos ni cambiado a mano categorías o artículos desde que se eligió. Si ya no se puede, el botón no aparece y el cartel de arriba dice por qué.',
 		nota_interna: 'POST category-proposal-runs/{id}/volver-atras. Que se pueda lo decide la API (run.puede_cambiar y run.motivo_no_puede_cambiar, la misma función que valida el pedido): la SPA no lo deduce.',
@@ -456,6 +457,16 @@ export default {
 		repercute: [
 			'No cambia nada en tu catálogo. La pantalla también se actualiza sola cada tanto mientras se están preparando.',
 		],
+	},
+
+	'categorias-sin-confirmar-actualizar': {
+		titulo: 'Actualizar',
+		que_hace: 'Vuelve a leer cómo quedó el sistema de categorías después de una acción que tardó demasiado o falló sin que se sepa cómo terminó.',
+		repercute: [
+			'No cambia nada en tu catálogo: solo muestra el estado real.',
+			'Si la acción se había aplicado igual, la pantalla pasa a mostrar el resultado.',
+		],
+		nota_interna: 'Vive en el aviso de Index.vue que sale cuando elegir o volver atrás falla por tiempo de espera o error de servidor (sin respuesta o 5xx): la API pudo haberlo aplicado igual. Llama al mismo método que el "Actualizar" de la vista preparando.',
 	},
 
 	'categorias-reintentar': {

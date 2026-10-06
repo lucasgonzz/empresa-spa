@@ -120,6 +120,21 @@ export const MOTIVOS_DE_BLOQUEO = {
 }
 
 /**
+ * Lo que hay que saber antes de aplicar un sistema de categorías o de volver atrás (B-04 y B-05). Lo leen
+ * el modal de "Elegir este" y la confirmación de "Cambiar de sistema", para que digan lo mismo.
+ *
+ * Por qué: los dos hacen UN pedido que reescribe la categoría de los artículos en una sola transacción. Con
+ * miles de artículos tarda varios segundos (medido con 10.000 artículos: 15 a 17 segundos, y hasta casi 55
+ * con la máquina cargada) y, mientras dura, las ventas, compras y cargas de artículos del mismo negocio
+ * esperan; además lo que otra persona edite en esos segundos puede pisarse. No hay forma de evitarlo desde
+ * la pantalla: se avisa para que el dueño elija el momento.
+ */
+export const AVISO_DE_DEMORA = {
+	titulo: 'Conviene hacerlo cuando no se esté vendiendo.',
+	texto: 'Puede tardar unos segundos, según la cantidad de artículos que tengas, y mientras tanto el sistema puede ir más lento para vender o cargar. Hasta que termine, que nadie edite artículos.',
+}
+
+/**
  * Los textos de cada estado de la pantalla, en un solo lugar (los componentes solo los eligen).
  */
 export const TEXTOS = {
@@ -150,6 +165,9 @@ export const TEXTOS = {
 	},
 	nota_dudosos: 'Los que la IA no tiene claro quedan sin categoría hasta que los revises.',
 	solo_el_dueno: 'Solo el dueño del negocio puede elegir un sistema de categorías.',
+	// Un pedido largo (elegir o volver atrás) falló por tiempo de espera o error del servidor: la API pudo
+	// haberlo aplicado igual (B-04). Lo que el aviso del interceptor global no dice es qué hacer.
+	sin_confirmar: 'No pudimos confirmar cómo terminó. Si tardó mucho, esperá un minuto y tocá Actualizar: puede haberse aplicado igual.',
 }
 
 /**

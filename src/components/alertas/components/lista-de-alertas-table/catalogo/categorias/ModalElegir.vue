@@ -97,6 +97,19 @@ title="Elegir este sistema de categorías"
 			</p>
 		</div>
 
+		<!--
+			Elegir es UN pedido que reescribe la categoría de los artículos: tarda unos segundos, frena un
+			poco las ventas y las cargas del negocio mientras dura, y lo que alguien edite en ese lapso
+			puede pisarse (B-04 y B-05). No se puede evitar desde acá: se avisa para que el dueño elija el
+			momento. El mismo texto lo usa la confirmación de "Cambiar de sistema".
+		-->
+		<div
+		class="cat-modal__aviso cat-modal__aviso--info"
+		data-testid="categorias-modal-demora">
+			<strong>{{ aviso_de_demora.titulo }}</strong>
+			{{ aviso_de_demora.texto }}
+		</div>
+
 		<p class="cat-modal__nota">
 			Si cambiás de idea, mientras no hayas revisado ni cambiado nada a mano podés volver atrás desde esta misma pantalla.
 		</p>
@@ -128,7 +141,7 @@ title="Elegir este sistema de categorías"
 </b-modal>
 </template>
 <script>
-import { advertencias_de_la_propuesta, entero_es } from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/textos'
+import { AVISO_DE_DEMORA, advertencias_de_la_propuesta, entero_es } from '@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/textos'
 
 /**
  * Confirmación de "Elegir este": muestra los números de lo que va a pasar antes de tocar el catálogo
@@ -145,6 +158,12 @@ import { advertencias_de_la_propuesta, entero_es } from '@/components/alertas/co
  * No habla con la API: avisa con `confirmar({propuesta_id, eliminar_categorias_vacias})` y quien la
  * orquesta (Index.vue) hace el pedido, con el cargando global. Las advertencias y el hecho de que el
  * negocio ya tuviera categorías los decide la API; acá solo se dibujan.
+ *
+ * Antes del botón también avisa que aplicar un sistema tarda unos segundos, que mientras tanto el sistema
+ * puede ir más lento para vender o cargar y que nadie tiene que editar artículos hasta que termine
+ * (B-04 y B-05): es un solo pedido que reescribe la categoría de los artículos, y el dueño es quien elige
+ * el momento. El texto vive en textos.js (`AVISO_DE_DEMORA`) porque la confirmación de "Cambiar de
+ * sistema" dice lo mismo.
  *
  * Props: `propuesta` (el sistema que se va a elegir, o null), `advertencias` (las de la corrida),
  * `tiene_categorias_previas` y `ocupado` (la elección ya viaja).
@@ -178,6 +197,8 @@ export default {
 			eliminar_vacias: true,
 			/** true desde que se confirmó hasta que el modal se vuelve a abrir: evita el doble clic. */
 			enviado: false,
+			/** Lo que hay que saber antes de aplicar (tarda, frena las ventas, que nadie edite): textos.js. */
+			aviso_de_demora: AVISO_DE_DEMORA,
 		}
 	},
 	computed: {
