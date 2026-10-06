@@ -154,6 +154,11 @@ export default {
 		            const field = k.replace('__diff__', '')
 		            const diff = pt[k]
 		            const label = this.prettyPriceField(field)
+		            // Mision catalogo-por-lista-tienda (5/10/2026): "Visible en la tienda" es un Si/No y crudo salia
+		            // como "— → 1" o "0 → 1". Se muestra igual que el historial de actualizaciones masivas.
+		            if (field === 'visible_en_tienda') {
+		              return `&nbsp;&nbsp;${label}: ${this.textoSiNo(diff.old)} → <span class="text-success">${this.textoSiNo(diff.new)}</span>`
+		            }
 		            return `&nbsp;&nbsp;${label}: ${this.formatearNumero(diff.old) ?? '—'} → <span class="text-success">${this.formatearNumero(diff.new) ?? '(S/A)'}</span>`
 		          })
 
@@ -269,6 +274,21 @@ export default {
 		  // los ceros/decimales sobrantes que trae el valor crudo del backend.
 		  // Encima van los separadores de la interfaz: 1234.5 -> 1.234,5
 		  return this.numero_es(numero.toString())
+		},
+
+		/**
+		 * "Sí" / "No" para el valor guardado de una columna Si/No (mision catalogo-por-lista-tienda).
+		 *
+		 * Es la misma lectura que hace el historial de actualizaciones masivas para esta columna
+		 * (MasiveUpdateHistory.valor_de_cambio): NULL cuenta como "No" igual que 0, porque la
+		 * tienda compara con `= 1` y un artículo que nunca se habilito no esta habilitado. Mostrado
+		 * crudo, un NULL saldria como "—" y se leeria como "sin dato".
+		 *
+		 * @param {*} valor 1, 0, null, "1", "0", true o false.
+		 * @return {String}
+		 */
+		textoSiNo(valor) {
+		  return valor === true || valor === 1 || valor === '1' || valor === 'true' ? 'Sí' : 'No'
 		},
 
 		prettyPriceField(field) {
