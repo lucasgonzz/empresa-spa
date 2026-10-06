@@ -70,10 +70,35 @@ export default {
 	methods: {
 		client_name(sale) {
 			if (sale.client) {
-				return sale.client.name+' ( '+ this.price(sale.client.saldo) +' )'
-				// return sale.client.name+' ( '+ this.price(sale.client.saldo) +' )'
+				return sale.client.name+' ( '+ this.saldo_del_cliente(sale) +' )'
 			}
 			return 'NO HAY'
+		},
+		/**
+		 * Saldo del cliente en la moneda de la venta, con su rotulo ("USD ..." en dolares).
+		 *
+		 * 🔴 Lee `saldo_pesos` / `saldo_dolares` y no `saldo`: esa columna es de antes de las cuentas por
+		 * moneda y ningun movimiento la mantiene al dia (`CurrentAcountHelper::set_model_saldo()` solo
+		 * sincroniza las dos nuevas), asi que mostraba un valor congelado, o un guion en un cliente nuevo
+		 * que ya debia plata. Son las mismas que muestra la lista de Clientes.
+		 *
+		 * La moneda es la de la cuenta que abre el boton de al lado (`showClientCurrentAcount` la elige por
+		 * `sale.moneda_id`): 0 y null cuentan como pesos, y los dolares solo con la extension
+		 * `ventas_en_dolares`. Asi la cifra del boton es la de la cuenta que se abre al tocarlo.
+		 *
+		 * @param {Object} sale Venta de la fila, con su `client`.
+		 * @returns {String} Saldo con el rotulo de su moneda, o '-' si el cliente no tiene dato en esa moneda.
+		 */
+		saldo_del_cliente(sale) {
+			// La venta es en dolares solo si lo dice su moneda Y el negocio trabaja con cuentas en dolares.
+			let en_dolares = (Number(sale.moneda_id) || 1) == 2 && this.hasExtencion('ventas_en_dolares')
+			// Saldo del cliente en esa moneda; es NULL hasta que su cuenta tiene el primer movimiento.
+			let saldo = en_dolares ? sale.client.saldo_dolares : sale.client.saldo_pesos
+			// Sin dato: un guion, y no "USD -", que dejaria el rotulo de la moneda solo. El cero SI se muestra.
+			if (saldo === null || typeof saldo == 'undefined') {
+				return '-'
+			}
+			return this.current_acount_simbolo_moneda({moneda_id: en_dolares ? 2 : 1}, saldo)
 		},
 		lo_que_falta_pagarse(sale) {
 			return this.price(Number(sale.current_acount.debe) - Number(sale.current_acount.pagandose))
