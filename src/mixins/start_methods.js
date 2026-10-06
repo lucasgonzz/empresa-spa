@@ -75,6 +75,8 @@ export default {
 			.catch(err => console.log(err))
 			.then(() => this.get_resumen_de_imagenes())
 			.catch(err => console.log(err))
+			.then(() => this.get_resumen_de_categorias())
+			.catch(err => console.log(err))
 			.then(() => this.check_synced_version_notifications())
 			.catch(err => console.log(err))
 			.then(() => this.check_excel_analysis_en_curso())
@@ -298,6 +300,21 @@ export default {
 		 */
 		get_resumen_de_imagenes() {
 			return this.$store.dispatch('image_assignment/get_resumen')
+		},
+		/**
+		 * Trae el resumen de los sistemas de categorias con IA (si hay uno esperando que el dueño
+		 * elija y cuantos articulos dudosos quedan por revisar) para el numero rojo de Alertas ->
+		 * Catalogo y de la campana (mision categorizacion-tres-modelos, 5/10/2026).
+		 *
+		 * Sin extension ni permiso que lo condicione: para quien no es el dueño ni el acceso maestro
+		 * la API contesta todo en cero. La accion del store es silenciosa y resuelve siempre (un 404
+		 * de una API que todavia no tiene la ruta no muestra nada), asi que no le puede cortar el
+		 * turno al eslabon que sigue.
+		 *
+		 * @returns {Promise}
+		 */
+		get_resumen_de_categorias() {
+			return this.$store.dispatch('category_proposal/get_resumen')
 		},
 		get_ventas_sin_cobrar() {
 			if (this.owner.dias_alertar_empleados_ventas_no_cobradas) {
