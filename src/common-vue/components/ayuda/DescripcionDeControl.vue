@@ -147,7 +147,8 @@ const CAJA_DE_MODAL = '.modal-content'
 
 /*
 	Aire que b-popover deja entre la ayuda y el borde de la ventana si nadie le pide otro: su default,
-	50 px. Se pasa siempre explícito porque adentro de un modal que recorta es otro (MARGEN_EN_MODAL).
+	50 px. Se pasa siempre explícito porque adentro de un modal que recorta es otro (MARGEN_EN_MODAL)
+	y en una pantalla angosta también (MARGEN_EN_PANTALLA_ANGOSTA).
 */
 const MARGEN_POR_DEFECTO = 50
 
@@ -156,6 +157,20 @@ const MARGEN_POR_DEFECTO = 50
 	descuenta este valor de los dos lados: ver `--en-modal` en los estilos, que lo repite (16 = 2 x 8).
 */
 const MARGEN_EN_MODAL = 8
+
+/*
+	Ancho máximo de la ayuda, en px: es el max-width de los estilos (.descripcion-de-control-popover);
+	se repite acá porque de él depende cuánta pantalla hace falta para que la ayuda entre con el aire
+	de siempre de los dos lados (ver pantalla_angosta).
+*/
+const ANCHO_MAXIMO_DE_LA_AYUDA = 420
+
+/*
+	Aire entre la ayuda y el borde de la ventana cuando la pantalla es angosta (un teléfono). El ancho
+	máximo de la ayuda descuenta este valor de los dos lados: ver `--pantalla-angosta` en los estilos,
+	que lo repite (16 = 2 x 8).
+*/
+const MARGEN_EN_PANTALLA_ANGOSTA = 8
 
 /**
  * Caja de modal que RECORTARÍA la ayuda del control, o null si no hay ninguna: el control no está en
@@ -185,6 +200,38 @@ function caja_que_recorta(el) {
 	return estilo.overflowX !== 'visible' || estilo.overflowY !== 'visible' ? caja : null
 }
 
+/*
+	Si la pantalla es tan angosta que la ayuda más ancha no entra con el aire de siempre.
+
+	Para qué sirve (misión ayuda-entera-en-telefono, 5/10/2026). En un teléfono de 375 px la ayuda de
+	un control que NO está en un modal que recorta salía cortada por el borde izquierdo de la pantalla
+	(quedaba en x = -50 hasta 325 y medía 375). La ayuda cuelga de <body> y su ancho se ajusta al
+	contenido hasta el ancho de la ventana, así que a 375 px llega a medir 375. b-popover le exige 50 px
+	de aire contra la ventana de cada lado (MARGEN_POR_DEFECTO) y una ayuda de 375 px no tiene dónde
+	ubicarse con 50 px de cada lado en una pantalla de 375: popper revisa primero el borde izquierdo y
+	después el derecho, y el segundo paso la deja en x = 325 - 375 = -50, o sea que se lee cortada. En
+	una tablet o en un escritorio entra entera y no hay nada que cambiar.
+
+	Por eso solo cuenta en una pantalla que no puede alojar la ayuda más ancha (ANCHO_MAXIMO_DE_LA_AYUDA)
+	con el aire de siempre de los dos lados: ahí la ayuda pasa a MARGEN_EN_PANTALLA_ANGOSTA de aire y a un
+	ancho máximo que descuenta ese aire de cada lado. En el resto no se toca nada.
+*/
+
+/**
+ * Si la pantalla no puede alojar la ayuda más ancha con el aire de siempre de los dos lados: menos de
+ * ANCHO_MAXIMO_DE_LA_AYUDA + 2 x MARGEN_POR_DEFECTO (420 + 2 x 50 = 520 px), o sea un teléfono. En una
+ * pantalla así, la ayuda de un control sin caja que recorta usa MARGEN_EN_PANTALLA_ANGOSTA de aire y la
+ * clase `--pantalla-angosta` (ver margen_del_limite y clases_popover).
+ *
+ * Mide `clientWidth` del documento y no `innerWidth`: no cuenta la barra de scroll, que es lo que ve el
+ * usuario y contra lo que mide popper.
+ *
+ * @returns {Boolean} true si la pantalla es angosta; false si la ayuda entra con el aire de siempre.
+ */
+function pantalla_angosta() {
+	return document.documentElement.clientWidth < ANCHO_MAXIMO_DE_LA_AYUDA + 2 * MARGEN_POR_DEFECTO
+}
+
 export default {
 	name: 'DescripcionDeControl',
 	data() {
@@ -192,7 +239,8 @@ export default {
 			/*
 				El control que tiene la descripción abierta (o a punto de abrirse):
 				{ el: HTMLElement, testid: String, descripcion: Object, placement: String,
-				interactiva: Boolean, caja: HTMLElement|null }. Es null cuando no hay ninguno.
+				interactiva: Boolean, caja: HTMLElement|null, angosta: Boolean }. Es null cuando
+				no hay ninguno.
 			*/
 			control_activo: null,
 			visible: false,
@@ -223,18 +271,28 @@ export default {
 			return this.control_activo && this.control_activo.caja ? this.control_activo.caja : 'window'
 		},
 		/**
-		 * Aire entre la ayuda y ese límite (ver MARGEN_EN_MODAL y MARGEN_POR_DEFECTO).
+		 * Aire entre la ayuda y ese límite (ver MARGEN_EN_MODAL, MARGEN_EN_PANTALLA_ANGOSTA y
+		 * MARGEN_POR_DEFECTO). El orden importa: manda la caja del modal que recorta; si no hay caja y
+		 * la pantalla es angosta (ver pantalla_angosta), el de la pantalla angosta; si no, el de siempre.
 		 *
 		 * @returns {Number}
 		 */
 		margen_del_limite() {
-			return this.control_activo && this.control_activo.caja ? MARGEN_EN_MODAL : MARGEN_POR_DEFECTO
+			if (this.control_activo && this.control_activo.caja) {
+				return MARGEN_EN_MODAL
+			}
+			if (this.control_activo && this.control_activo.angosta) {
+				return MARGEN_EN_PANTALLA_ANGOSTA
+			}
+			return MARGEN_POR_DEFECTO
 		},
 		/**
 		 * Clases del popover del control activo: la de siempre, más la que le saca el mouse
 		 * cuando el control pidió la ayuda no interactiva (ver ATRIBUTO_NO_INTERACTIVA), más la que
 		 * le limita el ancho cuando la ayuda va contenida en la caja de un modal (ver
-		 * caja_que_recorta).
+		 * caja_que_recorta) o, si no hay caja que recorte pero la pantalla es angosta (ver
+		 * pantalla_angosta), la que le limita el ancho al de su contenedor menos el aire de cada lado.
+		 * La caja manda: esas dos últimas clases nunca van juntas.
 		 *
 		 * Va como texto y no como arreglo: el prop `custom-class` de b-popover (BootstrapVue 2.23)
 		 * es de tipo String, y con un Array Vue tira "Invalid prop: type check failed" en desarrollo.
@@ -248,6 +306,8 @@ export default {
 			}
 			if (this.control_activo && this.control_activo.caja) {
 				clases += ' descripcion-de-control-popover--en-modal'
+			} else if (this.control_activo && this.control_activo.angosta) {
+				clases += ' descripcion-de-control-popover--pantalla-angosta'
 			}
 			return clases
 		},
@@ -285,7 +345,8 @@ export default {
 		 * documentado todavía --que es el caso de la enorme mayoría de los controles--.
 		 *
 		 * @param {EventTarget} target Elemento donde ocurrió el evento.
-		 * @returns {Object|null} { el, testid, descripcion, placement, interactiva, caja } o null.
+		 * @returns {Object|null} { el, testid, descripcion, placement, interactiva, caja,
+		 * angosta: Boolean } o null.
 		 */
 		control_documentado(target) {
 			if (!target || typeof target.closest != 'function') {
@@ -307,6 +368,7 @@ export default {
 				placement: lado_pedido(el),
 				interactiva: ayuda_interactiva(el),
 				caja: caja_que_recorta(el),
+				angosta: pantalla_angosta(),
 			}
 		},
 		al_entrar(event) {
@@ -411,6 +473,15 @@ export default {
 // entrar entera. Va despues del max-width de arriba (los dos con !important): si el navegador no
 // entiende min(), esta linea se ignora y queda el tope de 420px de siempre.
 .descripcion-de-control-popover--en-modal
+	max-width: min(420px, calc(100% - 16px)) !important
+
+// Ayuda de un control SIN caja que recorta (fuera de un modal, o adentro de uno que no recorta) en una
+// pantalla angosta (ver pantalla_angosta): nunca es mas ancha que su contenedor menos el aire de cada
+// lado (MARGEN_EN_PANTALLA_ANGOSTA x 2). El 100% es el ancho del bloque contenedor: la ventana cuando
+// cuelga de <body> (adentro de un modal que no recorta cuelga del .modal-content, y es el de esa caja).
+// Va despues del max-width base de 420px (los dos con !important): si el navegador no entiende min(),
+// esta linea se ignora y queda el tope de 420px de siempre.
+.descripcion-de-control-popover--pantalla-angosta
 	max-width: min(420px, calc(100% - 16px)) !important
 
 // Ayuda pedida NO interactiva con data-ayuda-no-interactiva (ver ATRIBUTO_NO_INTERACTIVA):
