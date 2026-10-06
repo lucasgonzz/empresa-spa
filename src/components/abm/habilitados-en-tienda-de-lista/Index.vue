@@ -11,10 +11,12 @@
 
 	Hace dos cosas, y ninguna escribe nada:
 
-	1. El contador "X habilitados de Y" (contrato C2 de la mision): `GET price-type/{id}/habilitados-en-tienda`
-		devuelve `{habilitados, total}`, donde `total` son los articulos vivos del dueño y
-		`habilitados` los que tienen tildado "Visible en la tienda para esta lista". Solo con la
-		lista YA GUARDADA: una lista nueva no tiene id ni articulos habilitados.
+	1. El contador "X de Y articulos habilitados en la tienda para esta lista" (contrato C2 de la
+		mision): `GET price-type/{id}/habilitados-en-tienda` devuelve `{habilitados, total}`, donde
+		`total` son los articulos vivos del dueño y `habilitados` los que tienen tildado "Visible en
+		la tienda para esta lista". Solo con la lista YA GUARDADA: una lista nueva no tiene id ni
+		articulos habilitados. El sustantivo concuerda con el TOTAL ("1 de 11 articulos habilitados",
+		"1 de 1 articulo habilitado"), no con la cantidad de habilitados.
 	2. Con el interruptor prendido en el formulario (guardado o no), un aviso permanente de lo que
 		implica. La ayuda del campo vive en un popover que solo se ve al pasar el mouse; esto, en
 		cambio, queda a la vista, porque prender el interruptor con cero articulos habilitados deja a
@@ -51,8 +53,8 @@ data-testid="habilitados-en-tienda-de-lista">
 
 		<span
 		v-else-if="contador_cargado">
-			<strong>{{ numero_es(habilitados) }} {{ habilitados == 1 ? 'habilitado' : 'habilitados' }}</strong>
-			de {{ numero_es(total) }}
+			<strong>{{ numero_es(habilitados) }} de {{ numero_es(total) }}</strong>
+			{{ Number(total) === 1 ? 'artículo habilitado' : 'artículos habilitados' }} en la tienda para esta lista
 		</span>
 	</div>
 
