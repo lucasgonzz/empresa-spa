@@ -29,7 +29,7 @@ export default {
 		}
 		this.setProvidersFormated()
 		// El chart de Acreedores (rendimiento-general/acreedores/Chart.vue) necesita
-		// provider.saldo, que el catalogo liviano (options) no trae -- ver la nota en
+		// provider.saldo_pesos, que el catalogo liviano (options) no trae -- ver la nota en
 		// _providers de mixins/article_performance.js. Con 'provider' fuera de la descarga
 		// inicial de sesion, esta seccion tiene que pedirlo ella misma.
 		if (!this.$store.state.provider.models.length) {
