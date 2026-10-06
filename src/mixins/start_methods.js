@@ -12,6 +12,14 @@ export default {
 
 			this.init_vender_address_id()
 
+			/*
+				Misión eliminar-sucursal-con-stock (5/10/2026): a esta altura las sucursales todavía NO
+				llegaron (las baja el panel de recursos, que arranca ~1 segundo después de montarse), así
+				que lo de arriba pudo haber tomado una sucursal que ya no existe. Se valida apenas
+				carguen y en cada cambio de la lista. Ver `vigilar_la_sucursal_de_vender`.
+			*/
+			this.vigilar_la_sucursal_de_vender()
+
 			// this.checkUpdateFeaturesCookie()
 
 			// Red de seguridad de los pedidos online (los mensajes de compradores no tienen polling:
@@ -338,30 +346,151 @@ export default {
 			}
 		},
 
-		/*
-			Al iniciar el sistema, se setea address_id con el configurado para el usuario
-			Solo si no se le configuro nada, se usa la cookie
-		*/
+		/**
+		 * Al iniciar el sistema, deja en Vender la sucursal con la que arranca el usuario: la que
+		 * tiene configurada en su usuario (`user.address_id`) o, solo si no tiene ninguna, la que
+		 * recuerda la cookie `address_id`.
+		 *
+		 * Misión eliminar-sucursal-con-stock (5/10/2026): antes las volcaba a Vender SIN mirar que la
+		 * sucursal siguiera existiendo, así que después de borrar una sucursal el empleado (o el dueño,
+		 * por la cookie de 3 años) seguía vendiendo contra un id muerto. Ahora cada candidata se valida
+		 * contra `address.models` (`address_id_es_vigente`) y la que no existe se descarta: si era la
+		 * cookie se borra, y si no queda ninguna Vender se queda sin sucursal y pide "Indique la SUCURSAL".
+		 *
+		 * 🔴 Mientras las sucursales no hayan cargado, `address_id_es_vigente` da true: no se puede saber
+		 * y NO se invalida nada (ver el comentario de ese método). Esa primera pasada, la del arranque,
+		 * se completa después con `validar_address_id_de_vender`.
+		 *
+		 * También la llama `limpiar_vender` después de cada venta, cuando las sucursales ya cargaron: ahí
+		 * la validación es la real.
+		 *
+		 * @returns {void}
+		 */
 		init_vender_address_id() {
-			
-			if (this.user.address_id) {
-				
+
+			if (this.user.address_id && this.address_id_es_vigente(this.user.address_id)) {
+
 				console.log('seteando VENDER address_id desde USER->ADDRESS_ID')
 				this.$store.commit('vender/setAddressId', this.user.address_id)
-				
+
 				this.$cookies.set('address_id', this.user.address_id, -1)
 
 			} else {
 
-
 				let cookie = this.$cookies.get('address_id')
 
-				if (cookie) {
+				if (cookie && this.address_id_es_vigente(cookie)) {
 					console.log('seteando VENDER address_id desde COOKIE')
 					this.$store.commit('vender/setAddressId', cookie)
+				} else if (cookie) {
+					// La cookie recuerda una sucursal que ya no existe: se borra para que nadie más la lea.
+					console.log('la cookie address_id apunta a una sucursal que ya no existe: se borra')
+					this.$cookies.remove('address_id')
 				}
 			}
 
+		},
+		/**
+		 * ¿Esta sucursal sigue existiendo? Mira `address.models`.
+		 *
+		 * 🔴 Devuelve true también cuando NO se puede saber (la lista está vacía): las sucursales las baja
+		 * el panel de recursos DESPUÉS de que `startMethods` ya corrió, y mirar antes de tiempo invalidaría
+		 * una sucursal perfectamente válida. Una lista vacía es indistinguible de "todavía no cargó" (y de
+		 * "la descarga falló", que el panel marca igual como lista), así que solo se contradice a un id
+		 * cuando hay al menos una sucursal cargada que no es esa.
+		 *
+		 * Un comercio sin ninguna sucursal tampoco invalida nada, y está bien: sin sucursales no hay a
+		 * dónde mandar el stock y la API (guarda D12 de esta misión) reemplaza cualquier id muerto.
+		 *
+		 * @param {Number|String} address_id Sucursal a verificar (viene del usuario o de la cookie).
+		 * @returns {Boolean}
+		 */
+		address_id_es_vigente(address_id) {
+			let sucursales = this.$store.state.address.models
+
+			if (!Array.isArray(sucursales) || !sucursales.length) {
+				return true
+			}
+
+			return sucursales.some(sucursal => sucursal.id == address_id)
+		},
+		/**
+		 * Corrige lo que quedó en Vender, en la cookie y en el usuario apuntando a una sucursal que ya no
+		 * existe, ahora que las sucursales sí cargaron. Se llama de nuevo en CADA cambio de
+		 * `address.models` (ver `vigilar_la_sucursal_de_vender`).
+		 *
+		 * - Usuario (`auth.user.address_id`) con una sucursal muerta: pasa a null. La API ya lo pasó a otra
+		 *   sucursal o lo dejó sin sucursal, pero esta sesión no sabe a cuál; null es lo seguro y el
+		 *   próximo login trae el valor real.
+		 * - Vender con una sucursal muerta: se pone en 0 y se vuelve a resolver desde el usuario o la cookie
+		 *   (esta vez validando de verdad). Si no queda ninguna, Vender queda sin sucursal.
+		 * - Cookie con una sucursal muerta aunque Vender esté bien (la cookie se escribió en otra sesión):
+		 *   se borra.
+		 * - Nunca toca una sucursal que existe.
+		 *
+		 * @returns {Boolean} true si pudo validar (había sucursales cargadas); false si todavía no se puede.
+		 */
+		validar_address_id_de_vender() {
+			let sucursales = this.$store.state.address.models
+
+			if (!Array.isArray(sucursales) || !sucursales.length) {
+				return false
+			}
+
+			if (this.user && this.user.address_id && !this.address_id_es_vigente(this.user.address_id)) {
+				console.log('el usuario tenia una sucursal que ya no existe: se deja sin sucursal')
+				this.$store.commit('auth/setUser', Object.assign({}, this.user, { address_id: null }))
+			}
+
+			let address_id_de_vender = this.$store.state.vender.address_id
+
+			if (address_id_de_vender && !this.address_id_es_vigente(address_id_de_vender)) {
+				console.log('VENDER tenia una sucursal que ya no existe: se vuelve a resolver')
+				this.$store.commit('vender/setAddressId', 0)
+				if (this.user) {
+					this.init_vender_address_id()
+				}
+			}
+
+			let cookie = this.$cookies.get('address_id')
+
+			if (cookie && !this.address_id_es_vigente(cookie)) {
+				this.$cookies.remove('address_id')
+			}
+
+			return true
+		},
+		/**
+		 * Valida la sucursal de Vender ya mismo (si las sucursales ya cargaron) y se queda vigilando
+		 * `address.models` para volver a validarla CADA VEZ que la lista cambia.
+		 *
+		 * Esto último es lo que cubre los borrados que NO pasan por el modal de eliminar: el broadcast
+		 * `deleted_model` de otra pestaña o de otra sesión, y el fin de una eliminación en segundo plano
+		 * (el 202), que saca la sucursal de la lista sin que nadie llame a `limpiar_referencias_locales`.
+		 * Antes el watcher se daba de baja después de la primera validación y esos casos dejaban a Vender
+		 * vendiendo contra el id muerto. Una lista vacía no valida nada (ver `address_id_es_vigente`).
+		 *
+		 * La función para darlo de baja se guarda en una propiedad de la instancia, FUERA de `data` a
+		 * propósito: no tiene por qué ser reactiva, y si `startMethods` vuelve a correr (otro login sin
+		 * recargar la página) se descarta el watcher anterior en vez de acumular uno por cada login. El
+		 * watcher muere con la instancia (App.vue).
+		 *
+		 * @returns {void}
+		 */
+		vigilar_la_sucursal_de_vender() {
+			if (this.unwatch_sucursales_de_vender) {
+				this.unwatch_sucursales_de_vender()
+				this.unwatch_sucursales_de_vender = null
+			}
+
+			this.validar_address_id_de_vender()
+
+			this.unwatch_sucursales_de_vender = this.$watch(
+				() => this.$store.state.address.models,
+				() => {
+					this.validar_address_id_de_vender()
+				}
+			)
 		},
 		checkUpdateFeaturesCookie() {
 			let cookie = this.$cookies.get('update_features_watched')
