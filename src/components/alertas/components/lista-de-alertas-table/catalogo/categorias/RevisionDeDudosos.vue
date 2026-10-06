@@ -27,7 +27,7 @@ data-testid="categorias-revision">
 		<i
 		class="bi bi-info-circle"
 		aria-hidden="true"></i>
-		Estos artículos todavía no tienen la categoría que sugiere la IA: la reciben recién cuando los aprobás. Hasta entonces quedan sin categoría.
+		Estos artículos todavía no tienen la categoría que sugiere la IA: la reciben recién cuando los aprobás y, si ya tienen otra, la sugerida la reemplaza. Hasta entonces quedan como figuran en su fila.
 	</p>
 
 	<barra-de-revision
@@ -135,7 +135,8 @@ const SOLAPAS_VALIDAS = ['a_revisar', 'asignados', 'sin_categoria']
  * no hay nada corriendo en segundo plano: la lista no se refresca sola.
  *
  *  - Aprobar le asigna al artículo la categoría que sugirió la IA (la API la crea si todavía no
- *    existía). Rechazar lo deja sin categoría ("Sin categoría").
+ *    existía) y reemplaza la que tenga hoy (la fila de "A revisar" la muestra). Rechazar descarta la
+ *    sugerencia y no toca al artículo: pasa a "Sin categoría", pero conserva la categoría que ya tuviera.
  *  - Cada acción saca la fila de la lista en el momento. Los números de las solapas no se ajustan a
  *    mano: cada respuesta de la API trae los conteos y el store los aplica (ver `conteos`).
  *  - Aprobar o rechazar de a muchos pide confirmación (cambia varios artículos de una vez) y usa el
@@ -618,9 +619,12 @@ export default {
 			let cantidad = ids.length
 			let texto_cantidad = cantidad_de(cantidad, 'artículo', 'artículos')
 
+			// Lo que dicen las confirmaciones tiene que ser cierto para cualquier artículo de la lista (B-13):
+			// aprobar REEMPLAZA la categoría que el artículo tenga hoy, y rechazar no lo toca (no siempre
+			// queda "sin categoría": uno que ya tenía categoría la conserva).
 			let texto = accion === 'aprobar'
-				? '¿Aprobar ' + texto_cantidad + '? ' + (cantidad === 1 ? 'Se le asigna' : 'Se les asigna') + ' la categoría que sugirió la IA (si todavía no existe, se crea).'
-				: '¿Rechazar ' + texto_cantidad + '? ' + (cantidad === 1 ? 'Queda sin categoría.' : 'Quedan sin categoría.')
+				? '¿Aprobar ' + texto_cantidad + '? ' + (cantidad === 1 ? 'Se le asigna' : 'Se les asigna') + ' la categoría que sugirió la IA (si todavía no existe, se crea). Si ya ' + (cantidad === 1 ? 'tiene' : 'tienen') + ' otra categoría, se reemplaza.'
+				: '¿Rechazar ' + texto_cantidad + '? Se descarta la sugerencia de la IA y ' + (cantidad === 1 ? 'queda' : 'quedan') + ' como ' + (cantidad === 1 ? 'está' : 'están') + '.'
 
 			self.confirmar(texto, {
 				title: accion === 'aprobar' ? 'Aprobar seleccionados' : 'Rechazar seleccionados',

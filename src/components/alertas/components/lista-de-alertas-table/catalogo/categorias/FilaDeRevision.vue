@@ -73,6 +73,26 @@ class="cat-rev-fila"
 			</template>
 		</p>
 
+		<!--
+			La categoria que el articulo tiene HOY, solo en "A revisar" y solo si ya tiene una (la API la
+			manda en `actual` para esos items): "Aprobar" se la va a pisar con la sugerida, y sin esta linea
+			no se veia que era lo que se reemplazaba (B-13). En "Sin categoria" `actual` viene vacio y no se
+			dibuja nada.
+		-->
+		<p
+		v-if="categoria_de_hoy"
+		class="cat-rev-fila__categoria"
+		:data-testid="'categorias-hoy-' + item.id">
+			<span class="cat-rev-fila__rotulo-categoria">Hoy está en</span>
+			<strong>{{ categoria_de_hoy.categoria }}</strong>
+			<template v-if="categoria_de_hoy.subcategoria">
+				<i
+				class="bi bi-chevron-right cat-rev-fila__separador"
+				aria-hidden="true"></i>
+				{{ categoria_de_hoy.subcategoria }}
+			</template>
+		</p>
+
 		<p
 		v-if="item.motivo"
 		class="cat-rev-fila__motivo"
@@ -119,8 +139,9 @@ import { ESTADOS_DE_ITEM, TONOS_DE_ITEM, texto_de } from '@/components/alertas/c
  * estaba segura. En "A revisar" lleva Aprobar y Rechazar y la casilla para hacerlo de a muchos.
  *
  * Mientras no se apruebe, el artículo NO tiene la categoría que sugiere la IA (decisión de la
- * misión): aprobar se la asigna (y crea la categoría si todavía no existía), rechazar lo deja sin
- * categoría.
+ * misión): aprobar se la asigna (y crea la categoría si todavía no existía) y REEMPLAZA la que tenga
+ * hoy, por eso la fila la muestra ("Hoy está en"); rechazar descarta la sugerencia y no toca al
+ * artículo.
  *
  * Eventos: `seleccionar(bool)`, `aprobar` y `rechazar`. La acción en sí la hace la revisión.
  */
@@ -179,6 +200,25 @@ export default {
 				return this.item.actual
 			}
 			return this.item.sugerencia
+		},
+		/**
+		 * La categoría (y subcategoría) que el artículo tiene HOY, para mostrar junto a la sugerencia de
+		 * un artículo "a revisar", o null si no corresponde mostrar nada (B-13).
+		 *
+		 * "Aprobar" le va a PISAR la categoría con la sugerida, así que la fila tiene que mostrar qué se
+		 * reemplaza: pasa en "Mantener las mías" (un artículo que ya tenía categoría y la conserva hasta
+		 * que lo aprueben) y cuando alguien le puso una a mano después de elegir. Solo en "A revisar":
+		 * en "Sin categoría" la API manda `actual` vacío y en Asignados/Aprobado esa categoría ya es la
+		 * que muestra `categoria`. Sin categoría hoy (o con la suya borrada) la API manda null y no se
+		 * dibuja nada, igual que con una API que todavía no manda `actual` en estos artículos.
+		 *
+		 * @returns {{categoria: String, subcategoria: String|null}|null}
+		 */
+		categoria_de_hoy() {
+			if (this.item.estado !== 'a_revisar' || !this.item.actual.categoria) {
+				return null
+			}
+			return this.item.actual
 		},
 		/**
 		 * El rótulo que acompaña a la categoría.
