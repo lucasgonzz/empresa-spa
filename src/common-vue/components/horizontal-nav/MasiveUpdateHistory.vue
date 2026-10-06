@@ -394,11 +394,68 @@ export default {
 		 * @returns {String}
 		 */
 		get_prop_label(prop_key) {
+			// Clave dinamica por lista (mision catalogo-por-lista-tienda): no es una propiedad del
+			// modelo, asi que sin esto se veria "Visible en tienda lista 3".
+			let label_por_lista = this.label_visible_en_tienda_lista(prop_key)
+			if (label_por_lista) {
+				return label_por_lista
+			}
 			let prop = this.propiedad_del_modelo(prop_key)
 			if (prop) {
 				return this.propText(prop)
 			}
 			return this.capitalize(String(prop_key).replaceAll('_', ' '))
+		},
+		/**
+		 * Id de la lista de una clave `visible_en_tienda_lista_<id>`, o null si la clave no es de
+		 * esas (mision catalogo-por-lista-tienda, 5/10/2026).
+		 *
+		 * Es la clave que arma opciones-filtrados-seleccion/Update.vue para habilitar o no un
+		 * articulo en la tienda para una lista restringida (contrato C2), y con la que la API
+		 * registra el cambio en el detalle de la masiva.
+		 *
+		 * @param {String} prop_key
+		 * @returns {String|null}
+		 */
+		id_de_lista_visible_en_tienda(prop_key) {
+			let coincidencia = String(prop_key).match(/^visible_en_tienda_lista_(\d+)$/)
+			return coincidencia ? coincidencia[1] : null
+		},
+		/**
+		 * "Visible en la tienda, lista <nombre>" para una clave `visible_en_tienda_lista_<id>`, o
+		 * null para cualquier otra clave (que sigue su camino de siempre en get_prop_label).
+		 *
+		 * El nombre sale del store de listas, que esta cargado en toda la app; si la lista ya no
+		 * existe (se borro despues de la masiva) se nombra por su numero.
+		 *
+		 * @param {String} prop_key
+		 * @returns {String|null}
+		 */
+		label_visible_en_tienda_lista(prop_key) {
+			let price_type_id = this.id_de_lista_visible_en_tienda(prop_key)
+			if (price_type_id === null) {
+				return null
+			}
+			let nombre = this.nombre_de_registro('price_type', price_type_id)
+			return 'Visible en la tienda, lista '+(nombre ? nombre : '#'+price_type_id)
+		},
+		/**
+		 * Valor viejo o nuevo de un cambio, como se muestra en la tabla del detalle.
+		 *
+		 * Para la clave por lista de la tienda se traduce a Sí / No: la API registra 1, 0 o null
+		 * (no habia fila o nunca se habia tildado), y null significa "no habilitado", igual que 0
+		 * (contrato C1: solo `= 1` habilita). Mostrado crudo, un null saldria como "—" y se leeria
+		 * como "sin dato". Cualquier otra clave sigue por format_change_value, sin cambios.
+		 *
+		 * @param {String} prop_key
+		 * @param {*} valor
+		 * @returns {String}
+		 */
+		valor_de_cambio(prop_key, valor) {
+			if (this.id_de_lista_visible_en_tienda(prop_key) !== null) {
+				return this.es_verdadero(valor) ? 'Sí' : 'No'
+			}
+			return this.format_change_value(valor)
 		},
 		/**
 		 * Texto legible de la operación aplicada en la actualización masiva.
@@ -433,8 +490,8 @@ export default {
 					change_rows.push({
 						prop_label: this.get_prop_label(prop_key),
 						operation: this.operation_label_for_change(change.operation),
-						old_value: this.format_change_value(change.old),
-						new_value: this.format_change_value(change.new),
+						old_value: this.valor_de_cambio(prop_key, change.old),
+						new_value: this.valor_de_cambio(prop_key, change.new),
 					})
 				})
 				articles.push({

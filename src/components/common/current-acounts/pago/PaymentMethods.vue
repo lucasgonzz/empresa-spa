@@ -1,11 +1,33 @@
 <template>
     <div class="m-b-15">
 
+        <!--
+            Total a repartir / repartido / sobrante, igual que en el modal de Vender.
+
+            Solo se dibuja cuando el pago se abrió con UNA venta elegida ("Registrar pago para
+            ..."): es la única forma de saber contra qué importe repartir. Sin selección
+            total_a_repartir es null y el modal queda idéntico al de siempre, sin este bloque ni
+            el botón "Completar" de las filas.
+
+            El testid es propio a propósito: la ayuda de controles se indexa por testid y la
+            entrada de Vender (multipago-total-a-repartir) habla de un descuento que acá no existe.
+        -->
+        <total-repartir
+            v-if="total_a_repartir"
+            testid="pago-cc-total-a-repartir"
+            :total_a_repartir="total_a_repartir"
+            :total_repartido="total_repartido"
+            :sobrante_a_repartir="sobrante_a_repartir"
+        ></total-repartir>
+
         <multi-payment-methods
             v-model="pago.current_acount_payment_methods"
             :payment_method_factory="payment_method_factory"
             :parent_modal_id="parent_modal_id"
             :show_decimal_help="true"
+            :total_a_repartir="total_a_repartir"
+            :total_repartido="total_repartido"
+            :sobrante_a_repartir="sobrante_a_repartir"
             :address_id="address_id"
             @changed="update_total"
 
@@ -26,6 +48,7 @@
 import MultiPaymentMethods from '@/components/common/payment-methods/Index'
 import CheckInfo from '@/components/common/current-acounts/pago/CheckInfo'
 import CreditCard from '@/components/common/current-acounts/pago/CreditCard'
+import TotalRepartir from '@/components/vender/modals/payment-methods/TotalRepartir'
 import cajas from '@/mixins/vender/cajas'
 
 export default {
@@ -35,6 +58,7 @@ export default {
         MultiPaymentMethods,
         CheckInfo,
         CreditCard,
+        TotalRepartir,
     },
     props: {
         pago: {
@@ -113,6 +137,113 @@ export default {
         },
         from_credit_account() {
             return this.$store.state.current_acount.from_credit_account
+        },
+        /**
+         * La venta elegida para pagar, o null si el pago se abrió "a secas". La setea
+         * BtnPagoNotaCredito.setToPay() al apretar "Registrar pago para ..." y pago/Index.vue::clear()
+         * la vuelve a null cuando el modal se cierra.
+         *
+         * @returns {Object|null} Movimiento de la cuenta corriente, con `debe` y `pagandose`.
+         */
+        to_pay() {
+            return this.$store.state.current_acount.to_pay
+        },
+        /**
+         * Lo que falta pagar de la venta elegida: el importe contra el que se reparte el pago.
+         *
+         * Es la misma cuenta con la que BtnPagoNotaCredito.setToPay() precarga el monto de la primera
+         * fila, y la que hace la API para saber cuánto le falta al débito (`debe - pagandose`, en
+         * CurrentAcountPagoHelper::procesarPago()). Si cambia una de las tres, tienen que cambiar las
+         * otras: si no, el modal abre con un sobrante distinto de cero.
+         *
+         * Con null (sin venta elegida, o sin saldo por pagar) no se dibuja el bloque de totales ni el
+         * botón "Completar": PaymentMethodsStep lo esconde con un v-if sobre esta misma prop.
+         *
+         * @returns {number|null}
+         */
+        total_a_repartir() {
+            if (!this.to_pay) {
+                return null
+            }
+
+            // Lo que le falta a la venta elegida: lo que debe menos lo que ya se le pagó
+            let pending_balance = (Number(this.to_pay.debe) || 0) - (Number(this.to_pay.pagandose) || 0)
+
+            // A centavos, igual que el sobrante: un residuo de coma flotante no tiene que llegar a pantalla
+            pending_balance = Math.round(pending_balance * 100) / 100
+
+            return pending_balance > 0 ? pending_balance : null
+        },
+        /**
+         * Lo que ya llevan cargado las filas de métodos de pago, en la moneda de la cuenta.
+         *
+         * Misma regla que el modal de Vender (vender/modals/payment-methods/Index.vue): una fila en
+         * otra moneda aporta su `amount_cotizado` (ya convertido a la moneda de la cuenta) y las
+         * demás su `amount`. Lo que no es un número cuenta como cero.
+         *
+         * Con un ajuste, para que coincida con lo que la API registra de verdad
+         * (CurrentAcountPagoMonedaHelper::valor_de_la_fila_en_la_cuenta): el `amount_cotizado` solo
+         * cuenta si la fila está en OTRA moneda, y una fila sin monto no cuenta nada. Si una fila pasa
+         * a dólares y vuelve a la moneda de la cuenta, check_moneda() de PaymentMethodsStep no le
+         * limpia el cotizado viejo: contarlo mostraría un reparto cerrado (verde, sobrante $0) que la
+         * API registra por menos.
+         *
+         * OJO: se calcula DE LAS FILAS y no se reusa `pago.haber`. `haber` lo recalcula update_total()
+         * con el evento `changed` del bloque compartido, y remove_payment_method()
+         * (common/payment-methods/Index.vue) no lo emite: al quitar una fila `haber` se queda con el
+         * valor viejo y este importe mostraría plata que ya no está repartida.
+         *
+         * Se redondea a centavos porque TotalRepartir pinta verde/rojo comparando este importe con el
+         * total usando `==`, y una suma de decimales deja residuos de coma flotante (50.1 + 50.2 da
+         * 100.30000000000001): sin redondear, un reparto exacto se vería en rojo con el sobrante en $0.
+         *
+         * @returns {number}
+         */
+        total_repartido() {
+            // Acumulador del importe repartido, en la moneda de la cuenta
+            let total = 0
+            // Filas de métodos de pago que arma el bloque compartido (vacío mientras todavía no hay ninguna)
+            let rows = this.pago.current_acount_payment_methods || []
+
+            rows.forEach(payment_method => {
+                // Importe tal como se cargó, en la moneda de la fila
+                let amount = Number(payment_method.amount) || 0
+
+                // Una fila sin monto no tiene efecto: ni un cotizado viejo que le haya quedado cuenta
+                if (amount <= 0) {
+                    return
+                }
+
+                // Una fila sin moneda, o en la moneda de la cuenta, vale su `amount` tal cual
+                let in_account_currency = !payment_method.moneda_id || Number(payment_method.moneda_id) === Number(this.base_moneda)
+
+                // Importe ya convertido a la moneda de la cuenta: solo cuenta si la fila está en otra moneda
+                let quoted_amount = in_account_currency ? 0 : (Number(payment_method.amount_cotizado) || 0)
+
+                total += quoted_amount > 0 ? quoted_amount : amount
+            })
+
+            return Math.round(total * 100) / 100
+        },
+        /**
+         * Lo que todavía falta repartir: `total_a_repartir` menos `total_repartido`, a centavos.
+         * Es negativo si se repartió de más.
+         *
+         * Se redondea por el mismo motivo que en Vender: un reparto exacto deja un residuo de coma
+         * flotante (del orden de 1e-12) que `price()` no sabe formatear, y el operador vería "NaN".
+         *
+         * Acá es informativo y NO bloquea nada, a diferencia de Vender, donde "Listo" exige cerrar el
+         * reparto: la API acepta pagar de menos (la venta queda "pagándose") y de más (el resto se
+         * aplica a las demás deudas pendientes de la cuenta).
+         *
+         * @returns {number|null} null si no hay venta elegida: sin total no hay contra qué comparar.
+         */
+        sobrante_a_repartir() {
+            if (!this.total_a_repartir) {
+                return null
+            }
+
+            return Math.round((this.total_a_repartir - this.total_repartido) * 100) / 100
         },
     },
     mounted() {

@@ -661,7 +661,61 @@ export default {
 				}
 			})
 
+			// Bloque ADITIVO (mision catalogo-por-lista-tienda): solo suma tarjetas para article con
+			// la extension online y listas restringidas. Ver agregar_tarjetas_visible_en_tienda.
+			this.agregar_tarjetas_visible_en_tienda(form_field_cards)
+
 			this.form_field_cards = form_field_cards
+		},
+		/**
+		 * Suma una tarjeta checkbox "Visible en la tienda, lista <nombre>" por cada lista de precios
+		 * RESTRINGIDA en la tienda (mision catalogo-por-lista-tienda, 5/10/2026).
+		 *
+		 * No sale de `properties_to_update` porque no es una propiedad del articulo: es una columna
+		 * del pivote `article_price_type` (`visible_en_tienda`) y hay una por lista, asi que se arma a
+		 * mano desde el store de listas. Contrato C2 con la API: el item del formulario plano lleva
+		 * `key = 'visible_en_tienda_lista_<id>'`, `type: 'checkbox'` y `value` 0 | 1, la misma forma
+		 * que `online`; build_flat_form ya omite el "No modificar" (value '').
+		 *
+		 * 🔴 Compatibilidad: este archivo es de common-vue y lo usa la masiva de TODOS los modelos.
+		 * Para cualquier modelo que no sea article, para una cuenta sin `online` o sin listas
+		 * restringidas no agrega nada, y las tarjetas de siempre quedan exactamente como estaban.
+		 *
+		 * `group_title` va fijo en 'Tienda online' (el mismo texto que el separador de
+		 * src/models/article.js): sin eso la tarjeta caeria en el primer grupo del modelo. Ese grupo
+		 * existe justamente con la extension online, que es la condicion de este bloque.
+		 *
+		 * @param {Array} form_field_cards Tarjetas que esta armando set_form (se modifica en el lugar).
+		 * @returns {void}
+		 */
+		agregar_tarjetas_visible_en_tienda(form_field_cards) {
+			if (this.model_name != 'article' || !this.hasExtencion('online')) {
+				return
+			}
+
+			let modulo_listas = this.$store.state.price_type
+			if (!modulo_listas || !Array.isArray(modulo_listas.models)) {
+				return
+			}
+
+			modulo_listas.models.forEach(price_type => {
+				// Comparacion SUELTA: la columna llega como 0/1, null o "1" segun el driver.
+				// Nunca `!= 0`: NULL tambien es "sin restriccion" (contrato C1).
+				if (!price_type || price_type.catalogo_restringido_en_tienda != 1) {
+					return
+				}
+
+				let prop_key = 'visible_en_tienda_lista_'+price_type.id
+
+				form_field_cards.push({
+					uid: 'checkbox-'+prop_key,
+					kind: 'checkbox',
+					prop_key: prop_key,
+					label: 'Visible en la tienda, lista '+price_type.name,
+					group_title: 'Tienda online',
+					value: '',
+				})
+			})
 		},
 		/**
 		 * Actualiza el grupo activo desde `GroupPorps`.

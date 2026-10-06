@@ -97,6 +97,18 @@ export default {
 		],
 	},
 
+	'pago-cc-total-a-repartir': {
+		titulo: 'Total a repartir',
+		que_hace: 'Lo que falta pagar de la deuda que elegiste (por ejemplo, una venta). Lo que cargues en las filas de métodos de pago se compara contra este importe.',
+		repercute: [
+			'Con "Completar", cada fila se llena con lo que todavía no está repartido.',
+			'Si repartís menos, esa deuda queda "pagándose" por lo que falta.',
+			'Si repartís más, el resto se aplica a las demás deudas pendientes de la cuenta, de la más vieja a la más nueva. Si no hay otras deudas, queda como saldo a favor.',
+		],
+		requiere: 'Solo aparece cuando abrís el pago con "Registrar pago para …", es decir, con una deuda elegida. Con "Registrar pago" a secas no hay un total contra el cual repartir.',
+		nota_interna: 'Reusa TotalRepartir.vue (el mismo de Vender) con otro testid A PROPOSITO: la entrada de Vender, multipago-total-a-repartir, habla del descuento del método que se quitó al abrir el reparto, y en un pago de cuenta corriente no hay ningún descuento. El sobrante acá es solo informativo y NO bloquea el pago, a diferencia de Vender, donde "Listo" exige cerrar el reparto: la API acepta pagar de menos (el débito queda en estado pagandose) y de más (sigue con los demás débitos pendientes, de la más vieja a la más nueva). Todo eso está LEÍDO en CurrentAcountPagoHelper (procesarPago y setSinPagar), NO medido por diferencia con un circuito e2e: ningún spec lo custodia. El total sale de to_pay (debe - pagandose), la misma cuenta que hace BtnPagoNotaCredito.setToPay() y la API.',
+	},
+
 	'metodos-de-pago-sucursal': {
 		titulo: 'Sucursal de las cajas',
 		que_hace: 'Elige de qué sucursal son las cajas que se ofrecen en cada fila del pago.',
@@ -111,7 +123,8 @@ export default {
 		titulo: 'Monto de esta fila',
 		que_hace: 'Cuánto se cobra con este método de pago.',
 		repercute: [
-			'La suma de todas las filas tiene que dar el total a repartir, o el reparto no se puede cerrar.',
+			'En Vender, la suma de todas las filas tiene que dar el total a repartir, o el reparto no se puede cerrar.',
+			'En el pago de una cuenta corriente la suma es lo que se cobra: si elegiste una venta, puede ser menos o más que su total a repartir.',
 		],
 		requiere: 'Cargalo ANTES de elegir la caja: el selector de caja de una fila no se dibuja hasta que la fila tiene monto.',
 	},

@@ -88,6 +88,39 @@ export default {
 			value: 0,
 			not_show: true,
 		},
+		/*
+			Mision catalogo-por-lista-tienda (5/10/2026): interruptor de la LISTA que restringe lo que
+			ven en la tienda online los compradores cuya lista efectiva es esta. Con `1`, la tienda les
+			muestra SOLO los articulos que tienen tildado "Visible en la tienda para esta lista" (columna
+			`article_price_type.visible_en_tienda`); NULL y 0 son "sin restriccion", que es lo de hoy.
+
+			- `if_has_extencion: 'online'`: sin tienda no hay nada que restringir, y una cuenta sin la
+			  extension no ve ningun campo nuevo.
+			- `value: 0`: una lista nueva nace SIN restriccion. Prenderlo es una decision explicita,
+			  porque le saca el catalogo entero a esos clientes hasta que se habiliten articulos.
+			- Debajo del campo, src/common-vue/views/Abm.vue monta (por el slot aditivo `prop_extras`)
+			  el contador "X habilitados de Y" (src/components/abm/habilitados-en-tienda-de-lista/).
+			- La API (PriceTypeController@update) solo escribe la columna si la clave viene en el
+			  request: un SPA viejo cacheado que no la manda no la pisa.
+		*/
+		{
+			text: 'En la tienda, mostrar solo los artículos habilitados para esta lista',
+			key: 'catalogo_restringido_en_tienda',
+			if_has_extencion: 'online',
+			type: 'checkbox',
+			value: 0,
+			not_show: true,
+			descriptions: [
+				// 🔴 Cuatro párrafos y cortos A PROPÓSITO (verificación en vivo del 6/10/2026): el cuerpo del
+				// globo de ayuda de ModelForm tiene un tope de 55vh y con seis párrafos (547 px) en un
+				// notebook de 1366×768 quedaban 125 px fuera de vista, justo la advertencia de que la tienda
+				// tiene que estar actualizada. Si se agrega texto acá, medirlo a 1366×768 (el tope es ~420 px).
+				'Los clientes con esta lista ven en la tienda online SOLO los artículos que habilites para ella; los demás dejan de verse hasta que los habilites (los artículos nuevos nacen sin habilitar).',
+				'Se habilitan con el check "Visible en la tienda para esta lista" de la ficha del artículo, con la actualización masiva o con el Excel de importación.',
+				'Requiere que la tienda de tu negocio esté actualizada a la versión que incluye esta función; hasta entonces sigue mostrando todo.',
+				'Si es la lista que ve el público (la de número de posición mayor que no esté oculta al público), también se aplica a los visitantes.',
+			]
+		},
 		{
 			text: 'Recargos',
 			key: 'price_type_surchages',
@@ -145,9 +178,9 @@ export default {
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Define las listas de precios del negocio (minorista, mayorista, distribuidores, etc.) y cómo se calcula cada una.',
-		implicancias: 'Cada lista aplica un margen por defecto sobre el costo de los artículos que no tengan margen o precio final propio. Cambiar el margen por defecto no modifica los artículos ya creados: para aplicárselo se usa el botón "Sincronizar artículos" que está debajo del margen, que pregunta si va solo a los que tienen el margen actual o a todos (los que tienen el precio fijado a mano quedan afuera, salvo que se los incluya a propósito). Las listas se asignan a los clientes, definen qué precio ven en Vender y en la tienda, y pueden ocultarse al público o usarse en Tienda Nube y Mercado Libre.',
+		implicancias: 'Cada lista aplica un margen por defecto sobre el costo de los artículos que no tengan margen o precio final propio. Cambiar el margen por defecto no modifica los artículos ya creados: para aplicárselo se usa el botón "Sincronizar artículos" que está debajo del margen, que pregunta si va solo a los que tienen el margen actual o a todos (los que tienen el precio fijado a mano quedan afuera, salvo que se los incluya a propósito). Las listas se asignan a los clientes, definen qué precio ven en Vender y en la tienda, y pueden ocultarse al público o usarse en Tienda Nube y Mercado Libre. Con la tienda online, una lista también puede restringir su catálogo: al activar "En la tienda, mostrar solo los artículos habilitados para esta lista", sus clientes ven en la tienda solo los artículos habilitados para ella (los demás dejan de verse hasta que se habiliten).',
 		como_se_utiliza: 'Creá la lista con nombre, posición y margen por defecto. Opcionalmente definí recargos propios de la lista y márgenes específicos por categoría o subcategoría. Después asignásela a los clientes que corresponda.',
-		palabras_clave: ['listas de precios', 'margen', 'ganancia', 'mayorista', 'minorista', 'porcentaje'],
+		palabras_clave: ['listas de precios', 'margen', 'ganancia', 'mayorista', 'minorista', 'porcentaje', 'catálogo', 'tienda', 'artículos habilitados'],
 	},
 	singular_model_name_spanish: 'Tipo de precio',
 	plural_model_name_spanish: 'Tipos de precio',
