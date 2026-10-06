@@ -114,7 +114,7 @@ export default {
 				'Si lo activás, los clientes que tienen asignada esta lista ven en la tienda online SOLO los artículos que habilites para ella.',
 				'Atención: al activarlo, los clientes con esta lista dejan de ver todos los artículos en la tienda hasta que habilites los que quieras.',
 				'Los artículos se habilitan con el check "Visible en la tienda para esta lista" de la ficha del artículo, con la actualización masiva o con la importación de Excel. Los artículos nuevos nacen sin habilitar.',
-				'Si esta es la lista que la tienda usa para quien entra sin cuenta (la de posición más alta que no está oculta al público), la restricción también se aplica a los visitantes.',
+				'Si esta es la lista que la tienda usa para quien entra sin cuenta (la de número de posición mayor que no esté oculta al público), la restricción también se aplica a los visitantes.',
 				'Las listas que no tienen esta opción activada no cambian: sus clientes siguen viendo todo el catálogo.',
 			]
 		},
