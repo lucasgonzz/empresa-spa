@@ -82,11 +82,10 @@ export default {
 		 * sincroniza las dos nuevas), asi que mostraba un valor congelado, o un guion en un cliente nuevo
 		 * que ya debia plata. Son las mismas que muestra la lista de Clientes.
 		 *
-		 * La moneda de la venta sale de la MISMA cascada que `moneda_de_la_venta` de Cobros.vue y que el
-		 * recordatorio de cobro por WhatsApp (`RecordatorioCobroSenderService`): la de la venta, si no la de
-		 * su cuenta corriente y, en ultima instancia, pesos (0 y null no son una moneda). Asi la tarjeta de
-		 * Cobros, esta etiqueta y el mensaje dicen la misma moneda. Los dolares cuentan solo con la
-		 * extension `ventas_en_dolares`: sin ella se muestra el saldo en pesos.
+		 * La moneda de la venta sale de la misma cascada que `moneda_de_la_venta` de Cobros.vue: la de la
+		 * venta, si no la de su cuenta corriente y, en ultima instancia, pesos. Los dolares cuentan solo
+		 * con la extension `ventas_en_dolares`: con ella prendida la tarjeta de Cobros y esta etiqueta
+		 * dicen la misma moneda, y sin ella la etiqueta muestra el saldo en pesos.
 		 *
 		 * Ojo: no es necesariamente la cuenta que abre el boton de al lado. `showClientCurrentAcount` la
 		 * busca por el `sale.moneda_id` pelado, sin esa cascada ni la extension.
