@@ -61,17 +61,24 @@ data-testid="habilitados-en-tienda-de-lista">
 	<!--
 		Aviso con el interruptor prendido. Si ya se sabe que no hay ninguno habilitado, se dice
 		con todas las letras: es exactamente el caso en que la tienda queda vacia para esos clientes.
+
+		Dos cuidados de texto (hallazgo H8 del revisor):
+		- Como se habilitan los articulos va SOLO en la variante de cero habilitados, que es cuando
+			hace falta. En la otra ya lo dicen el popover del interruptor y su descripcion: repetirlo
+			dejaba tres textos del mismo tema, y a 360 px eran seis u ocho lineas.
+		- El verbo va en futuro ("veran") mientras el interruptor esta prendido pero sin guardar:
+			la tienda todavia no lo aplica, y "ven" en presente decia lo contrario.
 	-->
 	<p
 	v-if="lista_restringida"
 	class="habilitados-en-tienda__aviso m-b-0">
 		<template v-if="sin_ninguno_habilitado">
 			Hoy no hay ningún artículo habilitado: los clientes con esta lista no van a ver ningún artículo en la tienda.
+			Se habilitan desde la ficha del artículo ("Visible en la tienda para esta lista"), con la actualización masiva o con la importación de Excel.
 		</template>
 		<template v-else>
-			Los clientes con esta lista ven en la tienda solo los artículos habilitados.
+			Los clientes con esta lista {{ verbo_de_la_tienda }} en la tienda solo los artículos habilitados.
 		</template>
-		Se habilitan desde la ficha del artículo ("Visible en la tienda para esta lista"), con la actualización masiva o con la importación de Excel.
 	</p>
 </div>
 </template>
@@ -138,6 +145,9 @@ export default {
 				el modelo y, mientras el objeto sea el mismo, manda el evento.
 			*/
 			restringida_en_el_formulario: esta_restringida(this.model),
+			// Lo que tenia la lista GUARDADA cuando se abrio el formulario: el aviso lo usa para hablar
+			// en futuro ("veran") mientras el interruptor este prendido pero todavia sin guardar.
+			restringida_guardada: esta_restringida(this.model),
 		}
 	},
 	computed: {
@@ -159,6 +169,25 @@ export default {
 		 */
 		lista_restringida() {
 			return this.restringida_en_el_formulario
+		},
+		/**
+		 * ¿El interruptor esta prendido pero eso todavia NO esta guardado?
+		 *
+		 * Es lo que pasa en una lista nueva, o en una guardada sin restriccion a la que se le acaba de
+		 * prender el interruptor: la tienda recien lo aplica despues de guardar.
+		 *
+		 * @return {Boolean}
+		 */
+		restriccion_sin_guardar() {
+			return this.lista_restringida && (!this.lista_guardada || !this.restringida_guardada)
+		},
+		/**
+		 * El verbo del aviso: "ven" si la tienda ya aplica la restriccion, "veran" si todavia no.
+		 *
+		 * @return {String}
+		 */
+		verbo_de_la_tienda() {
+			return this.restriccion_sin_guardar ? 'verán' : 'ven'
 		},
 		/**
 		 * ¿Ya llego una respuesta valida del contador?
@@ -199,11 +228,14 @@ export default {
 		/*
 			Si el formulario pasa a mostrar OTRO objeto de modelo (otra lista, o la misma tras un
 			guardado que no cierra el modal), el interruptor vuelve a valer lo que dice ese modelo,
-			que es tambien lo que ModelForm dibuja en el <input>. Mientras el objeto sea el mismo,
-			manda el evento del interruptor (`al_cambiar_un_campo`).
+			que es tambien lo que ModelForm dibuja en el <input>, y eso pasa a ser lo "guardado".
+			Mientras el objeto sea el mismo, manda el evento del interruptor (`al_cambiar_un_campo`).
 		*/
 		model(nuevo) {
-			this.restringida_en_el_formulario = esta_restringida(nuevo)
+			let restringida = esta_restringida(nuevo)
+
+			this.restringida_en_el_formulario = restringida
+			this.restringida_guardada = restringida
 		},
 	},
 	created() {
