@@ -82,16 +82,28 @@ export default {
 		 * sincroniza las dos nuevas), asi que mostraba un valor congelado, o un guion en un cliente nuevo
 		 * que ya debia plata. Son las mismas que muestra la lista de Clientes.
 		 *
-		 * La moneda es la de la cuenta que abre el boton de al lado (`showClientCurrentAcount` la elige por
-		 * `sale.moneda_id`): 0 y null cuentan como pesos, y los dolares solo con la extension
-		 * `ventas_en_dolares`. Asi la cifra del boton es la de la cuenta que se abre al tocarlo.
+		 * La moneda de la venta sale de la MISMA cascada que `moneda_de_la_venta` de Cobros.vue y que el
+		 * recordatorio de cobro por WhatsApp (`RecordatorioCobroSenderService`): la de la venta, si no la de
+		 * su cuenta corriente y, en ultima instancia, pesos (0 y null no son una moneda). Asi la tarjeta de
+		 * Cobros, esta etiqueta y el mensaje dicen la misma moneda. Los dolares cuentan solo con la
+		 * extension `ventas_en_dolares`: sin ella se muestra el saldo en pesos.
 		 *
-		 * @param {Object} sale Venta de la fila, con su `client`.
+		 * Ojo: no es necesariamente la cuenta que abre el boton de al lado. `showClientCurrentAcount` la
+		 * busca por el `sale.moneda_id` pelado, sin esa cascada ni la extension.
+		 *
+		 * @param {Object} sale Venta de la fila, con su `client` y su `current_acount`.
 		 * @returns {String} Saldo con el rotulo de su moneda, o '-' si el cliente no tiene dato en esa moneda.
 		 */
 		saldo_del_cliente(sale) {
+			// Moneda de la venta: la suya, si no la de su cuenta corriente y, en ultima instancia, pesos.
+			let moneda_id = 1
+			if (sale.moneda_id) {
+				moneda_id = Number(sale.moneda_id)
+			} else if (sale.current_acount && sale.current_acount.moneda_id) {
+				moneda_id = Number(sale.current_acount.moneda_id)
+			}
 			// La venta es en dolares solo si lo dice su moneda Y el negocio trabaja con cuentas en dolares.
-			let en_dolares = (Number(sale.moneda_id) || 1) == 2 && this.hasExtencion('ventas_en_dolares')
+			let en_dolares = moneda_id == 2 && this.hasExtencion('ventas_en_dolares')
 			// Saldo del cliente en esa moneda; es NULL hasta que su cuenta tiene el primer movimiento.
 			let saldo = en_dolares ? sale.client.saldo_dolares : sale.client.saldo_pesos
 			// Sin dato: un guion, y no "USD -", que dejaria el rotulo de la moneda solo. El cero SI se muestra.
