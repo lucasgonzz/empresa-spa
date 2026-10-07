@@ -1,11 +1,25 @@
 <template>
 	<div>
+		<!--
+			usar-cliente: "Usar cliente para la venta" del modal de ARCA (el CUIT ya era de un
+			cliente cargado). El modal solo avisa; elegirlo pasa por setSelected(), igual que un clic
+			en el buscador. Ver usar_cliente_de_arca().
+		-->
 		<modal-result
 		:title="afip_modal_title"
 		:afip_data="afip_data"
-		:client_model="client_model_for_afip_modal"></modal-result>
+		:client_model="client_model_for_afip_modal"
+		@usar-cliente="usar_cliente_de_arca"></modal-result>
 
-		<!-- Buscador de cliente con ícono distintivo en etapa 1 de vender -->
+		<!--
+			Buscador de cliente con ícono distintivo en etapa 1 de vender.
+
+			elegir_al_crear: el cliente que se crea desde acá —el "+ Cliente" del buscador o "Crear
+			cliente y usar para esta venta" del modal de ARCA (buscar-por-cuit/ModalResult.vue)— queda
+			elegido para la venta al guardar, pasando por el mismo setSelected() de abajo que un clic en
+			los resultados. Pedido de Lucas, 4/10/2026: antes volvía al buscador y había que elegirlo a
+			mano. Solo en el alta: editar el cliente desde el chip no lo vuelve a elegir.
+		-->
 		<div
 		v-if="puede_cambiar_cliente"
 		class="vender-stage__client-search">
@@ -17,6 +31,7 @@
 			model_name="client"
 			:props_to_filter="['num', 'name', 'phone', 'dni', 'cuit']"
 			show_btn_create
+			elegir_al_crear
 			search_from_api
 			:tax_id_afip_lookup_on_second_enter="true"
 			placeholder="Buscar cliente, CUIT o DNI"
@@ -62,7 +77,21 @@ export default {
 			afip_modal_title: '',
 			afip_data: null,
 			client_model_for_afip_modal: null,
+			/*
+				Espera armada por enfocar_buscador_al_cerrar_modal_de_arca(): `{ handler, tope }`, o
+				null si no hay ninguna. Se guarda para poder desarmarla (el $off del listener de $root
+				y el clearTimeout del tope) desde cualquiera de los tres caminos que la cierran.
+			*/
+			foco_pendiente_tras_arca: null,
 		}
+	},
+	beforeDestroy() {
+		/*
+			🔴 Obligatorio, no higiene: el listener de bv::modal::hidden vive en $root, que dura toda
+			la sesion. Si Vender se destruye con la espera armada, sin esto quedaria colgado de una
+			instancia muerta.
+		*/
+		this.cancelar_foco_pendiente_tras_arca()
 	},
 	computed: {
 		price_types() {
@@ -198,6 +227,94 @@ export default {
 			this.aplicar_ajustes_del_cliente(client)
 
 			this.set_afip_tipo_comprobante()
+		},
+		/**
+		 * Elige para la venta el cliente que el modal de ARCA encontró ya cargado ("Usar cliente
+		 * para la venta").
+		 *
+		 * 🔴 Pasa por setSelected() a propósito, con la misma forma que le manda el buscador
+		 * (`{ model }`): setSelected() es la única puerta para elegir el cliente de la venta desde
+		 * la interfaz de Vender. Ahí viven la caja, el tipo de comprobante y la rama de edición que
+		 * conserva la lista de precios; cuando el modal elegía por su cuenta se los salteaba
+		 * (misión cliente-desde-arca-en-vender, 4/10/2026).
+		 *
+		 * @param {Object} client Cliente que devolvió la consulta a ARCA.
+		 * @returns {void}
+		 */
+		usar_cliente_de_arca(client) {
+			this.setSelected({ model: client })
+			// Que termine con el foco en el campo, como una seleccion normal. Ver el metodo.
+			this.enfocar_buscador_al_cerrar_modal_de_arca()
+		},
+		/**
+		 * Deja el foco en el input del buscador de cliente (`#select_client_vender`) cuando el
+		 * modal de ARCA (`afip-data-modal`) termina de cerrarse.
+		 *
+		 * Por que hace falta: una seleccion normal cierra el modal de busqueda y bootstrap-vue le
+		 * devuelve el foco a ese input. Por "Usar cliente para la venta" el que se cierra es el
+		 * modal de ARCA, y bootstrap-vue le devuelve el foco a lo que lo tenia al abrirse: el input
+		 * del modal de busqueda, que onRequestClientAfipLookup() ya oculto. El foco no va a ningun
+		 * lado y queda en BODY (medido con Playwright el 4/10/2026): un cajero con teclado se
+		 * queda sin foco.
+		 *
+		 * Es el mismo mecanismo que search/Index.vue::enfocar_input_al_cerrar_el_formulario() para
+		 * el alta, escrito aca y no reusado a proposito: aquel filtra por el id del `<model>` de su
+		 * buscador, y parametrizarlo para este modal acoplaria el buscador generico con un modal
+		 * propio de Vender.
+		 *
+		 * 🔴 Por que esperar al `hidden` y no enfocar ya: mientras el b-modal esta visible,
+		 * bootstrap-vue fuerza el foco adentro de el (enforce focus). Y adentro del handler se
+		 * enfoca en un $nextTick: bootstrap-vue devuelve su foco tambien en un $nextTick que agenda
+		 * ANTES de emitir el `hidden` (modal.js, onAfterLeave), asi que el nuestro queda ultimo.
+		 *
+		 * El tope de 5 s es para que el listener de $root no quede colgado si el `hidden` nunca
+		 * llega. El beforeDestroy cubre el tercer caso.
+		 *
+		 * @returns {void}
+		 */
+		enfocar_buscador_al_cerrar_modal_de_arca() {
+			let self = this
+
+			// Una espera nueva desarma la anterior antes de armarse.
+			this.cancelar_foco_pendiente_tras_arca()
+
+			let handler = function(bv_event, modal_id) {
+				if (modal_id !== 'afip-data-modal') {
+					return
+				}
+				self.cancelar_foco_pendiente_tras_arca()
+				self.$nextTick(function() {
+					// Con guarda: el buscador va con v-if (puede_cambiar_cliente).
+					let input = document.getElementById('select_client_vender')
+					if (input) {
+						input.focus()
+					}
+				})
+			}
+
+			let tope = setTimeout(function() {
+				self.cancelar_foco_pendiente_tras_arca()
+			}, 5000)
+
+			this.$root.$on('bv::modal::hidden', handler)
+			this.foco_pendiente_tras_arca = {
+				handler: handler,
+				tope: tope,
+			}
+		},
+		/**
+		 * Desarma la espera de enfocar_buscador_al_cerrar_modal_de_arca(), si hay una: saca el
+		 * listener de $root y corta el tope. Se puede llamar de mas sin efecto.
+		 *
+		 * @returns {void}
+		 */
+		cancelar_foco_pendiente_tras_arca() {
+			if (!this.foco_pendiente_tras_arca) {
+				return
+			}
+			this.$root.$off('bv::modal::hidden', this.foco_pendiente_tras_arca.handler)
+			clearTimeout(this.foco_pendiente_tras_arca.tope)
+			this.foco_pendiente_tras_arca = null
 		},
 		// Devuelve true si se está editando un comprobante ya guardado (presupuesto o venta previa),
 		// false si es una venta nueva en curso.

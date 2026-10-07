@@ -9,17 +9,7 @@
 			head-variant="dark"
 			responsive
 			:fields="fields"
-			:items="items">
-
-				<template #cell(proveedor)="data">
-					<b-button
-					@click="showCurrentAcounts(pedidos_sin_confirmar[data.index])"
-					variant="success">
-						{{ pedidos_sin_confirmar[data.index].buyer.name }}
-					</b-button>
-				</template>
-
-			</b-table>
+			:items="items"></b-table>
 
 			<!-- Estado vacío del sistema (display/EmptyState), en vez del cartel azul viejo. -->
 			<empty-state
@@ -78,11 +68,6 @@ export default {
 		pedidos_sin_confirmar() {
 			return this.$store.state.order.unconfirmed_models
 		},
-	},
-	methods: {
-		showCurrentAcounts(provider_order) {
-			this.showProviderCurrentAcount(provider_order)
-		}
 	}
 }
 </script>

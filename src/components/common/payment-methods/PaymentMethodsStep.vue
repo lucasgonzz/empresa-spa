@@ -212,13 +212,22 @@
 
 <script>
 import caja_por_defecto from '@/mixins/caja_por_defecto'
+/*
+    🔴 CheckInfo y Cuotas van estaticos: se dibujan en cada fila, y las filas aparecen recien cuando
+    se abre el reparto. Asincronos, sus chunks se pedian en ese momento y una venta de Vender sin
+    internet abria el reparto con las filas a medias (sin cuotas ni datos del cheque). Medido el
+    4/10/2026 con la red cortada. RetencionInfo queda asincrono: solo lo prende el cobro de cuenta
+    corriente (show_datos_retencion), que sin red no se puede guardar igual.
+*/
+import CheckInfo from '@/components/common/payment-methods/CheckInfo'
+import Cuotas from '@/components/common/payment-methods/Cuotas'
 export default {
     mixins: [caja_por_defecto],
     name: 'PaymentMethodsStep',
     components: {
 
-        CheckInfo: () => import('@/components/common/payment-methods/CheckInfo'),
-        Cuotas: () => import('@/components/common/payment-methods/Cuotas'),
+        CheckInfo,
+        Cuotas,
         RetencionInfo: () => import('@/components/common/payment-methods/RetencionInfo'),
     },
     props: {
@@ -805,6 +814,8 @@ export default {
          * Si el método usa otra moneda, hay que convertir: el campo amount va en la
          * moneda del método y amount_cotizado en base (misma regla que check_moneda).
          *
+         * Si no queda sobrante (<= 0) no toca la fila y avisa con un toast.
+         *
          * @param {number} index Índice de la fila en payment_methods
          * @returns {void}
          */
@@ -815,6 +826,28 @@ export default {
             }
 
             let sobrante_en_base = Number(this.sobrante_a_repartir) || 0
+
+            /*
+             * Sin sobrante no hay nada que completar: el reparto ya cubre el total o se pasa.
+             *
+             * OJO: no es un chequeo "por las dudas". Completar PISA el monto de la fila con el
+             * sobrante, no se lo suma: con sobrante 0 deja la fila en $0 y con uno negativo (se
+             * repartió de más) la deja en NEGATIVO, borrando lo que el usuario había cargado. En el
+             * pago de una cuenta corriente con una venta elegida eso pasa de entrada: la primera fila
+             * abre precargada con el saldo entero (sobrante 0) y el botón aparece ahí mismo. En
+             * Vender el botón se encuentra antes con una fila vacía y casi no se notaba.
+             *
+             * Con sobrante > 0 el comportamiento no cambia.
+             */
+            if (sobrante_en_base <= 0) {
+                // Con una sola fila no hay otra a la que bajarle el importe: el aviso solo explica que ya está todo repartido
+                let hay_otras_filas = this.payment_methods.length > 1
+                this.$toast.info(hay_otras_filas
+                    ? 'No queda nada por repartir. Para completar esta fila, bajá antes el importe de otra.'
+                    : 'No queda nada por repartir: el total ya está cubierto.')
+                return
+            }
+
             let moneda_base = Number(this.base_moneda) || 0
             let moneda_metodo = Number(pm.moneda_id) || 0
 

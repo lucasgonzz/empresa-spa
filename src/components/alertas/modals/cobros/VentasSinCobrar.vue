@@ -70,10 +70,46 @@ export default {
 	methods: {
 		client_name(sale) {
 			if (sale.client) {
-				return sale.client.name+' ( '+ this.price(sale.client.saldo) +' )'
-				// return sale.client.name+' ( '+ this.price(sale.client.saldo) +' )'
+				return sale.client.name+' ( '+ this.saldo_del_cliente(sale) +' )'
 			}
 			return 'NO HAY'
+		},
+		/**
+		 * Saldo del cliente en la moneda de la venta, con su rotulo ("USD ..." en dolares).
+		 *
+		 * 🔴 Lee `saldo_pesos` / `saldo_dolares` y no `saldo`: esa columna es de antes de las cuentas por
+		 * moneda y ningun movimiento la mantiene al dia (`CurrentAcountHelper::set_model_saldo()` solo
+		 * sincroniza las dos nuevas), asi que mostraba un valor congelado, o un guion en un cliente nuevo
+		 * que ya debia plata. Son las mismas que muestra la lista de Clientes.
+		 *
+		 * La moneda de la venta sale de la misma cascada que `moneda_de_la_venta` de Cobros.vue: la de la
+		 * venta, si no la de su cuenta corriente y, en ultima instancia, pesos. Los dolares cuentan solo
+		 * con la extension `ventas_en_dolares`: con ella prendida la tarjeta de Cobros y esta etiqueta
+		 * dicen la misma moneda, y sin ella la etiqueta muestra el saldo en pesos.
+		 *
+		 * Ojo: no es necesariamente la cuenta que abre el boton de al lado. `showClientCurrentAcount` la
+		 * busca por el `sale.moneda_id` pelado, sin esa cascada ni la extension.
+		 *
+		 * @param {Object} sale Venta de la fila, con su `client` y su `current_acount`.
+		 * @returns {String} Saldo con el rotulo de su moneda, o '-' si el cliente no tiene dato en esa moneda.
+		 */
+		saldo_del_cliente(sale) {
+			// Moneda de la venta: la suya, si no la de su cuenta corriente y, en ultima instancia, pesos.
+			let moneda_id = 1
+			if (sale.moneda_id) {
+				moneda_id = Number(sale.moneda_id)
+			} else if (sale.current_acount && sale.current_acount.moneda_id) {
+				moneda_id = Number(sale.current_acount.moneda_id)
+			}
+			// La venta es en dolares solo si lo dice su moneda Y el negocio trabaja con cuentas en dolares.
+			let en_dolares = moneda_id == 2 && this.hasExtencion('ventas_en_dolares')
+			// Saldo del cliente en esa moneda; es NULL hasta que su cuenta tiene el primer movimiento.
+			let saldo = en_dolares ? sale.client.saldo_dolares : sale.client.saldo_pesos
+			// Sin dato: un guion, y no "USD -", que dejaria el rotulo de la moneda solo. El cero SI se muestra.
+			if (saldo === null || typeof saldo == 'undefined') {
+				return '-'
+			}
+			return this.current_acount_simbolo_moneda({moneda_id: en_dolares ? 2 : 1}, saldo)
 		},
 		lo_que_falta_pagarse(sale) {
 			return this.price(Number(sale.current_acount.debe) - Number(sale.current_acount.pagandose))

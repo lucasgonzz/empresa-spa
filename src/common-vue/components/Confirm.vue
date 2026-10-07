@@ -102,13 +102,34 @@ export default {
 	},
 	computed: {
 		confirm_text() {
-			if (this.not_show_delete_text) {
+			/*
+				Un texto que ya es una pregunta completa ("¿Seguro que quiere revertir…?") se muestra
+				tal cual: envolverlo en "¿Seguro que quiere eliminar …?" lo duplica, aunque el que lo
+				use se haya olvidado de not_show_delete_text (pasó en el historial de masivas, 4/10/2026).
+			*/
+			/*
+				`not_show_delete_text` muestra el texto tal cual SOLO si hay texto. Sin texto cae en la
+				pregunta por defecto del modelo: antes devolvía el `text` vacío y el cartel quedaba en
+				blanco, con solo el botón Eliminar (pasó con el plan de pago, 4/10/2026).
+			*/
+			if (this.text_es_pregunta || (this.not_show_delete_text && this.text)) {
 				return this.text
 			} else if (this.text) {
 				return '¿Seguro que quiere eliminar '+this.text+'?'
-			} else {
+			} else if (this.model_name) {
 				return '¿Seguro que quiere eliminar '+this.text_delete(this.model_name)+' '+this.singular(this.model_name).toLowerCase()+'?'
 			}
+			// Sin texto ni modelo no hay pregunta que armar (el require del modelo reventaría).
+			return this.text
+		},
+		/**
+		 * True si el texto recibido ya arranca con "¿", o sea que es una pregunta armada por quien
+		 * usa el confirm y no un fragmento para completar "¿Seguro que quiere eliminar …?".
+		 *
+		 * @returns {Boolean}
+		 */
+		text_es_pregunta() {
+			return typeof this.text === 'string' && this.text.trim().indexOf('¿') === 0
 		},
 	},
 	methods: {
@@ -131,8 +152,7 @@ export default {
 
 	        try {
 
-	            this.$emit('confirmed') // ojo: tenías 'confimed' (typo)
-
+	            // El flag lo lee la acción de borrado: tiene que estar ANTES de despacharla.
 	            if (this.show_compensar_caja_checkbox && this.model_name) {
 	            	this.$store.commit(this.model_name + '/setCompensarCajaDelete', this.compensar_caja)
 	            }
@@ -142,8 +162,23 @@ export default {
 	                await this.$store.dispatch(this.actions[i])
 	            }
 
-	            // Si llegó acá, salieron todas bien
-	            this.$toast.success(this.toast)
+	            /*
+	            	'confirmed' sale recién acá, cuando las acciones salieron bien. Salía antes de
+	            	despacharlas: model/Index lo convierte en `modelDeleted` y caja recargaba sus
+	            	movimientos aunque el borrado fallara (4/10/2026).
+	            */
+	            this.$emit('confirmed')
+
+	            /*
+	            	Si llegó acá, salieron todas bien. El aviso (por defecto "Eliminado") es del
+	            	trabajo que hizo el confirm: si no corrió ninguna acción propia, lo único que hizo
+	            	fue avisarle al padre con 'confirmed', y el aviso le toca al padre. Sin esta guarda,
+	            	un confirm que no es de borrado y se olvida del emit muestra "Eliminado" encima del
+	            	aviso propio (historial de masivas, 4/10/2026).
+	            */
+	            if (this.actions.length) {
+	            	this.$toast.success(this.toast)
+	            }
 	            this.$bvModal.hide(this.id)
 	            if (this.model_name) {
 	                this.$bvModal.hide(this.model_name)
@@ -152,9 +187,25 @@ export default {
 	        } catch (err) {
 	            // Corta acá en el primer error
 	            this.$toast.error('Error al ejecutar la acción')
-	            // Si querés mostrar algo más útil:
-	            const msg = err?.response?.data?.message || err?.message || String(err)
-	            this.$toast.error(msg)
+
+	            /*
+	            	El detalle del servidor ya lo mostró el interceptor global (main.js → errorEvent →
+	            	common-vue/components/error/Index.vue) cuando el error trae `response` y el pedido
+	            	no pidió `skip_global_error_event`: repetirlo acá lo mostraba dos veces (medido con
+	            	un 500, 4/10/2026). Se agrega cuando el error no trae el detalle del servidor: un error
+	            	de red (el interceptor avisa solo que no hubo conexión, no qué acción falló), un
+	            	pedido silenciado o un error que no vino de un pedido.
+	            */
+	            let ya_lo_mostro_el_interceptor = !!(err && err.response && !(err.config && err.config.skip_global_error_event))
+	            if (!ya_lo_mostro_el_interceptor) {
+	            	let msg = String(err)
+	            	if (err && err.response && err.response.data && err.response.data.message) {
+	            		msg = err.response.data.message
+	            	} else if (err && err.message) {
+	            		msg = err.message
+	            	}
+	            	this.$toast.error(msg)
+	            }
 	        } finally {
 	            this.loading = false
 	        }

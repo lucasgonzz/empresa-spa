@@ -76,7 +76,12 @@ export default {
 						article: input.article.name,
 						planned_amount: input.planned_amount,
 						actual_amount: input.actual_amount,
-						address: input.address.street,
+						/*
+							Mision eliminar-sucursal-con-stock (5/10/2026): el insumo puede apuntar a un deposito que
+							despues se elimino, y entonces `input.address` llega null. Antes `.street` tiraba un
+							TypeError y la tabla entera quedaba en blanco. `address_id` sigue yendo tal cual a la API.
+						*/
+						address: input.address ? input.address.street : 'Sucursal eliminada',
 					})
 				})
 			}

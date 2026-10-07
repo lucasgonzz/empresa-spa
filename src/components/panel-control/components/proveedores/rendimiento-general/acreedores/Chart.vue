@@ -46,10 +46,13 @@ export default {
 			}
 
 
-			if (this.order_by == 'mayor-a-menor') {	
-				providers = providers.sort((a, b) => b.saldo - a.saldo)
+			// Se ordena por el saldo vivo en pesos (ver saldo_en_pesos), no por la columna vieja `saldo`.
+			// Sobre una COPIA: `_providers` es `state.provider.models` y `sort` ordena en el lugar, asi que
+			// sin el slice() este grafico reordenaria el store de todas las pantallas que lo leen.
+			if (this.order_by == 'mayor-a-menor') {
+				providers = providers.slice().sort((a, b) => this.saldo_en_pesos(b) - this.saldo_en_pesos(a))
 			} else {
-				providers = providers.sort((a, b) => a.saldo - b.saldo)
+				providers = providers.slice().sort((a, b) => this.saldo_en_pesos(a) - this.saldo_en_pesos(b))
 			}
 			console.log(providers)
 
@@ -58,7 +61,7 @@ export default {
 
 			providers.forEach(model => {
 				labels.push(model.name)
-				data.push(model.saldo)
+				data.push(this.saldo_en_pesos(model))
 			})		
 
 			let that = this
@@ -66,7 +69,8 @@ export default {
 				labels: labels,
 				datasets: [
 					{
-						label: 'Saldo',
+						// El grafico es en pesos: con la extension de dolares el rotulo lo aclara, para que no se lea como el total de la deuda.
+						label: this.hasExtencion('ventas_en_dolares') ? 'Saldo en pesos' : 'Saldo',
 						backgroundColor: '#007bff',
 						data: data,
 					},
@@ -85,6 +89,26 @@ export default {
 					}
 				}
 			})
+		},
+		/**
+		 * Saldo del proveedor en pesos, listo para ordenar y graficar.
+		 *
+		 * 🔴 Lee `saldo_pesos` y no `saldo`: esa columna es de antes de las cuentas por moneda y ningun
+		 * movimiento la mantiene al dia (`CurrentAcountHelper::set_model_saldo()` solo sincroniza `saldo_pesos`
+		 * y `saldo_dolares`), asi que el grafico mostraba un valor congelado, o vacio en un proveedor nuevo.
+		 * `saldo_pesos` es el mismo dato que muestra la lista de Proveedores.
+		 *
+		 * Los decimales llegan como string ("1234.50") y como `null` hasta el primer movimiento de la cuenta:
+		 * `Number() || 0` los vuelve un numero, para que el orden y la altura de la barra no dependan del tipo.
+		 *
+		 * Los dolares (`saldo_dolares`) no se grafican aca: son otra moneda y no se suman ni comparten eje
+		 * con los pesos.
+		 *
+		 * @param {Object} provider Proveedor del catalogo (`provider/getModels`).
+		 * @returns {Number} Saldo en pesos; 0 si no hay dato.
+		 */
+		saldo_en_pesos(provider) {
+			return Number(provider.saldo_pesos) || 0
 		},
 		setSelectedProvider(provider) {
 			this.$router.push({params: {sub_view: 'rendimiento-por-proveedor'}})

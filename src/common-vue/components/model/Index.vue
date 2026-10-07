@@ -666,7 +666,8 @@ export default {
 							}
 						}
 						this.closeModal(info, res.data.model)
-						this.callActions(res.data.model)
+						// false: es una actualizacion, no un alta (ver callActions).
+						this.callActions(res.data.model, false)
 					})
 					.catch(err => {
 						this.extra_props_del_proximo_guardado = {}
@@ -734,7 +735,8 @@ export default {
 							}
 						}	
 						this.closeModal(info, res.data.model)
-						this.callActions(created_model)
+						// true: es un alta (ver callActions).
+						this.callActions(created_model, true)
 						this.clearModel(info)
 					})
 					.catch(err => {
@@ -1089,11 +1091,26 @@ export default {
 				this.$store.commit(this.model_name+'/setDeletedModelsFromRelationFiltered', [])
 			}
 		},
-		callActions(model) {
+		/**
+		 * Corre las acciones de despues de guardar y avisa al padre con `modelSaved`.
+		 *
+		 * El segundo argumento del evento, `{ es_nuevo }`, es ADITIVO (mision
+		 * cliente-desde-arca-en-vender, 4/10/2026): los listeners de siempre declaran un solo
+		 * parametro y lo ignoran. Hace falta porque `modelSaved` sale tanto del POST como del PUT,
+		 * y el buscador de cliente de Vender (search/Index.vue con `elegir_al_crear`) tiene que
+		 * distinguirlos: elige solo al cliente recien creado. El PUT lo dispara tambien el chip del
+		 * cliente ya elegido (search/SelectedInfo.vue abre su formulario para editarlo), y ahi no
+		 * hay nada que elegir.
+		 *
+		 * @param {Object} model Modelo que devolvio la API.
+		 * @param {Boolean} es_nuevo true si vino del POST (alta), false si vino del PUT.
+		 * @returns {void}
+		 */
+		callActions(model, es_nuevo) {
 			this.actions_after_save.forEach(action => {
 				this.$store.dispatch(action)
 			})
-			this.$emit('modelSaved', model)
+			this.$emit('modelSaved', model, { es_nuevo: !!es_nuevo })
 		}
 	},
 }

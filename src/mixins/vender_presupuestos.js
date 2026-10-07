@@ -637,8 +637,13 @@ export default {
 				*/
 				if (Array.isArray(article.varios_precios) && article.varios_precios.length) {
 
+					/*
+						for_update viaja hasta cada fila: al actualizar, las filas de un renglon ya cargado
+						van bajo `pivot`, como el renglon, para que la API no les vuelva a calcular el
+						costo (ver renglon_de_presupuesto_desde_otro_precio).
+					*/
 					article.varios_precios.forEach(otro_precio => {
-						articles.push(this.renglon_de_presupuesto_desde_otro_precio(article, otro_precio))
+						articles.push(this.renglon_de_presupuesto_desde_otro_precio(article, otro_precio, for_update))
 					})
 
 					return
@@ -743,11 +748,18 @@ export default {
 		 * renglon por renglon, y la suma de las filas descontadas es exactamente el total que muestra
 		 * VENDER (getTotalItem aplica el descuento sobre calculated_price_vender).
 		 *
+		 * Al ACTUALIZAR, cada fila de un renglon ya cargado (con `pivot`: un renglon reabierto, o el
+		 * que reagrupo utils/varios_precios_guardados.js) viaja bajo `pivot`, con la misma forma que
+		 * el renglon ya cargado, sea guardada o nueva: ver el bloque de abajo. El alta y los
+		 * renglones que se agregaron en la edicion (sin pivot), planos como siempre.
+		 *
 		 * @param {Object} article Renglon de articulo de VENDER, con varios_precios.
 		 * @param {Object} otro_precio Una fila de article.varios_precios.
-		 * @returns {Object} Renglon plano (sin pivot) para BudgetHelper::attachArticles().
+		 * @param {Boolean} [for_update=false] El de get_articles(): true al actualizar un presupuesto.
+		 * @returns {Object} Renglon para BudgetHelper::attachArticles(): plano, o con `pivot` si el
+		 *          renglon ya estaba cargado y se esta actualizando el presupuesto.
 		 */
-		renglon_de_presupuesto_desde_otro_precio(article, otro_precio) {
+		renglon_de_presupuesto_desde_otro_precio(article, otro_precio, for_update = false) {
 
 			let precio = otro_precio.price_vender
 			let base = null
@@ -768,6 +780,65 @@ export default {
 
 			if (otro_precio.amount != '') {
 				cantidad = Number(otro_precio.amount)
+			}
+
+			/*
+				🔴 AL ACTUALIZAR, TODA FILA DE UN RENGLON YA CARGADO (con `pivot`) VA BAJO `pivot`, NO
+				PLANA: la que vino del presupuesto guardado Y la que se tipeo en esta edicion (mision
+				varios-precios-descuento-renglon, 3/10/2026). NO "UNIFICAR" CON EL RETURN PLANO DE ABAJO.
+
+				Espeja lo que hace la API con una VENTA: SaleHelper::fila_de_varios_precios() le copia a
+				cada fila el `pivot` del renglon padre, asi que al editar una venta el costo queda
+				congelado en todas las filas del renglon, nuevas incluidas. El presupuesto tiene que
+				comportarse igual, y aca, a diferencia de la venta, las filas se arman a mano.
+
+				Por que una fila PLANA de un renglon reabierto es un error: su costo (article.cost) es el
+				del pivot guardado (getItemsPreviusSale(): `item.cost = Number(article.pivot.cost)`), o sea
+				que YA es el costo unitario y YA esta cotizado. SaleHelper::getCost() devuelve tal cual el
+				`pivot.cost` de un renglon (lo congela), pero a un renglon PLANO lo trata como costo de
+				catalogo: lo vuelve a dividir por unidades_individuales, lo vuelve a cotizar si el
+				articulo esta en dolares, y le vuelve a aplicar los descuentos y recargos del comprobante
+				si el comercio tiene aplicar_descuentos_de_venta_a_costos. Con 10 unidades individuales y
+				costo unitario 100, cada "Actualizar en VENDER" + guardar dividia el costo por 10
+				(100 -> 10 -> 1) y la ganancia del presupuesto quedaba inflada. Pasaba con las filas que
+				arma el reagrupado al abrir el presupuesto (utils/varios_precios_guardados.js), y pasaba
+				desde antes con cualquier precio que se tipeara en "Personalizado" sobre un renglon
+				reabierto: el costo de esa fila nueva tambien es el del pivot.
+
+				Es la misma forma que la rama `for_update && ya_estaba_cargado` de get_articles(), con el
+				precio, la cantidad y la base de la fila: BudgetHelper::attachArticles() lee amount,
+				price, bonus y location del pivot, y la base primero en el pivot y despues en la raiz.
+
+				- En el alta (for_update false) no hay nada cargado, y un renglon que se agrego en esta
+				  edicion no tiene pivot: su costo es el del catalogo y la API lo tiene que calcular. Los
+				  dos siguen planos, como siempre.
+				- `cost: article.cost` y no un costo por fila guardado aparte: article.cost es lo que
+				  reexpresar_comprobante.js convierte cuando el vendedor cambia la moneda del
+				  presupuesto, y un costo guardado en otra clave quedaria en la moneda vieja.
+			*/
+			if (
+				for_update
+				&& typeof article.pivot != 'undefined'
+			) {
+				return {
+					id: article.id,
+					status: article.status,
+					cost_in_dollars: article.cost_in_dollars,
+					name: article.name,
+					name_vender_personalizado: article.name_vender_personalizado || null,
+					pivot: {
+						amount: cantidad,
+						price: precio,
+						cost: article.cost,
+						costo_real: article.costo_real,
+						unidades_individuales: article.unidades_individuales,
+						presentacion: article.presentacion,
+						price_type_personalizado_id: article.price_type_personalizado_id,
+						bonus: typeof article.discount != 'undefined' ? article.discount : null,
+						location: null,
+						price_vender_sin_recargos: base,
+					},
+				}
 			}
 
 			return {

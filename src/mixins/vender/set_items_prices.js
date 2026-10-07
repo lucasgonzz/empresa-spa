@@ -52,6 +52,30 @@ export default {
 		 * factura y el presupuesto sumando renglones. La base (`price_vender_sin_recargos`) es el
 		 * input del vendedor, sin redondear.
 		 *
+		 * 🔴 COMPROBANTE LEGADO (mision varios-precios-descuento-renglon, 3/10/2026). Las filas que
+		 * vienen de un comprobante guardado (`desde_comprobante_guardado`, las arma
+		 * utils/varios_precios_guardados.js al abrirlo) NO se recargan si el comprobante es legado
+		 * (vender.recargos_en_precios_sin_registro): su precio va tal cual y la base en null, lo mismo
+		 * que hace getPriceVender() en la rama del pivot del legado. NO SACAR ESTA EXCEPCION "PARA QUE
+		 * TODAS LAS FILAS SE RECARGUEN IGUAL": en un legado el precio guardado ya es el que se cobro
+		 * -con el recargo adentro, o sin el en las filas de varios precios de antes del 28/9/2026, que
+		 * no lo llevaban (decision 2 de esa mision)- y el sistema no sabe cuanto valia sin el.
+		 * Recargarlo le subiria el total solo a una venta vieja con la opcion prendida, nada mas que
+		 * por abrirla. Y Surchages.vue le bloquea los recargos y la opcion a un legado, asi que el
+		 * factor no puede cambiar mientras se edita.
+		 *
+		 * Las filas NUEVAS que el vendedor tipee en un legado (sin la marca) se recargan como
+		 * cualquier precio escrito a mano, igual que el precio personalizado en getPriceVender(). Una
+		 * fila cargada que el vendedor edite conserva la marca: lo que tipea reemplaza un precio que
+		 * ya era el final (se le mostraba con el recargo adentro), y queda como precio final.
+		 *
+		 * La marca es un booleano y el precio sigue viviendo en `price_vender`, a proposito:
+		 * reexpresar_comprobante.js convierte `price_vender` de cada fila al cambiar de moneda, y un
+		 * precio guardado en otra clave quedaria en la moneda vieja.
+		 *
+		 * A esas mismas filas guardadas se les aplica tambien el ajuste de los checks de IVA, como a
+		 * un renglon suelto del pivot (ver el bloque del IVA, adentro del forEach).
+		 *
 		 * @param {Object} item
 		 */
 		set_varios_precios_con_recargos(item) {
@@ -66,6 +90,12 @@ export default {
 
 			let factor = this.factor_recargos_de_venta(item)
 
+			/*
+				Comprobante legado: lo calcula set_datos_para_actualizar_en_vender() al abrirlo, con lo
+				que tiene guardado, y lo limpia limpiar_vender(). En una venta nueva es false.
+			*/
+			let comprobante_legado = Boolean(this.$store.state.vender.recargos_en_precios_sin_registro)
+
 			let calculated_price_vender = 0
 
 			item.varios_precios.forEach(otro_precio => {
@@ -78,12 +108,67 @@ export default {
 
 				let precio_sin_recargos = Number(otro_precio.price_vender)
 
-				if (factor === null) {
-					otro_precio.price_vender_con_recargos = precio_sin_recargos
+				/*
+					El factor de ESTA fila: el del renglon, salvo la fila cargada de un comprobante
+					legado, que va sin recargar (ver el bloque de arriba). Ahi `precio_sin_recargos` es
+					en realidad el precio guardado tal cual, y por eso viaja sin base.
+				*/
+				let factor_de_la_fila = factor
+
+				if (comprobante_legado && otro_precio.desde_comprobante_guardado) {
+					factor_de_la_fila = null
+				}
+
+				// El precio de la fila con los recargos de venta adentro, o tal cual si no hay factor.
+				let precio = factor_de_la_fila === null ? precio_sin_recargos : precio_sin_recargos * factor_de_la_fila
+
+				// La base que viaja: el precio sin recargos, solo si hubo factor (ver la invariante).
+				let base = factor_de_la_fila === null ? null : precio_sin_recargos
+
+				/*
+					🔴 IVA DE LA FILA QUE VIENE DEL COMPROBANTE GUARDADO (mision
+					varios-precios-descuento-renglon, 3/10/2026). NO SACAR "PORQUE LAS FILAS TIPEADAS NO
+					LO HACEN".
+
+					Hasta que una venta o un presupuesto reabierto junto sus filas en un renglon
+					(utils/varios_precios_guardados.js), cada fila era un renglon suelto y pasaba por la
+					rama del pivot de getPriceVender() (generals.js), que despues del factor de recargos
+					-o del precio tal cual, en el legado- le aplica
+					ajustar_precio_segun_iva_aplicado(item, precio, true). Sin esto, si el vendedor
+					apaga "Precios con IVA" (o prende "Sumar IVA a los articulos sin IVA") editando, los
+					renglones sueltos se ajustan y las filas no, y se guardan con el IVA adentro en un
+					comprobante que dice que no lo tiene. Mismo orden que esa rama: precio guardado ->
+					factor (o tal cual) -> ajuste de IVA -> base = precio / factor -> redondeo a
+					centavos solo si hubo factor. Asi la fila sale exactamente como saldria ese mismo
+					precio en un renglon suelto.
+
+					- Sin tocar los checks, el ajuste devuelve el precio TAL CUAL
+					  (utils/iva_en_vender.js) y la fila sale identica a como salia antes: por eso la base
+					  se recalcula SOLO si el IVA cambio el precio. Dividir siempre (p x f / f) le
+					  agregaria ruido de coma flotante en el ultimo decimal a una base que no cambio.
+					- Las filas TIPEADAS (sin la marca) no se ajustan, como hasta ahora: que una fila
+					  tipeada siga los checks de IVA es otro tema (queda anotado en el informe).
+				*/
+				if (otro_precio.desde_comprobante_guardado) {
+
+					let precio_con_iva = this.ajustar_precio_segun_iva_aplicado(item, precio, true)
+
+					if (precio_con_iva !== precio) {
+
+						precio = Number(precio_con_iva)
+
+						if (factor_de_la_fila !== null) {
+							base = precio / factor_de_la_fila
+						}
+					}
+				}
+
+				if (factor_de_la_fila === null) {
+					otro_precio.price_vender_con_recargos = precio
 					otro_precio.price_vender_sin_recargos = null
 				} else {
-					otro_precio.price_vender_con_recargos = redondear_a_centavos(precio_sin_recargos * factor)
-					otro_precio.price_vender_sin_recargos = precio_sin_recargos
+					otro_precio.price_vender_con_recargos = redondear_a_centavos(precio)
+					otro_precio.price_vender_sin_recargos = base
 				}
 
 				calculated_price_vender += otro_precio.price_vender_con_recargos * amount

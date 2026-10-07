@@ -112,7 +112,11 @@ export default {
 		    // Caso 3: stock por dirección
 			if (key === 'stock_addresses' && Array.isArray(value)) {
 			  value.forEach(addr => {
-			    const label = addr.address_name || `${this.addresses.find(add => add.id == addr.address_id).street}`
+				// Mision eliminar-sucursal-con-stock (5/10/2026): el historial de una importacion puede nombrar una
+				// sucursal que despues se elimino. Antes el `.find(...)` daba undefined y `.street` tiraba un
+				// TypeError que rompia el detalle entero; ahora ese renglon dice 'Sucursal eliminada'.
+				const sucursal_del_renglon = this.addresses.find(add => add.id == addr.address_id)
+				const label = addr.address_name || (sucursal_del_renglon ? sucursal_del_renglon.street : 'Sucursal eliminada')
 
 			    const subLines = []
 
@@ -154,6 +158,11 @@ export default {
 		            const field = k.replace('__diff__', '')
 		            const diff = pt[k]
 		            const label = this.prettyPriceField(field)
+		            // Mision catalogo-por-lista-tienda (5/10/2026): "Visible en la tienda" es un Si/No y crudo salia
+		            // como "— → 1" o "0 → 1". Se muestra igual que el historial de actualizaciones masivas.
+		            if (field === 'visible_en_tienda') {
+		              return `&nbsp;&nbsp;${label}: ${this.textoSiNo(diff.old)} → <span class="text-success">${this.textoSiNo(diff.new)}</span>`
+		            }
 		            return `&nbsp;&nbsp;${label}: ${this.formatearNumero(diff.old) ?? '—'} → <span class="text-success">${this.formatearNumero(diff.new) ?? '(S/A)'}</span>`
 		          })
 
@@ -271,11 +280,28 @@ export default {
 		  return this.numero_es(numero.toString())
 		},
 
+		/**
+		 * "Sí" / "No" para el valor guardado de una columna Si/No (mision catalogo-por-lista-tienda).
+		 *
+		 * Es la misma lectura que hace el historial de actualizaciones masivas para esta columna
+		 * (MasiveUpdateHistory.valor_de_cambio): NULL cuenta como "No" igual que 0, porque la
+		 * tienda compara con `= 1` y un artículo que nunca se habilito no esta habilitado. Mostrado
+		 * crudo, un NULL saldria como "—" y se leeria como "sin dato".
+		 *
+		 * @param {*} valor 1, 0, null, "1", "0", true o false.
+		 * @return {String}
+		 */
+		textoSiNo(valor) {
+		  return valor === true || valor === 1 || valor === '1' || valor === 'true' ? 'Sí' : 'No'
+		},
+
 		prettyPriceField(field) {
 		  const map = {
 		    percentage: '% Ganancia',
 		    final_price: 'Precio final',
 		    setear_precio_final: 'Setear precio final',
+		    // Mision catalogo-por-lista-tienda (5/10/2026): la columna Si/No por lista de la tienda.
+		    visible_en_tienda: 'Visible en la tienda',
 		  }
 		  return map[field] || field.replaceAll('_', ' ')
 		},

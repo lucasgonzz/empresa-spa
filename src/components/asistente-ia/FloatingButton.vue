@@ -101,6 +101,12 @@ export default {
 			drag_max_delta_px: 0,
 			// Tras touch, muchos navegadores disparan mouse sintético; ignorar ese mousedown hasta cierta marca de tiempo.
 			suppress_primary_mouse_down_until_ms: 0,
+			// Copia REACTIVA del tamaño de la ventana, que actualiza el resize. window.innerWidth /
+			// innerHeight no son reactivos: sin esto el estilo del botón quedaba cacheado con el
+			// tamaño viejo (la posición por defecto no se movía al achicar la ventana, y en Vender
+			// el botón podía quedar sobre la barra de acciones después de un resize).
+			viewport_width_px: typeof window !== 'undefined' ? window.innerWidth : 0,
+			viewport_height_px: typeof window !== 'undefined' ? window.innerHeight : 0,
 			// True si la sesión de arrastre actual comenzó con touchstart (para coordinar suppress de mouse sintético).
 			drag_started_with_touch: false,
 			// Nombre del canal chat.user.* actualmente suscrito (para Echo.leave al cambiar de persona).
@@ -167,6 +173,16 @@ export default {
 			return 'Asistente IA de ' + this.nombre_negocio
 		},
 		/**
+		 * Alto en px de la franja de abajo que ocupa una barra fija de la pantalla actual
+		 * (hoy, la barra de acciones de Vender; 0 en cualquier otra pantalla). El botón se
+		 * acomoda por encima de esa franja: con la barra a lo ancho de toda la pantalla, en
+		 * la esquina derecha tapaba el botón de WhatsApp y la punta de "Guardar venta".
+		 */
+		bottom_reserved_px() {
+			const vender_state = this.$store.state.vender
+			return (vender_state && vender_state.actions_bar_height_px) || 0
+		},
+		/**
 		 * Estilo inline de posición fija usando left/top para permitir arrastre.
 		 */
 		floating_button_inline_style() {
@@ -222,10 +238,15 @@ export default {
 		 * Posición por defecto: esquina inferior derecha. Si el botón de soporte
 		 * también está activo, el de IA se apila justo encima (76 = 60 del botón de
 		 * soporte + 16 de aire) para que no nazcan superpuestos (D35).
+		 *
+		 * El "abajo" es el borde de la pantalla menos la franja reservada por una barra
+		 * fija (bottom_reserved_px): en Vender el botón nace 20 px arriba de la barra de
+		 * acciones, y el apilado con el de soporte —que hace la misma cuenta— se conserva.
 		 */
 		get_default_button_position() {
-			const w = typeof window !== 'undefined' ? window.innerWidth : 0
-			const h = typeof window !== 'undefined' ? window.innerHeight : 0
+			// Del dato reactivo y no de window: así la posición por defecto sigue al resize.
+			const w = this.viewport_width_px
+			const h = this.viewport_height_px
 			const size = this.button_size_px
 			const inset = 20
 			let top_offset = 0
@@ -234,11 +255,12 @@ export default {
 			}
 			return {
 				left: Math.max(0, w - size - inset),
-				top: Math.max(0, h - size - inset - top_offset),
+				top: Math.max(0, h - this.bottom_reserved_px - size - inset - top_offset),
 			}
 		},
 		/**
-		 * Devuelve la posición efectiva del botón (guardada o por defecto) ya acotada al viewport.
+		 * Devuelve la posición efectiva del botón (guardada o por defecto) ya acotada al
+		 * viewport y por encima de la franja reservada por una barra fija.
 		 */
 		get_resolved_button_position() {
 			let left = this.button_left_px
@@ -248,7 +270,35 @@ export default {
 				left = d.left
 				top = d.top
 			}
-			return this.clamp_button_position(left, top)
+			return this.keep_above_bottom_reserved(this.clamp_button_position(left, top))
+		},
+		/**
+		 * Sube el botón lo justo para que no pise la franja de abajo reservada por una
+		 * barra fija (bottom_reserved_px). La barra ocupa todo el ancho, así que vale para
+		 * cualquier posición horizontal, también para la que el usuario eligió arrastrando.
+		 *
+		 * 🔴 Va APARTE de clamp_button_position a propósito: el clamp lo usan la hidratación
+		 * y el resize, que escriben button_left_px / button_top_px. Si la reserva entrara ahí,
+		 * quedaría "horneada" en la posición elegida y al salir de Vender el botón no volvería
+		 * a donde el usuario lo dejó.
+		 *
+		 * @param {Object} pos { left, top } ya acotada al viewport
+		 * @returns {Object} { left, top }
+		 */
+		keep_above_bottom_reserved(pos) {
+			const reserved = this.bottom_reserved_px
+			if (!reserved) {
+				return pos
+			}
+			// Del dato reactivo y no de window: un resize con la barra puesta vuelve a acomodar el botón.
+			const h = this.viewport_height_px
+			const m = this.button_edge_margin_px
+			// Tope de arriba del botón para que su borde inferior quede `m` px sobre la barra.
+			const max_top = Math.max(m, h - reserved - this.button_size_px - m)
+			return {
+				left: pos.left,
+				top: Math.min(pos.top, max_top),
+			}
 		},
 		/**
 		 * Mantiene el botón dentro del viewport visible.
@@ -345,6 +395,10 @@ export default {
 		 * vive únicamente en el fin del drag (arreglo post-chequeo).
 		 */
 		on_window_resize_for_floating_button() {
+			// Primero el tamaño reactivo, ANTES del return de abajo: sin posición guardada (botón
+			// en su lugar por defecto) también hay que recalcular dónde va.
+			this.viewport_width_px = window.innerWidth
+			this.viewport_height_px = window.innerHeight
 			if (this.button_left_px == null || this.button_top_px == null) {
 				return
 			}
@@ -420,7 +474,10 @@ export default {
 			this.apply_floating_drag_delta(event.touches[0].clientX, event.touches[0].clientY)
 		},
 		/**
-		 * Calcula delta desde el inicio y mueve el botón acotado al viewport.
+		 * Calcula delta desde el inicio y mueve el botón acotado al viewport. Durante el
+		 * arrastre tampoco puede bajar a la franja de una barra fija: si no, el botón se
+		 * quedaría quieto mientras el dedo sigue (la posición guardada bajaría y la dibujada
+		 * no), y al volver hacia arriba tardaría en responder.
 		 */
 		apply_floating_drag_delta(client_x, client_y) {
 			const dx = client_x - this.drag_start_client_x
@@ -431,7 +488,7 @@ export default {
 			}
 			const next_left = this.drag_start_button_left + dx
 			const next_top = this.drag_start_button_top + dy
-			const clamped = this.clamp_button_position(next_left, next_top)
+			const clamped = this.keep_above_bottom_reserved(this.clamp_button_position(next_left, next_top))
 			this.button_left_px = clamped.left
 			this.button_top_px = clamped.top
 		},

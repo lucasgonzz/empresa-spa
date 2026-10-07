@@ -69,6 +69,18 @@
 
 <script>
 import moment from 'moment'
+/*
+	🔴 Import estatico y no `() => import(...)` como los otros botones de la barra: el boton de
+	guardar solo se dibuja cuando la venta tiene renglones (`v-if="items.length"`), asi que un
+	componente asincrono pedia su chunk recien con el primer renglon. Si internet se cortaba ANTES
+	de eso, el pedido fallaba, Vue no dibujaba nada y la barra quedaba solo con "Limpiar": el modo
+	offline no servia para la primera venta (medido el 4/10/2026 grabando el T2.43 en demo).
+
+	En produccion el service worker precachea todos los chunks, pero no controla la pagina en la
+	primera visita (no hay clientsClaim): ahi los chunks van directo a la red. Estatico, el boton
+	viaja con la barra, que se carga al entrar a Vender.
+*/
+import BtnGuardar from '@/components/vender/components/remito/total-previus-sales/BtnGuardar'
 
 export default {
 	name: 'VenderActionsBar',
@@ -79,8 +91,8 @@ export default {
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),
 		/* Botón de envío por WhatsApp */
 		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
-		/* Botón guardar / actualizar (lógica en mixin guardar_venta) */
-		BtnGuardar: () => import('@/components/vender/components/remito/total-previus-sales/BtnGuardar'),
+		/* Botón guardar / actualizar (lógica en mixin guardar_venta). Estático: ver arriba */
+		BtnGuardar,
 	},
 	data() {
 		return {
@@ -120,11 +132,19 @@ export default {
 		this.interval = setInterval(() => {
 			this.now = moment()
 		}, 1000)
+		/*
+			La barra reserva su franja de abajo para que los botones flotantes (asistente IA y
+			soporte) se acomoden por encima: con la barra a lo ancho de toda la pantalla, en la
+			esquina derecha tapaban WhatsApp y la punta de "Guardar venta".
+		*/
+		this.$store.commit('vender/set_actions_bar_height_px', this.$el.offsetHeight || 0)
 	},
 	beforeDestroy() {
 		if (this.interval) {
 			clearInterval(this.interval)
 		}
+		/* Fuera de Vender no hay barra: los botones flotantes vuelven a poder bajar hasta el borde */
+		this.$store.commit('vender/set_actions_bar_height_px', 0)
 	},
 	computed: {
 		/**

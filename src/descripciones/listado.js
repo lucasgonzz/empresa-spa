@@ -86,14 +86,119 @@ export default {
 		],
 	},
 
-	'btn-eliminar-*': {
+	'masiva-opcion-eliminar-seleccion': {
 		titulo: 'Eliminar los seleccionados',
-		que_hace: 'Borra en conjunto todo lo seleccionado.',
+		que_hace: 'Borra de una vez todos los registros tildados. Antes pide confirmación con la cantidad.',
 		repercute: [
-			'Repone el stock de lo que se borra, pero NO compensa la caja: la plata que había entrado queda adentro.',
+			'Si son más de uno, el borrado sigue en segundo plano: se puede seguir trabajando y, cuando termina, un aviso dice cuántos se eliminaron.',
+			'Si son artículos, van a la papelera, desde donde el dueño de la cuenta los puede restaurar.',
 		],
-		requiere: 'En VENTAS esta opción está deshabilitada a propósito. Una venta se borra de a una, desde la venta, porque ese camino ofrece compensar la caja y este no lo hace.',
-		nota_interna: 'La opcion esta deshabilitada en la interfaz (OptionsDropdown.vue) desde el 1/9/2026, pero el endpoint PUT delete/sale sigue aceptando el borrado masivo. Cerrarlo tambien del lado del servidor toca el borrado masivo generico y quedo esperando decision.',
+		nota_interna: 'Es el item Eliminar del menu de seleccionados (OptionsDropdown.vue). Hasta el 5/10/2026 su texto vivia en la clave btn-eliminar-*, que en realidad matchea el Eliminar del formulario de UN registro (BtnDelete.vue), y este item no tenia ayuda. En VENTAS el item esta deshabilitado a proposito (el masivo no compensa la caja: DeleteModelsHelper llama al destroy de la venta con un Request vacio) y un item deshabilitado NO abre este popover (medido: el motivo lo dice el globo del item); el endpoint PUT delete/sale igual acepta el borrado masivo. Con mas de un registro va por ProcessDeleteModelsJob (DeleteModelsHelper::BACKGROUND_THRESHOLD = 1); con uno solo es sincronico y la SPA no lee not_deleted. Solo provider_order respeta el rechazo de su destroy (MODELOS_QUE_RESPETAN_RECHAZO). Los textos de esta entrada y la de filtrados se leyeron en el codigo (DeleteController, DeleteModelsHelper, opciones-filtrados-seleccion/Index.vue), no se midieron por diferencia. La deshabilitacion del item en Ventas es del 1/9/2026. Cerrar el borrado masivo de ventas tambien del lado del servidor toca el borrado masivo generico y quedo esperando decision.',
+	},
+
+	'masiva-opcion-eliminar-filtrados': {
+		titulo: 'Eliminar todo lo filtrado',
+		que_hace: 'Borra de una vez todos los registros que deja el filtro. Antes pide confirmación con la cantidad.',
+		repercute: [
+			'Alcanza a TODO lo filtrado, no solo a lo que se ve en la página: la cantidad está en el botón del menú.',
+			'Si son más de uno, el borrado sigue en segundo plano: se puede seguir trabajando y, cuando termina, un aviso dice cuántos se eliminaron.',
+			'Si son artículos, van a la papelera, desde donde el dueño de la cuenta los puede restaurar.',
+		],
+		nota_interna: 'Es el item Eliminar del menu de filtrados (OptionsDropdown.vue). Se apaga sin filtro de columnas (listado por defecto, buscador general o sucursal elegida: ver motivo_masiva_por_filtro_apagada) y apagado no abre este popover; el servidor tambien lo frena con 422 si no hay filtros efectivos (DeleteController). En articulos, el servidor no deja borrar si el conjunto son TODOS los activos. Ver la nota de masiva-opcion-eliminar-seleccion.',
+	},
+
+	/* ------------------------------------------------------------ borrar un registro */
+
+	'btn-eliminar-*': {
+		titulo: 'Eliminar este registro',
+		que_hace: 'Borra este registro. Antes pide confirmación.',
+		nota_interna: 'Comodin del Eliminar del formulario de UN registro: el testid btn-eliminar-<modelo> lo pone BtnDelete.vue y nadie mas. Hasta el 5/10/2026 esta clave tenia el texto del borrado MASIVO ("Eliminar los seleccionados", "NO compensa la caja"), que en el detalle de una venta decia lo contrario de lo que hace ese boton; el masivo es masiva-opcion-eliminar-*. Los modelos con efectos que le importan al operador tienen su clave exacta, que le gana a esta: btn-eliminar-article, btn-eliminar-category y btn-eliminar-promocion_vinoteca (aca) y btn-eliminar-sale (vender.js). No lleva repercute porque lo que mueve un borrado depende del modelo. Las promociones de vinoteca y las categorias tienen clave exacta porque no son un borrado simple (vinoteca abre un formulario que descuenta stock; categoria arrastra subcategorias), y la exacta le gana a esta.',
+	},
+
+	'btn-eliminar-article': {
+		titulo: 'Eliminar este artículo',
+		que_hace: 'Borra el artículo abierto. Antes pide confirmación.',
+		repercute: [
+			'Va a la papelera, desde donde el dueño de la cuenta lo puede restaurar. Al restaurarlo no vuelven ni su receta ni su publicación en Tienda Nube.',
+			'Si está publicado en Tienda Nube, se borra también de ahí.',
+			'Si se fabrica con una receta, la receta se borra con él y no se puede recuperar.',
+		],
+		nota_interna: 'Leido en el codigo el 5/10/2026, no medido. ArticleController::destroy (soft delete; check_delete_tienda_nube solo con USA_TIENDA_NUBE y tiendanube_product_id; ArticleHelper::check_article_recipe_to_delete). Recipe NO usa SoftDeletes: el borrado de la receta es fisico. PapeleraController::aplicar_restauracion_soft_delete no rehace ni la receta ni Tienda Nube (solo recalcula combos). No se dice nada del insumo de otra receta porque check_recipes_despues_de_eliminar_articulo solo recalcula si la receta tiene article_cost_from_recipe y la SPA no tiene control para prenderlo (comentado en src/models/recipe_route.js). Tambien borra los articulos espejo de las cuentas con inventory linkage (InventoryLinkageHelper); no se le dice al operador porque aplica a muy pocas cuentas.',
+	},
+
+	'btn-eliminar-category': {
+		titulo: 'Eliminar esta categoría',
+		que_hace: 'Borra la categoría abierta. Antes pide confirmación.',
+		repercute: [
+			'Borra también todas sus subcategorías.',
+			'Los artículos que estaban en ella quedan sin categoría ni subcategoría.',
+		],
+		nota_interna: 'Leido en CategoryController::destroy el 5/10/2026: detachArticlesCategory pone category_id y sub_category_id en 0 a los articulos de la cuenta, deleteSubCategories borra las subcategorias, y ademas intenta borrar la categoria en Tienda Nube (delete_category_from_tienda_nube).',
+	},
+
+	'btn-eliminar-promocion_vinoteca': {
+		titulo: 'Eliminar promociones',
+		que_hace: 'Abre un cartel para sacar promociones armadas: cuántas se eliminan y cuántas unidades de cada artículo vuelven al stock.',
+		repercute: [
+			'La cantidad que se escribe se resta del stock de la promoción, no del de los artículos que la componen.',
+			'Cada artículo vuelve al stock solo con la cantidad que se le cargue en el cartel: si se deja vacía, no vuelve nada.',
+			'La promoción se borra recién cuando su stock llega a cero.',
+		],
+		nota_interna: 'BtnDelete con solo_emitir_delete (promociones-vinoteca/Modal.vue) abre promociones-vinoteca/DeleteModal.vue, que manda PUT promocion-vinoteca/delete-stock (PromocionVinotecaController::delete_stock + PromocionVinotecaHelper::regresar_stock, que saltea los articulos sin cantidad). No es un confirm y no usa el destroy() del controlador. Leido en el codigo el 5/10/2026.',
+	},
+
+	/* ------------------------------------------- catalogo de la tienda por lista de precios */
+
+	/*
+		Mision catalogo-por-lista-tienda (5/10/2026). Los cuatro controles existen solo con la
+		extension online, pero no todos con la misma condicion:
+		- El check de la ficha y la tarjeta de la masiva (con sus botones) aparecen solo para las
+			listas que tienen activado "En la tienda, mostrar solo los articulos habilitados para
+			esta lista".
+		- El contador (habilitados-en-tienda-de-lista) aparece en CUALQUIER lista ya guardada, la
+			tenga activada o no: cuelga del interruptor, que es lo que existe con la extension.
+	*/
+
+	'visible-en-tienda-lista-*': {
+		titulo: 'Visible en la tienda para esta lista',
+		que_hace: 'Habilita este artículo en la tienda online para los clientes que tienen esta lista de precios.',
+		repercute: [
+			'Esta lista muestra en la tienda SOLO los artículos habilitados: sin el tilde, sus clientes no ven el artículo, no lo pueden agregar al carrito ni comprarlo.',
+			'El artículo también tiene que estar «Disponible en la tienda» (solapa Tienda online) para verse.',
+			'No cambia el precio ni lo que ven los clientes de las otras listas.',
+			'Los artículos nuevos nacen sin habilitar.',
+		],
+		requiere: 'Aparece solo en las listas que tienen activado "En la tienda, mostrar solo los artículos habilitados para esta lista" (ABM de listas de precios). La tienda de tu negocio tiene que estar actualizada a la versión que incluye esta función; hasta entonces sigue mostrando todo.',
+		nota_interna: 'Escribe article_price_type.visible_en_tienda (1 habilitado; 0 y NULL no). La tienda aplica la restriccion recien cuando corre una version de tienda-api que la conoce (CatalogoPorListaHelper). Escrito desde el contrato de la mision, falta medirlo en vivo.',
+	},
+
+	'masiva-campo-visible_en_tienda_lista_*': {
+		titulo: 'Visible en la tienda para una lista',
+		que_hace: 'Habilita o deja sin habilitar en la tienda, para esa lista de precios, todos los artículos alcanzados.',
+		repercute: [
+			'"Activar": los clientes de esa lista pasan a ver estos artículos en la tienda. "Desactivar": dejan de verlos.',
+			'El artículo también tiene que estar «Disponible en la tienda» (solapa Tienda online) para verse.',
+			'Se puede revertir desde el historial de actualizaciones masivas.',
+		],
+		nota_interna: 'Viaja como key visible_en_tienda_lista_<id>, type checkbox (contrato C2). La API valida que la lista sea del dueño y registra el valor anterior para el revert (MasiveUpdateHelper).',
+	},
+
+	'masiva-checkbox-visible_en_tienda_lista_*': {
+		titulo: 'Visible en la tienda para una lista',
+		que_hace: '"No modificar" deja todo como está; "Activar" habilita los artículos alcanzados para esa lista en la tienda; "Desactivar" los deja sin habilitar.',
+		repercute: [
+			'Solo cambia lo que ven en la tienda los clientes de esa lista: el precio y las otras listas no se tocan.',
+		],
+	},
+
+	'habilitados-en-tienda-de-lista': {
+		titulo: 'Artículos habilitados en la tienda',
+		que_hace: 'Cuántos artículos están habilitados en la tienda para esta lista, sobre el total de artículos cargados.',
+		repercute: [
+			'Con la opción activada, los clientes de esta lista ven en la tienda solo esos artículos. Con cero habilitados, no ven ninguno.',
+		],
+		requiere: 'El número aparece con la lista ya guardada.',
+		nota_interna: 'GET price-type/{id}/habilitados-en-tienda -> {habilitados, total} (contrato C2).',
 	},
 
 	/* ------------------------------------------------------------------- importacion */

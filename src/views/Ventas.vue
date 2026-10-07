@@ -29,7 +29,6 @@ data-tour="ventas.contenedor">
 	:show_previus_days="show_previus_days"
 	:show_btn_create="false"
 	:show_modal="false"
-    :not_show_delete_text="not_show_delete_text"
     mostrar_models_que_vinienen_por_prop_siempre
 	model_name="sale">
 		<template v-slot:display_top>
@@ -294,12 +293,6 @@ export default {
 		},
 		is_filtered() {
 			return this.$store.state.sale.is_filtered 
-		},
-		model_to_delete() {
-			return this.$store.state.sale.delete 
-		},
-		not_show_delete_text() {
-			return this.delete && this.delete.afip_ticket
 		},
 	},
 }

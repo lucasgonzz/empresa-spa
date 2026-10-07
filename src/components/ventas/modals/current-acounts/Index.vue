@@ -1,12 +1,12 @@
 <template>
 <div>
     <confirm
-    :text="text_delete"
+    :text="delete_text"
     :actions="actions"
     model_name="current_acount"
     show_compensar_caja_checkbox
     id="delete-current-acount"
-    toast="Cuenta corriente eliminada"></confirm>
+    toast="Movimiento eliminado"></confirm>
     <pago></pago>    
     <nota-credito></nota-credito>    
     <import></import>    
@@ -80,11 +80,29 @@ export default {
         delete() {
             return this.$store.state.current_acount.delete
         },
-        text_delete() {
-            if (this.delete) {
-                return 'este pago por $'+this.delete.haber
+        /**
+         * Mismo texto que common/current-acounts/Index.vue: lo que se borra es un movimiento de la
+         * cuenta, nombrado por su detalle y su importe (el haber si es mayor a 0, si no el debe).
+         *
+         * 🔴 Se llamaba `text_delete`, igual que el método global del mixin generals: Vue no define
+         * un computed cuyo nombre ya es un método, así que el confirm recibía la función en vez del
+         * texto.
+         *
+         * @returns {String}
+         */
+        delete_text() {
+            if (!this.delete) {
+                return ''
             }
-            return ''
+            let importe = Number(this.delete.haber) > 0 ? this.delete.haber : this.delete.debe
+            let texto = 'el movimiento'
+            if (this.delete.detalle) {
+                texto += ' "'+this.delete.detalle+'"'
+            }
+            if (importe !== null && typeof importe != 'undefined' && importe !== '') {
+                texto += ' por '+this.price(importe)
+            }
+            return texto
         },
         actions() {
             return [

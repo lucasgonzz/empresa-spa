@@ -1374,7 +1374,7 @@
 				<b-button
 				variant="outline-secondary"
 				class="m-r-10"
-				@click="step = 3">
+				@click="step = model === 'article' ? 3 : 2">
 					Volver
 				</b-button>
 				<b-button
@@ -2772,6 +2772,23 @@ export default {
 					options.push({ value: `price_type_${id}_final_price`, text: `$ Final: ${name}` })
 					options.push({ value: `price_type_${id}_percentage`,  text: `%: ${name}` })
 					options.push({ value: `price_type_${id}_setear`,      text: `Setear precio final: ${name}` })
+
+					/*
+					 * Mision catalogo-por-lista-tienda (5/10/2026): "Visible en la tienda" de ESTA
+					 * lista (Si/No), que escribe article_price_type.visible_en_tienda. Solo con la
+					 * extension online y la lista restringida en la tienda: en una lista sin
+					 * restriccion la columna no cambia nada de lo que se ve, y ofrecerla solo
+					 * agregaria ruido al select. Comparacion SUELTA (`== 1`): la columna llega
+					 * como 0/1, null o "1" segun el driver.
+					 *
+					 * El texto es CORTO a proposito: con "(Si/No)" era el mas largo del grupo (unos
+					 * 396 px) y en el select de la importacion se cortaba perdiendo el nombre de la
+					 * lista ("...: May"), que es justo lo que distingue una opcion de otra. Es el mismo
+					 * texto que usa `get_property_label` para la columna ya mapeada.
+					 */
+					if (this.hasExtencion('online') && pt.catalogo_restringido_en_tienda == 1) {
+						options.push({ value: `price_type_${id}_visible_en_tienda`, text: `Visible en tienda: ${name}` })
+					}
 				})
 			}
 
@@ -4257,6 +4274,19 @@ export default {
 		confirmar_paso_2() {
 			let self = this
 
+			/*
+			 * La recomendación del paso 3 es de artículos (códigos de barras, códigos de
+			 * proveedor, formatos de costo y precio). Para clientes y proveedores no hay nada
+			 * que recomendar: antes igual se la pedía y la IA contestaba "el archivo contiene
+			 * 0 filas, no se importará ningún artículo" sobre un Excel de clientes bien armado.
+			 * Se salta directo a las opciones de importación, sin request.
+			 */
+			if (self.model !== 'article') {
+				self.error_message = ''
+				self.step = 4
+				return
+			}
+
 			self.loading_recomendacion = true
 			self.recomendacion_configuracion = null
 			/* El error del intento anterior no puede quedar colgado sobre el intento nuevo. */
@@ -4271,6 +4301,7 @@ export default {
 
 			self.$api.post('ai-excel-import/get-recomendacion', {
 				excel_path:                 self.excel_path,
+				model:                      self.model,
 				provider_id:                self.selected_provider_id,
 				provider_code_column_index: self.provider_code_column_index,
 				column_mapping:             self.column_mapping,
@@ -4931,8 +4962,12 @@ export default {
 				return system_property
 			}
 
-			/* Propiedad codificada de lista de precio: price_type_{id}_{final_price|percentage|setear}. */
-			let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear)$/)
+			/*
+			 * Propiedad codificada de lista de precio:
+			 * price_type_{id}_{final_price|percentage|setear|visible_en_tienda}. `visible_en_tienda`
+			 * es de la mision catalogo-por-lista-tienda (5/10/2026).
+			 */
+			let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear|visible_en_tienda)$/)
 			if (pt_match) {
 				const pt_id    = parseInt(pt_match[1])
 				const sub_type = pt_match[2]
@@ -4941,6 +4976,7 @@ export default {
 					if (sub_type === 'final_price') return '$ Final: ' + pt.name
 					if (sub_type === 'percentage')  return '%: ' + pt.name
 					if (sub_type === 'setear')      return 'Setear: ' + pt.name
+					if (sub_type === 'visible_en_tienda') return 'Visible en tienda: ' + pt.name
 				}
 				return system_property
 			}
@@ -5039,8 +5075,14 @@ export default {
 					return
 				}
 
-				/* Traducir propiedades codificadas de listas de precio a las claves planas de ProcessRow. */
-				let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear)$/)
+				/*
+				 * Traducir propiedades codificadas de listas de precio a las claves planas de ProcessRow.
+				 * `visible_en_tienda` (mision catalogo-por-lista-tienda, contrato C2) viaja como la
+				 * columna plana `visible_en_tienda_<nombre de la lista normalizado>`, con el MISMO
+				 * normalizado que las otras tres (minusculas, espacios a `_`): ProcessRow arma el
+				 * nombre del lado de la API igual, y si los dos no coinciden la columna se ignora.
+				 */
+				let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear|visible_en_tienda)$/)
 				if (pt_match) {
 					const pt_id    = parseInt(pt_match[1])
 					const sub_type = pt_match[2]
@@ -5050,6 +5092,7 @@ export default {
 						if (sub_type === 'final_price') columns['$_final_' + name_key]             = column_position
 						if (sub_type === 'percentage')  columns['%_' + name_key]                   = column_position
 						if (sub_type === 'setear')      columns['setear_precio_final_' + name_key] = column_position
+						if (sub_type === 'visible_en_tienda') columns['visible_en_tienda_' + name_key] = column_position
 					}
 					return
 				}

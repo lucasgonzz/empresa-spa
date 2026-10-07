@@ -19,6 +19,11 @@ import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_meth
 import facturar from '@/mixins/vender/guardar_venta/facturar'
 import { env } from '@/runtime_config'
 import { comprobante_con_recargos_en_precios_sin_registro } from '@/utils/recargos_en_precios'
+/*
+	Junta en UN renglon con varios precios las filas que guardo un renglon de varios precios (ver
+	getItemsPreviusSale(), al final).
+*/
+import { reagrupar_renglones_con_varios_precios } from '@/utils/varios_precios_guardados'
 
 /**
  * Reconstruye `modal_payment_methods` --los metodos de pago con su descuento / recargo-- a partir
@@ -842,6 +847,18 @@ export default {
 		// 	this.$store.commit('vender/current_acount_payment_methods/set_total_a_repartir', 0)
 		// 	this.$store.commit('vender/current_acount_payment_methods/set_total_repartido', 0)
 		// },
+		/**
+		 * Los renglones de VENDER de una venta o de un presupuesto guardado que se abre para editarlo
+		 * (lo llama set_datos_para_actualizar_en_vender(), que comparten los dos).
+		 *
+		 * Arma un renglon por fila del pivot (articulos, combos, promociones y servicios) y, al final,
+		 * junta en UN renglon con `varios_precios` las filas de articulo que salieron de un mismo
+		 * renglon de varios precios (reagrupar_renglones_con_varios_precios, en
+		 * utils/varios_precios_guardados.js, donde esta la regla completa y el porque).
+		 *
+		 * @param {Object} model Venta o presupuesto tal cual lo devuelve la API, con sus relaciones.
+		 * @returns {Array}
+		 */
 		getItemsPreviusSale(model) {
 			let items = []
 			let item = {}
@@ -964,7 +981,42 @@ export default {
 					items.push(item_to_add)
 				})
 			}
-			return items
+
+			/*
+				🔴 Las filas de un renglon de varios precios vuelven a ser UN renglon (mision
+				varios-precios-descuento-renglon, 3/10/2026). Hasta esta mision cada fila del pivot era
+				un renglon aparte: dos renglones con el mismo id y la misma variante, que para el store
+				son la misma linea (es_la_misma_linea), y al guardar la API contaba dos veces la
+				diferencia de stock. NO VOLVER A DEVOLVER `items` A SECAS.
+
+				Sirve igual para la venta y para el presupuesto ("Actualizar en VENDER"): en el
+				presupuesto el descuento de cada fila llega en `pivot.bonus` y ya quedo en item.discount
+				mas arriba, asi que la clave de agrupacion lo ve igual que en una venta.
+
+				- to_check / checked: se leen del MODELO y no del store. En la venta callGetSale() los
+				  commitea antes de llegar aca, pero el presupuesto (BtnActualizarEnVender) los pone en 0
+				  DESPUES; el modelo dice lo que el comprobante tiene guardado en los dos casos (un
+				  presupuesto no tiene esas columnas, y queda en "no esta en deposito").
+				- legado: la misma regla y con el mismo modelo que commitea
+				  set_datos_para_actualizar_en_vender() en vender/recargos_en_precios_sin_registro, pero
+				  calculada aca porque ese commit va DESPUES de armar los renglones. Con ella la fila de un
+				  comprobante legado toma el precio guardado tal cual (ver precio_de_la_fila en
+				  utils/varios_precios_guardados.js); el "no recargarla" lo resuelve
+				  set_varios_precios_con_recargos() (set_items_prices.js), que lee el store.
+				- con_acopios: con la extension acopios NO se reagrupa nada y queda un renglon por fila,
+				  como antes. Al editar, la columna "U. Entregadas" de ArticlesTable.vue es un input por
+				  renglon, y en un renglon reagrupado la entrega quedaria en el padre, que la API no
+				  reparte entre las filas: se perderia al guardar (el porque completo esta en la regla).
+				  `!!` porque hasExtencion() devuelve undefined sin usuario autenticado. hasExtencion es
+				  del mixin global (generals.js, Vue.mixin en main.js), asi que la tienen todos los
+				  componentes que mezclan este mixin, tambien BtnActualizarEnVender.vue (presupuesto).
+			*/
+			return reagrupar_renglones_con_varios_precios(items, {
+				to_check: model.to_check,
+				checked: model.checked,
+				legado: comprobante_con_recargos_en_precios_sin_registro(model),
+				con_acopios: !!this.hasExtencion('acopios'),
+			})
 		},
 		get_pivot_amount(amount) {
 			if (amount === null) {

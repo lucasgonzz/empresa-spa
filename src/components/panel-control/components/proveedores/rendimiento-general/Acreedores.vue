@@ -25,8 +25,9 @@ export default {
 			console.log(providers)
 			providers.forEach(model => {
 				labels.push(model.name)
-				data.push(model.saldo)
-				data_2.push(Number(model.saldo)-20)
+				// Saldo vivo en pesos (saldo_pesos), no la columna vieja saldo: ver acreedores/Chart.vue, el que monta rendimiento-general.
+				data.push(Number(model.saldo_pesos) || 0)
+				data_2.push(Number(model.saldo_pesos)-20)
 			})		
 
 			let that = this
