@@ -31,9 +31,19 @@ export default {
         descuentos_y_recargos() {
             let self = this
 
-            self.renglones_pie_descuentos_y_recargos().forEach(function (renglon) {
-                self.content.push(self.formatear_renglon_pie(renglon.etiqueta, renglon.importe) + "\n")
-            })
+            /*
+             * El desglose es informacion secundaria: si por un dato raro la cuenta tira una
+             * excepcion, el ticket tiene que salir igual, sin el pie. Sin este try/catch el error
+             * llegaria al .catch de printTicket() y el cliente veria "No se pudo armar el ticket"
+             * sin poder imprimir una venta que ya cobro.
+             */
+            try {
+                self.renglones_pie_descuentos_y_recargos().forEach(function (renglon) {
+                    self.content.push(self.formatear_renglon_pie(renglon.etiqueta, renglon.importe) + "\n")
+                })
+            } catch (error) {
+                console.error('No se pudo armar el desglose de descuentos y recargos del Ticket 2.0:', error)
+            }
         },
 
         /**
@@ -57,6 +67,18 @@ export default {
             // Pueden faltar en una API vieja o en una venta armada a mano: se tratan como vacios.
             let descuentos = Array.isArray(sale.discounts) ? sale.discounts : []
             let recargos = Array.isArray(sale.surchages) ? sale.surchages : []
+
+            /*
+             * 🔴 Con `aplicar_recargos_directo_a_items` prendido el recargo YA esta metido en el
+             * precio de cada renglon, y por lo tanto en `sub_total`. La venta conserva igual la
+             * relacion `surchages` (SaleHelper la adjunta), y el servidor la saltea en ese caso
+             * (`SaleHelper::getTotalSale()`: `!$sale->aplicar_recargos_directo_a_items`). Si aca se
+             * aplicara de nuevo, el papel diria "Rec 5% $1.102" arriba de un TOTAL A PAGAR de
+             * $1.050. El flag puede venir como 0/1, "0"/"1" o booleano: por eso el Number().
+             */
+            if (Number(sale.aplicar_recargos_directo_a_items)) {
+                recargos = []
+            }
             let medios_de_pago = Array.isArray(sale.current_acount_payment_methods) ? sale.current_acount_payment_methods : []
 
             let descuento_puntos = this.numero_del_pie(sale.descuento_puntos)
@@ -81,6 +103,12 @@ export default {
              * en null y de ahi en mas no se calcula nada, solo se muestran las etiquetas.
              */
             let corrido = this.numero_del_pie(sale.sub_total)
+
+            // Un sub_total en 0 no es un dato confiable (el comando que lo rellena tambien lo trata
+            // asi): imprimir "Total $0 / Desc 10% $0" seria peor que mostrar solo las etiquetas.
+            if (corrido !== null && corrido <= 0) {
+                corrido = null
+            }
             let renglones = []
             let self = this
 
@@ -91,7 +119,7 @@ export default {
                 })
             }
 
-            agregar('Total')
+            agregar('Subtotal')
 
             /*
              * Los descuentos y recargos son PORCENTAJES sobre el corrido, no sobre el sub total:
@@ -171,6 +199,28 @@ export default {
                 }
 
                 agregar('Ajuste ' + (ajuste_forzado < 0 ? '-' : '+') + self.price(Math.abs(ajuste_forzado), false))
+            }
+
+            /*
+             * 🔴 RED DE SEGURIDAD: un pie que no cierra es peor que un pie sin importes.
+             *
+             * El ticket no conoce todo lo que el servidor metio en `sale.total`: los servicios solo
+             * reciben el descuento o el recargo si `discounts_in_services` / `surchages_in_services`
+             * estan prendidos (la SPA los manda en 0 por defecto), el reparto por medio de pago o
+             * cuotas no se guarda en la venta, y `table_articles.js` ni siquiera lista los servicios.
+             * Si el corrido no llega a `sale.total` (con la misma tolerancia de un peso entero que
+             * usa el PDF), se conserva el Subtotal --que es `sub_total` y es verdad-- y el resto de
+             * los renglones queda solo con su etiqueta: el cliente ve QUE descuentos y recargos hubo,
+             * sin una cuenta falsa encima.
+             */
+            let total_guardado = this.numero_del_pie(sale.total)
+
+            if (corrido === null || total_guardado === null || Math.abs(corrido - total_guardado) >= 1) {
+                renglones.forEach(function (renglon, indice) {
+                    if (indice > 0 || corrido === null) {
+                        renglon.importe = ''
+                    }
+                })
             }
 
             /*
