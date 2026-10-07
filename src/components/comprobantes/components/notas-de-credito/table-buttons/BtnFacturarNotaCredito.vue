@@ -28,6 +28,14 @@
 			</p>
 
 			<p
+			v-if="reintento"
+			class="text-danger">
+				Esta nota ya tuvo un intento que no quedó autorizado. Si el intento anterior se cortó
+				por la conexión, ARCA pudo haberla emitido igual: antes de reintentar, verificá en
+				ARCA que no figure ya una nota de crédito por este importe sobre la misma factura.
+			</p>
+
+			<p
 			v-if="facturas.length == 1"
 			class="m-b-0">
 				Factura N° <strong>{{ facturas[0].cbte_numero }}</strong>
@@ -81,7 +89,7 @@ export default {
 			return !!this.nota_credito.afip_ticket
 		},
 		opciones_de_facturas() {
-			let opciones = []
+			let opciones = [{ value: null, text: 'Elegí la factura...', disabled: true }]
 
 			this.facturas.forEach(factura => {
 				opciones.push({
