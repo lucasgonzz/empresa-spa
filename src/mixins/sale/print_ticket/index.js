@@ -4,13 +4,14 @@ import afip_qr_iva from '@/mixins/sale/print_ticket/afip_qr_iva'
 import conectar_impresora from '@/mixins/sale/print_ticket/conectar_impresora'
 import table_articles from '@/mixins/sale/print_ticket/table_articles'
 import info_cliente from '@/mixins/sale/print_ticket/info_cliente'
+import descuentos_recargos from '@/mixins/sale/print_ticket/descuentos_recargos'
 import {
     preferencias_del_puesto,
     parse_ancho_de_ticket_mm,
     hidratar_preferencias_del_puesto,
 } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
 export default {
-    mixins: [afip_information, afip_qr_iva, conectar_impresora, table_articles, info_cliente],
+    mixins: [afip_information, afip_qr_iva, conectar_impresora, table_articles, info_cliente, descuentos_recargos],
     data() {
         return {
             qz: null,
@@ -470,6 +471,8 @@ export default {
 
             // Tabla
             this.table_articles()
+
+            this.descuentos_y_recargos()
 
             this.total()
 
