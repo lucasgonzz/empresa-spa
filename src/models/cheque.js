@@ -1,3 +1,13 @@
+/*
+	Misión cheque-edicion-acotada (8/10/2026): el formulario del cheque deja editar SOLO número,
+	banco (el select del catálogo), notas, fecha de emisión y fecha de pago. El resto (tipo,
+	cliente, proveedor, monto, endosos, cobro y rechazo) mueve cuentas corrientes y cajas, así
+	que no se edita acá. Dos flags, y solo ellos, arman eso (no cambian columnas ni orden):
+	  - `only_show`: se dibuja en el formulario como valor gris, de contexto, sin input.
+	  - `not_show_on_form`: no se dibuja en el formulario. La tabla lo ignora (solo mira
+	    `not_show_on_table`), así que la columna sigue donde estaba.
+	El back (PUT api/cheque/{id}) ignora lo demás aunque lo manden: esto es solo la interfaz.
+*/
 export default {
 	properties: [
 		{
@@ -10,6 +20,7 @@ export default {
 			text: 'Tipo',
 			key: 'tipo',
 			type: 'select',
+			only_show: true,
 			options: [
 				'recibido',
 				'emitido',
@@ -19,6 +30,13 @@ export default {
 			text: 'Cliente',
 			key: 'client_id',
 			type: 'search',
+			// Contexto de solo lectura: solo tiene sentido en el cheque recibido.
+			// ⚠️ Hoy el v_if NO filtra: showProperty() compara `typeof v_if == 'array'`, que nunca
+			// es cierto (ver el mismo aviso en models/order.js), así que en el formulario se ven
+			// Cliente y Proveedor y el que no corresponde dice "Sin datos". Queda declarado para
+			// que funcione el día que se arregle showProperty, o se pase a v_if_function.
+			only_show: true,
+			v_if: ['tipo', '=', 'recibido'],
 			// Sin prop "store" el buscador resuelve el store por la key (client_id -> client), asi
 			// que este campo tiene el mismo problema que los de abajo: la busqueda va siempre
 			// contra la API (global-search/client) y nunca contra el store. No sacar.
@@ -27,6 +45,7 @@ export default {
 		{
 			text: 'Endozado desde cliente',
 			key: 'endosado_desde_client_id',
+			not_show_on_form: true,
 			// store: 'client' es el modelo contra el que busca el modal (search-from-modal/client),
 			// no el nombre de la relacion embebida: esa se llama endosado_desde_client y se deriva
 			// de la clave (grupo 332, 4/8/2026, ver propertyText()).
@@ -41,6 +60,10 @@ export default {
 			text: 'Proveedor',
 			key: 'provider_id',
 			type: 'search',
+			// Contexto de solo lectura: solo tiene sentido en el cheque emitido (ver el aviso del
+			// v_if en `client_id`: hoy no filtra).
+			only_show: true,
+			v_if: ['tipo', '=', 'emitido'],
 			// Sin prop "store" el buscador resuelve el store por la key (provider_id -> provider),
 			// asi que este campo tiene el mismo problema que los de abajo: la busqueda va siempre
 			// contra la API (global-search/provider) y nunca contra el store. No sacar.
@@ -49,6 +72,7 @@ export default {
 		{
 			text: 'Endozado al proveedor',
 			key: 'endosado_a_provider_id',
+			not_show_on_form: true,
 			// store: 'provider' es el modelo contra el que busca el modal (search-from-modal/provider),
 			// no el nombre de la relacion embebida: esa se llama endosado_a_provider y se deriva de
 			// la clave (grupo 332, 4/8/2026, ver propertyText()).
@@ -98,6 +122,7 @@ export default {
 			key: 'amount',
 			type: 'number',
 			is_price: true,
+			only_show: true,
 		},
 		{
 			text: 'Notas',
@@ -135,6 +160,7 @@ export default {
 			key: 'fecha_endoso',
 			type: 'date',
 			is_date: true,
+			not_show_on_form: true,
 		},
 		{
 			text: 'Cobrado en',
@@ -142,11 +168,13 @@ export default {
 			type: 'date',
 			v_if: ['estado_manual', '=', 'cobrado'],
 			is_date: true,
+			not_show_on_form: true,
 		},
 		{
 			text: 'Cobrado por',
 			key: 'cobrado_por_id',
 			v_if: ['estado_manual', '=', 'cobrado'],
+			not_show_on_form: true,
 		},
 		{
 			text: 'Rechazado en',
@@ -154,11 +182,13 @@ export default {
 			v_if: ['estado_manual', '=', 'rechazado'],
 			type: 'date',
 			is_date: true,
+			not_show_on_form: true,
 		},
 		{
 			text: 'Rechazado por',
 			key: 'rechazado_por_id',
 			v_if: ['estado_manual', '=', 'rechazado'],
+			not_show_on_form: true,
 		},
 	],
 	singular_model_name_spanish: 'Cheque',

@@ -22,6 +22,23 @@ export default __base_store({
 	},
 	mutations: {
 		/**
+		 * Pisa la mutación `add` del factory con un no-op.
+		 *
+		 * Misión cheque-edicion-acotada (8/10/2026): al guardar el formulario del cheque, el
+		 * modal genérico hace `commit('cheque/add', model)`. La `add` del factory hace
+		 * `state.models.findIndex(...)`, pero en este store `state.models` NO es un array: es el
+		 * objeto agrupado `{recibido: {...}, emitido: {...}}` que devuelve `GET cheque`. Con eso
+		 * tiraba un TypeError dentro del `.then` del guardado, que caía al `.catch` y le mostraba
+		 * un error a alguien cuyo guardado había salido bien.
+		 *
+		 * No-op a propósito: la lista se refresca con la acción `cheque/getModels`, que las vistas
+		 * le pasan al modal en `actions_after_save` (views/Cheques.vue y views/Reportes.vue). Así,
+		 * además, un cheque al que le cambiaron la fecha de pago cambia de solapa.
+		 *
+		 * @returns {void}
+		 */
+		add() {},
+		/**
 		 * Apaga el orden de TODAS las columnas (deja `ordenar_de` en null), sin tocar los
 		 * criterios de valor ni sacar ningún filtro del array.
 		 *

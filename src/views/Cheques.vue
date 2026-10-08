@@ -5,8 +5,15 @@
 		<!--
 			El modal del cheque (lo abre el click en una fila de la tabla). Reportes.vue conserva
 			el suyo porque el drill-down de Flujo de Caja también abre cheques desde ahí.
+
+			Misión cheque-edicion-acotada (8/10/2026): después de guardar se recarga la lista
+			agrupada (`cheque/getModels`). El store de cheques no es una lista plana, así que no
+			sirve la actualización puntual del modal (ver la mutación `add` de store/cheque.js), y
+			la recarga hace que un cheque con otra fecha de pago aparezca en la solapa que le toca.
 		-->
-		<model-index model_name="cheque"></model-index>
+		<model-index
+		model_name="cheque"
+		:actions_after_save="['cheque/getModels']"></model-index>
 	</div>
 </template>
 <script>
