@@ -94,7 +94,7 @@
 					<small
 					v-if="precio_original_del_renglon(items[data.index]) !== null"
 					class="venta-item-precio-original"
-					:data-testid="'venta-item-precio-original-'+items[data.index].id"
+					:data-testid="'precio-original-venta-item-'+items[data.index].id"
 					title="Precio original, sin los descuentos ni los recargos de la venta">
 						(orig. {{ price(precio_original_del_renglon(items[data.index])) }})
 					</small>
@@ -498,7 +498,7 @@ export default {
 		 * un renglon, o null si no hay que mostrar nada. getPriceVender() lo deja en
 		 * item.price_vender_original solo cuando el precio lleva algun ajuste de venta adentro.
 		 *
-		 * No se muestra en un comprobante legado de recargos (no se sabe cual era el original), en un
+		 * No se muestra en un comprobante legado de recargos o de descuentos (no se sabe cual era el original), en un
 		 * renglon con varios precios (no tiene UN precio) ni cuando es igual al precio. La regla vive
 		 * en utils/descuentos_en_precios.js para poder probarla sin montar la tabla.
 		 *
@@ -506,7 +506,10 @@ export default {
 		 * @returns {Number|null}
 		 */
 		precio_original_del_renglon(item) {
-			return precio_original_a_mostrar(item, this.$store.state.vender.recargos_en_precios_sin_registro)
+			let vender = this.$store.state.vender
+
+			// Cualquiera de los dos legados: el precio guardado tiene un ajuste adentro de base desconocida.
+			return precio_original_a_mostrar(item, Boolean(vender.recargos_en_precios_sin_registro || vender.descuentos_en_precios_sin_registro))
 		},
 		/**
 		 * Nombre de slot dinamico de b-table para una columna de imagen configurable.
