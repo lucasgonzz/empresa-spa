@@ -233,8 +233,11 @@ export default {
 		 * El comprobante es un LEGADO de recargos: guardado con los recargos adentro de los precios
 		 * antes de que los renglones registraran su precio sin recargo (misión
 		 * recargos-en-precios-editable). Su precio tiene un recargo adentro de base desconocida, así
-		 * que no hay un precio original sobre el cual meter los descuentos: la opción no se puede usar
-		 * (y el predicado efectivo de utils/descuentos_en_precios.js tampoco la considera prendida).
+		 * que no hay un precio original sobre el cual meter los descuentos: la opción no se puede
+		 * prender (el toggle queda deshabilitado). Ojo: el predicado efectivo de
+		 * utils/descuentos_en_precios.js NO mira este legado, porque ese comprobante puede traer la
+		 * opción ya guardada en 1 (con las bases en NULL, que lo vuelve también legado de descuentos);
+		 * en ese caso el toggle se ve prendido y bloqueado, ver descuentos_en_precios_prendidos.
 		 *
 		 * @returns {boolean}
 		 */
@@ -278,8 +281,8 @@ export default {
 		},
 		/**
 		 * Si la opción de aplicar los descuentos directo a los precios debe estar bloqueada: el
-		 * comprobante es un legado de recargos, los descuentos elegidos dejarían el precio en cero, o
-		 * no hay ningún descuento seleccionado.
+		 * comprobante es un legado de descuentos o de recargos, los descuentos elegidos dejarían el
+		 * precio en cero, o no hay ningún descuento seleccionado.
 		 *
 		 * 🔴 Ya NO se bloquea por "estoy editando una venta" ni por "es un presupuesto": igual que la
 		 * opción de recargos desde el 28/9/2026, se puede prender y apagar editando porque getPriceVender()
@@ -294,11 +297,13 @@ export default {
 				|| this.sin_descuentos_seleccionados
 		},
 		/**
-		 * v-model del toggle de la opción. Lo que MUESTRA es lo efectivo: con la opción bloqueada por un
-		 * 100% o por el legado se ve apagada (no está aplicada a los precios, aunque el flag crudo del
-		 * store siga en 1 y vuelva a valer en cuanto se saque el descuento que lo bloqueaba). Escribir
-		 * pasa por el computed del mixin (aplicar_descuentos_directo_a_items), que commitea el flag y
-		 * recalcula el total.
+		 * v-model del toggle de la opción. Lo que MUESTRA es lo que de verdad pasa con los precios:
+		 * bloqueada por un 100% (o por no tener descuentos) se ve apagada, porque no está aplicada a
+		 * los precios aunque el flag crudo del store siga en 1 y vuelva a valer en cuanto se saque el
+		 * descuento que la bloqueaba. En un comprobante LEGADO (de descuentos o de recargos) se ve
+		 * como lo tiene guardado: si está en 1, sus precios ya llevan el descuento adentro y tiene que
+		 * verse prendida aunque no se pueda tocar. Escribir pasa por el computed del mixin
+		 * (aplicar_descuentos_directo_a_items), que commitea el flag y recalcula el total.
 		 *
 		 * @returns {number}
 		 */

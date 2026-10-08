@@ -114,14 +114,17 @@ export default {
         /**
          * Si la opcion "Aplicar los descuentos de esta venta directamente a los precios de los
          * articulos" esta EFECTIVAMENTE prendida: el flag, mas que haya algun descuento elegido con
-         * porcentaje usable, que el factor sea positivo y que el comprobante no sea un legado de
-         * recargos (la regla y su porque estan en utils/descuentos_en_precios.js).
+         * porcentaje usable y que el factor sea positivo, O que el comprobante abierto sea un LEGADO
+         * DE DESCUENTOS (vender.descuentos_en_precios_sin_registro: sus precios ya tienen el descuento
+         * adentro, asi que cuenta como efectivo aunque el factor no sirva). Un legado de RECARGOS no
+         * cambia el resultado (la regla y su porque estan en utils/descuentos_en_precios.js).
          *
-         * 🔴 Es ESTE predicado, y no el flag crudo del store, el que decide tres cosas a la vez: si
-         * el pie se saltea aplicar_discounts() (vender_set_total.js), si getPriceVender() mete el
-         * factor en el precio, y que flag viaja al guardar. Con un descuento del 100% el flag crudo
-         * sigue en 1 pero esto da false, y el descuento se sigue cobrando al pie: la opcion decide
-         * DONDE se ve el descuento, nunca SI se cobra.
+         * 🔴 Es ESTE predicado, y no el flag crudo del store, el que decide si el pie se saltea
+         * aplicar_discounts() (vender_set_total.js) y que flag viaja al guardar; la tercera decision,
+         * si getPriceVender() mete el factor en el precio de un renglon, mira el factor
+         * (factor_descuentos_de_venta). Con un descuento del 100% el flag crudo sigue en 1 pero esto
+         * da false, y el descuento se sigue cobrando al pie: la opcion decide DONDE se ve el
+         * descuento, nunca SI se cobra.
          *
          * @returns {Boolean}
          */
@@ -852,7 +855,10 @@ export default {
                 descuentos-aplicar-al-precio-del-articulo, 8/10/2026). Es el gemelo de recargar() para el
                 panel Descuentos: con la opcion "Aplicar los descuentos de esta venta directamente a los
                 precios" EFECTIVA (descuentos_en_precios_efectivos), CADA rama de abajo mete los
-                descuentos llamando a descontar(), ANTES de recargar().
+                descuentos llamando a descontar(), ANTES de recargar(). La unica excepcion es la
+                rama del pivot de un comprobante LEGADO (de recargos o de descuentos), que usa el precio
+                guardado tal cual porque ya tiene el descuento adentro: ahi NO se llama a descontar() a
+                proposito, y no es un olvido.
 
                 LA PILA DE CAPAS. Los descuentos son la capa de ABAJO y los recargos la de ARRIBA:
 
@@ -1286,7 +1292,10 @@ export default {
                 VENDER muestra como "(orig. $ 1.000,00)" (ArticlesTable.vue). Viaja null cuando el
                 precio no lleva ningun ajuste adentro, que es lo que le dice a la tabla que no
                 muestre nada. Lo dejan en null, sin hacer nada especial, el legado de recargos (la rama
-                del pivot ahi no llama a recargar()) y el servicio sin "en servicios".
+                del pivot ahi no llama a recargar()) y el servicio sin "en servicios". En un legado de
+                descuentos, en cambio, puede quedar con un valor (la base de recargos, que tiene el
+                descuento adentro): no es el original y la tabla no lo muestra, porque
+                precio_original_a_mostrar() corta por cualquiera de los dos legados.
             */
             let hubo_descuentos = factor_descuentos_aplicado !== null && factor_descuentos_aplicado !== 0
             let hubo_recargos = factor_recargos_aplicado !== null && factor_recargos_aplicado !== 0
@@ -1657,8 +1666,11 @@ export default {
          * Factor por el que los descuentos de venta elegidos multiplican el precio de ESTE renglon
          * cuando la opcion "Aplicar los descuentos de esta venta directamente a los precios" esta
          * EFECTIVA, o null si no le corresponde ninguno: opcion apagada, sin descuentos usables,
-         * descuento del 100% (factor no positivo), comprobante legado de recargos, o renglon no
-         * elegible (un servicio sin "Aplicar descuentos en los servicios").
+         * descuento del 100% (factor no positivo), o renglon no elegible (un servicio sin "Aplicar
+         * descuentos en los servicios"). Un comprobante legado (de recargos o de descuentos) NO lo
+         * apaga: lo que hacen los legados es que los renglones GUARDADOS no se vuelvan a descontar
+         * (rama del pivot de getPriceVender y filas guardadas de varios precios), mientras los
+         * renglones nuevos si llevan el descuento adentro.
          *
          * Es el gemelo de factor_recargos_de_venta(). Lo usan getPriceVender() para meter el
          * descuento en el precio y mixins/vender/set_items_prices.js para los `varios_precios`, que no

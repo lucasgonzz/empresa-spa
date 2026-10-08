@@ -150,7 +150,9 @@ export function porcentajes_de_descuentos_elegidos(discounts_id, discount_models
  *   (a) si el pie se saltea aplicar_discounts() (vender_set_total.js),
  *   (b) si getPriceVender() mete el factor en el precio (generals.js), y
  *   (c) que flag viaja al guardar (aplicar_descuentos_directo_a_items).
- * Las tres miran ESTE resultado y no el flag crudo del store, y no pueden desacordarse:
+ * Las tres parten de ESTE resultado y no del flag crudo del store: (b) lo usa directo, y (a) y (c) lo
+ * usan a traves de descuentos_en_precios_efectivos() (mas abajo), que ademas cuenta como efectivo a un
+ * comprobante legado de descuentos. No pueden desacordarse:
  *
  *   efectivo  =  la opcion esta prendida
  *             Y  hay al menos un descuento elegido con porcentaje usable

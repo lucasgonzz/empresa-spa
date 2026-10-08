@@ -140,8 +140,7 @@ export default {
 					El factor de recargos de ESTA fila: el del renglon, salvo la fila cargada de un
 					comprobante legado, que va sin recargar (ver el bloque de arriba). Ahi
 					`precio_original` es en realidad el precio guardado tal cual, y por eso viaja sin
-					base. El factor de descuentos no necesita esa excepcion: en un legado de recargos
-					factor_descuentos_de_venta() ya da null.
+					base. El factor de descuentos tiene su propia excepcion, en el bloque de abajo.
 				*/
 				let factor_de_la_fila = factor
 

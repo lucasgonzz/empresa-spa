@@ -602,8 +602,9 @@ export default {
 		},
 		/*
 			Si los descuentos de venta van EFECTIVAMENTE adentro del precio de los renglones (el flag,
-			mas descuentos elegidos con factor positivo, mas que no sea un legado de recargos). Es la
-			misma cuenta que el computed global `descuentos_en_precios_efectivos` de mixins/generals.js
+			mas descuentos elegidos con factor positivo, o un comprobante legado de descuentos, cuyos
+			precios ya traen el descuento). Es la misma cuenta que el computed global
+			`descuentos_en_precios_efectivos` de mixins/generals.js
 			(los dos llaman a utils/descuentos_en_precios.js): el store no ve los computeds de los
 			componentes, y los payloads de la venta tienen que mandar este valor y no el flag crudo.
 		*/

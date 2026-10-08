@@ -194,7 +194,8 @@ export default {
 			/*
 			 * Un legado de recargos NO apaga este factor: si la venta se guardó con los dos flags en 1 (y
 			 * las bases en NULL), sus precios ya traen el descuento adentro, y proponer el catálogo sin
-			 * descuento la dejaría cobrándolo de menos... o, peor, de nuevo si se vuelve a restar.
+			 * descuento haría que la venta lo perdiera (y como el flag sigue en 1, el pie tampoco lo
+			 * resta).
 			 */
 			let porcentajes = []
 
