@@ -34,6 +34,19 @@
 
 			<div class="vender-rate-panel__body">
 
+				<!-- Aviso cuando los descuentos no se pueden modificar (comprobante legado de descuentos) -->
+				<div
+				v-if="legado_de_descuentos"
+				data-testid="aviso-descuentos-en-precios-sin-registro"
+				class="vender-client-block__notice">
+					<p>
+						Este comprobante se guardó con los descuentos aplicados directamente a los precios de los artículos, pero sin registrar cuánto valía cada precio sin el descuento (por ejemplo, porque se cambió el precio de un artículo desde el listado de presupuestos).
+					</p>
+					<p>
+						Por eso no se pueden agregar ni quitar descuentos, ni cambiar "Aplicar descuentos en los servicios", ni la opción de aplicarlos directamente a los precios: los precios guardados ya tienen el descuento adentro y se mantienen como están.
+					</p>
+				</div>
+
 				<!-- Descuentos asignados al cliente -->
 				<div
 				v-if="client_discounts_visibles.length"
@@ -49,6 +62,7 @@
 						tipo="descuento"
 						:input_id="'venta-descuento-'+discount.id"
 						id_prefix="discount_"
+						:disabled="legado_de_descuentos"
 						v-model="sale_discounts"></toggle-de-ajuste-de-venta>
 					</div>
 				</div>
@@ -68,6 +82,7 @@
 						tipo="descuento"
 						:input_id="'venta-descuento-'+discount.id"
 						id_prefix="discount_"
+						:disabled="legado_de_descuentos"
 						v-model="sale_discounts"></toggle-de-ajuste-de-venta>
 					</div>
 				</div>
@@ -80,6 +95,7 @@
 						Servicios
 					</span>
 					<vender-toggle
+					:disabled="legado_de_descuentos"
 					v-model="discounts_in_services"
 					input_id="aplicar_descuentos_a_servicios">
 						Aplicar descuentos en los servicios
@@ -107,7 +123,7 @@
 
 					<!-- Aviso del motivo por el que la opción está deshabilitada -->
 					<p
-					v-if="legado_de_recargos"
+					v-if="legado_de_recargos && !legado_de_descuentos"
 					data-testid="aviso-descuentos-en-precios-legado"
 					class="vender-rate-panel__section-hint">
 						Este comprobante se guardó con los recargos aplicados directamente a los precios de los artículos, antes de que el sistema registrara cuánto valía cada precio sin el recargo. Por eso los descuentos no se pueden aplicar a los precios: se restan del total.
@@ -226,6 +242,20 @@ export default {
 			return Boolean(this.$store.state.vender.recargos_en_precios_sin_registro)
 		},
 		/**
+		 * El comprobante es un LEGADO DE DESCUENTOS: guardado con los descuentos adentro de los precios
+		 * pero sin el precio original de algún renglón (misión descuentos-aplicar-al-precio-del-articulo;
+		 * la regla y sus causas están en utils/descuentos_en_precios.js). Sus precios ya tienen el
+		 * descuento adentro de una base que no se conoce, así que se bloquean los tres controles que
+		 * podrían cambiar a quién le toca el descuento: elegir/sacar descuentos, "descuentos en
+		 * servicios" y la opción de aplicarlos a los precios. Lo calcula previus_sale/index.js al abrir
+		 * el comprobante (venta o presupuesto) y lo limpia limpiar_vender().
+		 *
+		 * @returns {boolean}
+		 */
+		legado_de_descuentos() {
+			return Boolean(this.$store.state.vender.descuentos_en_precios_sin_registro)
+		},
+		/**
 		 * La venta no tiene ningún descuento de venta seleccionado: no hay nada que aplicar.
 		 *
 		 * @returns {boolean}
@@ -258,7 +288,8 @@ export default {
 		 * @returns {boolean}
 		 */
 		desactivar_descuentos_a_precios_de_articulos() {
-			return this.legado_de_recargos
+			return this.legado_de_descuentos
+				|| this.legado_de_recargos
 				|| this.descuentos_hacen_cero_el_precio
 				|| this.sin_descuentos_seleccionados
 		},
@@ -273,7 +304,13 @@ export default {
 		 */
 		descuentos_en_precios_prendidos: {
 			get() {
-				if (this.desactivar_descuentos_a_precios_de_articulos) {
+				/*
+					En un comprobante legado (de descuentos o de recargos) el toggle esta deshabilitado
+					pero muestra lo que el comprobante TIENE: si se guardo con la opcion en 1, sus precios
+					ya llevan el descuento adentro y tiene que verse prendido. Apagado y bloqueado diria que
+					los descuentos van al pie, y no es asi.
+				*/
+				if (this.desactivar_descuentos_a_precios_de_articulos && !this.legado_de_descuentos && !this.legado_de_recargos) {
 					return 0
 				}
 				return Number(this.aplicar_descuentos_directo_a_items) ? 1 : 0
@@ -287,6 +324,11 @@ export default {
 				return this.$store.state.vender.discounts_id
 			},
 			set(value) {
+				// En un legado de descuentos no se cambian los descuentos (los toggles ya estan deshabilitados).
+				if (this.legado_de_descuentos) {
+					return
+				}
+
 				console.log('value')
 				console.log(value)
 				this.$store.commit('vender/setDiscountsId', value)
