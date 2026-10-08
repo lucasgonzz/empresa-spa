@@ -46,7 +46,7 @@ export default {
 	},
 	computed: {
 		fields() {
-			return [
+			let fields = [
 				{
 					key: 'id',
 					label: 'N°'
@@ -63,19 +63,37 @@ export default {
 					key: 'name',
 					label: 'Nombre'
 				},
-				{
-					key: 'amount',
-					label: 'U vendidas'
-				},
-				{
-					key: 'delivered_amount',
-					label: 'U Entregadas'
-				},
-				{
-					key: 'add_delivered_amount',
-					label: 'Agregar U Entregadas'
-				},
 			]
+
+			/*
+				Columna "Variante" solo si algun renglon tiene variante: con el mismo articulo
+				vendido en dos variantes hay dos renglones con el mismo N° y el mismo nombre, y sin
+				esta columna no se sabe a cual se le entregan unidades. En una venta sin variantes
+				la tabla queda como siempre.
+			*/
+			let hay_variantes = this.local_items.some(item => item.variant_description)
+
+			if (hay_variantes) {
+				fields.push({
+					key: 'variant_description',
+					label: 'Variante'
+				})
+			}
+
+			fields.push({
+				key: 'amount',
+				label: 'U vendidas'
+			})
+			fields.push({
+				key: 'delivered_amount',
+				label: 'U Entregadas'
+			})
+			fields.push({
+				key: 'add_delivered_amount',
+				label: 'Agregar U Entregadas'
+			})
+
+			return fields
 		},
 		sale() {
 			return this.$store.state.sale.model
@@ -102,8 +120,20 @@ export default {
 			let items = []
 
 			this.sale.articles.forEach(article => {
+
+				/*
+					Variante del renglon (mision variantes-mismo-articulo-en-vender, 8/10/2026).
+					sale.articles trae una entrada por fila del pivot: el mismo articulo en dos
+					variantes ya son dos renglones, pero viajaban a la API solo con el id y la entrega
+					se escribia en todas las filas del articulo. article_variant_id va siempre (0 = sin
+					variante); la API vieja no la lee y hace lo de siempre.
+				*/
+				let article_variant_id = Number(article.pivot.article_variant_id || 0)
+
 				items.push({
 					id: article.id,
+					article_variant_id: article_variant_id,
+					variant_description: this.descripcion_de_variante(article, article_variant_id),
 					bar_code: article.bar_code,
 					provider_code: article.provider_code,
 					name: article.name,
@@ -114,6 +144,32 @@ export default {
 			})
 
 			this.local_items = items
+		},
+		/**
+		 * La descripcion de la variante de un renglon ("Azul 36"), o null si no tiene: la del pivot
+		 * (article_sale.variant_description) o, si no la trae, la de las variantes del articulo.
+		 *
+		 * @param {Object} article Articulo de sale.articles, con su pivot.
+		 * @param {Number} article_variant_id Variante del renglon (0 = sin variante).
+		 * @returns {String|null}
+		 */
+		descripcion_de_variante(article, article_variant_id) {
+
+			if (!article_variant_id) {
+				return null
+			}
+
+			if (article.pivot.variant_description) {
+				return article.pivot.variant_description
+			}
+
+			if (!Array.isArray(article.article_variants)) {
+				return null
+			}
+
+			let variante = article.article_variants.find(variant => variant.id == article_variant_id)
+
+			return variante ? variante.variant_description : null
 		},
 		marcar_todo_como_entregado() {
 			this.local_items.forEach((item, index) => {
