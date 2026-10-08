@@ -85,7 +85,7 @@ export default {
 				ajustes restaurados desde lo guardado. Esto cubre también el bloqueo de
 				`desactivar_recargos` de stage-3/Surchages.vue, que solo existe en edición.
 			*/
-			if (this.editando_con_ajustes_guardados()) {
+			if (this.editando_con_ajustes_guardados() || this.$store.state.vender.descuentos_en_precios_sin_registro) {
 				return
 			}
 
@@ -135,6 +135,7 @@ export default {
 			*/
 			if (
 				this.editando_con_ajustes_guardados()
+				|| vender.descuentos_en_precios_sin_registro
 				|| !vender.client
 				|| vender.client.id != pendientes.client_id
 			) {

@@ -16,6 +16,16 @@ export default {
 				return this.$store.state.vender.discounts_in_services
 			}, 
 			set(value) {
+				/*
+					En un comprobante LEGADO DE DESCUENTOS no se cambia: decide a que renglones les toca el
+					descuento, y los renglones guardados ya lo tienen (o no) adentro de su precio, de una base
+					que no se conoce. Discounts.vue deshabilita el control; esta guarda cubre cualquier otro
+					camino que escriba aca.
+				*/
+				if (this.$store.state.vender.descuentos_en_precios_sin_registro) {
+					return
+				}
+
 				this.$store.commit('vender/setDiscountsInServices', value)
 				this.setTotal()
 			},
@@ -52,6 +62,15 @@ export default {
 				return this.$store.state.vender.aplicar_descuentos_directo_a_items
 			},
 			set(value) {
+				/*
+					En un comprobante LEGADO DE DESCUENTOS la opcion no se puede apagar: sus precios ya
+					tienen el descuento adentro, y el flag guardado en 0 haria que el pie lo restara de
+					nuevo (doble descuento permanente).
+				*/
+				if (this.$store.state.vender.descuentos_en_precios_sin_registro) {
+					return
+				}
+
 				this.$store.commit('vender/set_aplicar_descuentos_directo_a_items', value)
 				this.setTotal()
 			},
@@ -622,6 +641,10 @@ export default {
 				100% el flag sigue prendido pero getPriceVender() no mete el factor (el precio quedaria
 				en 0 y el original seria irrecuperable), asi que el descuento TIENE que seguir
 				cobrandose aca, al pie. Con el flag crudo ese 100% no se cobraria nunca. NO CAMBIAR.
+
+				Y el predicado EFECTIVO incluye al comprobante LEGADO DE DESCUENTOS (la opcion guardada en 1
+				sin el precio original de algun renglon): ahi los precios ya traen el descuento y este metodo
+				tampoco lo resta, aunque el factor no sirviera. Si no, el descuento se cobra dos veces.
 
 				Un servicio sin "Aplicar descuentos en los servicios" no lleva descuento adentro ni
 				recibe el del pie (el `if (this.discounts_in_services)` de abajo): es lo que hacia antes.

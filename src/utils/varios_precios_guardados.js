@@ -21,7 +21,7 @@
  * Regla PURA: sin store, sin `this` y con imports RELATIVOS (nada de `@/`), para que un harness de
  * node la pueda cargar tal cual, sin webpack.
  */
-import { numero_o_null, redondear_a_centavos } from './recargos_en_precios'
+import { numero_o_null, precio_sin_recargos_guardado, redondear_a_centavos } from './recargos_en_precios'
 import { precio_base_guardado } from './descuentos_en_precios'
 
 /**
@@ -233,17 +233,31 @@ function cantidad_de_la_fila(cantidad) {
  *
  * Number() porque la API devuelve las columnas decimales como string ("100.00").
  *
+ * 🔴 En un comprobante LEGADO DE DESCUENTOS (y no de recargos) el precio es la base de los recargos si
+ * existe, y si no el price tal cual: nunca la columna de descuentos ni el original. Ahi el precio
+ * guardado tiene el descuento adentro de una base que no se conoce, y getPriceVender() lo usa asi (rama
+ * del pivot del legado de descuentos) y set_varios_precios_con_recargos() no vuelve a descontar la
+ * fila. Las tres tienen que usar el mismo criterio o la fila cambiaria de precio al reabrir.
+ *
  * @param {Object} pivot Pivot del renglon guardado.
  * @param {Boolean} legado comprobante_con_recargos_en_precios_sin_registro() del comprobante.
+ * @param {Boolean} [legado_descuentos] comprobante_con_descuentos_en_precios_sin_registro() del comprobante.
  * @returns {Number}
  */
-function precio_de_la_fila(pivot, legado) {
+function precio_de_la_fila(pivot, legado, legado_descuentos) {
 
-	if (!legado) {
-		return precio_base_guardado(pivot)
+	if (legado) {
+		return Number(pivot.price)
 	}
 
-	return Number(pivot.price)
+	if (legado_descuentos) {
+
+		let precio_sin_recargos = precio_sin_recargos_guardado(pivot)
+
+		return precio_sin_recargos === null ? Number(pivot.price) : precio_sin_recargos
+	}
+
+	return precio_base_guardado(pivot)
 }
 
 /**
@@ -268,9 +282,10 @@ function precio_de_la_fila(pivot, legado) {
  *
  * @param {Array} renglones Los renglones de articulo de una identidad, en el orden del pivot.
  * @param {Boolean} legado comprobante_con_recargos_en_precios_sin_registro() del comprobante.
+ * @param {Boolean} [legado_descuentos] comprobante_con_descuentos_en_precios_sin_registro() del comprobante.
  * @returns {Array|null}
  */
-function filas_del_renglon_reagrupado(renglones, legado) {
+function filas_del_renglon_reagrupado(renglones, legado, legado_descuentos) {
 
 	if (renglones.length < 2) {
 		return null
@@ -293,7 +308,7 @@ function filas_del_renglon_reagrupado(renglones, legado) {
 
 	renglones.forEach((renglon, indice) => {
 
-		let precio = precio_de_la_fila(renglon.pivot, legado)
+		let precio = precio_de_la_fila(renglon.pivot, legado, legado_descuentos)
 		let cantidad = Number(renglon.amount)
 
 		suma_de_las_filas += precio * cantidad
@@ -364,6 +379,8 @@ function filas_del_renglon_reagrupado(renglones, legado) {
  * @param {Object} [opciones]
  * @param {*} [opciones.to_check] El `to_check` del comprobante (un presupuesto no lo tiene).
  * @param {*} [opciones.checked] El `checked` del comprobante (un presupuesto no lo tiene).
+ * @param {Boolean} [opciones.legado_descuentos] comprobante_con_descuentos_en_precios_sin_registro()
+ *        del comprobante: la fila toma el precio guardado sin volver a descontarlo (ver precio_de_la_fila).
  * @param {Boolean} [opciones.legado] comprobante_con_recargos_en_precios_sin_registro() del
  *        comprobante (ver precio_de_la_fila).
  * @param {Boolean} [opciones.con_acopios] Si la cuenta tiene la extension acopios: con true no se
@@ -416,6 +433,7 @@ export function reagrupar_renglones_con_varios_precios(items, opciones) {
 	}
 
 	let legado = Boolean(config.legado)
+	let legado_descuentos = Boolean(config.legado_descuentos)
 
 	/*
 		Primera pasada: TODOS los renglones de articulo por identidad (id + variante), en el orden en
@@ -444,7 +462,7 @@ export function reagrupar_renglones_con_varios_precios(items, opciones) {
 
 	Object.keys(renglones_por_identidad).forEach(identidad => {
 
-		let filas = filas_del_renglon_reagrupado(renglones_por_identidad[identidad], legado)
+		let filas = filas_del_renglon_reagrupado(renglones_por_identidad[identidad], legado, legado_descuentos)
 
 		if (filas) {
 			filas_por_identidad[identidad] = filas

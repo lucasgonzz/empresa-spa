@@ -154,8 +154,10 @@ export function porcentajes_de_descuentos_elegidos(discounts_id, discount_models
  *
  *   efectivo  =  la opcion esta prendida
  *             Y  hay al menos un descuento elegido con porcentaje usable
- *             Y  el factor es positivo (un 100% NO es efectivo)
- *             Y  el comprobante NO es un legado de recargos.
+ *             Y  el factor es positivo (un 100% NO es efectivo).
+ *
+ * (Ver mas abajo descuentos_en_precios_efectivos(): un comprobante LEGADO DE DESCUENTOS cuenta como
+ * efectivo aunque su factor no sirva, porque el descuento ya esta adentro de sus precios.)
  *
  * 🔴 NO SUSTITUIR ESTO POR `state.aplicar_descuentos_directo_a_items` A SECAS en ninguno de los tres
  * lugares. Con un descuento del 100% el flag crudo seguiria en 1: el pie se saltearia el descuento
@@ -163,13 +165,19 @@ export function porcentajes_de_descuentos_elegidos(discounts_id, discount_models
  * viajaria en 1 -> el 100% no se cobraria y quedaria un comprobante con la opcion prendida y los
  * precios sin descuento. Es la regla "la opcion decide DONDE, nunca SI".
  *
- * 🔴 Y en un comprobante LEGADO DE RECARGOS (vender.recargos_en_precios_sin_registro) tampoco es
- * efectivo: el precio guardado tiene un recargo adentro de base desconocida, asi que no hay un
- * precio sobre el cual meter el descuento y poder sacarlo despues. El panel de descuentos le
- * deshabilita la opcion, y esta guarda cubre cualquier otro camino que la deje prendida.
+ * 🔴 Un comprobante LEGADO DE RECARGOS (vender.recargos_en_precios_sin_registro) NO cambia este
+ * resultado, y no hay que "protegerlo" con una guarda que lo apague. Una primera version de esta
+ * mision lo hacia, pensando que un legado de recargos nunca tiene el flag de descuentos en 1 (el
+ * panel se lo deshabilita) y que, si lo tuviera, no habria precio original sobre el cual meter el
+ * descuento. Pero SI lo puede tener: lo hereda de lo guardado cuando los dos flags estaban en 1 y
+ * las bases en NULL (un comprobante reescrito por una SPA vieja, o editado en el ABM generico de
+ * Presupuestos). Ahi los precios YA traen el descuento adentro, y apagar el efectivo hacia que el pie
+ * lo restara de nuevo (doble descuento) y que se guardara con el flag en 0, o sea permanente. Cuando
+ * el flag viene en 1, el descuento esta adentro, y de eso se encarga el legado de descuentos
+ * (comprobante_con_descuentos_en_precios_sin_registro), no este predicado.
  *
- * @param {Object} vender_state state.vender (necesita aplicar_descuentos_directo_a_items,
- *        discounts_id y recargos_en_precios_sin_registro).
+ * @param {Object} vender_state state.vender (necesita aplicar_descuentos_directo_a_items y
+ *        discounts_id).
  * @param {Array} discount_models state.discount.models.
  * @returns {Number|null}
  */
@@ -178,23 +186,33 @@ export function factor_de_descuentos_de_venta(vender_state, discount_models) {
 		return null
 	}
 
-	if (vender_state.recargos_en_precios_sin_registro) {
-		return null
-	}
-
 	return factor_de_descuentos(porcentajes_de_descuentos_elegidos(vender_state.discounts_id, discount_models))
 }
 
 /**
- * Lo mismo que factor_de_descuentos_de_venta() como booleano: "la opcion esta efectivamente
- * prendida". Ver el comentario de arriba.
+ * "La opcion esta efectivamente prendida": hay factor (ver factor_de_descuentos_de_venta) O el
+ * comprobante abierto es un LEGADO DE DESCUENTOS (vender.descuentos_en_precios_sin_registro).
+ *
+ * 🔴 El segundo termino es lo que cierra el doble descuento. En un legado de descuentos el comprobante
+ * se guardo con la opcion en 1 y sus precios YA tienen el descuento adentro, de una base que no se
+ * conoce. Para el pie, para el flag que viaja al guardar y para los renglones NUEVOS eso es
+ * exactamente "efectivo": el pie no puede volver a restar el descuento, el flag tiene que seguir en 1
+ * (si viajara 0 el doble descuento quedaria guardado para siempre) y un renglon nuevo se tiene que
+ * preciar igual que los demas, con el descuento adentro. Lo unico que cambia en un legado es que los
+ * renglones guardados se usan tal cual, sin volver a descontar (generals.js, rama del pivot). Con el
+ * factor solo, un legado cuyo factor no sirviera (no deberia pasar: viene de una opcion efectiva)
+ * dejaria al pie restando lo que ya esta adentro.
  *
  * @param {Object} vender_state
  * @param {Array} discount_models
  * @returns {Boolean}
  */
 export function descuentos_en_precios_efectivos(vender_state, discount_models) {
-	return factor_de_descuentos_de_venta(vender_state, discount_models) !== null
+	if (factor_de_descuentos_de_venta(vender_state, discount_models) !== null) {
+		return true
+	}
+
+	return Boolean(vender_state && vender_state.descuentos_en_precios_sin_registro)
 }
 
 /**
@@ -225,6 +243,72 @@ export function renglon_lleva_descuentos_de_venta(item, discounts_in_services) {
 	}
 
 	return false
+}
+
+/**
+ * El comprobante (venta o presupuesto) esta guardado con la opcion de descuentos adentro del precio
+ * prendida PERO sin el precio original de algun renglon: un LEGADO DE DESCUENTOS. Es el espejo de
+ * comprobante_con_recargos_en_precios_sin_registro() (utils/recargos_en_precios.js), con la misma
+ * logica de fondo: el precio guardado tiene un descuento adentro y el sistema no sabe cuanto valia
+ * sin el.
+ *
+ * Es legado cuando las tres cosas se cumplen:
+ *   1. se guardo con aplicar_descuentos_directo_a_items en 1,
+ *   2. tiene al menos un descuento, y
+ *   3. algun renglon ELEGIBLE -articulos, combos y promociones siempre; servicios solo con el
+ *      discounts_in_services GUARDADO, la misma regla de renglon_lleva_descuentos_de_venta()- no
+ *      tiene precio sin descuentos (pivot.price_sin_descuentos_de_venta en NULL).
+ *
+ * Como se llega a ese estado, y por eso existe:
+ *   - Un presupuesto con el descuento adentro cuyo precio se edita en el ABM generico de Presupuestos:
+ *     la API pone las bases en NULL (el precio cambio y la base ya no vale) y PRESERVA el flag en 1.
+ *   - Una SPA vieja, cacheada, que reescribe un comprobante con el flag en 1: no conoce la columna
+ *     nueva y no manda la base.
+ *   - Un comprobante con los dos legados a la vez: flag de recargos y de descuentos en 1 y las bases
+ *     en NULL.
+ *
+ * 🔴 Es el modo de falla SEGURO y no hay que "mejorarlo" adivinando la base ni volviendo a descontar.
+ * Sin esta regla, getPriceVender() toma el `price` como si no tuviera ajustes adentro y le mete el
+ * descuento OTRA VEZ: 95 pasaba a 85,50 al abrir el comprobante, sin tocar nada. En un legado los
+ * renglones guardados se usan tal cual (el descuento ya esta adentro), el pie NO resta los descuentos
+ * y el flag sigue viajando en 1; el panel de descuentos bloquea elegir y sacar descuentos,
+ * "descuentos en servicios" y la opcion; y la tabla no muestra el precio original.
+ *
+ * @param {Object} model Venta o presupuesto tal cual lo devuelve la API (con sus relaciones).
+ * @returns {Boolean}
+ */
+export function comprobante_con_descuentos_en_precios_sin_registro(model) {
+	if (!model) {
+		return false
+	}
+
+	if (!Number(model.aplicar_descuentos_directo_a_items)) {
+		return false
+	}
+
+	if (!Array.isArray(model.discounts) || !model.discounts.length) {
+		return false
+	}
+
+	let renglones_elegibles = []
+
+	let agregar = coleccion => {
+		if (Array.isArray(coleccion)) {
+			renglones_elegibles = renglones_elegibles.concat(coleccion)
+		}
+	}
+
+	agregar(model.articles)
+	agregar(model.combos)
+	agregar(model.promocion_vinotecas)
+
+	if (Number(model.discounts_in_services)) {
+		agregar(model.services)
+	}
+
+	return renglones_elegibles.some(renglon => {
+		return precio_sin_descuentos_guardado(renglon ? renglon.pivot : null) === null
+	})
 }
 
 /**
@@ -289,15 +373,16 @@ export function precio_base_guardado(pivot) {
  * (de descuentos o de recargos) adentro del precio.
  *
  * No se muestra:
- *   - en un comprobante LEGADO de recargos: el precio guardado tiene un recargo adentro de base
- *     desconocida y no se sabe cual era el original;
+ *   - en un comprobante LEGADO (de recargos o de descuentos): el precio guardado tiene un ajuste
+ *     adentro de base desconocida y no se sabe cual era el original;
  *   - en un renglon con `varios_precios`: no tiene UN precio, tiene una suma de filas (y la tabla
  *     muestra esa suma, no `price_vender`);
  *   - si el original no es un numero, o si es igual al precio (un 0% adentro, o un redondeo que no
  *     cambio nada): una linea "(orig. $ 100)" debajo de un "$ 100" es ruido.
  *
  * @param {Object} item Renglon de VENDER.
- * @param {Boolean} legado vender.recargos_en_precios_sin_registro.
+ * @param {Boolean} legado vender.recargos_en_precios_sin_registro O
+ *        vender.descuentos_en_precios_sin_registro (cualquiera de los dos legados).
  * @returns {Number|null}
  */
 export function precio_original_a_mostrar(item, legado) {

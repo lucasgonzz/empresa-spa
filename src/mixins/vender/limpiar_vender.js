@@ -151,6 +151,13 @@ export default {
 			*/
 			this.$store.commit('vender/set_aplicar_descuentos_directo_a_items', 0)
 
+			/*
+				🔴 Y el LEGADO de descuentos, que set_datos_para_actualizar_en_vender() calcula al abrir un
+				comprobante: si sobreviviera, la venta SIGUIENTE arrancaria con los descuentos bloqueados, el
+				pie sin restarlos y el flag en 1 sin que nadie lo haya pedido.
+			*/
+			this.$store.commit('vender/set_descuentos_en_precios_sin_registro', false)
+
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
 			this.$store.commit('vender/setSellerId', 0)

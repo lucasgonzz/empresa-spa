@@ -2,7 +2,7 @@ import moment from 'moment'
 import { env } from '@/runtime_config'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
 import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/utils/criterio_de_oferta_por_cantidad'
-import { factor_de_recargos, renglon_lleva_recargos_de_venta, redondear_a_centavos } from '@/utils/recargos_en_precios'
+import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado, redondear_a_centavos } from '@/utils/recargos_en_precios'
 /*
 	Descuentos de venta adentro del precio de cada renglon, apilados DEBAJO de los recargos (mision
 	descuentos-aplicar-al-precio-del-articulo, 8/10/2026). El predicado "efectivo" vive ahi.
@@ -1030,6 +1030,38 @@ export default {
                     */
                     price = item.pivot.price
                     item_des.push('Precio del pivot (venta anterior, recargos ya adentro): ' + this.price(price))
+
+                    /*
+                        Y tampoco se DESCUENTA, aunque la opcion de descuentos este efectiva: si el flag
+                        de descuentos viene en 1 en este comprobante (los dos flags en 1 con las bases
+                        en NULL), el precio guardado YA tiene el descuento adentro. Aca simplemente no
+                        se llama a descontar(), y el pie tampoco resta los descuentos.
+                    */
+
+                } else if (this.$store.state.vender.descuentos_en_precios_sin_registro) {
+
+                    /*
+                        🔴 Comprobante LEGADO DE DESCUENTOS: se guardo con la opcion de descuentos en 1
+                        pero este renglon no tiene su precio sin descuentos (el espejo del bloque de
+                        arriba, ver comprobante_con_descuentos_en_precios_sin_registro en
+                        utils/descuentos_en_precios.js). El precio guardado tiene el descuento adentro de
+                        una base que no se conoce, asi que NO se descuenta de nuevo: 95 se queda en 95,
+                        no pasa a 85,50. NO LLAMAR A descontar() ACA "PARA QUE QUEDE IGUAL QUE LAS OTRAS
+                        RAMAS".
+
+                        Lo que si se hace es reconstruir los RECARGOS, que no estan bloqueados: la base es
+                        la columna de recargos si existe (es el precio justo debajo de los recargos, con
+                        los descuentos adentro) y, si no, el price tal cual, y se le meten los recargos de
+                        hoy. Sin recargos es el price sin tocar. El renglon no lleva base de descuentos
+                        (queda null): el comprobante sigue siendo legado al reabrirlo, que es el modo de
+                        falla seguro.
+                    */
+                    let precio_sin_recargos = precio_sin_recargos_guardado(item.pivot)
+
+                    price = precio_sin_recargos === null ? Number(item.pivot.price) : precio_sin_recargos
+                    item_des.push('Precio del pivot (venta anterior, descuentos ya adentro): ' + this.price(price))
+
+                    price = recargar(price)
 
                 } else {
 

@@ -108,13 +108,20 @@ export default {
 			let factor = this.factor_recargos_de_venta(item)
 
 			// El factor de los descuentos de venta de este renglon (null si no lleva ninguno adentro).
-			let factor_descuentos = this.factor_descuentos_de_venta(item)
+			let factor_descuentos_del_renglon = this.factor_descuentos_de_venta(item)
 
 			/*
 				Comprobante legado: lo calcula set_datos_para_actualizar_en_vender() al abrirlo, con lo
 				que tiene guardado, y lo limpia limpiar_vender(). En una venta nueva es false.
 			*/
 			let comprobante_legado = Boolean(this.$store.state.vender.recargos_en_precios_sin_registro)
+
+			/*
+				Y el legado de DESCUENTOS (vender.descuentos_en_precios_sin_registro): la fila cargada de ese
+				comprobante tiene el descuento adentro de una base que no se conoce, asi que se usa tal cual y
+				no se vuelve a descontar. Es independiente del legado de recargos.
+			*/
+			let comprobante_legado_descuentos = Boolean(this.$store.state.vender.descuentos_en_precios_sin_registro)
 
 			let calculated_price_vender = 0
 
@@ -137,6 +144,20 @@ export default {
 					factor_descuentos_de_venta() ya da null.
 				*/
 				let factor_de_la_fila = factor
+
+				/*
+					El factor de descuentos de la fila: el del renglon, salvo la fila cargada de un
+					comprobante legado. En un legado de descuentos el precio guardado ya tiene el descuento
+					adentro; en un legado de recargos el precio va tal cual y, si el flag de descuentos viene
+					en 1 (los dos flags en 1), tambien trae el descuento. En los dos casos NO se vuelve a
+					descontar. Las filas NUEVAS que tipee el vendedor si llevan el descuento, como cualquier
+					precio escrito a mano.
+				*/
+				let factor_descuentos = factor_descuentos_del_renglon
+
+				if (otro_precio.desde_comprobante_guardado && (comprobante_legado || comprobante_legado_descuentos)) {
+					factor_descuentos = null
+				}
 
 				if (comprobante_legado && otro_precio.desde_comprobante_guardado) {
 					factor_de_la_fila = null

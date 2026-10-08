@@ -504,14 +504,34 @@ export default {
 			aplicar_recargos_directo_a_items. Es el flag CRUDO: lo que el vendedor prendio. Lo que
 			manda en el calculo y lo que viaja al guardar es el predicado EFECTIVO (getter
 			descuentos_en_precios_efectivos de este modulo, o el computed global del mismo nombre de
-			mixins/generals.js): no cuenta con un descuento del 100% ni en un comprobante legado de
-			recargos.
+			mixins/generals.js): no cuenta con un descuento del 100%, pero SI cuenta en un comprobante
+			legado de descuentos (descuentos_en_precios_sin_registro, mas abajo): ahi el descuento ya esta
+			adentro de los precios.
 
 			🔴 Lo resetea limpiar_vender(), por lo mismo que el de recargos: un valor que se restaura
 			al abrir un comprobante y no se limpia al salir se hereda a la venta SIGUIENTE (el defecto
 			A del 9/9/2026, con aplicar_recargos_directo_a_items).
 		*/
 		aplicar_descuentos_directo_a_items: 0,
+
+		/*
+			True mientras se edita un comprobante (venta o presupuesto) LEGADO DE DESCUENTOS: guardado con
+			aplicar_descuentos_directo_a_items en 1, con descuentos, y con algun renglon elegible sin su
+			precio sin descuentos (pivot.price_sin_descuentos_de_venta en NULL). Sus precios ya tienen el
+			descuento adentro y no se sabe cuanto valian sin el: getPriceVender() los usa tal cual (no
+			vuelve a descontar), el pie no resta los descuentos, el flag sigue viajando en 1 y
+			stage-3/Discounts.vue bloquea los descuentos y la opcion. Es el espejo de
+			recargos_en_precios_sin_registro (mision descuentos-aplicar-al-precio-del-articulo, 8/10/2026).
+
+			Lo calcula previus_sale/index.js::set_datos_para_actualizar_en_vender() al abrir el comprobante,
+			con la regla de utils/descuentos_en_precios.js, y es independiente del legado de recargos: un
+			comprobante puede ser uno, el otro, los dos o ninguno.
+
+			🔴 Lo resetea limpiar_vender(), por lo mismo que los otros dos: un flag que se restaura al abrir y
+			no se limpia al salir se filtra a la venta SIGUIENTE (defecto A del 9/9/2026), que arrancaria con
+			los descuentos bloqueados y sin restar al pie.
+		*/
+		descuentos_en_precios_sin_registro: false,
 
 		total_description: [],
 
@@ -698,6 +718,9 @@ export default {
 		},
 		set_recargos_en_precios_sin_registro(state, value) {
 			state.recargos_en_precios_sin_registro = Boolean(value)
+		},
+		set_descuentos_en_precios_sin_registro(state, value) {
+			state.descuentos_en_precios_sin_registro = Boolean(value)
 		},
 		set_aplicar_descuentos_directo_a_items(state, value) {
 			const previous_value = state.aplicar_descuentos_directo_a_items
