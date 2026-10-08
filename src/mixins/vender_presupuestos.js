@@ -658,12 +658,19 @@ export default {
 				// ArticlesTable.vue. Si no se editó, se manda null. Estas claves quedan
 				// preservadas tanto si article_to_add se manda "plano" (crear) como si se
 				// anida bajo pivot (actualizar), porque ambas ramas parten de este mismo objeto.
+				/*
+					article_variant_id va en la RAIZ y no adentro de pivot_info (mision
+					presupuestos-con-variantes, 8/10/2026): asi viaja igual en el alta (plano) y en la
+					rama for_update (con pivot), y BudgetHelper::attachArticles la lee primero de la raiz.
+					Ver variante_del_renglon_de_presupuesto().
+				*/
 				let article_to_add = {
 					id: article.id,
 					status: article.status,
 					cost_in_dollars: article.cost_in_dollars,
 					name: article.name,
 					name_vender_personalizado: article.name_vender_personalizado || null,
+					article_variant_id: this.variante_del_renglon_de_presupuesto(article),
 				}
 
 				let pivot_info = {
@@ -728,6 +735,30 @@ export default {
 				console.log(articles)
 			})
 			return articles
+		},
+		/**
+		 * La variante con la que un renglon de VENDER viaja al presupuesto (mision
+		 * presupuestos-con-variantes, 8/10/2026): un entero, 0 = sin variante.
+		 *
+		 * Se lee article_variant_id del renglon, que es EXACTAMENTE lo que manda la VENTA: el
+		 * payload de guardar_venta (mixins/vender/guardar_venta/index.js) viaja con los items del
+		 * store tal cual, y ese campo lo fija add_item_to_sale (mixins/vender/index.js) como
+		 * `is_variant ? variant_id : 0` para todo renglon nuevo, venga del escaneo (variant_row), de
+		 * la busqueda por nombre, del selector de variantes o de la cache sin conexion: todos
+		 * terminan en add_item_to_sale. Un renglon reabierto de un presupuesto o una venta lo trae
+		 * de getItemsPreviusSale (`Number(article.pivot.article_variant_id)`). No se recalcula desde
+		 * is_variant/variant_id para que presupuesto y venta nunca puedan mandar variantes
+		 * distintas del mismo renglon.
+		 *
+		 * 🔴 El `|| 0` del final no sobra: un presupuesto guardado antes de esta mision se reabre con
+		 * article_variant_id = Number(undefined) = NaN, y `NaN || 0` lo vuelve 0. NaN ni null
+		 * tienen que llegar a la API.
+		 *
+		 * @param {Object} article Renglon de articulo de VENDER.
+		 * @returns {Number} Id de la variante, o 0 si el renglon no tiene.
+		 */
+		variante_del_renglon_de_presupuesto(article) {
+			return Number(article.article_variant_id || 0) || 0
 		},
 		/**
 		 * Un renglon del presupuesto para UNA fila de "varios precios" de un articulo de VENDER.
@@ -826,6 +857,8 @@ export default {
 					cost_in_dollars: article.cost_in_dollars,
 					name: article.name,
 					name_vender_personalizado: article.name_vender_personalizado || null,
+					// La variante es la del renglon padre: todas sus filas de varios precios la comparten.
+					article_variant_id: this.variante_del_renglon_de_presupuesto(article),
 					pivot: {
 						amount: cantidad,
 						price: precio,
@@ -847,6 +880,8 @@ export default {
 				cost_in_dollars: article.cost_in_dollars,
 				name: article.name,
 				name_vender_personalizado: article.name_vender_personalizado || null,
+				// Igual que en la rama de arriba: la variante del renglon padre, en la raiz.
+				article_variant_id: this.variante_del_renglon_de_presupuesto(article),
 				amount: cantidad,
 				price: precio,
 				cost: article.cost,
