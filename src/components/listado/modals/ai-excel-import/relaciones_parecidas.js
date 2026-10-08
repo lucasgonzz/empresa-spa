@@ -299,7 +299,9 @@ export function tiene_padre_ref(item) {
  *     que no apunta a `padre_id`, la comparación ya no vale: el hijo se oculta, no viaja, y la
  *     importación lo resuelve por su camino de siempre.
  *
- * Un padre que no está en la lista tiene una sola resolución: sus hijos se muestran siempre.
+ * Un padre que no está en la lista tiene una sola resolución: sus hijos se muestran siempre. Si
+ * igual llegaran varias copias de un mismo hijo (con `padre_ref` y el padre fuera de la lista),
+ * particionar() se queda con la primera: este método mira un ítem solo y no puede saberlo.
  *
  * @param {Object} item
  * @param {Object} padres índice de indice_de_padres()
@@ -331,6 +333,11 @@ export function item_visible(item, padres, decisiones) {
  * estos últimos son los únicos de los que hay que avisar "dejamos de mostrar", porque no tienen
  * reemplazo. Un recorrido, con el índice de padres armado una vez.
  *
+ * Un hijo con `padre_ref` cuyo padre NO está entre los ítems no tiene contra qué elegir variante:
+ * si llegaron varias copias de él (una por resolución posible de un padre que la API sí conocía),
+ * se ve y viaja solo la PRIMERA por tipo|padre|valor. Sin esto se veían y viajaban todas, con
+ * decisiones contradictorias para el mismo nombre (un "usar" y un "crear").
+ *
  * @param {Array} items ítems válidos (items_de)
  * @param {Object} decisiones
  * @param {Object} [padres] índice ya armado, si lo hay
@@ -340,8 +347,19 @@ export function particionar(items, decisiones, padres) {
 	let indice = padres || indice_de_padres(items)
 	let visibles = []
 	let ocultos_sin_reemplazo = []
+	let huerfanos_vistos = {}
 
 	items.forEach(function(item) {
+		if (tiene_padre_ref(item) && !item_del_padre(item, indice)) {
+			let llave = item.tipo + '|' + String(item.padre).trim() + '|' + String(item.valor).trim()
+			if (huerfanos_vistos[llave]) {
+				return
+			}
+			huerfanos_vistos[llave] = true
+			visibles.push(item)
+			return
+		}
+
 		if (item_visible(item, indice, decisiones)) {
 			visibles.push(item)
 		} else if (!tiene_padre_ref(item)) {
@@ -350,6 +368,28 @@ export function particionar(items, decisiones, padres) {
 	})
 
 	return { visibles: visibles, ocultos_sin_reemplazo: ocultos_sin_reemplazo }
+}
+
+/**
+ * True si hay algo que mostrar en la sección de nombres parecidos: algún ítem, o el aviso de que
+ * la revisión se acotó (`recortado`). Con `recortado` y sin ítems igual se muestra la sección (solo
+ * el aviso): si no, el usuario nunca se entera de que quedaron nombres sin revisar.
+ *
+ * @param {Object|null} relaciones
+ * @returns {Boolean}
+ */
+export function hay_algo_para_mostrar(relaciones) {
+	return items_de(relaciones).length > 0 || es_recortado(relaciones)
+}
+
+/**
+ * True si la API avisó que alguna capa del chequeo se acotó.
+ *
+ * @param {Object|null} relaciones
+ * @returns {Boolean}
+ */
+export function es_recortado(relaciones) {
+	return !!relaciones && relaciones.recortado === true
 }
 
 /**

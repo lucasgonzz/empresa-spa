@@ -1463,7 +1463,13 @@
 <script>
 import * as XLSX from 'xlsx/xlsx.mjs'
 import RelacionesParecidas from './RelacionesParecidas'
-import { items_de, decisiones_iniciales, armar_equivalencias, hay_pendientes } from './relaciones_parecidas'
+import {
+	decisiones_iniciales,
+	armar_equivalencias,
+	hay_pendientes,
+	hay_algo_para_mostrar,
+	es_recortado,
+} from './relaciones_parecidas'
 
 export default {
 
@@ -2084,11 +2090,12 @@ export default {
 		},
 
 		/*
-		 * True si el chequeo de nombres parecidos trajo algo para revisar. Decide si se dibuja la
-		 * sección del paso 3 y, en clientes y proveedores, si hay paso 3 o se va directo al 4.
+		 * True si el chequeo de nombres parecidos trajo algo para mostrar: ítems, o el aviso de que
+		 * la revisión se acotó (`recortado`, aunque no haya ítems). Decide si se dibuja la sección
+		 * del paso 3 y a dónde vuelve el Volver del paso 4 en clientes y proveedores.
 		 */
 		hay_relaciones_parecidas() {
-			return items_de(this.relaciones_parecidas).length > 0
+			return hay_algo_para_mostrar(this.relaciones_parecidas)
 		},
 
 		/*
@@ -4683,6 +4690,13 @@ export default {
 				return 3
 			}
 			if (hay_pendientes(this.relaciones_parecidas, this.decisiones_relaciones)) {
+				return 3
+			}
+			/*
+			 * Revisión acotada: aunque no haya nada pendiente (ni ningún ítem), el paso 3 se muestra
+			 * igual con el aviso, para que el usuario sepa que pudieron quedar nombres sin revisar.
+			 */
+			if (es_recortado(this.relaciones_parecidas)) {
 				return 3
 			}
 			return 4

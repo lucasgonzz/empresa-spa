@@ -14,8 +14,12 @@
 		se manda vive en relaciones_parecidas.js, compartida con Index.vue. Cada ítem se dibuja en
 		RelacionesParecidasItem.vue (ver ahí por qué: rendimiento con cientos de ítems).
 	-->
+	<!--
+		Se dibuja si hay ítems o si la revisión se acotó (`recortado`): en ese caso, aun sin ningún
+		nombre para revisar, el usuario tiene que ver el aviso de que pudieron quedar nombres afuera.
+	-->
 	<div
-	v-if="items_validos.length > 0"
+	v-if="items_validos.length > 0 || recortado"
 	class="ai-import-relaciones">
 
 		<div
@@ -30,9 +34,16 @@
 				v-if="items_pendientes.length > 0"
 				class="ai-import-relaciones__contador">{{ numero_es(items_pendientes.length) }}</span>
 			</p>
-			<p class="ai-import-relaciones__intro">
+			<p
+			v-if="items_validos.length > 0"
+			class="ai-import-relaciones__intro">
 				Encontramos en el archivo nombres parecidos a otros que ya tenés cargados, o parecidos entre sí.
 				Revisalos antes de seguir para no crear duplicados: ya dejamos marcada la opción que nos parece correcta.
+			</p>
+			<p
+			v-else
+			class="ai-import-relaciones__intro">
+				Entre los nombres que revisamos no encontramos ninguno parecido a otro que ya tengas cargado.
 			</p>
 		</div>
 
@@ -90,7 +101,9 @@
 			las acciones masivas y los botones del paso sigan a mano. Los títulos de grupo quedan
 			pegados arriba mientras se scrollea.
 		-->
-		<div class="ai-import-relaciones__lista">
+		<div
+		v-if="items_validos.length > 0"
+		class="ai-import-relaciones__lista">
 
 			<p
 			v-if="items_pendientes.length === 0 && cantidad_ocultos === 0"
@@ -175,6 +188,7 @@ import {
 	indice_de_padres,
 	particionar,
 	indice_para_accion_masiva,
+	es_recortado,
 } from './relaciones_parecidas'
 
 export default {
@@ -304,7 +318,7 @@ export default {
 
 		/* True cuando alguna capa del chequeo se acotó: puede haber parecidos que no están en la lista. */
 		recortado() {
-			return !!this.relaciones && this.relaciones.recortado === true
+			return es_recortado(this.relaciones)
 		},
 
 		/* "Usar el existente en todas" solo tiene sentido si alguna pendiente tiene un existente que ofrecer. */

@@ -190,7 +190,7 @@ export default {
 		repercute: [
 			'Puede haber nombres parecidos a otros cargados que no aparecen en la lista: esos se cargan como en cualquier importación: el que coincide con uno ya cargado, aunque cambien las mayúsculas, se asigna a ese, y el resto se crea.',
 		],
-		nota_interna: 'relaciones_parecidas.recortado === true: alguna capa del chequeo se acotó (más ítems de los que entran en la IA, una columna con demasiados valores distintos o el presupuesto de comparaciones agotado). Tanda 2 de la misión importacion-relaciones-parecidas.',
+		nota_interna: 'relaciones_parecidas.recortado === true: alguna capa del chequeo se acotó (más ítems de los que entran en la IA, una columna con demasiados valores distintos o el presupuesto de comparaciones agotado). Cuenta como "hay algo que mostrar": con recortado y sin ningún ítem, la sección sale igual (solo este aviso) y en clientes y proveedores se pasa por el paso 3 en vez de saltar al 4. Tanda 2 de la misión importacion-relaciones-parecidas.',
 	},
 
 	'ai-import-relaciones-sin-ia': {
