@@ -30,13 +30,11 @@ export default {
 			text: 'Cliente',
 			key: 'client_id',
 			type: 'search',
-			// Contexto de solo lectura: solo tiene sentido en el cheque recibido.
-			// ⚠️ Hoy el v_if NO filtra: showProperty() compara `typeof v_if == 'array'`, que nunca
-			// es cierto (ver el mismo aviso en models/order.js), así que en el formulario se ven
-			// Cliente y Proveedor y el que no corresponde dice "Sin datos". Queda declarado para
-			// que funcione el día que se arregle showProperty, o se pase a v_if_function.
+			// Contexto de solo lectura: solo tiene sentido en el cheque recibido. Va por
+			// v_if_function y no por v_if: showProperty() compara `typeof v_if == 'array'`, que nunca
+			// es cierto, así que un v_if en forma de array no oculta nada (ver models/order.js).
 			only_show: true,
-			v_if: ['tipo', '=', 'recibido'],
+			v_if_function: 'cheque_es_recibido',
 			// Sin prop "store" el buscador resuelve el store por la key (client_id -> client), asi
 			// que este campo tiene el mismo problema que los de abajo: la busqueda va siempre
 			// contra la API (global-search/client) y nunca contra el store. No sacar.
@@ -60,10 +58,10 @@ export default {
 			text: 'Proveedor',
 			key: 'provider_id',
 			type: 'search',
-			// Contexto de solo lectura: solo tiene sentido en el cheque emitido (ver el aviso del
-			// v_if en `client_id`: hoy no filtra).
+			// Contexto de solo lectura: solo tiene sentido en el cheque emitido (por v_if_function,
+			// ver el aviso en `client_id`).
 			only_show: true,
-			v_if: ['tipo', '=', 'emitido'],
+			v_if_function: 'cheque_es_emitido',
 			// Sin prop "store" el buscador resuelve el store por la key (provider_id -> provider),
 			// asi que este campo tiene el mismo problema que los de abajo: la busqueda va siempre
 			// contra la API (global-search/provider) y nunca contra el store. No sacar.
