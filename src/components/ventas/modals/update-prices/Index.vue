@@ -49,6 +49,10 @@ class="update-prices-modal">
 		:tbody-tr-class="row_class">
 			<template #cell(name)="data">
 				<span class="update-prices-modal__article-name">{{ data.item.name }}</span>
+				<!-- La variante del renglon: con el mismo articulo en dos variantes hay dos renglones con el mismo nombre -->
+				<span
+				v-if="data.item.variant_description"
+				class="update-prices-modal__variant">{{ data.item.variant_description }}</span>
 				<b-badge
 				v-if="data.item.is_service"
 				variant="light"
@@ -234,10 +238,23 @@ export default {
 					catalog_price = redondear_a_centavos(catalog_price * factor)
 				}
 
+				/*
+					Variante del renglon (mision variantes-mismo-articulo-en-vender, 8/10/2026).
+					sale.articles trae UNA entrada por fila del pivot, asi que el mismo articulo
+					vendido en dos variantes ya son dos renglones aca; lo que faltaba era decirle a la
+					API de cual se trata: con solo el id, la API escribia el precio en TODAS las filas
+					del articulo y la ultima pisaba a las demas. article_variant_id viaja siempre en
+					los articulos (0 = sin variante, que para la API nueva es "solo las filas sin
+					variante"); la API vieja no la lee y hace lo de siempre.
+				*/
+				let article_variant_id = Number(article.pivot.article_variant_id || 0)
+
 				item = {
 					is_article: true,
 					id: article.id,
 					name: article.name,
+					article_variant_id: article_variant_id,
+					variant_description: article_variant_id ? this.descripcion_de_variante_del_pivot(article, article_variant_id) : null,
 					// Precio numérico con el que se vendió el artículo
 					sold_price_raw: parseFloat(article.pivot.price) || 0,
 					actual_price: this.price(article.pivot.price),
@@ -510,6 +527,10 @@ export default {
 	&__article-name
 		font-weight: 600
 		color: var(--color-text-primary, #343a40)
+
+	&__variant
+		margin-left: 6px
+		color: var(--color-text-secondary, #6c757d)
 
 	&__type-badge
 		margin-left: 8px
