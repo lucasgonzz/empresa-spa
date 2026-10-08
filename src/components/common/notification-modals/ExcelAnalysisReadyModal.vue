@@ -5,6 +5,7 @@
 	hide-footer
 	hide-header
 	centered
+	@show="on_show"
 	@hidden="on_hidden">
 		<div class="excel-analysis-ready-modal">
 
@@ -36,17 +37,22 @@
 			</p>
 
 			<div class="buttons j-center">
+				<!--
+					Con error no hay nada que ver, salvo en la revisión de nombres de clientes y
+					proveedores: esa no frena la importación, y "Seguir con la importación" reabre el
+					modal en el paso de opciones finales (abrir_desde_corrida lo rearma sin la lista).
+				-->
 				<b-button
-				v-if="!hubo_error"
+				v-if="puede_seguir"
 				variant="primary"
 				class="m-r-15"
 				@click="ver_resultado">
-					Ver resultado
+					{{ hubo_error ? 'Seguir con la importación' : 'Ver resultado' }}
 				</b-button>
 				<b-button
-				:variant="hubo_error ? 'primary' : 'outline-secondary'"
+				:variant="puede_seguir ? 'outline-secondary' : 'primary'"
 				@click="descartar">
-					{{ hubo_error ? 'Entendido' : 'Después' }}
+					{{ puede_seguir ? 'Después' : 'Entendido' }}
 				</b-button>
 			</div>
 
@@ -90,6 +96,13 @@ export default {
 			const model = this.excel_analysis.model || 'article'
 			return this.es_recomendacion && (model === 'client' || model === 'provider')
 		},
+		/*
+		 * Si se ofrece seguir: siempre que terminó bien y, con error, solo en la revisión de nombres
+		 * (que nunca bloquea la importación: se sigue sin la lista).
+		 */
+		puede_seguir() {
+			return !this.hubo_error || this.es_revision_de_nombres
+		},
 		nombre_archivo() {
 			return this.excel_analysis.original_filename || ''
 		},
@@ -103,7 +116,7 @@ export default {
 			if (this.es_revision_de_nombres) {
 				return this.hubo_error
 					? 'No se pudieron revisar los nombres parecidos'
-					: 'Revisamos los nombres parecidos'
+					: 'Terminamos de revisar tu archivo'
 			}
 			if (this.hubo_error) {
 				return this.es_recomendacion
@@ -121,11 +134,12 @@ export default {
 			}
 
 			/*
-			 * "Si todavía no importaste": el usuario pudo haber seguido sin esperar la revisión
-			 * ("Seguir sin revisar los nombres") e importado igual, y este aviso le llega después.
+			 * Texto neutro a propósito: la revisión puede no haber encontrado ningún nombre parecido
+			 * (y entonces "Ver resultado" lleva directo a las opciones finales). "Si todavía no
+			 * importaste" porque el aviso puede llegar después de que el usuario siguió por su cuenta.
 			 */
 			if (this.es_revision_de_nombres) {
-				return 'Si todavía no importaste, podés ver los nombres parecidos a otros que ya tenés cargados antes de confirmar.'
+				return 'Si todavía no importaste, podés seguir con la importación.'
 			}
 
 			if (this.es_recomendacion) {
@@ -136,6 +150,20 @@ export default {
 		},
 	},
 	methods: {
+		/*
+		 * Una revisión de nombres que el usuario salteó ("Seguir sin revisar los nombres", ver
+		 * excel_analysis.salteados) no se avisa: el usuario ya siguió sin ella, y "Ver resultado" lo
+		 * dejaba volver a importar el mismo archivo. Se cancela la apertura acá, en el modal, y no en
+		 * el broadcast, que es común a otros proyectos.
+		 *
+		 * @param {BvModalEvent} evento
+		 * @return {void}
+		 */
+		on_show(evento) {
+			if (this.$store.getters['excel_analysis/fue_salteada'](this.excel_analysis.uuid)) {
+				evento.preventDefault()
+			}
+		},
 		/*
 		 * Lleva al usuario al módulo que corresponde y deja la orden para que el
 		 * modal de importación se reabra en el paso donde había quedado.
