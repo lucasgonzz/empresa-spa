@@ -79,6 +79,22 @@ export default {
             if (Number(sale.aplicar_recargos_directo_a_items)) {
                 recargos = []
             }
+
+            /*
+             * 🔴 Lo mismo con los DESCUENTOS de venta (mision descuentos-aplicar-al-precio-del-articulo,
+             * 8/10/2026): con `aplicar_descuentos_directo_a_items` prendido el descuento YA esta metido
+             * en el precio de cada renglon, y por lo tanto en `sub_total` (que el ticket usa como punto
+             * de partida del corrido). La venta conserva igual la relacion `discounts`, y el servidor
+             * la saltea en ese caso (`SaleHelper::getTotalSale()`). Si aca se aplicara de nuevo, el
+             * papel diria "Desc 10% $900" arriba de un TOTAL A PAGAR de $900 que ya lo trae, y el
+             * corrido (y la red de seguridad de abajo) ya no cerraria con el total guardado.
+             *
+             * Vale el flag GUARDADO en la venta, que es el efectivo: la SPA solo manda 1 cuando los
+             * precios de verdad llevan el descuento (un descuento del 100% viaja en 0).
+             */
+            if (Number(sale.aplicar_descuentos_directo_a_items)) {
+                descuentos = []
+            }
             let medios_de_pago = Array.isArray(sale.current_acount_payment_methods) ? sale.current_acount_payment_methods : []
 
             let descuento_puntos = this.numero_del_pie(sale.descuento_puntos)

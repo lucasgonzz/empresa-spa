@@ -87,6 +87,24 @@ export default {
 						this.$store.commit('devoluciones/set_aplicar_recargos_directo_a_items', 0)
 					}
 
+					/*
+						Y el de los DESCUENTOS adentro del precio (mision
+						descuentos-aplicar-al-precio-del-articulo, 8/10/2026): los precios de los renglones
+						(`pivot.price`, que es de donde sale price_vender en format_items) ya traen el descuento
+						adentro, asi que set_total.js::aplicar_discounts() tiene que saltearlo. Es el flag
+						GUARDADO en la venta, que es el efectivo (la SPA no manda 1 si el descuento no esta
+						adentro de los precios).
+					*/
+					if (
+						sale.aplicar_descuentos_directo_a_items
+					) {
+
+						this.$store.commit('devoluciones/set_aplicar_descuentos_directo_a_items', 1)
+					} else {
+
+						this.$store.commit('devoluciones/set_aplicar_descuentos_directo_a_items', 0)
+					}
+
 					this.$store.commit('devoluciones/format_items', sale)
 				} else {
 

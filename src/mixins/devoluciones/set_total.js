@@ -28,6 +28,9 @@ export default {
 		aplicar_recargos_directo_a_items() {
 			return this.$store.state.devoluciones.aplicar_recargos_directo_a_items
 		},
+		aplicar_descuentos_directo_a_items() {
+			return this.$store.state.devoluciones.aplicar_descuentos_directo_a_items
+		},
 		sale() {
 			return this.$store.state.devoluciones.sale
 		},
@@ -91,7 +94,14 @@ export default {
 			})
 		},
 		aplicar_discounts() {
-			if (this.discounts_id.length) {
+			/*
+				Con los descuentos de la venta metidos en el precio de cada renglon (flag heredado de la
+				venta en set_from_sale.js) el precio de la devolucion YA los trae: restarlos otra vez
+				devolveria de menos. Es el gemelo de `!this.aplicar_recargos_directo_a_items` de
+				aplicar_surchages(). Con esa opcion los toggles de descuentos de la devolucion no tienen
+				efecto, igual que los de recargos.
+			*/
+			if (this.discounts_id.length && !this.aplicar_descuentos_directo_a_items) {
 
 				let discounts_store_ = this.discounts_store 
 

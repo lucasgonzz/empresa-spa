@@ -1183,6 +1183,16 @@ export default {
 			let total = 0
             let total_item = 0
 
+            /*
+             * OJO, brecha conocida (hallazgo 10 del 28/9/2026, recargos-en-precios-editable): este
+             * fallback -solo corre si `sale.total` viene vacio o en 0- resta los descuentos y suma los
+             * recargos de la venta SOBRE los precios de los renglones sin mirar
+             * `aplicar_recargos_directo_a_items` ni `aplicar_descuentos_directo_a_items`. Con esas
+             * opciones prendidas los precios ya llevan el ajuste adentro y se contaria dos veces. No se
+             * toco porque `sale.total` lo guarda siempre el servidor (SaleHelper::getTotalSale): el caso
+             * practico seria una venta que quedo en 0 por canje de puntos o por total forzado y que
+             * ademas tiene la opcion prendida. Si se corrige, que sea para los dos flags a la vez.
+             */
             if (sale.total) {
                 total = sale.total 
             } else {

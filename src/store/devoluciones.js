@@ -43,6 +43,8 @@ export default {
 		generar_current_acount: 1,
 		facturar_nota_credito: 0,
 		aplicar_recargos_directo_a_items: 0,
+		// Gemelo del de recargos para los descuentos adentro del precio (mision descuentos-aplicar-al-precio-del-articulo).
+		aplicar_descuentos_directo_a_items: 0,
 	},
 	mutations: {
 		set_tipo(state, value) {
@@ -62,6 +64,9 @@ export default {
 		},
 		set_aplicar_recargos_directo_a_items(state, value) {
 			state.aplicar_recargos_directo_a_items = value
+		},
+		set_aplicar_descuentos_directo_a_items(state, value) {
+			state.aplicar_descuentos_directo_a_items = value
 		},
 		set_num_sale(state, value) {
 			state.num_sale = value 
