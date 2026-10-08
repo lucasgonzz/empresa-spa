@@ -199,8 +199,9 @@ export default {
 		repercute: [
 			'Los que solo cambian en mayúsculas, tildes o espacios vienen marcados como el que ya está cargado.',
 			'El resto viene marcado como nuevo, que es lo que pasaría sin esta revisión: conviene mirarlos uno por uno.',
+			'Si la lista quedó vacía (solo aparece el aviso de revisión acotada), dice que se revisaron solo los casos claros: mayúsculas, tildes y espacios.',
 		],
-		nota_interna: 'relaciones_parecidas.ia_consultada === false. Fallback del chequeo cuando la IA falla (error, timeout o JSON inválido): quedan los de clave fuerte y, de los parecidos, solo los de puntaje >= 0,85, con motivo "posible" y preseleccionados en "crear".',
+		nota_interna: 'relaciones_parecidas.ia_consultada === false. Fallback del chequeo cuando la IA falla (error, timeout o JSON inválido): quedan los de clave fuerte y, de los parecidos, solo los de puntaje >= 0,85, con motivo "posible" y preseleccionados en "crear". Sin ítems (sección visible solo por recortado) el texto cambia para no hablar de "estos nombres" que no están en pantalla.',
 	},
 
 	'ai-import-relaciones-saltear': {

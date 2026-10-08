@@ -55,8 +55,14 @@
 		class="ai-import-relaciones__aviso m-t-10 m-b-0"
 		data-testid="ai-import-relaciones-sin-ia">
 			<i class="icon-alert-triangle m-r-5"></i>
-			No pudimos consultar a la IA, así que estos nombres no se revisaron a fondo.
-			Revisá los nombres parecidos antes de seguir.
+			<!-- Sin ítems (solo sale por `recortado`) no hay "estos nombres" en pantalla de los que hablar. -->
+			<template v-if="items_validos.length > 0">
+				No pudimos consultar a la IA, así que estos nombres no se revisaron a fondo.
+				Revisá los nombres parecidos antes de seguir.
+			</template>
+			<template v-else>
+				No pudimos consultar a la IA: revisamos solo los casos claros (mayúsculas, tildes y espacios).
+			</template>
 		</b-alert>
 
 		<!-- Recortado: el chequeo se acotó (demasiados nombres); lo que no está acá no se revisó. -->
