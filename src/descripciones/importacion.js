@@ -136,7 +136,7 @@ export default {
 			'Cuando elegís uno que ya está cargado, queda recordado para tu comercio: la próxima importación con ese mismo nombre lo trae resuelto, en "Confirmadas en importaciones anteriores".',
 		],
 		requiere: 'Aparece solo si el archivo trae nombres parecidos. Un nombre escrito exactamente igual que uno cargado no se pregunta nunca.',
-		nota_interna: 'Viene en resultado.relaciones_parecidas de la corrida de get-recomendacion, que el SPA pide con chequear_relaciones: true (sin la bandera el backend no lo calcula). Las elecciones viajan como equivalencias [{ tipo, valor, padre?, accion: usar|crear|unir, id?|con? }] en POST ai-excel-import/import, para los tres modelos, y solo si hubo lista. Lo que se ve y lo que se manda lo decide ai-excel-import/relaciones_parecidas.js: una subcategoría (o localidad) cuya categoría (o provincia) quedó resuelta distinto de padre_id se oculta y no viaja. Del lado de la API, "usar" guarda la equivalencia en import_equivalencias, "crear" la borra y "unir" la guarda el worker cuando conoce el id.',
+		nota_interna: 'Viene en resultado.relaciones_parecidas de la corrida de get-recomendacion, que el SPA pide con chequear_relaciones: true (sin la bandera el backend no lo calcula). Las elecciones viajan como equivalencias [{ tipo, valor, padre?, accion: usar|crear|unir, id?|con? }] en POST ai-excel-import/import, para los tres modelos, y solo si hubo lista. Lo que se ve y lo que se manda lo decide ai-excel-import/relaciones_parecidas.js: la API manda cada subcategoría (o localidad) una vez por cada resolución posible de su categoría (o provincia), con padre_ref ("id:X" / "nuevo:<nombre>"), y se ve y viaja solo la que coincide con lo elegido para el padre; con una API sin padre_ref, la que no coincide con padre_id se oculta y no viaja. Un clic redibuja un solo ítem (RelacionesParecidasItem.vue) y la lista llega congelada (Object.freeze): con cientos de ítems no se nota. Del lado de la API, "usar" guarda la equivalencia en import_equivalencias, "crear" la borra y "unir" la guarda el worker cuando conoce el id.',
 	},
 
 	'ai-import-relaciones-opcion-*': {
@@ -167,7 +167,7 @@ export default {
 		que_hace: 'Marca en todos los nombres pendientes la opción "es uno nuevo".',
 		repercute: [
 			'Cada nombre se carga tal como está escrito en el Excel, aunque ya exista uno que solo cambia en mayúsculas, tildes o espacios: puede dejar duplicados.',
-			'Si una categoría pasa a ser nueva, sus subcategorías dejan de mostrarse: se habían comparado contra las de la categoría que ya existía.',
+			'Si una categoría pasa a ser nueva, sus subcategorías se vuelven a comparar contra esa categoría nueva: pueden cambiar las que se preguntan.',
 			'No toca las confirmadas en importaciones anteriores.',
 		],
 		requiere: 'Aparece con dos o más nombres pendientes de revisar.',
@@ -182,6 +182,15 @@ export default {
 			'Si cambiás uno a "es uno nuevo", deja de estar recordado y la próxima importación no lo va a traer resuelto.',
 		],
 		nota_interna: 'Ítems con motivo "recordado" (tabla import_equivalencias: user_id, tipo, contexto_id, valor_clave -> model_id, solo si el modelo sigue vivo). La equivalencia también se aplica en los caminos que no muestran esta lista (AdminSync, import clásico). Arranca plegado por decisión de Lucas.',
+	},
+
+	'ai-import-relaciones-recortado': {
+		titulo: 'Revisión acotada',
+		que_hace: 'Avisa que el archivo tiene tantos nombres que solo se revisaron los más probables.',
+		repercute: [
+			'Puede haber nombres parecidos a otros cargados que no aparecen en la lista: esos se cargan como en cualquier importación: el que coincide con uno ya cargado, aunque cambien las mayúsculas, se asigna a ese, y el resto se crea.',
+		],
+		nota_interna: 'relaciones_parecidas.recortado === true: alguna capa del chequeo se acotó (más ítems de los que entran en la IA, una columna con demasiados valores distintos o el presupuesto de comparaciones agotado). Tanda 2 de la misión importacion-relaciones-parecidas.',
 	},
 
 	'ai-import-relaciones-sin-ia': {
@@ -201,7 +210,7 @@ export default {
 			'La importación funciona como siempre: los nombres que ya existen se asignan y los que no, se crean.',
 		],
 		requiere: 'Solo en clientes y proveedores, cuando la revisión tarda más de 20 segundos.',
-		nota_interna: 'Suelta el polling y marca la corrida como vista (no la cancela: es un job y termina igual). El broadcast excel_analysis_ready igual llega al terminar y abre el aviso "Ver resultado"; si el usuario ya importó, lo descarta. Si la corrida falla o se pierde la conexión, clientes y proveedores siguen al paso 4 solos, sin mostrar error.',
+		nota_interna: 'Suelta el polling, marca la corrida como vista (no la cancela: es un job y termina igual) y la anota en excel_analysis.salteados: cuando termina, el broadcast excel_analysis_ready llega igual, pero ExcelAnalysisReadyModal cancela su apertura (evento show) para no ofrecer "Ver resultado" sobre un archivo que el usuario ya pudo haber importado. Aparece a los 20 s contados desde el clic en Confirmar, aunque la corrida siga "en espera" (cola ocupada o sin worker). Si la corrida falla o se pierde la conexión, clientes y proveedores siguen al paso 4 solos, sin mostrar error; lo mismo si la revisión se retoma después de cerrar el modal.',
 	},
 
 	'ai-import-btn-continuar': {
