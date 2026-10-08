@@ -218,8 +218,9 @@ export default {
 		}, {
 			/*
 				El aviso global del interceptor de main.js se apaga para este PUT: el rechazo
-				(409 de venta facturada o cerrada, 422 sin lista de precios) lo muestra el catch
-				de updateSale() en previus_sale/index.js, con el mensaje del back. Sin esto el
+				(409 de venta facturada o cerrada, 422 sin lista de precios, sin cotizacion o con
+				un cambio de cuenta corriente que no se puede hacer) lo muestra el catch de
+				updateSale() en previus_sale/index.js, con el mensaje del back. Sin esto el
 				mismo mensaje salia dos veces.
 			*/
 			skip_global_error_event: true,
@@ -241,6 +242,14 @@ export default {
 					},
 					diff: null,
 				}, { root: true })
+
+				/*
+					Se devuelve la respuesta: updateSale() (previus_sale/index.js) compara la venta que
+					guardo el servidor con la original para avisar el cambio de cuenta corriente y para
+					detectar una API que no guardo la moneda. Hasta esta mision la promesa resolvia en
+					undefined y nadie la leia.
+				*/
+				return res
 			})
 			.catch(err => {
 				commit('setUpdating', false)

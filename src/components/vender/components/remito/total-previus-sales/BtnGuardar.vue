@@ -53,13 +53,18 @@ import articulo_pendiente_de_agregar from '@/mixins/vender/articulo_pendiente_de
 	dos caminos que NO pasan por checkear_vender(), y conviene que la dependencia se lea aca.
 */
 import check_price_type from '@/mixins/vender/guardar_venta/chequeos/price_type'
+/*
+	Explicito aunque previus_sale/index.js ya lo trae (lo usa updateSale() para el aviso de despues de
+	guardar): saveSale() le pide la confirmacion de antes de guardar, y la dependencia conviene leerla aca.
+*/
+import aviso_cambio_de_cuenta from '@/mixins/vender/previus_sale/aviso_cambio_de_cuenta'
 export default {
 	name: 'ButtonClients',
 	components: {
 		VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
 		BtnLoader,
 	},
-	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar, check_price_type],
+	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar, check_price_type, aviso_cambio_de_cuenta],
 	props: {
 		/**
 		 * Cuando es true, suprime el componente VueltoEfectivo.
@@ -92,7 +97,15 @@ export default {
 				} else if (!this.editando_venta_previa) {
 					this.guardar_venta(false)
 				} else {
-					this.updateSale()
+					/*
+						Venta guardada: si cambia de cuenta corriente (otro cliente u otra moneda) y
+						tenia cobros, primero se confirma, porque lo cobrado queda en la cuenta
+						original (decision 1 de Lucas). Sin eso guarda derecho. Ver
+						mixins/vender/previus_sale/aviso_cambio_de_cuenta.js.
+					*/
+					this.cambio_de_cuenta_confirmar_y_guardar(() => {
+						this.updateSale()
+					})
 				}
 			}
 		},

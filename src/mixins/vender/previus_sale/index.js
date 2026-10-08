@@ -24,6 +24,12 @@ import { comprobante_con_recargos_en_precios_sin_registro } from '@/utils/recarg
 	getItemsPreviusSale(), al final).
 */
 import { reagrupar_renglones_con_varios_precios } from '@/utils/varios_precios_guardados'
+/*
+	El aviso de que la venta cambio de cuenta corriente, que updateSale() muestra cuando el PUT sale
+	bien (mision edicion-completa-ventas-presupuestos, 8/10/2026). Solo metodos, con prefijo
+	`cambio_de_cuenta_` y sin data(): este mixin lo mezclan una docena de componentes.
+*/
+import aviso_cambio_de_cuenta from '@/mixins/vender/previus_sale/aviso_cambio_de_cuenta'
 
 /**
  * Reconstruye `modal_payment_methods` --los metodos de pago con su descuento / recargo-- a partir
@@ -66,7 +72,7 @@ export function ajustes_del_cobro_de_filas(filas, metodos_de_pago) {
 }
 
 export default {
-	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods, facturar],
+	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods, facturar, aviso_cambio_de_cuenta],
 	// mixins: [vender, set_employee_vender, vender_set_total],
 	data() {
 		return {
@@ -712,6 +718,11 @@ export default {
 		updateSale() {
 			const sale_id = this.previus_sale ? this.previus_sale.id : null
 			const pending = [...this.$store.state.vender.pending_attachments]
+			/*
+				La venta tal como estaba GUARDADA, para comparar con la que devuelve el PUT (aviso de
+				cambio de cuenta corriente). Se toma aca y no en el .then: cancelPreviusSale() la limpia.
+			*/
+			const venta_original = this.previus_sale
 
 			this.$store.dispatch('vender/previus_sales/updateSale', {
 				client_id: this.client ? this.client.id : null, 
@@ -785,6 +796,13 @@ export default {
 					this.upload_pending_attachments(sale_id, pending)
 				}
 				this.$toast.success('Venta actualizada')
+
+				// La respuesta la devuelve la action del store (res.data.model es la venta guardada).
+				let venta_guardada = res && res.data ? res.data.model : null
+
+				// Si la venta paso de una cuenta corriente a otra, se dice de cual a cual (decision 1 de Lucas).
+				this.cambio_de_cuenta_avisar_al_guardar(venta_original, venta_guardada)
+
 				this.cancelPreviusSale()
 			})
 			.catch(err => {
@@ -797,6 +815,13 @@ export default {
 					vendedor corrigio adentro: nada de cancelPreviusSale() aca. Este catch corre
 					desde que la action del store relanza el error (antes lo tragaba con un alert y
 					el .then de arriba daba la venta por actualizada).
+
+					Desde la mision edicion-completa-ventas-presupuestos (8/10/2026) llegan por aca,
+					con el mismo `message`, tres 422 mas: el cambio de cliente o de moneda de una venta a
+					cuenta corriente que la API no puede mover (tiene una nota de credito en la cuenta
+					corriente, esta en una facturacion consolidada o el cliente es de otro comercio), el
+					paso a dolares sin cotizacion (`sin_cotizacion_dolar`) y el limite de credito del
+					cliente nuevo. En los tres la venta quedo como estaba y la edicion sigue abierta.
 				*/
 				if (
 					err.response
