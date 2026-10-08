@@ -70,8 +70,12 @@ export default {
 				vendido en dos variantes hay dos renglones con el mismo N° y el mismo nombre, y sin
 				esta columna no se sabe a cual se le entregan unidades. En una venta sin variantes
 				la tabla queda como siempre.
+
+				Se decide por article_variant_id y no por la descripcion: una variante borrada sin
+				descripcion en el pivot dejaba la columna escondida (descripcion_de_variante le pone
+				"#<id>" en ese caso).
 			*/
-			let hay_variantes = this.local_items.some(item => item.variant_description)
+			let hay_variantes = this.local_items.some(item => Number(item.article_variant_id || 0) !== 0)
 
 			if (hay_variantes) {
 				fields.push({
@@ -147,7 +151,9 @@ export default {
 		},
 		/**
 		 * La descripcion de la variante de un renglon ("Azul 36"), o null si no tiene: la del pivot
-		 * (article_sale.variant_description) o, si no la trae, la de las variantes del articulo.
+		 * (article_sale.variant_description) o, si no la trae, la de las variantes del articulo. Si
+		 * no esta en ningun lado (variante borrada), "#<id>": algo neutro para que el renglon no se
+		 * vea como uno sin variante.
 		 *
 		 * @param {Object} article Articulo de sale.articles, con su pivot.
 		 * @param {Number} article_variant_id Variante del renglon (0 = sin variante).
@@ -163,13 +169,17 @@ export default {
 				return article.pivot.variant_description
 			}
 
-			if (!Array.isArray(article.article_variants)) {
-				return null
+			let variante = null
+
+			if (Array.isArray(article.article_variants)) {
+				variante = article.article_variants.find(variant => variant.id == article_variant_id)
 			}
 
-			let variante = article.article_variants.find(variant => variant.id == article_variant_id)
+			if (variante && variante.variant_description) {
+				return variante.variant_description
+			}
 
-			return variante ? variante.variant_description : null
+			return '#' + article_variant_id
 		},
 		marcar_todo_como_entregado() {
 			this.local_items.forEach((item, index) => {
