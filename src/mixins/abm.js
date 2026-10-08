@@ -99,6 +99,8 @@ export default {
 						'default_payment_method_caja',
 						// Bancos de cheques (misión cheques-endoso-y-bancos, 21/9/2026)
 						'cheque_banco',
+						// Impuestos de retención (misión retenciones-abm-impuestos, 8/10/2026)
+						'retencion_impuesto',
 					],
 				},
 				// Gastos
