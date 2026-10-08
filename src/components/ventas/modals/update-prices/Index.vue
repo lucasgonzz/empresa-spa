@@ -114,7 +114,7 @@ import previus_sale from '@/mixins/vender/previus_sale/index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import { factor_de_recargos, numero_o_null, precio_sin_recargos_guardado, comprobante_con_recargos_en_precios_sin_registro, redondear_a_centavos } from '@/utils/recargos_en_precios'
 /* Los descuentos de venta adentro del precio, apilados debajo de los recargos (mision descuentos-aplicar-al-precio-del-articulo). */
-import { factor_de_descuentos, precio_sin_descuentos_guardado } from '@/utils/descuentos_en_precios'
+import { factor_de_descuentos, precio_sin_descuentos_guardado, comprobante_con_descuentos_en_precios_sin_registro } from '@/utils/descuentos_en_precios'
 export default {
 	mixins: [previus_sale],
 	components: {
@@ -191,11 +191,11 @@ export default {
 				return null
 			}
 
-			// En un legado de recargos la opción de descuentos no puede estar prendida (ver Discounts.vue).
-			if (this.venta_con_recargos_en_precios_sin_registro) {
-				return null
-			}
-
+			/*
+			 * Un legado de recargos NO apaga este factor: si la venta se guardó con los dos flags en 1 (y
+			 * las bases en NULL), sus precios ya traen el descuento adentro, y proponer el catálogo sin
+			 * descuento la dejaría cobrándolo de menos... o, peor, de nuevo si se vuelve a restar.
+			 */
 			let porcentajes = []
 
 			if (Array.isArray(this.sale.discounts)) {
@@ -205,6 +205,18 @@ export default {
 			}
 
 			return factor_de_descuentos(porcentajes)
+		},
+		/**
+		 * Venta LEGADO DE DESCUENTOS: guardada con la opción de descuentos prendida pero sin el precio
+		 * sin descuentos de algún renglón (misma regla que VENDER, utils/descuentos_en_precios.js). En
+		 * esa venta se sigue proponiendo el precio del catálogo CON los descuentos adentro (el flag está
+		 * en 1 y los precios ya los traen), pero no se manda precio sin descuentos de los renglones que
+		 * cambian: la venta sigue siendo legado al reabrirla, que es el modo de falla seguro.
+		 *
+		 * @returns {Boolean}
+		 */
+		venta_con_descuentos_en_precios_sin_registro() {
+			return comprobante_con_descuentos_en_precios_sin_registro(this.sale)
 		},
 		/**
 		 * Venta LEGADO: guardada con la opción prendida antes de que los renglones registraran su
@@ -424,7 +436,13 @@ export default {
 
 			// Los factores que de verdad lleva ESTE renglón adentro (null si no le corresponde).
 			let fr = (factor_recargos !== null && factor_recargos !== 0 && item.lleva_recargos) ? factor_recargos : null
-			let fd = (factor_descuentos !== null && item.lleva_descuentos) ? factor_descuentos : null
+			/*
+			 * En un legado de descuentos tampoco hay base de descuentos que mandar (la que no se conoce es
+			 * justo esa): el renglón viaja con null y la venta sigue siendo legado, que es lo seguro. La
+			 * base de RECARGOS sí se manda (es el precio justo debajo de los recargos, con el descuento
+			 * adentro) salvo que la venta tambien sea legado de recargos.
+			 */
+			let fd = (factor_descuentos !== null && item.lleva_descuentos && !this.venta_con_descuentos_en_precios_sin_registro) ? factor_descuentos : null
 
 			if (fr === null && fd === null) {
 				return sin_ajustes

@@ -95,8 +95,9 @@ export default {
 						GUARDADO en la venta, que es el efectivo (la SPA no manda 1 si el descuento no esta
 						adentro de los precios).
 					*/
+					// Number() y no la verdad del valor a secas: la columna es nullable y un "0" serializado seria truthy.
 					if (
-						sale.aplicar_descuentos_directo_a_items
+						Number(sale.aplicar_descuentos_directo_a_items)
 					) {
 
 						this.$store.commit('devoluciones/set_aplicar_descuentos_directo_a_items', 1)
