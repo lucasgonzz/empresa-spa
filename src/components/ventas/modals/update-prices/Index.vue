@@ -217,12 +217,31 @@ export default {
 			this.sale.articles.forEach(article => {
 
 				/*
+					Variante del renglon (mision variantes-mismo-articulo-en-vender, 8/10/2026).
+					sale.articles trae UNA entrada por fila del pivot, asi que el mismo articulo
+					vendido en dos variantes ya son dos renglones aca; lo que faltaba era decirle a la
+					API de cual se trata: con solo el id, la API escribia el precio en TODAS las filas
+					del articulo y la ultima pisaba a las demas. article_variant_id viaja siempre en
+					los articulos (0 = sin variante, que para la API nueva es "solo las filas sin
+					variante"); la API vieja no la lee y hace lo de siempre.
+				*/
+				let article_variant_id = Number(article.pivot.article_variant_id || 0)
+
+				/*
+					El precio actual del catalogo para ESTE renglon: con variante, el de la variante
+					(precio_de_catalogo_del_renglon, misma regla que la API). Antes se proponia
+					siempre el del articulo y un renglon de una variante con precio propio se
+					"actualizaba" al precio de otra cosa.
+				*/
+				let precio_de_catalogo = this.precio_de_catalogo_del_renglon(article, article_variant_id)
+
+				/*
 					Con la opción prendida, el precio actual que se propone es el del catálogo CON
 					los recargos de la venta adentro, igual que lo calcularía VENDER: si no, el
 					renglón perdería el recargo (el pie no lo suma con la opción prendida).
 				*/
 				let lleva_recargos = factor !== null
-				let catalog_price = parseFloat(article.final_price) || 0
+				let catalog_price = parseFloat(precio_de_catalogo) || 0
 
 				// Precio del catálogo SIN recargos: la base exacta si el vendedor no toca el propuesto
 				let catalog_price_sin_recargos = null
@@ -237,17 +256,6 @@ export default {
 					*/
 					catalog_price = redondear_a_centavos(catalog_price * factor)
 				}
-
-				/*
-					Variante del renglon (mision variantes-mismo-articulo-en-vender, 8/10/2026).
-					sale.articles trae UNA entrada por fila del pivot, asi que el mismo articulo
-					vendido en dos variantes ya son dos renglones aca; lo que faltaba era decirle a la
-					API de cual se trata: con solo el id, la API escribia el precio en TODAS las filas
-					del articulo y la ultima pisaba a las demas. article_variant_id viaja siempre en
-					los articulos (0 = sin variante, que para la API nueva es "solo las filas sin
-					variante"); la API vieja no la lee y hace lo de siempre.
-				*/
-				let article_variant_id = Number(article.pivot.article_variant_id || 0)
 
 				item = {
 					is_article: true,
@@ -269,7 +277,7 @@ export default {
 					precio_propuesto: lleva_recargos ? catalog_price : null,
 					precio_propuesto_sin_recargos: catalog_price_sin_recargos,
 				}
-				item.price_vender = lleva_recargos ? catalog_price : article.final_price
+				item.price_vender = lleva_recargos ? catalog_price : precio_de_catalogo
 				items.push(item)
 			})
 
@@ -294,6 +302,38 @@ export default {
 			})
 
 			this.table_items = items
+		},
+		/**
+		 * El precio actual del catálogo de un renglón de la venta (sin recargos de venta).
+		 *
+		 * Sin variante, el final_price del artículo, como siempre. Con variante, el precio PROPIO
+		 * de la variante si tiene uno (`article_variants.price` no null) y si no el del artículo:
+		 * la misma regla que VenderSearchHelper::get_variant_price de la API, que es el precio con
+		 * el que VENDER agrega la variante. Un precio propio en 0 es un precio (la API mira
+		 * is_null, no la veracidad). Si la variante no está entre las del artículo (borrada, o una
+		 * API que no las manda), el del artículo.
+		 *
+		 * @param {Object} article Artículo de sale.articles (con article_variants).
+		 * @param {Number} article_variant_id Variante del renglón (0 = sin variante).
+		 * @returns {Number|String|null}
+		 */
+		precio_de_catalogo_del_renglon(article, article_variant_id) {
+
+			if (!article_variant_id || !Array.isArray(article.article_variants)) {
+				return article.final_price
+			}
+
+			let variante = article.article_variants.find(variant => variant.id == article_variant_id)
+
+			if (
+				variante
+				&& variante.price !== null
+				&& typeof variante.price != 'undefined'
+			) {
+				return variante.price
+			}
+
+			return article.final_price
 		},
 		/**
 		 * El precio sin recargos de un renglón para `PUT sale/update-prices` (clave
