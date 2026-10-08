@@ -20,10 +20,18 @@
 			los resultados. Pedido de Lucas, 4/10/2026: antes volvía al buscador y había que elegirlo a
 			mano. Solo en el alta: editar el cliente desde el chip no lo vuelve a elegir.
 		-->
+		<!--
+			:key="buscador_cliente_key": se incrementa cuando clearSelected() RECHAZA sacar el cliente
+			(venta guardada que iba a la cuenta corriente). El buscador ya borro su chip antes de
+			avisar (search/Index.vue::clearSelected pone selected_model en null y despues emite) y el
+			store no cambio, asi que nada le avisa que vuelva a mostrar el cliente: recrearlo lo hace
+			leer otra vez `_vender.client`, sin tocar el componente comun.
+		-->
 		<div
 		v-if="puede_cambiar_cliente"
 		class="vender-stage__client-search">
 			<search-component
+			:key="buscador_cliente_key"
 			id="select_client_vender"
 			@setSelected="setSelected"
 			:prop="{text: 'Cliente', key: 'client_id'}"
@@ -64,6 +72,11 @@ import computed from '@/mixins/vender/computed'
 import default_payment_method from '@/mixins/vender/default_payment_method'
 import set_afip_tipo_comprobante from '@/mixins/vender/set_afip_tipo_comprobante'
 import ajustes_del_cliente from '@/mixins/vender/ajustes_del_cliente'
+/*
+	La regla de "la venta guardada iba a la cuenta corriente" es UNA sola y vive con el aviso de
+	cambio de cuenta (lo usa tambien BtnGuardar.vue al confirmar): si cambia, cambia para los dos.
+*/
+import { venta_iba_a_cuenta_corriente } from '@/mixins/vender/previus_sale/aviso_cambio_de_cuenta'
 export default {
 	mixins: [price_types, vender_set_total, computed, default_payment_method, set_afip_tipo_comprobante, ajustes_del_cliente],
 	// mixins: [vender, vender_set_total],
@@ -83,6 +96,8 @@ export default {
 				y el clearTimeout del tope) desde cualquiera de los tres caminos que la cierran.
 			*/
 			foco_pendiente_tras_arca: null,
+			// Se incrementa para recrear el buscador cuando se rechaza sacar el cliente (ver el template).
+			buscador_cliente_key: 0,
 		}
 	},
 	beforeDestroy() {
@@ -132,11 +147,23 @@ export default {
 				}
 			]
 		},
-		// Determina si se puede elegir/cambiar el cliente en VENDER.
-		// - Venta nueva: siempre.
-		// - Venta existente en edición: solo si está omitida en cuenta corriente.
-		// - Presupuesto en edición: solo si no está confirmado (estado 2).
-		//   (De todos modos el botón "Actualizar en VENDER" ya viene deshabilitado para confirmados.)
+		/*
+			Determina si se puede elegir/cambiar el cliente en VENDER.
+			- Venta nueva: siempre.
+			- Presupuesto en edición: solo si no está confirmado (estado 2). (De todos modos el
+			  botón "Actualizar en VENDER" ya viene deshabilitado para confirmados.)
+			- Venta guardada en edición (mision edicion-completa-ventas-presupuestos, 8/10/2026):
+			  · si iba a la CUENTA CORRIENTE se puede CAMBIAR por otro cliente: la API saca el
+			    debito de la cuenta del cliente original, lo crea en la del nuevo y recalcula entera
+			    la cuenta de la que salio (SaleHelper::updateCurrentAcountsAndCommissions). Lo que
+			    el original ya habia pagado queda en su cuenta (decision 1 de Lucas) y BtnGuardar lo
+			    avisa antes de guardar. SACARLO, en cambio, no: ver clearSelected().
+			  · si estaba OMITIDA en la cuenta corriente, como siempre (no mueve ninguna cuenta).
+			  · si es de CONTADO (sin cliente y no omitida) sigue sin buscador, como hasta ahora:
+			    ponerle cliente la convertiria en una venta a cuenta corriente con los metodos de
+			    pago viejos todavia adjuntos --cobrada y ademas deuda--, porque la API
+			    (attachSelectedPaymentMethods) no los saca cuando la venta deja de ser de contado.
+		*/
 		puede_cambiar_cliente() {
 			if (this.budget) {
 				return this.budget.budget_status_id != 2
@@ -144,7 +171,18 @@ export default {
 			if (!this.editando_venta_previa) {
 				return true
 			}
-			return !!(this.previus_sale && this.previus_sale.omitir_en_cuenta_corriente)
+			if (this.venta_previa_a_cuenta_corriente) {
+				return true
+			}
+			return !!(this.previus_sale && Number(this.previus_sale.omitir_en_cuenta_corriente))
+		},
+		/*
+			La venta guardada que se esta editando iba a la cuenta corriente (tiene cliente y no esta
+			omitida), tal como esta GUARDADA y no como la dejo el vendedor en esta edicion: es lo que
+			decide si sacar el cliente se permite.
+		*/
+		venta_previa_a_cuenta_corriente() {
+			return this.editando_venta_previa && venta_iba_a_cuenta_corriente(this.previus_sale)
 		},
 	},
 	watch: {
@@ -211,6 +249,14 @@ export default {
 			// Cliente elegido en el buscador
 			let client = result.model
 
+			/*
+				Si el comprobante en edicion tiene un canje de puntos, vender/setClient lo va a anular
+				(los puntos eran del cliente que estaba: ver store/vender/vender.js) y el total sube.
+				Hasta esta mision pasaba en silencio; ahora que una venta a cuenta corriente puede
+				cambiar de cliente, se avisa. Se mira ANTES del commit, que es el que lo borra.
+			*/
+			let pierde_canje_de_puntos = this.en_edicion_vender() && Number(this.$store.state.vender.descuento_puntos) > 0
+
 			// En edición (presupuesto o venta existente) se conserva la lista de precios que
 			// ya tiene el comprobante: NO se llama a setPriceType(). Si el negocio usa listas y
 			// el cliente elegido trae otra distinta, se avisa que se mantiene la original.
@@ -220,6 +266,12 @@ export default {
 			} else {
 				this.$store.commit('vender/setClient', client)
 				this.setPriceType()
+			}
+
+			if (pierde_canje_de_puntos) {
+				this.$toast.warning('Se quitó el canje de puntos: los puntos eran del cliente anterior y el total vuelve a subir. Si el cliente nuevo tiene puntos, podés canjearlos de nuevo.', {
+					duration: 10000,
+				})
 			}
 
 			// Descuentos y recargos vinculados al cliente. Acá y no en `vender/setClient`: ver el
@@ -345,6 +397,24 @@ export default {
 			}
 		},
 		clearSelected() {
+			/*
+				🔴 CAMBIAR SI, SACAR NO. A una venta guardada que iba a la cuenta corriente se le puede
+				cambiar el cliente (ver puede_cambiar_cliente), pero no sacarselo. Sacarlo la pasaria
+				a contado por un camino que hasta esta mision no existia en la pantalla (el buscador
+				estaba escondido): habilitar_metodo_de_pago() de abajo le pone efectivo, y en un
+				comercio con cajas la venta quedaria cobrada sin movimiento de caja, porque el
+				update() de la API nunca llama a check_caja. Se rechaza y el cliente que estaba
+				elegido sigue puesto (el store no se toca; el buscador se recrea para volver a
+				mostrarlo, ver el template).
+			*/
+			if (this.venta_previa_a_cuenta_corriente) {
+				this.$toast.error('La venta va a la cuenta corriente: podés cambiar el cliente por otro, pero no sacarlo. Para pasar la venta a contado, eliminala y volvé a cargarla.', {
+					duration: 8000,
+				})
+				this.buscador_cliente_key++
+				return
+			}
+
 			this.$store.commit('vender/setClient', null)
 			this.$store.commit('vender/set_send_mail', 0)
 			/*
