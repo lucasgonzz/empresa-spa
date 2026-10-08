@@ -178,6 +178,12 @@ export default {
 				valor_dolar: info.valor_dolar,
 				observations_ocultas: info.observations_ocultas,
 				aplicar_recargos_directo_a_items: info.aplicar_recargos_directo_a_items,
+				/*
+					Flag EFECTIVO de los descuentos adentro del precio (ver el POST en store/vender/vender.js).
+					Viaja siempre, tambien en 0: editando se puede APAGAR la opcion, y el 0 es lo que le
+					dice a la API que los precios de esta edicion ya no llevan el descuento adentro.
+				*/
+				aplicar_descuentos_directo_a_items: info.aplicar_descuentos_directo_a_items,
 				sale_status_id: info.sale_status_id,
 			// Indica si la venta debe descontar stock al actualizarse
 			discount_stock: info.discount_stock,

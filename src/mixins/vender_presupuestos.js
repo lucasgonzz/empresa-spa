@@ -326,6 +326,19 @@ export default {
 				'aplicar_recargos_directo_a_items'	: this.aplicar_recargos_directo_a_items,
 
 				/*
+					Lo mismo para los DESCUENTOS adentro del precio (mision
+					descuentos-aplicar-al-precio-del-articulo, 8/10/2026), y por el mismo motivo: con el
+					prendido los price_vender ya traen el descuento y aplicar_discounts() se salteo
+					restarlo del total; si el campo no llega, BudgetHelper::getTotal() lo vuelve a restar y
+					rechaza el guardado.
+
+					🔴 Viaja el flag EFECTIVO, no el crudo (con un descuento del 100% el crudo sigue en 1
+					pero los precios no llevan el descuento: mandarlo en 1 haria que el back no lo cobre), y
+					viaja siempre, 0 incluido: es lo que le dice al back que este presupuesto ya no lo lleva.
+				*/
+				'aplicar_descuentos_directo_a_items'	: this.$store.getters['vender/descuentos_en_precios_efectivos'] ? 1 : 0,
+
+				/*
 					🔴 El total forzado tiene que viajar, igual que el flag de arriba y por el mismo
 					motivo: `total` ya lo trae aplicado (lo suma vender_set_total.js al final de
 					setTotal()), pero BudgetHelper::getTotal() recalcula el total desde los items,
@@ -470,6 +483,9 @@ export default {
 				// ya traen el recargo adentro, y sin este campo el back se lo vuelve a sumar y rechaza
 				// el total.
 				'aplicar_recargos_directo_a_items'	: this.aplicar_recargos_directo_a_items,
+
+				// Idem para los descuentos adentro del precio, y tambien el flag efectivo (ver actualizar()).
+				'aplicar_descuentos_directo_a_items'	: this.$store.getters['vender/descuentos_en_precios_efectivos'] ? 1 : 0,
 
 				// Viaja por el mismo motivo que en actualizar(): sin el, BudgetHelper::getTotal()
 				// recalcula el total sin el ajuste y rechaza el guardado.
@@ -685,6 +701,11 @@ export default {
 						actualizar un renglon que ya estaba cargado, igual que el precio.
 					*/
 					price_vender_sin_recargos : this.precio_sin_recargos_del_renglon(article),
+					/*
+						Y el precio ORIGINAL, sin descuentos ni recargos de venta (la columna nueva
+						pivot.price_sin_descuentos_de_venta), con las mismas reglas que la de recargos.
+					*/
+					price_vender_sin_descuentos : this.precio_sin_descuentos_del_renglon(article),
 				}
 
 				if (
@@ -763,7 +784,14 @@ export default {
 
 			let precio = otro_precio.price_vender
 			let base = null
+			let base_descuentos = null
 
+			/*
+				`price_vender_con_recargos` es el precio FINAL de la fila, con los descuentos y/o los
+				recargos de venta adentro: el nombre quedo por compatibilidad con la API (mision
+				descuentos-aplicar-al-precio-del-articulo, 8/10/2026). Si vino, trae tambien las dos
+				bases, cada una null cuando su capa no se aplico.
+			*/
 			let con_recargos = otro_precio.price_vender_con_recargos
 
 			if (
@@ -774,6 +802,7 @@ export default {
 			) {
 				precio = con_recargos
 				base = typeof otro_precio.price_vender_sin_recargos != 'undefined' ? otro_precio.price_vender_sin_recargos : null
+				base_descuentos = typeof otro_precio.price_vender_sin_descuentos != 'undefined' ? otro_precio.price_vender_sin_descuentos : null
 			}
 
 			let cantidad = 1
@@ -837,6 +866,7 @@ export default {
 						bonus: typeof article.discount != 'undefined' ? article.discount : null,
 						location: null,
 						price_vender_sin_recargos: base,
+						price_vender_sin_descuentos: base_descuentos,
 					},
 				}
 			}
@@ -857,6 +887,7 @@ export default {
 				bonus: typeof article.discount != 'undefined' ? article.discount : null,
 				location: null,
 				price_vender_sin_recargos: base,
+				price_vender_sin_descuentos: base_descuentos,
 			}
 		},
 		get_services() {
@@ -869,6 +900,7 @@ export default {
 						amount: service.amount,
 						price: service.price_vender,
 						price_vender_sin_recargos: this.precio_sin_recargos_del_renglon(service),
+						price_vender_sin_descuentos: this.precio_sin_descuentos_del_renglon(service),
 					}
 				})
 				console.log(services)
@@ -885,6 +917,7 @@ export default {
 						amount: promo.amount,
 						price: promo.price_vender,
 						price_vender_sin_recargos: this.precio_sin_recargos_del_renglon(promo),
+						price_vender_sin_descuentos: this.precio_sin_descuentos_del_renglon(promo),
 					}
 				})
 				console.log(promocion_vinotecas)
@@ -905,6 +938,7 @@ export default {
 						amount: combo.amount,
 						price: combo.price_vender,
 						price_vender_sin_recargos: this.precio_sin_recargos_del_renglon(combo),
+						price_vender_sin_descuentos: this.precio_sin_descuentos_del_renglon(combo),
 					}
 				})
 			})
@@ -941,6 +975,36 @@ export default {
 			}
 
 			return precio_sin_recargos
+		},
+		/**
+		 * El precio ORIGINAL -sin descuentos ni recargos de venta- de un renglon del remito, para el
+		 * payload del presupuesto (mision descuentos-aplicar-al-precio-del-articulo, 8/10/2026). Lo
+		 * deja generals.js::getPriceVender() en item.price_vender_sin_descuentos cada vez que calcula
+		 * el precio; null si el precio no tiene descuentos adentro. Es el gemelo exacto de
+		 * precio_sin_recargos_del_renglon().
+		 *
+		 * 🔴 Viaja SIEMPRE, tambien en null, por el mismo motivo que la base de recargos: en el
+		 * presupuesto la API trata distinto la clave ausente (preserva la base guardada si el precio no
+		 * cambio: el formulario generico de Presupuestos no conoce la clave) y el null (la borra). Con
+		 * la opcion apagada el renglon tiene que quedar sin base, y solo el null lo dice. Cada get_*
+		 * tiene que sumar la clave: el que se olvide deja el presupuesto con el descuento adentro sin
+		 * poder apagarlo al reabrirlo.
+		 *
+		 * @param {Object} item
+		 * @returns {Number|null}
+		 */
+		precio_sin_descuentos_del_renglon(item) {
+			let precio_sin_descuentos = item ? item.price_vender_sin_descuentos : null
+
+			if (
+				typeof precio_sin_descuentos != 'number'
+				|| isNaN(precio_sin_descuentos)
+				|| !isFinite(precio_sin_descuentos)
+			) {
+				return null
+			}
+
+			return precio_sin_descuentos
 		},
 
 	}

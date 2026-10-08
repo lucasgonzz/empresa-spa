@@ -184,6 +184,16 @@ export default {
 
 			if (resultado_descuentos.cambio) {
 				this.$store.commit('vender/setDiscountsId', resultado_descuentos.ids)
+
+				/*
+					Gemelo de lo que se hace abajo con los recargos y del setter de stage-3/Discounts.vue:
+					sin descuentos, la opcion de aplicarlos directo a los precios no tiene sobre que actuar y
+					hay que apagarla, si no el toggle queda prendido y bloqueado (sin descuentos elegidos no
+					se puede tocar) y la venta se guarda con la bandera en 1.
+				*/
+				if (!resultado_descuentos.ids.length && vender.aplicar_descuentos_directo_a_items) {
+					this.$store.commit('vender/set_aplicar_descuentos_directo_a_items', 0)
+				}
 			}
 
 			if (resultado_recargos.cambio) {

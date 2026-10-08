@@ -1340,7 +1340,7 @@ export default {
 				})
 		},
 
-		vender({ commit, state }, info) {
+		vender({ commit, state, getters }, info) {
 			// Log previo al envío para auditar el estado final con el que se intenta guardar.
 			commit('append_sale_log', {
 				event_key: 'sale_submit_attempt',
@@ -1421,6 +1421,14 @@ export default {
 				incoterms: state.incoterms,
 				observations_ocultas: state.observations_ocultas,
 				aplicar_recargos_directo_a_items: state.aplicar_recargos_directo_a_items,
+				/*
+					🔴 Viaja el flag EFECTIVO y no state.aplicar_descuentos_directo_a_items a secas: con un
+					descuento del 100% (o sin descuentos elegidos) el flag crudo sigue prendido pero los
+					precios NO llevan el descuento adentro, y mandarlo en 1 le diria a la API que se
+					saltee el descuento (SaleHelper::getTotalSale) -> el 100% no se cobraria. Siempre
+					viaja, 0 incluido: es lo que le dice al servidor que esta venta no lo lleva.
+				*/
+				aplicar_descuentos_directo_a_items: getters.descuentos_en_precios_efectivos ? 1 : 0,
 				sale_type_id: state.sale_type_id,
 				sale_status_id: state.sale_status_id,
 			// Indica si la venta debe descontar stock al crearse

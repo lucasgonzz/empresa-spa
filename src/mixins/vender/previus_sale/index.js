@@ -323,6 +323,23 @@ export default {
 			*/
 			this.$store.commit('vender/set_recargos_en_precios_sin_registro', comprobante_con_recargos_en_precios_sin_registro(model))
 
+			/*
+				🔴 El flag de los DESCUENTOS adentro del precio (mision
+				descuentos-aplicar-al-precio-del-articulo, 8/10/2026) se restaura igual que el de recargos, y
+				por lo mismo: sin esto quedaba en 0 al abrir una venta o un presupuesto para editarlo, y
+				aplicar_discounts() volvia a restar al total un descuento que el precio del renglon ya
+				traia adentro (el comprobante se re-guardaba con el descuento DOS veces).
+
+				Se restaura el flag que el comprobante tiene guardado; que sea EFECTIVO lo decide
+				factor_de_descuentos_de_venta() con los descuentos que carga mas abajo, y es lo que viaja
+				al guardar. Number() y no la verdad del valor a secas: la columna es nullable (un
+				comprobante viejo lo trae en null y queda en 0) y un "0" serializado seria truthy.
+
+				Va despues del commit del legado de recargos: en un legado la opcion no es efectiva (no hay
+				un precio original sobre el que meter el descuento), aunque el flag venga en 1.
+			*/
+			this.$store.commit('vender/set_aplicar_descuentos_directo_a_items', Number(model.aplicar_descuentos_directo_a_items) ? 1 : 0)
+
 			if (model.discounts.length) {
 				
 				this.set_discounts_store_with_pivot_percetage(model.discounts)
@@ -760,6 +777,11 @@ export default {
 				valor_dolar: this.valor_dolar,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
+				/*
+					El flag EFECTIVO de los descuentos adentro del precio, no el crudo: el porque esta en el
+					POST de store/vender/vender.js. Viaja siempre, tambien en 0.
+				*/
+				aplicar_descuentos_directo_a_items: this.$store.getters['vender/descuentos_en_precios_efectivos'] ? 1 : 0,
 				sale_status_id: this.$store.state.vender.sale_status_id,
 				// Enviamos el valor actual de discount_stock al actualizar la venta
 				discount_stock: this.$store.state.vender.discount_stock,

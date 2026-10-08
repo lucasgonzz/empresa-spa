@@ -21,7 +21,8 @@
  * Regla PURA: sin store, sin `this` y con imports RELATIVOS (nada de `@/`), para que un harness de
  * node la pueda cargar tal cual, sin webpack.
  */
-import { numero_o_null, precio_sin_recargos_guardado, redondear_a_centavos } from './recargos_en_precios'
+import { numero_o_null, redondear_a_centavos } from './recargos_en_precios'
+import { precio_base_guardado } from './descuentos_en_precios'
 
 /**
  * Si una cantidad de deposito, de devolucion o de acopio (checked_amount, returned_amount,
@@ -214,12 +215,14 @@ function cantidad_de_la_fila(cantidad) {
 /**
  * El precio de la fila de varios precios que sale de un renglon guardado.
  *
- * Una fila de varios precios lleva en `price_vender` el precio SIN los recargos de venta (lo que
- * tipeo el vendedor): set_varios_precios_con_recargos() le aplica el factor de los recargos en su
- * propia clave. Por eso, en un comprobante normal, es el precio sin recargos que guardo el renglon
- * (pivot.price_sin_recargos_de_venta) y, si esa base es null, el price tal cual: con base null el
- * price NO tiene recargos adentro (la invariante de utils/recargos_en_precios.js). Es exactamente lo
- * que hace getPriceVender() en la rama del pivot.
+ * Una fila de varios precios lleva en `price_vender` el precio ORIGINAL, sin descuentos ni recargos
+ * de venta (lo que tipeo el vendedor): set_varios_precios_con_recargos() le aplica los factores de
+ * los descuentos y de los recargos en su propia clave. Por eso, en un comprobante normal, es el
+ * precio original que guardo el renglon (precio_base_guardado: pivot.price_sin_descuentos_de_venta
+ * y, si esa base es null, pivot.price_sin_recargos_de_venta) y, si las dos son null, el price tal
+ * cual: con las dos bases en null el price NO tiene ajustes de venta adentro (la pila de capas de
+ * utils/descuentos_en_precios.js). Es exactamente lo que hace getPriceVender() en la rama del
+ * pivot, y por eso las dos tienen que usar la MISMA funcion.
  *
  * 🔴 En un comprobante LEGADO el precio es SIEMPRE el price tal cual, tenga o no base, porque ahi
  * getPriceVender() usa `item.pivot.price` sin mirar la base, y set_varios_precios_con_recargos() no
@@ -237,12 +240,7 @@ function cantidad_de_la_fila(cantidad) {
 function precio_de_la_fila(pivot, legado) {
 
 	if (!legado) {
-
-		let precio_sin_recargos = precio_sin_recargos_guardado(pivot)
-
-		if (precio_sin_recargos !== null) {
-			return precio_sin_recargos
-		}
+		return precio_base_guardado(pivot)
 	}
 
 	return Number(pivot.price)
