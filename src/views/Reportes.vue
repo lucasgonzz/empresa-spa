@@ -58,7 +58,10 @@
 		<model-index model_name="movimiento_caja"></model-index>
 		<!-- El de cheque se queda aunque el módulo de Cheques se haya mudado a Tesorería (misión
 		cheques-endoso-y-bancos, 21/9/2026): es el drill-down de Flujo de Caja el que lo abre. -->
-		<model-index model_name="cheque"></model-index>
+		<model-index
+		model_name="cheque"
+		:skip_global_error_event="true"
+		:actions_after_save="['cheque/getModels']"></model-index>
 	</div>
 </template>
 <script>
