@@ -280,7 +280,15 @@ export default {
 					if (variantes_en_cache.length) {
 
 						if (this.$store.state.auth.online) {
-							return this.getArticleFromApi(codigo)
+							/*
+								Con las variantes de la cache como respaldo: con una conexion
+								inestable la llamada puede fallar, y entonces se abre el selector
+								con lo que hay en la cache en vez de no agregar nada.
+							*/
+							return this.getArticleFromApi(codigo, {
+								article: finded,
+								variants: variantes_en_cache,
+							})
 						}
 
 						this.abrir_selector_de_variantes(finded, variantes_en_cache)
@@ -519,7 +527,18 @@ export default {
 			// getElementById devuelve null, no undefined. El guard vive adentro del helper.
 			this.setInputValueSync(input, this.finded_article.name)
 		},
-		getArticleFromApi(bar_code) {
+		/**
+		 * Busca el codigo en la API (vender/buscar-articulo-por-codido).
+		 *
+		 * @param {String} bar_code Codigo escaneado.
+		 * @param {Object|null} variantes_de_respaldo Solo cuando el codigo ya se encontro en la cache
+		 *        como un articulo con variantes (set_finded_article): `{article, variants}` con las
+		 *        variantes de la cache. Si la llamada FALLA (conexion inestable), se abre el selector
+		 *        con ellas en vez de avisar el error y no agregar nada (mision
+		 *        variantes-mismo-articulo-en-vender, 8/10/2026). Sin respaldo, el catch de siempre.
+		 * @returns {Promise}
+		 */
+		getArticleFromApi(bar_code, variantes_de_respaldo = null) {
 			this.$store.commit('auth/setMessage', 'Buscando articulo')
 			this.$store.commit('auth/setLoading', true)
 			
@@ -639,6 +658,20 @@ export default {
 			})
 			.catch(err => {
 				this.$store.commit('auth/setLoading', false)
+
+				/*
+					La cache ya sabia que es un articulo con variantes: se abre el selector con las
+					de la cache. abrir_selector_de_variantes deja opening_variant_selector en true,
+					asi que set_article_from_barcode tampoco muestra "No se encontro articulo" (antes
+					salian los dos avisos y no entraba nada).
+				*/
+				if (variantes_de_respaldo) {
+					console.log('Fallo la API, se abre el selector con las variantes de la cache')
+					console.log(err)
+					this.abrir_selector_de_variantes(variantes_de_respaldo.article, variantes_de_respaldo.variants)
+					return
+				}
+
 				this.$toast.error('Error al buscar codigo de barras: '+err)
 			})
 		},
