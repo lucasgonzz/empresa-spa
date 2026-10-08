@@ -259,6 +259,33 @@
 					<span class="cascada-renglon__monto">{{ formatear(ganancias.retencion_ganancias_sufrida) }}</span>
 				</div>
 			</div>
+
+			<!-- Otras retenciones sufridas (misión retenciones-abm-impuestos, 8/10/2026): los
+			impuestos que el dueño agregó en el ABM (SUSS, tasas municipales, etc.). Es SOLO
+			informativo: no se suma ni se resta contra el saldo de IVA, IIBB ni Ganancias. Aparece
+			solo si la API trae alguno (una API vieja no manda la clave, y se trata como vacía) -->
+			<div
+			v-if="otras_retenciones.length"
+			class="cascada-card m-t-20"
+			data-testid="posicion-fiscal-otras-retenciones">
+				<h6 class="cascada-card__titulo">Otras retenciones sufridas</h6>
+
+				<div
+				v-for="retencion in otras_retenciones"
+				:key="retencion.impuesto"
+				class="cascada-renglon apretable"
+				:data-testid="'posicion-fiscal-retencion-otra-'+retencion.impuesto"
+				:data-monto="retencion.monto"
+				@click="abrirDetalle('retenciones')">
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-fiscal">
+							<i class="bi bi-scissors" aria-hidden="true"></i>
+						</span>
+						Retenciones de {{ retencion.nombre }} sufridas
+					</span>
+					<span class="cascada-renglon__monto">{{ formatear(retencion.monto) }}</span>
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
@@ -291,6 +318,15 @@ export default {
 		},
 		ganancias() {
 			return this.model.pagos_a_cuenta_ganancias || {}
+		},
+		/**
+		 * Impuestos de retención propios del dueño con lo retenido en el período. Una API vieja no
+		 * manda la clave: se trata como vacía y el bloque no se dibuja.
+		 *
+		 * @returns {Array} [{impuesto: 'imp_7', nombre: 'SUSS', monto: 1234.5}]
+		 */
+		otras_retenciones() {
+			return Array.isArray(this.model.otras_retenciones) ? this.model.otras_retenciones : []
 		},
 	},
 	methods: {

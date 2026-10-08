@@ -64,6 +64,14 @@
 
 					<td class="dev-tabla__nombre">
 						{{ item.name }}
+						<!--
+							La variante junto al nombre: con el mismo articulo vendido en dos variantes
+							hay dos renglones con el mismo nombre, y la columna "Variante" no siempre
+							esta (sin la extension, o en el telefono queda lejos del nombre).
+						-->
+						<span
+						v-if="descripcion_de_variante(item)"
+						class="dev-tabla__variante-nombre">· {{ descripcion_de_variante(item) }}</span>
 						<span
 						v-if="item.is_service"
 						class="dev-chip">Servicio</span>
@@ -285,6 +293,7 @@ export default {
 		 * @param {Object} item Renglón a quitar.
 		 */
 		remove_item(item) {
+			// Va el objeto del renglon: el store lo quita por referencia (ver remove_item del store)
 			this.$store.commit('devoluciones/remove_item', item)
 			this.set_total_devolucion()
 		},
@@ -349,6 +358,35 @@ export default {
 		 */
 		recalcular() {
 			this.set_total_devolucion()
+		},
+		/**
+		 * La descripcion de la variante del renglon ("Azul 36") para mostrar junto al nombre, o null
+		 * si no tiene variante (mision variantes-mismo-articulo-en-vender, 8/10/2026).
+		 *
+		 * Con comprobante la trae el renglon (store/devoluciones.js::format_items, del pivot). En una
+		 * nota libre el renglon solo tiene el article_variant_id que se elige en el select de la
+		 * columna "Variante": se busca en las variantes del articulo.
+		 *
+		 * @param {Object} item Renglon.
+		 * @returns {String|null}
+		 */
+		descripcion_de_variante(item) {
+
+			if (!item.is_article || !Number(item.article_variant_id || 0)) {
+				return null
+			}
+
+			if (item.variant_description) {
+				return item.variant_description
+			}
+
+			if (!Array.isArray(item.article_variants)) {
+				return null
+			}
+
+			let variante = item.article_variants.find(variant => variant.id == item.article_variant_id)
+
+			return variante ? variante.variant_description : null
 		},
 		/**
 		 * Opciones del select de variante de un renglón.
@@ -449,6 +487,12 @@ export default {
 
 			.dev-chip
 				margin-left: 6px
+
+			// La variante junto al nombre: secundaria, para que el nombre siga mandando
+			.dev-tabla__variante-nombre
+				margin-left: 4px
+				font-weight: 400
+				color: var(--color-text-secondary)
 
 		.dev-tabla__variante
 			min-width: 160px

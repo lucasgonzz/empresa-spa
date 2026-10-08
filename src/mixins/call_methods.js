@@ -117,6 +117,10 @@ export default [
     // cheque lo lee en cualquier pago a proveedor o gasto, así que tiene que estar desde el
     // arranque. Es un catálogo chico (una fila por banco) y entra por recursos-iniciales.
     'cheque_banco',
+    // Impuestos de retención propios (misión retenciones-abm-impuestos, 8/10/2026): el selector de
+    // impuesto del cobro con retención los lee en cualquier cobro, así que entran desde el arranque
+    // (recursos-iniciales). Chicos: una fila por impuesto, y vacío si el dueño no agregó ninguno.
+    'retencion_impuesto',
     // Balanzas (mision balanzas-configurables, 3/10/2026): VENDER las necesita SIN CONEXION para
     // leer los tickets con "Por balanza" (src/utils/balanzas.js), asi que tienen que estar desde el
     // arranque. Va SIN condicion a proposito: es una configuracion del dueño y no una extension, y
