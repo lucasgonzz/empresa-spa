@@ -18,8 +18,10 @@
  * se manda y el item conserva el del articulo. Es lo mismo que pasa con una API vieja, y
  * PaymentMethod.vue solo lee de ahi el porcentaje de descuento por metodo, que no depende del precio.
  *
- * Funciones puras (sin store, sin `this`, sin imports): no mutan lo que reciben.
+ * Las funciones de armado son puras (sin store, sin `this`): no mutan lo que reciben. Lo unico con
+ * estado es el indice de codigos de variante (al final del archivo), que lee la cache.
  */
+import db from '@/offline/db'
 
 /**
  * Si una variante de la cache esta disponible para vender: la API solo ofrece las que no estan
@@ -169,4 +171,145 @@ export function fila_de_variante_en_cache(article, variante) {
 		images: imagenes_de_la_variante(article, variante),
 		addresses: variante.addresses || [],
 	}
+}
+
+/*
+	🔴 INDICE DE CODIGOS DE VARIANTE (revision de la mision, 8/10/2026). La cache solo indexa
+	articles.bar_code: los codigos de las variantes viven ADENTRO de cada articulo y Dexie no los puede
+	buscar por indice. La primera version recorria la tabla entera (filter().first()) en CADA escaneo
+	sin conexion que no era el codigo de un articulo -codigos desconocidos incluidos-, y con 30-50 mil
+	articulos eso son segundos por escaneo.
+
+	Ahora se recorre la cache UNA vez y se arma en memoria `codigo de variante -> id del articulo`.
+	Despues cada escaneo es una consulta a este objeto y, si hay match, UN get por clave primaria.
+
+	Cuando deja de valer: cuando cambia la tabla de articulos. Lo invalida
+	invalidar_indice_de_variantes_en_cache(), que llama la sincronizacion de la cache
+	(src/offline/sync_articles.js) despues de cada bulkPut y bulkDelete. Un indice viejo no puede
+	meter una variante equivocada: el articulo se vuelve a leer de la cache y la variante se vuelve a
+	buscar ahi por su codigo (variante_por_codigo_en_cache), asi que lo peor que deja es "no
+	encontrado" para una variante recien bajada, hasta la proxima invalidacion. (La sincronizacion
+	hecha en OTRA pestaña no invalida el indice de esta: esa pestaña lo rearma al recargar.)
+
+	`version_del_indice` cuida un armado que estaba en curso cuando se invalido: al terminar no se
+	guarda, porque pudo haber leido la tabla a mitad de la sincronizacion.
+*/
+let indice_de_codigos = null
+let indice_en_armado = null
+let version_del_indice = 0
+
+/**
+ * Tira el indice de codigos de variante: el proximo escaneo lo rearma leyendo la cache.
+ *
+ * @returns {void}
+ */
+export function invalidar_indice_de_variantes_en_cache() {
+	indice_de_codigos = null
+	indice_en_armado = null
+	version_del_indice++
+}
+
+/**
+ * El indice `codigo -> id del articulo` de las variantes disponibles de la cache, armado una sola
+ * vez (o el que ya esta armandose, si otro escaneo lo pidio antes).
+ *
+ * @returns {Promise<Object>}
+ */
+function indice_de_variantes() {
+
+	if (indice_de_codigos) {
+		return Promise.resolve(indice_de_codigos)
+	}
+
+	if (indice_en_armado) {
+		return indice_en_armado
+	}
+
+	let version_al_empezar = version_del_indice
+
+	// Sin prototipo: un codigo como "constructor" no tiene que encontrar nada
+	let nuevo_indice = Object.create(null)
+
+	indice_en_armado = db.table('articles')
+	.each(article => {
+
+		if (!Array.isArray(article.article_variants)) {
+			return
+		}
+
+		article.article_variants.forEach(variante => {
+
+			if (!variante.bar_code || !variante_disponible(variante)) {
+				return
+			}
+
+			let codigo = String(variante.bar_code)
+
+			// Si dos variantes tuvieran el mismo codigo, gana la primera (la API impide repetirlo)
+			if (typeof nuevo_indice[codigo] == 'undefined') {
+				nuevo_indice[codigo] = article.id
+			}
+		})
+	})
+	.then(() => {
+
+		if (version_al_empezar === version_del_indice) {
+			indice_de_codigos = nuevo_indice
+			indice_en_armado = null
+		}
+
+		return nuevo_indice
+	})
+	.catch(err => {
+
+		if (version_al_empezar === version_del_indice) {
+			indice_en_armado = null
+		}
+
+		throw err
+	})
+
+	return indice_en_armado
+}
+
+/**
+ * El item de VENDER para el codigo de una variante de la cache, o null si ninguna variante
+ * disponible tiene ese codigo: el articulo completo con lo propio de la variante encima
+ * (fila_de_variante_en_cache), igual que la `variant_row` de la API.
+ *
+ * Usa el indice de codigos (ver arriba): el primer llamado de la sesion recorre la cache una vez;
+ * los demas son una consulta en memoria y, si hay match, un get por id.
+ *
+ * @param {String} codigo Codigo escaneado.
+ * @returns {Promise<Object|null>}
+ */
+export function item_de_variante_por_codigo_en_cache(codigo) {
+
+	if (!codigo) {
+		return Promise.resolve(null)
+	}
+
+	return indice_de_variantes()
+	.then(indice => {
+
+		let article_id = indice[String(codigo)]
+
+		if (typeof article_id == 'undefined') {
+			return null
+		}
+
+		return db.table('articles').get(article_id)
+		.then(article => {
+
+			// El articulo pudo cambiar o borrarse desde que se armo el indice: se vuelve a mirar
+			let variante = variante_por_codigo_en_cache(article, codigo)
+
+			if (!variante) {
+				return null
+			}
+
+			// Sobre {} para no mutar el articulo leido de la cache
+			return Object.assign({}, article, fila_de_variante_en_cache(article, variante))
+		})
+	})
 }

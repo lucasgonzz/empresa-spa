@@ -52,8 +52,7 @@ import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout
 */
 import {
 	variantes_disponibles_en_cache,
-	variante_por_codigo_en_cache,
-	fila_de_variante_en_cache,
+	item_de_variante_por_codigo_en_cache,
 } from '@/utils/variantes_en_cache'
 /*
 	Tickets de balanza (mision balanzas-configurables, 3/10/2026): la dinamica la elige el dueño en
@@ -193,7 +192,21 @@ export default {
 				// para un nuevo escaneo, tiene que volver a bloquear el agregado automatico.
 				this.opening_variant_selector = false
 
-				await this.set_finded_article(this.item_vender.codigo)
+				let resultado = await this.set_finded_article(this.item_vender.codigo)
+
+				/*
+					Variante encontrada en la cache sin conexion (mision
+					variantes-mismo-articulo-en-vender, 8/10/2026). Viaja en la PROMESA y no en
+					this.finded_article, a proposito: la busqueda en la cache es asincronica y, con el
+					lector disparando codigos seguidos, un escaneo que termina tarde escribiendo
+					this.finded_article podia pisar el de un escaneo posterior. Asi el item es de ESTE
+					escaneo y se asigna aca mismo, en la misma vuelta en que se usa (nada puede
+					meterse en el medio). No se descarta el resultado si ya empezo otro escaneo: seria
+					perder un articulo que el vendedor paso por el lector.
+				*/
+				if (resultado && resultado.variante_de_la_cache) {
+					this.finded_article = resultado.variante_de_la_cache
+				}
 
 				console.log('from_balanza: '+this.from_balanza)
 				console.log('finded_article: ')
@@ -326,29 +339,51 @@ export default {
 					8/10/2026). Con conexion lo resuelve el respaldo por API de arriba; sin conexion era
 					"No se encontro articulo", porque el indice local solo busca por articles.bar_code.
 					Ahora se buscan las variantes que la cache guarda adentro de cada articulo y, si
-					una tiene ese codigo, entra como esa variante (buscar_variante_en_cache).
+					una tiene ese codigo, entra como esa variante.
 
-					Va ANTES de la lectura de balanza, por lo mismo que el respaldo por API: una
-					variante encontrada no puede leerse como ticket. Si no hay variante con ese
-					codigo, sigue a la balanza como siempre. (El PLU se intento antes, como antes de
-					esta mision: un codigo de variante solo choca con un ticket PLU si ademas hay un
-					articulo con ese PLU.)
+					La busqueda usa un indice en memoria de los codigos de variante que se arma UNA vez
+					recorriendo la cache (item_de_variante_por_codigo_en_cache, en
+					utils/variantes_en_cache.js, con el porque y cuando se invalida): recorrer la tabla
+					en cada escaneo eran segundos con 30-50 mil articulos.
 
-					Promesa devuelta y no await, igual que los dos bloques de arriba.
+					🔴 Un ticket de "Por balanza" NO busca variante (es_ticket_de_balanza): va directo a
+					la lectura de balanza del bloque siguiente, como siempre. Es una diferencia con la
+					API, que busca la variante antes que la balanza, y se acepta: sin conexion lo que
+					manda es que cada ticket de la balanza entre rapido. Una variante cuyo codigo
+					empiece con el prefijo de una balanza del dueño se lee como ticket sin conexion.
+					(El PLU se intento antes, como antes de esta mision: un codigo de variante solo
+					choca con un ticket PLU si ademas hay un articulo con ese PLU.)
+
+					La variante encontrada se DEVUELVE en la promesa ({variante_de_la_cache}) y no se
+					escribe en this.finded_article: set_article_from_barcode la toma de ahi (el porque
+					esta alla). Promesa devuelta y no await, igual que los dos bloques de arriba.
 				*/
 				if (
 					typeof this.finded_article == 'undefined'
 					&& !this.from_balanza
 					&& !this.$store.state.auth.online
 					&& this.hasExtencion('article_variants')
+					&& !this.es_ticket_de_balanza(codigo)
 				) {
 
 					let self = this
 
-					return this.buscar_variante_en_cache(codigo)
-					.then(encontrada => {
+					return item_de_variante_por_codigo_en_cache(codigo)
+					.catch(err => {
+						// Si no se pudo leer la cache, el codigo sigue como no encontrado
+						console.log('Error al buscar la variante en la cache de articulos')
+						console.log(err)
+						return null
+					})
+					.then(item => {
 
-						if (encontrada || !self.usa_tickets_por_balanzas) {
+						if (item) {
+							return {
+								variante_de_la_cache: item,
+							}
+						}
+
+						if (!self.usa_tickets_por_balanzas) {
 							return
 						}
 
@@ -437,47 +472,22 @@ export default {
 			}
 		},
 		/**
-		 * Busca en la cache de articulos (Dexie) la variante disponible cuyo codigo de barras es
-		 * `codigo` y, si la encuentra, la deja en finded_article armada como la `variant_row` de la
-		 * API: el articulo completo con lo propio de la variante encima (precio, stock, depositos,
-		 * codigo, nombre, is_variant / variant_id / variant_description). Ver
-		 * fila_de_variante_en_cache (utils/variantes_en_cache.js).
+		 * Si el codigo es un ticket de "Por balanza": empieza con el prefijo de alguna balanza del
+		 * dueño, con la misma regla que la lectura del ticket (leer_ticket_por_balanzas de
+		 * src/utils/balanzas.js). Fuera del modo "Por balanza" nunca lo es.
 		 *
-		 * La cache solo indexa articles.bar_code, asi que esto recorre los articulos (filter de
-		 * Dexie). Se usa SOLO sin conexion: con conexion la API resuelve el codigo de una variante
-		 * (y por indice).
+		 * Lo usa set_finded_article para no buscar variantes en la cache con un ticket (ver ahi).
 		 *
-		 * Sin async/await (regla del repo): devuelve una promesa que resuelve true si encontro la
-		 * variante y false si no (o si la lectura fallo).
-		 *
-		 * @param {String} codigo Codigo escaneado (ya pasado por getBarCode).
-		 * @returns {Promise<Boolean>}
+		 * @param {String} codigo Codigo escaneado.
+		 * @returns {Boolean}
 		 */
-		buscar_variante_en_cache(codigo) {
+		es_ticket_de_balanza(codigo) {
 
-			let self = this
-
-			return db.table('articles')
-			.filter(article => variante_por_codigo_en_cache(article, codigo) !== null)
-			.first()
-			.then(article => {
-
-				if (typeof article == 'undefined') {
-					return false
-				}
-
-				let variante = variante_por_codigo_en_cache(article, codigo)
-
-				// Sobre {} para no mutar el articulo leido de la cache.
-				self.finded_article = Object.assign({}, article, fila_de_variante_en_cache(article, variante))
-
-				return true
-			})
-			.catch(err => {
-				console.log('Error al buscar la variante en la cache de articulos')
-				console.log(err)
+			if (!this.usa_tickets_por_balanzas) {
 				return false
-			})
+			}
+
+			return leer_ticket_por_balanzas(codigo, this.balanzas_del_dueno) !== null
 		},
 		check_article(article, codigo) {
 			if (this.usar_codigo_proveedor) {
