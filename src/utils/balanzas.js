@@ -330,14 +330,47 @@ export function cantidad_de_la_fila_pendiente(linea) {
  * @returns {Number}
  */
 export function precio_sin_recargos_del_renglon(linea, factor) {
+	return precio_sin_ajustes_de_venta_del_renglon(linea, factor, null)
+}
+
+/**
+ * El precio de un renglon SIN los ajustes de venta que lleva adentro -ni descuentos ni recargos-: la
+ * base con la que el precio que suma hoy pasa a ser una fila de varios precios sin que cambie el
+ * total del renglon (mision descuentos-aplicar-al-precio-del-articulo, 8/10/2026). Es
+ * precio_sin_recargos_del_renglon() con la segunda capa de la pila (utils/descuentos_en_precios.js).
+ *
+ * set_varios_precios_con_recargos() le vuelve a aplicar a la fila los factores que correspondan
+ * -descuentos abajo, recargos arriba- y la redondea a centavos, y getPriceVender() dejo en el
+ * renglon las bases de cada capa. La que corresponde es la de la capa de MAS ABAJO que el renglon
+ * lleva adentro:
+ *
+ *   - con factor de descuentos: price_vender_sin_descuentos (el original, sin descuentos y sin
+ *     recargos). Es la misma para "solo descuentos" y para "descuentos y recargos";
+ *   - sin descuentos y con factor de recargos: price_vender_sin_recargos, que es el original;
+ *   - sin ningun factor (las opciones apagadas, o un renglon no elegible): price_vender tal cual,
+ *     porque el ajuste, si hay, va al pie y no se toca.
+ *
+ * La base se calcula ANTES de redondear el precio: al volver a multiplicarla por los factores y
+ * redondear da exactamente el price_vender redondeado. Si no viniera un numero, se divide el precio
+ * por los factores, que da lo mismo.
+ *
+ * @param {Object} linea Renglon del remito (con price_vender y las bases al dia).
+ * @param {Number|null} factor_recargos factor_recargos_de_venta(linea) del mixin general.
+ * @param {Number|null} factor_descuentos factor_descuentos_de_venta(linea) del mixin general.
+ * @returns {Number}
+ */
+export function precio_sin_ajustes_de_venta_del_renglon(linea, factor_recargos, factor_descuentos) {
 
 	let precio = Number(linea.price_vender)
 
-	if (factor === null || typeof factor == 'undefined' || !Number(factor)) {
+	let hay_recargos = factor_recargos !== null && typeof factor_recargos != 'undefined' && Boolean(Number(factor_recargos))
+	let hay_descuentos = factor_descuentos !== null && typeof factor_descuentos != 'undefined' && Boolean(Number(factor_descuentos))
+
+	if (!hay_recargos && !hay_descuentos) {
 		return precio
 	}
 
-	let base = linea.price_vender_sin_recargos
+	let base = hay_descuentos ? linea.price_vender_sin_descuentos : linea.price_vender_sin_recargos
 
 	if (
 		base !== null
@@ -349,5 +382,5 @@ export function precio_sin_recargos_del_renglon(linea, factor) {
 		return Number(base)
 	}
 
-	return precio / Number(factor)
+	return precio / ((hay_descuentos ? Number(factor_descuentos) : 1) * (hay_recargos ? Number(factor_recargos) : 1))
 }

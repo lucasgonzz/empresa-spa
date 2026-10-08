@@ -64,6 +64,23 @@ export default {
 		 * por abrirla. Y Surchages.vue le bloquea los recargos y la opcion a un legado, asi que el
 		 * factor no puede cambiar mientras se edita.
 		 *
+		 * 🔴 DESCUENTOS DE VENTA ADENTRO (mision descuentos-aplicar-al-precio-del-articulo,
+		 * 8/10/2026). Con la opcion "Aplicar los descuentos de esta venta directamente a los precios"
+		 * EFECTIVA, cada fila lleva tambien el factor de los descuentos, DEBAJO del de los recargos
+		 * (la pila de capas esta en utils/descuentos_en_precios.js):
+		 *
+		 *     price_vender (input)  ──► × fd ──► × fr ──► redondeo a centavos ──► price_vender_con_recargos
+		 *
+		 * `price_vender_con_recargos` pasa a ser entonces "el precio FINAL de la fila", con los
+		 * descuentos y/o los recargos adentro. El nombre queda por compatibilidad con la API (que lo
+		 * lee con ese nombre desde el 28/9/2026 y se despliega por separado): renombrarlo romperia
+		 * la combinacion SPA nueva + API vieja y la inversa. Las bases viajan en
+		 * `price_vender_sin_recargos` (= input × fd, el precio justo debajo de los recargos) y en
+		 * `price_vender_sin_descuentos` (= input, el original). La que no se aplico viaja null.
+		 *
+		 * El input del vendedor sigue siendo el precio ORIGINAL y NO se pisa, por lo mismo que con
+		 * los recargos: setTotal() corre en cada tecla y el precio creceria (o bajaria) solo.
+		 *
 		 * Las filas NUEVAS que el vendedor tipee en un legado (sin la marca) se recargan como
 		 * cualquier precio escrito a mano, igual que el precio personalizado en getPriceVender(). Una
 		 * fila cargada que el vendedor edite conserva la marca: lo que tipea reemplaza un precio que
@@ -90,6 +107,9 @@ export default {
 
 			let factor = this.factor_recargos_de_venta(item)
 
+			// El factor de los descuentos de venta de este renglon (null si no lleva ninguno adentro).
+			let factor_descuentos = this.factor_descuentos_de_venta(item)
+
 			/*
 				Comprobante legado: lo calcula set_datos_para_actualizar_en_vender() al abrirlo, con lo
 				que tiene guardado, y lo limpia limpiar_vender(). En una venta nueva es false.
@@ -106,12 +126,15 @@ export default {
 					amount = Number(otro_precio.amount)
 				}
 
-				let precio_sin_recargos = Number(otro_precio.price_vender)
+				// Lo que tipeo el vendedor: el precio ORIGINAL, sin descuentos ni recargos de venta.
+				let precio_original = Number(otro_precio.price_vender)
 
 				/*
-					El factor de ESTA fila: el del renglon, salvo la fila cargada de un comprobante
-					legado, que va sin recargar (ver el bloque de arriba). Ahi `precio_sin_recargos` es
-					en realidad el precio guardado tal cual, y por eso viaja sin base.
+					El factor de recargos de ESTA fila: el del renglon, salvo la fila cargada de un
+					comprobante legado, que va sin recargar (ver el bloque de arriba). Ahi
+					`precio_original` es en realidad el precio guardado tal cual, y por eso viaja sin
+					base. El factor de descuentos no necesita esa excepcion: en un legado de recargos
+					factor_descuentos_de_venta() ya da null.
 				*/
 				let factor_de_la_fila = factor
 
@@ -119,11 +142,35 @@ export default {
 					factor_de_la_fila = null
 				}
 
-				// El precio de la fila con los recargos de venta adentro, o tal cual si no hay factor.
-				let precio = factor_de_la_fila === null ? precio_sin_recargos : precio_sin_recargos * factor_de_la_fila
+				/*
+					El precio de la fila con los ajustes de venta adentro: primero los descuentos (la
+					capa de abajo) y despues los recargos (la de arriba), o tal cual si no hay factor.
+					Con recargos solos la cuenta es la de siempre: original × fr.
+				*/
+				let precio = precio_original
 
-				// La base que viaja: el precio sin recargos, solo si hubo factor (ver la invariante).
-				let base = factor_de_la_fila === null ? null : precio_sin_recargos
+				if (factor_descuentos !== null) {
+					precio = precio * factor_descuentos
+				}
+
+				if (factor_de_la_fila !== null) {
+					precio = precio * factor_de_la_fila
+				}
+
+				/*
+					Las bases que viajan, solo de las capas que se aplicaron (ver la invariante de
+					utils/descuentos_en_precios.js):
+					  - sin recargos: el precio justo debajo de los recargos, o sea el original por el
+					    factor de los descuentos si los hay (los descuentos quedan adentro);
+					  - sin descuentos: el original.
+				*/
+				let base_sin_recargos = null
+
+				if (factor_de_la_fila !== null) {
+					base_sin_recargos = factor_descuentos === null ? precio_original : precio_original * factor_descuentos
+				}
+
+				let base_sin_descuentos = factor_descuentos === null ? null : precio_original
 
 				/*
 					🔴 IVA DE LA FILA QUE VIENE DEL COMPROBANTE GUARDADO (mision
@@ -138,8 +185,8 @@ export default {
 					apaga "Precios con IVA" (o prende "Sumar IVA a los articulos sin IVA") editando, los
 					renglones sueltos se ajustan y las filas no, y se guardan con el IVA adentro en un
 					comprobante que dice que no lo tiene. Mismo orden que esa rama: precio guardado ->
-					factor (o tal cual) -> ajuste de IVA -> base = precio / factor -> redondeo a
-					centavos solo si hubo factor. Asi la fila sale exactamente como saldria ese mismo
+					factores (o tal cual) -> ajuste de IVA -> bases = precio / factores -> redondeo a
+					centavos solo si hubo algun factor. Asi la fila sale exactamente como saldria ese mismo
 					precio en un renglon suelto.
 
 					- Sin tocar los checks, el ajuste devuelve el precio TAL CUAL
@@ -157,19 +204,31 @@ export default {
 
 						precio = Number(precio_con_iva)
 
+						// El IVA cambio el precio: las bases se rehacen dividiendo, como en getPriceVender().
 						if (factor_de_la_fila !== null) {
-							base = precio / factor_de_la_fila
+							base_sin_recargos = precio / factor_de_la_fila
+						}
+
+						if (factor_descuentos !== null) {
+							base_sin_descuentos = precio / (factor_descuentos * (factor_de_la_fila === null ? 1 : factor_de_la_fila))
 						}
 					}
 				}
 
-				if (factor_de_la_fila === null) {
+				/*
+					`price_vender_con_recargos` es el precio FINAL de la fila, con los descuentos y/o los
+					recargos adentro (el nombre queda por compatibilidad con la API, ver arriba). Se
+					redondea a centavos si hubo CUALQUIERA de los dos factores, por lo mismo que en
+					getPriceVender(): la API guarda cada renglon con 2 decimales.
+				*/
+				if (factor_de_la_fila === null && factor_descuentos === null) {
 					otro_precio.price_vender_con_recargos = precio
-					otro_precio.price_vender_sin_recargos = null
 				} else {
 					otro_precio.price_vender_con_recargos = redondear_a_centavos(precio)
-					otro_precio.price_vender_sin_recargos = base
 				}
+
+				otro_precio.price_vender_sin_recargos = base_sin_recargos
+				otro_precio.price_vender_sin_descuentos = base_sin_descuentos
 
 				calculated_price_vender += otro_precio.price_vender_con_recargos * amount
 			})

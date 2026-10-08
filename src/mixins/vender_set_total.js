@@ -41,6 +41,21 @@ export default {
 				this.setTotal()
 			},
 		},
+		/*
+			La opcion "Aplicar los descuentos de esta venta directamente a los precios de los
+			articulos" (mision descuentos-aplicar-al-precio-del-articulo, 8/10/2026), gemela de la
+			de recargos. OJO: este es el flag CRUDO, lo que el vendedor prendio. Lo que decide si los
+			descuentos van adentro del precio es `descuentos_en_precios_efectivos` (generals.js).
+		*/
+		aplicar_descuentos_directo_a_items: {
+			get() {
+				return this.$store.state.vender.aplicar_descuentos_directo_a_items
+			},
+			set(value) {
+				this.$store.commit('vender/set_aplicar_descuentos_directo_a_items', value)
+				this.setTotal()
+			},
+		},
 		discounts_store() {
 			return this.$store.state.discount.models 
 		},
@@ -596,7 +611,22 @@ export default {
 			}
 		},
 		aplicar_discounts() {
-			if (this.discounts_id.length) {
+			/*
+				🔴 Con la opcion de descuentos adentro del precio EFECTIVA el descuento ya esta metido en
+				el precio de cada renglon elegible (getPriceVender -> descontar()), y por lo tanto en
+				total_articles / total_combos / total_promocion_vinoteca / total_services: aplicarlo de
+				nuevo lo descontaria DOS VECES. Es el gemelo de `!this.aplicar_recargos_directo_a_items`
+				de aplicar_surchages().
+
+				Y se pregunta por el predicado EFECTIVO y no por el flag crudo: con un descuento del
+				100% el flag sigue prendido pero getPriceVender() no mete el factor (el precio quedaria
+				en 0 y el original seria irrecuperable), asi que el descuento TIENE que seguir
+				cobrandose aca, al pie. Con el flag crudo ese 100% no se cobraria nunca. NO CAMBIAR.
+
+				Un servicio sin "Aplicar descuentos en los servicios" no lleva descuento adentro ni
+				recibe el del pie (el `if (this.discounts_in_services)` de abajo): es lo que hacia antes.
+			*/
+			if (this.discounts_id.length && !this.descuentos_en_precios_efectivos) {
 
 				this.des.push('APLICANDO DESCUENTOS DE VENTA')
 

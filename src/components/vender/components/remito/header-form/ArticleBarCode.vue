@@ -57,7 +57,7 @@ import {
 	precio_tipeado_pendiente,
 	cantidad_de_la_fila_pendiente,
 	cantidad_del_renglon_para_fila,
-	precio_sin_recargos_del_renglon,
+	precio_sin_ajustes_de_venta_del_renglon,
 } from '@/utils/balanzas'
 
 import db from '@/offline/db'
@@ -577,9 +577,10 @@ export default {
 		 * ya esta en la venta con un precio propio: el de lista, o el de un renglon de una venta o un
 		 * presupuesto que se esta editando.
 		 *
-		 * La fila lleva el precio SIN recargos de venta (precio_sin_recargos_del_renglon), porque
-		 * set_varios_precios_con_recargos() le vuelve a aplicar el factor: con "Aplicar los recargos
-		 * de esta venta a los precios" prendida o apagada, el renglon suma lo mismo antes y despues.
+		 * La fila lleva el precio SIN descuentos ni recargos de venta
+		 * (precio_sin_ajustes_de_venta_del_renglon), porque set_varios_precios_con_recargos() le vuelve a
+		 * aplicar los factores: con "Aplicar los recargos / descuentos de esta venta a los precios"
+		 * prendida o apagada, el renglon suma lo mismo antes y despues.
 		 * La cantidad es la del renglon (vacia si es 1, como el Enter). El descuento del renglon se
 		 * sigue aplicando sobre la suma de las filas (getTotalItem).
 		 *
@@ -601,15 +602,17 @@ export default {
 
 			/*
 				Precios al dia antes de leerlos: es el mismo primer paso de setTotal(), y deja
-				price_vender y price_vender_sin_recargos calculados juntos, en la misma pasada.
+				price_vender y las bases de cada capa (price_vender_sin_recargos y
+				price_vender_sin_descuentos) calculados juntos, en la misma pasada.
 			*/
 			this.setItemsPrices(false, this.from_pivot)
 
 			let factor = this.factor_recargos_de_venta(linea)
+			let factor_descuentos = this.factor_descuentos_de_venta(linea)
 
 			this.agregar_otro_precio(
 				linea,
-				precio_sin_recargos_del_renglon(linea, factor),
+				precio_sin_ajustes_de_venta_del_renglon(linea, factor, factor_descuentos),
 				cantidad_del_renglon_para_fila(linea)
 			)
 		},
