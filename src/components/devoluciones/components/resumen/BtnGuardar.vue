@@ -1,25 +1,45 @@
 <template>
-	<!--
-		Guardar: botón primario a lo ancho del panel. Sin renglones queda deshabilitado (antes
-		desaparecía y el panel saltaba de alto). `btn-guardar-devolucion` es el testid de siempre,
-		para los dos modos.
-	-->
-	<b-button
-	class="dev-btn-guardar"
-	data-testid="btn-guardar-devolucion"
-	variant="primary"
-	block
-	:disabled="!items.length || guardando"
-	@click="guardar">
-		{{ texto }}
-	</b-button>
+	<div>
+		<!--
+			Guardar: botón primario a lo ancho del panel. Sin renglones queda deshabilitado (antes
+			desaparecía y el panel saltaba de alto). `btn-guardar-devolucion` es el testid de siempre,
+			para los dos modos.
+		-->
+		<b-button
+		class="dev-btn-guardar"
+		data-testid="btn-guardar-devolucion"
+		variant="primary"
+		block
+		:disabled="!items.length || guardando"
+		@click="guardar">
+			{{ texto }}
+		</b-button>
+
+		<!--
+			Aviso de que la venta ya tiene una nota de crédito con esas unidades (la API responde 409):
+			facturar la existente, crear otra de todos modos o cancelar.
+		-->
+		<notas-existentes-modal
+		:notas="notas_existentes"
+		@facturada="limpiar_devolucion"
+		@crear_igual="guardar_confirmando_la_duplicada"></notas-existentes-modal>
+	</div>
 </template>
 <script>
 import limpiar from '@/mixins/devoluciones/limpiar'
 export default {
 	mixins: [limpiar],
+	components: {
+		NotasExistentesModal: () => import('@/components/devoluciones/components/resumen/NotasExistentesModal'),
+	},
 	data() {
 		return {
+			// Notas de crédito de la venta que chocan con lo que se quiere devolver (las manda la
+			// API en el 409). Vacío si no hay aviso.
+			notas_existentes: [],
+			// true solo para el reenvío que sigue a "Crear otra de todos modos": le dice a la API que
+			// salte el aviso. Se apaga apenas termina ese pedido.
+			confirmar_duplicada: false,
 			// true mientras el POST está en vuelo: el botón queda deshabilitado para que un
 			// segundo clic no mande otra nota de crédito igual (la API tiene candado, pero el
 			// segundo pedido terminaría en un 422 confuso o en una nota duplicada sin compra).
@@ -129,6 +149,7 @@ export default {
 			.then(() => {
 
 				self.guardando = false
+				self.confirmar_duplicada = false
 				self.$store.commit('auth/setLoading', false)
 
 				self.$toast.success(self.es_compra ? 'Nota de crédito al proveedor creada' : 'Devolución creada')
@@ -137,13 +158,32 @@ export default {
 			})
 			.catch(err => {
 				self.guardando = false
+				self.confirmar_duplicada = false
 				self.$store.commit('auth/setLoading', false)
+
+				// 409: la venta ya tiene una nota con esas unidades. No es un error: se le ofrece al
+				// usuario facturar la existente, crear otra igual o cancelar.
+				let data = err && err.response ? err.response.data : null
+				if (err && err.response && err.response.status == 409 && data && data.nota_existente && data.notas && data.notas.length) {
+					self.notas_existentes = data.notas
+					self.$bvModal.show('devolucion-notas-existentes')
+					return
+				}
 
 				let mensaje = self.mensaje_de_error(err)
 				if (mensaje) {
 					self.$toast.error(mensaje, { duration: 10000 })
 				}
 			})
+		},
+
+		/**
+		 * "Crear otra de todos modos" del aviso de nota existente: reenvía la devolución diciéndole a
+		 * la API que salte el aviso. El tope de stock de la API sigue valiendo.
+		 */
+		guardar_confirmando_la_duplicada() {
+			this.confirmar_duplicada = true
+			this.guardar()
 		},
 
 		/**
@@ -201,6 +241,11 @@ export default {
 				descriptions: this.descriptions,
 				discounts: this.get_models_by_id('discount', this.discounts_id),
 				surchages: this.get_models_by_id('surchage', this.surchages_id),
+				// Pide el aviso si la venta ya tiene una nota con esas unidades; con `confirmar_duplicada`
+				// el usuario ya eligió "Crear otra de todos modos". Campos opcionales: una API que no los
+				// conoce los ignora.
+				verificar_notas_existentes: true,
+				confirmar_duplicada: this.confirmar_duplicada,
 			}
 		},
 
