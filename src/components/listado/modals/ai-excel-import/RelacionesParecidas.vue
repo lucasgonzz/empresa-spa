@@ -11,7 +11,8 @@
 		propuesta, y cualquier ítem se puede cambiar — incluso uno que solo difiere en mayúsculas.
 
 		v-model = mapa { clave del ítem -> índice de la opción elegida }. La lógica de qué se ve y qué
-		se manda vive en relaciones_parecidas.js, compartida con Index.vue.
+		se manda vive en relaciones_parecidas.js, compartida con Index.vue. Cada ítem se dibuja en
+		RelacionesParecidasItem.vue (ver ahí por qué: rendimiento con cientos de ítems).
 	-->
 	<div
 	v-if="items_validos.length > 0"
@@ -24,7 +25,10 @@
 			v-if="con_titulo"
 			class="ai-import-relaciones__titulo">
 				Nombres parecidos
-				<span class="ai-import-relaciones__contador">{{ numero_es(items_visibles.length) }}</span>
+				<!-- Cuenta lo que hay que revisar: las confirmadas antes van plegadas y no suman. -->
+				<span
+				v-if="items_pendientes.length > 0"
+				class="ai-import-relaciones__contador">{{ numero_es(items_pendientes.length) }}</span>
 			</p>
 			<p class="ai-import-relaciones__intro">
 				Encontramos en el archivo nombres parecidos a otros que ya tenés cargados, o parecidos entre sí.
@@ -42,6 +46,18 @@
 			<i class="icon-alert-triangle m-r-5"></i>
 			No pudimos consultar a la IA, así que estos nombres no se revisaron a fondo.
 			Revisá los nombres parecidos antes de seguir.
+		</b-alert>
+
+		<!-- Recortado: el chequeo se acotó (demasiados nombres); lo que no está acá no se revisó. -->
+		<b-alert
+		v-if="recortado"
+		show
+		variant="info"
+		class="ai-import-relaciones__aviso m-t-10 m-b-0"
+		data-testid="ai-import-relaciones-recortado">
+			<i class="icon-info m-r-5"></i>
+			Hay muchos nombres en este archivo: revisamos los más probables. Puede haber otros parecidos
+			que no aparecen acá.
 		</b-alert>
 
 		<!--
@@ -115,51 +131,17 @@
 							<span class="ai-import-relaciones__grupo-cantidad">{{ numero_es(grupo.items.length) }}</span>
 						</p>
 
-						<div
+						<!--
+							Cada ítem recibe solo su índice elegido (un número): un clic redibuja un ítem,
+							no la lista entera.
+						-->
+						<relaciones-parecidas-item
 						v-for="item in grupo.items"
 						:key="item.clave"
-						class="ai-import-relaciones__item"
-						:data-clave="item.clave">
-
-							<div class="ai-import-relaciones__item-cabecera">
-								<span class="ai-import-relaciones__valor">«{{ item.valor }}»</span>
-								<span
-								v-if="texto_filas(item)"
-								class="ai-import-relaciones__filas">
-									{{ texto_filas(item) }}
-								</span>
-							</div>
-
-							<small
-							v-if="texto_padre(item)"
-							class="ai-import-relaciones__detalle">
-								{{ texto_padre(item) }}
-							</small>
-
-							<small
-							v-if="item.explicacion"
-							class="ai-import-relaciones__detalle">
-								{{ item.explicacion }}
-							</small>
-
-							<div
-							class="ai-import-relaciones__opciones"
-							role="radiogroup"
-							:aria-label="'Qué es «' + item.valor + '»'">
-								<b-form-radio
-								v-for="opcion in opciones_mostrables(item)"
-								:key="item.clave + '-' + opcion.indice"
-								:name="'ai-import-relacion-' + item.clave"
-								:value="opcion.indice"
-								:checked="elegido(item)"
-								:data-testid="'ai-import-relaciones-opcion-' + item.clave + '-' + opcion.indice"
-								class="ai-import-relaciones__opcion"
-								@change="elegir(item, opcion.indice)">
-									{{ texto_opcion(item, opcion.opcion) }}
-								</b-form-radio>
-							</div>
-
-						</div>
+						:item="item"
+						:elegido="elegido(item)"
+						@elegir="elegir(item, $event)">
+						</relaciones-parecidas-item>
 
 					</div>
 
@@ -167,6 +149,11 @@
 
 			</div>
 
+			<!--
+				Solo con la API anterior (ítems sin padre_ref): un hijo comparado contra una categoría o
+				provincia que el usuario cambió se deja de mostrar y no tiene reemplazo. Con padre_ref
+				no pasa: el hijo se reemplaza por el que corresponde a la elección nueva.
+			-->
 			<p
 			v-if="cantidad_ocultos > 0"
 			class="ai-import-relaciones__vacio">
@@ -179,22 +166,27 @@
 </template>
 
 <script>
+import RelacionesParecidasItem from './RelacionesParecidasItem'
 import {
 	TIPOS,
 	definicion_de_tipo,
 	items_de,
 	indice_elegido,
-	item_visible,
+	indice_de_padres,
+	particionar,
 	indice_para_accion_masiva,
-	opcion_es_valida,
 } from './relaciones_parecidas'
 
 export default {
 
+	components: {
+		RelacionesParecidasItem,
+	},
+
 	props: {
 		/*
 		 * `relaciones_parecidas` tal como llega en el resultado de get-recomendacion:
-		 * { ia_consultada, items: [...] }. Null o sin ítems: el componente no dibuja nada.
+		 * { ia_consultada, recortado?, items: [...] }. Null o sin ítems: el componente no dibuja nada.
 		 */
 		relaciones: {
 			type: Object,
@@ -228,20 +220,26 @@ export default {
 
 	computed: {
 
-		/* Ítems con una forma que se puede mostrar (ver items_de). */
+		/* Ítems con una forma que se puede mostrar (ver items_de). No depende de las decisiones. */
 		items_validos() {
 			return items_de(this.relaciones)
 		},
 
+		/* Índice de padres por tipo|nombre: se arma una vez por lista, no en cada clic. */
+		padres() {
+			return indice_de_padres(this.items_validos)
+		},
+
 		/*
-		 * Ítems que se muestran: todos menos las subcategorías / localidades cuyo padre el usuario
-		 * resolvió distinto de lo que supuso el chequeo (ver item_visible).
+		 * Visibles y ocultos-sin-reemplazo, en un solo recorrido. Es lo único que se recalcula entero
+		 * en cada clic, y es lineal: cada ítem resuelve su padre en el índice.
 		 */
+		particion() {
+			return particionar(this.items_validos, this.value, this.padres)
+		},
+
 		items_visibles() {
-			let self = this
-			return self.items_validos.filter(function(item) {
-				return item_visible(item, self.items_validos, self.value)
-			})
+			return this.particion.visibles
 		},
 
 		/* Lo que hay que revisar ahora. */
@@ -258,9 +256,9 @@ export default {
 			})
 		},
 
-		/* Cuántos ítems quedaron ocultos por la decisión tomada sobre su categoría o provincia. */
+		/* Ítems sin padre_ref que quedaron ocultos por la decisión tomada sobre su padre (API anterior). */
 		cantidad_ocultos() {
-			return this.items_validos.length - this.items_visibles.length
+			return this.particion.ocultos_sin_reemplazo.length
 		},
 
 		/*
@@ -268,25 +266,20 @@ export default {
 		 * subcategorías, "provincia" si son todas localidades.
 		 */
 		texto_ocultos() {
-			let self = this
-			let n = self.cantidad_ocultos
-			let tipos_ocultos = self.items_validos.filter(function(item) {
-				return self.items_visibles.indexOf(item) === -1
-			}).map(function(item) {
-				return item.tipo
-			})
+			let ocultos = this.particion.ocultos_sin_reemplazo
+			let n = ocultos.length
 
 			let padre = 'la categoría o la provincia'
-			if (tipos_ocultos.every(function(tipo) { return tipo === 'sub_categoria' })) {
+			if (ocultos.every(function(item) { return item.tipo === 'sub_categoria' })) {
 				padre = 'la categoría'
-			} else if (tipos_ocultos.every(function(tipo) { return tipo === 'localidad' })) {
+			} else if (ocultos.every(function(item) { return item.tipo === 'localidad' })) {
 				padre = 'la provincia'
 			}
 
 			if (n === 1) {
 				return 'Dejamos de mostrar un nombre porque cambiaste ' + padre + ' a la que pertenece: se va a cargar como en cualquier importación.'
 			}
-			return 'Dejamos de mostrar ' + self.numero_es(n) + ' nombres porque cambiaste ' + padre + ' a la que pertenecen: se van a cargar como en cualquier importación.'
+			return 'Dejamos de mostrar ' + this.numero_es(n) + ' nombres porque cambiaste ' + padre + ' a la que pertenecen: se van a cargar como en cualquier importación.'
 		},
 
 		/*
@@ -307,6 +300,11 @@ export default {
 		/* True cuando la parte de IA del chequeo no corrió (cayó, o tardó): se avisa. */
 		ia_no_consultada() {
 			return !!this.relaciones && this.relaciones.ia_consultada === false
+		},
+
+		/* True cuando alguna capa del chequeo se acotó: puede haber parecidos que no están en la lista. */
+		recortado() {
+			return !!this.relaciones && this.relaciones.recortado === true
 		},
 
 		/* "Usar el existente en todas" solo tiene sentido si alguna pendiente tiene un existente que ofrecer. */
@@ -355,23 +353,6 @@ export default {
 			return grupos
 		},
 
-		/**
-		 * Opciones del ítem que se pueden mostrar, con su índice original (el índice es lo que viaja
-		 * en el v-model y tiene que coincidir con el de `opciones` de la API).
-		 *
-		 * @param {Object} item
-		 * @returns {Array} [{ opcion, indice }]
-		 */
-		opciones_mostrables(item) {
-			let mostrables = []
-			item.opciones.forEach(function(opcion, indice) {
-				if (opcion_es_valida(opcion)) {
-					mostrables.push({ opcion: opcion, indice: indice })
-				}
-			})
-			return mostrables
-		},
-
 		/* Índice elegido del ítem (o el sugerido, si todavía no se tocó). */
 		elegido(item) {
 			return indice_elegido(item, this.value)
@@ -390,9 +371,10 @@ export default {
 		},
 
 		/**
-		 * Acción masiva sobre todas las pendientes. Recorre también las ocultas (no las recordadas):
-		 * si vuelven a aparecer porque el usuario cambió de nuevo su categoría, aparecen con la
-		 * misma decisión masiva que el resto.
+		 * Acción masiva sobre todas las pendientes. Recorre también las que no se ven (no las
+		 * recordadas): las variantes de un hijo para otra elección de su padre, y los ocultos de la
+		 * API anterior. Si vuelven a aparecer porque el usuario cambia de nuevo el padre, aparecen
+		 * con la misma decisión masiva que el resto.
 		 *
 		 * @param {String} hacia 'existente' | 'nuevo'
 		 */
@@ -410,72 +392,6 @@ export default {
 			})
 
 			this.$emit('input', decisiones)
-		},
-
-		/**
-		 * Texto de una opción, en lenguaje de comerciante y concordando en género con el tipo
-		 * ("que ya está cargada" para una categoría, "cargado" para un proveedor).
-		 *
-		 * @param {Object} item
-		 * @param {Object} opcion
-		 * @returns {String}
-		 */
-		texto_opcion(item, opcion) {
-			let femenino = definicion_de_tipo(item.tipo).genero === 'f'
-
-			if (opcion.accion === 'usar') {
-				let nombre = opcion.nombre !== null && opcion.nombre !== undefined && opcion.nombre !== ''
-					? opcion.nombre
-					: (femenino ? 'la que ya existe' : 'el que ya existe')
-				return 'Es «' + nombre + '», que ya está ' + (femenino ? 'cargada' : 'cargado')
-			}
-
-			if (opcion.accion === 'unir') {
-				return 'Es ' + (femenino ? 'la misma' : 'el mismo') + ' que «' + opcion.con + '» (también '
-					+ (femenino ? 'nueva' : 'nuevo') + '): crear ' + (femenino ? 'una sola' : 'uno solo')
-			}
-
-			/* crear */
-			let uniones = item.opciones.filter(function(otra) {
-				return otra && otra.accion === 'unir'
-			}).length
-
-			if (uniones === 1) {
-				return 'Son ' + (femenino ? 'distintas' : 'distintos') + ': crear ' + (femenino ? 'las dos' : 'los dos')
-			}
-			if (uniones > 1) {
-				return 'Es ' + (femenino ? 'otra distinta' : 'otro distinto') + ': crear «' + item.valor + '» aparte'
-			}
-			return 'Es ' + (femenino ? 'una nueva' : 'uno nuevo') + ': crear «' + item.valor + '»'
-		},
-
-		/**
-		 * "en la categoría «Herramientas»" para una subcategoría, "en la provincia «Córdoba»" para
-		 * una localidad. Vacío si el ítem no tiene padre.
-		 *
-		 * @param {Object} item
-		 * @returns {String}
-		 */
-		texto_padre(item) {
-			let definicion = definicion_de_tipo(item.tipo)
-			if (!definicion.en_el_padre || item.padre === null || item.padre === undefined || item.padre === '') {
-				return ''
-			}
-			return definicion.en_el_padre + ' «' + item.padre + '»'
-		},
-
-		/**
-		 * En cuántas filas del Excel aparece el valor. Vacío si la API no lo informó.
-		 *
-		 * @param {Object} item
-		 * @returns {String}
-		 */
-		texto_filas(item) {
-			let filas = Number(item.filas)
-			if (!filas || filas < 1) {
-				return ''
-			}
-			return 'en ' + this.numero_es(filas) + (filas === 1 ? ' fila' : ' filas')
 		},
 	},
 }
