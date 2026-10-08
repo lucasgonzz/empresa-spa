@@ -13,6 +13,7 @@
 		-->
 		<model-index
 		model_name="cheque"
+		:skip_global_error_event="true"
 		:actions_after_save="['cheque/getModels']"></model-index>
 	</div>
 </template>

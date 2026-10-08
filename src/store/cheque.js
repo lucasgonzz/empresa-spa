@@ -1,4 +1,5 @@
 import Vue from 'vue'
+import axios from 'axios'
 import __base_store from '@/store/__base_store'
 
 /**
@@ -65,6 +66,31 @@ export default __base_store({
 		},
 	},
 	actions: {
+		/**
+		 * Pisa la acción `delete` del factory: borra el cheque y recarga la lista agrupada.
+		 *
+		 * Misión cheque-edicion-acotada (8/10/2026): el botón Eliminar del modal del cheque llega
+		 * acá (Confirm.vue → `cheque/delete`). La del factory, tras el DELETE, hace
+		 * `commit('delete')`, cuya mutación busca el cheque con `state.models.findIndex(...)`: con el
+		 * objeto agrupado `{recibido: {...}, emitido: {...}}` eso es un TypeError. El cheque ya estaba
+		 * borrado en el servidor, pero el usuario ve "Error al ejecutar la acción", el modal queda
+		 * abierto y la tabla sigue mostrando el cheque. Misma raíz que la mutación `add` de arriba.
+		 *
+		 * Lee `state.delete`, que deja puesto la mutación `setDelete` del factory, igual que la base.
+		 *
+		 * @param {Object} context state, dispatch
+		 * @returns {Promise}
+		 */
+		delete({ state, dispatch }) {
+			return axios.delete('/api/cheque/' + state.delete.id)
+			.then(() => {
+				return dispatch('getModels')
+			})
+			.catch((err) => {
+				console.log(err)
+				return Promise.reject(err)
+			})
+		},
 		/**
 		 * Deja la búsqueda de columnas en cero: sin criterios de valor, sin orden y sin
 		 * resultados. La tabla vuelve a mostrar la lista de la solapa tal cual viene de

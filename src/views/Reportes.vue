@@ -60,6 +60,7 @@
 		cheques-endoso-y-bancos, 21/9/2026): es el drill-down de Flujo de Caja el que lo abre. -->
 		<model-index
 		model_name="cheque"
+		:skip_global_error_event="true"
 		:actions_after_save="['cheque/getModels']"></model-index>
 	</div>
 </template>
