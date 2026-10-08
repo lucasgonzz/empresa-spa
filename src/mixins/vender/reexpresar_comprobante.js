@@ -90,6 +90,16 @@ const DECIMALES_BASE_SIN_RECARGOS = 6
  * reexpresar_importes_fijos_sin_convertir) y el vendedor los saca primero. Nunca se guarda un
  * comprobante con importes en dos monedas.
  *
+ * 🔴 Y LOS COMBOS de una venta guardada tambien frenan (revision independiente, 8/10/2026). Su precio
+ * del pivot se convierte, pero su COSTO no: este mixin solo convierte el costo de los ARTICULOS
+ * (reexpresar_renglon_con_pivot, `es_articulo`) y la API tampoco recotiza el costo de un combo. La
+ * venta quedaria con el precio del combo en la moneda nueva y el costo en la vieja, o sea una
+ * ganancia inventada. La API rechaza el cambio con 422 (`motivo` combos); aca se frena antes, con
+ * un aviso que dice que hacer: sacar el combo, cambiar la moneda y volver a agregarlo (un combo
+ * nuevo sale del catalogo y check_moneda lo cotiza).
+ * En un PRESUPUESTO los combos NO frenan: es el mismo limite conocido desde la mision
+ * 2r-presupuestos-editables (1/10/2026), que esta mision no cambia.
+ *
  * Una venta de contado con UN solo metodo de pago no frena: al abrirla queda el id del metodo y el
  * reparto vacio (previus_sale/index.js::set_datos_para_actualizar_en_vender), o sea que no lleva
  * ningun importe en filas, y la API lo cobra por el total que viaja.
@@ -105,21 +115,23 @@ const DECIMALES_BASE_SIN_RECARGOS = 6
  *
  * Es pura (no lee el store) para poder probarla sin Vue.
  *
- * El reparto solo cuenta con `con_reparto_que_viaja` (una VENTA guardada): sus filas viajan tal
- * cual en el PUT. En un presupuesto no frena, a proposito: el cartel de guardar
- * (modals/budget-cobro) siempre arranca el reparto de cero sobre el total vigente, asi que lo que
- * quedara en las filas no se guarda.
+ * El reparto y los combos solo cuentan con `es_venta_guardada`:
+ *   - el reparto de una venta viaja tal cual en el PUT. En un presupuesto no frena, a proposito: el
+ *     cartel de guardar (modals/budget-cobro) siempre arranca el reparto de cero sobre el total
+ *     vigente, asi que lo que quedara en las filas no se guarda;
+ *   - los combos, ver "Y LOS COMBOS" arriba (en un presupuesto es un limite conocido del 1/10).
  *
  * Los ajustes del reparto (`modal_payment_methods`) solo cuentan sin un metodo unico elegido: con
  * metodo unico setTotal() no los aplica (vender_set_total.js::aplicar_payment_method_discounts_a_total_repartido_del_modal)
  * y son un sobrante que no mueve nada.
  *
  * @param {Object} estado { descuento_puntos, returned_items, selected_payment_methods,
- *                          modal_payment_methods, current_acount_payment_method_id } del store de VENDER.
- * @param {Boolean} con_reparto_que_viaja true si el comprobante es una venta guardada.
+ *                          modal_payment_methods, current_acount_payment_method_id, items } del
+ *                          store de VENDER.
+ * @param {Boolean} es_venta_guardada true si el comprobante es una venta guardada.
  * @returns {Array<String>}
  */
-export function importes_fijos_que_no_se_convierten(estado, con_reparto_que_viaja) {
+export function importes_fijos_que_no_se_convierten(estado, es_venta_guardada) {
 
 	let pendientes = []
 
@@ -139,7 +151,15 @@ export function importes_fijos_que_no_se_convierten(estado, con_reparto_que_viaj
 		pendientes.push('la devolución cargada')
 	}
 
-	if (con_reparto_que_viaja) {
+	if (es_venta_guardada) {
+
+		let combos = Array.isArray(estado.items) ? estado.items.filter(item => {
+			return item && item.is_combo
+		}) : []
+
+		if (combos.length) {
+			pendientes.push('los combos (después de cambiar la moneda los podés volver a agregar)')
+		}
 
 		let filas_con_monto = Array.isArray(estado.selected_payment_methods) ? estado.selected_payment_methods.filter(fila => {
 			return fila && Number(fila.amount) > 0
@@ -182,6 +202,7 @@ export default {
 				selected_payment_methods: vender.selected_payment_methods,
 				modal_payment_methods: vender.modal_payment_methods,
 				current_acount_payment_method_id: vender.current_acount_payment_method_id,
+				items: vender.items,
 			}, this.$store.getters['vender/previus_sales/editando_venta_previa'])
 		},
 
