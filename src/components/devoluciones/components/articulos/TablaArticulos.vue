@@ -360,12 +360,6 @@ export default {
 			this.set_total_devolucion()
 		},
 		/**
-		 * Opciones del select de variante de un renglón.
-		 *
-		 * @param {Object} item Renglón con `article_variants`.
-		 * @returns {Array} [{value, text}]
-		 */
-		/**
 		 * La descripcion de la variante del renglon ("Azul 36") para mostrar junto al nombre, o null
 		 * si no tiene variante (mision variantes-mismo-articulo-en-vender, 8/10/2026).
 		 *
@@ -394,6 +388,12 @@ export default {
 
 			return variante ? variante.variant_description : null
 		},
+		/**
+		 * Opciones del select de variante de un renglón.
+		 *
+		 * @param {Object} item Renglón con `article_variants`.
+		 * @returns {Array} [{value, text}]
+		 */
 		article_variant_options(item) {
 			let options = [{
 				value: 0,
