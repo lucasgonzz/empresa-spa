@@ -75,7 +75,7 @@
 				<!-- Opción global: descuentos en servicios -->
 				<div
 				v-if="puede_usar_discount_surchages"
-				class="vender-rate-panel__section vender-rate-panel__section--footer">
+				class="vender-rate-panel__section">
 					<span class="vender-rate-panel__section-label">
 						Servicios
 					</span>
@@ -84,6 +84,58 @@
 					input_id="aplicar_descuentos_a_servicios">
 						Aplicar descuentos en los servicios
 					</vender-toggle>
+				</div>
+
+				<!--
+					Descuentos directos en precios de artículos (misión
+					descuentos-aplicar-al-precio-del-articulo, 8/10/2026): el espejo de la misma sección del
+					panel de recargos. Es el pie del panel (--footer) para que los dos paneles queden
+					alineados.
+				-->
+				<div
+				v-if="puede_usar_discount_surchages"
+				class="vender-rate-panel__section vender-rate-panel__section--footer">
+					<span class="vender-rate-panel__section-label">
+						Precios de artículos
+					</span>
+
+					<p
+					v-if="!desactivar_descuentos_a_precios_de_articulos"
+					class="vender-rate-panel__section-hint">
+						Podés cambiar esta opción también al editar la venta o el presupuesto: los precios se recalculan solos. El total se mantiene, salvo algún centavo por el redondeo de los precios. Con la opción prendida, la tabla de artículos muestra debajo de cada precio cuál era el original.
+					</p>
+
+					<!-- Aviso del motivo por el que la opción está deshabilitada -->
+					<p
+					v-if="legado_de_recargos"
+					data-testid="aviso-descuentos-en-precios-legado"
+					class="vender-rate-panel__section-hint">
+						Este comprobante se guardó con los recargos aplicados directamente a los precios de los artículos, antes de que el sistema registrara cuánto valía cada precio sin el recargo. Por eso los descuentos no se pueden aplicar a los precios: se restan del total.
+					</p>
+					<p
+					v-else-if="descuentos_hacen_cero_el_precio"
+					data-testid="aviso-descuentos-en-precios-cero"
+					class="vender-rate-panel__section-hint">
+						Con los descuentos seleccionados el precio de los artículos quedaría en $0 y no se podría volver al precio original, así que se restan del total.
+					</p>
+					<p
+					v-else-if="sin_descuentos_seleccionados"
+					class="vender-rate-panel__section-hint">
+						Seleccioná al menos un descuento de los de arriba para poder usar esta opción.
+					</p>
+
+					<vender-toggle
+					:disabled="desactivar_descuentos_a_precios_de_articulos"
+					v-model="descuentos_en_precios_prendidos"
+					input_id="aplicar_descuentos_directo_a_items"
+					row_class="vender-toggle-row--multiline">
+						Aplicar los descuentos de esta venta directamente a los precios de los artículos, en lugar de restarlos al total. (Para que no aparezcan discriminados en el comprobante)
+					</vender-toggle>
+
+					<!-- Aclaración de alcance: esta opción no gobierna los descuentos de método de pago ni de cuotas -->
+					<p class="vender-rate-panel__section-hint">
+						Solo afecta a los descuentos de venta seleccionados arriba. Los descuentos y recargos por método de pago y por cantidad de cuotas se aplican siempre al precio de los artículos, sin importar esta opción.
+					</p>
 				</div>
 
 			</div>
@@ -97,6 +149,7 @@ import ToggleDeAjusteDeVenta from './ToggleDeAjusteDeVenta'
 import vender from '@/mixins/vender'
 import vender_set_total from '@/mixins/vender_set_total'
 import discount_surchage_permissions from '@/mixins/vender/discount_surchage_permissions'
+import { descuentos_dejan_el_precio_en_cero, porcentajes_de_descuentos_elegidos } from '@/utils/descuentos_en_precios'
 export default {
 	mixins: [vender, vender_set_total, discount_surchage_permissions],
 	components: {
@@ -160,6 +213,75 @@ export default {
 				return !discount.client_id && !this.es_descuento_del_cliente(discount)
 			})
 		},
+		/**
+		 * El comprobante es un LEGADO de recargos: guardado con los recargos adentro de los precios
+		 * antes de que los renglones registraran su precio sin recargo (misión
+		 * recargos-en-precios-editable). Su precio tiene un recargo adentro de base desconocida, así
+		 * que no hay un precio original sobre el cual meter los descuentos: la opción no se puede usar
+		 * (y el predicado efectivo de utils/descuentos_en_precios.js tampoco la considera prendida).
+		 *
+		 * @returns {boolean}
+		 */
+		legado_de_recargos() {
+			return Boolean(this.$store.state.vender.recargos_en_precios_sin_registro)
+		},
+		/**
+		 * La venta no tiene ningún descuento de venta seleccionado: no hay nada que aplicar.
+		 *
+		 * @returns {boolean}
+		 */
+		sin_descuentos_seleccionados() {
+			return !this.sale_discounts.length
+		},
+		/**
+		 * Los descuentos seleccionados, juntos, dejarían el precio en cero (un 100%, o una cascada
+		 * que llega a cero). El precio original sería irrecuperable -habría que dividir por 0-, así
+		 * que la opción no se puede usar y los descuentos se restan del total, que es lo que
+		 * garantiza que un descuento del 100% nunca deje de cobrarse.
+		 *
+		 * @returns {boolean}
+		 */
+		descuentos_hacen_cero_el_precio() {
+			return descuentos_dejan_el_precio_en_cero(
+				porcentajes_de_descuentos_elegidos(this.sale_discounts, this.discounts)
+			)
+		},
+		/**
+		 * Si la opción de aplicar los descuentos directo a los precios debe estar bloqueada: el
+		 * comprobante es un legado de recargos, los descuentos elegidos dejarían el precio en cero, o
+		 * no hay ningún descuento seleccionado.
+		 *
+		 * 🔴 Ya NO se bloquea por "estoy editando una venta" ni por "es un presupuesto": igual que la
+		 * opción de recargos desde el 28/9/2026, se puede prender y apagar editando porque getPriceVender()
+		 * rearma cada precio desde el precio original guardado y le mete los descuentos de hoy.
+		 *
+		 * @returns {boolean}
+		 */
+		desactivar_descuentos_a_precios_de_articulos() {
+			return this.legado_de_recargos
+				|| this.descuentos_hacen_cero_el_precio
+				|| this.sin_descuentos_seleccionados
+		},
+		/**
+		 * v-model del toggle de la opción. Lo que MUESTRA es lo efectivo: con la opción bloqueada por un
+		 * 100% o por el legado se ve apagada (no está aplicada a los precios, aunque el flag crudo del
+		 * store siga en 1 y vuelva a valer en cuanto se saque el descuento que lo bloqueaba). Escribir
+		 * pasa por el computed del mixin (aplicar_descuentos_directo_a_items), que commitea el flag y
+		 * recalcula el total.
+		 *
+		 * @returns {number}
+		 */
+		descuentos_en_precios_prendidos: {
+			get() {
+				if (this.desactivar_descuentos_a_precios_de_articulos) {
+					return 0
+				}
+				return Number(this.aplicar_descuentos_directo_a_items) ? 1 : 0
+			},
+			set(value) {
+				this.aplicar_descuentos_directo_a_items = value
+			},
+		},
 		sale_discounts: {
 			get() {
 				return this.$store.state.vender.discounts_id
@@ -168,6 +290,21 @@ export default {
 				console.log('value')
 				console.log(value)
 				this.$store.commit('vender/setDiscountsId', value)
+
+				/*
+					Si se quitaron todos los descuentos, la opción de aplicarlos directo a los precios queda
+					sin sentido y hay que apagarla (gemelo del setter de stage-3/Surchages.vue). Si no, el
+					comprobante se guarda con el flag en 1 y sin descuentos, y el toggle queda prendido y
+					bloqueado (sin descuentos seleccionados no se puede tocar). Vale también editando una
+					venta o un presupuesto: apagarla devuelve cada precio a su valor original.
+				*/
+				if (
+					!value.length
+					&& this.aplicar_descuentos_directo_a_items
+				) {
+					this.$store.commit('vender/set_aplicar_descuentos_directo_a_items', 0)
+				}
+
 				this.setTotal()
 				// this.$store.commit('vender/setTotal')
 			}
