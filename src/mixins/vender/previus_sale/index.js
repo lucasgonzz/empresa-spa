@@ -928,6 +928,34 @@ export default {
 					item_to_add = this.check_price_type_ranges(item_to_add)
 				}
 
+				/*
+					La variante del renglon (mision variantes-mismo-articulo-en-vender, 8/10/2026).
+					Hasta aca el renglon reabierto solo traia article_variant_id: sin
+					variant_description la columna "Variante" quedaba vacia y el nombre salia pelado,
+					asi que una venta con el mismo articulo en dos variantes se reabria con dos
+					renglones identicos a la vista. Y sin is_variant / variant_id el renglon no
+					hablaba el mismo idioma que uno recien agregado (add_item_to_sale arma
+					article_variant_id = is_variant ? variant_id : 0).
+
+					🔴 Se marca DESPUES de check_price_type_ranges, a proposito: ese metodo saltea
+					los renglones con is_variant, y al reabrir el renglon tiene que quedar con la misma
+					lista de precios por rango que tenia antes de esta mision (con la extension
+					lista_de_precios_por_rango_de_cantidad_vendida el precio NO sale del pivot y la
+					lista decide el precio). El precio guardado de la venta no depende de is_variant:
+					getPriceVender toma el del pivot y varios_precios_guardados agrupa por id +
+					article_variant_id, que no cambian.
+
+					Un presupuesto no guarda variante: su pivot no trae article_variant_id
+					(Number(undefined) = NaN, falsy), asi que queda sin variante como siempre.
+				*/
+				let variante_del_renglon = Number(article.pivot.article_variant_id || 0)
+
+				if (variante_del_renglon) {
+					item_to_add.is_variant = true
+					item_to_add.variant_id = variante_del_renglon
+					item_to_add.variant_description = this.descripcion_de_variante_del_pivot(article, variante_del_renglon)
+				}
+
 				items.push(item_to_add)
 			})
 			if (model.combos) {
@@ -1023,6 +1051,38 @@ export default {
 				return ''
 			}
 			return Number(amount)
+		},
+		/**
+		 * La descripcion de la variante de un renglon guardado ("Azul 36"), para la columna
+		 * "Variante" y el nombre del renglon al reabrir una venta.
+		 *
+		 * Primero la del pivot (article_sale.variant_description, que la API guarda al vender con
+		 * SaleHelper::getVariantDescription). Si el pivot no la trae (una fila vieja o escrita por
+		 * otro camino), se busca en las variantes del articulo por id, que es lo mismo que hace
+		 * ArticulosSoloLectura.vue con los movimientos de deposito. Si tampoco esta (variante
+		 * borrada), null: el renglon conserva su article_variant_id y se guarda igual.
+		 *
+		 * @param {Object} article Articulo de model.articles, con su pivot.
+		 * @param {Number} article_variant_id Variante del renglon (ya normalizada, distinta de 0).
+		 * @returns {String|null}
+		 */
+		descripcion_de_variante_del_pivot(article, article_variant_id) {
+
+			if (article.pivot && article.pivot.variant_description) {
+				return article.pivot.variant_description
+			}
+
+			if (!Array.isArray(article.article_variants)) {
+				return null
+			}
+
+			let variante = article.article_variants.find(variant => variant.id == article_variant_id)
+
+			if (variante) {
+				return variante.variant_description
+			}
+
+			return null
 		},
 		get_price_type_personalizado_id(item) {
 			if (!item.pivot.price_type_personalizado_id) {

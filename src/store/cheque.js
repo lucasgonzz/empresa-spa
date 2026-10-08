@@ -1,4 +1,5 @@
 import Vue from 'vue'
+import axios from 'axios'
 import __base_store from '@/store/__base_store'
 
 /**
@@ -21,6 +22,23 @@ export default __base_store({
 		model_name: 'cheque',
 	},
 	mutations: {
+		/**
+		 * Pisa la mutación `add` del factory con un no-op.
+		 *
+		 * Misión cheque-edicion-acotada (8/10/2026): al guardar el formulario del cheque, el
+		 * modal genérico hace `commit('cheque/add', model)`. La `add` del factory hace
+		 * `state.models.findIndex(...)`, pero en este store `state.models` NO es un array: es el
+		 * objeto agrupado `{recibido: {...}, emitido: {...}}` que devuelve `GET cheque`. Con eso
+		 * tiraba un TypeError dentro del `.then` del guardado, que caía al `.catch` y le mostraba
+		 * un error a alguien cuyo guardado había salido bien.
+		 *
+		 * No-op a propósito: la lista se refresca con la acción `cheque/getModels`, que las vistas
+		 * le pasan al modal en `actions_after_save` (views/Cheques.vue y views/Reportes.vue). Así,
+		 * además, un cheque al que le cambiaron la fecha de pago cambia de solapa.
+		 *
+		 * @returns {void}
+		 */
+		add() {},
 		/**
 		 * Apaga el orden de TODAS las columnas (deja `ordenar_de` en null), sin tocar los
 		 * criterios de valor ni sacar ningún filtro del array.
@@ -48,6 +66,31 @@ export default __base_store({
 		},
 	},
 	actions: {
+		/**
+		 * Pisa la acción `delete` del factory: borra el cheque y recarga la lista agrupada.
+		 *
+		 * Misión cheque-edicion-acotada (8/10/2026): el botón Eliminar del modal del cheque llega
+		 * acá (Confirm.vue → `cheque/delete`). La del factory, tras el DELETE, hace
+		 * `commit('delete')`, cuya mutación busca el cheque con `state.models.findIndex(...)`: con el
+		 * objeto agrupado `{recibido: {...}, emitido: {...}}` eso es un TypeError. El cheque ya estaba
+		 * borrado en el servidor, pero el usuario ve "Error al ejecutar la acción", el modal queda
+		 * abierto y la tabla sigue mostrando el cheque. Misma raíz que la mutación `add` de arriba.
+		 *
+		 * Lee `state.delete`, que deja puesto la mutación `setDelete` del factory, igual que la base.
+		 *
+		 * @param {Object} context state, dispatch
+		 * @returns {Promise}
+		 */
+		delete({ state, dispatch }) {
+			return axios.delete('/api/cheque/' + state.delete.id)
+			.then(() => {
+				return dispatch('getModels')
+			})
+			.catch((err) => {
+				console.log(err)
+				return Promise.reject(err)
+			})
+		},
 		/**
 		 * Deja la búsqueda de columnas en cero: sin criterios de valor, sin orden y sin
 		 * resultados. La tabla vuelve a mostrar la lista de la solapa tal cual viene de

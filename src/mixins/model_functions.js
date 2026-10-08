@@ -872,6 +872,28 @@ export default {
             return ''
         },
         /**
+         * Formulario del cheque (misión cheque-edicion-acotada, 8/10/2026): el Cliente de solo
+         * lectura se muestra únicamente en un cheque recibido. Es v_if_function y no `v_if` porque
+         * showProperty() compara `typeof v_if == 'array'`, que nunca se cumple.
+         *
+         * @param {object} prop
+         * @param {object} model El cheque.
+         * @returns {boolean}
+         */
+        cheque_es_recibido(prop, model) {
+            return !!model && model.tipo === 'recibido'
+        },
+        /**
+         * Idem para el Proveedor de solo lectura: solo en un cheque emitido.
+         *
+         * @param {object} prop
+         * @param {object} model El cheque.
+         * @returns {boolean}
+         */
+        cheque_es_emitido(prop, model) {
+            return !!model && model.tipo === 'emitido'
+        },
+        /**
          * `v_if_function` de "Envío elegido": solo tiene sentido en un pedido con envío a
          * domicilio.
          *

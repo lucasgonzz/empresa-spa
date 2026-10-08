@@ -3,6 +3,35 @@ import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = env('VUE_APP_API_URL')
 
+/**
+ * La descripcion de la variante de un renglon de la venta ("Azul 36"), o null si el renglon no tiene
+ * variante. Primero la del pivot (article_sale.variant_description, que la API guarda al vender) y,
+ * si no la trae, la de las variantes del articulo por id.
+ *
+ * @param {Object} article Articulo de sale.articles, con su pivot.
+ * @returns {String|null}
+ */
+function descripcion_de_variante_del_renglon(article) {
+
+	let article_variant_id = Number(article.pivot.article_variant_id || 0)
+
+	if (!article_variant_id) {
+		return null
+	}
+
+	if (article.pivot.variant_description) {
+		return article.pivot.variant_description
+	}
+
+	if (!Array.isArray(article.article_variants)) {
+		return null
+	}
+
+	let variante = article.article_variants.find(variant => variant.id == article_variant_id)
+
+	return variante ? variante.variant_description : null
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -127,8 +156,24 @@ export default {
 		set_facturar_nota_credito(state, value) {
 			state.facturar_nota_credito = value 
 		},
+		/*
+			Quita un renglon de la nota libre (mision variantes-mismo-articulo-en-vender, 8/10/2026).
+
+			Hasta esta mision buscaba el primer renglon con el mismo id: con el mismo articulo dos
+			veces (dos variantes), quitar el segundo borraba el primero. Ahora se busca por
+			REFERENCIA (TablaArticulos.vue pasa el mismo objeto del store) y, si no estuviera (un
+			llamador que pase una copia), por la identidad del renglon: id + variante + tipo
+			(articulo o servicio, que tienen ids de tablas distintas).
+		*/
 		remove_item(state, value) {
-			let index = state.items.findIndex(item => item.id == value.id)
+			let index = state.items.indexOf(value)
+			if (index == -1) {
+				index = state.items.findIndex(item => {
+					return item.id == value.id
+						&& Number(item.article_variant_id || 0) == Number(value.article_variant_id || 0)
+						&& !!item.is_service == !!value.is_service
+				})
+			}
 			if (index != -1) {
 				state.items.splice(index, 1)
 			}
@@ -149,6 +194,15 @@ export default {
 					price_vender: article.pivot.price,
 					amount: article.pivot.amount,
 					article_variant_id: article.pivot.article_variant_id,
+					/*
+						La variante del renglon ("Azul 36"), para mostrarla junto al nombre (mision
+						variantes-mismo-articulo-en-vender, 8/10/2026): con el mismo articulo vendido en
+						dos variantes la venta trae dos renglones con el mismo nombre, y sin esto no se
+						sabia cual de los dos se estaba devolviendo. Sale del pivot
+						(article_sale.variant_description) y, si no la trae, de las variantes del
+						articulo por id. null si el renglon no tiene variante.
+					*/
+					variant_description: descripcion_de_variante_del_renglon(article),
 					discount: article.pivot.discount,
 					returned_amount: article.pivot.returned_amount,
 					ya_devueltas: article.pivot.returned_amount,

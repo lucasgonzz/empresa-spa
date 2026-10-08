@@ -75,12 +75,44 @@ export default {
 			}
 			return false
 		},
+		/**
+		 * Los tres impuestos de siempre (fijos, en este orden) y, a continuación, los que el dueño
+		 * agregó en el ABM de impuestos de retención (misión retenciones-abm-impuestos, 8/10/2026),
+		 * ordenados por nombre. Un impuesto propio viaja como `imp_<id>`: se resuelve por id, así que
+		 * renombrarlo no rompe los certificados ya cargados.
+		 *
+		 * Si el store no existe o está vacío (API vieja, o el dueño no agregó ninguno), queda la lista
+		 * de siempre. Y si la fila trae un `imp_<id>` que ya no está en el store (el impuesto se
+		 * borró mientras el modal estaba abierto), se muestra igual como opción, para que el select
+		 * no quede en blanco mientras el valor sigue viajando en el payload.
+		 *
+		 * @returns {Array}
+		 */
 		impuesto_options() {
-			return [
+			let options = [
 				{value: 'ganancias', text: 'Ganancias'},
 				{value: 'iva', text: 'IVA'},
 				{value: 'iibb', text: 'Ingresos Brutos'},
 			]
+
+			let store_impuestos = this.$store.state.retencion_impuesto
+			let propios = store_impuestos && Array.isArray(store_impuestos.models) ? store_impuestos.models : []
+
+			let extras = propios
+				.filter(impuesto => impuesto && impuesto.id)
+				.map(impuesto => {
+					return {value: 'imp_' + impuesto.id, text: impuesto.name}
+				})
+				.sort((a, b) => String(a.text).localeCompare(String(b.text), 'es', {sensitivity: 'base'}))
+
+			options = options.concat(extras)
+
+			let elegido = this.valor('retencion_impuesto')
+			if (!options.some(option => option.value == elegido)) {
+				options.push({value: elegido, text: 'Impuesto que ya no existe'})
+			}
+
+			return options
 		},
 		/**
 		 * 🔴 El campo del régimen cambia de nombre según el impuesto, y no es cosmético: las

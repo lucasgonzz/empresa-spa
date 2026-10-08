@@ -6,6 +6,12 @@ import deteccion_combos from '@/mixins/vender/deteccion_combos'
 	usan ArticlesTable.vue y el ticket de balanza. Ver actualizar_cantidad().
 */
 import { tiene_varios_precios } from '@/mixins/vender/varios_precios'
+/*
+	Id del renglon en el DOM (price-vender-<id>, con sufijo de variante solo si el renglon tiene
+	variante): sin el, el foco iba al input del primer renglon del articulo aunque el repetido fuera
+	otra variante. Ver utils/id_de_renglon_vender.js.
+*/
+import { id_de_renglon_vender } from '@/utils/id_de_renglon_vender'
 export default {
 	mixins: [computed, vender_set_total, deteccion_combos],
 	methods: {
@@ -16,7 +22,7 @@ export default {
 			if (finded.personalizar_price_en_vender) {
 
 				setTimeout(() => {
-					document.getElementById('price-vender-'+finded.id).focus()
+					document.getElementById('price-vender-'+id_de_renglon_vender(finded)).focus()
 				}, 300)
 				return true
 			}
@@ -138,7 +144,7 @@ export default {
 
 					this.limpiar_item()
 
-					let id_del_renglon = repetido.id
+					let id_del_renglon = id_de_renglon_vender(repetido)
 
 					setTimeout(() => {
 						let input_personalizado = document.getElementById('price-vender-' + id_del_renglon)
