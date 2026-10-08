@@ -114,6 +114,8 @@ import article_pre_import_range from '@/store/article_pre_import_range'
 import unidad_medida from '@/store/unidad_medida'
 import cheque from '@/store/cheque'
 import cheque_banco from '@/store/cheque_banco'
+// Impuestos de retención propios del dueño (misión retenciones-abm-impuestos, 8/10/2026).
+import retencion_impuesto from '@/store/retencion_impuesto'
 // Balanzas que imprimen tickets con codigo de barras (mision balanzas-configurables, 3/10/2026).
 import balanza from '@/store/balanza'
 import expense from '@/store/expense'
@@ -416,6 +418,7 @@ export default new Vuex.Store({
         unidad_medida,
         cheque,
         cheque_banco,
+        retencion_impuesto,
         balanza,
         expense,
         expense_concept,

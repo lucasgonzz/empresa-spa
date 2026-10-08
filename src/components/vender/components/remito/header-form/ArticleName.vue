@@ -41,6 +41,11 @@
 <script>
 // import SearchComponent from '@/common-vue/components/search/Index'
 import vender from '@/mixins/vender/index'
+/*
+	Variantes de un articulo de la cache (busqueda por nombre sin conexion): ver setSelected() y
+	src/utils/variantes_en_cache.js.
+*/
+import { variantes_disponibles_en_cache } from '@/utils/variantes_en_cache'
 // import vender from '@/mixins/vender'
 export default {
 	mixins: [vender],
@@ -193,6 +198,49 @@ export default {
 			const article = {
 				...result.model,
 				is_article: true,
+			}
+
+			/*
+				🔴 Articulo de la CACHE con variantes (mision variantes-mismo-articulo-en-vender,
+				8/10/2026). Sin conexion el buscador busca en la cache (search_articles_offline,
+				mixins/model_functions.js) y devuelve el articulo crudo, que entraba PELADO: sin
+				variante, y el stock salia del articulo. Con conexion eso no pasa porque la API
+				devuelve una fila por variante (VenderSearchHelper::match_descriptors).
+
+				Ahora se abre el selector de variantes con las de la cache, igual que el escaneo del
+				codigo del padre sin conexion. Es el mismo armado que abrir_selector_de_variantes() de
+				ArticleBarCode.vue (que es un metodo de ese componente y no se puede llamar desde
+				aca): si se cambia uno, se cambia el otro. Al elegir, SelectVariant.vue arma el item
+				con armar_item_de_variante (utils/item_de_variante.js), como en todos los caminos.
+
+				Como se sabe que viene de la cache: las filas de la API traen SIEMPRE is_variant
+				(true en una variante, false en el articulo, build_row); el articulo de la cache no
+				trae esa clave. Solo con la extension article_variants, como la API.
+			*/
+			if (
+				typeof result.model.is_variant == 'undefined'
+				&& this.hasExtencion('article_variants')
+			) {
+
+				let variantes = variantes_disponibles_en_cache(result.model)
+
+				if (variantes.length) {
+
+					this.$store.commit('vender/setArticleForSale', {
+						...result.model,
+						variants: variantes,
+					})
+
+					this.$bvModal.show('select-variant')
+
+					let input = document.getElementById('search-article')
+
+					if (input) {
+						this.setInputValueSync(input, '')
+					}
+
+					return
+				}
 			}
 
 			this.set_codigo_input_value(article)
