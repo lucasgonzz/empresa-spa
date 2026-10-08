@@ -327,8 +327,17 @@ export default {
 		 * Si el campo queda vacio o en cero NO se restaura el dolar del sistema acá, porque el vendedor
 		 * puede estar borrando para escribir otro valor: eso lo hace `restaurar_dolar_si_falta` cuando
 		 * sale del campo.
+		 *
+		 * Es el UNICO camino del vendedor (el @input de bootstrap-vue sale solo de lo que tipea una
+		 * persona, no de los cambios por codigo), asi que aca y solo aca se anota que la cotizacion la
+		 * edito a mano: con una venta guardada que no tenia cotizacion, es lo que decide si el PUT
+		 * manda la del campo o deja la guardada (ver store/vender/previus_sales.js,
+		 * `cotizacion_editada_a_mano`). iniciar_dolar(), restaurar_dolar_si_falta() y
+		 * cargar_dolar_por_defecto() no la prenden: ponen el dolar del sistema por su cuenta.
 		 */
 		set_valor_dolar() {
+			this.$store.commit('vender/previus_sales/set_cotizacion_editada_a_mano', true)
+
 			this.valor_dolar = Number(this.input_dolar_valor)
 
 			this.setTotal()

@@ -30,6 +30,8 @@ import { reagrupar_renglones_con_varios_precios } from '@/utils/varios_precios_g
 	`cambio_de_cuenta_` y sin data(): este mixin lo mezclan una docena de componentes.
 */
 import aviso_cambio_de_cuenta, { moneda_de_cuenta_normalizada } from '@/mixins/vender/previus_sale/aviso_cambio_de_cuenta'
+// La moneda y la cotizacion que viajan en el PUT de la venta (updateSale). Ver el archivo.
+import { moneda_para_el_put_de_la_venta, cotizacion_para_el_put_de_la_venta } from '@/mixins/vender/previus_sale/moneda_y_cotizacion_del_put'
 
 /**
  * Reconstruye `modal_payment_methods` --los metodos de pago con su descuento / recargo-- a partir
@@ -724,11 +726,23 @@ export default {
 			*/
 			const venta_original = this.previus_sale
 			/*
-				La moneda que viaja en el PUT, del store: la que set_datos_para_actualizar_en_vender()
-				restauro de la venta, o la que el vendedor eligio en Moneda.vue. Se guarda aparte para
-				comparar con la que devuelve el servidor (ver el .then).
+				La moneda que viaja en el PUT, del store --la que set_datos_para_actualizar_en_vender()
+				restauro de la venta, o la que el vendedor eligio en Moneda.vue-- y NORMALIZADA, nunca
+				null (ver moneda_para_el_put_de_la_venta). Se guarda aparte para comparar con la que
+				devuelve el servidor (ver el .then).
 			*/
-			const moneda_enviada = this.$store.state.vender.moneda_id
+			const moneda_enviada = moneda_para_el_put_de_la_venta(this.$store.state.vender.moneda_id)
+			/*
+				La cotizacion que viaja: la del campo USD, o null si es el dolar del sistema que
+				Moneda.vue puso solo en una venta que no tenia cotizacion y nadie la toco (la API
+				conserva la guardada). La regla entera en cotizacion_para_el_put_de_la_venta.
+			*/
+			const valor_dolar_enviado = cotizacion_para_el_put_de_la_venta(
+				venta_original,
+				this.$store.state.vender.moneda_id,
+				this.valor_dolar,
+				this.$store.state.vender.previus_sales.cotizacion_editada_a_mano
+			)
 
 			this.$store.dispatch('vender/previus_sales/updateSale', {
 				client_id: this.client ? this.client.id : null, 
@@ -777,11 +791,11 @@ export default {
 				/*
 					Moneda de la venta (mision edicion-completa-ventas-presupuestos, 8/10/2026). Es la
 					SEÑAL para la API: con `moneda_id` en el PUT guarda la moneda y, si es mayor que
-					cero, la cotizacion de abajo; sin `moneda_id` (o en null) no toca ninguna de las
-					dos. El motivo completo esta en el PUT de store/vender/previus_sales.js.
+					cero, la cotizacion de abajo (null la conserva). El motivo completo esta en el PUT
+					de store/vender/previus_sales.js.
 				*/
 				moneda_id: moneda_enviada,
-				valor_dolar: this.valor_dolar,
+				valor_dolar: valor_dolar_enviado,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
 				sale_status_id: this.$store.state.vender.sale_status_id,
@@ -822,14 +836,12 @@ export default {
 					(Moneda.vue) y la venta quedaria guardada con precios en la moneda nueva y la
 					moneda vieja, sin ningun error. Pasa solo si la SPA llega a un cliente antes que
 					la API (las dos salen en el mismo release): se avisa fuerte para que lo revisen.
-					Se compara normalizado (null/0 es pesos, como en la API), y con `moneda_enviada`
-					en null no hay nada que comparar: null es "no toques la moneda".
+					Se compara normalizado (null/0 es pesos, como en la API): `moneda_enviada` ya lo
+					esta, y una venta vieja con moneda NULL a la que se le mando 1 no salta.
 				*/
 				if (
 					venta_guardada
-					&& moneda_enviada !== null
-					&& typeof moneda_enviada != 'undefined'
-					&& moneda_de_cuenta_normalizada(venta_guardada.moneda_id) !== moneda_de_cuenta_normalizada(moneda_enviada)
+					&& moneda_de_cuenta_normalizada(venta_guardada.moneda_id) !== moneda_enviada
 				) {
 					this.$toast.error('El servidor no guardó la moneda de la venta: revisala.', {
 						duration: 20000,
@@ -850,19 +862,31 @@ export default {
 					el .then de arriba daba la venta por actualizada).
 
 					Desde la mision edicion-completa-ventas-presupuestos (8/10/2026) llegan por aca,
-					con el mismo `message`, tres 422 mas: el cambio de cliente o de moneda de una venta a
-					cuenta corriente que la API no puede mover (tiene una nota de credito en la cuenta
-					corriente, esta en una facturacion consolidada o el cliente es de otro comercio), el
-					paso a dolares sin cotizacion (`sin_cotizacion_dolar`) y el limite de credito del
-					cliente nuevo. En los tres la venta quedo como estaba y la edicion sigue abierta.
+					con el mismo `message`, mas 422: el cambio de cliente o de moneda de una venta a
+					cuenta corriente que la API no puede mover (`cambio_de_cuenta_rechazado` con su
+					`motivo`: nota de credito en la cuenta corriente, facturacion consolidada, cliente
+					de otro comercio o inexistente, plan de pago en cuotas, combos), el paso a dolares
+					sin cotizacion (`sin_cotizacion_dolar`) y el limite de credito del cliente nuevo. En
+					todos la venta quedo como estaba y la edicion sigue abierta.
+
+					Esos mensajes son largos (dicen que paso y que hacer): duran 12 s y no 6, que no
+					alcanzaban para leerlos. Los demas rechazos siguen como estaban.
 				*/
 				if (
 					err.response
 					&& err.response.data
 					&& err.response.data.message
 				) {
-					this.$toast.error(err.response.data.message, {
-						duration: 6000
+					let datos = err.response.data
+
+					let es_rechazo_de_la_edicion = Boolean(
+						datos.cambio_de_cuenta_rechazado
+						|| datos.sin_cotizacion_dolar
+						|| datos.motivo
+					)
+
+					this.$toast.error(datos.message, {
+						duration: es_rechazo_de_la_edicion ? 12000 : 6000
 					})
 				} else {
 					this.$toast.error('Error al actualizar venta')
