@@ -45,6 +45,16 @@ export default {
 		 * no está mirando ninguna.
 		 */
 		siguiendo_uuid: null,
+
+		/*
+		 * uuids de las revisiones de nombres parecidos (clientes y proveedores) que el usuario
+		 * salteó con "Seguir sin revisar los nombres" (misión importacion-relaciones-parecidas). La
+		 * corrida sigue en el servidor y, al terminar, el aviso por broadcast llega igual: con esta
+		 * lista ExcelAnalysisReadyModal sabe que no tiene que abrirse, porque el usuario ya siguió
+		 * (y probablemente ya importó). Vive en memoria y alcanza: si la SPA se recarga, la corrida
+		 * ya está marcada vista y no se vuelve a ofrecer.
+		 */
+		salteados: [],
 	},
 	getters: {
 		/*
@@ -57,6 +67,15 @@ export default {
 				return false
 			}
 			return state.corrida.estado === 'pendiente' || state.corrida.estado === 'procesando'
+		},
+		/*
+		 * True si esa corrida es una revisión de nombres parecidos que el usuario salteó (ver
+		 * `salteados`). Se usa como función: getters['excel_analysis/fue_salteada'](uuid).
+		 */
+		fue_salteada(state) {
+			return function(uuid) {
+				return !!uuid && state.salteados.indexOf(uuid) !== -1
+			}
 		},
 	},
 	mutations: {
@@ -78,6 +97,11 @@ export default {
 		},
 		set_siguiendo_uuid(state, value) {
 			state.siguiendo_uuid = value || null
+		},
+		marcar_salteado(state, uuid) {
+			if (uuid && state.salteados.indexOf(uuid) === -1) {
+				state.salteados.push(uuid)
+			}
 		},
 	},
 	actions: {

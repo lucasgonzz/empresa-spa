@@ -552,12 +552,18 @@
 				archivo entero tres veces y vuelve a llamar a Claude, asi que tambien
 				puede tardar minutos y tampoco tiene por que retener al usuario.
 			-->
+			<!--
+				🔴 Se muestra con loading_recomendacion aunque `paso` venga vacío: la corrida nace
+				"pendiente" y sin paso, y con la cola ocupada (o sin worker) puede quedarse así. Si este
+				bloque dependiera del paso, el usuario se quedaba con el spinner del botón y sin ninguna
+				salida (ni "Seguir en segundo plano" ni, en clientes y proveedores, "Seguir sin revisar").
+			-->
 			<div
-			v-if="loading_recomendacion && analysis_paso"
+			v-if="loading_recomendacion"
 			class="ai-import-progreso m-t-15">
 
 				<p class="text-muted small m-b-5">
-					{{ analysis_paso }}
+					{{ analysis_paso || 'En espera…' }}
 					<span v-if="analysis_progreso"> ({{ analysis_progreso }}%)</span>
 				</p>
 
@@ -1457,7 +1463,7 @@
 <script>
 import * as XLSX from 'xlsx/xlsx.mjs'
 import RelacionesParecidas from './RelacionesParecidas'
-import { items_de, decisiones_iniciales, armar_equivalencias } from './relaciones_parecidas'
+import { items_de, decisiones_iniciales, armar_equivalencias, hay_pendientes } from './relaciones_parecidas'
 
 export default {
 
@@ -4396,6 +4402,12 @@ export default {
 			self.analysis_paso     = solo_relaciones ? 'Revisando nombres parecidos…' : 'Generando recomendación con IA…'
 			self.analysis_progreso = 0
 
+			/*
+			 * La salida de los 20 s ("Seguir sin revisar los nombres") se arma desde el clic, no
+			 * desde que la corrida existe: si el POST mismo tarda, la salida tiene que aparecer igual.
+			 */
+			self.agendar_salida_de_la_revision(token_corrida)
+
 			self.$api.post('ai-excel-import/get-recomendacion', {
 				excel_path:                 self.excel_path,
 				model:                      self.model,
@@ -4440,30 +4452,7 @@ export default {
 					contexto: { model: self.model },
 				})
 
-				return self.esperar_analisis_terminado(res.data.analysis_uuid, token_corrida)
-				.then(function(resultado) {
-
-					if (token_corrida !== self.analysis_polling_token) return
-
-					self.terminar_seguimiento()
-					self.aplicar_resultado_recomendacion(resultado)
-					self.step = self.paso_despues_de_la_recomendacion()
-				})
-				.catch(function(mensaje) {
-
-					if (token_corrida !== self.analysis_polling_token) return
-
-					self.terminar_seguimiento()
-
-					/* Clientes y proveedores: el chequeo no bloquea, se sigue como antes. */
-					if (solo_relaciones) {
-						self.seguir_sin_relaciones_parecidas()
-						return
-					}
-
-					/* b-alert persistente en vez de toast: ver el comentario en el template. */
-					self.error_message = mensaje
-				})
+				return self.seguir_corrida_de_recomendacion(res.data.analysis_uuid, token_corrida)
 			})
 			.catch(function(err) {
 
@@ -4491,6 +4480,76 @@ export default {
 		},
 
 		/*
+		 * Espera una corrida de recomendación ya encolada y la vuelca en el modal. La usan
+		 * confirmar_paso_2() (corrida recién pedida) y retomar_revision_de_nombres() (corrida que
+		 * siguió trabajando con el modal cerrado): las dos tienen que terminar igual.
+		 *
+		 *   - Terminó: paso 3, o el 4 en clientes y proveedores sin nada que revisar.
+		 *   - Falló (error de la corrida, conexión perdida, 15 min): en artículos, el error en el
+		 *     paso 2 como siempre; en clientes y proveedores, el paso 4 sin error — la revisión de
+		 *     nombres nunca frena la importación.
+		 *
+		 * @param {String} uuid           uuid de la corrida de recomendación
+		 * @param {Number} token_corrida  token que el caller capturó (ver run_analyze_request)
+		 * @return {Promise}
+		 */
+		seguir_corrida_de_recomendacion(uuid, token_corrida) {
+			let self = this
+			let solo_relaciones = self.model !== 'article'
+
+			return self.esperar_analisis_terminado(uuid, token_corrida)
+			.then(function(resultado) {
+
+				if (token_corrida !== self.analysis_polling_token) return
+
+				self.terminar_seguimiento()
+				self.aplicar_resultado_recomendacion(resultado)
+				self.step = self.paso_despues_de_la_recomendacion()
+			})
+			.catch(function(mensaje) {
+
+				if (token_corrida !== self.analysis_polling_token) return
+
+				self.terminar_seguimiento()
+
+				/* Clientes y proveedores: el chequeo no bloquea, se sigue como antes. */
+				if (solo_relaciones) {
+					self.seguir_sin_relaciones_parecidas()
+					return
+				}
+
+				/* b-alert persistente en vez de toast: ver el comentario en el template. */
+				self.error_message = mensaje
+			})
+		},
+
+		/*
+		 * Clientes y proveedores: a los 20 s de estar esperando la revisión de nombres, aparecen
+		 * "Seguir sin revisar los nombres" y "Seguir en segundo plano" (analysis_es_archivo_grande).
+		 * esperar_analisis_terminado() tiene su propio aviso de 20 s, pero arranca recién cuando la
+		 * corrida existe; este arranca con el clic. Para artículos no hace nada: su aviso es el de
+		 * siempre.
+		 *
+		 * No hace falta cancelarlo: si para entonces la corrida terminó o se soltó, el token ya no es
+		 * el mismo o loading_recomendacion ya está apagado, y no toca nada.
+		 *
+		 * @param {Number} token_corrida
+		 * @return {void}
+		 */
+		agendar_salida_de_la_revision(token_corrida) {
+			let self = this
+
+			if (self.model === 'article') {
+				return
+			}
+
+			setTimeout(function() {
+				if (token_corrida !== self.analysis_polling_token || !self.loading_recomendacion) return
+				self.analysis_es_archivo_grande = true
+			}, 20000)
+		},
+
+		/*
 		 * Vuelca en el modal el resultado de una corrida de recomendación. Mismo
 		 * criterio que aplicar_resultado_analisis(): un solo lugar donde se arma el
 		 * paso 3, lo haya esperado el usuario o lo esté reabriendo después.
@@ -4509,7 +4568,13 @@ export default {
 			 * sugerida de cada ítem ya elegida. Clave ausente o null (API vieja, corrida vieja
 			 * reabierta, chequeo caído) = no hay sección, y el paso queda como antes.
 			 */
-			this.relaciones_parecidas  = resultado.relaciones_parecidas || null
+			/*
+			 * Congelado a propósito: con cientos de ítems, que Vue los vuelva reactivos uno por uno
+			 * (con todas sus opciones) es puro costo — la lista nunca se modifica, lo que cambia es el
+			 * mapa de decisiones. Object.freeze en el objeto de arriba alcanza para que Vue no lo
+			 * recorra. En el banco de medición de la misión, con 900 ítems, el clic baja de ~85 ms a ~36 ms.
+			 */
+			this.relaciones_parecidas  = resultado.relaciones_parecidas ? Object.freeze(resultado.relaciones_parecidas) : null
 			this.decisiones_relaciones = decisiones_iniciales(this.relaciones_parecidas)
 
 			/*
@@ -4575,13 +4640,21 @@ export default {
 
 		/*
 		 * Paso al que se va cuando la recomendación terminó: el 3 en artículos (siempre tiene algo
-		 * que mostrar); en clientes y proveedores, el 3 solo si hay nombres parecidos para revisar
-		 * y si no, directo al 4, como antes de esta misión.
+		 * que mostrar); en clientes y proveedores, el 3 solo si hay nombres parecidos PENDIENTES de
+		 * revisar y si no, directo al 4, como antes de esta misión.
+		 *
+		 * "Pendientes" deja afuera las confirmadas en importaciones anteriores: si todo lo que se
+		 * encontró ya estaba confirmado, no tiene sentido frenar en un paso que solo muestra un grupo
+		 * plegado. Esas decisiones viajan igual en el POST, y el Volver del paso 4 lleva al 3
+		 * (hay_relaciones_parecidas) por si se quieren cambiar.
 		 *
 		 * @return {Number}
 		 */
 		paso_despues_de_la_recomendacion() {
-			if (this.model === 'article' || this.hay_relaciones_parecidas) {
+			if (this.model === 'article') {
+				return 3
+			}
+			if (hay_pendientes(this.relaciones_parecidas, this.decisiones_relaciones)) {
 				return 3
 			}
 			return 4
@@ -4608,7 +4681,9 @@ export default {
 		 *
 		 * La corrida se suelta (no se cancela: es un job y termina igual) y se marca vista, para
 		 * que no se ofrezca como "análisis pendiente" al volver a abrir el modal ni en la próxima
-		 * carga de la SPA.
+		 * carga de la SPA. Y se anota como salteada: cuando termine, el aviso por broadcast llega
+		 * igual, y ExcelAnalysisReadyModal no lo tiene que abrir — si no, "Ver resultado" lo dejaba
+		 * volver a importar el mismo archivo.
 		 *
 		 * @return {void}
 		 */
@@ -4618,6 +4693,7 @@ export default {
 			this.soltar_seguimiento_del_analisis()
 
 			if (uuid) {
+				this.$store.commit('excel_analysis/marcar_salteado', uuid)
 				this.$store.dispatch('excel_analysis/marcar_visto', uuid)
 			}
 
@@ -5754,24 +5830,7 @@ export default {
 						return
 					}
 
-					self.analysis_uuid = contexto.analysis_uuid
-					self.aplicar_contexto_analisis(res_analisis.data.contexto)
-					self.aplicar_resultado_analisis(res_analisis.data.resultado)
-
-					/*
-					 * Encima del paso 2 va lo que el usuario había confirmado a mano antes de
-					 * pedir la recomendación: si eligió otro proveedor o corrigió el mapeo, eso
-					 * es lo que vale, no lo que había inferido la IA.
-					 */
-					if (contexto.provider_id) {
-						self.selected_provider_id = contexto.provider_id
-					}
-					if (contexto.provider_code_column_index !== null && contexto.provider_code_column_index !== undefined) {
-						self.provider_code_column_index = contexto.provider_code_column_index
-					}
-					if (contexto.column_mapping && contexto.column_mapping.length) {
-						self.column_mapping = self.normalize_column_mapping(contexto.column_mapping)
-					}
+					self.rearmar_paso_2_desde_el_analisis(contexto.analysis_uuid, res_analisis.data, contexto)
 
 					/*
 					 * Una corrida vieja no trae relaciones_parecidas y una fallida no trae nada: en
@@ -5794,6 +5853,89 @@ export default {
 
 				self.loading = false
 				self.error_message = 'No se pudo recuperar el análisis. Volvé a subir el archivo.'
+			})
+		},
+
+		/*
+		 * Rearma el paso 2 desde el análisis padre de una corrida de recomendación: lo que dejó el
+		 * análisis y, encima, lo que el usuario había confirmado a mano antes de pedir la
+		 * recomendación (si eligió otro proveedor o corrigió el mapeo, eso es lo que vale, no lo que
+		 * había inferido la IA). Lo usan abrir_desde_corrida() y retomar_revision_de_nombres().
+		 *
+		 * @param {String} analysis_uuid           uuid del análisis padre
+		 * @param {Object} analisis                respuesta de /analysis/{uuid} del análisis padre
+		 * @param {Object} contexto_recomendacion  contexto de la corrida de recomendación
+		 * @return {void}
+		 */
+		rearmar_paso_2_desde_el_analisis(analysis_uuid, analisis, contexto_recomendacion) {
+			let contexto = contexto_recomendacion || {}
+
+			this.analysis_uuid = analysis_uuid
+			this.aplicar_contexto_analisis(analisis.contexto)
+			this.aplicar_resultado_analisis(analisis.resultado)
+
+			if (contexto.provider_id) {
+				this.selected_provider_id = contexto.provider_id
+			}
+			if (contexto.provider_code_column_index !== null && contexto.provider_code_column_index !== undefined) {
+				this.provider_code_column_index = contexto.provider_code_column_index
+			}
+			if (contexto.column_mapping && contexto.column_mapping.length) {
+				this.column_mapping = this.normalize_column_mapping(contexto.column_mapping)
+			}
+		},
+
+		/*
+		 * Clientes y proveedores: retoma una revisión de nombres parecidos que siguió trabajando con
+		 * el modal cerrado. No se la sigue desde el paso 1 como a un análisis: se rearma el paso 2
+		 * desde el análisis padre y se la espera ahí, igual que si el usuario acabara de confirmar
+		 * el mapeo. Así tiene lo mismo que en vivo: "Revisando nombres parecidos…", "Seguir sin
+		 * revisar los nombres" a los 20 s, y si falla o se pierde la conexión, el paso 4 — sin pedir
+		 * que se vuelva a subir el archivo.
+		 *
+		 * @param {String} uuid           uuid de la corrida de recomendación
+		 * @param {Object} estado_actual  última respuesta de /analysis/{uuid}
+		 * @return {void}
+		 */
+		retomar_revision_de_nombres(uuid, estado_actual) {
+			let self = this
+			const contexto = estado_actual.contexto || {}
+
+			self.loading = true
+			self.recomendacion_uuid = uuid
+
+			/* Mismo criterio de token que el resto: se captura antes del primer request. */
+			let token_corrida = ++self.analysis_polling_token
+
+			self.$api.get('ai-excel-import/analysis/' + contexto.analysis_uuid, { timeout: 30000 })
+			.then(function(res_analisis) {
+
+				if (token_corrida !== self.analysis_polling_token) return
+
+				self.loading = false
+
+				/* Sin el análisis padre no hay archivo ni mapeo con qué importar: ahí sí hay que volver a subirlo. */
+				if (res_analisis.data.estado !== 'listo') {
+					self.error_message = 'No se pudo recuperar el análisis original. Volvé a subir el archivo.'
+					return
+				}
+
+				self.rearmar_paso_2_desde_el_analisis(contexto.analysis_uuid, res_analisis.data, contexto)
+				self.step = 2
+
+				self.loading_recomendacion = true
+				self.analysis_paso         = estado_actual.paso || 'Revisando nombres parecidos…'
+				self.analysis_progreso     = estado_actual.progreso || 0
+
+				self.agendar_salida_de_la_revision(token_corrida)
+				self.seguir_corrida_de_recomendacion(uuid, token_corrida)
+			})
+			.catch(function() {
+
+				if (token_corrida !== self.analysis_polling_token) return
+
+				self.loading = false
+				self.error_message = 'No se pudo recuperar el análisis original. Volvé a subir el archivo.'
 			})
 		},
 
@@ -5861,6 +6003,17 @@ export default {
 		 */
 		retomar_seguimiento(uuid, estado_actual) {
 			let self = this
+
+			/*
+			 * Misión importacion-relaciones-parecidas: en clientes y proveedores la "recomendación" es
+			 * la revisión de nombres parecidos, que no bloquea nada. Se retoma como lo que es (ver
+			 * retomar_revision_de_nombres), no como un análisis que hay que esperar sí o sí.
+			 */
+			const contexto_actual = estado_actual.contexto || {}
+			if (estado_actual.tipo === 'recomendacion' && self.model !== 'article' && contexto_actual.analysis_uuid) {
+				self.retomar_revision_de_nombres(uuid, estado_actual)
+				return
+			}
 
 			self.loading = true
 			self.analysis_paso     = estado_actual.paso || 'Analizando el archivo con IA…'
