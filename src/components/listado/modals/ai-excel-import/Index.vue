@@ -1837,6 +1837,14 @@ export default {
 			 * Arranca con la `sugerida` de cada ítem y viaja traducido a `equivalencias` en importar().
 			 */
 			decisiones_relaciones: {},
+
+			/*
+			 * Tokens de corridas de revisión de nombres que el usuario salteó ("Seguir sin revisar
+			 * los nombres") mientras su POST a get-recomendacion seguía en vuelo, sin uuid todavía.
+			 * El .then de ese POST lo consume y marca la corrida salteada y vista. No se limpia en
+			 * reset(): el POST puede volver con el modal ya cerrado y la marca tiene que hacerse igual.
+			 */
+			tokens_salteados_en_vuelo: [],
 		}
 	},
 
@@ -4389,6 +4397,12 @@ export default {
 
 			self.loading_recomendacion = true
 			self.recomendacion_configuracion = null
+			/*
+			 * 🔴 La corrida anterior deja de ser "la de ahora" desde el clic, no desde que vuelve el
+			 * POST: si el usuario saltea la revisión con el POST todavía en vuelo,
+			 * saltear_chequeo_de_relaciones() no puede marcar como salteada la corrida VIEJA.
+			 */
+			self.recomendacion_uuid = null
 			/* El mapeo pudo cambiar: lo que se había revisado antes es de otra corrida. */
 			self.relaciones_parecidas  = null
 			self.decisiones_relaciones = {}
@@ -4439,6 +4453,17 @@ export default {
 			}, { timeout: 120000 })
 			.then(function(res) {
 
+				/*
+				 * El usuario salteó la revisión mientras este POST estaba en vuelo: recién ahora se
+				 * conoce el uuid de la corrida, y se marca salteada y vista ACÁ, antes del chequeo de
+				 * token (que la soltura ya invalidó). Sin esto la corrida terminaba, abría el aviso con
+				 * "Ver resultado" y se volvía a ofrecer en la próxima carga.
+				 */
+				if (self.tomar_salteo_en_vuelo(token_corrida)) {
+					self.marcar_corrida_salteada(res.data.analysis_uuid)
+					return
+				}
+
 				/* Punto de chequeo: el .then del POST inicial, antes de llamar al helper. */
 				if (token_corrida !== self.analysis_polling_token) return
 
@@ -4455,6 +4480,9 @@ export default {
 				return self.seguir_corrida_de_recomendacion(res.data.analysis_uuid, token_corrida)
 			})
 			.catch(function(err) {
+
+				/* Si se había salteado con el POST en vuelo y el POST falló, no hay corrida que marcar. */
+				self.tomar_salteo_en_vuelo(token_corrida)
 
 				/* Punto de chequeo: el .catch del POST inicial. */
 				if (token_corrida !== self.analysis_polling_token) return
@@ -4690,14 +4718,53 @@ export default {
 		saltear_chequeo_de_relaciones() {
 			let uuid = this.recomendacion_uuid
 
+			/*
+			 * Token de la corrida que se saltea, tomado ANTES de soltarla (soltar lo incrementa). Si
+			 * el POST todavía no volvió, todavía no hay uuid: se anota el token y el .then del POST
+			 * marca la corrida cuando llegue (ver confirmar_paso_2).
+			 */
+			let token = this.analysis_polling_token
+
 			this.soltar_seguimiento_del_analisis()
 
 			if (uuid) {
-				this.$store.commit('excel_analysis/marcar_salteado', uuid)
-				this.$store.dispatch('excel_analysis/marcar_visto', uuid)
+				this.marcar_corrida_salteada(uuid)
+			} else {
+				this.tokens_salteados_en_vuelo.push(token)
 			}
 
 			this.seguir_sin_relaciones_parecidas()
+		},
+
+		/*
+		 * Anota la corrida como salteada (el aviso de "terminó" no se abre) y la marca vista (no se
+		 * vuelve a ofrecer al abrir el modal ni en la próxima carga de la SPA).
+		 *
+		 * @param {String} uuid
+		 * @return {void}
+		 */
+		marcar_corrida_salteada(uuid) {
+			if (!uuid) {
+				return
+			}
+			this.$store.commit('excel_analysis/marcar_salteado', uuid)
+			this.$store.dispatch('excel_analysis/marcar_visto', uuid)
+		},
+
+		/*
+		 * True si la corrida de ese token se salteó con su POST en vuelo; la saca de la lista (cada
+		 * POST la consume una sola vez, vuelva bien o mal).
+		 *
+		 * @param {Number} token
+		 * @return {Boolean}
+		 */
+		tomar_salteo_en_vuelo(token) {
+			let indice = this.tokens_salteados_en_vuelo.indexOf(token)
+			if (indice === -1) {
+				return false
+			}
+			this.tokens_salteados_en_vuelo.splice(indice, 1)
+			return true
 		},
 
 		/*

@@ -210,7 +210,7 @@ export default {
 			'La importación funciona como siempre: los nombres que ya existen se asignan y los que no, se crean.',
 		],
 		requiere: 'Solo en clientes y proveedores, cuando la revisión tarda más de 20 segundos.',
-		nota_interna: 'Suelta el polling, marca la corrida como vista (no la cancela: es un job y termina igual) y la anota en excel_analysis.salteados: cuando termina, el broadcast excel_analysis_ready llega igual, pero ExcelAnalysisReadyModal cancela su apertura (evento show) para no ofrecer "Ver resultado" sobre un archivo que el usuario ya pudo haber importado. Aparece a los 20 s contados desde el clic en Confirmar, aunque la corrida siga "en espera" (cola ocupada o sin worker). Si la corrida falla o se pierde la conexión, clientes y proveedores siguen al paso 4 solos, sin mostrar error; lo mismo si la revisión se retoma después de cerrar el modal.',
+		nota_interna: 'Suelta el polling, marca la corrida como vista (no la cancela: es un job y termina igual) y la anota en excel_analysis.salteados (si el POST de get-recomendacion todavía no volvió, se anota el token y la marca se hace al volver el POST, con el uuid nuevo: tokens_salteados_en_vuelo en Index.vue): cuando termina, el broadcast excel_analysis_ready llega igual, pero ExcelAnalysisReadyModal cancela su apertura (evento show) para no ofrecer "Ver resultado" sobre un archivo que el usuario ya pudo haber importado. Aparece a los 20 s contados desde el clic en Confirmar, aunque la corrida siga "en espera" (cola ocupada o sin worker). Si la corrida falla o se pierde la conexión, clientes y proveedores siguen al paso 4 solos, sin mostrar error; lo mismo si la revisión se retoma después de cerrar el modal.',
 	},
 
 	'ai-import-btn-continuar': {
