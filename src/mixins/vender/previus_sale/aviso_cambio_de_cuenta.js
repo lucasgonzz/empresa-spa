@@ -10,13 +10,17 @@
  *
  * Lo que cobro el cliente original NO se mueve con la venta (decision 1 de Lucas): el pago queda en
  * su cuenta, imputado a otra deuda suya o como saldo a favor, y la venta entra en la cuenta nueva
- * como pendiente. Eso es plata que cambia de lugar sin que nadie la toque, asi que:
+ * como pendiente (o pagada con el saldo a favor que esa cuenta tuviera). Eso es plata que cambia de
+ * lugar sin que nadie la toque, asi que:
  *   - si el debito de la venta tenia cobros, ANTES de guardar se pide confirmacion diciendo cuanto
  *     queda en la cuenta original (cambio_de_cuenta_confirmar_y_guardar, lo llama BtnGuardar.vue);
  *   - si no tenia cobros, se guarda sin preguntar y, cuando el PUT sale bien, un aviso dice de que
  *     cuenta a que cuenta paso (cambio_de_cuenta_avisar_al_guardar, lo llama updateSale() en
  *     previus_sale/index.js). El aviso sale con lo que DEVOLVIO el servidor, no con lo que se mando:
  *     una API vieja que ignora la moneda no puede hacer decir "paso a la cuenta en dolares".
+ * Los dos solo hablan de una mudanza que de verdad pasa: la venta tenia su debito y lo sigue
+ * teniendo despues del PUT (venta_iba_a_cuenta_corriente, que espeja la regla de la API). Una venta
+ * "para checkear" con cliente, por ejemplo, no tiene debito: cambiarle el cliente no mueve nada.
  *
  * La regla vive en funciones puras exportadas (abajo) para poder probarlas sin Vue; los metodos del
  * mixin solo leen el store y muestran los carteles.
@@ -56,21 +60,73 @@ export function moneda_de_cuenta_normalizada(moneda_id) {
 }
 
 /**
- * Si la venta, tal como esta GUARDADA, va a la cuenta corriente: tiene cliente y no esta omitida.
- * Es la misma regla con la que la API decide si crea el debito, y la misma que usaba
- * checkear_metodos_de_pago_en_previus_sale() para no pedir metodo de pago.
+ * Si la venta es A CUENTA CORRIENTE en sentido amplio, o sea que NO es de contado: tiene cliente y no
+ * esta omitida. Es la regla con la que checkear_metodos_de_pago_en_previus_sale() deja de pedir
+ * metodo de pago, y la que usa SelectClient.vue para "cambiar si, sacar no": sacarle el cliente a una
+ * venta asi la pasaria a contado.
+ *
+ * OJO: no dice que la venta tenga hoy un debito en la cuenta corriente. Una venta "para checkear"
+ * (to_check / checked) o guardada con `save_current_acount` en 0 (extension "guardar en la cuenta
+ * corriente despues de facturar") todavia no lo tiene: entra cuando se checkea o se factura. Para eso
+ * esta venta_iba_a_cuenta_corriente(), abajo.
  *
  * Number() y no la verdad del valor a secas: un "0" serializado como string seria truthy.
  *
- * @param {Object} venta La venta guardada (`previus_sale`).
+ * @param {Object} venta La venta (guardada, o como queda en VENDER).
  * @returns {Boolean}
  */
-export function venta_iba_a_cuenta_corriente(venta) {
+export function venta_es_a_cuenta_corriente(venta) {
 	return Boolean(
 		venta
 		&& Number(venta.client_id) > 0
 		&& !Number(venta.omitir_en_cuenta_corriente)
 	)
+}
+
+/**
+ * Si la venta TIENE (o va a tener al guardar) su debito en la cuenta corriente del cliente. Espeja la
+ * regla de la API, que es la que decide si el debito existe y si se muda
+ * (CambioDeCuentaDeVentaHelper::va_a_quedar_en_la_cuenta_corriente y el_debito_se_muda, y
+ * SaleHelper::va_a_volver_a_la_cuenta_corriente):
+ *   - tiene cliente y no esta omitida (venta_es_a_cuenta_corriente);
+ *   - `save_current_acount` prendido (update() nunca lo reasigna);
+ *   - ni `to_check` ni `checked`: SaleController@update solo toca la cuenta corriente sin ellos.
+ * Sirve igual para la venta GUARDADA (si tenia debito) y para la que QUEDA despues del PUT (si lo va
+ * a tener): una venta para checkear con cliente no tiene debito, y decir que "paso de la cuenta de A
+ * a la de B" seria falso porque no se movio nada.
+ *
+ * @param {Object} venta
+ * @returns {Boolean}
+ */
+export function venta_iba_a_cuenta_corriente(venta) {
+	return Boolean(
+		venta_es_a_cuenta_corriente(venta)
+		&& Number(venta.save_current_acount)
+		&& !Number(venta.to_check)
+		&& !Number(venta.checked)
+	)
+}
+
+/**
+ * La venta como QUEDA en VENDER al guardar, con las claves que miran venta_iba_a_cuenta_corriente()
+ * y analizar_cambio_de_cuenta_de_la_venta(). Es lo que viaja en el PUT: el cliente, la moneda,
+ * "omitir", to_check y checked del store. `save_current_acount` no viaja y la API nunca lo
+ * reasigna, asi que es el de la venta guardada.
+ *
+ * @param {Object} vender `state.vender` del store.
+ * @param {Object} venta_original La venta guardada (`previus_sale`).
+ * @returns {Object}
+ */
+export function venta_que_queda_segun_vender(vender, venta_original) {
+	return {
+		client: vender.client ? vender.client : null,
+		client_id: vender.client ? vender.client.id : null,
+		moneda_id: vender.moneda_id,
+		omitir_en_cuenta_corriente: vender.omitir_en_cuenta_corriente,
+		to_check: vender.to_check,
+		checked: vender.checked,
+		save_current_acount: venta_original ? venta_original.save_current_acount : null,
+	}
 }
 
 /**
@@ -120,43 +176,41 @@ export function cobrado_del_debito_de_la_venta(current_acount) {
 }
 
 /**
- * Si la venta cambia de cuenta corriente y como. Devuelve null si no cambia de cuenta:
- *   - la venta guardada no iba a la cuenta corriente (de contado u omitida), o
- *   - no queda cliente (sacarlo no se permite desde VENDER, ver SelectClient.vue::clearSelected), o
+ * Si el DEBITO de la venta se muda de cuenta corriente, y como. Devuelve null si no se muda:
+ *   - la venta guardada no tenia debito (de contado, omitida, para checkear o con
+ *     `save_current_acount` en 0: ver venta_iba_a_cuenta_corriente), o
+ *   - la que queda no lo va a tener (sin cliente, omitida, para checkear), o
  *   - quedan el mismo cliente y la misma moneda.
+ * Es la misma decision que CambioDeCuentaDeVentaHelper::el_debito_se_muda de la API, mas la
+ * condicion de que hubiera un debito que mudar.
  *
- * Una moneda que queda en null o vacia es "no se toca" (el contrato del PUT: sin `moneda_id` la API
- * no cambia ni la moneda ni la cotizacion), asi que no cuenta como cambio.
+ * La moneda que queda se compara NORMALIZADA (null o 0 es pesos): es como viaja en el PUT
+ * (moneda_para_el_put_de_la_venta) y como la compara la API.
  *
- * @param {Object} venta_original   La venta guardada (`previus_sale`, con `client` y `current_acount`).
- * @param {Object|null} cliente_que_queda {id, name}: el elegido en VENDER, o el que devolvio el PUT.
- * @param {*} moneda_que_queda       La moneda elegida en VENDER, o la que devolvio el PUT.
+ * @param {Object} venta_original La venta guardada (`previus_sale`, con `client` y `current_acount`).
+ * @param {Object} venta_que_queda La que queda: venta_que_queda_segun_vender() antes de guardar, o la
+ *        que devolvio el PUT despues. Necesita client_id (y `client` para el nombre), moneda_id,
+ *        omitir_en_cuenta_corriente, to_check, checked y save_current_acount.
  * @returns {Object|null} { cliente_original, cliente_nuevo, moneda_original, moneda_nueva,
  *                          cambia_cliente, cambia_moneda, cobrado }
  */
-export function analizar_cambio_de_cuenta_de_la_venta(venta_original, cliente_que_queda, moneda_que_queda) {
+export function analizar_cambio_de_cuenta_de_la_venta(venta_original, venta_que_queda) {
 
 	if (!venta_iba_a_cuenta_corriente(venta_original)) {
 		return null
 	}
 
-	if (!cliente_que_queda || !(Number(cliente_que_queda.id) > 0)) {
+	if (!venta_iba_a_cuenta_corriente(venta_que_queda)) {
 		return null
 	}
 
+	let cliente_que_queda = venta_que_queda.client ? venta_que_queda.client : { id: venta_que_queda.client_id, name: null }
+
 	let moneda_original = moneda_de_cuenta_normalizada(venta_original.moneda_id)
 
-	let moneda_nueva = moneda_original
+	let moneda_nueva = moneda_de_cuenta_normalizada(venta_que_queda.moneda_id)
 
-	if (
-		moneda_que_queda !== null
-		&& typeof moneda_que_queda != 'undefined'
-		&& moneda_que_queda !== ''
-	) {
-		moneda_nueva = moneda_de_cuenta_normalizada(moneda_que_queda)
-	}
-
-	let cambia_cliente = Number(cliente_que_queda.id) !== Number(venta_original.client_id)
+	let cambia_cliente = Number(venta_que_queda.client_id) !== Number(venta_original.client_id)
 
 	let cambia_moneda = moneda_nueva !== moneda_original
 
@@ -208,9 +262,14 @@ export function textos_del_cambio_de_cuenta(cambio, formatear_importe) {
 
 	let cuenta_nueva = texto_de_la_cuenta_corriente(cambio.cliente_nuevo, cambio.moneda_nueva, cambio.cambia_moneda)
 
+	/*
+		"pasa a la cuenta de B" y no "como pendiente": si esa cuenta tiene saldo a favor, la API se lo
+		imputa a la venta al crearla (CurrentAcountFromSaleHelper recalcula la cuenta entera), y la
+		venta puede quedar pagada en parte o entera. Lo que se dice tiene que ser cierto en los dos casos.
+	*/
 	let confirmacion = 'La venta tenía ' + formatear_importe(cambio.cobrado, cambio.moneda_original) + ' cobrados en ' + cuenta_original + '. '
 		+ 'Ese cobro queda en ' + cuenta_original + ' (se aplica a otra deuda suya o queda a su favor) '
-		+ 'y la venta pasa a ' + cuenta_nueva + ' como pendiente.'
+		+ 'y la venta pasa a ' + cuenta_nueva + ' (si esa cuenta tiene saldo a favor, se le aplica a la venta).'
 
 	let aviso = 'La venta pasó de ' + cuenta_original + ' a ' + cuenta_nueva + '.'
 
@@ -251,10 +310,11 @@ export default {
 		 */
 		cambio_de_cuenta_confirmar_y_guardar(guardar) {
 
+			let venta_original = this.$store.state.vender.previus_sales.previus_sale
+
 			let cambio = analizar_cambio_de_cuenta_de_la_venta(
-				this.$store.state.vender.previus_sales.previus_sale,
-				this.$store.state.vender.client,
-				this.$store.state.vender.moneda_id
+				venta_original,
+				venta_que_queda_segun_vender(this.$store.state.vender, venta_original)
 			)
 
 			if (!cambio || !(cambio.cobrado > 0)) {
@@ -309,16 +369,17 @@ export default {
 
 			/*
 				El cliente con su nombre: el que trae la respuesta (fullModel con withAll); si no lo
-				trae, el elegido en VENDER cuando es el mismo id.
+				trae, el elegido en VENDER cuando es el mismo id. Se arma una copia: la respuesta es el
+				mismo objeto que se commitea en el store de ventas.
 			*/
-			let cliente_guardado = venta_guardada.client ? venta_guardada.client : null
+			let venta_que_quedo = Object.assign({}, venta_guardada)
 
-			if (!cliente_guardado && Number(venta_guardada.client_id) > 0) {
+			if (!venta_que_quedo.client && Number(venta_que_quedo.client_id) > 0) {
 				let elegido = this.$store.state.vender.client
-				cliente_guardado = elegido && Number(elegido.id) === Number(venta_guardada.client_id) ? elegido : { id: venta_guardada.client_id, name: null }
+				venta_que_quedo.client = elegido && Number(elegido.id) === Number(venta_que_quedo.client_id) ? elegido : null
 			}
 
-			let cambio = analizar_cambio_de_cuenta_de_la_venta(venta_original, cliente_guardado, venta_guardada.moneda_id)
+			let cambio = analizar_cambio_de_cuenta_de_la_venta(venta_original, venta_que_quedo)
 
 			if (!cambio) {
 				return
