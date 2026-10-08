@@ -543,7 +543,7 @@
 					small
 					class="m-r-5">
 					</b-spinner>
-					{{ loading_recomendacion ? 'Generando recomendación...' : 'Confirmar y configurar importación' }}
+					{{ loading_recomendacion ? (model === 'article' ? 'Generando recomendación...' : 'Revisando nombres parecidos...') : 'Confirmar y configurar importación' }}
 				</b-button>
 			</div>
 
@@ -570,10 +570,32 @@
 				</b-progress>
 
 				<div v-if="analysis_es_archivo_grande">
-					<p class="text-muted small m-b-10">
+					<p
+					v-if="model === 'article'"
+					class="text-muted small m-b-10">
 						Podés cerrar esta ventana y seguir trabajando: te avisamos cuando la
 						recomendación esté lista.
 					</p>
+					<!--
+						Clientes y proveedores (misión importacion-relaciones-parecidas): lo que corre acá
+						es solo la revisión de nombres parecidos, que ayuda pero no es necesaria para
+						importar. Si tarda, se puede seguir sin ella, como se importaba antes.
+					-->
+					<template v-else>
+						<p class="text-muted small m-b-10">
+							La revisión de nombres parecidos está tardando. Podés seguir sin ella (la importación
+							funciona igual que siempre) o cerrar esta ventana: te avisamos cuando termine.
+						</p>
+						<b-button
+						variant="outline-primary"
+						size="sm"
+						block
+						class="m-b-5"
+						data-testid="ai-import-relaciones-saltear"
+						@click="saltear_chequeo_de_relaciones">
+							Seguir sin revisar los nombres
+						</b-button>
+					</template>
 					<b-button
 					variant="outline-secondary"
 					size="sm"
@@ -599,6 +621,16 @@
 		<div
 		v-if="step === 3"
 		data-tour="listado.tabla_interpretacion_numeros">
+
+			<!--
+				Todo lo que sigue hasta la lista de nombres parecidos es de ARTÍCULOS (cadena de
+				identificación, chips de duplicados, números, recomendación y políticas de códigos).
+				Hasta la misión importacion-relaciones-parecidas (8/10/2026) clientes y proveedores no
+				llegaban nunca al paso 3 y estos bloques no tenían guarda de modelo; ahora llegan cuando
+				hay nombres parecidos para revisar, y en ese caso el paso muestra SOLO esa lista.
+				(El contenido no se reindentó a propósito, para no ensuciar el diff de un archivo enorme.)
+			-->
+			<template v-if="model === 'article'">
 
 			<!-- ====================================================================== -->
 			<!-- Bloque explicativo: cadena de identificación efectiva (prompt 06, grupo 229) -->
@@ -1216,6 +1248,26 @@
 			</b-form-radio>
 		</b-form-group>
 
+			</template>
+
+			<!--
+				Nombres parecidos (misión importacion-relaciones-parecidas, 8/10/2026): valores de las
+				columnas de relación del Excel (proveedor, categoría, subcategoría, marca; provincia,
+				localidad, vendedor, lista de precios) que se parecen a algo ya cargado o entre sí.
+				En artículos va al final, antes de los botones; en clientes y proveedores es lo único
+				del paso. Cada ítem trae la opción sugerida ya elegida, así que no bloquea Continuar.
+			-->
+			<div
+			v-if="hay_relaciones_parecidas"
+			class="ai-import-relaciones-seccion m-b-20"
+			:class="{ 'ai-import-relaciones-seccion--articulos': model === 'article' }">
+				<relaciones-parecidas
+				v-model="decisiones_relaciones"
+				:relaciones="relaciones_parecidas"
+				:con_titulo="model === 'article'">
+				</relaciones-parecidas>
+			</div>
+
 			<div class="j-end">
 				<b-button
 				variant="outline-secondary"
@@ -1223,12 +1275,16 @@
 				@click="step = 2">
 					Volver
 				</b-button>
+				<!--
+					Las dos condiciones de :disabled son de las políticas de códigos de ARTÍCULOS: en
+					clientes y proveedores no se muestran, así que no pueden trabar el botón.
+				-->
 				<b-button
 				variant="primary"
 				data-tour="listado.boton_continuar_importacion"
 				data-testid="ai-import-btn-continuar"
-				:disabled="(filas_identificadas_por_provider_code > 0 && !politica_colision)
-					|| (duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
+				:disabled="model === 'article' && ((filas_identificadas_por_provider_code > 0 && !politica_colision)
+					|| (duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor))"
 				@click="step = 4">
 					Continuar
 				</b-button>
@@ -1371,10 +1427,11 @@
 			</b-alert>
 
 			<div class="j-end">
+				<!-- Clientes y proveedores vuelven al 3 solo si tuvieron lista de nombres parecidos. -->
 				<b-button
 				variant="outline-secondary"
 				class="m-r-10"
-				@click="step = model === 'article' ? 3 : 2">
+				@click="step = (model === 'article' || hay_relaciones_parecidas) ? 3 : 2">
 					Volver
 				</b-button>
 				<b-button
@@ -1399,8 +1456,18 @@
 
 <script>
 import * as XLSX from 'xlsx/xlsx.mjs'
+import RelacionesParecidas from './RelacionesParecidas'
+import { items_de, decisiones_iniciales, armar_equivalencias } from './relaciones_parecidas'
 
 export default {
+
+	/*
+	 * Import estático y no `() => import(...)`: la lista se dibuja en el mismo paso en que llega
+	 * el resultado, y un chunk aparte solo agregaría un parpadeo (o un fallo, sin conexión).
+	 */
+	components: {
+		RelacionesParecidas,
+	},
 
 	props: {
 		/*
@@ -1749,6 +1816,21 @@ export default {
 			 * archivo es grande y de que se puede cerrar el modal mientras tanto.
 			 */
 			analysis_es_archivo_grande: false,
+
+			/*
+			 * Misión importacion-relaciones-parecidas (8/10/2026): nombres del Excel parecidos a
+			 * proveedores, categorías, marcas, provincias, etc. ya cargados (o parecidos entre sí).
+			 * Llega en `resultado.relaciones_parecidas` de la corrida de get-recomendacion, que se
+			 * pide con `chequear_relaciones: true`: { ia_consultada, items: [...] }. Null si la API
+			 * no lo mandó (API vieja, corrida vieja, o el chequeo falló): la sección no aparece.
+			 */
+			relaciones_parecidas: null,
+
+			/*
+			 * Lo que el usuario eligió en esa lista: { clave del ítem -> índice de la opción }.
+			 * Arranca con la `sugerida` de cada ítem y viaja traducido a `equivalencias` en importar().
+			 */
+			decisiones_relaciones: {},
 		}
 	},
 
@@ -1980,10 +2062,19 @@ export default {
 			const titles = {
 				1: 'Importar ' + model_label + ' con IA — Subir archivo',
 				2: 'Importar ' + model_label + ' con IA — Confirmar mapeo',
-				3: 'Importar ' + model_label + ' con IA — Recomendación',
+				/* En clientes y proveedores el paso 3 es solo la lista de nombres parecidos. */
+				3: 'Importar ' + model_label + ' con IA — ' + (this.model === 'article' ? 'Recomendación' : 'Nombres parecidos'),
 				4: 'Importar ' + model_label + ' con IA — Opciones de importación',
 			}
 			return titles[this.step] || ('Importar ' + model_label + ' con IA')
+		},
+
+		/*
+		 * True si el chequeo de nombres parecidos trajo algo para revisar. Decide si se dibuja la
+		 * sección del paso 3 y, en clientes y proveedores, si hay paso 3 o se va directo al 4.
+		 */
+		hay_relaciones_parecidas() {
+			return items_de(this.relaciones_parecidas).length > 0
 		},
 
 		/*
@@ -4278,17 +4369,23 @@ export default {
 			 * La recomendación del paso 3 es de artículos (códigos de barras, códigos de
 			 * proveedor, formatos de costo y precio). Para clientes y proveedores no hay nada
 			 * que recomendar: antes igual se la pedía y la IA contestaba "el archivo contiene
-			 * 0 filas, no se importará ningún artículo" sobre un Excel de clientes bien armado.
-			 * Se salta directo a las opciones de importación, sin request.
+			 * 0 filas, no se importará ningún artículo" sobre un Excel de clientes bien armado,
+			 * y por eso se saltaba directo al paso 4 sin request.
+			 *
+			 * Desde la misión importacion-relaciones-parecidas (8/10/2026) la corrida se vuelve a
+			 * pedir para los tres modelos, con `chequear_relaciones: true`: en clientes y
+			 * proveedores el backend corre SOLO el chequeo de nombres parecidos (provincia,
+			 * localidad, vendedor, lista de precios). 🔴 Para ellos ese chequeo NUNCA bloquea: si
+			 * no encuentra nada, si falla o si el usuario no quiere esperarlo, se sigue al paso 4
+			 * como antes, sin mostrar error.
 			 */
-			if (self.model !== 'article') {
-				self.error_message = ''
-				self.step = 4
-				return
-			}
+			let solo_relaciones = self.model !== 'article'
 
 			self.loading_recomendacion = true
 			self.recomendacion_configuracion = null
+			/* El mapeo pudo cambiar: lo que se había revisado antes es de otra corrida. */
+			self.relaciones_parecidas  = null
+			self.decisiones_relaciones = {}
 			/* El error del intento anterior no puede quedar colgado sobre el intento nuevo. */
 			self.error_message = ''
 
@@ -4296,7 +4393,7 @@ export default {
 			let token_corrida = ++self.analysis_polling_token
 
 			/* Ídem run_analyze_request(): sin loading global, el estado se muestra en el modal. */
-			self.analysis_paso     = 'Generando recomendación con IA…'
+			self.analysis_paso     = solo_relaciones ? 'Revisando nombres parecidos…' : 'Generando recomendación con IA…'
 			self.analysis_progreso = 0
 
 			self.$api.post('ai-excel-import/get-recomendacion', {
@@ -4321,6 +4418,12 @@ export default {
 				 */
 				hoja:                       self.hoja_para_el_backend(),
 				header_row:                 self.header_row_para_el_backend(),
+				/*
+				 * Misión importacion-relaciones-parecidas: pide el chequeo de nombres parecidos
+				 * (resultado.relaciones_parecidas). Sin esta bandera el backend no lo calcula, y así
+				 * una SPA vieja no paga una llamada a la IA que no va a mostrar.
+				 */
+				chequear_relaciones:        true,
 			}, { timeout: 120000 })
 			.then(function(res) {
 
@@ -4344,13 +4447,20 @@ export default {
 
 					self.terminar_seguimiento()
 					self.aplicar_resultado_recomendacion(resultado)
-					self.step = 3
+					self.step = self.paso_despues_de_la_recomendacion()
 				})
 				.catch(function(mensaje) {
 
 					if (token_corrida !== self.analysis_polling_token) return
 
 					self.terminar_seguimiento()
+
+					/* Clientes y proveedores: el chequeo no bloquea, se sigue como antes. */
+					if (solo_relaciones) {
+						self.seguir_sin_relaciones_parecidas()
+						return
+					}
+
 					/* b-alert persistente en vez de toast: ver el comentario en el template. */
 					self.error_message = mensaje
 				})
@@ -4361,6 +4471,12 @@ export default {
 				if (token_corrida !== self.analysis_polling_token) return
 
 				self.terminar_seguimiento()
+
+				/* Ídem arriba: sin chequeo de nombres, clientes y proveedores siguen al paso 4. */
+				if (solo_relaciones) {
+					self.seguir_sin_relaciones_parecidas()
+					return
+				}
 
 				let message = 'Error al generar la recomendación.'
 				if (err.response && err.response.data && err.response.data.message) {
@@ -4384,6 +4500,26 @@ export default {
 		 */
 		aplicar_resultado_recomendacion(resultado) {
 			this.loading_recomendacion = false
+
+			/* Una corrida sin resultado (no debería pasar) se trata como una que no trajo nada. */
+			resultado = resultado || {}
+
+			/*
+			 * Misión importacion-relaciones-parecidas: la lista de nombres parecidos, con la opción
+			 * sugerida de cada ítem ya elegida. Clave ausente o null (API vieja, corrida vieja
+			 * reabierta, chequeo caído) = no hay sección, y el paso queda como antes.
+			 */
+			this.relaciones_parecidas  = resultado.relaciones_parecidas || null
+			this.decisiones_relaciones = decisiones_iniciales(this.relaciones_parecidas)
+
+			/*
+			 * En clientes y proveedores la corrida es SOLO el chequeo de nombres: lo demás que
+			 * trae (recomendación, formatos numéricos, conteos de códigos) es de artículos y viene
+			 * vacío. No se vuelca para no pisar con null lo que dejó el análisis del paso 1.
+			 */
+			if (this.model !== 'article') {
+				return
+			}
 
 			this.recomendacion_configuracion = resultado.recomendacion_configuracion || null
 
@@ -4435,6 +4571,78 @@ export default {
 					this.politica_intra_archivo = this.recomendacion_configuracion.politica_intra_archivo
 				}
 			}
+		},
+
+		/*
+		 * Paso al que se va cuando la recomendación terminó: el 3 en artículos (siempre tiene algo
+		 * que mostrar); en clientes y proveedores, el 3 solo si hay nombres parecidos para revisar
+		 * y si no, directo al 4, como antes de esta misión.
+		 *
+		 * @return {Number}
+		 */
+		paso_despues_de_la_recomendacion() {
+			if (this.model === 'article' || this.hay_relaciones_parecidas) {
+				return 3
+			}
+			return 4
+		},
+
+		/*
+		 * Clientes y proveedores: sigue al paso 4 sin la lista de nombres parecidos, como si el
+		 * chequeo no hubiera encontrado nada. Es la salida de todos los caminos en que el chequeo
+		 * no llegó (falló el POST, la corrida dio error, se perdió la conexión): el chequeo ayuda,
+		 * pero nunca frena una importación que antes andaba.
+		 *
+		 * @return {void}
+		 */
+		seguir_sin_relaciones_parecidas() {
+			this.relaciones_parecidas  = null
+			this.decisiones_relaciones = {}
+			this.error_message         = ''
+			this.step                  = 4
+		},
+
+		/*
+		 * Botón "Seguir sin revisar los nombres" (clientes y proveedores, aparece a los 20 s):
+		 * deja de esperar el chequeo y sigue al paso 4.
+		 *
+		 * La corrida se suelta (no se cancela: es un job y termina igual) y se marca vista, para
+		 * que no se ofrezca como "análisis pendiente" al volver a abrir el modal ni en la próxima
+		 * carga de la SPA.
+		 *
+		 * @return {void}
+		 */
+		saltear_chequeo_de_relaciones() {
+			let uuid = this.recomendacion_uuid
+
+			this.soltar_seguimiento_del_analisis()
+
+			if (uuid) {
+				this.$store.dispatch('excel_analysis/marcar_visto', uuid)
+			}
+
+			this.seguir_sin_relaciones_parecidas()
+		},
+
+		/*
+		 * `equivalencias` para el POST de importación, como objeto para desparramar en el payload:
+		 * { equivalencias: [...] } si hay decisiones de nombres parecidos, {} si no. Sin ítems el
+		 * campo no viaja y la importación queda byte por byte como antes de esta misión.
+		 *
+		 * Solo viajan los ítems visibles (una subcategoría cuya categoría el usuario resolvió
+		 * distinto se oculta y no se manda): la regla es la misma que usa la lista, en
+		 * relaciones_parecidas.js.
+		 *
+		 * @return {Object}
+		 */
+		payload_de_equivalencias() {
+			let equivalencias = armar_equivalencias(this.relaciones_parecidas, this.decisiones_relaciones)
+
+			if (equivalencias.length === 0) {
+				return {}
+			}
+
+			return { equivalencias: equivalencias }
 		},
 
 		/**
@@ -4882,6 +5090,13 @@ export default {
 				 * mostró, y `undefined` en JSON se pierde en vez de viajar como false.
 				 */
 				desempatar_por_nombre:                              this.desempatar_por_nombre === true,
+				/*
+				 * Misión importacion-relaciones-parecidas (8/10/2026): lo que el usuario decidió en
+				 * la lista de nombres parecidos del paso 3, para los tres modelos —
+				 * [{ tipo, valor, padre?, accion: 'usar'|'crear'|'unir', id?|con? }]. Solo viaja si
+				 * hubo lista: sin ella la clave no va y el backend hace lo de siempre.
+				 */
+				...this.payload_de_equivalencias(),
 			})
 			.then(() => {
 				this.loading = false
@@ -5474,7 +5689,19 @@ export default {
 					self.$store.dispatch('excel_analysis/marcar_visto', orden.uuid)
 				}
 
-				if (res.data.estado === 'error') {
+				/*
+				 * Misión importacion-relaciones-parecidas: en clientes y proveedores la corrida de
+				 * "recomendación" es solo el chequeo de nombres parecidos, que nunca bloquea. Si
+				 * terminó con error, se rearma igual el paso 2 desde el análisis padre (más abajo) y
+				 * se sigue al 4 sin lista, en vez de dejar al usuario en el paso 1 con un error que
+				 * lo obliga a volver a subir el archivo.
+				 */
+				const chequeo_fallido = res.data.estado === 'error'
+					&& res.data.tipo === 'recomendacion'
+					&& self.model !== 'article'
+					&& !!(res.data.contexto && res.data.contexto.analysis_uuid)
+
+				if (res.data.estado === 'error' && !chequeo_fallido) {
 					self.loading = false
 					self.error_message = res.data.error || 'Ocurrió un error al analizar el archivo.'
 					return
@@ -5485,7 +5712,7 @@ export default {
 				 * modal por su cuenta mientras el análisis corre, o el aviso llega justo
 				 * cuando ya estaba mirando. Se muestra el paso 1 siguiéndola en vivo.
 				 */
-				if (res.data.estado !== 'listo') {
+				if (res.data.estado !== 'listo' && !chequeo_fallido) {
 					self.retomar_seguimiento(orden.uuid, res.data)
 					return
 				}
@@ -5546,9 +5773,14 @@ export default {
 						self.column_mapping = self.normalize_column_mapping(contexto.column_mapping)
 					}
 
-					self.aplicar_resultado_recomendacion(res.data.resultado)
+					/*
+					 * Una corrida vieja no trae relaciones_parecidas y una fallida no trae nada: en
+					 * los dos casos aplicar_resultado_recomendacion() deja la lista vacía y, en
+					 * clientes y proveedores, se sigue al paso 4 (ver paso_despues_de_la_recomendacion).
+					 */
+					self.aplicar_resultado_recomendacion(chequeo_fallido ? {} : res.data.resultado)
 					self.loading = false
-					self.step = 3
+					self.step = self.paso_despues_de_la_recomendacion()
 				})
 				.catch(function() {
 					if (token_corrida !== self.analysis_polling_token) return
@@ -5817,6 +6049,9 @@ export default {
 			this.cadena_identificacion       = null
 			this.nombres_duplicados          = null
 			this.interpretacion_punto        = 'auto'
+			/* 🔴 Las decisiones de nombres parecidos son de ESTE archivo: no se heredan. */
+			this.relaciones_parecidas        = null
+			this.decisiones_relaciones       = {}
 		},
 
 	},
@@ -6245,4 +6480,9 @@ export default {
 /* Aviso de celdas que no se pueden leer */
 .ai-import-numeric-lecturas__alert
 	font-size: 12px
+
+/* Sección de nombres parecidos del paso 3: en artículos va debajo de las políticas, separada por una línea. */
+.ai-import-relaciones-seccion--articulos
+	border-top: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.08))
+	padding-top: 16px
 </style>
