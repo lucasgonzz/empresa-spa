@@ -185,9 +185,7 @@ export function analizar_cambio_de_cuenta_de_la_venta(venta_original, cliente_qu
  * @returns {String}
  */
 export function texto_de_la_cuenta_corriente(cliente, moneda_id, con_moneda) {
-	let nombre = cliente && cliente.name ? cliente.name : ('el cliente N° ' + (cliente ? cliente.id : ''))
-
-	let texto = 'la cuenta de ' + nombre
+	let texto = cliente && cliente.name ? 'la cuenta de ' + cliente.name : 'la cuenta del cliente N° ' + (cliente ? cliente.id : '')
 
 	if (con_moneda) {
 		texto += moneda_id == MONEDA_DOLAR ? ' en dólares' : ' en pesos'

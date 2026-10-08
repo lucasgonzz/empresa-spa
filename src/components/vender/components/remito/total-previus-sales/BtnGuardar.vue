@@ -57,7 +57,7 @@ import check_price_type from '@/mixins/vender/guardar_venta/chequeos/price_type'
 	Explicito aunque previus_sale/index.js ya lo trae (lo usa updateSale() para el aviso de despues de
 	guardar): saveSale() le pide la confirmacion de antes de guardar, y la dependencia conviene leerla aca.
 */
-import aviso_cambio_de_cuenta from '@/mixins/vender/previus_sale/aviso_cambio_de_cuenta'
+import aviso_cambio_de_cuenta, { moneda_de_cuenta_normalizada } from '@/mixins/vender/previus_sale/aviso_cambio_de_cuenta'
 export default {
 	name: 'ButtonClients',
 	components: {
@@ -131,6 +131,42 @@ export default {
 			if (
 				(this.guardar_como_presupuesto || this.editando_venta_previa)
 				&& !this.check_price_type()
+			) {
+				return false
+			}
+
+			/*
+				🔴 La cotizacion del dolar de una VENTA GUARDADA en dolares, igual que en una venta
+				nueva (checkear_vender() la chequea en el mismo lugar, despues de la lista). Hasta la
+				mision edicion-completa-ventas-presupuestos (8/10/2026) no hacia falta: la moneda y la
+				cotizacion de una venta guardada estaban bloqueadas y la API las ignoraba. Ahora la
+				venta se puede pasar a dolares y la API rechaza con 422 si queda sin cotizacion: aca se
+				corta antes, y si el campo quedo vacio se carga la del sistema y NO se guarda en este
+				paso (los renglones convertidos cambian con la cotizacion y el vendedor tiene que
+				verlos antes). Ver chequeos/valor_dolar_de_la_venta.js.
+
+				El presupuesto no pasa por aca: su PUT ya devuelve el 422 con el mensaje.
+
+				Una venta que YA estaba en dolares sin cotizacion guardada (2R tiene 44 asi) y sigue
+				sin una no se frena: la API la acepta y conserva la cotizacion como estaba (solo
+				rechaza al PASAR a dolares), y frenarla aca dejaria sin poder editar esas ventas en un
+				comercio que no tiene dolar cargado. Con dolar cargado ni llega: Moneda.vue lo pone en
+				el campo al abrirla.
+			*/
+			let venta_original = this.previus_sale
+
+			let ya_estaba_en_dolares_sin_cotizacion = Boolean(
+				venta_original
+				&& moneda_de_cuenta_normalizada(venta_original.moneda_id) === 2
+				&& !(Number(venta_original.valor_dolar) > 0)
+				&& !(Number(this.$store.state.vender.valor_dolar) > 0)
+			)
+
+			if (
+				this.editando_venta_previa
+				&& !this.guardar_como_presupuesto
+				&& !ya_estaba_en_dolares_sin_cotizacion
+				&& !this.check_valor_dolar_de_la_venta()
 			) {
 				return false
 			}

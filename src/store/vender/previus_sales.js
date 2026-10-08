@@ -175,6 +175,24 @@ export default {
 					campo, el dia es el mismo que ya tenia la venta y el back no la toca.
 				*/
 				created_at: info.created_at,
+				/*
+					🔴 LA MONEDA VIAJA EN EL PUT Y ES LA SEÑAL DE LA COTIZACION (mision
+					edicion-completa-ventas-presupuestos, 8/10/2026).
+
+					`valor_dolar` viaja en TODOS los PUT de venta desde hace meses, y si la venta tenia
+					la cotizacion en null viaja con el dolar del sistema que Moneda.vue carga al
+					abrirla. Por eso la API no lo puede honrar solo: cualquier edicion comun pisaria la
+					cotizacion. La señal es `moneda_id` (SaleController@update):
+					  - ausente o null -> ni la moneda ni la cotizacion se tocan (es lo que manda una
+					    SPA vieja, y por eso el cambio es compatible hacia atras);
+					  - presente -> se guarda la moneda, y la cotizacion si es mayor que cero (null o
+					    0 conservan la guardada). Pasar a dolares sin ninguna cotizacion valida es 422
+					    `sin_cotizacion_dolar`, y si la venta va a la cuenta corriente el debito pasa a
+					    la cuenta de la moneda nueva.
+					Esta SPA la manda siempre. No sacarla "porque casi nunca cambia": sin ella la
+					cotizacion editada en el campo USD no se guarda.
+				*/
+				moneda_id: info.moneda_id,
 				valor_dolar: info.valor_dolar,
 				observations_ocultas: info.observations_ocultas,
 				aplicar_recargos_directo_a_items: info.aplicar_recargos_directo_a_items,
