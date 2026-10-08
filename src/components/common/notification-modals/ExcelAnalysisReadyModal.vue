@@ -80,6 +80,16 @@ export default {
 		es_recomendacion() {
 			return this.excel_analysis.tipo === 'recomendacion'
 		},
+		/*
+		 * Misión importacion-relaciones-parecidas (8/10/2026): en clientes y proveedores la corrida
+		 * de "recomendación" no recomienda ninguna configuración, es solo la revisión de nombres
+		 * parecidos (provincia, localidad, vendedor, lista de precios). El aviso no puede hablarles
+		 * de una recomendación que no existe.
+		 */
+		es_revision_de_nombres() {
+			const model = this.excel_analysis.model || 'article'
+			return this.es_recomendacion && (model === 'client' || model === 'provider')
+		},
 		nombre_archivo() {
 			return this.excel_analysis.original_filename || ''
 		},
@@ -90,6 +100,11 @@ export default {
 			return 'bi bi-stars'
 		},
 		titulo() {
+			if (this.es_revision_de_nombres) {
+				return this.hubo_error
+					? 'No se pudieron revisar los nombres parecidos'
+					: 'Revisamos los nombres parecidos'
+			}
 			if (this.hubo_error) {
 				return this.es_recomendacion
 					? 'No se pudo generar la recomendación'
@@ -103,6 +118,14 @@ export default {
 			if (this.hubo_error) {
 				/* El mensaje del backend suele decir qué pasa con el archivo; si no vino, algo genérico. */
 				return this.excel_analysis.error || 'Volvé a intentarlo o avisanos si sigue pasando.'
+			}
+
+			/*
+			 * "Si todavía no importaste": el usuario pudo haber seguido sin esperar la revisión
+			 * ("Seguir sin revisar los nombres") e importado igual, y este aviso le llega después.
+			 */
+			if (this.es_revision_de_nombres) {
+				return 'Si todavía no importaste, podés ver los nombres parecidos a otros que ya tenés cargados antes de confirmar.'
 			}
 
 			if (this.es_recomendacion) {
