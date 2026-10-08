@@ -18,8 +18,14 @@ import deteccion_combos from '@/mixins/vender/deteccion_combos'
 	mixins/vender.js con el mismo nombre y el mismo valor.
 */
 import default_payment_method from '@/mixins/vender/default_payment_method'
+/*
+	limpiar_item() vacia el codigo de barras, el buscador por nombre y la cantidad pendiente, y
+	devuelve el foco a la primera entrada de articulos. Se importa aca, y no se asume que lo tenga el
+	componente que llama, por la misma razon que los defaults de arriba.
+*/
+import limpiar_item_vender from '@/mixins/vender/limpiar_item_vender'
 export default {
-	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender, omitir_en_cuenta_corriente, default_articles, deteccion_combos, default_payment_method],
+	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender, omitir_en_cuenta_corriente, default_articles, deteccion_combos, default_payment_method, limpiar_item_vender],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -207,6 +213,14 @@ export default {
 			this.$store.commit('vender/setSaleAttachments', [])
 
 			/*
+				El aviso de "limite de credito excedido" de la venta que se esta cerrando no tiene por
+				que sobrevivirle: si quedara en el store, el modal (LimiteCreditoExcedido.vue) se abriria
+				con el cliente y el monto de OTRA venta. Vuelve a su valor inicial, null: el modal ya lo
+				lee con `|| {}`.
+			*/
+			this.$store.commit('vender/set_limite_credito_excedido', null)
+
+			/*
 				Remito nuevo, deteccion de combos en cero: se descarta la espera pendiente y se
 				olvidan los combos que el vendedor rechazo en la venta anterior.
 			*/
@@ -298,6 +312,26 @@ export default {
 			this.setDefaultPaymentMethod(true)
 
 			/*
+				🔴 Lo que el vendedor dejo TIPEADO en los buscadores tambien se vacia: la venta nueva
+				tiene que quedar como entrando al modulo por primera vez. Hasta el 8/10/2026 limpiar
+				solo vaciaba el store, y un documento escrito en el buscador de cliente (elegido o no)
+				o un codigo a medias en la cabecera de articulos sobrevivian a la venta anterior.
+
+				- limpiar_buscador_de_cliente(): el texto vive en el `query` local del buscador, que no
+				  depende del cliente del store; un watcher sobre el cliente no alcanza, porque si el
+				  vendedor tipeo un documento y no eligio a nadie el cliente pasa de null a null.
+				- limpiar_item(): codigo de barras, buscador por nombre, cantidad pendiente y el item de
+				  la cabecera, y deja el foco en la primera entrada de articulos. Idempotente: los
+				  llamadores que ya lo invocan (agregar un articulo) pueden repetirlo sin efecto. Necesita
+				  el dueño para saber si se pide la cantidad; sin usuario no hay Vender que limpiar.
+			*/
+			this.limpiar_buscador_de_cliente()
+
+			if (this.owner) {
+				this.limpiar_item()
+			}
+
+			/*
 				Va ultima a proposito: setPriceType() y el resto de los commits de arriba
 				prenden la bandera. Si el apagado no fuera lo ultimo, la venta nueva quedaria
 				marcada como ya inicializada y no recibiria sus valores por defecto al volver
@@ -336,6 +370,26 @@ export default {
 			this.$store.commit('vender/set_cantidad_cuotas', null)
 			this.$store.commit('vender/set_cuota_descuento', null)
 			this.$store.commit('vender/set_cuota_recargo', null)
+		},
+		/**
+		 * Vacia lo tipeado en el buscador de cliente de Vender (`#select_client_vender`).
+		 *
+		 * Con setInputValueSync y no con un `input.value = ''` suelto: el input es de
+		 * common-vue/components/search/Index.vue y esta controlado por v-model sobre su `query`, asi
+		 * que sin avisarle a Vue el proximo render lo vuelve a llenar (ver el comentario de ese
+		 * template). Elegir un cliente tampoco borra `query`, por eso no alcanza con setClient(null).
+		 *
+		 * Si el input no esta en el DOM (el cliente no se puede cambiar, o el diseño de Vender no
+		 * trae ese campo) no hay nada que vaciar: no reintenta.
+		 *
+		 * @returns {void}
+		 */
+		limpiar_buscador_de_cliente() {
+			let input = document.getElementById('select_client_vender')
+
+			if (input) {
+				this.setInputValueSync(input, '')
+			}
 		},
 	}
 }

@@ -7,6 +7,8 @@ import repetidos from '@/mixins/vender/repetidos'
 import price_types from '@/mixins/vender/price_types'
 import set_items_prices from '@/mixins/vender/set_items_prices'
 import deteccion_combos from '@/mixins/vender/deteccion_combos'
+// Id del renglon en el DOM, con sufijo de variante solo si tiene variante (ver el archivo)
+import { id_de_renglon_vender } from '@/utils/id_de_renglon_vender'
 export default {
 	mixins: [
 		limpiar_item_vender,
@@ -203,9 +205,16 @@ export default {
 			console.log('check_foco_to_precio_personalizado: ')
 			console.log(item)
 			if (item.personalizar_price_en_vender) {
+				/*
+					item es el renglon recien armado en add_item_to_sale, que ya trae su
+					article_variant_id: con dos variantes del mismo articulo, el foco tiene que ir
+					al "Personalizado" de ESTE renglon y no al del primero del articulo.
+				*/
+				let id_del_renglon = id_de_renglon_vender(item)
+
 				setTimeout(() => {
 
-					document.getElementById('price-vender-'+item.id).focus()
+					document.getElementById('price-vender-'+id_del_renglon).focus()
 				}, 500)
 			}
 		},

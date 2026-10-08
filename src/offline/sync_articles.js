@@ -1,5 +1,11 @@
 // sync_articles.js
 import db from './db'
+/*
+	El indice en memoria de los codigos de variante de la cache (VENDER sin conexion) deja de valer
+	cuando cambia la tabla de articulos: se tira despues de cada escritura de esta sincronizacion y el
+	proximo escaneo lo rearma. Ver utils/variantes_en_cache.js.
+*/
+import { invalidar_indice_de_variantes_en_cache } from '@/utils/variantes_en_cache'
 import moment from 'moment-timezone'
 /**
  * Descarga todos los artículos paginados desde la API
@@ -116,6 +122,7 @@ export default {
 
                     if (deleted_ids.length) {
                         await db.articles.bulkDelete(deleted_ids)
+                        invalidar_indice_de_variantes_en_cache()
                         deleted_processed += deleted_ids.length
                         /** Incrementa progreso por página de eliminados procesada. */
                         this.increment_offline_articles_sync_progress('deleted', deleted_ids.length)
@@ -181,6 +188,7 @@ export default {
 
                     /** Guarda artículos actualizados en IndexedDB por lote. */
                     await db.articles.bulkPut(articles)
+                    invalidar_indice_de_variantes_en_cache()
                     /** Incrementa progreso por lote descargado. */
                     this.increment_offline_articles_sync_progress('updated', articles.length)
 
