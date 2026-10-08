@@ -82,6 +82,22 @@
 					v-else>
 						{{ price(items[data.index].price_vender) }}
 					</span>
+
+					<!--
+						El precio ORIGINAL, sin los descuentos ni los recargos de la venta (misión
+						descuentos-aplicar-al-precio-del-articulo, 8/10/2026): una línea gris y chica debajo del
+						precio, solo en los renglones que llevan algún ajuste adentro del precio (opciones
+						"Aplicar los descuentos / recargos de esta venta directamente a los precios"). Va DESPUÉS
+						del par de spans de arriba, que es un v-if/v-else y no admite nada en el medio. Cuándo se
+						muestra y cuándo no: utils/descuentos_en_precios.js::precio_original_a_mostrar.
+					-->
+					<small
+					v-if="precio_original_del_renglon(items[data.index]) !== null"
+					class="venta-item-precio-original"
+					:data-testid="'venta-item-precio-original-'+items[data.index].id"
+					title="Precio original, sin los descuentos ni los recargos de la venta">
+						(orig. {{ price(precio_original_del_renglon(items[data.index])) }})
+					</small>
 				</template>
 
 
@@ -275,6 +291,8 @@ import check_stock from '@/mixins/vender/check_stock'
 	foco despues del Enter sigue siendo de este componente (foco_despues_de_varios_precios).
 */
 import varios_precios, { tiene_varios_precios } from '@/mixins/vender/varios_precios'
+/* Cuando se muestra el precio original debajo del precio de un renglon (mision descuentos-aplicar-al-precio-del-articulo). */
+import { precio_original_a_mostrar } from '@/utils/descuentos_en_precios'
 /*
 	El foco de vuelta al codigo de barras (al sacar un renglon, al terminar de personalizar un
 	precio) va a la primera entrada A LA VISTA: con los diseños de Vender el codigo de barras puede
@@ -475,6 +493,21 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * El precio original -sin descuentos ni recargos de venta- que se muestra debajo del precio de
+		 * un renglon, o null si no hay que mostrar nada. getPriceVender() lo deja en
+		 * item.price_vender_original solo cuando el precio lleva algun ajuste de venta adentro.
+		 *
+		 * No se muestra en un comprobante legado de recargos (no se sabe cual era el original), en un
+		 * renglon con varios precios (no tiene UN precio) ni cuando es igual al precio. La regla vive
+		 * en utils/descuentos_en_precios.js para poder probarla sin montar la tabla.
+		 *
+		 * @param {Object} item Renglon del remito.
+		 * @returns {Number|null}
+		 */
+		precio_original_del_renglon(item) {
+			return precio_original_a_mostrar(item, this.$store.state.vender.recargos_en_precios_sin_registro)
+		},
 		/**
 		 * Nombre de slot dinamico de b-table para una columna de imagen configurable.
 		 *
@@ -981,6 +1014,17 @@ export default {
 
 .input-price
 	width: 150px
+
+/* El precio original debajo del precio del renglon: gris, chico, en su propio bloque (no se pega al precio ni al input "Personalizado") y sin cortarse en dos lineas */
+.venta-item-precio-original
+	display: block
+	margin-top: 2px
+	font-size: 0.75rem
+	line-height: 1.2
+	font-weight: normal
+	font-style: normal
+	white-space: nowrap
+	color: var(--color-text-secondary, #6c757d)
 
 .input-name
 	width: 200px
