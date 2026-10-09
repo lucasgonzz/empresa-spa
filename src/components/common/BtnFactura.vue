@@ -5,9 +5,11 @@
 	:class="afip_ticket.cae ? 'border-primary' : 'border-danger'">
 		<div class="factura-card__header">
 			<div class="factura-card__title">
-				<i class="bi bi-receipt factura-card__icon"></i>
+				<i
+				class="bi factura-card__icon"
+				:class="es_nota_credito ? 'bi-receipt-cutoff' : 'bi-receipt'"></i>
 				<span>
-					Factura
+					{{ nombre_comprobante }}
 					<strong v-if="afip_ticket.cbte_numero">N° {{ afip_ticket.cbte_numero }}</strong>
 					<span
 					v-else
@@ -19,7 +21,7 @@
 			v-if="afip_ticket.cae"
 			variant="primary"
 			size="sm"
-			title="Imprimir factura"
+			:title="'Imprimir '+nombre_comprobante.toLowerCase()"
 			@click.stop="print">
 				<i class="bi bi-printer"></i>
 			</b-button>
@@ -79,7 +81,7 @@
 			<b-button
 			@click.stop="delete_afip_ticket(afip_ticket)"
 			variant="outline-danger"
-			title="Eliminar factura"
+			:title="'Eliminar '+nombre_comprobante.toLowerCase()"
 			v-if="puede_eliminar(afip_ticket)">
 				<i class="bi bi-trash"></i>
 			</b-button>
@@ -199,7 +201,24 @@ export default {
 		resolved_sale_factura_print_option() {
 			return this.owner ? this.owner.sale_factura_print_option : null
 		},
+		/**
+		 * La tarjeta principal no siempre es una factura: en Comprobantes › Notas de credito llega el
+		 * comprobante de la NOTA (CurrentAcount::afip_ticket, por nota_credito_id) y tiene que
+		 * rotularse, imprimirse y explicarse como lo que es.
+		 *
+		 * @returns {boolean}
+		 */
+		es_nota_credito() {
+			return this.es_comprobante_nota_credito(this.afip_ticket)
+		},
+		nombre_comprobante() {
+			return this.es_nota_credito ? 'Nota de credito' : 'Factura'
+		},
 		title_description() {
+			if (this.es_nota_credito) {
+				return this.title_description_nota_credito(this.afip_ticket)
+			}
+
 			if (this.afip_ticket.cae) {
 				return 'Factura de ARCA'
 			} else {
@@ -208,6 +227,10 @@ export default {
 
 		},
 		descriptions() {
+			if (this.es_nota_credito) {
+				return this.descriptions_nota_credito(this.afip_ticket)
+			}
+
 			if (this.afip_ticket.cae) {
 				return [
 					'Factura de ARCA emitida correctamente',
@@ -235,6 +258,20 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Indica si un comprobante ARCA es una nota de credito y no una factura. `nota_credito_id`
+		 * lo trae desde que se crea (AfipNotaCreditoHelper), aunque ARCA no lo haya autorizado;
+		 * `cbte_tipo` recien se escribe con la respuesta de ARCA, por eso va de respaldo.
+		 *
+		 * @param {Object} afip_ticket
+		 * @returns {boolean}
+		 */
+		es_comprobante_nota_credito(afip_ticket) {
+			let tipos_nota_credito = ['3', '8', '13', '21', '53', '203', '208', '213']
+
+			return !!afip_ticket.nota_credito_id
+				|| tipos_nota_credito.indexOf(String(afip_ticket.cbte_tipo)) != -1
+		},
 		title_description_nota_credito(nota_credito_afip_ticket) {
 			if (nota_credito_afip_ticket.cae) {
 				return 'Nota de Credito Facturada ante ARCA'
@@ -268,9 +305,24 @@ export default {
 		},
 		print() {
 
-			if (this.afip_ticket.cae) {
-				this.print_afip_ticket()
+			if (!this.afip_ticket.cae) {
+				return
 			}
+
+			/*
+			 * Una nota de credito se imprime siempre con su propio PDF (el de la nota, con su CAE). La
+			 * preferencia del dueño (Ticket 2.0 o A4) arma el comprobante de la VENTA: no aplica.
+			 */
+			if (this.es_nota_credito) {
+				let url = this.print_url
+					? this.print_url
+					: '/current-acount/pdf/'+this.afip_ticket.nota_credito_id
+
+				window.open(env('VUE_APP_API_URL')+url)
+				return
+			}
+
+			this.print_afip_ticket()
 		},
 		puede_eliminar(afip_ticket) {
 			if (
@@ -341,6 +393,11 @@ export default {
 			}
 		},
 		delete_afip_ticket(afip_ticket) {
+			if (this.es_comprobante_nota_credito(afip_ticket)) {
+				this.delete_nota_credito_afip_ticket(afip_ticket)
+				return
+			}
+
 			let text = '¿Seguro que quiere eliminar esta factura?'
 
 			if (afip_ticket.cbte_numero) {
@@ -491,6 +548,11 @@ export default {
 			}
 		},
 		consultar(afip_ticket) {
+			if (this.es_comprobante_nota_credito(afip_ticket)) {
+				this.consultar_nota_credito_afip_ticket(afip_ticket)
+				return
+			}
+
 			this.$store.commit('auth/setMessage', 'Consultando comprobante')
 			this.$store.commit('auth/setLoading', true)
 
