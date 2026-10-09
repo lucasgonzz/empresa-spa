@@ -64,6 +64,21 @@ export const COLUMNAS_SUGERIDAS_POR_MODELO = {
 	order: ['document_item_name', 'document_item_amount', 'document_item_price', 'document_item_subtotal'],
 }
 
+/*
+	Medias columnas de las sugeridas en un TICKET de comandera, por `value_resolver`: las mismas de
+	los tickets por defecto que crea la API (PdfTicketComanderaSetupHelper::MEDIAS_COLUMNAS, 9/3/6/6).
+	Con los anchos por defecto de las opciones (pensados para una A4) un rollo quedaba con "Cant" en
+	2 medias (3 caracteres a 80 mm, 1 a 55) y los precios cortados. En una hoja, las sugeridas entran
+	con su ancho por defecto; en las dos, lo que sobra de la fila va a la de salto de línea
+	(llenar_la_fila).
+*/
+export const MEDIAS_SUGERIDAS_EN_TICKET = {
+	item_name: 9,
+	item_amount: 3,
+	item_price: 6,
+	item_subtotal: 6,
+}
+
 /* Tamaños de letra que acepta la API para el pivot (4 a 24 pt; otro valor viaja como null) */
 const TAMANO_DE_LETRA_MIN = 4
 const TAMANO_DE_LETRA_MAX = 24
@@ -515,17 +530,63 @@ export function columnas_sugeridas(model_name, catalogo) {
 }
 
 /**
+ * Lo que sobra de la fila (las medias columnas que no ocupa ninguna) se lo lleva una columna: la
+ * primera con salto de línea y, si ninguna lo tiene, la más ancha (la primera, en un empate). Es la
+ * misma regla con que el motor del ticket reparte los caracteres que sobran (plan §4), así la tabla
+ * de las sugeridas llena el ancho en vez de quedar angosta (en una A4, 9/2/3/3 = 17 de 24 pasa a
+ * 16/2/3/3). Muta `cols` en el lugar.
+ *
+ * @param {Array} visibles columnas de la tabla ({cols, salto})
+ * @param {number} total medias columnas de la grilla
+ * @returns {Object|null} la columna que se llevó lo que sobraba, o null si no sobraba nada
+ */
+export function llenar_la_fila(visibles, total) {
+	let grilla = entero_positivo(total, COLUMNAS_DE_LA_TABLA)
+	let lista = Array.isArray(visibles) ? visibles : []
+	let sobra = grilla - suma_de_columnas(lista)
+
+	if (sobra <= 0 || !lista.length) {
+		return null
+	}
+
+	let destino = null
+	lista.forEach(function (columna) {
+		if (!destino && columna.salto) {
+			destino = columna
+		}
+	})
+	if (!destino) {
+		lista.forEach(function (columna) {
+			if (!destino || (Number(columna.cols) || 0) > (Number(destino.cols) || 0)) {
+				destino = columna
+			}
+		})
+	}
+
+	destino.cols = (Number(destino.cols) || 0) + sobra
+	return destino
+}
+
+/**
  * Pone en la tabla las columnas sugeridas (en el orden de la lista), cada una con su ancho y
  * haciéndole lugar. Las que permiten salto de línea entran con el salto prendido (el nombre del
- * artículo: así un nombre largo no se corta). Muta `visibles` y las columnas.
+ * artículo: así un nombre largo no se corta). Al final, lo que sobra de la fila va a la de salto de
+ * línea (llenar_la_fila). Muta `visibles` y las columnas.
+ *
+ * `medias_fijas` ({value_resolver: medias}, opcional) fija el ancho de las que estén ahí: en un
+ * ticket, MEDIAS_SUGERIDAS_EN_TICKET (9/3/6/6). Las demás entran con el ancho que ya traen (el
+ * por defecto de la opción, convertido al ancho útil).
  *
  * @param {Array} columnas todas
  * @param {Array} visibles
  * @param {Array<string>} resolvers
  * @param {number} total
+ * @param {Object} [medias_fijas]
  * @returns {number} cuántas entraron
  */
-export function poner_sugeridas(columnas, visibles, resolvers, total) {
+export function poner_sugeridas(columnas, visibles, resolvers, total, medias_fijas) {
+	let grilla = entero_positivo(total, COLUMNAS_DE_LA_TABLA)
+	let fijas = medias_fijas && typeof medias_fijas == 'object' ? medias_fijas : {}
 	let entraron = 0
 
 	;(resolvers || []).forEach(function (resolver) {
@@ -538,6 +599,10 @@ export function poner_sugeridas(columnas, visibles, resolvers, total) {
 		if (!columna) {
 			return
 		}
+		let fija = parseInt(fijas[resolver], 10)
+		if (fija > 0) {
+			columna.cols = Math.min(fija, grilla)
+		}
 		visibles.push(columna)
 		if (!hacer_lugar(visibles, columna, total)) {
 			visibles.splice(visibles.indexOf(columna), 1)
@@ -548,6 +613,10 @@ export function poner_sugeridas(columnas, visibles, resolvers, total) {
 		}
 		entraron++
 	})
+
+	if (entraron) {
+		llenar_la_fila(visibles, total)
+	}
 
 	return entraron
 }

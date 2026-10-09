@@ -105,7 +105,21 @@ import PdfColumnsPreferencesConfigModal from '@/common-vue/components/pdf/PdfCol
 */
 import DisenadorPdf from '@/common-vue/components/pdf/disenador-pdf/Index.vue'
 import TarjetaDelPdf from '@/common-vue/components/pdf/miniatura-pdf/TarjetaDelPdf.vue'
-import { columnas_sugeridas } from '@/common-vue/components/pdf/disenador-pdf/tabla_del_disenador'
+import {
+	COLUMNAS_DE_LA_TABLA,
+	MEDIAS_SUGERIDAS_EN_TICKET,
+	columnas_sugeridas,
+	poner_sugeridas,
+	mm_a_columnas,
+	mm_de_las_columnas,
+} from '@/common-vue/components/pdf/disenador-pdf/tabla_del_disenador'
+import { hoja_del_perfil, ancho_util, tiene_diseno } from '@/common-vue/components/pdf/disenador-pdf/estado_del_disenador'
+
+/* Límites del margen para leer la hoja del perfil (los de DisenoDePaginaPdf: el catálogo acá no llega) */
+const LIMITES_DEL_MARGEN = {
+	margen_min: 0,
+	margen_max: 20,
+}
 import CatalogHeaderDesigner from '@/common-vue/components/pdf/catalog-header-designer/Index.vue'
 
 /**
@@ -454,11 +468,20 @@ export default {
 		},
 		/**
 		 * Perfil NUEVO de venta, presupuesto o pedido online sin ninguna columna visible: se prenden
-		 * las sugeridas (las de `columnas_sugeridas` del diseñador, con su respaldo local), con su
-		 * ancho por defecto y el salto de línea en las que lo permiten. Desde la misión
-		 * diseno-ticket-comandera la tabla no se ve en el formulario: sin esto, un diseño creado sin
-		 * abrir el diseñador saldría con la tabla vacía. Un perfil guardado no se toca (el diseñador
-		 * propone las sugeridas al abrirlo, como cambio sin guardar).
+		 * las sugeridas (las de `columnas_sugeridas` del diseñador, con su respaldo local), con el
+		 * salto de línea en las que lo permiten. Desde la misión diseno-ticket-comandera la tabla no
+		 * se ve en el formulario: sin esto, un diseño creado sin abrir el diseñador saldría con la
+		 * tabla vacía. Un perfil guardado no se toca (el diseñador propone las sugeridas al abrirlo,
+		 * como cambio sin guardar).
+		 *
+		 * Los anchos, con la MISMA regla que el diseñador (poner_sugeridas de tabla_del_disenador.js):
+		 * - en medias columnas: en una hoja, el ancho por defecto de cada opción sobre el ancho útil;
+		 *   en un ticket, las medias de los tickets por defecto de la API (9/3/6/6);
+		 * - lo que sobra de las 24 medias va a la de salto de línea (el nombre), así la tabla llena el
+		 *   ancho (en una A4 era 9/2/3/3 = 17 de 24);
+		 * - y los milímetros contra el ancho útil ACTUAL del modelo (ancho_util_para_sugeridas): si el
+		 *   formulario eligió un rollo antes de que llegara el catálogo de columnas, entran en mm del
+		 *   rollo. Antes entraban en los de una A4 y el POST daba 422 (la suma no entraba en 80 mm).
 		 *
 		 * @param {Array} rows filas recién armadas (se modifican)
 		 * @return {void}
@@ -467,23 +490,74 @@ export default {
 			if (this.model.id || !this.tiene_disenador_de_pdf) {
 				return
 			}
-			const any_visible = rows.some((row) => row.visible)
+			const any_visible = rows.some(function (row) {
+				return row.visible
+			})
 			if (any_visible) {
 				return
 			}
 
+			const self = this
 			const allows_wrap = {}
-			this.pdf_column_options_catalog.forEach((option) => {
-				allows_wrap[option.id] = this.as_bool(option.allow_wrap_content)
+			this.pdf_column_options_catalog.forEach(function (option) {
+				allows_wrap[option.id] = self.as_bool(option.allow_wrap_content)
 			})
 
-			const suggested = columnas_sugeridas(this.model.model_name, null)
-			rows.forEach((row) => {
-				if (suggested.indexOf(row.value_resolver) !== -1) {
-					row.visible = true
-					row.wrap_content = !!allows_wrap[row.key]
-				}
+			const util = this.ancho_util_para_sugeridas()
+
+			/* Columnas de trabajo mínimas, como las de la tabla del diseñador, para poner_sugeridas */
+			const columnas = []
+			rows.forEach(function (row) {
+				columnas.push({
+					row: row,
+					value_resolver: row.value_resolver,
+					cols: mm_a_columnas(row.width, util, COLUMNAS_DE_LA_TABLA),
+					permite_salto: !!allows_wrap[row.key],
+					salto: false,
+				})
 			})
+
+			const visibles = []
+			const medias_fijas = this.es_rollo_del_modelo() ? MEDIAS_SUGERIDAS_EN_TICKET : null
+			poner_sugeridas(columnas, visibles, columnas_sugeridas(this.model.model_name, null), COLUMNAS_DE_LA_TABLA, medias_fijas)
+
+			const medias = []
+			visibles.forEach(function (columna) {
+				medias.push(columna.cols)
+			})
+			const milimetros = mm_de_las_columnas(medias, util, COLUMNAS_DE_LA_TABLA)
+
+			visibles.forEach(function (columna, indice) {
+				columna.row.visible = true
+				columna.row.wrap_content = columna.salto
+				columna.row.width = milimetros[indice]
+			})
+		},
+		/**
+		 * Si el tipo de hoja del formulario es un rollo de comandera: una venta con un tipo de hoja sin
+		 * alto (D2). El selector "Hoja o comandera" deja el tipo en `model.sheet_type`.
+		 *
+		 * @return {boolean}
+		 */
+		es_rollo_del_modelo() {
+			const tipo = this.model ? this.model.sheet_type : null
+			return !!(this.model && this.model.model_name === 'sale' && tipo && typeof tipo === 'object' && tipo.height === null)
+		},
+		/**
+		 * El ancho útil (mm) contra el que se calculan los milímetros de las sugeridas: el ancho del
+		 * rollo en un ticket; en una hoja, el de la hoja con que la ve el diseñador (la A4 de siempre,
+		 * 200 mm, si el perfil no tiene diseño con cajas).
+		 *
+		 * @return {number}
+		 */
+		ancho_util_para_sugeridas() {
+			if (this.es_rollo_del_modelo()) {
+				const ancho = Number(this.model.sheet_type.width || this.model.paper_width_mm || 0)
+				return ancho > 0 ? ancho : 80
+			}
+			const hoja = hoja_del_perfil(this.model, tiene_diseno(this.model.page_layout), LIMITES_DEL_MARGEN)
+			const util = ancho_util(hoja)
+			return util > 0 ? util : 200
 		},
 		/**
 		 * Firma de un pdf_column_options: lo que importa de cada opción (id y pivot normalizado), en

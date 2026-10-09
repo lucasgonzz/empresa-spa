@@ -195,7 +195,12 @@ export default {
 
 			let util_que_queda = hoja ? ancho_util({ ancho: hoja.ancho, margen: hoja.margen }) : null
 			let la_hoja_no_deja_entrar = util_que_queda !== null && this.suma_mm_de_la_base > util_que_queda
-			let mandar_tabla = this.tabla.columnas.length > 0 && (this.tabla_cambiada || la_hoja_no_deja_entrar)
+			/*
+				Si viaja el tipo de hoja del formulario (se cambió y no se guardó), viaja también la tabla
+				en milímetros del ancho útil que se ve: la API la valida contra el papel NUEVO, y las
+				columnas guardadas están en los del viejo (misión diseno-ticket-comandera, corrección 1).
+			*/
+			let mandar_tabla = this.tabla.columnas.length > 0 && (this.tabla_cambiada || la_hoja_no_deja_entrar || this.hay_que_mandar_el_tipo_de_hoja())
 
 			if (mandar_tabla) {
 				datos.pdf_column_options = opciones_para_guardar(this.tabla.columnas, this.tabla.visibles, this.ancho_util_de_la_tabla_mm, this.total_de_la_tabla)
@@ -241,7 +246,9 @@ export default {
 		 *   volver al ticket de siempre), con una diferencia: en el ticket tocar la tabla TAMBIÉN pasa
 		 *   a cajas (D10, ver cambio_que_pasa_a_cajas).
 		 * - La tabla (`pdf_column_options` completo) si cambió, con los milímetros contra el ancho del
-		 *   rollo (D9: la "hoja" del ticket es {ancho del rollo, margen 0}).
+		 *   rollo (D9: la "hoja" del ticket es {ancho del rollo, margen 0}). También si viaja el tipo de
+		 *   hoja del formulario (hay_que_mandar_el_tipo_de_hoja): con el rollo cambiado de 80 a 55 mm sin
+		 *   guardar, la API validaba las columnas guardadas (en mm de 80) contra 55 y daba 422.
 		 * - NADA de la hoja (ni formatos ni margen: la API fuerza los del rollo) ni del encabezado
 		 *   (`header_layout`, `logo_size_mm`: el ticket no tiene encabezado aparte, D6).
 		 *
@@ -251,14 +258,21 @@ export default {
 			let datos = {}
 
 			if (this.sigue_de_siempre) {
-				if (this.restablecido && this.tenia_diseno) {
+				/*
+					Después de "Volver al ticket de siempre" viaja page_layout null SIEMPRE, aunque el
+					perfil abriera sin diseño: la API hace nacer diseñado (con el derivado) un ticket que
+					se crea o que se convierte de hoja, y un pedido sin page_layout con el tipo de hoja
+					cambiado (ver hay_que_mandar_el_tipo_de_hoja) lo dejaría con cajas. Si ya estaba en
+					null, la API lo deja igual.
+				*/
+				if (this.restablecido) {
 					datos.page_layout = null
 				}
 			} else if (this.cambio_que_pasa_a_cajas) {
 				datos.page_layout = serializar(this.estado_de_trabajo, this.limites)
 			}
 
-			if (this.tabla.columnas.length && this.tabla_cambiada) {
+			if (this.tabla.columnas.length && (this.tabla_cambiada || this.hay_que_mandar_el_tipo_de_hoja())) {
 				datos.pdf_column_options = opciones_para_guardar(this.tabla.columnas, this.tabla.visibles, this.ancho_util_de_la_tabla_mm, this.total_de_la_tabla)
 			}
 

@@ -24,6 +24,7 @@ import {
 	armar_tabla,
 	poner_sugeridas,
 	columnas_sugeridas,
+	MEDIAS_SUGERIDAS_EN_TICKET,
 	hacer_lugar,
 	cols_maximo_de,
 	columnas_a_mm,
@@ -66,6 +67,10 @@ export default {
 		 * catálogo, o el respaldo local). Se llama DESPUÉS de tomar las bases: ponerlas es un cambio
 		 * sin guardar, así un perfil sin columnas no muestra una tabla que no imprime.
 		 *
+		 * En una hoja entran con su ancho por defecto; en un ticket, con las medias de los tickets por
+		 * defecto de la API (9/3/6/6). En los dos casos lo que sobra de la fila va a la columna con
+		 * salto de línea (poner_sugeridas → llenar_la_fila): la tabla llena el ancho.
+		 *
 		 * @returns {void}
 		 */
 		poner_columnas_sugeridas() {
@@ -73,7 +78,8 @@ export default {
 				return
 			}
 			let resolvers = columnas_sugeridas(this.modelo_del_perfil, this.catalogo)
-			let entraron = poner_sugeridas(this.tabla.columnas, this.tabla.visibles, resolvers, this.total_de_la_tabla)
+			let medias_fijas = this.es_ticket ? MEDIAS_SUGERIDAS_EN_TICKET : null
+			let entraron = poner_sugeridas(this.tabla.columnas, this.tabla.visibles, resolvers, this.total_de_la_tabla, medias_fijas)
 			this.columnas_sugeridas_puestas = entraron > 0
 		},
 		/**

@@ -28,7 +28,8 @@
 	- LOGO (`negocio_logo`, tipo `imagen`): centrado a lo ancho; si su caja comparte fila, sale antes
 	  de los renglones de la fila.
 	- TABLA: caracteres de cada columna con caracteres_de_la_tabla() (tabla_del_disenador.js);
-	  encabezado en negrita + guiones, un renglón por ítem (los numéricos a la derecha; con salto de
+	  encabezado en negrita + guiones, un renglón por ítem (las columnas numéricas -- todos sus
+	  valores con algo son números -- a la derecha, encabezado y celdas; con salto de
 	  línea se parte, sin salto se corta; un NÚMERO que no entra no se corta: sigue abajo), guiones
 	  al final.
 
@@ -243,9 +244,10 @@ export function factor(clase) {
 
 /**
  * Deja un texto listo para medir (TextoDeTicket::limpiar, sin la conversión a CP850: ver el
- * comentario de arriba): CRLF y CR pasan a LF, los saltos de línea se conservan solo si se pide (si
- * no, son espacios) y los caracteres de control pasan a ser espacios (un 0x1D en un dato no llega
- * a la impresora como comando).
+ * comentario de arriba): CRLF y CR pasan a LF, la forma compuesta (NFC: una "e" + tilde combinable
+ * pasa a ser UNA letra, como en la API desde el 9/10), los saltos de línea se conservan solo si se
+ * pide (si no, son espacios) y los caracteres de control pasan a ser espacios (un 0x1D en un dato no
+ * llega a la impresora como comando).
  *
  * @param {*} texto
  * @param {boolean} [con_saltos]
@@ -256,7 +258,11 @@ export function limpiar(texto, con_saltos) {
 		return ''
 	}
 	let resultado = ''
-	Array.from(String(texto).replace(/\r\n?/g, '\n')).forEach(function (caracter) {
+	let normalizado = String(texto).replace(/\r\n?/g, '\n')
+	if (typeof normalizado.normalize == 'function') {
+		normalizado = normalizado.normalize('NFC')
+	}
+	Array.from(normalizado).forEach(function (caracter) {
 		if (caracter === '\n') {
 			resultado += con_saltos ? '\n' : ' '
 			return
@@ -835,13 +841,14 @@ export function muestras_de_columna(value_resolver) {
  * Los renglones de un ítem de la tabla (TicketComanderaEscPos::renglones_de_fila_de_tabla), POR
  * COLUMNA: cada columna partida (con salto de línea), cortada (sin él) o, si es un número que no
  * entra, seguida abajo; el ítem ocupa los renglones de su columna más alta (las demás se completan
- * con renglones en blanco).
+ * con renglones en blanco). "Es un número" mira la COLUMNA (numérica) o el valor, como la API.
  *
  * @param {Array} columnas [{contenido, salto}]
  * @param {Array<string>} valores uno por columna
+ * @param {Array<boolean>} numericas por columna: todos sus valores con algo son números
  * @returns {Array<Array<string>>} por columna, sus textos (todas con la misma cantidad)
  */
-function partes_de_un_item(columnas, valores) {
+function partes_de_un_item(columnas, valores, numericas) {
 	let partes = []
 	let alto = 1
 
@@ -854,7 +861,7 @@ function partes_de_un_item(columnas, valores) {
 			lista = ['']
 		} else if (columna.salto) {
 			lista = partir(valor, ancho)
-		} else if (largo(valor) > ancho && es_numerico(valor)) {
+		} else if (largo(valor) > ancho && (numericas[c] || es_numerico(valor))) {
 			lista = partir_por_caracteres(valor, ancho)
 		} else {
 			lista = [cortar(valor, ancho)]
@@ -974,10 +981,15 @@ export function tabla_en_el_rollo(visibles, caracteres, total, filas) {
 		resultado[c].renglones.push(guiones(columna.ancho))
 	})
 
+	/*
+		Cada celda se alinea según su COLUMNA (numérica → a la derecha), no según su propio valor: un
+		artículo que se llama "12" queda a la izquierda en Nombre, como el resto de la columna (la API
+		lo cambió así a pedido del revisor: TicketComanderaEscPos::renglones_de_fila_de_tabla).
+	*/
 	items.forEach(function (valores) {
-		let partes = partes_de_un_item(columnas, valores)
+		let partes = partes_de_un_item(columnas, valores, numericas)
 		columnas.forEach(function (columna, c) {
-			let alineacion = es_numerico(valores[c]) ? 'derecha' : 'izquierda'
+			let alineacion = numericas[c] ? 'derecha' : 'izquierda'
 			partes[c].forEach(function (texto) {
 				agregar(c, alinear([trozo(texto, false)], Math.max(0, columna.contenido), alineacion))
 			})
