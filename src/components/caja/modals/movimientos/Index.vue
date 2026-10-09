@@ -11,12 +11,19 @@
 			abrirse. Mismo problema que en aperturas/Index.vue: movimiento_cajas tampoco
 			tiene columna user_id, asi que el runListadoPorDefecto del grupo 221 rompe con
 			500 apenas monta. Ver hallazgo 20260810-buscador-general-modelos-sin-user-id.
+
+			show_actualizar_option en false: sin la opción masiva "Actualizar" en los menús de
+			seleccionados y filtrados. Un movimiento se corrige de a uno, y solo si es manual y del
+			turno abierto; `PUT update/movimiento_caja` no mira nada de eso y la API lo rechaza con
+			422 (misión movimientos-caja-manuales, 9/10/2026). "Eliminar" masivo sigue: pasa por el
+			`destroy` de cada fila, que sí aplica las reglas.
 		-->
 		<view-component
 		@modelSaved="actualizar_info"
 		@modelDeleted="actualizar_info"
 		:set_model_on_row_selected="false"
 		@clicked="clicked"
+		:show_actualizar_option="false"
 		:show_btn_save="show_btn_save"
 		:props_to_send_on_save="props_to_send_on_save"
 		:listado_paginado_por_defecto="false"
@@ -83,13 +90,14 @@ export default {
 			movimientos-caja-manuales, 9/10/2026). Antes era solo `id === null`, así que al abrir un
 			movimiento existente quedaban "×" y "Eliminar" nada más.
 
-			Se oculta únicamente si la API dice explícitamente `editable === false` (una venta, un
-			gasto, un pago, una transferencia, una compensación). En la práctica esa fila ni llega a
-			abrirse porque `clicked()` la frena antes, pero así el botón no depende de eso.
+			Al editar se muestra SOLO si la API dice explícitamente `editable === true`. Una venta, un
+			gasto, un pago, una transferencia o una compensación llegan con `editable === false` y ni
+			siquiera se abren (los frena `clicked()`).
 
-			Con una API vieja, que no manda `editable`, el campo llega `undefined` y "Guardar"
-			aparece: el `PUT movimiento-caja/{id}` existe desde siempre, y las filas de venta, gasto
-			y pago las siguen frenando las guardas de `clicked()`.
+			🔴 Con una API vieja, que no manda `editable`, NO se muestra: queda como antes, sin
+			"Guardar" al editar. El `update` viejo guarda la fila y después revienta con 500 al
+			recalcular los saldos, así que dejaba la caja descuadrada (medido en el chequeo de la
+			misión). Corregir un movimiento existe solo contra la API que lo valida.
 
 			El estado inicial del store es `{}` (sin id): ahí no hay ningún formulario abierto y se
 			devuelve false, igual que antes.
@@ -101,7 +109,7 @@ export default {
 			if (!this.movimiento_caja.id) {
 				return false
 			}
-			return this.movimiento_caja.editable !== false
+			return this.movimiento_caja.editable === true
 		},
 		props_to_send_on_save() {
 			if (this.caja) {
@@ -134,7 +142,9 @@ export default {
 			2. API nueva (`editable` viene): si es `false`, se muestra el motivo que manda el back.
 			3. API vieja (`editable` es `undefined`): las tres guardas de siempre, por `sale_id`,
 			   `expense_id` y `current_acount_id`, con sus textos originales. Estuvieron comentadas
-			   hasta esta misión, así que la fila de una venta se abría con "Eliminar".
+			   hasta esta misión, así que la fila de una venta se abría con "Eliminar". Lo que pasa
+			   estas guardas se abre como antes, solo con "Eliminar": sin `editable === true` no hay
+			   "Guardar" (ver `show_btn_save`).
 		*/
 		clicked(movimiento_caja) {
 
