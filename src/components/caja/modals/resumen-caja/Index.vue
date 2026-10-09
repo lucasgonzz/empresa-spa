@@ -91,10 +91,7 @@ export default {
 			// 	return
 			// } 
 
-			// Una copia y no la fila: movimiento_caja tiene full_reactivity, asi que el form edita el
-			// modelo del store, y con la fila misma lo que se tipee en un movimiento ya guardado (que
-			// no tiene boton Guardar) quedaria pintado en la tabla como si se hubiera guardado.
-			this.setModel({...movimiento_caja}, 'movimiento_caja')
+			this.setModel(movimiento_caja, 'movimiento_caja')
 		},
 		actualizar_info(movimiento_caja) {
 			console.log('actualizar_info, movimiento_caja:')

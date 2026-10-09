@@ -32,9 +32,12 @@ export default {
 			key: 'ingreso',
 			type: 'number',
 			is_price: true,
-			// Bloqueo mutuo con Egreso (ver generals.js): si ya hay un Egreso cargado, este campo
-			// se deshabilita, para que el monto no pueda terminar cargado en los dos a la vez.
-			disabled_function: 'ingreso_bloqueado_por_egreso',
+			// Bloqueo mutuo con Egreso (ver `deshabilitado_si_hay` en ModelForm.vue::isDisabled): si
+			// ya hay un Egreso cargado, este campo se deshabilita, para que el monto no pueda terminar
+			// cargado en los dos a la vez. No apaga un campo que ya tiene valor, asi que una fila vieja
+			// guardada con los dos importes se puede desempatar; el 0 cuenta como vacio y un negativo
+			// como cargado, la misma regla que aplica la API (MovimientoCajaController).
+			deshabilitado_si_hay: 'egreso',
 			descriptions: [
 				'Plata que ENTRA a la caja. Cargá el monto acá o en Egreso, nunca en los dos.',
 			],
@@ -44,7 +47,7 @@ export default {
 			key: 'egreso',
 			type: 'number',
 			is_price: true,
-			disabled_function: 'egreso_bloqueado_por_ingreso',
+			deshabilitado_si_hay: 'ingreso',
 			descriptions: [
 				'Plata que SALE de la caja. Cargá el monto acá o en Ingreso, nunca en los dos.',
 			],
@@ -72,12 +75,12 @@ export default {
 	},
 	/**
 	 * Sin esto, model/Index.vue le pasa al formulario una COPIA no reactiva del modelo
-	 * (`{...model}`, sin observer) y el `disabled_function` de Ingreso y Egreso nunca se volvia a
+	 * (`{...model}`, sin observer) y el bloqueo mutuo de Ingreso y Egreso nunca se volvia a
 	 * evaluar: con un importe en Egreso, Ingreso seguia habilitado y se podian cargar los dos,
 	 * aunque la ayuda de los campos dice "nunca en los dos". Medido el 9/10/2026 en la demo
 	 * (4.3.8). Misma clase que pdf_column_profile (18/9/2026). Con full_reactivity el form edita
-	 * el modelo del store; por eso los dos modales que abren un movimiento existente
-	 * (movimientos y resumen-caja) le pasan a setModel una copia de la fila, no la fila.
+	 * el modelo del store; por eso el modal de movimientos (caja/modals/movimientos/Index.vue::
+	 * clicked) le pasa a setModel una copia de la fila, no la fila.
 	 */
 	full_reactivity: true,
 	singular_model_name_spanish: 'Movimiento de Caja',
