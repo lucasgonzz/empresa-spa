@@ -83,11 +83,12 @@
 		<!--
 			Sin ningún renglón de comandera para esta venta (API vieja, el seeder de los diseños
 			por defecto sin correr, o una venta remito en un negocio que solo tiene tickets de
-			factura): el "Ticket 2.0" de siempre. Igual le pide a la API el ticket por defecto, así
-			que si existe uno armado con cajas sale ese.
+			factura), o una venta con CAE sin ningún ticket de factura (lo borraron): el "Ticket 2.0"
+			de siempre (ver mostrar_ticket_2 en Index.vue). Igual le pide a la API el ticket por
+			defecto, así que si existe uno armado con cajas sale ese.
 		-->
 		<b-dropdown-item
-		v-else
+		v-if="mostrar_ticket_2"
 		class="p-0">
 			<div class="sale-print-remito-profile-row">
 				<span
@@ -146,6 +147,14 @@ export default {
 		hay_opciones_de_ticket: {
 			type: Boolean,
 			default: false,
+		},
+		/**
+		 * Si va el renglón "Ticket 2.0" (el ticket por defecto). Por defecto true: sin la prop, el
+		 * menú se ve como antes de esta misión.
+		 */
+		mostrar_ticket_2: {
+			type: Boolean,
+			default: true,
 		},
 	},
 }

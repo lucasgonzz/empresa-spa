@@ -19,6 +19,7 @@
 				:perfiles_de_ticket_remito="perfiles_de_ticket_remito"
 				:opciones_de_ticket_factura="opciones_de_ticket_factura"
 				:hay_opciones_de_ticket="hay_opciones_de_ticket"
+				:mostrar_ticket_2="mostrar_ticket_2"
 				@ticket_pdf="ticketPdf(sale)"
 				@factura_ticket_pdf="facturaTicketPdf"
 				@ticket_2="nuevo_ticket(sale)"
@@ -363,6 +364,24 @@ export default {
 			return this.perfiles_de_ticket_remito.length > 0 || this.opciones_de_ticket_factura.length > 0
 		},
 		/**
+		 * Si va el renglón "Ticket 2.0" (el ticket por defecto, que elige la API):
+		 *
+		 * - sin ningún renglón de comandera para la venta (ver hay_opciones_de_ticket);
+		 * - y TAMBIÉN cuando la venta tiene un comprobante con CAE y no hay ningún renglón de ticket
+		 *   de factura (alguien borró "Ticket factura", o pasó a hoja el único que había). Sin esto
+		 *   los tickets de remito escondían el "Ticket 2.0" y no quedaba forma de imprimir el ticket
+		 *   fiscal desde el menú: el Ticket 2.0 sin diseño de factura sale con el bloque de ARCA de
+		 *   siempre.
+		 *
+		 * @returns {boolean}
+		 */
+		mostrar_ticket_2() {
+			if (!this.hay_opciones_de_ticket) {
+				return true
+			}
+			return this.afip_tickets_with_cae.length > 0 && this.opciones_de_ticket_factura.length === 0
+		},
+		/**
 		 * Opciones de impresión A4 fiscal (ticket x perfil AFIP).
 		 */
 		afip_a4_print_options() {
@@ -469,6 +488,22 @@ export default {
 		selected_profile_id_for_edit() {
 			this.load_rows_from_selected_profile()
 		},
+		/**
+		 * El MISMO perfil cambió en el store (otro objeto con el mismo id): lo guardó el diseñador
+		 * que se abre con "Diseñar PDF" desde el modal de columnas (misión diseno-ticket-comandera),
+		 * o este mismo modal. Se refresca lo que es del diseñador (la hoja y las columnas): si no, un
+		 * "Guardar perfil" posterior mandaba la hoja vieja y pisaba lo que se acababa de diseñar. Lo
+		 * que el usuario está tocando en el modal (nombre, tildes) se respeta.
+		 *
+		 * @param {Object|undefined} nuevo
+		 * @param {Object|undefined} viejo
+		 */
+		selected_profile_for_edit(nuevo, viejo) {
+			if (!nuevo || !viejo || nuevo === viejo || nuevo.id != viejo.id) {
+				return
+			}
+			this.refrescar_lo_del_disenador(nuevo)
+		},
 	},
 	methods: {
 		/**
@@ -553,7 +588,26 @@ export default {
 		/**
 		 * Mezcla catálogo completo + pivots del perfil para editar visible/width.
 		 */
-		load_rows_from_selected_profile() {
+		/**
+		 * Lo que el diseñador de PDF guarda en un perfil y este modal también manda (la hoja y las
+		 * columnas), releído del perfil del store. Ver el watcher de selected_profile_for_edit.
+		 *
+		 * @param {Object} profile
+		 */
+		refrescar_lo_del_disenador(profile) {
+			this.load_rows_from_selected_profile(true)
+			this.paper_width_mm = Number(profile.paper_width_mm || 297)
+			this.printable_width_mm = Number(profile.printable_width_mm || 277)
+			this.margin_mm = (profile.margin_mm == null || profile.margin_mm === '') ? 5 : Number(profile.margin_mm)
+			this.sheet_type_id = profile.sheet_type_id || (profile.sheet_type ? profile.sheet_type.id : null)
+		},
+		/**
+		 * Mezcla catálogo completo + pivots del perfil para editar visible/width.
+		 *
+		 * @param {boolean} [solo_filas] true = solo rearma las filas de columnas, sin tocar el resto
+		 *        de los campos del modal (lo usa refrescar_lo_del_disenador()).
+		 */
+		load_rows_from_selected_profile(solo_filas) {
 			/**
 			 * Perfil editado actualmente.
 			 */
@@ -607,6 +661,9 @@ export default {
 			})
 			rows = rows.sort((a, b) => Number(a.order) - Number(b.order))
 			this.pdf_config_rows = rows
+			if (solo_filas) {
+				return
+			}
 			if (profile) {
 				this.paper_width_mm = Number(profile.paper_width_mm || 297)
 				this.printable_width_mm = Number(profile.printable_width_mm || 277)
@@ -705,7 +762,15 @@ export default {
 				this.$toast.error('Seleccione un perfil')
 				return
 			}
-			if (this.remaining_width_mm < 0) {
+			/*
+				Misión diseno-ticket-comandera: en un perfil de VENTA la tabla se arma en el diseñador
+				("Diseñar PDF" del modal), no en este modal. El PUT no manda las columnas (la API las
+				acepta como opcionales y conserva las guardadas) ni se chequea su suma acá: si no, las
+				opciones del catálogo que el perfil no tiene entraban como visibles sin que nadie las
+				viera, y unas filas viejas podían pisar lo que se acababa de diseñar.
+			*/
+			const es_de_venta = this.selected_profile_for_edit.model_name === 'sale'
+			if (!es_de_venta && this.remaining_width_mm < 0) {
 				this.$toast.error('El ancho usado supera el ancho disponible')
 				return
 			}
@@ -747,7 +812,8 @@ export default {
 				 */
 				footer_text: this.footer_text || null,
 				use_current_date: this.normalize_boolean(this.use_current_date),
-				pdf_column_options,
+				// En un perfil de venta las columnas son del diseñador (ver arriba): no viajan.
+				...(es_de_venta ? {} : { pdf_column_options: pdf_column_options }),
 			})
 				const store_models = this.$store.state.pdf_column_profile.models
 				const index = store_models.findIndex(profile => profile.id == res.data.model.id)
