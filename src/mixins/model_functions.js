@@ -3,6 +3,7 @@ import dates from '@/common-vue/mixins/dates'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import db from '@/offline/db'
 import { normalizar_telefono } from '@/utils/whatsapp_phone'
+import { es_perfil_de_ticket } from '@/constants/vender_print_shortcut_options'
 export default {
     mixins: [select_payment_methods],
     computed: {
@@ -892,6 +893,25 @@ export default {
          */
         cheque_es_emitido(prop, model) {
             return !!model && model.tipo === 'emitido'
+        },
+        /**
+         * `v_if_function` del formulario de Diseño de PDF (misión diseno-ticket-comandera, 9/10/2026):
+         * esconde los campos que un ticket de comandera no tiene ("Predeterminado WhatsApp (remito)",
+         * "Predeterminado WhatsApp (factura ARCA)", "Predeterminado Tienda (ecommerce)" y "Mostrar
+         * pie de página en cada hoja") cuando el tipo de hoja elegido es un rollo (`sheet_type.height`
+         * null, D2 del plan). El selector "Hoja o comandera" deja el objeto en `model.sheet_type` al
+         * elegir, así que se esconden en el momento, sin guardar. La API igual los fuerza en false en
+         * un ticket (D4).
+         *
+         * Va en un mixin GLOBAL a propósito: showProperty() también se evalúa en la tabla del ABM
+         * (Tr.vue), y un v_if_function que no existe ahí rompe el render de la fila.
+         *
+         * @param {object} prop
+         * @param {object} model El diseño de PDF.
+         * @returns {boolean}
+         */
+        pdf_column_profile_campo_de_hoja(prop, model) {
+            return !es_perfil_de_ticket(model)
         },
         /**
          * `v_if_function` de "Envío elegido": solo tiene sentido en un pedido con envío a

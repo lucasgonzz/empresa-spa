@@ -148,6 +148,8 @@ export default {
 			 */
 			text: 'Mostrar pie de página en cada hoja',
 			key: 'show_totals_on_each_page',
+			// Misión diseno-ticket-comandera: se esconde con un ticket de comandera elegido.
+			v_if_function: 'pdf_column_profile_campo_de_hoja',
 			type: 'checkbox',
 			value: 0,
 			show_when_model_name: ['sale', 'budget', 'order'],
@@ -265,6 +267,8 @@ export default {
 			 */
 			text: 'Predeterminado WhatsApp (remito)',
 			key: 'is_default_whatsapp',
+			// Misión diseno-ticket-comandera: se esconde con un ticket de comandera elegido.
+			v_if_function: 'pdf_column_profile_campo_de_hoja',
 			type: 'checkbox',
 			value: 0,
 			show_when_model_name: 'sale',
@@ -275,6 +279,8 @@ export default {
 			 */
 			text: 'Predeterminado WhatsApp (factura ARCA)',
 			key: 'is_default_whatsapp_afip',
+			// Misión diseno-ticket-comandera: se esconde con un ticket de comandera elegido.
+			v_if_function: 'pdf_column_profile_campo_de_hoja',
 			type: 'checkbox',
 			value: 0,
 			show_when_model_name: 'sale',
@@ -285,6 +291,8 @@ export default {
 			 */
 			text: 'Predeterminado Tienda (ecommerce)',
 			key: 'is_default_tienda',
+			// Misión diseno-ticket-comandera: se esconde con un ticket de comandera elegido.
+			v_if_function: 'pdf_column_profile_campo_de_hoja',
 			type: 'checkbox',
 			value: 0,
 			show_when_model_name: 'sale',
