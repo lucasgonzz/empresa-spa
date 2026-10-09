@@ -26,6 +26,45 @@ export default {
 			type: 'text',
 		},
 		{
+			/**
+			 * Misión diseno-ticket-comandera (9/10/2026): con modelo Venta, si el diseño es una HOJA
+			 * (PDF) o un TICKET de comandera (sale directo a la impresora por ESC/POS, sin PDF). Lo
+			 * que hace ticket a un diseño es su tipo de hoja: un rollo sin alto (D2). Lo dibuja el
+			 * componente common-vue/components/pdf/selector-de-hoja/ (ModelForm.vue lo monta por
+			 * esta key), que escribe `sheet_type_id` (abajo) y `sheet_type` en el modelo.
+			 */
+			text: 'Hoja o comandera',
+			key: 'selector_de_hoja',
+			type: 'display',
+			not_show: true,
+			not_show_on_table: true,
+			not_show_on_form: false,
+			show_when_model_name: 'sale',
+			descriptions: [
+				'Comandera: el diseño es un ticket que sale directo a la impresora del puesto (por el agente de impresión o por QZ Tray), sin pasar por un PDF. Se imprime desde Imprimir → Tickets de la venta o con el atajo de Vender.',
+				'Hoja: el diseño se imprime como PDF (A4, Carta, Oficio o A5, que se elige en el diseñador).',
+				'Con "+ Agregar un ancho de comandera…" sumás el ancho de tu rollo (de 40 a 120 mm): queda guardado para el negocio y aparece en todos los diseños.',
+			],
+		},
+		{
+			/**
+			 * Tipo de hoja del diseño (`sheet_types`): A4, un rollo de comandera (Ticket 55 mm,
+			 * Ticket 80 mm o un ancho del negocio) o null (= hoja, D2). No tiene input propio: lo
+			 * escribe el selector "Hoja o comandera". Se declara para que exista en un diseño NUEVO
+			 * y viaje en el payload (getModelToSend() manda el modelo entero): hasta la misión
+			 * diseno-ticket-comandera el formulario nunca lo mandaba, y un diseño de venta creado
+			 * desde el ABM quedaba sin tipo de hoja y no aparecía en el menú Imprimir (D12).
+			 * `type: 'text'` y no 'number' a propósito: así no aparece como filtro numérico en el
+			 * buscador del ABM (un id no le dice nada a nadie).
+			 */
+			text: 'Tipo de hoja',
+			key: 'sheet_type_id',
+			type: 'text',
+			value: null,
+			not_show: true,
+			not_show_on_form: true,
+		},
+		{
 			text: 'Es factura de ARCA',
 			key: 'is_afip_ticket',
 			type: 'checkbox',
@@ -210,6 +249,15 @@ export default {
 			key: 'is_default',
 			type: 'checkbox',
 			value: 0,
+			/*
+				Misión diseno-ticket-comandera (D5): el "por defecto" se separa por clase. Entre las
+				hojas, uno por modelo (como siempre); entre los tickets de comandera, uno de remito y
+				uno de factura de ARCA, que son los que imprime el atajo "Ticket 2.0".
+			*/
+			descriptions: [
+				'En un diseño de hoja (PDF): es el que se usa cuando no se elige otro. Hay uno solo por modelo.',
+				'En un ticket de comandera: es el que imprime el atajo "Ticket 2.0, el ticket por defecto". Hay uno para los remitos y otro para las facturas de ARCA.',
+			],
 		},
 		{
 			/**
@@ -293,7 +341,13 @@ export default {
 			show_when_model_name: [],
 		},
 		{
-			text: 'Columnas del PDF',
+			/*
+				Misión diseno-ticket-comandera (D13): "Columnas del PDF" -> "Diseño del PDF". En venta,
+				presupuesto y pedido online acá va la tarjeta en miniatura del diseño, que abre el
+				diseñador (y la tabla se arma adentro del diseñador); en artículo sigue el editor de
+				columnas de siempre.
+			*/
+			text: 'Diseño del PDF',
 			key: 'pdf_column_profile_editor',
 			type: 'display',
 			full_cols: true,
@@ -394,10 +448,10 @@ export default {
 		},
 	],
 	abm_descripcion: {
-		para_que_sirve: 'Define perfiles de diseño para los PDFs del sistema: comprobantes de venta (remito y factura de ARCA), presupuestos, pedidos online y listados de artículos.',
-		implicancias: 'Cada perfil controla qué columnas tiene la tabla, en qué orden y con qué ancho. En los comprobantes de venta, los presupuestos y los pedidos online, el botón Diseñar PDF arma la hoja entera: el encabezado con el logo y los datos del negocio, cajas arriba de la tabla con los datos que quieras (del cliente, de la venta, de la cuenta corriente: saldo anterior, compra actual y saldo), y el pie con totales, subtotal, descuentos, comisiones o un texto propio; además la hoja (A4, Carta, Oficio o A5) y el margen. Los diseños que nunca se abrieron en el diseñador siguen imprimiendo como siempre. En una factura de ARCA, los datos del cliente que pide ARCA y el cuadro de importes con el QR y el CAE se pueden mover pero no sacar. El perfil elegido al imprimir determina cómo sale el documento. Cada dueño ya tiene armados los diseños "Presupuesto", "Presupuesto sin precios", "Presupuesto con imágenes" y "Pedido online": podés modificarlos o duplicarlos.',
-		como_se_utiliza: 'Creá el perfil eligiendo el modelo (venta, presupuesto, pedido online o artículo), elegí las columnas en Columnas del PDF y tocá Diseñar PDF: arrastrá cajas a la zona de arriba de la tabla o al pie, y adentro los campos de la bandeja (organizados por cliente, venta, cuenta corriente, totales y otros); tirá del borde de una caja para cambiarle el ancho, y tocá una caja o un campo para ponerle título, estilo, tamaño de letra, negrita, cursiva o alineación. Con Ver un PDF de prueba ves cómo sale con tu último comprobante, y Volver al diseño de siempre deshace el diseño con cajas. Seleccioná el perfil al imprimir: en un presupuesto o en un pedido online, el botón Imprimir lista los diseños disponibles y el marcado como por defecto va primero. Podés duplicar un perfil existente con el botón de duplicar para hacer variantes rápido. En las plantillas de artículo, el botón Diseñar encabezado permite ubicar el logo, el nombre y los datos del negocio y elegir si salen en todas las hojas o solo en la primera.',
-		palabras_clave: ['comprobante', 'columnas', 'diseño', 'impresion', 'remito', 'factura', 'presupuesto', 'pedido online', 'pedido', 'pdf', 'sin precios', 'con imagenes', 'diseñar pdf', 'cajas', 'arrastrar', 'pie de pagina', 'encabezado', 'hoja', 'margen', 'a4', 'a5', 'carta', 'oficio', 'cuenta corriente', 'saldo anterior'],
+		para_que_sirve: 'Define cómo salen los comprobantes impresos del sistema: los PDF de las ventas (remito y factura de ARCA), de los presupuestos, de los pedidos online y de los listados de artículos, y los tickets de comandera de las ventas, que salen directo a la impresora térmica sin pasar por un PDF.',
+		implicancias: 'Cada diseño decide qué datos salen, dónde y con qué tabla de artículos. En las ventas, el campo Hoja o comandera define la clase: una hoja (A4, Carta, Oficio o A5) se imprime como PDF, y una comandera (Ticket 55 mm, Ticket 80 mm o un ancho propio de 40 a 120 mm que se agrega una vez y queda para todos los diseños) es un ticket que sale directo a la impresora del puesto por el agente de impresión o por QZ Tray. Cada negocio ya tiene un "Ticket remito" y un "Ticket factura", que imprimen igual que el Ticket 2.0 de siempre hasta que alguien los rediseñe; los diseños de ticket aparecen en Imprimir → Tickets de cada venta, y los marcados como por defecto son los que imprime el atajo "Ticket 2.0, el ticket por defecto" (el de factura si la venta tiene CAE, el de remito si no). En los comprobantes de venta, los presupuestos y los pedidos online el diseñador arma la hoja o el ticket entero: cajas arriba y abajo de la tabla con los datos que quieras (del negocio, del cliente, de la venta, de la cuenta corriente: saldo anterior, compra actual y saldo), y la tabla de artículos misma (qué columnas, en qué orden y con qué ancho, en una grilla de 24 medias columnas). Al abrir un diseño se ve una tarjeta en miniatura con cómo va a salir. Los diseños que nunca se abrieron en el diseñador siguen imprimiendo como siempre. En una factura de ARCA, los datos del emisor y del cliente que pide ARCA y el cuadro de importes con el QR y el CAE se pueden mover pero no sacar. Un ticket de comandera nunca se manda como PDF por WhatsApp ni por la tienda. Cada dueño ya tiene armados los diseños "Presupuesto", "Presupuesto sin precios", "Presupuesto con imágenes" y "Pedido online": podés modificarlos o duplicarlos.',
+		como_se_utiliza: 'Creá el diseño eligiendo el modelo (venta, presupuesto, pedido online o artículo). En una venta elegí en Hoja o comandera si es una hoja o un ticket; si tu rollo no es de 55 ni de 80 mm, usá "+ Agregar un ancho de comandera…". Tocá la tarjeta en miniatura de Diseño del PDF (o el botón Diseñar PDF) para abrir el diseñador: arrastrá cajas a la zona de arriba de la tabla o al pie, y adentro los campos de la bandeja (organizados por negocio, cliente, venta, cuenta corriente, totales y otros); tirá del borde de una caja para cambiarle el ancho, y tocá una caja o un campo para ponerle título, estilo, tamaño de letra, negrita, cursiva (en hoja: las comanderas no la tienen) o alineación. La tabla de artículos también se arma ahí: arrastrá las columnas para ordenarlas, tirá de sus bordes para el ancho, y sumá o sacá columnas desde la bandeja. Con Ver un PDF de prueba (en un ticket, Ver cómo sale) ves el resultado con tu último comprobante, y Volver al diseño de siempre deshace el diseño con cajas. Para imprimir, elegí el diseño en el menú Imprimir de la venta: los tickets en Tickets, las hojas en Remitos A4 y Facturas A4; en un presupuesto o en un pedido online el botón Imprimir lista los diseños disponibles y el marcado como por defecto va primero. Podés duplicar un diseño existente con el botón de duplicar para hacer variantes rápido. En las plantillas de artículo, el botón Diseñar encabezado permite ubicar el logo, el nombre y los datos del negocio y elegir si salen en todas las hojas o solo en la primera.',
+		palabras_clave: ['comprobante', 'columnas', 'diseño', 'impresion', 'remito', 'factura', 'presupuesto', 'pedido online', 'pedido', 'pdf', 'sin precios', 'con imagenes', 'diseñar pdf', 'cajas', 'arrastrar', 'pie de pagina', 'encabezado', 'hoja', 'margen', 'a4', 'a5', 'carta', 'oficio', 'cuenta corriente', 'saldo anterior', 'ticket', 'comandera', 'impresora termica', 'ticket 2.0', 'ticket remito', 'ticket factura', '80 mm', '58 mm', '55 mm', 'ancho del rollo', 'tabla de articulos', 'miniatura'],
 	},
 	/**
 	 * Sin esto, model/Index.vue le pasa al formulario una COPIA no reactiva del modelo
