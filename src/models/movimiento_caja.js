@@ -35,8 +35,8 @@ export default {
 			// Bloqueo mutuo con Egreso (ver `deshabilitado_si_hay` en ModelForm.vue::isDisabled): si
 			// ya hay un Egreso cargado, este campo se deshabilita, para que el monto no pueda terminar
 			// cargado en los dos a la vez. No apaga un campo que ya tiene valor, asi que una fila vieja
-			// guardada con los dos importes se puede desempatar; el 0 cuenta como vacio y un negativo
-			// como cargado, la misma regla que aplica la API (MovimientoCajaController).
+			// guardada con los dos importes se puede desempatar; el 0 cuenta como vacio (no traba el
+			// otro campo) y un negativo como cargado.
 			deshabilitado_si_hay: 'egreso',
 			descriptions: [
 				'Plata que ENTRA a la caja. Cargá el monto acá o en Egreso, nunca en los dos.',
