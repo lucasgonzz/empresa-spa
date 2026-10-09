@@ -38,9 +38,9 @@ export default {
 		 * Tampoco se toca `state.client.model` (ni se llama a `setModel`): eso recalcula la
 		 * copia del modal y borra lo que la persona tipeo en la ficha sin guardar, y el caso
 		 * tipico es justo ese: escribe el correo y aprieta "Crear usuario" sin guardar antes.
-		 * Lo que si se actualiza es la fila del cliente en la lista (`client/add` la
-		 * reemplaza con splice, sin mutar el objeto que el modal ya copio), asi al cerrar y
-		 * volver a abrir la ficha el boton no reaparece.
+		 * Lo que si se actualiza es la fila del cliente en las listas (ver
+		 * `actualizarFilaDelCliente`), reemplazandola por un objeto nuevo sin mutar el que el
+		 * modal ya copio, asi al cerrar y volver a abrir la ficha el boton no reaparece.
 		 */
 		createBuyer() {
 			if (this.loading) {
@@ -73,22 +73,33 @@ export default {
 			}
 		},
 		/**
-		 * Le carga el comprador a la fila del cliente en la lista (`models` o, si no esta
-		 * ahi, `filtered`) para que reabrir la ficha sin recargar la app no traiga el boton
-		 * de vuelta. Si el cliente no esta en ninguna de las dos listas no hay nada que
-		 * actualizar y alcanza con `buyer_creado_para`.
+		 * Le carga el comprador a la fila del cliente en cada lista donde este (`models` y/o
+		 * `filtered`), para que reabrir la ficha sin recargar la app no traiga el boton de
+		 * vuelta. Si el cliente no esta en ninguna no hay nada que actualizar y alcanza con
+		 * `buyer_creado_para`.
+		 *
+		 * Cada lista se reemplaza POR SEPARADO y sin insertar nada, a proposito, y no con
+		 * `client/add`:
+		 * - `add` mete la fila en `models` si ahi no esta. En el telefono (`client` tiene
+		 *   `not_download_on_mobile`) `models` esta vacio y la lista vive en `filtered`: un
+		 *   `unshift` dejaria `models` con un solo cliente, el buscador (Modal.vue,
+		 *   `searchFromApi`) dejaria de ir a la API porque `models.length` ya no es 0, y el
+		 *   buscador de clientes (por ejemplo en Vender) solo encontraria a ese cliente hasta
+		 *   recargar.
+		 * - Con la ficha abierta desde una busqueda, `filtered` tiene la fila fresca y `models`
+		 *   una vieja; escribir la de `models` sobre las dos pisaria la fresca con datos viejos.
+		 * Cada lista conserva su propia version de la fila; solo se le suma `buyer`.
 		 */
 		actualizarFilaDelCliente(client_id, buyer) {
 			let state = this.$store.state.client
-			let fila = state.models.find(item => item.id == client_id)
-			if (!fila) {
-				fila = state.filtered.find(item => item.id == client_id)
+			let con_buyer = item => {
+				return item.id == client_id ? { ...item, buyer: buyer } : item
 			}
-			if (fila) {
-				this.$store.commit('client/add', {
-					...fila,
-					buyer: buyer,
-				})
+			if (state.models.some(item => item.id == client_id)) {
+				this.$store.commit('client/setModels', state.models.map(con_buyer))
+			}
+			if (state.filtered.some(item => item.id == client_id)) {
+				this.$store.commit('client/setFiltered', state.filtered.map(con_buyer))
 			}
 		},
 		check() {
