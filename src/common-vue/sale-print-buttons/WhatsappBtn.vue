@@ -19,6 +19,8 @@
 
 <script>
 
+import { is_vender_print_profile_a4 } from '@/constants/vender_print_shortcut_options'
+
 export default {
 
 	props: {
@@ -423,7 +425,14 @@ export default {
 
 			const models = this.$store.state.pdf_column_profile.models || []
 
-			return models.filter(profile => profile.model_name == this.model_name)
+			/*
+				Solo diseños de HOJA (misión diseno-ticket-comandera, D4/D5): por WhatsApp se manda un
+				PDF, y un ticket de comandera nunca se dibuja como PDF. Sin este filtro, el respaldo
+				"el por defecto" de get_whatsapp_remito_pdf_profile_id() y del fiscal podía elegir el
+				ticket por defecto (el "por defecto" es por clase: hay uno de hoja y uno de ticket), y
+				la API caía al de hoja sin decir nada.
+			*/
+			return models.filter(profile => profile.model_name == this.model_name && is_vender_print_profile_a4(profile))
 
 		},
 

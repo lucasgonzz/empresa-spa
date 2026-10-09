@@ -6,6 +6,12 @@
 		arrastrable con las cajas, los saltos de fila y los bloques fijos de ARCA (grupo pdf-cajas,
 		compartido con la otra zona y con la "Caja nueva" de la bandeja). Cada ítem ocupa sus N/12 con
 		el mismo gutter que Vender (lista con margin 0 -8px, ítem con padding 0 8px y margin-bottom 10px).
+
+		En un ticket de comandera (misión diseno-ticket-comandera, plan §7.3) la grilla es la del
+		papel: sin gutter, cada caja mide sus caracteres (floor(cols × N / 12), con el de separación
+		si no es la última de su fila) y la última de cada fila lleva el resto del renglón como margen,
+		así lo que sigue empieza abajo exactamente donde lo hace la comandera (vista_de_ticket.js,
+		disposicion_de_zona).
 	-->
 	<section
 	class="dpdf-zona"
@@ -64,12 +70,13 @@
 			:data-testid="'zona-' + zona + '-disenador-pdf'"
 			@start="disenador.al_empezar_arrastre($event)"
 			@end="disenador.al_terminar_arrastre($event)">
-				<template v-for="item in lista">
+				<template v-for="(item, indice) in lista">
 					<caja-del-disenador
 					v-if="item.tipo === TIPO_CAJA"
 					:key="identidad(item)"
 					:caja="item"
 					:zona="zona"
+					:en_el_rollo="en_el_rollo(indice)"
 					@redimension="redimensionando = $event"></caja-del-disenador>
 
 					<bloque-fijo
@@ -119,7 +126,7 @@
 				<i class="bi bi-box-arrow-in-down"></i>
 				<span>
 					Arrastrá una caja acá
-					<small class="dpdf-zona__vacia-nota">Mientras esté vacía, no ocupa lugar en el PDF.</small>
+					<small class="dpdf-zona__vacia-nota">Mientras esté vacía, no ocupa lugar en {{ disenador.es_ticket ? 'el ticket' : 'el PDF' }}.</small>
 				</span>
 			</div>
 		</div>
@@ -140,6 +147,7 @@ import draggable from 'vuedraggable'
 import CajaDelDisenador from './CajaDelDisenador'
 import BloqueFijo from './BloqueFijo'
 import { TIPO_CAJA, TIPO_FIJO, identidad } from './estado_del_disenador'
+import { disposicion_de_zona } from './vista_de_ticket'
 
 /*
 	Grupo común de las listas de las zonas: las dos zonas comparten el nombre, así una caja o un
@@ -241,10 +249,32 @@ export default {
 				'dpdf-zona--redimensionando': this.redimensionando,
 				'dpdf-zona--vacia': !this.lista.length,
 				'dpdf-zona--recibe': this.recibe,
+				'dpdf-zona--ticket': this.disenador.es_ticket,
 			}
+		},
+		/**
+		 * En un ticket, dónde va cada ítem en el rollo (en el orden de la lista): ancho, contenido,
+		 * separación y relleno en caracteres (vista_de_ticket.js). En una hoja, null.
+		 *
+		 * @returns {Array|null}
+		 */
+		disposicion() {
+			if (!this.disenador.es_ticket) {
+				return null
+			}
+			return disposicion_de_zona(this.lista, this.disenador.caracteres_del_rollo)
 		},
 	},
 	methods: {
+		/**
+		 * La disposición en el rollo del ítem de esa posición (null en una hoja).
+		 *
+		 * @param {number} indice
+		 * @returns {Object|null}
+		 */
+		en_el_rollo(indice) {
+			return this.disposicion ? (this.disposicion[indice] || null) : null
+		},
 		/**
 		 * Identidad de un ítem (key del v-for).
 		 *
@@ -482,4 +512,29 @@ export default {
 
 	&.dpdf-salto--destacado .dpdf-salto__tarjeta
 		animation: dpdf-destello 1.4s ease
+
+// ── Ticket de comandera ────────────────────────────────────────────────────────────────────────
+// La grilla es la del papel: sin gutter (la lista no se sale de los costados y los ítems no tienen
+// relleno; el ancho, la separación y el relleno de cada caja los pone ella, en px de caracteres) y
+// las guías llenan el renglón.
+.dpdf-zona--ticket
+	margin: 8px 0 10px
+
+	.dpdf-zona__guias
+		left: 0
+		right: 0
+		bottom: 6px
+
+	.dpdf-zona__guia
+		padding: 0 1px
+
+		&::before
+			border-radius: 3px
+
+	.dpdf-zona__lista
+		margin: 0
+
+		> *
+			padding: 0
+			margin-bottom: 6px
 </style>

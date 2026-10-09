@@ -27,6 +27,28 @@ const ESTILOS = {
 	},
 }
 
+/*
+	Estilos de caja en un ticket de comandera (misión diseno-ticket-comandera, decisión D7): la
+	comandera no dibuja recuadros ni fondos. "Con línea" (`borde`) imprime una línea de guiones abajo
+	de la caja; "Sin línea" (`ninguno`), nada. `gris` no se ofrece: si llega (un diseño de hoja que se
+	pasó a ticket), el motor lo imprime como `borde` y acá se muestra como "Con línea".
+*/
+const ESTILOS_EN_TICKET = {
+	borde: {
+		nombre: 'Con línea',
+		icono: 'bi-hr',
+		descripcion: 'Una línea de guiones abajo de la caja, del ancho de la caja.',
+	},
+	ninguno: {
+		nombre: 'Sin línea',
+		icono: 'bi-dash-square-dotted',
+		descripcion: 'Sin línea: solo los renglones.',
+	},
+}
+
+/* Los estilos que se ofrecen en un ticket, en este orden */
+const KEYS_EN_TICKET = ['borde', 'ninguno']
+
 /* Alineaciones de un renglón */
 const ALINEACIONES = {
 	izquierda: {
@@ -71,6 +93,65 @@ export function icono_del_estilo(estilo) {
  */
 export function descripcion_del_estilo(estilo) {
 	return ESTILOS[estilo] ? ESTILOS[estilo].descripcion : ''
+}
+
+/**
+ * Los estilos de caja que se ofrecen en un ticket: "Con línea" y "Sin línea", si el catálogo los
+ * tiene (`limites.estilos_de_caja`). Si el catálogo no trae ninguno de los dos, los suyos.
+ *
+ * @param {Array<string>} estilos_del_catalogo
+ * @returns {Array<string>}
+ */
+export function estilos_en_ticket(estilos_del_catalogo) {
+	let catalogo = Array.isArray(estilos_del_catalogo) ? estilos_del_catalogo : []
+	let ofrecidos = KEYS_EN_TICKET.filter(function (estilo) {
+		return catalogo.indexOf(estilo) !== -1
+	})
+	return ofrecidos.length ? ofrecidos : catalogo.slice()
+}
+
+/**
+ * El estilo con que se MUESTRA una caja en un ticket: `gris` es "Con línea" (`borde`), como lo
+ * imprime el motor. El estilo guardado no se toca hasta que se elige otro.
+ *
+ * @param {string} estilo
+ * @returns {string}
+ */
+export function estilo_en_ticket(estilo) {
+	return estilo === 'gris' ? 'borde' : estilo
+}
+
+/**
+ * Nombre de un estilo de caja en un ticket ("Con línea" / "Sin línea").
+ *
+ * @param {string} estilo
+ * @returns {string}
+ */
+export function nombre_del_estilo_en_ticket(estilo) {
+	let clave = estilo_en_ticket(estilo)
+	return ESTILOS_EN_TICKET[clave] ? ESTILOS_EN_TICKET[clave].nombre : nombre_del_estilo(estilo)
+}
+
+/**
+ * Ícono de un estilo de caja en un ticket.
+ *
+ * @param {string} estilo
+ * @returns {string}
+ */
+export function icono_del_estilo_en_ticket(estilo) {
+	let clave = estilo_en_ticket(estilo)
+	return ESTILOS_EN_TICKET[clave] ? ESTILOS_EN_TICKET[clave].icono : icono_del_estilo(estilo)
+}
+
+/**
+ * Explicación de un estilo de caja en un ticket.
+ *
+ * @param {string} estilo
+ * @returns {string}
+ */
+export function descripcion_del_estilo_en_ticket(estilo) {
+	let clave = estilo_en_ticket(estilo)
+	return ESTILOS_EN_TICKET[clave] ? ESTILOS_EN_TICKET[clave].descripcion : descripcion_del_estilo(estilo)
 }
 
 /**
