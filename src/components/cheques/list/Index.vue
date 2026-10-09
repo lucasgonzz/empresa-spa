@@ -4,6 +4,7 @@
 		<pagar-cheque></pagar-cheque>
 		<endozar-cheque></endozar-cheque>
 		<rechazar-cheque></rechazar-cheque>
+		<rechazado-por-proveedor></rechazado-por-proveedor>
 
 		<table-component
 	    :loading="loading"
@@ -44,6 +45,7 @@ export default {
 		PagarCheque: () => import('@/components/cheques/list/modals/PagarCheque'),
 		EndozarCheque: () => import('@/components/cheques/list/modals/EndozarCheque'),
 		RechazarCheque: () => import('@/components/cheques/list/modals/RechazarCheque'),
+		RechazadoPorProveedor: () => import('@/components/cheques/list/modals/RechazadoPorProveedor'),
 	},
 	computed: {
 		loading() {

@@ -34,6 +34,7 @@
 			</b-button>
 			<b-button
 			v-if="puede_cobrar_por_proveedor"
+			@click.stop="rechazar_por_proveedor"
 			class="m-l-10"
 			variant="danger">
 				Rechazado por proveedor
@@ -70,10 +71,14 @@ export default {
 		},
 
 
+		/**
+		 * Emitido: "Pagar cheque" y "Rechazado por proveedor". La ruta de la solapa es `vencidos`
+		 * (ver components/cheques/solapas.js): con `vencido` los dos botones no aparecían en Vencidos.
+		 */
 		puede_cobrar_por_proveedor() {
 			return this.sub_sub_view == 'disponibles-para-cobrar'
 					|| this.sub_sub_view == 'pronto-a-vencerse'
-					|| this.sub_sub_view == 'vencido'
+					|| this.sub_sub_view == 'vencidos'
 		},
 	},
 	methods: {
@@ -120,6 +125,18 @@ export default {
 			})
 
 			this.$bvModal.show('rechazar-cheque')
+		},
+		/**
+		 * Abre el modal que marca el emitido como rechazado por el proveedor (y le carga la nota de
+		 * débito): components/cheques/list/modals/RechazadoPorProveedor.vue.
+		 */
+		rechazar_por_proveedor() {
+			this.$store.commit('cheque/setModel', {
+				model: this.cheque,
+				properties: []
+			})
+
+			this.$bvModal.show('rechazado-por-proveedor')
 		},
  	}
 }
