@@ -77,8 +77,31 @@ export default {
 				return 'Movimientos de '+this.caja.name
 			}
 		},
+		/*
+			"Guardar" se muestra en un alta y también al editar un movimiento: un movimiento manual
+			del turno abierto se puede CORREGIR, no solo eliminar (decisión de Lucas, misión
+			movimientos-caja-manuales, 9/10/2026). Antes era solo `id === null`, así que al abrir un
+			movimiento existente quedaban "×" y "Eliminar" nada más.
+
+			Se oculta únicamente si la API dice explícitamente `editable === false` (una venta, un
+			gasto, un pago, una transferencia, una compensación). En la práctica esa fila ni llega a
+			abrirse porque `clicked()` la frena antes, pero así el botón no depende de eso.
+
+			Con una API vieja, que no manda `editable`, el campo llega `undefined` y "Guardar"
+			aparece: el `PUT movimiento-caja/{id}` existe desde siempre, y las filas de venta, gasto
+			y pago las siguen frenando las guardas de `clicked()`.
+
+			El estado inicial del store es `{}` (sin id): ahí no hay ningún formulario abierto y se
+			devuelve false, igual que antes.
+		*/
 		show_btn_save() {
-			return this.movimiento_caja.id === null 
+			if (this.movimiento_caja.id === null) {
+				return true
+			}
+			if (!this.movimiento_caja.id) {
+				return false
+			}
+			return this.movimiento_caja.editable !== false
 		},
 		props_to_send_on_save() {
 			if (this.caja) {
@@ -97,13 +120,23 @@ export default {
 		},
 	},
 	methods: {
-		clicked(movimiento_caja) {
+		/*
+			Abre el formulario de un movimiento solo si se puede corregir o eliminar a mano.
 
-			console.log('clicked')
-			console.log('movimiento_caja:')
-			console.log(movimiento_caja)
-			console.log('caja:')
-			console.log(this.caja)
+			Quién decide es la API (misión movimientos-caja-manuales, 9/10/2026): cada fila de
+			`GET movimiento-caja/{apertura}` trae `editable` y `motivo_no_editable`, y el back
+			rechaza con 422 el `update` y el `destroy` de lo que no es manual. Acá solo se evita
+			abrir un formulario que después no va a poder guardar ni eliminar.
+
+			Orden de las guardas:
+			1. Apertura cerrada: se mantiene del lado del front porque compara contra la caja que
+			   está en pantalla, y es lo primero que tiene que leer el usuario.
+			2. API nueva (`editable` viene): si es `false`, se muestra el motivo que manda el back.
+			3. API vieja (`editable` es `undefined`): las tres guardas de siempre, por `sale_id`,
+			   `expense_id` y `current_acount_id`, con sus textos originales. Estuvieron comentadas
+			   hasta esta misión, así que la fila de una venta se abría con "Eliminar".
+		*/
+		clicked(movimiento_caja) {
 
 			if (movimiento_caja.apertura_caja_id != this.caja.current_apertura_caja_id) {
 
@@ -111,20 +144,28 @@ export default {
 				return
 			}
 
-			// if (movimiento_caja.sale_id) {
-			// 	this.$toast.error('No pueden actualizar los movimientos originados desde una VENTA')
-			// 	return
-			// } 
+			if (movimiento_caja.editable === false) {
+				this.$toast.error(movimiento_caja.motivo_no_editable || 'Este movimiento no se puede editar desde la caja.')
+				return
+			}
 
-			// if (movimiento_caja.expense_id) {
-			// 	this.$toast.error('No pueden actualizar los movimientos originados desde un GASTO')
-			// 	return
-			// } 
+			if (typeof movimiento_caja.editable == 'undefined') {
 
-			// if (movimiento_caja.current_acount_id) {
-			// 	this.$toast.error('No pueden actualizar los movimientos originados desde un PAGO de Cuenta Corriente')
-			// 	return
-			// } 
+				if (movimiento_caja.sale_id) {
+					this.$toast.error('No pueden actualizar los movimientos originados desde una VENTA')
+					return
+				}
+
+				if (movimiento_caja.expense_id) {
+					this.$toast.error('No pueden actualizar los movimientos originados desde un GASTO')
+					return
+				}
+
+				if (movimiento_caja.current_acount_id) {
+					this.$toast.error('No pueden actualizar los movimientos originados desde un PAGO de Cuenta Corriente')
+					return
+				}
+			}
 
 			this.setModel(movimiento_caja, 'movimiento_caja')
 		},
