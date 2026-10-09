@@ -63,6 +63,8 @@ export default {
 			value: null,
 			not_show: true,
 			not_show_on_form: true,
+			// Un id no se busca con el buscador del ABM (buscador-general lo excluye con este flag).
+			not_use_in_global_search: true,
 		},
 		{
 			text: 'Es factura de ARCA',

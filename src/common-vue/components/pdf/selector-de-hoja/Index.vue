@@ -67,9 +67,11 @@ import { ordenar_tipos_de_hoja } from '@/store/sheet_type'
 import {
 	CAMPOS_APAGADOS_EN_TICKET,
 	HOJA_POR_DEFECTO,
-	ancho_util_del_modelo,
+	ancho_util_de_la_clase,
 	foto_de_la_clase,
 	columnas_reescaladas,
+	son_las_sugeridas_sin_tocar,
+	medias_sugeridas_de_la_clase_nueva,
 	caracteres_por_renglon,
 } from './clase_de_hoja'
 
@@ -401,17 +403,28 @@ export default {
 		elegir_tipo(tipo) {
 			const era_ticket = this.es_ticket
 			const sera_ticket = es_tipo_de_hoja_ticket(tipo)
-			let util_de_partida = ancho_util_del_modelo(this.model)
+			/*
+				El ancho útil en que están medidas HOY las columnas, antes de tocar nada: el rollo si
+				es un ticket, la hoja de siempre (200 mm) si es una hoja sin cajas, o la hoja guardada
+				si tiene diseño (ancho_util_de_la_clase()).
+			*/
+			let util_de_partida = ancho_util_de_la_clase(this.model, this.tipo_actual)
+			// La clase en que están medidas las columnas (cambia si se restauran las de una foto).
+			let columnas_de_ticket = era_ticket
 
 			if (era_ticket !== sera_ticket) {
 				// Se guarda la clase que se deja, por si vuelve sin guardar.
-				this.respaldo_por_clase[era_ticket ? 'ticket' : 'hoja'] = foto_de_la_clase(this.model)
+				this.respaldo_por_clase[era_ticket ? 'ticket' : 'hoja'] = foto_de_la_clase(this.model, util_de_partida)
 
 				const respaldo = this.respaldo_por_clase[sera_ticket ? 'ticket' : 'hoja']
 
 				if (respaldo) {
 					this.restaurar_foto(respaldo)
-					util_de_partida = ancho_util_del_modelo(this.model)
+					// Las columnas de la foto están medidas en el útil que tenía esa clase al salir.
+					if (respaldo.pdf_column_options) {
+						util_de_partida = respaldo.util
+						columnas_de_ticket = sera_ticket
+					}
 				} else {
 					this.poner_valores_de_la_clase(sera_ticket)
 				}
@@ -429,7 +442,11 @@ export default {
 				this.$set(this.model, 'paper_height_mm', null)
 			}
 
-			this.reescalar_columnas(util_de_partida, ancho_util_del_modelo(this.model))
+			/*
+				También dentro de la clase ticket: pasar de Ticket 80 a Ticket 55 (o a uno propio) lleva
+				las columnas al rollo nuevo conservando sus medias columnas.
+			*/
+			this.reescalar_columnas(util_de_partida, ancho_util_de_la_clase(this.model, tipo), columnas_de_ticket, sera_ticket)
 		},
 		/**
 		 * Los valores con los que entra un diseño a una clase la primera vez.
@@ -441,6 +458,13 @@ export default {
 
 			// El diseño con cajas es de la clase que se deja: el nuevo arranca "de siempre".
 			self.$set(self.model, 'page_layout', null)
+
+			/*
+				El "por defecto" es por clase (D5): una hoja por defecto que se convierte en ticket no
+				puede quitarle el lugar al ticket por defecto (ni al revés). Si se vuelve a la clase
+				original sin guardar, la foto lo restaura.
+			*/
+			self.$set(self.model, 'is_default', 0)
 
 			if (sera_ticket) {
 				CAMPOS_APAGADOS_EN_TICKET.forEach(function (campo) {
@@ -469,19 +493,37 @@ export default {
 		},
 		/**
 		 * Reparte las columnas de la tabla sobre el ancho útil nuevo conservando sus medias columnas
-		 * (D9): 80 mm de nombre en una hoja de 200 mm útiles pasan a 32 mm en un rollo de 80 mm.
+		 * (D9), con la regla del diseñador y la API (columnas_reescaladas()): 80 mm de nombre en una
+		 * hoja de 200 mm útiles (12 medias) pasan a 40 mm en un rollo de 80 mm.
+		 *
+		 * Caso puntual: un diseño NUEVO con las columnas sugeridas sin tocar (las que le puso el
+		 * editor) no conserva sus medias sino que toma las sugeridas de la clase nueva: 9/3/6/6 en un
+		 * rollo y, en una hoja, las del ancho por defecto con lo que sobra al nombre (16/2/3/3 en A4).
+		 * Ver son_las_sugeridas_sin_tocar().
 		 *
 		 * @param {number} util_anterior
 		 * @param {number} util_nuevo
+		 * @param {boolean} eran_de_ticket la clase en que están medidas hoy las columnas.
+		 * @param {boolean} sera_ticket la clase nueva.
 		 */
-		reescalar_columnas(util_anterior, util_nuevo) {
-			if (!util_anterior || !util_nuevo || util_anterior === util_nuevo) {
+		reescalar_columnas(util_anterior, util_nuevo, eran_de_ticket, sera_ticket) {
+			if (!util_anterior || !util_nuevo) {
 				return
 			}
 			if (!Array.isArray(this.model.pdf_column_options) || !this.model.pdf_column_options.length) {
 				return
 			}
-			this.$set(this.model, 'pdf_column_options', columnas_reescaladas(this.model.pdf_column_options, util_nuevo / util_anterior))
+
+			let medias_sugeridas = null
+			if (!!eran_de_ticket !== !!sera_ticket && son_las_sugeridas_sin_tocar(this.model, util_anterior, eran_de_ticket)) {
+				medias_sugeridas = medias_sugeridas_de_la_clase_nueva(this.model, util_nuevo, sera_ticket)
+			}
+
+			if (!medias_sugeridas && util_anterior === util_nuevo) {
+				return
+			}
+
+			this.$set(this.model, 'pdf_column_options', columnas_reescaladas(this.model.pdf_column_options, util_anterior, util_nuevo, medias_sugeridas))
 		},
 		/**
 		 * Si el formulario deja de ser de venta (cambiaron el Modelo), el selector se esconde: un
