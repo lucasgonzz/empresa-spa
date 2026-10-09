@@ -70,6 +70,16 @@ export default {
 		como_se_utiliza: 'Abrí Movimientos desde la fila de la caja en Tesorería y cargá un movimiento nuevo con su concepto. El monto va en Ingreso o en Egreso, nunca en los dos: Ingreso es plata que entra, Egreso plata que sale.',
 		palabras_clave: ['caja', 'ingreso', 'egreso', 'saldo', 'apertura', 'tesorería'],
 	},
+	/**
+	 * Sin esto, model/Index.vue le pasa al formulario una COPIA no reactiva del modelo
+	 * (`{...model}`, sin observer) y el `disabled_function` de Ingreso y Egreso nunca se volvia a
+	 * evaluar: con un importe en Egreso, Ingreso seguia habilitado y se podian cargar los dos,
+	 * aunque la ayuda de los campos dice "nunca en los dos". Medido el 9/10/2026 en la demo
+	 * (4.3.8). Misma clase que pdf_column_profile (18/9/2026). Con full_reactivity el form edita
+	 * el modelo del store; por eso los dos modales que abren un movimiento existente
+	 * (movimientos y resumen-caja) le pasan a setModel una copia de la fila, no la fila.
+	 */
+	full_reactivity: true,
 	singular_model_name_spanish: 'Movimiento de Caja',
 	plural_model_name_spanish: 'Movimientos de Caja',
 	create_model_name_spanish: 'Nuevo Movimiento de Caja',
