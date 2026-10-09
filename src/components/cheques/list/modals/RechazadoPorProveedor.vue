@@ -119,6 +119,8 @@ export default {
 			this.$store.commit('auth/setLoading', true)
 			// `skip_global_error_event`: el 422 trae un texto para el comerciante y lo muestra el catch,
 			// una sola vez (sin la bandera, el interceptor de main.js lo sacaba además como warning).
+			// Lo mismo que promete el aviso del modal: un cheque de un proveedor, que no salió de un gasto.
+			let iba_a_cargar_nota = !!this.cheque.provider_id && !this.cheque.expense_id
 			this.$api.put('cheque/rechazar-por-proveedor', {
 				cheque_id: this.cheque.id,
 				notas: self.motivo,
@@ -132,8 +134,17 @@ export default {
 				self.$store.dispatch('cheque/getModels')
 				if (res.data.nota_debito) {
 					self.refrescar_proveedor(res.data.nota_debito.provider_id)
+					self.$toast.success(res.data.mensaje || 'Cheque marcado como rechazado')
+				} else if (iba_a_cargar_nota) {
+					// Se esperaba una nota y no salió (pago provisorio o borrado, o el sistema no pudo
+					// saber el monto y pide cargarla a mano): el aviso tiene que quedar a la vista, no
+					// irse en 3 segundos como un éxito, porque la deuda con el proveedor no volvió.
+					self.$toast.warning(res.data.mensaje || 'Cheque marcado como rechazado', {
+						duration: 20000,
+					})
+				} else {
+					self.$toast.success(res.data.mensaje || 'Cheque marcado como rechazado')
 				}
-				self.$toast.success(res.data.mensaje || 'Cheque marcado como rechazado')
 				self.$bvModal.hide('rechazado-por-proveedor')
 			})
 			.catch(err => {
