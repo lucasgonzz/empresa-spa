@@ -162,6 +162,18 @@ export default [
 				},
 			},
 			{
+				/*
+					Misión permisos-navegacion-empleados (decisión de Lucas, 9/10/2026): "Por
+					Estados" pide `sale.index`, el mismo permiso que el listado de Ventas. Antes no
+					tenía `can` y lo veía cualquiera con la extensión: muestra las ventas con sus
+					importes, así que un empleado sin permiso para ver ventas tampoco tiene que
+					verlas desde acá.
+
+					Además, como hijo sin `can`, hacía aparecer el padre Ventas en el menú de un
+					empleado sin ningún permiso (showRoute() en common-vue/mixins/nav.js contaba al
+					hijo como permitido). Ese conteo también se corrigió: ahora un hijo cuenta solo
+					si el propio hijo se mostraría.
+				*/
 				path: '/por-estado',
 				text: 'Por Estados',
 				name: 'por-estado',
@@ -169,6 +181,7 @@ export default [
 				image_url: 'nuevos-nav-icons/por_entregar.png',
 				icon: 'ui-checks-grid',
 				if_has_extencion: 'ventas_con_estados',
+				can: 'sale.index',
 				params: {
 					view: 'ventas',
 				},
@@ -560,10 +573,25 @@ export default [
 		]
 	},
 	{
+		/*
+			Misión permisos-navegacion-empleados (decisión de Lucas, 9/10/2026): Comprobantes
+			pide un permiso propio, `comprobantes.index` ("Ver Comprobantes (notas de crédito y
+			pagos de clientes)", grupo Ventas del catálogo de permisos de empresa-api). Antes no
+			tenía `can` y cualquier empleado, aun sin ningún permiso, veía las notas de crédito y
+			los pagos de los clientes con sus importes.
+
+			🔴 El slug tiene que coincidir carácter por carácter con el que crea
+			PermisosCatalogoHelper en la API. Y para que los empleados que hoy usan Comprobantes no
+			lo pierdan de golpe con el release, el seeder suelto PermissionComprobantesIndexSeeder
+			se lo da a los que ya tienen `sale.index` o `client.index`: tiene que correr en el
+			despliegue de cada cliente. Sin ese seeder los empleados dejan de ver el módulo (el
+			dueño y el acceso maestro lo siguen viendo: `can()` les da true siempre).
+		*/
 		text: 'Comprobantes',
 		path: '/comprobantes',
 		name: 'comprobantes',
 		component: '@/views/Comprobantes',
+		can: 'comprobantes.index',
 		image_url: 'nuevos-nav-icons/comprobantes.png',
 		icon: 'file-earmark-text',
 		// image_url: 'nav-icons/comprobantes.png',
