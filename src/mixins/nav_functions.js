@@ -47,39 +47,63 @@ export default {
 		whatsapp_por_aprobar_count() {
 			return Number(this.$store.state.whatsapp_chat.resumen.mensajes_por_aprobar) || 0
 		},
+		/**
+		 * El número rojo del ítem Alertas del menú (`budget_function: 'alerts_count'` en
+		 * router/routes.js).
+		 *
+		 * Misión permisos-navegacion-empleados (decisión de Lucas, 9/10/2026): cada sumando entra
+		 * solo si la persona puede ver la solapa de Alertas donde está esa alerta, con la MISMA
+		 * regla que decide qué pestañas se dibujan (puede_ver_solapa_de_alertas, en
+		 * mixins/alert_infos.js). Antes Stock mínimo, Movimientos y Catálogo sumaban siempre: la
+		 * campana de un empleado sin permisos marcaba alertas que no podía encontrar. (Cobros
+		 * entra para cualquier usuario cargado: la API ya le manda a cada empleado solo sus
+		 * ventas sin cobrar, salvo que el dueño le habilite ver las de todos.)
+		 *
+		 * @returns {number}
+		 */
 		alerts_count() {
 			let total = 0
-			
-			total += this.ventas_sin_cobrar.length
 
-			if (this.can('alerts.provider_orders')) {
+			if (this.puede_ver_solapa_de_alertas('cobros')) {
+				total += Number(this.ventas_sin_cobrar.length)
+			}
+
+			if (this.puede_ver_solapa_de_alertas('pedidos-proveedor')) {
 				total += Number(this.provider_order_days_to_advise.length)
 			}
-			
-			if (this.can('alerts.orders')) {
+
+			if (this.puede_ver_solapa_de_alertas('pedidos-online')) {
 				total += Number(this.unconfirmed_orders.length)
 			}
-			
-			if (this.can('alerts.messages')) {
+
+			if (this.puede_ver_solapa_de_alertas('mensajes')) {
 				total += Number(this.messages_not_read)
 			}
-			
-			if (this.can('alerts.problemas_al_facturar')) {
+
+			if (this.puede_ver_solapa_de_alertas('facturacion')) {
 				total += Number(this.problemas_al_facturar.length)
 			}
-			
-			total += this.stock_minimo_alert_count
 
-			total += Number(this.deposit_movements_en_curso.length)
-			
-			// Imagenes para revisar + busquedas de imagenes terminadas sin abrir. Sin permiso que
-			// lo condicione: la solapa "Catalogo" de Alertas tampoco lo tiene.
-			total += Number(this.imagenes_alert_count)
+			if (this.puede_ver_solapa_de_alertas('stock-minimo')) {
+				total += Number(this.stock_minimo_alert_count)
+			}
 
-			// Sistemas de categorias esperando que el dueño elija + articulos dudosos por revisar
-			// (mision categorizacion-tres-modelos). El numero lo arma la API y para quien no es el
-			// dueño o el acceso maestro vale 0, asi que tampoco necesita un permiso aca.
-			total += Number(this.categorias_alert_count)
+			if (this.puede_ver_solapa_de_alertas('movimientos-de-depositos')) {
+				total += Number(this.deposit_movements_en_curso.length)
+			}
+
+			if (this.puede_ver_solapa_de_alertas('catalogo')) {
+				// Imagenes para revisar + busquedas de imagenes terminadas sin abrir. Desde la
+				// mision permisos-navegacion-empleados (9/10/2026) la solapa "Catalogo" de Alertas
+				// pide `article.index`, y el numero entra con la misma regla.
+				total += Number(this.imagenes_alert_count)
+
+				// Sistemas de categorias esperando que el dueño elija + articulos dudosos por revisar
+				// (mision categorizacion-tres-modelos). El numero lo arma la API y para quien no es el
+				// dueño o el acceso maestro vale 0; va adentro del mismo `if` porque se ve en la
+				// misma solapa (Catalogo → Categorias).
+				total += Number(this.categorias_alert_count)
+			}
 
 			return  total
 		}

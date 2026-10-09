@@ -49,10 +49,29 @@ export default {
 				if (route.childrens) {
 					let children_has_permision = false
 
+					/*
+						Misión permisos-navegacion-empleados (decisión de Lucas, 9/10/2026): un hijo
+						cuenta para mostrar al padre solo si el HIJO MISMO se mostraría en el menú,
+						o sea si pasa este mismo showRoute() (not_show, check_is_owner, can y las
+						extensiones). Antes se contaba con tiene_permiso_para_la_ruta(), que mira solo
+						`can`: un hijo sin `can` contaba siempre como permitido aunque fuera solo
+						para el dueño (ABM → Empleados / Papelera) o tuviera la extensión apagada.
+						Con eso un empleado SIN ningún permiso veía en el menú los padres Ventas y
+						ABM, y al tocarlos no podía entrar a nada.
+
+						Un padre con `can` que el usuario no tiene se sigue mostrando, con razón,
+						cuando algún hijo sí se puede abrir: Ventas para un empleado con
+						`devolucion.store` y sin `sale.index`, Tesorería para uno con `expense.index`
+						y sin `caja.index`.
+
+						Los hijos no tienen `childrens` propios, así que la llamada no baja más de un
+						nivel. tiene_permiso_para_la_ruta() queda como está: la sigue usando
+						NavVertical.vue (callSetRoute) para decidir adónde lleva el clic en el padre.
+					*/
 					route.childrens.forEach(children => {
 
 						if (!children_has_permision) {
-							children_has_permision = this.tiene_permiso_para_la_ruta(children)
+							children_has_permision = this.showRoute(children)
 						}
 					})
 
