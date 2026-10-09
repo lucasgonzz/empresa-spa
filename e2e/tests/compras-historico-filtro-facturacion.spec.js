@@ -153,7 +153,8 @@ function sumar_totales(compras) {
  * @returns {Promise<void>}
  */
 async function elegir_facturacion(valor) {
-	const select = page.locator('select.toolbar-select:has(option[value="solo-con-factura"])').first()
+	// `:visible`: en algunos anchos el nav de compras deja montada una copia oculta del mismo select.
+	const select = page.locator('select.toolbar-select:has(option[value="solo-con-factura"]):visible').first()
 	await select.selectOption(valor)
 }
 
@@ -264,7 +265,10 @@ test.describe('Compras, Historico: el select de facturacion filtra la tabla y el
 		const sin_factura = compras.filter(function (compra) {
 			return !compra.con_factura
 		})
-		test.skip(sin_factura.length === 0, 'el listado de Historico no tiene compras SIN factura: no hay nada que comprobar en vacio')
+		// Si TODAS fueran sin factura, el filtro no discrimina y el caso pasaria igual sin el arreglo.
+		// Total 0 tambien se saltea: price(0) pinta "-" y no hay numero que comparar.
+		test.skip(sin_factura.length === 0 || sin_factura.length === compras.length || sumar_totales(sin_factura) === 0,
+			'el listado de Historico necesita compras con y sin factura (y con total) para que el filtro discrimine')
 
 		await verificar_facturacion('solo-sin-factura', sin_factura)
 	})
@@ -274,14 +278,15 @@ test.describe('Compras, Historico: el select de facturacion filtra la tabla y el
 		const con_factura = compras.filter(function (compra) {
 			return compra.con_factura
 		})
-		test.skip(con_factura.length === 0, 'el listado de Historico no tiene compras CON factura: no hay nada que comprobar en vacio')
+		test.skip(con_factura.length === 0 || con_factura.length === compras.length || sumar_totales(con_factura) === 0,
+			'el listado de Historico necesita compras con y sin factura (y con total) para que el filtro discrimine')
 
 		await verificar_facturacion('solo-con-factura', con_factura)
 	})
 
 	test('Historico: volver a "Con y sin factura" trae todas las compras del listado', async () => {
 		const compras = await compras_del_listado()
-		test.skip(compras.length === 0, 'el listado de Historico no tiene compras')
+		test.skip(compras.length === 0 || sumar_totales(compras) === 0, 'el listado de Historico no tiene compras con total')
 
 		await verificar_facturacion('con-y-sin-factura', compras)
 	})
@@ -293,6 +298,12 @@ test.describe('Compras, Historico: el select de facturacion filtra la tabla y el
 
 		await page.locator('[data-testid="control-fecha-modo-por-fecha"]').click()
 		await page.locator('[data-testid="control-fecha-dia"][data-fecha="' + fecha_de_hoy() + '"]').click()
+		await expect.poll(function () {
+			return page.evaluate(function () {
+				const state = document.querySelector('#app').__vue__.$store.state.provider_order
+				return state.loading === false && state.is_filtered === false
+			})
+		}, { timeout: 60000, message: 'la lista del dia no termino de cargar' }).toBe(true)
 
 		const del_dia = await page.evaluate(function () {
 			const store = document.querySelector('#app').__vue__.$store
@@ -308,9 +319,11 @@ test.describe('Compras, Historico: el select de facturacion filtra la tabla y el
 			return !compra.con_factura
 		})
 
-		if (del_dia.length === 0) {
+		// Sin compras sin factura hoy, o con todas sin factura, el caso no discrimina nada (y con total 0
+		// el chip pinta "-").
+		if (esperadas.length === 0 || esperadas.length === del_dia.length || sumar_totales(esperadas) === 0) {
 			await elegir_facturacion('con-y-sin-factura')
-			test.skip(true, 'hoy no hay compras en la lista de Por fecha: no hay nada que filtrar')
+			test.skip(true, 'hoy no hay compras con y sin factura en la lista de Por fecha: no hay nada que filtrar')
 		}
 
 		await expect.poll(ids_de_la_tabla, {
