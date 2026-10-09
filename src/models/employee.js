@@ -1,10 +1,19 @@
 export default {
 	properties: [
+		/*
+			Nombre, documento y contraseña son obligatorios en el alta Y en la edicion (mision
+			empleados-alta-y-edicion, 9/10/2026): sin documento o sin contraseña el empleado no puede
+			iniciar sesion (el login busca por doc_number). El `required` hace que el formulario
+			avise "Ingrese ..." en el modal sin mandar el pedido; la red de verdad es el API
+			(EmployeeController::validar_datos_del_empleado), que contesta 422 y el modal queda
+			abierto con lo escrito.
+		*/
 		{
 			text: 'Nombre',
 			key: 'name',
 			type: 'text',
 			is_title: true,
+			required: true,
 		},
 		{
 			text: 'Teléfono',
@@ -17,7 +26,12 @@ export default {
 			key: 'doc_number',
 			type: 'text',
 			show: true,
+			required: true,
 		},
+		/*
+			Ingreso y Egreso los escribe el login: en el alta siempre estarian vacios, asi que se
+			muestran solo al ver o editar un empleado que ya existe.
+		*/
 		{
 			text: 'Ingreso',
 			key: 'login_at',
@@ -25,6 +39,7 @@ export default {
 			is_date: true,
 			show_full_date: true,
 			only_show: true,
+			show_only_if_is_created: true,
 		},
 		{
 			text: 'Egreso',
@@ -33,24 +48,35 @@ export default {
 			is_date: true,
 			show_full_date: true,
 			only_show: true,
+			show_only_if_is_created: true,
 		},
 		{
 			text: 'Contraseña',
 			key: 'visible_password',
 			type: 'text',
 			not_show: true,
+			required: true,
 		},
+		/*
+			🔴 Las versiones NO se muestran en el formulario (mision empleados-alta-y-edicion,
+			9/10/2026): son datos internos que escribe el admin en el dueño y en todos sus empleados
+			en cada rotacion de frente, y el API ya no las toma ni en el alta ni en la edicion. Se
+			dejan declaradas (y no se borran) porque siguen viniendo en el modelo y viajan en el
+			guardado como el resto: el API las ignora.
+		*/
 		{
 			text: 'Version por defecto',
 			key: 'default_version',
 			type: 'text',
 			not_show: true,
+			not_show_on_form: true,
 		},
 		{
 			text: 'Version estable',
 			key: 'estable_version',
 			type: 'text',
 			not_show: true,
+			not_show_on_form: true,
 		},
 		{
 			text: 'Acceso de ADMINISTRADOR',

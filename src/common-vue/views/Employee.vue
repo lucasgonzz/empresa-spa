@@ -2,6 +2,7 @@
 <view-component
 show_filter_modal
 emit_on_saved_instead_continue
+skip_global_error_event
 @modelSaved="modelSaved"
 model_name="employee">
 	<template #table_left_options="props">
@@ -36,6 +37,22 @@ export default {
 		}
 	},
 	methods: {
+		/*
+			`skip_global_error_event` del template (mision empleados-alta-y-edicion, 9/10/2026): el
+			alta y la edicion contestan 422 con `{message}` (documento repetido, nombre, documento o
+			contraseña vacios, o de mas de 128). Ese texto ya lo muestra el aviso del propio modal
+			(`setSaveErrorFromApi` del `catch` del guardado, que ademas deja el modal abierto con lo
+			escrito); sin la bandera, el interceptor global de main.js suma un toast con el mismo
+			texto encima.
+
+			🔴 `emit_on_saved_instead_continue` y la rama `if (!model)` SE QUEDAN, aunque el API
+			nuevo ya no conteste `{model: false}`: son la compatibilidad con un API viejo (4.3.8 o
+			anterior), que ante un documento repetido en el alta todavia devuelve `{model: false}` con
+			200. Esta SPA y el API no llegan a produccion al mismo tiempo en todos los clientes, asi
+			que contra ese API el alta repetida sigue avisando con el toast (y el modal se cierra,
+			como siempre). Con el API nuevo esa respuesta no llega nunca: es un 422 y lo resuelve el
+			modal.
+		*/
 		modelSaved(model) {
 			if (!model) {
 				this.$toast.error('Ya hay un empleado con ese numero de documento')
