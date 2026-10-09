@@ -261,10 +261,14 @@ export default {
 		 * elegir cualquiera, y seguía trabado al reabrir porque el id vive en el store. No
 		 * vuelvas a deducirlo de addresses ni de ventas_afip_information_id.
 		 *
+		 * El id distinto de cero va igual como guarda: si algun dia alguien limpia el punto de
+		 * venta sin apagar la bandera, el select no puede quedar trabado en "Seleccione".
+		 *
 		 * @returns {Boolean}
 		 */
 		disabled() {
 			return this.$store.state.afip_ticket.punto_de_venta_por_sucursal
+				&& this.ventas_afip_information_id != 0
 		},
 		description_importe_a_facturar() {
 			return 'Completar SOLO si querés facturar un importe distinto al de la venta. En blanco se facturan '+this.total_a_facturar
@@ -512,7 +516,7 @@ export default {
 			]
 		},
 		/**
-		 * 🔴 Se limpian LAS DOS cosas, y esa simetria es el punto: monto_a_facturar vive en el
+		 * 🔴 Se limpian las tres cosas, y esa simetria es el punto: monto_a_facturar vive en el
 		 * store y hasta ahora solo se borraba al terminar la emision. O sea que abrir el modal para
 		 * la venta A, escribir un importe, cancelar y abrir el modal para la venta B dejaba el
 		 * importe de A cargado -ahora sin reparto- listo para facturarse sobre otra venta.

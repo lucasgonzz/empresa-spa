@@ -86,10 +86,11 @@ export default {
          *
          * Los datos de AFIP se SNAPSHOTEAN aca en vez de leerse en vivo dentro de send_request,
          * para que el motor pueda emitir listas donde cada venta tiene sus propios datos (por
-         * ejemplo, una fecha de emision distinta por venta). El comportamiento de hoy no cambia
-         * porque nadie toca esos valores mientras la cadena corre: los unicos que los escriben
-         * son los v-model de ConfirmAfipTickets (ya confirmado, con el boton deshabilitado) y
-         * terminar_emision(), que corre despues.
+         * ejemplo, una fecha de emision distinta por venta). Tambien es lo que permite limpiar el
+         * store mientras la cadena corre: lo escriben los v-model de ConfirmAfipTickets, el cierre
+         * de ese modal (limpiar_datos_de_facturacion(), que puede correr con una emision en curso si
+         * el usuario cierra el progreso y cancela la confirmacion) y terminar_emision(). Ninguno de
+         * los tres llega a los items: send_request() lee solo item.datos_afip.
          *
          * @return {Array}
          */
