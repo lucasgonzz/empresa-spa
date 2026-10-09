@@ -2,11 +2,25 @@
 	<b-modal
 	hide-footer
 	title="Rechazado por proveedor"
-	id="rechazado-por-proveedor">
+	id="rechazado-por-proveedor"
+	@show="al_abrir">
 
 		<p>
 			{{ texto_del_aviso }}
 		</p>
+
+		<!-- El mismo campo que RechazarCheque.vue (misión cheque-motivo-rechazo). Es opcional. -->
+		<b-form-group
+		label="Indique el motivo del rechazo">
+			<!--
+				maxlength: el mismo tope que la API (ChequeHelper::MOTIVO_DE_RECHAZO_MAX). Si se
+				pasara, la API contesta 422 y el cheque no se marca.
+			-->
+			<b-form-textarea
+			placeholder="Indique el motivo del rechazo"
+			maxlength="1000"
+			v-model="motivo"></b-form-textarea>
+		</b-form-group>
 
 		<b-button
 		@click="rechazar_por_proveedor"
@@ -27,8 +41,8 @@
  * cheque rechazado no se puede eliminar, así que sin la nota la deuda no volvía nunca a su cuenta
  * corriente. Si no salió de un pago a un proveedor (un gasto, por ejemplo), solo se marca.
  *
- * Sin campo de motivo a propósito: mientras la API no lo guarde para los emitidos, un texto que se
- * tipea y se pierde es peor que no pedirlo.
+ * El motivo (opcional) viaja como `notas`, igual que en RechazarCheque.vue: es la clave que la API
+ * lee para los dos rechazos (misión cheque-motivo-rechazo).
  */
 export default {
 	computed: {
@@ -83,9 +97,17 @@ export default {
 	data() {
 		return {
 			enviando: false,
+			motivo: '',
 		}
 	},
 	methods: {
+		/**
+		 * Al abrir el modal el motivo arranca vacío: un motivo escrito y cancelado no tiene que
+		 * aparecer al marcar OTRO cheque.
+		 */
+		al_abrir() {
+			this.motivo = ''
+		},
 		rechazar_por_proveedor() {
 			if (this.enviando) {
 				return
@@ -99,11 +121,13 @@ export default {
 			// una sola vez (sin la bandera, el interceptor de main.js lo sacaba además como warning).
 			this.$api.put('cheque/rechazar-por-proveedor', {
 				cheque_id: this.cheque.id,
+				notas: self.motivo,
 			}, {
 				skip_global_error_event: true,
 			})
 			.then(res => {
 				self.enviando = false
+				self.motivo = ''
 				self.$store.commit('auth/setLoading', false)
 				self.$store.dispatch('cheque/getModels')
 				if (res.data.nota_debito) {
@@ -139,7 +163,11 @@ export default {
 		 */
 		refrescar_proveedor(provider_id) {
 			let self = this
-			this.$api.get('provider/'+provider_id)
+			// `skip_global_error_event`: si esto falla no tiene que salir un aviso de error encima del
+			// de la nota, que sí se cargó.
+			this.$api.get('provider/'+provider_id, {
+				skip_global_error_event: true,
+			})
 			.then(res => {
 				self.$store.commit('provider/add', res.data.model)
 			})
