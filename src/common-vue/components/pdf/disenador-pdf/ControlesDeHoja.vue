@@ -4,8 +4,30 @@
 		cada uno de los que manda el catálogo (A4, Carta, Oficio, A5; siempre vertical) y el margen con
 		− N mm +, el mismo para los cuatro lados. Un ancho/alto guardado que no coincide con ningún
 		formato se muestra como "Hoja personalizada" hasta que se elija otro.
+
+		En un ticket de comandera (misión diseno-ticket-comandera, plan §7.3) no hay formatos ni
+		margen: el rollo es el del tipo de hoja del formulario ("Hoja o comandera") y acá solo se dice
+		cuál es y cuántos caracteres entran por renglón.
 	-->
 	<div
+	v-if="disenador.es_ticket"
+	class="dpdf-controles dpdf-controles--ticket"
+	role="group"
+	aria-label="Comandera"
+	data-testid="comandera-disenador-pdf">
+		<div class="dpdf-controles__grupo">
+			<span class="dpdf-controles__etiqueta">Comandera</span>
+			<span class="dpdf-controles__rollo">
+				<i
+				class="bi bi-printer"
+				aria-hidden="true"></i>
+				Comandera de {{ disenador.ancho_del_rollo_mm }} mm · {{ disenador.caracteres_del_rollo }} caracteres por renglón
+			</span>
+			<span class="dpdf-controles__detalle">El ancho se cambia en el formulario, en «Hoja o comandera».</span>
+		</div>
+	</div>
+	<div
+	v-else
 	class="dpdf-controles"
 	role="group"
 	aria-label="Hoja y margen">
@@ -296,4 +318,21 @@ export default {
 	font-weight: 700
 	text-align: center
 	font-variant-numeric: tabular-nums
+
+// Ticket: el rollo de la comandera, en una pastilla como la de los formatos de la hoja
+.dpdf-controles__rollo
+	grid-area: control
+	display: inline-flex
+	align-items: center
+	gap: 8px
+	padding: 5px 12px
+	border-radius: 10px
+	background: var(--bg-nav)
+	color: var(--color-text-primary)
+	font-size: 0.85rem
+	font-weight: 600
+	line-height: 1.4
+
+	i
+		color: var(--color-primary)
 </style>

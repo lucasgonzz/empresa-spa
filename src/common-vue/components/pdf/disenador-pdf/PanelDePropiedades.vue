@@ -80,6 +80,13 @@ const NOMBRES_DE_ZONAS = {
 	tabla: 'tabla de artículos',
 }
 
+/* En un ticket de comandera (misión diseno-ticket-comandera) el pie es lo de abajo de la tabla */
+const NOMBRES_DE_ZONAS_EN_TICKET = {
+	superior: 'arriba de la tabla',
+	pie: 'abajo de la tabla',
+	tabla: 'tabla de artículos',
+}
+
 /**
  * Panel de propiedades del diseñador de PDF (misión diseno-pdf-configurable, 1/10/2026).
  *
@@ -115,7 +122,8 @@ export default {
 			if (!seleccion) {
 				return ''
 			}
-			let zona = NOMBRES_DE_ZONAS[seleccion.zona] || ''
+			let nombres = this.disenador.es_ticket ? NOMBRES_DE_ZONAS_EN_TICKET : NOMBRES_DE_ZONAS
+			let zona = nombres[seleccion.zona] || ''
 			if (seleccion.tipo === 'caja') {
 				return 'Caja · ' + zona
 			}
@@ -370,6 +378,57 @@ export default {
 
 .dpdf-panel__muestra-linea--corta
 	width: 60%
+
+// Estilos de caja en un ticket (misión diseno-ticket-comandera): dos opciones, sin recuadro; "Con
+// línea" muestra la línea de guiones de abajo
+.dpdf-panel__estilos--ticket
+	grid-template-columns: repeat(2, minmax(0, 1fr))
+
+.dpdf-panel__muestra--con-linea,
+.dpdf-panel__muestra--sin-linea
+	border: 1px dashed var(--color-border)
+	background: var(--bg-card)
+
+.dpdf-panel__muestra--con-linea
+	border-bottom: 2px dashed var(--color-text-secondary)
+
+// Los tres tamaños de la comandera: una pastilla segmentada, como los formatos de la hoja
+.dpdf-panel__tamanos
+	display: grid
+	grid-template-columns: repeat(3, minmax(0, 1fr))
+	gap: 2px
+	padding: 3px
+	border-radius: 10px
+	background: var(--bg-nav)
+
+.dpdf-panel__tamano
+	min-width: 0
+	padding: 5px 6px
+	border: 0
+	border-radius: 8px
+	background: transparent
+	color: var(--color-text-primary)
+	font-size: 0.78rem
+	font-weight: 600
+	line-height: 1.3
+	white-space: nowrap
+	overflow: hidden
+	text-overflow: ellipsis
+	cursor: pointer
+	transition: background .15s ease, color .15s ease
+
+	&:hover:not(.dpdf-panel__tamano--activo)
+		background: var(--bg-card)
+
+	&:focus
+		outline: none
+
+	&:focus-visible
+		box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
+
+.dpdf-panel__tamano--activo
+	background: var(--color-primary)
+	color: var(--bg-card)
 
 // − N +
 .dpdf-panel__paso

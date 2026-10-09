@@ -9,6 +9,12 @@
 		no puede tirar un rato de trabajo (igual se avisa si se cierra con cambios, ver al_ocultar).
 
 		Se abre desde el registro del ABM (PdfColumnProfileEditor.vue) con this.$refs.disenador.abrir().
+
+		Modo ticket de comandera (misión diseno-ticket-comandera, 9/10/2026; plan §7.3): con
+		`catalogo.es_ticket` (una venta cuyo tipo de hoja es un rollo) la hoja es un rollo angosto con
+		la letra de la comandera, sin encabezado aparte (D6), "Ver un PDF de prueba" pasa a "Ver cómo
+		sale" (el ticket en texto, en un modal) y "Volver al diseño de siempre" a "Volver al ticket de
+		siempre". Con `es_ticket` falso o ausente (API vieja), todo como la hoja de siempre.
 	-->
 	<b-modal
 	:id="id_del_modal"
@@ -66,15 +72,17 @@
 						size="sm"
 						class="disenador-pdf__prueba"
 						:disabled="hay_cambios"
-						:title="hay_cambios ? 'Guardá los cambios para verlos en el PDF' : 'Abre el PDF del último comprobante con este diseño'"
+						:title="titulo_de_la_prueba"
 						data-testid="ver-prueba-disenador-pdf"
-						@click="ver_pdf_de_prueba">
-							<i class="bi bi-file-earmark-pdf"></i>
-							Ver un PDF de prueba
+						@click="probar_el_diseno">
+							<i
+							class="bi"
+							:class="es_ticket ? 'bi-receipt' : 'bi-file-earmark-pdf'"></i>
+							{{ es_ticket ? 'Ver cómo sale' : 'Ver un PDF de prueba' }}
 						</b-button>
 						<p
 						v-if="se_puede_probar && hay_cambios"
-						class="disenador-pdf__nota-de-accion">Guardá los cambios para verlos en el PDF.</p>
+						class="disenador-pdf__nota-de-accion">{{ es_ticket ? 'Guardá los cambios para ver cómo sale.' : 'Guardá los cambios para verlos en el PDF.' }}</p>
 						<p
 						v-if="nota_del_diseno"
 						class="disenador-pdf__nota-de-accion">{{ nota_del_diseno }}</p>
@@ -100,7 +108,15 @@
 						Las columnas de la tabla también: arrastralas para ordenarlas y tirá de sus bordes.
 					</li>
 				</ul>
-				<p class="disenador-pdf__nota">
+				<!-- En el ticket: la letra de la comandera, N caracteres por renglón como en el papel -->
+				<p
+				v-if="es_ticket"
+				class="disenador-pdf__nota">
+					El ticket se ve con la letra de la comandera y datos de ejemplo: cada renglón tiene {{ caracteres_del_rollo }} caracteres, como en el papel. En cada venta se imprime lo que tenga datos: una caja sin ninguno no ocupa lugar.
+				</p>
+				<p
+				v-else
+				class="disenador-pdf__nota">
 					La hoja se ve a escala, con datos de ejemplo. En cada comprobante se imprime lo que tenga datos: una caja sin ninguno no ocupa lugar.
 				</p>
 
@@ -141,8 +157,14 @@
 				</div>
 
 				<div class="disenador-pdf__area">
-					<!-- El marco de la hoja: en el teléfono la hoja se desliza de costado adentro de él -->
-					<div class="disenador-pdf__marco">
+					<!--
+						El marco de la hoja: en el teléfono la hoja se desliza de costado adentro de él. En
+						el ticket, el rollo se achica para entrar en el marco (HojaDelDisenador mide su
+						ancho) y solo se desliza si ni con la letra más chica entra.
+					-->
+					<div
+					class="disenador-pdf__marco"
+					:class="{ 'disenador-pdf__marco--rollo': es_ticket }">
 						<hoja-del-disenador></hoja-del-disenador>
 					</div>
 
@@ -152,6 +174,90 @@
 					</div>
 				</div>
 			</template>
+
+			<!--
+				"Ver cómo sale" del ticket (plan §7.3): el ticket de la última venta del negocio con
+				este diseño, en texto, como lo arma la API (GET sale/{id}/ticket-comandera?formato=
+				texto). Es otro b-modal: bootstrap-vue lo lleva al <body> y lo apila encima del
+				diseñador.
+			-->
+			<b-modal
+			ref="como_sale"
+			:id="id_del_modal + '-como-sale'"
+			title="Así sale en la comandera"
+			size="md"
+			scrollable
+			centered
+			ok-only
+			ok-title="Cerrar"
+			ok-variant="outline-secondary"
+			dialog-class="dpdf-como-sale__dialogo"
+			body-class="dpdf-como-sale__cuerpo">
+				<div
+				class="dpdf-como-sale"
+				data-testid="como-sale-disenador-pdf">
+					<div
+					v-if="como_sale.cargando"
+					class="dpdf-como-sale__estado"
+					role="status">
+						<span class="spinner-border spinner-border-sm"></span>
+						<span>Armando el ticket…</span>
+					</div>
+
+					<div
+					v-else-if="como_sale.error"
+					class="dpdf-como-sale__estado dpdf-como-sale__estado--error"
+					role="alert">
+						<i
+						class="bi bi-exclamation-triangle"
+						aria-hidden="true"></i>
+						<span>{{ como_sale.error }}</span>
+					</div>
+
+					<template v-else>
+						<p
+						v-if="!como_sale.disenado"
+						class="dpdf-como-sale__nota"
+						data-testid="nota-como-sale-disenador-pdf">
+							<i
+							class="bi bi-info-circle"
+							aria-hidden="true"></i>
+							<span>Así va a salir cuando guardes el diseño; hoy imprime el ticket de siempre.</span>
+						</p>
+						<p class="dpdf-como-sale__detalle">
+							Con la última venta del negocio · comandera de {{ como_sale.ancho_mm }} mm · {{ como_sale.caracteres }} caracteres por renglón
+						</p>
+
+						<!-- El papel: un renglón por línea, en monoespaciada; el logo y el QR, de muestra -->
+						<div class="dpdf-como-sale__marco">
+							<div
+							class="dpdf-como-sale__papel"
+							:style="{ width: 'calc(' + como_sale.caracteres + 'ch + 28px)' }">
+								<template v-for="(linea, indice) in como_sale.lineas">
+									<span
+									v-if="linea === MARCA_LOGO"
+									:key="indice"
+									class="dpdf-como-sale__logo">
+										<i
+										class="bi bi-image"
+										aria-hidden="true"></i>
+										Logo
+									</span>
+									<span
+									v-else-if="linea === MARCA_QR"
+									:key="indice"
+									class="dpdf-como-sale__qr"
+									title="El código QR de ARCA"></span>
+									<span
+									v-else
+									:key="indice"
+									class="dpdf-como-sale__linea">{{ linea }}</span>
+								</template>
+							</div>
+						</div>
+					</template>
+				</div>
+			</b-modal>
 		</div>
 
 		<template #modal-footer>
@@ -171,7 +277,7 @@
 				data-testid="volver-disenador-pdf"
 				@click="volver_al_de_siempre">
 					<i class="bi bi-arrow-counterclockwise"></i>
-					Volver al diseño de siempre
+					{{ es_ticket ? 'Volver al ticket de siempre' : 'Volver al diseño de siempre' }}
 				</b-button>
 				<div class="disenador-pdf__botones">
 					<b-button
@@ -221,6 +327,8 @@ import {
 	ubicar,
 	hoja_del_perfil,
 	ancho_util,
+	estilo_efectivo,
+	etiqueta_efectiva,
 } from './estado_del_disenador'
 import {
 	total_de_la_grilla,
@@ -228,7 +336,16 @@ import {
 	suma_de_columnas,
 	huella_de_la_tabla,
 	columnas_a_mm,
+	caracteres_de_la_tabla,
 } from './tabla_del_disenador'
+import {
+	MARCA_LOGO,
+	MARCA_QR,
+	TIPO_IMAGEN,
+	caracteres_del_catalogo,
+	ancho_del_rollo,
+	hoja_del_rollo,
+} from './vista_de_ticket'
 import { traer_catalogo, traer_perfil, traer_opciones_de_columnas, mensaje_de_error } from './api_del_disenador'
 import {
 	emisor_chip_keys,
@@ -238,6 +355,16 @@ import {
 
 /* Escala (px de pantalla por mm de hoja) hasta que la hoja se mide por primera vez */
 const ESCALA_INICIAL = 3.5
+
+/*
+	Letra del rollo de comandera (px) y ancho de un carácter en esa letra hasta que el rollo se mide
+	por primera vez (HojaDelDisenador.vue). La letra monoespaciada mide unos 0,6 de su tamaño.
+*/
+const LETRA_DEL_ROLLO_INICIAL = 14
+const CARACTER_DEL_ROLLO_INICIAL = 8.4
+
+/* Alto de un renglón del rollo respecto de la letra */
+const ALTO_DE_RENGLON = 1.3
 
 /**
  * Un encabezado vacío, con la forma de header_layout.
@@ -283,10 +410,13 @@ function encabezado_vacio() {
  *   cols_maximo_de_columna, mm_de_columna, alternar_salto_de_columna, mostrar_columna,
  *   mostrar_columnas_en_la_bandeja, avisar_tabla_completa.
  *
- * 🔌 Para el modo ticket (lo enchufa otro constructor sobre esto): la tabla se convierte contra
- * `ancho_util_de_la_tabla_mm` (hoy el ancho útil de la hoja; en ticket, el ancho del rollo) y
- * `total_de_la_tabla` (el `grilla_de_tabla` del catálogo), y si tocar SOLO la tabla pasa el perfil
- * a cajas lo decide `tocar_la_tabla_pasa_a_cajas` (D10: en hoja no, en ticket sí).
+ * Modo ticket de comandera (misión diseno-ticket-comandera, plan §7.3), con `es_ticket` (lo dice el
+ * catálogo): la tabla se convierte contra `ancho_util_de_la_tabla_mm` (el ancho del rollo),
+ * tocar SOLO la tabla también pasa el perfil a cajas (`tocar_la_tabla_pasa_a_cajas`, D10), y las
+ * piezas dibujan la vista previa con las reglas del motor ESC/POS (vista_de_ticket.js). Lo que
+ * usan de acá, además de lo de arriba: es_ticket, caracteres_del_rollo, ancho_del_rollo_mm,
+ * caracter_del_rollo_px, estilo_de_letra_del_rollo, datos_del_campo_en_el_ticket(),
+ * caracteres_de_columna() y cambiar_letra_del_rollo() (la llama la hoja al medir).
  */
 export default {
 	name: 'DisenadorPdf',
@@ -336,6 +466,34 @@ export default {
 			catalogo: null,
 			/* El Modelo del perfil GUARDADO (GET pdf-column-profiles/{id}), o null si no se pudo leer o es nuevo */
 			modelo_guardado: null,
+			/*
+				El tipo de hoja del perfil GUARDADO (sheet_type_id, puede ser null), o undefined si no se
+				sabe (perfil nuevo, o no se pudo leer). Si el del formulario es otro (se cambió "Hoja o
+				comandera" y no se guardó), el diseño viaja con el del formulario (ver guardar()).
+			*/
+			tipo_de_hoja_guardado: undefined,
+			/* Ticket de comandera: la letra del rollo (px) y el ancho de UN carácter en esa letra (px), los mide la hoja */
+			letra_del_rollo_px: LETRA_DEL_ROLLO_INICIAL,
+			caracter_del_rollo_px: CARACTER_DEL_ROLLO_INICIAL,
+			/*
+				Huella de la tabla desde la que "tocar la tabla" pasa un ticket a cajas (D10). Es la de
+				la base, salvo después de "Volver al ticket de siempre" o de poner las columnas
+				sugeridas: ahí se toma la de ese momento, así esos cambios viajan (la tabla se guarda)
+				sin pasar el perfil a cajas. En la hoja no se usa.
+			*/
+			huella_de_la_tabla_para_cajas: '',
+			/* "Ver cómo sale" del ticket: el modal con el ticket en texto */
+			como_sale: {
+				cargando: false,
+				error: null,
+				disenado: false,
+				ancho_mm: 0,
+				caracteres: 0,
+				lineas: [],
+			},
+			/* Marcas del logo y del QR en las líneas de "Ver cómo sale", para el template */
+			MARCA_LOGO: MARCA_LOGO,
+			MARCA_QR: MARCA_QR,
 			/* Las dos zonas de trabajo (ver estado_del_disenador.js) */
 			superior: [],
 			pie: [],
@@ -411,7 +569,76 @@ export default {
 		 */
 		titulo() {
 			let nombre = String(this.model && this.model.name ? this.model.name : '').trim()
-			return 'Diseñar PDF — ' + (nombre || 'diseño nuevo')
+			return (this.es_ticket ? 'Diseñar ticket — ' : 'Diseñar PDF — ') + (nombre || 'diseño nuevo')
+		},
+		/**
+		 * Si el diseño es un ticket de comandera (lo dice el catálogo: una venta cuyo tipo de hoja es
+		 * un rollo, contrato §3.3). Una API vieja no manda `es_ticket`: hoja.
+		 *
+		 * @returns {boolean}
+		 */
+		es_ticket() {
+			return !!(this.catalogo && this.catalogo.es_ticket)
+		},
+		/**
+		 * Caracteres por renglón del rollo (N): los del catálogo, o la cuenta con su ancho.
+		 *
+		 * @returns {number}
+		 */
+		caracteres_del_rollo() {
+			return caracteres_del_catalogo(this.catalogo)
+		},
+		/**
+		 * Ancho del rollo en mm (el `ancho_mm` del catálogo de ticket).
+		 *
+		 * @returns {number}
+		 */
+		ancho_del_rollo_mm() {
+			return ancho_del_rollo(this.catalogo)
+		},
+		/**
+		 * La letra del rollo para lo que se dibuja en monoespaciada (renglones, título de una caja).
+		 *
+		 * @returns {Object}
+		 */
+		estilo_de_letra_del_rollo() {
+			let letra = this.letra_del_rollo_px
+			return {
+				fontSize: letra.toFixed(2) + 'px',
+				lineHeight: this.renglon_del_rollo_px + 'px',
+				'--dpdf-renglon': this.renglon_del_rollo_px + 'px',
+			}
+		},
+		/**
+		 * Alto de un renglón del rollo (px, entero para que los renglones no "bailen").
+		 *
+		 * @returns {number}
+		 */
+		renglon_del_rollo_px() {
+			return Math.round(this.letra_del_rollo_px * ALTO_DE_RENGLON)
+		},
+		/**
+		 * Los caracteres de cada columna de la tabla en el rollo, en el orden de la tabla (la regla del
+		 * motor, plan §4). Solo en un ticket; en una hoja, [].
+		 *
+		 * @returns {Array<{ancho: number, contenido: number}>}
+		 */
+		caracteres_de_la_tabla_en_el_rollo() {
+			if (!this.es_ticket) {
+				return []
+			}
+			return caracteres_de_la_tabla(this.tabla.visibles, this.caracteres_del_rollo, this.total_de_la_tabla)
+		},
+		/**
+		 * El title de "Ver un PDF de prueba" / "Ver cómo sale".
+		 *
+		 * @returns {string}
+		 */
+		titulo_de_la_prueba() {
+			if (this.es_ticket) {
+				return this.hay_cambios ? 'Guardá los cambios para ver cómo sale' : 'Muestra cómo sale la última venta en la comandera, con este diseño'
+			}
+			return this.hay_cambios ? 'Guardá los cambios para verlos en el PDF' : 'Abre el PDF del último comprobante con este diseño'
 		},
 		/**
 		 * El modelo del perfil ('sale' | 'budget' | 'order').
@@ -444,6 +671,10 @@ export default {
 		 * @returns {boolean}
 		 */
 		hoja_es_a5() {
+			/* Un ticket no tiene formatos de hoja: ni la regla de ARCA en A5 ni el aviso del pie aplican */
+			if (this.es_ticket) {
+				return false
+			}
 			return !!this.catalogo && es_hoja_a5(this.catalogo.formatos_de_hoja, this.hoja)
 		},
 		/**
@@ -595,12 +826,12 @@ export default {
 		},
 		/**
 		 * El ancho (mm) contra el que se convierten las columnas de la tabla (D9): el ancho útil de
-		 * la hoja. 🔌 En el modo ticket es el ancho del rollo: es el punto donde se enchufa.
+		 * la hoja; en un ticket, el ancho del rollo (sin margen).
 		 *
 		 * @returns {number}
 		 */
 		ancho_util_de_la_tabla_mm() {
-			return this.ancho_util_mm
+			return this.es_ticket ? this.ancho_del_rollo_mm : this.ancho_util_mm
 		},
 		/**
 		 * Las columnas que no están en la tabla, en el orden del catálogo (la bandeja las ofrece).
@@ -677,7 +908,17 @@ export default {
 		 * @returns {boolean}
 		 */
 		cambio_que_pasa_a_cajas() {
-			return this.diseno_tocado || (this.tabla_cambiada && this.tocar_la_tabla_pasa_a_cajas)
+			return this.diseno_tocado || (this.tocar_la_tabla_pasa_a_cajas && this.tabla_tocada_para_cajas)
+		},
+		/**
+		 * Si la tabla se tocó desde la huella que cuenta para pasar un ticket a cajas (D10): la de la
+		 * base, o la de después de "Volver al ticket de siempre" o de poner las sugeridas (ver
+		 * huella_de_la_tabla_para_cajas). En la hoja no cuenta (tocar_la_tabla_pasa_a_cajas).
+		 *
+		 * @returns {boolean}
+		 */
+		tabla_tocada_para_cajas() {
+			return this.huella_de_la_tabla_actual !== this.huella_de_la_tabla_para_cajas
 		},
 		/**
 		 * El ancho (mm) contra el que se dibuja la hoja: el de la hoja más ancha que se puede elegir
@@ -701,6 +942,10 @@ export default {
 		 * @returns {string}
 		 */
 		cuando_sale_el_pie() {
+			/* Un ticket es un solo papel continuo: el pie sale al final */
+			if (this.es_ticket) {
+				return 'al final del ticket'
+			}
 			if (es_verdadero(this.model.show_totals_on_each_page)) {
 				return 'sale en cada hoja'
 			}
@@ -813,6 +1058,9 @@ export default {
 			if (!this.catalogo) {
 				return null
 			}
+			if (this.es_ticket) {
+				return this.nota_del_ticket
+			}
 			if (this.sigue_de_siempre) {
 				/* D10: en hoja, cambiar la tabla no pasa el perfil a cajas (el PDF de siempre la lee igual) */
 				if (this.tabla_cambiada) {
@@ -822,6 +1070,24 @@ export default {
 			}
 			if (this.base_es_de_siempre) {
 				return 'Con estos cambios, al guardar el PDF pasa a imprimirse con estas cajas.'
+			}
+			return null
+		},
+		/**
+		 * La nota de un ticket: si imprime el Ticket 2.0 de siempre o estas cajas. En el ticket,
+		 * tocar la tabla TAMBIÉN pasa a cajas (D10: el de siempre no lee las columnas).
+		 *
+		 * @returns {string|null}
+		 */
+		nota_del_ticket() {
+			if (this.sigue_de_siempre) {
+				if (this.tabla_cambiada) {
+					return 'Ticket de siempre: la comandera imprime como hasta ahora (el ticket de siempre no usa estas columnas). Cuando muevas algo del ticket o de la tabla y guardes, pasa a imprimirse con estas cajas.'
+				}
+				return 'Ticket de siempre: la comandera imprime como hasta ahora. Cuando muevas algo del ticket o de la tabla y guardes, pasa a imprimirse con estas cajas.'
+			}
+			if (this.base_es_de_siempre) {
+				return 'Con estos cambios, al guardar el ticket pasa a imprimirse con estas cajas.'
 			}
 			return null
 		},
@@ -870,10 +1136,20 @@ export default {
 				parametros.profile_id = this.model.id
 			}
 
+			/*
+				El tipo de hoja del formulario (misión diseno-ticket-comandera, contrato §3.3), aunque no
+				esté guardado: decide si el catálogo es el de una hoja o el de un ticket. Una API vieja
+				lo ignora.
+			*/
+			if (this.model.sheet_type_id) {
+				parametros.sheet_type_id = this.model.sheet_type_id
+			}
+
 			this.pedido_en_curso = pedido
 			this.cargando = true
 			this.error_de_carga = null
 			this.modelo_guardado = null
+			this.tipo_de_hoja_guardado = undefined
 
 			/*
 				Con el catálogo va el de COLUMNAS de la tabla (GET pdf-column-options, misión
@@ -921,6 +1197,10 @@ export default {
 
 				let guardado = respuestas[2] && respuestas[2].data ? respuestas[2].data.model : null
 				self.modelo_guardado = guardado && guardado.model_name ? guardado.model_name : null
+				/* El tipo de hoja guardado (null = hoja sin tipo); undefined si no se pudo leer */
+				if (guardado && Object.prototype.hasOwnProperty.call(guardado, 'sheet_type_id')) {
+					self.tipo_de_hoja_guardado = guardado.sheet_type_id === null || typeof guardado.sheet_type_id == 'undefined' ? null : guardado.sheet_type_id
+				}
 
 				self.aplicar_catalogo(catalogo, opciones)
 			})
@@ -953,11 +1233,11 @@ export default {
 			let con_diseno = tiene_diseno(this.model.page_layout)
 			let estado = armar_estado(con_diseno ? this.model.page_layout : catalogo.diseno_derivado, catalogo)
 
-			/* Primero el catálogo: es_fiscal, los límites y la grilla de la tabla dependen de él */
+			/* Primero el catálogo: es_fiscal, es_ticket, los límites y la grilla de la tabla dependen de él */
 			this.catalogo = catalogo
 			this.superior = estado.superior
 			this.pie = estado.pie
-			this.hoja = hoja_del_perfil(this.model, con_diseno, catalogo.limites)
+			this.hoja = this.hoja_de_trabajo(con_diseno)
 			this.armar_encabezado()
 			/* La tabla después de la hoja: sus medias columnas salen de los mm sobre ese ancho útil (D9) */
 			this.opciones_de_columnas = Array.isArray(opciones) ? opciones : []
@@ -969,6 +1249,83 @@ export default {
 			this.restablecido = false
 			this.tomar_bases()
 			this.poner_columnas_sugeridas()
+			/*
+				Las sugeridas las puso el diseñador, no el usuario: se guardan (cambiaron la tabla), pero
+				en un ticket no lo pasan a cajas (D10 cuenta lo que toca el usuario).
+			*/
+			this.huella_de_la_tabla_para_cajas = this.huella_de_la_tabla_actual
+		},
+		/**
+		 * La hoja de trabajo: en un ticket, el rollo (su ancho, sin margen: es contra lo que se
+		 * convierten las columnas, D9); en una hoja, la guardada si tiene diseño o la de siempre.
+		 *
+		 * @param {boolean} con_diseno si el perfil tiene page_layout
+		 * @returns {{ancho: number, alto: number, margen: number}}
+		 */
+		hoja_de_trabajo(con_diseno) {
+			if (this.es_ticket) {
+				return hoja_del_rollo(this.catalogo)
+			}
+			return hoja_del_perfil(this.model, con_diseno, this.limites)
+		},
+		/**
+		 * La letra del rollo que midió la hoja (px) y el ancho de un carácter en esa letra (px). Se
+		 * redondea para no redibujar por centésimas.
+		 *
+		 * @param {number} letra
+		 * @param {number} caracter
+		 * @returns {void}
+		 */
+		cambiar_letra_del_rollo(letra, caracter) {
+			if (!(letra > 0) || !(caracter > 0)) {
+				return
+			}
+			if (Math.abs(letra - this.letra_del_rollo_px) >= 0.01 || Math.abs(caracter - this.caracter_del_rollo_px) >= 0.001) {
+				this.letra_del_rollo_px = letra
+				this.caracter_del_rollo_px = caracter
+			}
+		},
+		/**
+		 * Lo que imprime un campo en la vista previa del ticket (lo que vista_de_ticket.js le pide al
+		 * "resolver"): el ejemplo del catálogo (o el texto escrito, en el texto libre), el rótulo
+		 * efectivo y el estilo efectivo (sin cursiva: la comandera no la tiene). Null si la key ya no
+		 * está en el catálogo (el motor la saltea).
+		 *
+		 * @param {Object} campo campo de trabajo
+		 * @returns {Object|null} {valor, rotulo, tamano, negrita, alineacion, es_imagen}
+		 */
+		datos_del_campo_en_el_ticket(campo) {
+			if (!campo || typeof campo.key != 'string') {
+				return null
+			}
+			let definicion = this.definiciones[campo.key] || null
+			let es_texto_libre = campo.key === 'texto_libre'
+			if (!definicion && !es_texto_libre) {
+				return null
+			}
+			let estilo = estilo_efectivo(campo, definicion)
+			return {
+				valor: es_texto_libre ? campo.texto : (definicion ? definicion.ejemplo : null),
+				rotulo: etiqueta_efectiva(campo, definicion),
+				tamano: estilo.tamano,
+				negrita: estilo.negrita,
+				alineacion: estilo.alineacion || 'izquierda',
+				es_imagen: !!(definicion && definicion.tipo === TIPO_IMAGEN),
+			}
+		},
+		/**
+		 * Los caracteres de una columna de la tabla en el rollo ({ancho, contenido}: el contenido sin
+		 * el espacio que la separa de la siguiente), o null si no está en la tabla o no es un ticket.
+		 *
+		 * @param {Object} columna
+		 * @returns {{ancho: number, contenido: number}|null}
+		 */
+		caracteres_de_columna(columna) {
+			let indice = this.tabla.visibles.indexOf(columna)
+			if (indice === -1) {
+				return null
+			}
+			return this.caracteres_de_la_tabla_en_el_rollo[indice] || null
 		},
 		/**
 		 * Arma la copia de trabajo del encabezado desde header_layout (o el de siempre) y el logo.
@@ -1037,6 +1394,7 @@ export default {
 		tomar_bases() {
 			this.huella_base_del_diseno = this.huella_del_diseno_actual
 			this.huella_base_de_la_tabla = this.huella_de_la_tabla_actual
+			this.huella_de_la_tabla_para_cajas = this.huella_de_la_tabla_actual
 			this.huella_base_del_emisor = this.huella_del_emisor_actual
 			this.logo_base = this.logo_size_mm
 			this.huella_inicial = this.huella_total
@@ -1052,6 +1410,16 @@ export default {
 			this.error_de_carga = null
 			this.catalogo = null
 			this.modelo_guardado = null
+			this.tipo_de_hoja_guardado = undefined
+			this.huella_de_la_tabla_para_cajas = ''
+			this.como_sale = {
+				cargando: false,
+				error: null,
+				disenado: false,
+				ancho_mm: 0,
+				caracteres: 0,
+				lineas: [],
+			}
 			this.superior = []
 			this.pie = []
 			this.tabla = {
@@ -1425,4 +1793,116 @@ export default {
 
 	.btn
 		border-radius: 8px
+
+// ── Ticket de comandera ────────────────────────────────────────────────────────────────────────
+// El marco del rollo: el rollo va centrado con margin auto (HojaDelDisenador.vue: un flex centrado
+// cortaría la izquierda al deslizarse) y se desliza solo si ni con la letra más chica entra. Abajo,
+// lugar para el corte del papel.
+.disenador-pdf .disenador-pdf__marco--rollo
+	padding-bottom: 18px
+
+// "Ver cómo sale": el ticket en texto sobre un papel blanco (--bg-card), en monoespaciada. El modal
+// cuelga de <body>: todo depende de clases propias (dpdf-como-sale*). Colores solo por token.
+@import '@/common-vue/components/pdf/disenador-pdf/_ticket'
+
+.dpdf-como-sale__cuerpo
+	background: var(--bg-section)
+
+.dpdf-como-sale
+	display: flex
+	flex-direction: column
+	gap: 10px
+	min-width: 0
+
+.dpdf-como-sale__estado
+	display: flex
+	align-items: center
+	justify-content: center
+	gap: 10px
+	padding: 28px 12px
+	color: var(--color-text-secondary)
+	font-size: 0.88rem
+	text-align: left
+
+.dpdf-como-sale__estado--error i
+	color: var(--color-text-warning-strong, var(--warning))
+	font-size: 1.2rem
+
+.dpdf-como-sale__nota
+	display: flex
+	align-items: flex-start
+	gap: 8px
+	margin: 0
+	padding: 8px 12px
+	border: 1px solid var(--color-border)
+	border-radius: 10px
+	background: var(--bg-card)
+	color: var(--color-text-primary)
+	font-size: 0.8rem
+	line-height: 1.4
+
+	i
+		flex: 0 0 auto
+		margin-top: 1px
+		color: var(--color-primary)
+
+.dpdf-como-sale__detalle
+	margin: 0
+	color: var(--color-text-secondary)
+	font-size: 0.74rem
+
+// El papel se desliza de costado adentro de su marco si no entra (teléfono)
+.dpdf-como-sale__marco
+	display: flex
+	justify-content: center
+	min-width: 0
+	overflow-x: auto
+	padding-bottom: 4px
+
+.dpdf-como-sale__papel
+	flex: 0 0 auto
+	display: flex
+	flex-direction: column
+	padding: 14px 14px 22px
+	border: 1px solid var(--color-border)
+	border-bottom: 2px dashed var(--color-border)
+	border-radius: 4px 4px 0 0
+	background: var(--bg-card)
+	color: var(--color-text-primary)
+	font-family: $dpdf-letra-de-comandera
+	font-size: 13px
+	line-height: 1.3
+
+.dpdf-como-sale__linea
+	display: block
+	min-height: 1.3em
+	white-space: pre
+
+.dpdf-como-sale__logo
+	display: flex
+	align-items: center
+	justify-content: center
+	gap: 6px
+	align-self: center
+	width: 60%
+	height: 4.2em
+	margin: 2px 0
+	border: 1px dashed var(--color-border)
+	border-radius: 4px
+	color: var(--color-text-secondary)
+	font-family: var(--font-family-sans-serif)
+	font-size: 0.74rem
+
+.dpdf-como-sale__qr
+	align-self: center
+	width: 7.5em
+	height: 7.5em
+	margin: 6px 0 2px
+	+dpdf-qr-de-muestra
+
+// Teléfono: una letra más chica para que los 48 caracteres de un rollo de 80 mm entren sin deslizar
+@media (max-width: 575.98px)
+	.dpdf-como-sale__papel
+		padding: 12px 10px 18px
+		font-size: 10.5px
 </style>

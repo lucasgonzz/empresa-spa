@@ -606,7 +606,7 @@ export function armar_estado(diseno, catalogo) {
 		})
 	})
 
-	return asegurar_fijos(estado, catalogo.fijos)
+	return asegurar_fijos(estado, catalogo.fijos, !!catalogo.es_ticket)
 }
 
 /**
@@ -615,11 +615,17 @@ export function armar_estado(diseno, catalogo) {
  * zona superior al principio y el del pie al final. Devuelve listas nuevas (los ítems son los
  * mismos objetos).
  *
+ * En el ticket de comandera (misión diseno-ticket-comandera, contrato §3.5) son tres y la API los
+ * pone así cuando faltan: el del emisor (`afip_emisor`) al principio de "superior", el del cliente
+ * (`afip_receptor`) al FINAL de "superior" (pegado a la tabla) y el del pie al final. Se replica el
+ * mismo orden para que lo que se ve sea lo que la API guarda.
+ *
  * @param {Object} estado {superior, pie}
  * @param {Array} fijos `fijos` del catálogo
+ * @param {boolean} [es_ticket] el catálogo es el de un ticket de comandera
  * @returns {{superior: Array, pie: Array}}
  */
-export function asegurar_fijos(estado, fijos) {
+export function asegurar_fijos(estado, fijos, es_ticket) {
 	let definiciones = fijos_del_catalogo(fijos)
 	let resultado = {}
 
@@ -656,7 +662,8 @@ export function asegurar_fijos(estado, fijos) {
 			nuevo.cols = cols
 		}
 
-		if (zona === 'superior') {
+		/* En el ticket, el del cliente va al final de "superior" (ver el docblock) */
+		if (zona === 'superior' && !(es_ticket && fijo.key === FIJO_AFIP_RECEPTOR)) {
 			resultado[zona].unshift(nuevo)
 		} else {
 			resultado[zona].push(nuevo)

@@ -9,6 +9,10 @@
 		del cliente cambia de ancho como una caja -- manijas en los dos bordes, − N/12 + y la insignia
 		mientras se tira, de a una columna y acotado a cols_min..12 -- y con menos de 12 columnas deja
 		lugar para una caja al lado; el del pie va siempre a lo ancho (data-cols 12), sin manijas.
+
+		En un ticket de comandera (misión diseno-ticket-comandera, D8) son tres -- el del emisor, el
+		del cliente y el del pie -- y van siempre a lo ancho del rollo. Se dibujan con su nombre y una
+		muestra de lo que imprimen, en la letra de la comandera (el del pie, con un QR de muestra).
 	-->
 	<div
 	class="dpdf-fijo dpdf-item-de-zona"
@@ -41,7 +45,9 @@
 		@pointercancel="terminar_redimension"
 		@lostpointercapture="terminar_redimension"></span>
 
-		<div class="dpdf-fijo__tarjeta">
+		<div
+		v-if="!es_ticket"
+		class="dpdf-fijo__tarjeta">
 			<i
 			class="bi bi-grip-vertical dpdf-fijo__agarre"
 			title="Arrastrá para moverlo dentro de su zona"
@@ -100,6 +106,39 @@
 			</span>
 		</div>
 
+		<!-- Ticket: el nombre del bloque y una muestra de lo que imprime la comandera -->
+		<div
+		v-else
+		class="dpdf-fijo__tarjeta dpdf-fijo__tarjeta--ticket">
+			<span class="dpdf-fijo__cabecera">
+				<span
+				class="dpdf-fijo__candado"
+				:title="motivo"
+				aria-hidden="true">
+					<i class="bi bi-lock-fill"></i>
+				</span>
+				<span
+				class="dpdf-fijo__nombre"
+				:title="nombre">{{ nombre }}</span>
+				<span
+				v-if="tiene_importes"
+				class="dpdf-fijo__estado"
+				:class="{ 'dpdf-fijo__estado--apagado': !fijo.importes }">
+					{{ fijo.importes ? 'Con el IVA' : 'Sin el IVA' }}
+				</span>
+			</span>
+			<renglones-de-ticket
+			:renglones="muestra_en_el_rollo.renglones"
+			aria-hidden="true"></renglones-de-ticket>
+			<span
+			v-if="muestra_en_el_rollo.qr"
+			class="dpdf-fijo__qr"
+			:style="estilo_del_qr"
+			title="El código QR de ARCA (de muestra)"
+			aria-hidden="true"></span>
+			<span class="dpdf-fijo__muestra">Datos de muestra: salen los de la factura.</span>
+		</div>
+
 		<!--
 			Mientras se tira de un borde: el ancho en grande. Las manijas y esta insignia llevan `key`
 			para que Vue nunca reutilice el nodo de una manija para dibujar la insignia (perdería la
@@ -128,7 +167,12 @@
 </template>
 <script>
 import redimension_por_columnas from './redimension_por_columnas'
+import RenglonesDeTicket from './RenglonesDeTicket'
 import { cols_de_fijo, cols_minimo_de_fijo } from './estado_del_disenador'
+import { fijo_de_muestra } from './vista_de_ticket'
+
+/* Lado del QR de muestra del ticket, en renglones del rollo */
+const RENGLONES_DEL_QR = 6
 
 /* Lo que se dice del candado de un bloque fijo, según cambie de ancho o no */
 const MOTIVO_DEL_CANDADO = 'Lo pide ARCA: se puede mover dentro de su zona, pero no sacar.'
@@ -147,6 +191,9 @@ export default {
 	name: 'BloqueFijo',
 	inject: ['disenador'],
 	mixins: [redimension_por_columnas],
+	components: {
+		RenglonesDeTicket,
+	},
 	props: {
 		/* Bloque de trabajo: {tipo: 'fijo', key, (cols), (importes)} */
 		fijo: {
@@ -155,6 +202,38 @@ export default {
 		},
 	},
 	computed: {
+		/**
+		 * Si el bloque está en un ticket de comandera.
+		 *
+		 * @returns {boolean}
+		 */
+		es_ticket() {
+			return this.disenador.es_ticket
+		},
+		/**
+		 * La muestra de lo que imprime el bloque en el rollo (vista_de_ticket.js, fijo_de_muestra):
+		 * renglones y si lleva el QR.
+		 *
+		 * @returns {{renglones: Array, qr: boolean}}
+		 */
+		muestra_en_el_rollo() {
+			if (!this.es_ticket) {
+				return { renglones: [], qr: false }
+			}
+			return fijo_de_muestra(this.fijo.key, this.disenador.caracteres_del_rollo, this.fijo.importes !== false)
+		},
+		/**
+		 * El tamaño del QR de muestra (un cuadrado de unos renglones de lado).
+		 *
+		 * @returns {Object}
+		 */
+		estilo_del_qr() {
+			let lado = RENGLONES_DEL_QR * this.disenador.renglon_del_rollo_px
+			return {
+				width: lado + 'px',
+				height: lado + 'px',
+			}
+		},
 		/**
 		 * Definición del bloque en el catálogo ({key, zona, nombre, descripcion, redimensionable,
 		 * cols_min}), o null.
@@ -258,6 +337,7 @@ export default {
 				'dpdf-fijo--seleccionado': this.seleccionado,
 				'dpdf-fijo--redimensionando': this.redimensionando,
 				'dpdf-fijo--destacado': this.disenador.destacado === 'fijo:' + this.fijo.key,
+				'dpdf-fijo--ticket': this.es_ticket,
 			}
 		},
 	},
@@ -388,4 +468,48 @@ export default {
 @media (hover: none)
 	.dpdf-fijo
 		+dpdf-ancho-tactil('dpdf-fijo')
+
+// ── Ticket de comandera ────────────────────────────────────────────────────────────────────────
+// El bloque en el rollo: el nombre arriba (con la letra de la interfaz) y la muestra en la letra de
+// la comandera, a todo el ancho, sobre un fondo apenas gris (son datos de muestra, no se editan).
+@import '@/common-vue/components/pdf/disenador-pdf/_ticket'
+
+.dpdf-fijo.dpdf-fijo--ticket
+	font-family: var(--font-family-sans-serif)
+
+	.dpdf-fijo__tarjeta--ticket
+		flex-direction: column
+		align-items: stretch
+		gap: 3px
+		padding: 3px 0 5px
+		border: 0
+		border-radius: 3px
+		outline: 1px dashed var(--color-border)
+		outline-offset: 0
+
+	&.dpdf-fijo--seleccionado .dpdf-fijo__tarjeta--ticket
+		outline-color: var(--color-primary)
+
+	.dpdf-fijo__cabecera
+		display: flex
+		align-items: center
+		gap: 6px
+		min-width: 0
+		color: var(--color-text-secondary)
+
+	.dpdf-fijo__nombre
+		flex: 1 1 auto
+		min-width: 0
+		font-size: 0.74rem
+
+	.dpdf-fijo__qr
+		align-self: center
+		margin: 4px 0 2px
+		+dpdf-qr-de-muestra
+
+	.dpdf-fijo__muestra
+		color: var(--color-text-secondary)
+		font-size: 0.66rem
+		font-style: italic
+		text-align: center
 </style>

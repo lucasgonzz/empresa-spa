@@ -12,6 +12,11 @@
 		columna). La suma nunca pasa de 24.
 		- Debajo, cuánto lugar queda libre (o que la tabla ocupa todo el ancho) y, si el diseñador
 		puso las columnas sugeridas, que hay que guardar para que queden.
+
+		En un ticket de comandera (plan §7.3) cada columna mide sus caracteres del rollo (la regla del
+		motor: caracteres_de_la_tabla) y se dibuja como la imprime la comandera: el rótulo en negrita,
+		la línea de guiones, dos ítems de muestra y la línea del final (vista_de_ticket.js,
+		tabla_en_el_rollo). Las medias columnas siguen siendo las mismas 24.
 	-->
 	<section
 	class="dpdf-tabla"
@@ -77,9 +82,10 @@
 			@start="disenador.al_empezar_arrastre($event)"
 			@end="disenador.al_terminar_arrastre($event)">
 				<columna-de-la-tabla
-				v-for="columna in disenador.tabla.visibles"
+				v-for="(columna, indice) in disenador.tabla.visibles"
 				:key="columna.ui_id"
 				:columna="columna"
+				:en_el_rollo="tabla_del_rollo ? (tabla_del_rollo[indice] || null) : null"
 				@redimension="redimensionando = $event"></columna-de-la-tabla>
 			</draggable>
 
@@ -114,6 +120,7 @@
 <script>
 import draggable from 'vuedraggable'
 import ColumnaDeLaTabla from './ColumnaDeLaTabla'
+import { tabla_en_el_rollo } from './vista_de_ticket'
 
 /*
 	Grupo de la fila de la tabla y de "Columnas de la tabla" de la bandeja: una columna va y viene
@@ -177,6 +184,9 @@ export default {
 		 */
 		texto_del_lugar() {
 			let libre = this.disenador.lugar_libre_en_la_tabla
+			if (this.disenador.es_ticket) {
+				return this.texto_del_lugar_en_el_rollo
+			}
 			if (!this.disenador.tabla.visibles.length) {
 				return 'La tabla no tiene columnas: en el PDF sale vacía.'
 			}
@@ -191,6 +201,50 @@ export default {
 		 *
 		 * @returns {boolean}
 		 */
+		/**
+		 * En un ticket: la tabla en el rollo (por columna, sus renglones de muestra en caracteres), en
+		 * el orden de la tabla. En una hoja, null.
+		 *
+		 * @returns {Array|null}
+		 */
+		tabla_del_rollo() {
+			if (!this.disenador.es_ticket) {
+				return null
+			}
+			return tabla_en_el_rollo(this.disenador.tabla.visibles, this.disenador.caracteres_del_rollo, this.total)
+		},
+		/**
+		 * Cuánto lugar queda en la fila, dicho para el rollo: en la comandera la tabla siempre llena
+		 * el renglón (lo que sobra se lo lleva la columna con salto de línea, o la más ancha).
+		 *
+		 * @returns {string}
+		 */
+		texto_del_lugar_en_el_rollo() {
+			let visibles = this.disenador.tabla.visibles
+			let libre = this.disenador.lugar_libre_en_la_tabla
+			if (!visibles.length) {
+				return 'La tabla no tiene columnas: en el ticket no sale.'
+			}
+			let por_renglon = this.disenador.caracteres_del_rollo + ' caracteres por renglón'
+			if (libre <= 0) {
+				return 'La tabla ocupa todo el ancho del rollo (' + por_renglon + '). Para agrandar una columna, achicá otra.'
+			}
+			let destino = null
+			visibles.forEach(function (columna) {
+				if (!destino && columna.salto) {
+					destino = columna
+				}
+			})
+			if (!destino) {
+				visibles.forEach(function (columna) {
+					if (!destino || columna.cols > destino.cols) {
+						destino = columna
+					}
+				})
+			}
+			return 'Quedan ' + libre + (libre === 1 ? ' media columna libre' : ' medias columnas libres')
+				+ ': en la comandera ese lugar se lo lleva «' + destino.nombre + '» (la tabla llena los ' + por_renglon + ').'
+		},
 		recibe() {
 			let arrastrando = this.disenador.arrastrando
 			return !!(arrastrando && arrastrando.tipo === 'columna')
@@ -205,6 +259,7 @@ export default {
 				'dpdf-tabla--redimensionando': this.redimensionando,
 				'dpdf-tabla--vacia': !this.disenador.tabla.visibles.length,
 				'dpdf-tabla--recibe': this.recibe,
+				'dpdf-tabla--ticket': this.disenador.es_ticket,
 			}
 		},
 	},
@@ -380,4 +435,29 @@ export default {
 	i
 		flex: 0 0 auto
 		margin-top: 1px
+
+// ── Ticket de comandera ────────────────────────────────────────────────────────────────────────
+// La fila es el renglón del papel: sin gutter (cada columna trae su ancho en caracteres y su espacio
+// de separación adentro) y las guías llenan el renglón. La letra de la interfaz para los textos de
+// ayuda; los renglones traen la de la comandera.
+.dpdf-tabla.dpdf-tabla--ticket
+	font-family: var(--font-family-sans-serif)
+
+	.dpdf-tabla__guias
+		left: 0
+		right: 0
+
+	.dpdf-tabla__guia
+		padding: 0
+
+		&::before
+			border-radius: 0
+			box-shadow: inset -1px 0 0 var(--bg-card)
+
+	.dpdf-tabla__fila
+		min-height: 60px
+		margin: 0
+
+		> *
+			padding: 0
 </style>

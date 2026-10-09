@@ -16,7 +16,9 @@
 		la saca de la tabla.
 
 		Nada del catálogo está escrito acá: categorías, nombres, ejemplos y zona sugerida llegan del
-		endpoint (`disenador.catalogo`).
+		endpoint (`disenador.catalogo`). En un ticket de comandera (misión diseno-ticket-comandera) el
+		catálogo trae primero la categoría "Negocio" (el logo y los datos del negocio, D6) y acá solo
+		cambian los textos ("el ticket" en lugar de "la hoja") y el ejemplo del logo.
 	-->
 	<aside
 	class="dpdf-bandeja"
@@ -26,7 +28,7 @@
 
 		<!-- ── Fuente de cajas y saltos de fila: se clonan, nunca se vacía ni recibe nada ──────── -->
 		<div class="dpdf-bandeja__fuente">
-			<p class="dpdf-bandeja__seccion">Para armar la hoja</p>
+			<p class="dpdf-bandeja__seccion">Para armar {{ papel }}</p>
 			<draggable
 			class="dpdf-bandeja__fuente-lista"
 			:list="fuente"
@@ -109,7 +111,7 @@
 				<i
 				class="bi bi-box-arrow-in-down"
 				aria-hidden="true"></i>
-				<span>{{ recibe ? 'Soltalo acá para sacarlo de la hoja' : 'Arrastrá acá un campo para sacarlo de la hoja' }}</span>
+				<span>{{ recibe ? 'Soltalo acá para sacarlo de ' + papel : 'Arrastrá acá un campo para sacarlo de ' + papel }}</span>
 			</div>
 		</div>
 
@@ -471,6 +473,15 @@ export default {
 			return Object.keys(this.disenador.keys_en_uso).length
 		},
 		/**
+		 * Cómo se nombra lo que se arma en los textos de la bandeja: "la hoja" o, en un ticket de
+		 * comandera, "el ticket".
+		 *
+		 * @returns {string}
+		 */
+		papel() {
+			return this.disenador.es_ticket ? 'el ticket' : 'la hoja'
+		},
+		/**
 		 * Las categorías del catálogo con sus campos (filtrados por la búsqueda) y cuántos están en
 		 * uso. Con una búsqueda, solo las que tienen algo que coincide.
 		 *
@@ -663,6 +674,10 @@ export default {
 		 * @returns {string}
 		 */
 		ejemplo_de(definicion) {
+			/* El logo del ticket (tipo `imagen`) no tiene un ejemplo de texto */
+			if (definicion.tipo === 'imagen') {
+				return 'El logo, centrado a todo el ancho'
+			}
 			let ejemplo = definicion.ejemplo
 			if (Array.isArray(ejemplo)) {
 				return ejemplo.join(SEPARADOR_DE_RENGLONES)

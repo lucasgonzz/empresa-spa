@@ -5,6 +5,10 @@
 		del pie, el interruptor "Mostrar el cuadro de importes" (decisión 4 del plan: el cuadro de
 		importes se puede apagar, el QR y el CAE no). Los estilos de las clases dpdf-panel__* y
 		dpdf-toggle están en PanelDePropiedades.vue.
+
+		En un ticket de comandera (misión diseno-ticket-comandera, D8) los tres bloques van a lo ancho
+		(ninguno cambia de ancho) y el interruptor del pie apaga el IVA (contenido o discriminado); el
+		CAE y el QR salen siempre.
 	-->
 	<div class="dpdf-panel__cuerpo">
 		<p
@@ -63,7 +67,7 @@
 			<span class="dpdf-toggle__pista">
 				<span class="dpdf-toggle__perilla"></span>
 			</span>
-			<span class="dpdf-toggle__texto">Mostrar el cuadro de importes</span>
+			<span class="dpdf-toggle__texto">{{ disenador.es_ticket ? 'Mostrar el IVA' : 'Mostrar el cuadro de importes' }}</span>
 		</label>
 
 		<p class="dpdf-panel__nota">

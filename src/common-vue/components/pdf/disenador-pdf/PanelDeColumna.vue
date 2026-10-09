@@ -8,7 +8,7 @@
 	-->
 	<div class="dpdf-panel__cuerpo">
 		<p class="dpdf-panel__ayuda dpdf-panel__ayuda--parrafo">
-			En el PDF el encabezado de esta columna dice «{{ columna.rotulo }}».
+			En {{ disenador.es_ticket ? 'el ticket' : 'el PDF' }} el encabezado de esta columna dice «{{ columna.rotulo }}».
 		</p>
 
 		<div class="dpdf-panel__bloque">
@@ -114,6 +114,11 @@ export default {
 		ayuda_del_ancho() {
 			let libre = this.disenador.lugar_libre_en_la_tabla
 			let texto = 'Unos ' + this.disenador.mm_de_columna(this.columna) + ' mm en esta hoja. '
+			/* En un ticket: los caracteres que le tocan en la comandera (sin el espacio que la separa de la siguiente) */
+			let en_el_rollo = this.disenador.es_ticket ? this.disenador.caracteres_de_columna(this.columna) : null
+			if (en_el_rollo) {
+				texto = en_el_rollo.contenido + (en_el_rollo.contenido === 1 ? ' carácter' : ' caracteres') + ' en la comandera. '
+			}
 			if (libre <= 0) {
 				return texto + 'La tabla ocupa todo el ancho: para agrandarla, achicá otra columna.'
 			}

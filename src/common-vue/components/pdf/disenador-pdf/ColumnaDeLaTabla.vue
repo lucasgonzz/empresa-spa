@@ -11,11 +11,16 @@
 		renglones de muestra. Toda la columna se agarra para arrastrar (reordenar), MENOS las manijas y
 		los botones (clase dpdf-no-arrastra, el `filter` de Sortable). Un clic (o Enter) la selecciona:
 		el panel de propiedades muestra su ancho, el salto de línea y "Quitar de la tabla".
+
+		En un ticket de comandera (plan §7.3) mide sus caracteres del rollo (`en_el_rollo`, de
+		tabla_en_el_rollo) y se dibuja como la imprime la comandera: el rótulo en negrita, la línea de
+		guiones, dos ítems de muestra y la línea del final, con el espacio que la separa de la
+		siguiente adentro (así las columnas, una al lado de la otra, dan el renglón entero).
 	-->
 	<div
 	class="dpdf-columna dpdf-item-de-tabla"
 	:class="clases"
-	:style="{ '--dpdf-cols': columna.cols }"
+	:style="estilo_de_la_columna"
 	data-tipo="columna"
 	:data-ui="columna.ui_id"
 	:data-testid="'columna-' + columna.value_resolver + '-disenador-pdf'"
@@ -41,8 +46,18 @@
 		<div
 		class="dpdf-columna__tarjeta"
 		@click="seleccionar">
+			<!-- Ticket: lo que imprime la comandera en esta columna (solo ilustración) -->
+			<renglones-de-ticket
+			v-if="en_el_rollo"
+			class="dpdf-columna__rollo"
+			:renglones="en_el_rollo.renglones"
+			:title="columna.nombre + ' · se imprime «' + columna.rotulo + '»'"
+			aria-hidden="true"></renglones-de-ticket>
+
 			<!-- El encabezado gris de la tabla del PDF, con el rótulo que se imprime -->
-			<div class="dpdf-columna__encabezado">
+			<div
+			v-if="!en_el_rollo"
+			class="dpdf-columna__encabezado">
 				<span
 				class="dpdf-columna__rotulo"
 				:title="columna.nombre + ' · se imprime «' + columna.rotulo + '»'">{{ columna.rotulo }}</span>
@@ -55,6 +70,7 @@
 
 			<!-- Dos renglones de muestra: lo que importa es el ancho -->
 			<div
+			v-if="!en_el_rollo"
 			class="dpdf-columna__renglones"
 			aria-hidden="true">
 				<span class="dpdf-columna__raya"></span>
@@ -68,6 +84,12 @@
 				táctiles, siempre).
 			-->
 			<div class="dpdf-columna__pie">
+				<!-- Ticket: el salto de línea, abajo (el rótulo ya es el que se imprime) -->
+				<i
+				v-if="en_el_rollo && columna.salto"
+				class="bi bi-text-wrap dpdf-columna__salto"
+				title="Con salto de línea: un texto largo sigue abajo"
+				aria-hidden="true"></i>
 				<span
 				v-if="con_botones"
 				class="dpdf-columna__ancho">
@@ -127,6 +149,7 @@
 </template>
 <script>
 import redimension_por_columnas from './redimension_por_columnas'
+import RenglonesDeTicket from './RenglonesDeTicket'
 
 /* Desde cuántas medias columnas entra el − N/24 + adentro de la columna (si no, solo el número) */
 const COLS_PARA_LOS_BOTONES = 5
@@ -145,14 +168,42 @@ export default {
 	name: 'ColumnaDeLaTabla',
 	inject: ['disenador'],
 	mixins: [redimension_por_columnas],
+	components: {
+		RenglonesDeTicket,
+	},
 	props: {
 		/* Columna de trabajo (ver tabla_del_disenador.js) */
 		columna: {
 			type: Object,
 			required: true,
 		},
+		/*
+			Solo en un ticket: la columna en el rollo ({ancho, contenido, numerica, renglones}, de
+			tabla_en_el_rollo). En una hoja, null.
+		*/
+		en_el_rollo: {
+			type: Object,
+			default: null,
+		},
 	},
 	computed: {
+		/**
+		 * El ancho de la columna: en una hoja, sus medias columnas (la fila lee --dpdf-cols); en un
+		 * ticket, además, sus caracteres del rollo en px (el renglón entero mide N caracteres).
+		 *
+		 * @returns {Object}
+		 */
+		estilo_de_la_columna() {
+			if (!this.en_el_rollo) {
+				return { '--dpdf-cols': this.columna.cols }
+			}
+			let ancho = (this.en_el_rollo.ancho * this.disenador.caracter_del_rollo_px).toFixed(2) + 'px'
+			return {
+				'--dpdf-cols': this.columna.cols,
+				flex: '0 1 ' + ancho,
+				maxWidth: ancho,
+			}
+		},
 		/**
 		 * Lo que se ensancha con las manijas y − / + (lo pide el mixin redimension_por_columnas).
 		 *
@@ -200,6 +251,10 @@ export default {
 		 * @returns {string}
 		 */
 		titulo_del_ancho() {
+			if (this.en_el_rollo) {
+				return 'Ocupa ' + this.columna.cols + ' de las ' + this.total_de_columnas + ' medias columnas: '
+					+ this.en_el_rollo.contenido + (this.en_el_rollo.contenido === 1 ? ' carácter' : ' caracteres') + ' en la comandera'
+			}
 			return 'Ocupa ' + this.columna.cols + ' de las ' + this.total_de_columnas + ' medias columnas (unos '
 				+ this.disenador.mm_de_columna(this.columna) + ' mm en esta hoja)'
 		},
@@ -233,6 +288,7 @@ export default {
 				'dpdf-columna--redimensionando': this.redimensionando,
 				'dpdf-columna--angosta': this.columna.cols < 3,
 				'dpdf-columna--destacada': this.disenador.destacado === this.columna.ui_id,
+				'dpdf-columna--ticket': !!this.en_el_rollo,
 			}
 		},
 	},
@@ -439,4 +495,38 @@ export default {
 
 		.dpdf-columna__manija--derecha
 			right: -4px
+
+// ── Ticket de comandera ────────────────────────────────────────────────────────────────────────
+// La columna en el rollo: sin recuadro ni encabezado gris (la comandera no los dibuja), un contorno
+// punteado tenue para ver dónde está, y sus renglones justo en sus caracteres. La letra de la
+// interfaz para el pie; los renglones traen la de la comandera.
+.dpdf-columna.dpdf-columna--ticket
+	font-family: var(--font-family-sans-serif)
+
+	.dpdf-columna__tarjeta
+		border: 0
+		border-radius: 0
+		background: transparent
+		box-shadow: inset 0 0 0 1px var(--color-border-secondary)
+
+	&:hover .dpdf-columna__tarjeta
+		box-shadow: inset 0 0 0 1px var(--color-primary)
+
+	&.dpdf-columna--seleccionada .dpdf-columna__tarjeta,
+	&.dpdf-columna--redimensionando .dpdf-columna__tarjeta
+		box-shadow: inset 0 0 0 2px var(--color-primary)
+
+	.dpdf-columna__rollo
+		padding: 2px 0
+
+	.dpdf-columna__pie
+		align-items: center
+		gap: 2px
+		padding: 0 1px 2px
+
+	.dpdf-columna__manija--izquierda
+		left: -5px
+
+	.dpdf-columna__manija--derecha
+		right: -5px
 </style>

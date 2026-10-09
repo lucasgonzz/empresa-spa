@@ -8,6 +8,11 @@
 	computeds de Index.vue (estado_de_trabajo, hoja, sigue_de_siempre, cambio_que_pasa_a_cajas,
 	tabla, tabla_cambiada...).
 
+	En un ticket de comandera (misión diseno-ticket-comandera, plan §7.3) cambia lo que viaja: ni la
+	hoja ni el encabezado (la API fuerza papel, imprimible y margen del rollo, y el ticket no tiene
+	encabezado aparte, D6); "Volver al ticket de siempre" no toca el ancho; y "Ver un PDF de prueba"
+	pasa a "Ver cómo sale" (el ticket en texto que arma la API, en un modal).
+
 	Los nombres se chequearon contra los mixins globales: ninguno pisa a uno de ellos.
 */
 import {
@@ -19,10 +24,10 @@ import {
 	serializar,
 	tiene_diseno,
 	ancho_util,
-	hoja_del_perfil,
 } from './estado_del_disenador'
 import { opciones_para_guardar, suma_mm_visible } from './tabla_del_disenador'
-import { guardar_diseno, mensaje_de_error } from './api_del_disenador'
+import { guardar_diseno, traer_ticket_en_texto, mensaje_de_error } from './api_del_disenador'
+import { caracteres_por_renglon } from './vista_de_ticket'
 import { avisar } from '@/components/abm/disenos-de-vender/avisos'
 import { env } from '@/runtime_config'
 
@@ -64,6 +69,11 @@ export default {
 		volver_al_de_siempre() {
 			let self = this
 
+			if (this.es_ticket) {
+				this.volver_al_ticket_de_siempre()
+				return
+			}
+
 			this.$bvModal.msgBoxConfirm('Las cajas, el pie y la hoja vuelven a como imprime el PDF de siempre (hoja A4, margen de 5 mm). El encabezado y las columnas de la tabla no cambian, y nada se guarda hasta que toques Guardar.', {
 				title: '¿Volver al diseño de siempre?',
 				okTitle: 'Volver al de siempre',
@@ -87,6 +97,43 @@ export default {
 				self.base_es_de_siempre = true
 				self.restablecido = true
 				self.huella_base_del_diseno = self.huella_del_diseno_actual
+			})
+			.catch(function () {})
+		},
+		/**
+		 * "Volver al ticket de siempre" (plan §7.3): las cajas vuelven al diseño derivado del catálogo
+		 * (el equivalente al Ticket 2.0 de siempre), SIN tocar el ancho del rollo (se cambia en el
+		 * formulario). Pregunta antes; nada se guarda hasta Guardar, y si se guarda sin tocar más,
+		 * viaja `page_layout: null` (ver datos_para_guardar_del_ticket).
+		 *
+		 * Las columnas de la tabla no cambian, pero lo que se les haya tocado hasta acá deja de
+		 * contar para pasar a cajas (D10): el ticket de siempre no las usa, así que se guardan igual
+		 * sin volver a imprimir con cajas.
+		 *
+		 * @returns {void}
+		 */
+		volver_al_ticket_de_siempre() {
+			let self = this
+
+			this.$bvModal.msgBoxConfirm('Las cajas vuelven a como imprime el ticket de siempre. El ancho de la comandera y las columnas de la tabla no cambian, y nada se guarda hasta que toques Guardar.', {
+				title: '¿Volver al ticket de siempre?',
+				okTitle: 'Volver al de siempre',
+				okVariant: 'primary',
+				cancelTitle: 'Cancelar',
+				centered: true,
+			})
+			.then(function (confirmado) {
+				if (!confirmado || !self.catalogo) {
+					return
+				}
+				let estado = armar_estado(self.catalogo.diseno_derivado, self.catalogo)
+				self.superior = estado.superior
+				self.pie = estado.pie
+				self.seleccion = null
+				self.base_es_de_siempre = true
+				self.restablecido = true
+				self.huella_base_del_diseno = self.huella_del_diseno_actual
+				self.huella_de_la_tabla_para_cajas = self.huella_de_la_tabla_actual
 			})
 			.catch(function () {})
 		},
@@ -125,6 +172,10 @@ export default {
 		 * @returns {Object|null}
 		 */
 		datos_para_guardar() {
+			if (this.es_ticket) {
+				return this.datos_para_guardar_del_ticket()
+			}
+
 			let datos = {}
 			let hoja = null
 
@@ -182,6 +233,62 @@ export default {
 			}
 
 			return datos
+		},
+		/**
+		 * Lo que viaja al guardar un ticket de comandera (plan §7.3).
+		 *
+		 * - `page_layout`: igual que en la hoja (solo si lo tocado pasa el perfil a cajas, o null al
+		 *   volver al ticket de siempre), con una diferencia: en el ticket tocar la tabla TAMBIÉN pasa
+		 *   a cajas (D10, ver cambio_que_pasa_a_cajas).
+		 * - La tabla (`pdf_column_options` completo) si cambió, con los milímetros contra el ancho del
+		 *   rollo (D9: la "hoja" del ticket es {ancho del rollo, margen 0}).
+		 * - NADA de la hoja (ni formatos ni margen: la API fuerza los del rollo) ni del encabezado
+		 *   (`header_layout`, `logo_size_mm`: el ticket no tiene encabezado aparte, D6).
+		 *
+		 * @returns {Object}
+		 */
+		datos_para_guardar_del_ticket() {
+			let datos = {}
+
+			if (this.sigue_de_siempre) {
+				if (this.restablecido && this.tenia_diseno) {
+					datos.page_layout = null
+				}
+			} else if (this.cambio_que_pasa_a_cajas) {
+				datos.page_layout = serializar(this.estado_de_trabajo, this.limites)
+			}
+
+			if (this.tabla.columnas.length && this.tabla_cambiada) {
+				datos.pdf_column_options = opciones_para_guardar(this.tabla.columnas, this.tabla.visibles, this.ancho_util_de_la_tabla_mm, this.total_de_la_tabla)
+			}
+
+			return datos
+		},
+		/**
+		 * Si el pedido de guardar tiene que llevar el `sheet_type_id` del formulario (solo venta): el
+		 * formulario cambió "Hoja o comandera" y no lo guardó, así que el guardado no es el que se ve.
+		 *
+		 * Por qué: el lienzo se armó con el catálogo del tipo de hoja del FORMULARIO (hoja o ticket, y
+		 * en el ticket los milímetros de las columnas se convierten contra ESE ancho), pero la API
+		 * normaliza el diseño con el tipo de hoja del pedido o, si no viene, con el guardado. Sin
+		 * mandarlo, un ticket se guardaría normalizado como hoja (o al revés) y, al guardar después el
+		 * formulario con el cambio de clase y el mismo diseño, la API lo dejaría en null (contrato
+		 * §3.2). Es el mismo criterio que `is_afip_ticket`.
+		 *
+		 * Si el guardado no se pudo leer: en un ticket va igual (es el que da sentido a los
+		 * milímetros); en una hoja no (todo queda como antes de esta misión).
+		 *
+		 * @returns {boolean}
+		 */
+		hay_que_mandar_el_tipo_de_hoja() {
+			if (this.modelo_del_perfil !== 'sale' || !Object.prototype.hasOwnProperty.call(this.model, 'sheet_type_id')) {
+				return false
+			}
+			let del_formulario = this.model.sheet_type_id === null || typeof this.model.sheet_type_id == 'undefined' ? null : this.model.sheet_type_id
+			if (typeof this.tipo_de_hoja_guardado == 'undefined') {
+				return this.es_ticket && del_formulario !== null
+			}
+			return String(del_formulario) !== String(this.tipo_de_hoja_guardado)
 		},
 		/**
 		 * La hoja que se guarda con un perfil de siempre: la A4 de 5 mm que imprime el PDF de siempre,
@@ -266,6 +373,11 @@ export default {
 				datos.is_afip_ticket = es_verdadero(this.model.is_afip_ticket)
 			}
 
+			/* Y "Hoja o comandera" del formulario, si se cambió y no se guardó (ver hay_que_mandar_el_tipo_de_hoja) */
+			if (this.hay_que_mandar_el_tipo_de_hoja()) {
+				datos.sheet_type_id = this.model.sheet_type_id
+			}
+
 			this.guardando = true
 			this.$store.commit('auth/setMessage', 'Guardando el diseño de PDF')
 			this.$store.commit('auth/setLoading', true)
@@ -278,7 +390,8 @@ export default {
 
 				let guardado = respuesta && respuesta.data ? respuesta.data.model : null
 				self.aplicar_lo_guardado(datos, guardado)
-				avisar(self, 'success', self.se_puede_probar ? 'Diseño guardado. Ya podés verlo con «Ver un PDF de prueba».' : 'Diseño guardado.')
+				let como_verlo = self.es_ticket ? '«Ver cómo sale»' : '«Ver un PDF de prueba»'
+				avisar(self, 'success', self.se_puede_probar ? 'Diseño guardado. Ya podés verlo con ' + como_verlo + '.' : 'Diseño guardado.')
 			})
 			.catch(function (error) {
 				self.guardando = false
@@ -330,6 +443,11 @@ export default {
 				this.$store.commit('pdf_column_profile/add', guardado)
 			}
 
+			/* Si viajó el tipo de hoja del formulario, ese es ahora el guardado */
+			if (Object.prototype.hasOwnProperty.call(datos, 'sheet_type_id')) {
+				this.tipo_de_hoja_guardado = guardado && Object.prototype.hasOwnProperty.call(guardado, 'sheet_type_id') ? guardado.sheet_type_id : datos.sheet_type_id
+			}
+
 			this.tenia_diseno = tiene_diseno(this.model.page_layout)
 
 			/* El lienzo desde el diseño guardado, si difiere del que se ve (con null queda el derivado) */
@@ -342,7 +460,8 @@ export default {
 				}
 			}
 
-			this.hoja = hoja_del_perfil(this.model, this.tenia_diseno, this.limites)
+			/* En un ticket, el rollo del catálogo; en una hoja, la que quedó guardada */
+			this.hoja = this.hoja_de_trabajo(this.tenia_diseno)
 			this.armar_encabezado()
 
 			/* La tabla: si viajó, lo que devolvió la API (con su pivot) es la verdad */
@@ -358,6 +477,80 @@ export default {
 			this.base_es_de_siempre = !this.tenia_diseno
 			this.restablecido = false
 			this.tomar_bases()
+		},
+		/**
+		 * El botón de probar: "Ver cómo sale" en un ticket, "Ver un PDF de prueba" en una hoja.
+		 *
+		 * @returns {void}
+		 */
+		probar_el_diseno() {
+			if (this.es_ticket) {
+				this.ver_como_sale()
+				return
+			}
+			this.ver_pdf_de_prueba()
+		},
+		/**
+		 * "Ver cómo sale" (ticket de comandera, plan §7.3): con el perfil guardado y sin cambios
+		 * pendientes (el botón se deshabilita con cambios), pide a la API el ticket de la venta de
+		 * prueba del catálogo armado con este perfil, en texto (`formato=texto`), y lo muestra en un
+		 * modal. Si el perfil todavía imprime el ticket de siempre, la API lo arma con el derivado y
+		 * contesta `disenado: false` (el modal lo avisa).
+		 *
+		 * @returns {void}
+		 */
+		ver_como_sale() {
+			let self = this
+			let comprobante = this.catalogo ? this.catalogo.comprobante_de_prueba : null
+
+			if (!comprobante || !comprobante.id || !this.model.id || this.hay_cambios) {
+				return
+			}
+
+			this.como_sale = {
+				cargando: true,
+				error: null,
+				disenado: false,
+				ancho_mm: this.ancho_del_rollo_mm,
+				caracteres: this.caracteres_del_rollo,
+				lineas: [],
+			}
+			this.$refs.como_sale.show()
+
+			traer_ticket_en_texto(this, comprobante.id, {
+				pdf_column_profile_id: this.model.id,
+				afip_ticket_id: comprobante.afip_ticket_id || null,
+			})
+			.then(function (respuesta) {
+				let datos = respuesta && respuesta.data ? respuesta.data : null
+				if (!datos || !Array.isArray(datos.lineas)) {
+					self.como_sale.cargando = false
+					self.como_sale.error = 'La respuesta del servidor no tiene la forma esperada. Probá de nuevo en un rato.'
+					return
+				}
+				let ancho = parseInt(datos.ancho_mm, 10) > 0 ? parseInt(datos.ancho_mm, 10) : self.ancho_del_rollo_mm
+				let caracteres = parseInt(datos.caracteres_por_renglon, 10) > 0 ? parseInt(datos.caracteres_por_renglon, 10) : caracteres_por_renglon(ancho)
+				self.como_sale = {
+					cargando: false,
+					error: null,
+					disenado: datos.disenado === true,
+					ancho_mm: ancho,
+					caracteres: caracteres,
+					lineas: datos.lineas.filter(function (linea) {
+						return typeof linea == 'string'
+					}),
+				}
+			})
+			.catch(function (error) {
+				console.log(error)
+				let estado = error && error.response ? error.response.status : null
+				self.como_sale.cargando = false
+				if (estado === 404) {
+					self.como_sale.error = 'El servidor todavía no muestra cómo sale el ticket: se habilita cuando se actualice el sistema.'
+					return
+				}
+				self.como_sale.error = mensaje_de_error(error, 'No se pudo armar el ticket. Revisá tu conexión y volvé a intentar.')
+			})
 		},
 		/**
 		 * "Ver un PDF de prueba": abre el PDF del último comprobante del negocio con este diseño (lo

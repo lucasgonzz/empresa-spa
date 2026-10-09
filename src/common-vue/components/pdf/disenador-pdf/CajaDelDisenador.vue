@@ -9,10 +9,17 @@
 		la clase dpdf-no-arrastra, que es el `filter` de Sortable. Adentro va otra lista arrastrable,
 		la de sus campos (grupo pdf-campos): Sortable resuelve la anidación solo, el arrastre lo toma
 		la lista más de adentro que tenga un ítem bajo el puntero.
+
+		En un ticket de comandera (misión diseno-ticket-comandera, plan §7.3) la caja mide sus
+		caracteres del rollo (`en_el_rollo`, que le pasa la zona): el ancho, el espacio de separación
+		si no es la última de su fila y, si lo es, el resto del renglón. Adentro, lo que imprime la
+		comandera en su letra: el título en negrita (se escribe en el lugar), los renglones de cada
+		campo y, "Con línea", la línea de guiones de abajo. Sin el agarre: toda la caja se agarra.
 	-->
 	<div
 	class="dpdf-caja dpdf-item-de-zona"
 	:class="clases"
+	:style="estilo_en_el_rollo"
 	:data-cols="caja.cols"
 	data-tipo="caja"
 	:data-id="caja.id"
@@ -44,6 +51,7 @@
 			-->
 			<div class="dpdf-caja__cabecera">
 				<i
+				v-if="!es_ticket"
 				class="bi bi-grip-vertical dpdf-caja__agarre"
 				title="Arrastrá para mover la caja"
 				aria-hidden="true"></i>
@@ -52,6 +60,7 @@
 				v-if="caja.cols > 1"
 				type="text"
 				class="dpdf-caja__titulo dpdf-no-arrastra"
+				:class="{ 'dpdf-caja__titulo--ticket': es_ticket }"
 				:value="caja.titulo"
 				:maxlength="disenador.limites.max_titulo"
 				placeholder="Título (opcional)"
@@ -72,14 +81,14 @@
 				role="group"
 				aria-label="Estilo de la caja">
 					<button
-					v-for="estilo in disenador.limites.estilos_de_caja"
+					v-for="estilo in estilos_ofrecidos"
 					:key="estilo"
 					type="button"
 					class="dpdf-caja__boton dpdf-no-arrastra"
-					:class="{ 'dpdf-caja__boton--activo': caja.estilo === estilo }"
+					:class="{ 'dpdf-caja__boton--activo': estilo_mostrado === estilo }"
 					:title="nombre_del_estilo(estilo)"
 					:aria-label="'Estilo: ' + nombre_del_estilo(estilo)"
-					:aria-pressed="caja.estilo === estilo ? 'true' : 'false'"
+					:aria-pressed="estilo_mostrado === estilo ? 'true' : 'false'"
 					@click.stop="caja.estilo = estilo">
 						<i
 						class="bi"
@@ -97,6 +106,13 @@
 					<i class="bi bi-x-lg"></i>
 				</button>
 			</div>
+
+			<!-- Ticket: un título más largo que la caja sigue en los renglones de abajo, como en el papel -->
+			<renglones-de-ticket
+			v-if="es_ticket && titulo_que_sigue.length"
+			class="dpdf-caja__titulo-que-sigue"
+			:renglones="titulo_que_sigue"
+			aria-hidden="true"></renglones-de-ticket>
 
 			<!-- Los campos: lista arrastrable entre las cajas de las dos zonas y la bandeja -->
 			<div class="dpdf-caja__cuerpo">
@@ -126,7 +142,8 @@
 					v-for="campo in caja.campos"
 					:key="campo.ui_id"
 					:campo="campo"
-					:cols_de_la_caja="caja.cols"></campo-de-caja>
+					:cols_de_la_caja="caja.cols"
+					:caracteres="contenido_en_el_rollo"></campo-de-caja>
 				</draggable>
 
 				<!-- Caja vacía: el texto va encima de la zona de soltar, sin tapar el arrastre -->
@@ -137,6 +154,18 @@
 					<span>Arrastrá campos acá</span>
 				</div>
 			</div>
+
+			<!-- Ticket: "Con línea" imprime una línea de guiones del ancho de la caja abajo -->
+			<renglones-de-ticket
+			v-if="es_ticket && linea_del_rollo.length"
+			class="dpdf-caja__linea"
+			:renglones="linea_del_rollo"
+			aria-hidden="true"></renglones-de-ticket>
+
+			<!-- Ticket: una caja con campos pero sin ningún dato no ocupa lugar en el papel -->
+			<span
+			v-if="es_ticket && sin_datos"
+			class="dpdf-caja__sin-datos">Sin datos: no se imprime</span>
 
 			<!--
 				Pie: el ancho (− N/12 +), pegado abajo a la derecha como en Vender. Los botones se ven al
@@ -156,7 +185,7 @@
 					</button>
 					<span
 					class="dpdf-caja__cols"
-					:title="'Ocupa ' + caja.cols + ' de las 12 columnas'">{{ caja.cols }}/12</span>
+					:title="titulo_del_ancho">{{ caja.cols }}/12</span>
 					<button
 					type="button"
 					class="dpdf-caja__boton dpdf-caja__boton--ancho dpdf-no-arrastra"
@@ -197,8 +226,17 @@
 <script>
 import draggable from 'vuedraggable'
 import CampoDeCaja from './CampoDeCaja'
+import RenglonesDeTicket from './RenglonesDeTicket'
 import redimension_por_columnas from './redimension_por_columnas'
-import { nombre_del_estilo, icono_del_estilo } from './estilos_de_caja'
+import {
+	nombre_del_estilo,
+	icono_del_estilo,
+	estilos_en_ticket,
+	estilo_en_ticket,
+	nombre_del_estilo_en_ticket,
+	icono_del_estilo_en_ticket,
+} from './estilos_de_caja'
+import { contenido_de_caja } from './vista_de_ticket'
 
 /*
 	Grupo de las listas de campos: todas las cajas (de las dos zonas) y la bandeja comparten el
@@ -236,6 +274,7 @@ export default {
 	components: {
 		draggable,
 		CampoDeCaja,
+		RenglonesDeTicket,
 	},
 	props: {
 		/* Caja de trabajo: {tipo: 'caja', id, cols, titulo, estilo, campos} */
@@ -247,6 +286,14 @@ export default {
 		zona: {
 			type: String,
 			required: true,
+		},
+		/*
+			Solo en un ticket: dónde va en el rollo, en caracteres ({ancho, contenido, separacion,
+			relleno, ultima}, de disposicion_de_zona). En una hoja, null.
+		*/
+		en_el_rollo: {
+			type: Object,
+			default: null,
 		},
 	},
 	data() {
@@ -307,10 +354,131 @@ export default {
 		 * @returns {Object}
 		 */
 		estilo_del_titulo() {
+			/* En un ticket, la letra del rollo: el título se imprime como un renglón más, en negrita */
+			if (this.es_ticket) {
+				return this.disenador.estilo_de_letra_del_rollo
+			}
 			let letra = Math.max(8, PUNTOS_DEL_TITULO * MM_POR_PUNTO * this.disenador.escala)
 			return {
 				fontSize: letra.toFixed(1) + 'px',
 			}
+		},
+		/**
+		 * Si la caja está en un ticket de comandera.
+		 *
+		 * @returns {boolean}
+		 */
+		es_ticket() {
+			return this.disenador.es_ticket
+		},
+		/**
+		 * Caracteres de contenido de la caja en el rollo (sin el de separación). 0 en una hoja.
+		 *
+		 * @returns {number}
+		 */
+		contenido_en_el_rollo() {
+			if (!this.es_ticket) {
+				return 0
+			}
+			if (this.en_el_rollo) {
+				return this.en_el_rollo.contenido
+			}
+			return Math.floor(this.caja.cols * this.disenador.caracteres_del_rollo / 12)
+		},
+		/**
+		 * El ancho de la caja en el rollo (px): sus caracteres, el de separación como relleno de la
+		 * derecha y, si es la última de su fila, el resto del renglón como margen (lo que sigue
+		 * empieza abajo). Las manijas usan la separación (--dpdf-separacion) para quedar sobre el
+		 * borde de la tarjeta. En una hoja, nada (el ancho lo pone la zona con data-cols).
+		 *
+		 * @returns {Object|null}
+		 */
+		estilo_en_el_rollo() {
+			if (!this.es_ticket || !this.en_el_rollo) {
+				return null
+			}
+			let caracter = this.disenador.caracter_del_rollo_px
+			let ancho = (this.en_el_rollo.ancho * caracter).toFixed(2) + 'px'
+			let separacion = (this.en_el_rollo.separacion * caracter).toFixed(2) + 'px'
+			return {
+				flex: '0 0 ' + ancho,
+				maxWidth: ancho,
+				paddingRight: separacion,
+				marginRight: (this.en_el_rollo.relleno * caracter).toFixed(2) + 'px',
+				'--dpdf-separacion': separacion,
+			}
+		},
+		/**
+		 * Lo que la caja imprime en el rollo (vista_de_ticket.js, contenido_de_caja): el título, los
+		 * renglones de cada campo, la línea y si está vacía. Null en una hoja.
+		 *
+		 * @returns {Object|null}
+		 */
+		vista_en_el_rollo() {
+			if (!this.es_ticket) {
+				return null
+			}
+			let disenador = this.disenador
+			return contenido_de_caja(this.caja, this.contenido_en_el_rollo, function (campo) {
+				return disenador.datos_del_campo_en_el_ticket(campo)
+			})
+		},
+		/**
+		 * Los renglones del título que siguen al primero (el primero es el input): un título más
+		 * largo que la caja se parte por palabras, como en el papel.
+		 *
+		 * @returns {Array}
+		 */
+		titulo_que_sigue() {
+			return this.vista_en_el_rollo ? this.vista_en_el_rollo.titulo.slice(1) : []
+		},
+		/**
+		 * La línea de guiones de abajo ("Con línea"), como lista de un renglón; [] sin línea o sin datos.
+		 *
+		 * @returns {Array}
+		 */
+		linea_del_rollo() {
+			return this.vista_en_el_rollo && this.vista_en_el_rollo.linea ? [this.vista_en_el_rollo.linea] : []
+		},
+		/**
+		 * Si la caja tiene campos pero ninguno con datos (y sin logo): en el papel no ocupa lugar.
+		 *
+		 * @returns {boolean}
+		 */
+		sin_datos() {
+			return !!(this.vista_en_el_rollo && this.vista_en_el_rollo.vacia && this.caja.campos.length)
+		},
+		/**
+		 * Los estilos que se ofrecen: los del catálogo; en un ticket, "Con línea" y "Sin línea".
+		 *
+		 * @returns {Array<string>}
+		 */
+		estilos_ofrecidos() {
+			if (this.es_ticket) {
+				return estilos_en_ticket(this.disenador.limites.estilos_de_caja)
+			}
+			return this.disenador.limites.estilos_de_caja
+		},
+		/**
+		 * El estilo que se marca como elegido: el de la caja; en un ticket, `gris` se ve como "Con
+		 * línea" (el motor lo imprime así).
+		 *
+		 * @returns {string}
+		 */
+		estilo_mostrado() {
+			return this.es_ticket ? estilo_en_ticket(this.caja.estilo) : this.caja.estilo
+		},
+		/**
+		 * El title del ancho (N/12): en un ticket, también los caracteres por renglón de la caja.
+		 *
+		 * @returns {string}
+		 */
+		titulo_del_ancho() {
+			let texto = 'Ocupa ' + this.caja.cols + ' de las 12 columnas'
+			if (this.es_ticket) {
+				texto += ': ' + this.contenido_en_el_rollo + (this.contenido_en_el_rollo === 1 ? ' carácter' : ' caracteres') + ' por renglón'
+			}
+			return texto
 		},
 		/**
 		 * Clases de estado de la caja.
@@ -324,18 +492,20 @@ export default {
 				'dpdf-caja--angosta': this.caja.cols <= 3,
 				'dpdf-caja--una-columna': this.caja.cols === 1,
 				'dpdf-caja--destacada': this.disenador.destacado === 'caja:' + this.caja.id,
+				'dpdf-caja--ticket': this.es_ticket,
+				'dpdf-caja--sin-datos': this.sin_datos,
 			}
 		},
 	},
 	methods: {
 		/**
-		 * Nombre de un estilo de caja (ver estilos_de_caja.js).
+		 * Nombre de un estilo de caja (ver estilos_de_caja.js; en un ticket, "Con línea" / "Sin línea").
 		 *
 		 * @param {string} estilo
 		 * @returns {string}
 		 */
 		nombre_del_estilo(estilo) {
-			return nombre_del_estilo(estilo)
+			return this.es_ticket ? nombre_del_estilo_en_ticket(estilo) : nombre_del_estilo(estilo)
 		},
 		/**
 		 * Ícono de un estilo de caja.
@@ -344,7 +514,7 @@ export default {
 		 * @returns {string}
 		 */
 		icono_del_estilo(estilo) {
-			return icono_del_estilo(estilo)
+			return this.es_ticket ? icono_del_estilo_en_ticket(estilo) : icono_del_estilo(estilo)
 		},
 		/**
 		 * Selecciona la caja (el panel de propiedades pasa a mostrarla).
@@ -559,4 +729,62 @@ export default {
 @media (hover: none)
 	.dpdf-caja
 		+dpdf-ancho-tactil('dpdf-caja')
+
+// ── Ticket de comandera ────────────────────────────────────────────────────────────────────────
+// La caja en el rollo: sin recuadro de verdad (la comandera no dibuja recuadros; "Con línea" es la
+// línea de guiones de abajo), un contorno punteado tenue para ver dónde está y su contenido justo
+// en sus caracteres (sin relleno a los costados). La letra de la interfaz para los botones y los
+// textos de ayuda; los renglones y el título traen la de la comandera.
+@import '@/common-vue/components/pdf/disenador-pdf/_ticket'
+
+.dpdf-caja.dpdf-caja--ticket
+	font-family: var(--font-family-sans-serif)
+
+	.dpdf-caja__tarjeta
+		gap: 2px
+		padding: 2px 0
+		border: 0
+		border-radius: 3px
+		background: transparent
+		outline: 1px dashed var(--color-border)
+		outline-offset: 0
+
+	.dpdf-caja__cabecera
+		gap: 2px
+
+	.dpdf-caja__campos
+		gap: 0
+		padding: 0
+
+	// Las manijas, centradas en el borde de la tarjeta (la derecha, antes del espacio de separación)
+	.dpdf-caja__manija
+		width: 10px
+
+	.dpdf-caja__manija--izquierda
+		left: -5px
+
+	.dpdf-caja__manija--derecha
+		right: calc(var(--dpdf-separacion, 0px) - 5px)
+
+	// Sin datos: en el papel no ocupa lugar
+	&.dpdf-caja--sin-datos .dpdf-caja__tarjeta
+		opacity: .6
+
+	// Angosta o de una sola columna: igual sin relleno a los costados (los caracteres son justos)
+	&.dpdf-caja--angosta .dpdf-caja__tarjeta,
+	&.dpdf-caja--una-columna .dpdf-caja__tarjeta
+		padding: 2px 0
+
+// El título en el lugar, en la letra de la comandera y en negrita: es el primer renglón que imprime
+.dpdf-caja .dpdf-caja__titulo.dpdf-caja__titulo--ticket
+	padding: 0
+	border-radius: 2px
+	color: var(--color-text-primary)
+	font-family: $dpdf-letra-de-comandera
+
+.dpdf-caja__sin-datos
+	color: var(--color-text-secondary)
+	font-size: 0.68rem
+	font-style: italic
+	line-height: 1.3
 </style>
