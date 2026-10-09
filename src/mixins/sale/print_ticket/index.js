@@ -359,12 +359,49 @@ export default {
 
                 if (bytes !== null) {
                     self.content = [bytes]
+                    self.avisar_si_el_ancho_del_diseno_no_coincide(respuesta)
                     return
                 }
 
                 self.sale_to_print = self.venta_para_el_ticket_de_siempre(venta, opciones, respuesta)
 
                 return self.set_ticket_content()
+            })
+        },
+
+        /**
+         * Avisa (sin frenar la impresión) cuando un ticket DISEÑADO no es del ancho de la comandera
+         * de este puesto.
+         *
+         * El ticket diseñado lo arma la API con el ancho de SU diseño (`ancho_mm` de la respuesta),
+         * no con el del puesto: el ancho del puesto sigue valiendo solo para el Ticket 2.0 de
+         * siempre y la prueba. El caso real: un negocio con una caja en 80 mm y otra con una
+         * comandera de 58; alguien diseña "Ticket remito" en 80 mm y la caja de 58 recibe
+         * renglones de 48 caracteres, que la impresora corta o parte. Se imprime igual (es el
+         * diseño que se eligió y el operador necesita el papel), pero se dice qué pasa y cómo
+         * se arregla.
+         *
+         * Solo con un ancho configurado EXPLÍCITAMENTE en este puesto (la cookie, vía
+         * preferencias_del_puesto): el respaldo del dueño o el 80 por defecto no dicen qué
+         * comandera hay de verdad en esta caja, y avisar con eso sería un falso positivo.
+         *
+         * @param {Object} respuesta la de GET sale/{id}/ticket-comandera, con `disenado: true`.
+         */
+        avisar_si_el_ancho_del_diseno_no_coincide(respuesta) {
+            let ancho_del_puesto = this.preferencias_del_puesto ? Number(this.preferencias_del_puesto.ancho_mm) : 0
+            let ancho_del_diseno = respuesta ? Number(respuesta.ancho_mm) : 0
+
+            if (!ancho_del_puesto || !ancho_del_diseno || isNaN(ancho_del_puesto) || isNaN(ancho_del_diseno)) {
+                return
+            }
+
+            if (ancho_del_puesto === ancho_del_diseno) {
+                return
+            }
+
+            this.$toast.warning('Este ticket está diseñado para ' + ancho_del_diseno + ' mm y esta caja tiene una comandera de '
+                + ancho_del_puesto + ' mm. Elegí un diseño de ' + ancho_del_puesto + ' mm o cambiá el ancho en Diseño de PDF.', {
+                timeout: 10000,
             })
         },
 
