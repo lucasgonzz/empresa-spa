@@ -16,9 +16,13 @@
 
 				<section-tickets
 				:afip_tickets_with_cae="afip_tickets_with_cae"
+				:perfiles_de_ticket_remito="perfiles_de_ticket_remito"
+				:opciones_de_ticket_factura="opciones_de_ticket_factura"
+				:hay_opciones_de_ticket="hay_opciones_de_ticket"
 				@ticket_pdf="ticketPdf(sale)"
 				@factura_ticket_pdf="facturaTicketPdf"
 				@ticket_2="nuevo_ticket(sale)"
+				@ticket_perfil="imprimir_ticket_con_perfil"
 				@configurar_impresora="abrir_modal_impresora"></section-tickets>
 
 				<section-remitos-a4
@@ -106,6 +110,13 @@ import SectionFacturasA4 from './SectionFacturasA4.vue'
 import ImpresoraConfigModal from './ImpresoraConfigModal.vue'
 import InstalarAgenteModal from './InstalarAgenteModal.vue'
 import { guardar_preferencias_del_puesto, guardar_ancho_del_puesto } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
+import {
+	VENDER_PRINT_OPTION_TICKET_PREFIX,
+	es_tipo_de_hoja_ticket,
+	is_vender_print_profile_a4,
+	get_vender_ticket_profiles,
+	find_vender_ticket_profile,
+} from '@/constants/vender_print_shortcut_options'
 import { env } from '@/runtime_config'
 
 export default {
@@ -303,6 +314,55 @@ export default {
 			return afip_tickets.filter(afip_ticket => !!afip_ticket.cae)
 		},
 		/**
+		 * Diseños de ticket de comandera de REMITO (no fiscales) del negocio (misión
+		 * diseno-ticket-comandera, D-L1). Se listan siempre, como los Remitos A4: una venta con
+		 * factura también puede imprimir un ticket remito (sale sin el bloque fiscal).
+		 *
+		 * @returns {Array}
+		 */
+		perfiles_de_ticket_remito() {
+			return get_vender_ticket_profiles(this.model_profiles, false)
+		},
+		/**
+		 * Diseños de ticket de comandera de FACTURA (fiscales) del negocio.
+		 *
+		 * @returns {Array}
+		 */
+		perfiles_de_ticket_factura() {
+			return get_vender_ticket_profiles(this.model_profiles, true)
+		},
+		/**
+		 * Renglones "Ticket factura N°X" del menú: cada diseño fiscal por cada comprobante con CAE
+		 * de la venta (el mismo cruce que Facturas A4).
+		 *
+		 * @returns {Array<{afip_ticket_id: number, cbte_numero: *, profile: Object}>}
+		 */
+		opciones_de_ticket_factura() {
+			const options = []
+			const self = this
+			this.afip_tickets_with_cae.forEach(function (afip_ticket) {
+				self.perfiles_de_ticket_factura.forEach(function (profile) {
+					options.push({
+						afip_ticket_id: afip_ticket.id,
+						cbte_numero: afip_ticket.cbte_numero,
+						profile: profile,
+					})
+				})
+			})
+			return options
+		},
+		/**
+		 * Si el menú tiene algún renglón de comandera para ESTA venta. Sin ninguno (API vieja, el
+		 * seeder de los diseños por defecto sin correr, o una venta remito en un negocio que solo
+		 * armó tickets de factura) se muestra el "Ticket 2.0" de siempre, que igual le pide a la
+		 * API el ticket por defecto.
+		 *
+		 * @returns {boolean}
+		 */
+		hay_opciones_de_ticket() {
+			return this.perfiles_de_ticket_remito.length > 0 || this.opciones_de_ticket_factura.length > 0
+		},
+		/**
 		 * Opciones de impresión A4 fiscal (ticket x perfil AFIP).
 		 */
 		afip_a4_print_options() {
@@ -357,6 +417,14 @@ export default {
 			const unique = []
 			const used_ids = {}
 			models.forEach(model => {
+				/*
+					Los rollos de comandera (Ticket 55 mm, Ticket 80 mm y los anchos que agregue el
+					negocio) no se ofrecen: este modal edita diseños de HOJA (Remitos A4 / Facturas A4),
+					y un ticket se elige en ABM -> Diseño de PDF (misión diseno-ticket-comandera).
+				*/
+				if (es_tipo_de_hoja_ticket(model)) {
+					return
+				}
 				if (!used_ids[model.id]) {
 					used_ids[model.id] = true
 					unique.push(model)
@@ -419,14 +487,18 @@ export default {
 			return Boolean(value)
 		},
 		/**
-		 * Determina si un perfil corresponde a hoja A4.
+		 * Determina si un perfil es de HOJA (se imprime como PDF): Remitos A4 / Facturas A4.
+		 *
+		 * Misión diseno-ticket-comandera (D12): antes preguntaba `sheet_type.name == 'A4'`, y un
+		 * diseño de venta creado desde ABM -> Diseño de PDF (que quedaba sin tipo de hoja) no
+		 * aparecía en este menú. Ahora es hoja todo lo que no es un rollo de comandera. El nombre
+		 * del método se conserva: lo usan las listas de este componente.
 		 *
 		 * @param {Object} profile
 		 * @returns {boolean}
 		 */
 		is_profile_a4(profile) {
-			const sheet_type_name = profile && profile.sheet_type ? profile.sheet_type.name : null
-			return sheet_type_name == 'A4'
+			return is_vender_print_profile_a4(profile)
 		},
 		/**
 		 * Descarga catálogo completo de opciones PDF para model_name.
@@ -1018,10 +1090,27 @@ export default {
 			window.open(link)
 		},
 		/**
-		 * Imprime ticket 2.0.
+		 * Imprime "Ticket 2.0": el ticket de comandera por defecto.
+		 *
+		 * Sin opciones, la API elige el diseño (el de factura si la venta tiene CAE, el de remito si
+		 * no) y, si ese diseño nunca se armó con cajas o la API es vieja, sale el Ticket 2.0 de
+		 * siempre, byte a byte (ver printTicket() del mixin print_ticket).
 		 */
 		nuevo_ticket(sale) {
 			this.printTicket(sale)
+		},
+		/**
+		 * Imprime un diseño de ticket de comandera elegido en el menú (misión
+		 * diseno-ticket-comandera, D-L1): "Ticket remito" o "Ticket factura N°X".
+		 *
+		 * @param {number} profile_id
+		 * @param {number|null} afip_ticket_id el comprobante del renglón (solo en los fiscales).
+		 */
+		imprimir_ticket_con_perfil(profile_id, afip_ticket_id) {
+			this.printTicket(this.sale, {
+				pdf_column_profile_id: profile_id,
+				afip_ticket_id: afip_ticket_id || null,
+			})
 		},
 		/**
 		 * Imprime ticket venta no AFIP.
@@ -1126,7 +1215,67 @@ export default {
 				return
 			}
 
+			if (option_key.indexOf(VENDER_PRINT_OPTION_TICKET_PREFIX) === 0) {
+				this.ejecutar_atajo_de_ticket(option_key, sale)
+				return
+			}
+
 			this.$toast.error('Opción de impresión no reconocida')
+		},
+
+		/**
+		 * Ejecuta un atajo `ticket:<id>`: un diseño de ticket de comandera elegido en la
+		 * configuración del atajo de Vender (misión diseno-ticket-comandera).
+		 *
+		 * 🔴 Una opción guardada que apunta a un diseño que ya no existe (o que pasaron a hoja) NO
+		 * puede terminar en un error mudo: se avisa cuál es el problema y dónde se arregla, y se
+		 * imprime igual el ticket por defecto — el operador acaba de cobrar y necesita el papel.
+		 * Si el store todavía no tiene ningún diseño de venta (recién se abrió la pantalla y no
+		 * terminaron de bajar), no se puede saber si existe: se le pide a la API con el id y ella
+		 * decide (si no es válido contesta 422 y el mixin hace el mismo aviso).
+		 *
+		 * @param {string} option_key
+		 * @param {Object} sale
+		 */
+		ejecutar_atajo_de_ticket(option_key, sale) {
+			const encontrado = find_vender_ticket_profile(option_key, this.model_profiles)
+			const store_cargado = this.model_profiles.length > 0
+
+			if (!encontrado.profile_id) {
+				this.$toast.error('Opción de impresión no reconocida')
+				return
+			}
+
+			const afip_ticket = this.get_first_afip_ticket_with_cae(sale)
+
+			if (!encontrado.profile && store_cargado) {
+				this.$toast.warning('El atajo de Imprimir apunta a un diseño de ticket que ya no existe. Se imprime el ticket por defecto. Elegí otro desde el engranaje del atajo Imprimir, en la barra de arriba de Vender.', {
+					timeout: 10000,
+				})
+				this.printTicket(sale, {
+					afip_ticket_id: afip_ticket ? afip_ticket.id : null,
+				})
+				return
+			}
+
+			/*
+				Un ticket de factura necesita un comprobante con CAE (mismo criterio que factura_a4:).
+				Un ticket de remito no lo lleva nunca: sale sin el bloque fiscal aunque la venta
+				tenga factura.
+			*/
+			const es_fiscal = encontrado.profile
+				? this.normalize_boolean(encontrado.profile.is_afip_ticket)
+				: !!afip_ticket
+
+			if (es_fiscal && !afip_ticket) {
+				this.$toast.error('La venta no tiene ticket AFIP con CAE')
+				return
+			}
+
+			this.printTicket(sale, {
+				pdf_column_profile_id: encontrado.profile_id,
+				afip_ticket_id: es_fiscal ? afip_ticket.id : null,
+			})
 		},
 
 		/**
