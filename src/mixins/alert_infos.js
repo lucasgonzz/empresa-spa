@@ -134,17 +134,16 @@ export default {
 		 *   - views/Alertas.vue: qué pestañas se dibujan (`nav_items`) y adónde se lleva una URL
 		 *     con una solapa no permitida (`completar_ruta`).
 		 *   - lista-de-alertas-table/Index.vue: qué secciones se montan (recibe la lista ya armada
-		 *     por prop). Esconder solo la pestaña NO alcanzaba: /alertas/cobros, que es el destino
-		 *     del menú y del aterrizaje, seguía mostrando Cobros; y Stock mínimo pedía su reporte
-		 *     apenas se entraba a Alertas por cualquier solapa.
+		 *     por prop). Esconder solo la pestaña NO alcanzaba: cada sección se dibuja por la URL
+		 *     (/alertas/stock-minimo mostraba Stock mínimo aunque no hubiera pestaña), y Stock
+		 *     mínimo pedía su reporte apenas se entraba a Alertas por cualquier solapa.
 		 *   - mixins/nav_functions.js → alerts_count(): el número rojo del ítem Alertas del menú.
 		 *     Si sumara lo de una solapa que la persona no ve, la campana marcaría alertas que no
 		 *     puede encontrar.
 		 *
-		 * Antes Cobros, Stock mínimo y Catálogo no pedían ningún permiso, y Movimientos de
-		 * depósitos solo la extensión: un empleado sin permisos veía los saldos de los clientes,
-		 * el stock y el catálogo. Ahora:
-		 *   - cobros                     → client.index
+		 * Antes Stock mínimo y Catálogo no pedían ningún permiso, y Movimientos de depósitos solo
+		 * la extensión: un empleado sin permisos veía el stock y el catálogo. Ahora:
+		 *   - cobros                     → cualquier usuario cargado (sin permiso, ver abajo)
 		 *   - stock-minimo               → article.index
 		 *   - catalogo (y el alias viejo imagenes, /alertas/imagenes) → article.index
 		 *   - pedidos-proveedor          → alerts.provider_orders
@@ -170,8 +169,17 @@ export default {
 			if (!this.user) {
 				return false
 			}
+			/*
+				Cobros, sin permiso (Lucas lo re-decidió el 9/10/2026, en esta misma misión, al saber
+				esto): la API ya recorta las ventas sin cobrar de un empleado común a SUS propias
+				ventas (SaleController::ventas_sin_cobrar, `$ver_solo_las_ventas_suyas`, salvo
+				que el dueño le tilde `ver_alertas_de_todos_los_empleados`), así que la solapa no le
+				expone las de otros. Pedirle `client.index`, en cambio, le sacaba a un vendedor el
+				aviso de lo que él mismo tiene que cobrar, y dejaba sin efecto
+				`alerts.recordatorio_cobro` para quien no tuviera `client.index`.
+			*/
 			if (solapa == 'cobros') {
-				return this.can('client.index')
+				return true
 			}
 			if (solapa == 'stock-minimo') {
 				return this.can('article.index')

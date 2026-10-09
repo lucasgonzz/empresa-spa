@@ -29,12 +29,17 @@
 		:items="nav_items"></horizontal-nav>
 
 		<!--
-			Misión permisos-navegacion-empleados (decisión de Lucas, 9/10/2026): un empleado sin
-			permiso para ninguna solapa igual puede llegar acá (Alertas está en el menú de todos y es
-			el aterrizaje de quien no tiene otra pantalla). En vez de una pantalla en blanco, un
-			aviso con el estado vacío del sistema (display/EmptyState, el mismo de las secciones de
-			Alertas). Solo con el usuario ya cargado, para que no parpadee al entrar: antes de eso
-			no se sabe qué solapas le tocan.
+			Misión permisos-navegacion-empleados (9/10/2026): aviso para quien no tiene ninguna
+			solapa para ver, con el estado vacío del sistema (display/EmptyState, el mismo de las
+			secciones de Alertas), en vez de una pantalla en blanco.
+
+			🔴 HOY NO SE DISPARA: Cobros está permitida para cualquier usuario cargado (ver
+			puede_ver_solapa_de_alertas en mixins/alert_infos.js), así que todos tienen al menos
+			una solapa. Queda como red por si una regla futura deja a alguien sin ninguna: Alertas
+			está en el menú de todos y es el aterrizaje de quien no tiene otra pantalla.
+
+			Solo con el usuario ya cargado, para que no parpadee al entrar: antes de eso no se
+			sabe qué solapas le tocan.
 		-->
 		<empty-state
 		v-if="alertas_sin_solapas_para_ver"
@@ -128,8 +133,9 @@ export default {
 			Cada pestaña se agrega solo si `puede_ver_solapa_de_alertas` (mixins/alert_infos.js) dice
 			que esta persona la puede ver: es LA regla de las solapas de Alertas, la misma que decide
 			qué secciones se montan y qué suma el número rojo del menú (misión
-			permisos-navegacion-empleados, decisión de Lucas del 9/10/2026). Antes Cobros, Stock
-			mínimo y Catálogo no pedían permiso y Movimientos de depósitos solo la extensión.
+			permisos-navegacion-empleados, decisión de Lucas del 9/10/2026). Antes Stock mínimo y
+			Catálogo no pedían permiso y Movimientos de depósitos solo la extensión. Cobros sigue
+			sin permiso (ver el porqué en la regla).
 
 			El slug que se le pasa a la regla es el de la URL: el que sale de
 			routeString(route_value || name), que es como lo arma horizontal-nav.
@@ -407,8 +413,8 @@ export default {
 				Mision permisos-navegacion-empleados (decision de Lucas, 9/10/2026): una solapa que
 				esta persona no puede ver se lleva a la primera que si puede (sin sub_view, salvo que
 				esa primera sea el Catalogo, que `ruta_normalizada` completa con su sub-solapa).
-				Esconder la pestaña no alcanzaba: /alertas/cobros es el destino del menu y del
-				aterrizaje, y la seccion se dibujaba igual para un empleado sin `client.index`.
+				Esconder la pestaña no alcanzaba: cada seccion se dibuja por la URL, asi que
+				/alertas/stock-minimo mostraba Stock minimo a un empleado sin `article.index`.
 
 				 - Sin ninguna solapa permitida no se toca la URL: Alertas muestra el aviso de que no
 				   tiene alertas para ver, y no hay adonde llevarlo.

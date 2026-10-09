@@ -54,8 +54,10 @@ export default {
 		 * Misión permisos-navegacion-empleados (decisión de Lucas, 9/10/2026): cada sumando entra
 		 * solo si la persona puede ver la solapa de Alertas donde está esa alerta, con la MISMA
 		 * regla que decide qué pestañas se dibujan (puede_ver_solapa_de_alertas, en
-		 * mixins/alert_infos.js). Antes Cobros, Stock mínimo, Movimientos y Catálogo sumaban
-		 * siempre: la campana de un empleado sin permisos marcaba alertas que no podía encontrar.
+		 * mixins/alert_infos.js). Antes Stock mínimo, Movimientos y Catálogo sumaban siempre: la
+		 * campana de un empleado sin permisos marcaba alertas que no podía encontrar. (Cobros
+		 * entra para cualquier usuario cargado: la API ya le manda a cada empleado solo sus
+		 * ventas sin cobrar, salvo que el dueño le habilite ver las de todos.)
 		 *
 		 * @returns {number}
 		 */

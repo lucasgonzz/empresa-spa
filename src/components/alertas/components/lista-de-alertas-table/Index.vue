@@ -7,9 +7,9 @@
 			regla de las solapas (puede_ver_solapa_de_alertas, en mixins/alert_infos.js).
 
 			Esconder la pestaña no alcanzaba: cada sección se muestra sola con su `v-if` de `view`,
-			así que /alertas/cobros (el destino del menú y del aterrizaje) dibujaba Cobros para un
-			empleado sin `client.index`. Y como todas se montaban siempre, Stock mínimo pedía su
-			reporte en `created()` apenas se entraba a Alertas, aunque la persona no pudiera verlo.
+			así que /alertas/stock-minimo dibujaba Stock mínimo para un empleado sin `article.index`.
+			Y como todas se montaban siempre, Stock mínimo pedía su reporte en `created()` apenas se
+			entraba a Alertas, aunque la persona no pudiera verlo.
 			Con el `v-if` acá, lo que no se puede ver ni se monta ni pide nada.
 
 			Los `v-if` de `view` de adentro de cada componente quedan como estaban: siguen
@@ -44,8 +44,10 @@
 			A diferencia de las otras secciones, el `v-if` va ACA y no adentro del componente:
 			asi el chunk y sus pedidos (la tabla de busquedas, el refresco periodico mientras una
 			corre, los sistemas de categorias) solo existen mientras la pestaña esta abierta. Las
-			demas se montan siempre y se esconden solas, y por eso la de stock minimo pide su
-			reporte apenas se entra a Alertas por cualquier pestaña.
+			demas se montan solo si su solapa esta permitida (mision permisos-navegacion-empleados,
+			9/10/2026); para quien la tiene se montan apenas se entra a Alertas y se esconden solas
+			por `view`, como antes, y por eso la de stock minimo pide su reporte apenas se entra a
+			Alertas por cualquier pestaña.
 
 			`view == 'imagenes'` es la URL de antes de esta solapa (/alertas/imagenes): Alertas.vue la
 			lleva a /alertas/catalogo/imagenes con un `replace`, pero hasta que eso pasa tiene que
