@@ -3,16 +3,25 @@ export default {
 		/*
 			Nombre, documento y contraseña son obligatorios en el alta Y en la edicion (mision
 			empleados-alta-y-edicion, 9/10/2026): sin documento o sin contraseña el empleado no puede
-			iniciar sesion (el login busca por doc_number). El `required` hace que el formulario
-			avise "Ingrese ..." en el modal sin mandar el pedido; la red de verdad es el API
-			(EmployeeController::validar_datos_del_empleado), que contesta 422 y el modal queda
-			abierto con lo escrito.
+			iniciar sesion (el login busca por doc_number).
+
+			El `required` hace que el formulario avise "Ingrese ..." en el modal sin mandar el
+			pedido. 🔴 Para eso hace falta el `value: ''`: el modelo nuevo nace con `prop.value`
+			(common-vue/store/employee.js) y el `check()` de common-vue/components/model/Index.vue
+			compara `== ''`; sin el value el campo sin tocar nace `undefined`, `undefined == ''` es
+			false, y el required no frenaba nada.
+
+			Ojo con lo que el required NO frena: al EDITAR un empleado viejo con el documento o la
+			contraseña en null, `null == ''` tambien es false. Ahi el que frena es el API
+			(EmployeeController::validar_datos_del_empleado), que contesta 422 con el motivo: el
+			modal lo muestra en su aviso y queda abierto con lo escrito. El API es la red de verdad.
 		*/
 		{
 			text: 'Nombre',
 			key: 'name',
 			type: 'text',
 			is_title: true,
+			value: '',
 			required: true,
 		},
 		{
@@ -26,6 +35,7 @@ export default {
 			key: 'doc_number',
 			type: 'text',
 			show: true,
+			value: '',
 			required: true,
 		},
 		/*
@@ -55,13 +65,19 @@ export default {
 			key: 'visible_password',
 			type: 'text',
 			not_show: true,
+			value: '',
 			required: true,
 		},
 		/*
 			🔴 Las versiones NO se muestran en el formulario (mision empleados-alta-y-edicion,
-			9/10/2026): son datos internos que escribe el admin en el dueño y en todos sus empleados
-			en cada rotacion de frente, y el API ya no las toma ni en el alta ni en la edicion. Se
-			dejan declaradas (y no se borran) porque siguen viniendo en el modelo y viajan en el
+			9/10/2026), y el API ya no las toma ni en el alta ni en la edicion:
+			- `default_version` la escribe el admin, en el dueño y en todos sus empleados, en cada
+			  rotacion de frente: guardarla desde un listado cargado antes de la rotacion mandaba al
+			  empleado al frente viejo.
+			- `estable_version` es interna (la URL de un frente) y el dueño no tiene que poner ahi:
+			  se deja de cargar desde aca para que nadie la cambie sin saber. Si un empleado quedara
+			  con una vieja, se corrige en la base.
+			Se dejan declaradas (y no se borran) porque siguen viniendo en el modelo y viajan en el
 			guardado como el resto: el API las ignora.
 		*/
 		{
