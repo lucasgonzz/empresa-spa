@@ -10,9 +10,15 @@
 		- El buscador y las categorías del catálogo (plegables, con su ícono). Cada campo se arrastra a
 		  cualquier caja (se clona con el estilo en null) o se toca con "Agregar". Un campo que ya está
 		  en la hoja se ve "En uso" y no se arrastra, salvo el texto libre, que va las veces que se quiera.
+		- Al final, "Columnas de la tabla" (misión diseno-ticket-comandera): las columnas del catálogo
+		de columnas. Las que no están en la tabla se arrastran a la tabla o se tocan con "Agregar";
+		las que están dicen "En la tabla" (tocarlo la muestra). Soltar acá una columna de la tabla
+		la saca de la tabla.
 
 		Nada del catálogo está escrito acá: categorías, nombres, ejemplos y zona sugerida llegan del
-		endpoint (`disenador.catalogo`).
+		endpoint (`disenador.catalogo`). En un ticket de comandera (misión diseno-ticket-comandera) el
+		catálogo trae primero la categoría "Negocio" (el logo y los datos del negocio, D6) y acá solo
+		cambian los textos ("el ticket" en lugar de "la hoja") y el ejemplo del logo.
 	-->
 	<aside
 	class="dpdf-bandeja"
@@ -22,7 +28,7 @@
 
 		<!-- ── Fuente de cajas y saltos de fila: se clonan, nunca se vacía ni recibe nada ──────── -->
 		<div class="dpdf-bandeja__fuente">
-			<p class="dpdf-bandeja__seccion">Para armar la hoja</p>
+			<p class="dpdf-bandeja__seccion">Para armar {{ papel }}</p>
 			<draggable
 			class="dpdf-bandeja__fuente-lista"
 			:list="fuente"
@@ -105,7 +111,7 @@
 				<i
 				class="bi bi-box-arrow-in-down"
 				aria-hidden="true"></i>
-				<span>{{ recibe ? 'Soltalo acá para sacarlo de la hoja' : 'Arrastrá acá un campo para sacarlo de la hoja' }}</span>
+				<span>{{ recibe ? 'Soltalo acá para sacarlo de ' + papel : 'Arrastrá acá un campo para sacarlo de ' + papel }}</span>
 			</div>
 		</div>
 
@@ -220,10 +226,111 @@
 			</draggable>
 		</div>
 
+		<!--
+			Columnas de la tabla. `:value` (no `:list`): la lista es una vista de la tabla de trabajo
+			del diseñador. Al arrastrar una columna se "clona" la MISMA columna (clonar_columna) y entra
+			a `tabla.visibles`; al soltar acá una de la tabla, vuedraggable la saca de la tabla y acá no
+			entra a ningún lado (vuelve a aparecer sola: las ocultas son las que no están en la tabla).
+		-->
+		<div
+		v-if="disenador.tabla.columnas.length && (lista_de_columnas.length || !busqueda.trim())"
+		class="dpdf-bandeja__categoria dpdf-bandeja__columnas"
+		:class="{ 'dpdf-bandeja__columnas--recibe': recibe_columna }">
+			<button
+			type="button"
+			class="dpdf-bandeja__categoria-cabecera"
+			:aria-expanded="columnas_abiertas ? 'true' : 'false'"
+			aria-controls="dpdf-bandeja-columnas"
+			data-testid="categoria-columnas-disenador-pdf"
+			@click="alternar_columnas">
+				<i
+				class="bi dpdf-bandeja__chevron"
+				:class="columnas_abiertas ? 'bi-chevron-down' : 'bi-chevron-right'"
+				aria-hidden="true"></i>
+				<i
+				class="bi bi-table dpdf-bandeja__categoria-icono"
+				aria-hidden="true"></i>
+				<span class="dpdf-bandeja__categoria-nombre">Columnas de la tabla</span>
+				<span
+				class="dpdf-bandeja__categoria-cantidad"
+				:title="disenador.tabla.visibles.length + ' de ' + disenador.tabla.columnas.length + ' en la tabla'">{{ disenador.tabla.visibles.length }}/{{ disenador.tabla.columnas.length }}</span>
+			</button>
+
+			<p
+			v-if="columnas_abiertas && recibe_columna"
+			class="dpdf-bandeja__columnas-pista">Soltala acá para sacarla de la tabla.</p>
+
+			<draggable
+			v-if="columnas_abiertas"
+			id="dpdf-bandeja-columnas"
+			class="dpdf-bandeja__lista"
+			:value="lista_de_columnas"
+			:group="grupo_de_columnas"
+			:clone="clonar_columna"
+			:sort="false"
+			:move="disenador.permitir_movimiento"
+			draggable=".dpdf-bandeja-columna-arrastrable"
+			filter=".dpdf-no-arrastra"
+			:prevent-on-filter="false"
+			ghost-class="dpdf-hueco"
+			drag-class="dpdf-levantado"
+			:force-fallback="true"
+			:fallback-on-body="true"
+			:fallback-tolerance="4"
+			:delay="150"
+			:delay-on-touch-only="true"
+			:scroll-sensitivity="80"
+			:scroll-speed="14"
+			data-lista="columnas"
+			data-testid="columnas-bandeja-disenador-pdf"
+			@start="disenador.al_empezar_arrastre($event)"
+			@end="disenador.al_terminar_arrastre($event)">
+				<div
+				v-for="columna in lista_de_columnas"
+				:key="columna.ui_id"
+				class="dpdf-bandeja__campo dpdf-bandeja__columna"
+				:class="clases_de_columna(columna)"
+				:style="{ '--dpdf-cols': columna.cols }"
+				data-tipo="columna"
+				:title="columna.nombre + ': en el PDF se imprime «' + columna.rotulo + '»'">
+					<div class="dpdf-bandeja__tarjeta">
+						<span class="dpdf-bandeja__fila">
+							<i
+							class="bi bi-grip-vertical dpdf-bandeja__agarre"
+							aria-hidden="true"></i>
+							<span class="dpdf-bandeja__nombre">{{ columna.nombre }}</span>
+							<button
+							v-if="en_la_tabla(columna)"
+							type="button"
+							class="dpdf-bandeja__en-uso dpdf-no-arrastra"
+							title="Ya está en la tabla: tocá para verla"
+							:aria-label="columna.nombre + ' ya está en la tabla. Mostrarla'"
+							@click="disenador.mostrar_columna(columna)">
+								<i class="bi bi-check2"></i>
+								En la tabla
+							</button>
+							<button
+							v-else
+							type="button"
+							class="dpdf-bandeja__agregar dpdf-no-arrastra"
+							title="Agregarla al final de la tabla"
+							:aria-label="'Agregar la columna ' + columna.nombre + ' a la tabla'"
+							:data-testid="'agregar-columna-' + columna.value_resolver + '-disenador-pdf'"
+							@click="disenador.agregar_columna(columna)">
+								<i class="bi bi-plus-lg"></i>
+								Agregar
+							</button>
+						</span>
+						<span class="dpdf-bandeja__ejemplo">Encabezado: «{{ columna.rotulo }}»</span>
+					</div>
+				</div>
+			</draggable>
+		</div>
+
 		<p
-		v-if="busqueda && !categorias.length"
+		v-if="busqueda && !categorias.length && !lista_de_columnas.length"
 		class="dpdf-bandeja__sin-resultados">
-			Ningún campo dice «{{ busqueda }}».
+			Ningún campo ni columna dice «{{ busqueda }}».
 		</p>
 	</aside>
 </template>
@@ -255,6 +362,20 @@ const GRUPO_DE_LA_PAPELERA = {
 	pull: false,
 	put: ['pdf-campos'],
 }
+
+/*
+	"Columnas de la tabla": se "clonan" hacia la fila de la tabla (el clon es la misma columna, ver
+	clonar_columna) y reciben las que salen de la tabla. Grupo propio (pdf-columnas, el de la fila de
+	la tabla): una columna nunca cae en una caja ni un campo en la tabla.
+*/
+const GRUPO_DE_COLUMNAS = {
+	name: 'pdf-columnas',
+	pull: 'clone',
+	put: ['pdf-columnas'],
+}
+
+/* Clave de "Columnas de la tabla" en `abiertas` (no choca con las keys de categorías del catálogo) */
+const CLAVE_DE_COLUMNAS = '__columnas_de_la_tabla'
 
 /* Lo que se muestra de ejemplo de un campo de tipo lista: los renglones, separados */
 const SEPARADOR_DE_RENGLONES = ' · '
@@ -289,6 +410,7 @@ export default {
 			grupo_de_la_fuente: GRUPO_DE_LA_FUENTE,
 			grupo_de_la_bandeja: GRUPO_DE_LA_BANDEJA,
 			grupo_de_la_papelera: GRUPO_DE_LA_PAPELERA,
+			grupo_de_columnas: GRUPO_DE_COLUMNAS,
 			/* La lista de la zona para sacar: siempre vacía (ver el template) */
 			papelera: [],
 			/* Lo que se escribió en "Buscar campo…" */
@@ -351,6 +473,15 @@ export default {
 			return Object.keys(this.disenador.keys_en_uso).length
 		},
 		/**
+		 * Cómo se nombra lo que se arma en los textos de la bandeja: "la hoja" o, en un ticket de
+		 * comandera, "el ticket".
+		 *
+		 * @returns {string}
+		 */
+		papel() {
+			return this.disenador.es_ticket ? 'el ticket' : 'la hoja'
+		},
+		/**
 		 * Las categorías del catálogo con sus campos (filtrados por la búsqueda) y cuántos están en
 		 * uso. Con una búsqueda, solo las que tienen algo que coincide.
 		 *
@@ -397,8 +528,96 @@ export default {
 
 			return resultado
 		},
+		/**
+		 * Las columnas de la tabla que se muestran en la bandeja (todas, filtradas por la búsqueda),
+		 * en el orden del catálogo de columnas.
+		 *
+		 * @returns {Array}
+		 */
+		lista_de_columnas() {
+			let buscado = para_buscar(this.busqueda).trim()
+			return this.disenador.tabla.columnas.filter(function (columna) {
+				if (!buscado) {
+					return true
+				}
+				return para_buscar(columna.nombre + ' ' + columna.rotulo).indexOf(buscado) !== -1
+			})
+		},
+		/**
+		 * Si "Columnas de la tabla" se ve abierta: con una búsqueda, sí; si no, la que se abrió o cerró
+		 * a mano (sin tocar, cerrada: la primera categoría de campos es la que arranca abierta).
+		 *
+		 * @returns {boolean}
+		 */
+		columnas_abiertas() {
+			if (this.busqueda.trim()) {
+				return true
+			}
+			return !!this.abiertas[CLAVE_DE_COLUMNAS]
+		},
+		/**
+		 * Si se está arrastrando una columna de la tabla (la bandeja se ofrece para sacarla).
+		 *
+		 * @returns {boolean}
+		 */
+		recibe_columna() {
+			let arrastrando = this.disenador.arrastrando
+			return !!(arrastrando && arrastrando.tipo === 'columna' && arrastrando.desde === 'tabla')
+		},
+	},
+	watch: {
+		/**
+		 * "+ Agregar columna" de la tabla pide ver las columnas: se abre la categoría (y se limpia la
+		 * búsqueda, por si las escondía).
+		 *
+		 * @returns {void}
+		 */
+		'disenador.pedido_de_columnas'() {
+			this.busqueda = ''
+			this.$set(this.abiertas, CLAVE_DE_COLUMNAS, true)
+		},
 	},
 	methods: {
+		/**
+		 * Abre o cierra "Columnas de la tabla".
+		 *
+		 * @returns {void}
+		 */
+		alternar_columnas() {
+			this.$set(this.abiertas, CLAVE_DE_COLUMNAS, !this.columnas_abiertas)
+		},
+		/**
+		 * Si una columna está en la tabla.
+		 *
+		 * @param {Object} columna
+		 * @returns {boolean}
+		 */
+		en_la_tabla(columna) {
+			return this.disenador.tabla.visibles.indexOf(columna) !== -1
+		},
+		/**
+		 * Clases de una columna de la bandeja: solo las que no están en la tabla se pueden arrastrar.
+		 *
+		 * @param {Object} columna
+		 * @returns {Object}
+		 */
+		clases_de_columna(columna) {
+			let esta = this.en_la_tabla(columna)
+			return {
+				'dpdf-bandeja-columna-arrastrable': !esta,
+				'dpdf-bandeja__campo--en-uso': esta,
+			}
+		},
+		/**
+		 * Lo que vuedraggable inserta en la tabla al soltar una columna de la bandeja: la MISMA
+		 * columna de trabajo (no una copia): es una sola por opción, esté en la tabla o en la bandeja.
+		 *
+		 * @param {Object} columna
+		 * @returns {Object}
+		 */
+		clonar_columna(columna) {
+			return columna
+		},
 		/**
 		 * Si una categoría se ve abierta: con una búsqueda, todas; si no, la que se abrió o cerró a
 		 * mano y, sin tocar, la primera.
@@ -455,6 +674,10 @@ export default {
 		 * @returns {string}
 		 */
 		ejemplo_de(definicion) {
+			/* El logo del ticket (tipo `imagen`) no tiene un ejemplo de texto */
+			if (definicion.tipo === 'imagen') {
+				return 'El logo, centrado a todo el ancho'
+			}
 			let ejemplo = definicion.ejemplo
 			if (Array.isArray(ejemplo)) {
 				return ejemplo.join(SEPARADOR_DE_RENGLONES)
@@ -850,4 +1073,25 @@ export default {
 	color: var(--color-text-secondary)
 	font-size: 0.78rem
 	text-align: center
+
+// ── Columnas de la tabla ──────────────────────────────────────────────────────────────────────
+// Mientras se arrastra una columna de la tabla: la lista se ofrece para sacarla (como la papelera)
+.dpdf-bandeja__columnas--recibe
+	.dpdf-bandeja__lista
+		min-height: 44px
+		padding: 4px
+		border: 1.5px dashed var(--color-primary)
+		border-radius: 10px
+		background: var(--bg-nav-hover)
+
+.dpdf-bandeja__columnas-pista
+	margin: 0
+	color: var(--color-primary)
+	font-size: 0.74rem
+	font-weight: 600
+
+// Una columna de la tabla que pasa por acá (se va a sacar): un renglón finito
+.dpdf-bandeja__lista > .dpdf-columna.dpdf-hueco
+	max-height: 32px
+	overflow: hidden
 </style>

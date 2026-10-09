@@ -23,29 +23,22 @@
 
 			<template v-else>
 				<!--
-					Botón del diseñador de PDF (misión diseno-pdf-configurable, 1/10/2026): para los
-					perfiles de comprobantes -- venta, presupuesto y pedido online -- arma la hoja entera
-					con cajas (encabezado, zona de arriba de la tabla, pie, hoja y margen). Reemplaza al
-					viejo "Diseñar header", que ahora es el encabezado de ese mismo diseñador. Los perfiles
-					de artículo siguen con su propio diseñador, el del encabezado del catálogo (abajo).
+					Diseñador de PDF (misión diseno-pdf-configurable, 1/10/2026): para los perfiles de
+					comprobantes -- venta, presupuesto y pedido online -- arma la hoja entera con cajas
+					(encabezado, zona de arriba de la tabla, la tabla, pie, hoja y margen). Los perfiles de
+					artículo siguen con su propio diseñador, el del encabezado del catálogo (abajo).
 
-					Debajo, en gris, si el perfil imprime con el PDF de siempre o con cajas.
+					Desde la misión diseno-ticket-comandera (9/10/2026) la tabla de columnas también se arma
+					en el diseñador, y en su lugar va la TARJETA con la miniatura del diseño (como las de
+					Diseños de Vender): el nombre, si imprime con el diseño de siempre o con cajas y "Tocá
+					para diseñarlo". Un clic (o Enter) abre el diseñador; el botón "Diseñar PDF"
+					(data-testid="abrir-disenador-pdf") queda adentro de la tarjeta.
 				-->
-				<div
+				<tarjeta-del-pdf
 				v-if="tiene_disenador_de_pdf"
-				class="m-b-10">
-					<b-button
-					size="sm"
-					variant="outline-primary"
-					data-testid="abrir-disenador-pdf"
-					@click="abrir_disenador_de_pdf">
-						<i class="icon-configuration"></i>
-						Diseñar PDF
-					</b-button>
-					<p class="pdf-column-profile-editor__estado-del-diseno">
-						{{ tiene_diseno_de_cajas ? 'Diseño armado con cajas' : 'Diseño de siempre' }}
-					</p>
-				</div>
+				class="m-b-10"
+				:model="model"
+				@abrir="abrir_disenador_de_pdf"></tarjeta-del-pdf>
 
 				<!-- Diseñador del encabezado del catálogo (misión catalogo-pdf-encabezado):
 				logo, nombre y datos del negocio del PDF tabla de artículos. -->
@@ -61,7 +54,14 @@
 					</b-button>
 				</div>
 
+				<!--
+					La tabla de columnas de siempre: solo para artículo. En venta, presupuesto y pedido
+					online las columnas se arman en el diseñador (la tarjeta de arriba), pero este editor
+					sigue cargando el catálogo y sincronizando model.pdf_column_options (el POST del ABM
+					exige al menos una opción): ver build_rows y sync_rows_to_model.
+				-->
 				<pdf-columns-preferences-config-modal
+				v-if="!tiene_disenador_de_pdf"
 				:config_rows="pdf_config_rows"
 				:paper_width_mm="local_paper_width_mm"
 				:printable_width_mm="local_printable_width_mm"
@@ -71,7 +71,7 @@
 				:layout_table="true"></pdf-columns-preferences-config-modal>
 
 				<b-alert
-				v-if="remaining_width_mm < 0"
+				v-if="!tiene_disenador_de_pdf && remaining_width_mm < 0"
 				show
 				variant="danger"
 				class="m-t-10">
@@ -79,7 +79,7 @@
 				</b-alert>
 
 				<!-- Diseñador de PDF (modal aparte): recibe el mismo model que edita este ABM y
-				     persiste page_layout, la hoja, header_layout y logo_size_mm -->
+				persiste page_layout, la hoja, la tabla (pdf_column_options), header_layout y logo_size_mm -->
 				<disenador-pdf
 				v-if="tiene_disenador_de_pdf"
 				ref="disenador_de_pdf"
@@ -104,20 +104,46 @@ import PdfColumnsPreferencesConfigModal from '@/common-vue/components/pdf/PdfCol
 	hasta que termina de cargar. Este editor ya se carga diferido desde ModelForm.vue.
 */
 import DisenadorPdf from '@/common-vue/components/pdf/disenador-pdf/Index.vue'
-import { tiene_diseno } from '@/common-vue/components/pdf/disenador-pdf/estado_del_disenador'
+import TarjetaDelPdf from '@/common-vue/components/pdf/miniatura-pdf/TarjetaDelPdf.vue'
+import {
+	COLUMNAS_DE_LA_TABLA,
+	MEDIAS_SUGERIDAS_EN_TICKET,
+	columnas_sugeridas,
+	poner_sugeridas,
+	mm_a_columnas,
+	mm_de_las_columnas,
+} from '@/common-vue/components/pdf/disenador-pdf/tabla_del_disenador'
+import { hoja_del_perfil, ancho_util, tiene_diseno } from '@/common-vue/components/pdf/disenador-pdf/estado_del_disenador'
+
+/* Límites del margen para leer la hoja del perfil (los de DisenoDePaginaPdf: el catálogo acá no llega) */
+const LIMITES_DEL_MARGEN = {
+	margen_min: 0,
+	margen_max: 20,
+}
 import CatalogHeaderDesigner from '@/common-vue/components/pdf/catalog-header-designer/Index.vue'
 
 /**
  * Editor de columnas PDF para ABM de pdf_column_profile (ventas, presupuestos, pedidos online
  * o artículos).
  *
- * Recibe el modelo del perfil como prop y muestra todas las columnas del catálogo,
- * mezclando el estado visible/ancho/orden de los pivots ya guardados.
+ * Recibe el modelo del perfil como prop y arma las filas con todas las columnas del catálogo,
+ * mezclando el estado visible/ancho/orden de los pivots ya guardados. Para artículo las muestra (la
+ * tabla de siempre); para venta, presupuesto y pedido online muestra la tarjeta del diseño y las
+ * columnas se arman en el diseñador (misión diseno-ticket-comandera), pero las filas se siguen
+ * armando y sincronizando a `model.pdf_column_options`, que es lo que lleva el POST/PUT del ABM.
+ *
+ * 🔴 Ida y vuelta con el diseñador, sin ciclos: cuando el diseñador cambia
+ * `model.pdf_column_options` (perfil nuevo, o después de guardar), este editor rearma sus filas
+ * desde el modelo (watcher de `model.pdf_column_options`). Lo que escribe el propio editor no
+ * dispara ese rearmado: cada escritura anota su firma (`firma_sincronizada`) y el watcher la
+ * reconoce. Y mientras build_rows asigna las filas, `_syncing` frena el watcher de las filas (que
+ * correría en el tick siguiente): después de armar, la sincronización se hace una vez, a mano.
  */
 export default {
 	components: {
 		PdfColumnsPreferencesConfigModal,
 		DisenadorPdf,
+		TarjetaDelPdf,
 		CatalogHeaderDesigner,
 	},
 	props: {
@@ -152,10 +178,11 @@ export default {
 			 */
 			local_printable_width_mm: 277,
 			/**
-			 * Cuando es true, los cambios en pdf_config_rows no se sincronizan al modelo.
-			 * Evita ciclos al cargar filas programáticamente.
+			 * Firma (JSON normalizado) del último pdf_column_options que este editor escribió o leyó
+			 * del modelo: el watcher de model.pdf_column_options no rearma las filas por un cambio que
+			 * hizo el propio editor.
 			 */
-			_syncing: false,
+			firma_sincronizada: '',
 		}
 	},
 	computed: {
@@ -171,15 +198,7 @@ export default {
 			const model_name = this.model && this.model.model_name
 			return model_name === 'sale' || model_name === 'budget' || model_name === 'order'
 		},
-		/**
-		 * Si el perfil ya imprime con cajas (tiene page_layout): para la línea gris de debajo del
-		 * botón "Diseñar PDF". Sin diseño, sale el PDF de siempre.
-		 *
-		 * @returns {boolean}
-		 */
-		tiene_diseno_de_cajas() {
-			return !!(this.model && tiene_diseno(this.model.page_layout))
-		},
+
 		/**
 		 * Suma de anchos de columnas visibles (mm).
 		 *
@@ -263,8 +282,33 @@ export default {
 				this.sync_rows_to_model()
 			},
 		},
+		/**
+		 * El diseñador de PDF cambió las columnas del modelo (perfil nuevo: las deja con $set; perfil
+		 * guardado: copia las que devolvió la API): las filas se rearman desde el modelo, así el
+		 * guardado del ABM no las pisa con las viejas. Si el cambio lo hizo este mismo editor (misma
+		 * firma), no se hace nada.
+		 *
+		 * @param {Array} opciones
+		 */
+		'model.pdf_column_options'(opciones) {
+			if (!this.pdf_column_options_catalog.length) {
+				return
+			}
+			if (this.firma_de_opciones(opciones) === this.firma_sincronizada) {
+				return
+			}
+			this.build_rows()
+		},
 	},
 	created() {
+		/*
+			`_syncing`: cuando es true, los cambios en pdf_config_rows no se sincronizan al modelo
+			(evita ciclos al cargar filas programáticamente). Va acá y no en data(): Vue no vuelve
+			reactivas las claves que empiezan con "_" (y el lint las rechaza en data). Es una bandera
+			común del componente: build_rows la prende y la apaga en el tick siguiente, después de que
+			corrió el watcher de las filas.
+		*/
+		this._syncing = false
 		if (this.model) {
 			this.local_paper_width_mm = Number(this.model.paper_width_mm || 297)
 			this.local_printable_width_mm = Number(this.model.printable_width_mm || 277)
@@ -407,10 +451,139 @@ export default {
 			/* Ordenar por el order guardado en el pivot; las nuevas van al final en orden del catálogo */
 			rows.sort((a, b) => Number(a.order) - Number(b.order))
 
-			/* Asignar sin disparar sync al modelo */
+			this.mark_suggested_columns(rows)
+
+			/*
+				Asignar sin disparar el watcher de las filas: corre en el tick siguiente, así que la
+				bandera se apaga recién después (con $nextTick, que queda detrás de ese watcher). Y la
+				sincronización al modelo se hace una vez, acá mismo: un perfil nuevo necesita sus
+				opciones en el modelo para el POST, y sync_rows_to_model no escribe si no cambió nada.
+			*/
 			this._syncing = true
 			this.pdf_config_rows = rows
-			this._syncing = false
+			this.$nextTick(() => {
+				this._syncing = false
+			})
+			this.sync_rows_to_model()
+		},
+		/**
+		 * Perfil NUEVO de venta, presupuesto o pedido online sin ninguna columna visible: se prenden
+		 * las sugeridas (las de `columnas_sugeridas` del diseñador, con su respaldo local), con el
+		 * salto de línea en las que lo permiten. Desde la misión diseno-ticket-comandera la tabla no
+		 * se ve en el formulario: sin esto, un diseño creado sin abrir el diseñador saldría con la
+		 * tabla vacía. Un perfil guardado no se toca (el diseñador propone las sugeridas al abrirlo,
+		 * como cambio sin guardar).
+		 *
+		 * Los anchos, con la MISMA regla que el diseñador (poner_sugeridas de tabla_del_disenador.js):
+		 * - en medias columnas: en una hoja, el ancho por defecto de cada opción sobre el ancho útil;
+		 *   en un ticket, las medias de los tickets por defecto de la API (9/3/6/6);
+		 * - lo que sobra de las 24 medias va a la de salto de línea (el nombre), así la tabla llena el
+		 *   ancho (en una A4 era 9/2/3/3 = 17 de 24);
+		 * - y los milímetros contra el ancho útil ACTUAL del modelo (ancho_util_para_sugeridas): si el
+		 *   formulario eligió un rollo antes de que llegara el catálogo de columnas, entran en mm del
+		 *   rollo. Antes entraban en los de una A4 y el POST daba 422 (la suma no entraba en 80 mm).
+		 *
+		 * @param {Array} rows filas recién armadas (se modifican)
+		 * @return {void}
+		 */
+		mark_suggested_columns(rows) {
+			if (this.model.id || !this.tiene_disenador_de_pdf) {
+				return
+			}
+			const any_visible = rows.some(function (row) {
+				return row.visible
+			})
+			if (any_visible) {
+				return
+			}
+
+			const self = this
+			const allows_wrap = {}
+			this.pdf_column_options_catalog.forEach(function (option) {
+				allows_wrap[option.id] = self.as_bool(option.allow_wrap_content)
+			})
+
+			const util = this.ancho_util_para_sugeridas()
+
+			/* Columnas de trabajo mínimas, como las de la tabla del diseñador, para poner_sugeridas */
+			const columnas = []
+			rows.forEach(function (row) {
+				columnas.push({
+					row: row,
+					value_resolver: row.value_resolver,
+					cols: mm_a_columnas(row.width, util, COLUMNAS_DE_LA_TABLA),
+					permite_salto: !!allows_wrap[row.key],
+					salto: false,
+				})
+			})
+
+			const visibles = []
+			const medias_fijas = this.es_rollo_del_modelo() ? MEDIAS_SUGERIDAS_EN_TICKET : null
+			poner_sugeridas(columnas, visibles, columnas_sugeridas(this.model.model_name, null), COLUMNAS_DE_LA_TABLA, medias_fijas)
+
+			const medias = []
+			visibles.forEach(function (columna) {
+				medias.push(columna.cols)
+			})
+			const milimetros = mm_de_las_columnas(medias, util, COLUMNAS_DE_LA_TABLA)
+
+			visibles.forEach(function (columna, indice) {
+				columna.row.visible = true
+				columna.row.wrap_content = columna.salto
+				columna.row.width = milimetros[indice]
+			})
+		},
+		/**
+		 * Si el tipo de hoja del formulario es un rollo de comandera: una venta con un tipo de hoja sin
+		 * alto (D2). El selector "Hoja o comandera" deja el tipo en `model.sheet_type`.
+		 *
+		 * @return {boolean}
+		 */
+		es_rollo_del_modelo() {
+			const tipo = this.model ? this.model.sheet_type : null
+			return !!(this.model && this.model.model_name === 'sale' && tipo && typeof tipo === 'object' && tipo.height === null)
+		},
+		/**
+		 * El ancho útil (mm) contra el que se calculan los milímetros de las sugeridas: el ancho del
+		 * rollo en un ticket; en una hoja, el de la hoja con que la ve el diseñador (la A4 de siempre,
+		 * 200 mm, si el perfil no tiene diseño con cajas).
+		 *
+		 * @return {number}
+		 */
+		ancho_util_para_sugeridas() {
+			if (this.es_rollo_del_modelo()) {
+				const ancho = Number(this.model.sheet_type.width || this.model.paper_width_mm || 0)
+				return ancho > 0 ? ancho : 80
+			}
+			const hoja = hoja_del_perfil(this.model, tiene_diseno(this.model.page_layout), LIMITES_DEL_MARGEN)
+			const util = ancho_util(hoja)
+			return util > 0 ? util : 200
+		},
+		/**
+		 * Firma de un pdf_column_options: lo que importa de cada opción (id y pivot normalizado), en
+		 * su orden. Dos listas con la misma firma guardan lo mismo.
+		 *
+		 * @param {Array} opciones
+		 * @return {string}
+		 */
+		firma_de_opciones(opciones) {
+			const firma = []
+			;(Array.isArray(opciones) ? opciones : []).forEach((opcion) => {
+				if (!opcion || opcion.id == null) {
+					return
+				}
+				const pivot = opcion.pivot || {}
+				firma.push([
+					opcion.id,
+					this.as_bool(pivot.visible),
+					Number(pivot.order || 0),
+					Number(pivot.width || 0),
+					this.as_bool(pivot.wrap_content),
+					this.normalize_font_size(pivot.font_size),
+					this.normalize_text_align(pivot.text_align),
+				])
+			})
+			return JSON.stringify(firma)
 		},
 		/**
 		 * Normaliza un valor a boolean (1/'1'/true → true, todo lo demás → false).
@@ -491,6 +664,15 @@ export default {
 				})
 			})
 
+			/*
+				Se anota la firma ANTES de escribir: el watcher de model.pdf_column_options la reconoce
+				y no rearma las filas por este cambio. Si el modelo ya tiene lo mismo, no se escribe.
+			*/
+			const firma = this.firma_de_opciones(payload)
+			this.firma_sincronizada = firma
+			if (firma === this.firma_de_opciones(this.model.pdf_column_options)) {
+				return
+			}
 			this.$set(this.model, 'pdf_column_options', payload)
 		},
 		/**
@@ -522,9 +704,4 @@ export default {
 	width: 100%
 	max-width: 100%
 
-// La línea gris debajo de "Diseñar PDF": si el perfil imprime con el PDF de siempre o con cajas
-.pdf-column-profile-editor__estado-del-diseno
-	margin: 4px 0 0
-	color: var(--color-text-secondary)
-	font-size: 0.75rem
 </style>

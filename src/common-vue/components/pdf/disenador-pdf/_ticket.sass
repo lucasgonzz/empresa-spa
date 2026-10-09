@@ -1,0 +1,20 @@
+// El ticket de comandera en el diseñador de PDF (misión diseno-ticket-comandera, 9/10/2026; plan
+// §7.3): la letra de la comandera y el QR de muestra, que comparten el rollo (HojaDelDisenador),
+// los renglones (RenglonesDeTicket), los bloques fijos de ARCA (BloqueFijo) y "Ver cómo sale"
+// (Index.vue).
+//
+// 🔴 Solo define una variable y un mixin: importarlo no escribe CSS, así lo importa cada componente
+// sin duplicar nada. Colores solo por token.
+
+// La letra monoespaciada del rollo: cada carácter mide lo mismo, como en la comandera. La hoja mide
+// el ancho real de un carácter con esta misma pila (HojaDelDisenador.vue, la "sonda"), así que da
+// igual cuál de todas encuentre el navegador.
+$dpdf-letra-de-comandera: Consolas, Menlo, "DejaVu Sans Mono", "Liberation Mono", "Courier New", monospace
+
+// El QR de ARCA de muestra: un cuadrado con un damero (no es un QR de verdad: es para ver dónde va y
+// cuánto ocupa). Se incluye adentro de la regla del elemento, que pone el ancho y el alto.
+=dpdf-qr-de-muestra
+	border: 3px solid var(--color-text-primary)
+	border-radius: 2px
+	background: repeating-conic-gradient(var(--color-text-primary) 0% 25%, var(--bg-card) 0% 50%) 50% / 25% 25%
+	opacity: .78

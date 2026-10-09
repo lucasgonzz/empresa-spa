@@ -196,6 +196,8 @@ import column_position from '@/store/column_position'
 import table_column_preference from '@/store/table_column_preference'
 import pdf_column_option from '@/store/pdf_column_option'
 import pdf_column_profile from '@/store/pdf_column_profile'
+// Tipos de hoja y rollos de comandera de los diseños de PDF (misión diseno-ticket-comandera)
+import sheet_type from '@/store/sheet_type'
 
 import platform from '@/store/platform'
 import article_embeddings_estado from '@/store/article_embeddings_estado'
@@ -493,6 +495,7 @@ export default new Vuex.Store({
         table_column_preference,
         pdf_column_option,
         pdf_column_profile,
+        sheet_type,
 
         platform,
         platform_connector,

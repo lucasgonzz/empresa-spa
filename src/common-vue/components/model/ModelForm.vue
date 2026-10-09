@@ -363,6 +363,12 @@
 									:key="'pdf-column-profile-editor-' + (model.id || 'new') + '-' + (model.model_name || '')"
 									:model="model"></pdf-column-profile-editor>
 
+									<!-- "Hoja o comandera" del Diseño de PDF de venta (misión diseno-ticket-comandera) -->
+									<selector-de-hoja
+									v-else-if="prop.type == 'display' && prop.key == 'selector_de_hoja' && model_name == 'pdf_column_profile'"
+									:key="'selector-de-hoja-' + (model.id || 'new')"
+									:model="model"></selector-de-hoja>
+
 									</template>
 
 									<!-- en pivot_parent_model le paso el model padre, para que por ejemplo en el model Sale, en la tabla de articles, tenga acceso al Sale model (el parent_model) -->
@@ -597,6 +603,7 @@ export default {
 		// BtnDelete,
 		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
 		PdfColumnProfileEditor: () => import('@/common-vue/components/pdf/PdfColumnProfileEditor.vue'),
+		SelectorDeHoja: () => import('@/common-vue/components/pdf/selector-de-hoja/Index.vue'),
 	},
 
 	mixins: [model_functions],

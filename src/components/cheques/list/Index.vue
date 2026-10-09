@@ -121,9 +121,18 @@ export default {
 		 *   - Emitido: sin Cliente ni las columnas de endoso a proveedor/gasto (queda "Endozado
 		 *     desde cliente": la copia emitida guarda de qué cliente vino el cheque).
 		 *   - Endosado: las de endoso, sin Proveedor ni "desde cliente".
+		 *   - "Motivo del rechazo" (`rechazado_observaciones`, misión cheque-motivo-rechazo,
+		 *     9/10/2026): solo en la segunda fila Rechazados, de Recibido y de Emitido. En
+		 *     Endosado y en los otros estados siempre está vacía.
 		 */
 		base_properties_for_cheques_list() {
 			let props = this.modelPropertiesFromName('cheque').filter(prop => !prop.not_show_on_table)
+
+			// Endosado no tiene segunda fila (su sub_sub_view se ignora): se lo nombra igual, por
+			// si la URL trae un "rechazados" que sobra antes de que se normalice.
+			if (this.sub_view == 'endosado' || this.sub_sub_view != 'rechazados') {
+				props = props.filter(prop => prop.key != 'rechazado_observaciones')
+			}
 
 			if (this.sub_view == 'recibido') {
 				return props.filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_en_expense_id' && prop.key != 'endosado_desde_client_id')
