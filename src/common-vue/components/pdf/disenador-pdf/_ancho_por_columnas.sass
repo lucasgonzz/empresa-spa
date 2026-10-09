@@ -2,7 +2,9 @@
 // el dibujo que comparten la caja (CajaDelDisenador.vue) y el bloque del cliente de la factura de
 // ARCA (BloqueFijo.vue), los dos con el mixin redimension_por_columnas.js. Las manijas de los dos
 // bordes, el ancho − N/12 +, la insignia grande mientras se tira y los botones redondos chiquitos.
-// Mismo lenguaje que ElementoDelEditor.vue del editor de Diseños de Vender.
+// Mismo lenguaje que ElementoDelEditor.vue del editor de Diseños de Vender. La columna de la tabla
+// (ColumnaDeLaTabla.vue, misión diseno-ticket-comandera) usa los botones, el ancho − N/24 + y la
+// insignia; sus manijas son propias (el gutter de la tabla es de 3px por lado, no de 8).
 //
 // 🔴 Solo define mixins: importarlo no escribe CSS, así lo importa cada componente sin duplicar
 // nada. Cada mixin se incluye ADENTRO de la regla del bloque del componente (las reglas dependen de

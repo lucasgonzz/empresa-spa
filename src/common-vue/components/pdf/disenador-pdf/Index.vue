@@ -95,6 +95,10 @@
 						<i class="bi bi-hand-index-thumb"></i>
 						Tocá una caja o un campo para cambiarle el título, el estilo o la letra.
 					</li>
+					<li>
+						<i class="bi bi-table"></i>
+						Las columnas de la tabla también: arrastralas para ordenarlas y tirá de sus bordes.
+					</li>
 				</ul>
 				<p class="disenador-pdf__nota">
 					La hoja se ve a escala, con datos de ejemplo. En cada comprobante se imprime lo que tenga datos: una caja sin ninguno no ocupa lugar.
@@ -198,6 +202,7 @@ import HojaDelDisenador from './HojaDelDisenador'
 import PanelDePropiedades from './PanelDePropiedades'
 import BandejaDeCampos from './BandejaDeCampos'
 import acciones_del_disenador from './acciones_del_disenador'
+import acciones_de_la_tabla from './acciones_de_la_tabla'
 import guardado_del_disenador from './guardado_del_disenador'
 import {
 	HOJA_DE_SIEMPRE,
@@ -216,9 +221,15 @@ import {
 	ubicar,
 	hoja_del_perfil,
 	ancho_util,
-	columnas_visibles,
 } from './estado_del_disenador'
-import { traer_catalogo, traer_perfil, mensaje_de_error } from './api_del_disenador'
+import {
+	total_de_la_grilla,
+	columnas_ocultas,
+	suma_de_columnas,
+	huella_de_la_tabla,
+	columnas_a_mm,
+} from './tabla_del_disenador'
+import { traer_catalogo, traer_perfil, traer_opciones_de_columnas, mensaje_de_error } from './api_del_disenador'
 import {
 	emisor_chip_keys,
 	FISCAL_REQUIRED_EMISOR_KEYS,
@@ -251,8 +262,9 @@ function encabezado_vacio() {
  * El estado (las dos zonas, la hoja, el encabezado) lo arma y lo desarma estado_del_disenador.js;
  * acá se orquesta el ciclo del modal: abrir, pedir el catálogo, armar el estado, saber si hay
  * cambios y cerrar. Lo que piden las piezas de la hoja (mover, agregar, quitar, seleccionar...)
- * está en el mixin acciones_del_disenador.js, y el guardado en guardado_del_disenador.js. Las
- * zonas, las cajas y la bandeja mutan sus listas por referencia (vuedraggable `:list`), así que
+ * está en el mixin acciones_del_disenador.js, lo de la tabla de artículos en acciones_de_la_tabla.js
+ * (misión diseno-ticket-comandera) y el guardado en guardado_del_disenador.js. Las zonas, las
+ * cajas, la tabla y la bandeja mutan sus listas por referencia (vuedraggable `:list`), así que
  * este componente es el dueño de los arrays y los ve cambiar.
  *
  * Las piezas de adentro (hoja, zonas, cajas, campos, panel, bandeja) reciben ESTE componente por
@@ -260,13 +272,21 @@ function encabezado_vacio() {
  * que usan:
  * - datos: catalogo, limites, definiciones, categorias_por_key, fijos_por_key, superior, pie, hoja,
  *   encabezado, emisor_paleta, logo_size_mm, escala, es_fiscal, obligatorios_del_emisor,
- *   modelo_del_perfil, seleccion_actual, destacado, arrastrando, keys_en_uso,
- *   columnas_de_la_tabla, suma_de_columnas_mm, ancho_util_mm, ancho_de_referencia_mm,
- *   cuando_sale_el_pie.
+ *   modelo_del_perfil, seleccion_actual, destacado, arrastrando, keys_en_uso, ancho_util_mm,
+ *   ancho_de_referencia_mm, cuando_sale_el_pie; y de la tabla: tabla ({columnas, visibles}),
+ *   columnas_ocultas, total_de_la_tabla, suma_de_la_tabla, lugar_libre_en_la_tabla,
+ *   mm_libres_en_la_tabla, columnas_sugeridas_puestas, pedido_de_columnas.
  * - acciones: permitir_movimiento, al_empezar_arrastre, al_terminar_arrastre, seleccionar,
  *   quitar_item, quitar_campo, agregar_caja, agregar_campo, mostrar_campo, clonar_campo,
  *   clonar_de_la_fuente, restablecer_estilo, elegir_formato, cambiar_margen, cambiar_escala,
- *   cambiar_logo.
+ *   cambiar_logo; y de la tabla: agregar_columna, quitar_columna, cambiar_ancho_de_columna,
+ *   cols_maximo_de_columna, mm_de_columna, alternar_salto_de_columna, mostrar_columna,
+ *   mostrar_columnas_en_la_bandeja, avisar_tabla_completa.
+ *
+ * 🔌 Para el modo ticket (lo enchufa otro constructor sobre esto): la tabla se convierte contra
+ * `ancho_util_de_la_tabla_mm` (hoy el ancho útil de la hoja; en ticket, el ancho del rollo) y
+ * `total_de_la_tabla` (el `grilla_de_tabla` del catálogo), y si tocar SOLO la tabla pasa el perfil
+ * a cajas lo decide `tocar_la_tabla_pasa_a_cajas` (D10: en hoja no, en ticket sí).
  */
 export default {
 	name: 'DisenadorPdf',
@@ -278,6 +298,7 @@ export default {
 	},
 	mixins: [
 		acciones_del_disenador,
+		acciones_de_la_tabla,
 		guardado_del_disenador,
 	],
 	provide() {
@@ -318,6 +339,25 @@ export default {
 			/* Las dos zonas de trabajo (ver estado_del_disenador.js) */
 			superior: [],
 			pie: [],
+			/*
+				La tabla de trabajo (ver acciones_de_la_tabla.js y tabla_del_disenador.js): `columnas`
+				son todas las del catálogo de columnas, `visibles` las de la tabla en su orden (la lista
+				que muta vuedraggable).
+			*/
+			tabla: {
+				columnas: [],
+				visibles: [],
+			},
+			/* Catálogo de columnas del modelo (GET pdf-column-options), para rearmar la tabla después de guardar */
+			opciones_de_columnas: [],
+			/* Lo que suman en mm las columnas visibles GUARDADAS (si la hoja nueva no las deja entrar, la tabla viaja) */
+			suma_mm_de_la_base: 0,
+			/* Huella de la tabla al abrir (o al último guardado): si cambia, la tabla se guarda */
+			huella_base_de_la_tabla: '',
+			/* true si el perfil no tenía columnas visibles y el diseñador puso las sugeridas (falta guardar) */
+			columnas_sugeridas_puestas: false,
+			/* Contador: cada vez que sube, la bandeja abre "Columnas de la tabla" (ver mostrar_columnas_en_la_bandeja) */
+			pedido_de_columnas: 0,
 			/* La hoja: {ancho, alto, margen} en mm */
 			hoja: {
 				ancho: HOJA_DE_SIEMPRE.ancho,
@@ -514,6 +554,18 @@ export default {
 			if (!this.seleccion) {
 				return null
 			}
+			/* Una columna de la tabla: vale mientras siga en la tabla (si se sacó, nada seleccionado) */
+			if (this.seleccion.tipo === 'columna') {
+				if (this.tabla.visibles.indexOf(this.seleccion.item) === -1) {
+					return null
+				}
+				return {
+					tipo: 'columna',
+					item: this.seleccion.item,
+					caja: null,
+					zona: 'tabla',
+				}
+			}
 			let ubicacion = ubicar(this.estado_de_trabajo, this.seleccion.item)
 			if (!ubicacion) {
 				return null
@@ -534,24 +586,98 @@ export default {
 			return ancho_util(this.hoja)
 		},
 		/**
-		 * Columnas visibles de la tabla (las del formulario, con los cambios sin guardar).
-		 *
-		 * @returns {Array}
-		 */
-		columnas_de_la_tabla() {
-			return columnas_visibles(this.model.pdf_column_options)
-		},
-		/**
-		 * Suma de los anchos de las columnas visibles (mm).
+		 * Medias columnas de la grilla de la tabla: el `grilla_de_tabla` del catálogo, o 24 (D-L3).
 		 *
 		 * @returns {number}
 		 */
-		suma_de_columnas_mm() {
-			let suma = 0
-			this.columnas_de_la_tabla.forEach(function (columna) {
-				suma += columna.ancho
-			})
-			return suma
+		total_de_la_tabla() {
+			return total_de_la_grilla(this.catalogo)
+		},
+		/**
+		 * El ancho (mm) contra el que se convierten las columnas de la tabla (D9): el ancho útil de
+		 * la hoja. 🔌 En el modo ticket es el ancho del rollo: es el punto donde se enchufa.
+		 *
+		 * @returns {number}
+		 */
+		ancho_util_de_la_tabla_mm() {
+			return this.ancho_util_mm
+		},
+		/**
+		 * Las columnas que no están en la tabla, en el orden del catálogo (la bandeja las ofrece).
+		 *
+		 * @returns {Array}
+		 */
+		columnas_ocultas() {
+			return columnas_ocultas(this.tabla.columnas, this.tabla.visibles)
+		},
+		/**
+		 * Medias columnas que ocupan las columnas de la tabla.
+		 *
+		 * @returns {number}
+		 */
+		suma_de_la_tabla() {
+			return suma_de_columnas(this.tabla.visibles)
+		},
+		/**
+		 * Medias columnas libres en la fila de la tabla (nunca negativo: la suma no pasa de la grilla).
+		 *
+		 * @returns {number}
+		 */
+		lugar_libre_en_la_tabla() {
+			let libre = this.total_de_la_tabla - this.suma_de_la_tabla
+			return libre > 0 ? libre : 0
+		},
+		/**
+		 * Lo libre de la fila en milímetros de esta hoja (para el texto de debajo de la tabla).
+		 *
+		 * @returns {number}
+		 */
+		mm_libres_en_la_tabla() {
+			return columnas_a_mm(this.lugar_libre_en_la_tabla, this.ancho_util_de_la_tabla_mm, this.total_de_la_tabla)
+		},
+		/**
+		 * Huella de la tabla de ahora: columnas, orden, medias columnas, salto y el ancho útil contra
+		 * el que se convierten (cambiar la hoja recalcula los mm: también es un cambio de la tabla).
+		 *
+		 * @returns {string}
+		 */
+		huella_de_la_tabla_actual() {
+			if (!this.catalogo) {
+				return ''
+			}
+			return huella_de_la_tabla(this.tabla.visibles, this.ancho_util_de_la_tabla_mm, this.total_de_la_tabla)
+		},
+		/**
+		 * Si la tabla cambió respecto de su base (o cambió el ancho útil): al guardar, viaja
+		 * `pdf_column_options` completo (plan §7.2).
+		 *
+		 * @returns {boolean}
+		 */
+		tabla_cambiada() {
+			return this.huella_de_la_tabla_actual !== this.huella_base_de_la_tabla
+		},
+		/**
+		 * D10: si tocar SOLO la tabla pasa el perfil a imprimirse con cajas.
+		 *
+		 * - En hoja, NO: el PDF de siempre ya lee las columnas del pivot, así que un perfil de siempre
+		 *   cambia su tabla y sigue siendo de siempre (no viaja page_layout).
+		 * - En ticket, SÍ: el Ticket 2.0 de siempre no lee el pivot, y sin pasar a diseñado el cambio
+		 *   no se vería. 🔌 Es el criterio que el modo ticket ajusta si hace falta; hoy se lee del
+		 *   `es_ticket` del catálogo (contrato §3.3), que una API vieja no manda (= hoja).
+		 *
+		 * @returns {boolean}
+		 */
+		tocar_la_tabla_pasa_a_cajas() {
+			return !!(this.catalogo && this.catalogo.es_ticket)
+		},
+		/**
+		 * Si lo que se tocó hace que, al guardar, el perfil quede (o pase a) imprimirse con cajas: el
+		 * lienzo o la hoja, o la tabla cuando eso cuenta (D10).
+		 *
+		 * @returns {boolean}
+		 */
+		cambio_que_pasa_a_cajas() {
+			return this.diseno_tocado || (this.tabla_cambiada && this.tocar_la_tabla_pasa_a_cajas)
 		},
 		/**
 		 * El ancho (mm) contra el que se dibuja la hoja: el de la hoja más ancha que se puede elegir
@@ -610,12 +736,13 @@ export default {
 		},
 		/**
 		 * Si al guardar el perfil va a quedar (o seguir) con el PDF de siempre: la base es la de
-		 * siempre y ni el lienzo ni la hoja se tocaron.
+		 * siempre y ni el lienzo ni la hoja se tocaron (ni la tabla, si en este modo eso pasa el
+		 * perfil a cajas: D10, ver tocar_la_tabla_pasa_a_cajas).
 		 *
 		 * @returns {boolean}
 		 */
 		sigue_de_siempre() {
-			return this.base_es_de_siempre && !this.diseno_tocado
+			return this.base_es_de_siempre && !this.cambio_que_pasa_a_cajas
 		},
 		/**
 		 * Si se cambiaron los datos del negocio del encabezado.
@@ -634,14 +761,15 @@ export default {
 			return Number(this.logo_size_mm) !== Number(this.logo_base)
 		},
 		/**
-		 * Huella de todo lo que el diseñador puede guardar. `sigue_de_siempre` entra porque volver
-		 * al diseño de siempre es un cambio aunque el lienzo quede igual.
+		 * Huella de todo lo que el diseñador puede guardar, la tabla incluida. `sigue_de_siempre`
+		 * entra porque volver al diseño de siempre es un cambio aunque el lienzo quede igual.
 		 *
 		 * @returns {string}
 		 */
 		huella_total() {
 			return JSON.stringify({
 				diseno: this.huella_del_diseno_actual,
+				tabla: this.huella_de_la_tabla_actual,
 				emisor: this.huella_del_emisor_actual,
 				logo: Number(this.logo_size_mm),
 				sigue_de_siempre: this.sigue_de_siempre,
@@ -686,6 +814,10 @@ export default {
 				return null
 			}
 			if (this.sigue_de_siempre) {
+				/* D10: en hoja, cambiar la tabla no pasa el perfil a cajas (el PDF de siempre la lee igual) */
+				if (this.tabla_cambiada) {
+					return 'Diseño de siempre: el PDF sale como hasta ahora, con las columnas de esta tabla. Cuando muevas algo más de la hoja y guardes, pasa a imprimirse con estas cajas.'
+				}
 				return 'Diseño de siempre: el PDF sale como hasta ahora. Cuando muevas algo de la hoja y guardes, pasa a imprimirse con estas cajas.'
 			}
 			if (this.base_es_de_siempre) {
@@ -744,12 +876,23 @@ export default {
 			this.modelo_guardado = null
 
 			/*
+				Con el catálogo va el de COLUMNAS de la tabla (GET pdf-column-options, misión
+				diseno-ticket-comandera): la tabla se arma acá adentro. Si falla, el diseñador abre igual
+				y la tabla se arma con las columnas que ya tiene el perfil.
+
 				Con un perfil ya creado se pide también el perfil GUARDADO: si el Modelo del formulario no
 				es el guardado (se cambió y no se guardó), la API normalizaría el diseño con el de la base
 				y el diseñador no deja guardar (ver modelo_cambiado_sin_guardar). Si ese pedido falla, el
 				diseñador abre igual, sin ese chequeo.
 			*/
-			let pedidos = [traer_catalogo(this, parametros)]
+			let modelo = this.model.model_name
+			let pedidos = [
+				traer_catalogo(this, parametros),
+				traer_opciones_de_columnas(this, modelo).catch(function (error) {
+					console.log('diseño de PDF: no se pudo leer el catálogo de columnas', error)
+					return null
+				}),
+			]
 			if (this.model.id) {
 				pedidos.push(traer_perfil(this, this.model.id).catch(function (error) {
 					console.log('diseño de PDF: no se pudo leer el perfil guardado', error)
@@ -770,10 +913,16 @@ export default {
 					return
 				}
 
-				let guardado = respuestas[1] && respuestas[1].data ? respuestas[1].data.model : null
+				/* Las columnas del modelo (filtradas como lo hace el editor del formulario), o null si no llegaron */
+				let modelos = respuestas[1] && respuestas[1].data && Array.isArray(respuestas[1].data.models) ? respuestas[1].data.models : null
+				let opciones = modelos ? modelos.filter(function (opcion) {
+					return opcion && opcion.id !== null && typeof opcion.id != 'undefined' && opcion.model_name === modelo
+				}) : null
+
+				let guardado = respuestas[2] && respuestas[2].data ? respuestas[2].data.model : null
 				self.modelo_guardado = guardado && guardado.model_name ? guardado.model_name : null
 
-				self.aplicar_catalogo(catalogo)
+				self.aplicar_catalogo(catalogo, opciones)
 			})
 			.catch(function (error) {
 				if (pedido !== self.pedido_en_curso) {
@@ -792,27 +941,34 @@ export default {
 		},
 		/**
 		 * Arma el estado de trabajo con el catálogo: el diseño del perfil si tiene uno, y si no el
-		 * derivado (lo que el perfil imprime hoy); la hoja; el encabezado. Después toma las bases.
+		 * derivado (lo que el perfil imprime hoy); la hoja; el encabezado; la tabla (contra el ancho
+		 * útil de esa hoja). Después toma las bases y, si la tabla quedó sin columnas, pone las
+		 * sugeridas (después: así cuentan como cambio sin guardar).
 		 *
 		 * @param {Object} catalogo
+		 * @param {Array|null} opciones catálogo de columnas del modelo (null si no llegó)
 		 * @returns {void}
 		 */
-		aplicar_catalogo(catalogo) {
+		aplicar_catalogo(catalogo, opciones) {
 			let con_diseno = tiene_diseno(this.model.page_layout)
 			let estado = armar_estado(con_diseno ? this.model.page_layout : catalogo.diseno_derivado, catalogo)
 
-			/* Primero el catálogo: es_fiscal y los límites dependen de él */
+			/* Primero el catálogo: es_fiscal, los límites y la grilla de la tabla dependen de él */
 			this.catalogo = catalogo
 			this.superior = estado.superior
 			this.pie = estado.pie
 			this.hoja = hoja_del_perfil(this.model, con_diseno, catalogo.limites)
 			this.armar_encabezado()
+			/* La tabla después de la hoja: sus medias columnas salen de los mm sobre ese ancho útil (D9) */
+			this.opciones_de_columnas = Array.isArray(opciones) ? opciones : []
+			this.armar_la_tabla(this.opciones_de_columnas)
 			this.seleccion = null
 
 			this.tenia_diseno = con_diseno
 			this.base_es_de_siempre = !con_diseno
 			this.restablecido = false
 			this.tomar_bases()
+			this.poner_columnas_sugeridas()
 		},
 		/**
 		 * Arma la copia de trabajo del encabezado desde header_layout (o el de siempre) y el logo.
@@ -880,6 +1036,7 @@ export default {
 		 */
 		tomar_bases() {
 			this.huella_base_del_diseno = this.huella_del_diseno_actual
+			this.huella_base_de_la_tabla = this.huella_de_la_tabla_actual
 			this.huella_base_del_emisor = this.huella_del_emisor_actual
 			this.logo_base = this.logo_size_mm
 			this.huella_inicial = this.huella_total
@@ -897,6 +1054,14 @@ export default {
 			this.modelo_guardado = null
 			this.superior = []
 			this.pie = []
+			this.tabla = {
+				columnas: [],
+				visibles: [],
+			}
+			this.opciones_de_columnas = []
+			this.suma_mm_de_la_base = 0
+			this.huella_base_de_la_tabla = ''
+			this.columnas_sugeridas_puestas = false
 			this.hoja = {
 				ancho: HOJA_DE_SIEMPRE.ancho,
 				alto: HOJA_DE_SIEMPRE.alto,

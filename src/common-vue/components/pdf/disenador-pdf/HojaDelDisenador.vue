@@ -3,7 +3,8 @@
 		La hoja del diseñador de PDF: blanca (--bg-card) sobre la mesa gris del modal, con el ancho
 		proporcional al formato elegido y el margen dibujado como relleno proporcional (el rectángulo
 		punteado es el ancho útil). Adentro, en el orden del PDF (plan §4.2): el encabezado del
-		negocio, la zona de arriba de la tabla, la tabla fija y el pie.
+		negocio, la zona de arriba de la tabla, la tabla de artículos (con sus columnas editables
+		desde la misión diseno-ticket-comandera) y el pie.
 	-->
 	<div
 	ref="hoja"
@@ -60,7 +61,7 @@
 				subtitulo="sale en todas las hojas"
 				icono="bi-layout-text-window"></zona-del-disenador>
 
-				<tabla-fija></tabla-fija>
+				<tabla-del-disenador></tabla-del-disenador>
 
 				<zona-del-disenador
 				zona="pie"
@@ -76,7 +77,7 @@
 import HeaderPreview from '@/common-vue/components/pdf/header-designer/HeaderPreview.vue'
 import ChipPalette from '@/common-vue/components/pdf/header-designer/ChipPalette.vue'
 import ZonaDelDisenador from './ZonaDelDisenador'
-import TablaFija from './TablaFija'
+import TablaDelDisenador from './TablaDelDisenador'
 
 /*
 	Ancho mínimo (px) de la hoja más ancha que se puede elegir. En el teléfono la hoja no se achica
@@ -105,7 +106,7 @@ export default {
 		HeaderPreview,
 		ChipPalette,
 		ZonaDelDisenador,
-		TablaFija,
+		TablaDelDisenador,
 	},
 	data() {
 		return {

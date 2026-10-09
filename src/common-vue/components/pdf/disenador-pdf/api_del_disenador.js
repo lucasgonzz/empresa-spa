@@ -11,9 +11,15 @@
 	              para venta, presupuesto y pedido online). Con una API vieja, 404.
 	- GET pdf-column-profiles/{id}   el perfil GUARDADO -> 200 {model}: para comparar su Modelo con el
 	                                 del formulario (si se cambió sin guardar, no se deja guardar).
+	- GET pdf-column-options?model_name=   el catálogo de columnas de la tabla -> 200 {models: [{id,
+	                                 name, label, value_resolver, default_width, allow_wrap_content,
+	                                 order...}]} (misión diseno-ticket-comandera: la tabla se arma
+	                                 adentro del diseñador). Solo con `skip_global_error_event`: es el
+	                                 mismo pedido que hace el editor del formulario.
 	- PUT pdf-column-profiles/{id}   solo las claves que vienen (page_layout, paper_width_mm,
 	                                 printable_width_mm, margin_mm, paper_height_mm, header_layout,
-	                                 logo_size_mm y, en venta, is_afip_ticket) -> 200 {model};
+	                                 logo_size_mm, en venta is_afip_ticket y, si la tabla o la hoja
+	                                 cambiaron, pdf_column_options completo) -> 200 {model};
 	                                 422 {message | errors}. Va como JSON en el cuerpo (objeto): la
 	                                 API lee page_layout del cuerpo crudo para no perder las etiquetas
 	                                 vacías ("sin rótulo").
@@ -59,6 +65,26 @@ export function traer_catalogo(vm, parametros) {
  */
 export function traer_perfil(vm, id) {
 	return vm.$api.get(RUTA + '/' + id, CONFIGURACION)
+}
+
+/**
+ * Trae el catálogo de columnas de la tabla de un modelo (GET pdf-column-options?model_name=): todas
+ * las opciones activas, para mezclarlas con los pivots del perfil (tabla_del_disenador.js).
+ *
+ * Solo `skip_global_error_event` (sin el de validación), igual que el editor del formulario: si
+ * falla, el diseñador arma la tabla con las columnas que ya tiene el perfil.
+ *
+ * @param {Object} vm componente que hace el pedido (usa su $api)
+ * @param {string} model_name 'sale' | 'budget' | 'order'
+ * @returns {Promise}
+ */
+export function traer_opciones_de_columnas(vm, model_name) {
+	return vm.$api.get('pdf-column-options', {
+		params: {
+			model_name: model_name,
+		},
+		skip_global_error_event: true,
+	})
 }
 
 /**

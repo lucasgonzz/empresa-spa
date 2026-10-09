@@ -3,9 +3,10 @@
 		Panel de propiedades del diseñador de PDF: arriba de la bandeja, muestra lo seleccionado en la
 		hoja (plan §8.3). La cabecera (qué es, cómo se llama y la ✕ para dejar de editarlo) es común; el
 		cuerpo es de cada tipo: PanelDeCaja (título, estilo, ancho, quitar), PanelDeCampo (rótulo,
-		texto, letra, alineación, volver al estilo del campo, sacar) y PanelDeFijo (el ancho del
-		bloque de ARCA del cliente, el cuadro de importes del del pie). Sin nada seleccionado, una
-		línea de ayuda.
+		texto, letra, alineación, volver al estilo del campo, sacar), PanelDeFijo (el ancho del
+		bloque de ARCA del cliente, el cuadro de importes del del pie) y PanelDeColumna (una columna de
+		la tabla: ancho en medias columnas, salto de línea, quitar; misión diseno-ticket-comandera).
+		Sin nada seleccionado, una línea de ayuda.
 
 		Todo se cambia EN EL LUGAR sobre el objeto seleccionado (el mismo de las listas de trabajo):
 		la hoja lo ve al instante y el diseñador lo cuenta como cambio sin guardar.
@@ -23,7 +24,7 @@
 			<i
 			class="bi bi-hand-index-thumb"
 			aria-hidden="true"></i>
-			<p>Tocá una caja o un campo de la hoja para cambiarle el título, el estilo o la letra.</p>
+			<p>Tocá una caja, un campo o una columna de la tabla para cambiarle el título, el estilo, la letra o el ancho.</p>
 		</div>
 
 		<template v-else>
@@ -58,6 +59,11 @@
 			v-else-if="seleccion.tipo === 'fijo'"
 			:key="'fijo-' + seleccion.item.key"
 			:fijo="seleccion.item"></panel-de-fijo>
+
+			<panel-de-columna
+			v-else-if="seleccion.tipo === 'columna'"
+			:key="'columna-' + seleccion.item.ui_id"
+			:columna="seleccion.item"></panel-de-columna>
 		</template>
 	</section>
 </template>
@@ -65,11 +71,13 @@
 import PanelDeCaja from './PanelDeCaja'
 import PanelDeCampo from './PanelDeCampo'
 import PanelDeFijo from './PanelDeFijo'
+import PanelDeColumna from './PanelDeColumna'
 
-/* Cómo se nombra cada zona en la cabecera del panel */
+/* Cómo se nombra cada zona en la cabecera del panel (la tabla, para una columna seleccionada) */
 const NOMBRES_DE_ZONAS = {
 	superior: 'arriba de la tabla',
 	pie: 'pie de página',
+	tabla: 'tabla de artículos',
 }
 
 /**
@@ -86,6 +94,7 @@ export default {
 		PanelDeCaja,
 		PanelDeCampo,
 		PanelDeFijo,
+		PanelDeColumna,
 	},
 	computed: {
 		/**
@@ -113,6 +122,9 @@ export default {
 			if (seleccion.tipo === 'fijo') {
 				return 'Bloque de ARCA · ' + zona
 			}
+			if (seleccion.tipo === 'columna') {
+				return 'Columna · ' + zona
+			}
 			let definicion = this.disenador.definiciones[seleccion.item.key]
 			let categoria = definicion ? this.disenador.categorias_por_key[definicion.categoria] : null
 			return categoria ? categoria.nombre : 'Campo'
@@ -135,6 +147,9 @@ export default {
 			if (seleccion.tipo === 'fijo') {
 				let fijo = this.disenador.fijos_por_key[item.key]
 				return fijo ? fijo.nombre : item.key
+			}
+			if (seleccion.tipo === 'columna') {
+				return item.nombre
 			}
 			let definicion = this.disenador.definiciones[item.key]
 			return definicion ? definicion.nombre : item.key
