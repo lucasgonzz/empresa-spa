@@ -583,7 +583,8 @@ export default [
 			🔴 El slug tiene que coincidir carácter por carácter con el que crea
 			PermisosCatalogoHelper en la API. Y para que los empleados que hoy usan Comprobantes no
 			lo pierdan de golpe con el release, el seeder suelto PermissionComprobantesIndexSeeder
-			se lo da a los que ya tienen `sale.index` o `client.index`: tiene que correr en el
+			se lo da a los que ya tienen `sale.index`, `client.index` o `devolucion.store` (en
+			Comprobantes se reintenta facturar con ARCA una nota de crédito sin CAE): tiene que correr en el
 			despliegue de cada cliente. Sin ese seeder los empleados dejan de ver el módulo (el
 			dueño y el acceso maestro lo siguen viendo: `can()` les da true siempre).
 		*/
