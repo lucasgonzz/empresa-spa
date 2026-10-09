@@ -5,6 +5,10 @@
 		gris por campo), un bloque fijo de ARCA (el del cliente con sus renglones; el del pie con el QR
 		y, si lo tiene, el cuadro de importes) o un salto de fila (no se ve: corta la fila). Ocupa sus
 		N/12 de la fila: el ancho lo pone la zona de la miniatura leyendo `data-cols` (Index.vue).
+
+		En un rollo de comandera (misión diseno-ticket-comandera) las mismas piezas se dibujan como en
+		el papel (lo pone Index.vue con miniatura-pdf--rollo): la caja sin recuadro y, "Con línea", con
+		la línea de guiones abajo; cada bloque de ARCA con su clase (emisor, cliente, pie).
 	-->
 	<span
 	v-if="bloque.tipo === 'salto'"
@@ -18,7 +22,7 @@
 		<span
 		v-if="bloque.tipo === 'caja'"
 		class="miniatura-pdf__caja"
-		:class="'miniatura-pdf__caja--' + bloque.estilo">
+		:class="['miniatura-pdf__caja--' + bloque.estilo, { 'miniatura-pdf__caja--con-linea': bloque.con_linea }]">
 			<span
 			v-if="bloque.con_titulo"
 			class="miniatura-pdf__titulo"></span>
@@ -48,7 +52,7 @@
 		<span
 		v-else
 		class="miniatura-pdf__fijo"
-		:class="{ 'miniatura-pdf__fijo--pie': bloque.es_pie_de_arca }">
+		:class="['miniatura-pdf__fijo--' + bloque.key, { 'miniatura-pdf__fijo--pie': bloque.es_pie_de_arca }]">
 			<span
 			v-if="bloque.es_pie_de_arca"
 			class="miniatura-pdf__qr"></span>

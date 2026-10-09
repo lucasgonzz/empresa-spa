@@ -14,9 +14,12 @@
 		Con `page_layout` NULL dibuja el `diseno_derivado` del catálogo (lo que imprime el de siempre).
 		Es decorativa (aria-hidden): la tarjeta dice en texto lo mismo. Colores solo por token.
 
-		🔌 Para el modo ticket: con `rollo` se dibuja una tira de comandera (angosta, sin alto fijo y
-		sin encabezado aparte) en vez de una hoja; es la clase miniatura-pdf--rollo y el computed
-		`estilo_del_papel`, el lugar donde ajustar cómo se ve el rollo.
+		Con `rollo` (un ticket de comandera, misión diseno-ticket-comandera) se dibuja una tira de
+		comandera en vez de una hoja: angosta, sin alto fijo, sin encabezado aparte (D6) y como sale en
+		el papel -- las cajas sin recuadro y, "Con línea", con la línea de guiones abajo; el logo
+		centrado; los bloques de ARCA a lo ancho (el del pie, con el QR abajo y centrado); la tabla con
+		el encabezado en negrita entre líneas de guiones --. Con `page_layout` NULL dibuja el derivado
+		del ticket que manda el catálogo (lo que imprime el Ticket 2.0 de siempre).
 	-->
 	<div
 	class="miniatura-pdf"
@@ -61,7 +64,13 @@
 						v-for="columna in armado.columnas"
 						:key="'encabezado-' + columna.id"
 						class="miniatura-pdf__tabla-celda"
-						:style="estilo_de_columna(columna)"></span>
+						:style="estilo_de_columna(columna)">
+							<!-- En el rollo, el encabezado es un renglón en negrita -->
+							<span
+							v-if="rollo"
+							class="miniatura-pdf__raya miniatura-pdf__raya--negrita miniatura-pdf__raya--tabla"
+							:style="{ width: '72%' }"></span>
+						</span>
 					</div>
 					<div
 					v-for="renglon in RENGLONES_DE_LA_TABLA"
@@ -484,11 +493,89 @@ export default {
 
 // ── El rollo de comandera (modo ticket) ────────────────────────────────────────────────────────
 // Una tira angosta sin alto fijo: el ticket es tan largo como su contenido. El borde de abajo
-// punteado es el corte del papel.
+// punteado es el corte del papel. Adentro, como lo imprime la comandera: nada de recuadros ni de
+// fondos grises, las líneas son de guiones.
 .miniatura-pdf--rollo
 	border-radius: 2px 2px 0 0
 	border-bottom: 2px dashed var(--color-border)
 
 	.miniatura-pdf__util
+		gap: 3px
 		padding: 6px 5px 8px
+
+	// Las cajas: sin recuadro; "Con línea", la línea de guiones abajo
+	.miniatura-pdf__caja,
+	.miniatura-pdf__caja--borde,
+	.miniatura-pdf__caja--gris,
+	.miniatura-pdf__caja--ninguno
+		padding: 1px 0 2px
+		border: 0
+		border-radius: 0
+		background: transparent
+
+	.miniatura-pdf__caja--con-linea
+		border-bottom: 1px dashed var(--color-text-secondary)
+
+	// El logo: un rectángulo centrado
+	.miniatura-pdf__imagen
+		width: 46%
+		aspect-ratio: 2 / 1
+
+	// Los bloques de ARCA: a lo ancho, sin recuadro; el emisor centrado y con línea abajo, como el
+	// cliente; el del pie con el IVA, el CAE y el QR abajo y centrado
+	.miniatura-pdf__fijo
+		padding: 1px 0 2px
+		border: 0
+		border-radius: 0
+		background: transparent
+
+	.miniatura-pdf__fijo--afip_emisor,
+	.miniatura-pdf__fijo--afip_receptor
+		border-bottom: 1px dashed var(--color-text-secondary)
+
+	.miniatura-pdf__fijo--afip_emisor .miniatura-pdf__fijo-renglones
+		align-items: center
+
+	.miniatura-pdf__fijo--pie
+		flex-direction: column
+		align-items: stretch
+		gap: 3px
+
+		.miniatura-pdf__importes
+			order: 0
+			flex: 0 0 auto
+			align-items: flex-start
+			padding: 0
+			background: transparent
+
+		.miniatura-pdf__fijo-renglones
+			order: 1
+
+		.miniatura-pdf__qr
+			order: 2
+			align-self: center
+			flex: 0 0 auto
+			width: 30%
+
+	// La tabla: el encabezado en negrita entre líneas de guiones, y otra línea al final
+	.miniatura-pdf__tabla
+		border: 0
+		border-radius: 0
+		border-bottom: 1px dashed var(--color-text-secondary)
+
+	.miniatura-pdf__tabla--vacia
+		height: 6px
+
+	.miniatura-pdf__tabla-fila
+		border-top: 0
+
+	.miniatura-pdf__tabla-fila--encabezado
+		height: auto
+		padding-bottom: 2px
+		border-bottom: 1px dashed var(--color-text-secondary)
+		background: transparent
+
+	.miniatura-pdf__tabla-celda
+		padding: 2px 1px
+		border-left: 0
 </style>

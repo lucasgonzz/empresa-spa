@@ -14,7 +14,11 @@
 		diseño derivado de un perfil que todavía no se diseñó: una vez al montarse y de nuevo cuando
 		cambian el Modelo, el perfil, "Es factura de ARCA" o el tipo de hoja del formulario. Lo demás
 		(page_layout, columnas, hoja) lo lee del `model` del formulario, así se redibuja sola cuando el
-		diseñador guarda.
+		diseñador guarda. Lo pide con `sin_comprobante_de_prueba=1`: la tarjeta no prueba nada y la API
+		se ahorra buscar el comprobante.
+
+		Un ticket de comandera (misión diseno-ticket-comandera) se dibuja como un rollo y la tarjeta
+		dice "Ticket de siempre" / "Ticket armado con cajas".
 	-->
 	<div
 	class="tarjeta-pdf"
@@ -24,7 +28,7 @@
 		class="tarjeta-pdf__abrir"
 		role="button"
 		tabindex="0"
-		:aria-label="'Diseñar el PDF ' + nombre + '. ' + estado + '.'"
+		:aria-label="(es_rollo ? 'Diseñar el ticket ' : 'Diseñar el PDF ') + nombre + '. ' + estado + '.'"
 		@click="abrir"
 		@keydown.enter.prevent="abrir"
 		@keydown.space.prevent="abrir">
@@ -69,7 +73,7 @@
 			data-testid="abrir-disenador-pdf"
 			@click="abrir">
 				<i class="icon-configuration"></i>
-				Diseñar PDF
+				{{ es_rollo ? 'Diseñar ticket' : 'Diseñar PDF' }}
 			</b-button>
 		</div>
 	</div>
@@ -85,6 +89,7 @@ import {
 	es_verdadero,
 } from '../disenador-pdf/estado_del_disenador'
 import { pivot_es_visible } from '../disenador-pdf/tabla_del_disenador'
+import { caracteres_por_renglon } from '../disenador-pdf/vista_de_ticket'
 
 /* Los modelos que se diseñan con el diseñador de PDF (los demás no tienen catálogo de cajas) */
 const MODELOS_CON_DISENADOR = ['sale', 'budget', 'order']
@@ -134,6 +139,8 @@ export default {
 			let parametros = {
 				model_name: modelo,
 				is_afip_ticket: es_verdadero(this.model.is_afip_ticket) ? 1 : 0,
+				/* La tarjeta no usa el comprobante de prueba: la API no lo busca (contrato §3.3) */
+				sin_comprobante_de_prueba: 1,
 			}
 			if (this.model.id) {
 				parametros.profile_id = this.model.id
@@ -158,7 +165,16 @@ export default {
 		 * @returns {boolean}
 		 */
 		es_rollo() {
-			return !!(this.catalogo && this.catalogo.es_ticket)
+			if (this.catalogo) {
+				return !!this.catalogo.es_ticket
+			}
+			/*
+				Sin catálogo (no llegó todavía, o falló): lo que dice el tipo de hoja del formulario. Un
+				ticket es una venta con un tipo de hoja sin alto (rollo continuo, D2). Una API vieja no
+				tiene tipos sin alto en una venta: hoja.
+			*/
+			let tipo = this.model ? this.model.sheet_type : null
+			return !!(this.model && this.model.model_name === 'sale' && tipo && typeof tipo == 'object' && tipo.height === null)
 		},
 		/**
 		 * Si el perfil imprime con cajas (tiene page_layout).
@@ -176,7 +192,8 @@ export default {
 		 */
 		hoja() {
 			if (this.es_rollo) {
-				let ancho = parseInt(this.catalogo.ancho_mm, 10) || 80
+				let del_tipo = this.model.sheet_type ? parseInt(this.model.sheet_type.width, 10) : NaN
+				let ancho = (this.catalogo ? parseInt(this.catalogo.ancho_mm, 10) : NaN) || del_tipo || 80
 				return {
 					ancho: ancho,
 					alto: 0,
@@ -225,6 +242,9 @@ export default {
 		 * @returns {string}
 		 */
 		estado() {
+			if (this.es_rollo) {
+				return this.con_cajas ? 'Ticket armado con cajas' : 'Ticket de siempre'
+			}
 			return this.con_cajas ? 'Diseño armado con cajas' : 'Diseño de siempre'
 		},
 		/**
@@ -235,7 +255,7 @@ export default {
 		detalle() {
 			let partes = []
 			if (this.es_rollo) {
-				partes.push('Comandera de ' + this.hoja.ancho + ' mm')
+				partes.push('Comandera de ' + this.hoja.ancho + ' mm · ' + caracteres_por_renglon(this.hoja.ancho) + ' caracteres por renglón')
 			} else {
 				let formato = this.catalogo ? formato_de_hoja(this.catalogo.formatos_de_hoja, this.hoja.ancho, this.hoja.alto) : null
 				partes.push(formato ? formato.nombre : 'Hoja de ' + this.hoja.ancho + ' × ' + this.hoja.alto + ' mm')

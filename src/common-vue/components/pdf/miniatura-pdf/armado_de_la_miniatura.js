@@ -43,6 +43,33 @@ const TIPO_IMAGEN = 'imagen'
 /* Fijo del encabezado fiscal del ticket (contrato §3.5): solo existe en el catálogo de ticket */
 const FIJO_AFIP_EMISOR = 'afip_emisor'
 
+/*
+	Las alineaciones del catálogo (DisenoDePaginaPdf::ALINEACIONES: izquierda, centro, derecha) con el
+	nombre de la clase que las dibuja (miniatura-pdf__renglon--left | center | right). Lo que no está
+	acá (un valor viejo ya en inglés, o nada) queda como venga, o a la izquierda.
+*/
+const CLASE_DE_ALINEACION = {
+	izquierda: 'left',
+	centro: 'center',
+	derecha: 'right',
+}
+
+/* El estilo de caja que no lleva línea en un ticket ("Sin línea"); los otros dos la llevan (D7) */
+const ESTILO_SIN_LINEA = 'ninguno'
+
+/**
+ * La clase de alineación de un renglón ('left' | 'center' | 'right').
+ *
+ * @param {*} alineacion la del estilo efectivo del campo
+ * @returns {string}
+ */
+function clase_de_alineacion(alineacion) {
+	if (CLASE_DE_ALINEACION[alineacion]) {
+		return CLASE_DE_ALINEACION[alineacion]
+	}
+	return alineacion === 'center' || alineacion === 'right' ? alineacion : 'left'
+}
+
 /**
  * Un número estable a partir de un texto (para el largo de las rayas): el mismo texto da siempre lo
  * mismo.
@@ -132,7 +159,7 @@ function renglones_de_la_caja(campos, definiciones) {
 				largo: largo_de_raya(campo.key, renglon),
 				negrita: !!estilo.negrita,
 				grande: Number(estilo.tamano) >= TAMANO_GRANDE,
-				alineacion: es_imagen ? 'center' : (estilo.alineacion || 'left'),
+				alineacion: es_imagen ? 'center' : clase_de_alineacion(estilo.alineacion),
 				imagen: es_imagen,
 			})
 		}
@@ -182,6 +209,8 @@ export function bloques_de_la_zona(items, definiciones, estilos, rollo) {
 				tipo: 'caja',
 				cols: acotar_entero(item.cols, 1, 12, 12),
 				estilo: estilo,
+				/* En un rollo: "Con línea" (borde o gris) lleva la línea de guiones abajo; "Sin línea", no */
+				con_linea: estilo !== ESTILO_SIN_LINEA,
 				con_titulo: !!String(item.titulo || '').trim(),
 				renglones: renglones_de_la_caja(item.campos, definiciones),
 			})
