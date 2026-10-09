@@ -304,17 +304,10 @@ export default {
 
             setTimeout(() => {
 
-                self.ventas_afip_information_id = 0
-                self.afip_tipo_comprobante_id = 0
+                self.limpiar_datos_de_facturacion()
 
                 self.$store.commit('sale/setIsSelecteable', 0)
                 self.$store.commit('sale/setSelected', [])
-
-                self.$store.commit('afip_ticket/set_forma_de_pago', '')
-                self.$store.commit('afip_ticket/set_permiso_existente', '')
-                self.$store.commit('afip_ticket/set_incoterms', 'FOB')
-                self.$store.commit('afip_ticket/set_monto_a_facturar', '')
-                self.$store.commit('afip_ticket/set_importe_personalizado_ivas', [])
 
                 self.$bvModal.hide('send-afip-tickets')
                 self.$bvModal.hide('confirm-make-afip-tickets')
@@ -328,6 +321,37 @@ export default {
                 })
 
             }, 2000)
+        },
+        /**
+         * Deja los datos de facturacion del store como al arrancar: punto de venta, tipo de
+         * comprobante, la marca de "punto de venta de la sucursal", los datos de exportacion y
+         * el importe personalizado con su reparto.
+         *
+         * 🔴 Esos datos viven en el store y el modal de confirmacion (confirm-make-afip-tickets)
+         * es global: App.vue lo monta una vez y nunca se desmonta. Lo que se eligio para una
+         * venta queda puesto para la siguiente mientras nadie lo limpie, y hasta el 9/10/2026 solo
+         * se limpiaba al terminar de emitir: elegir un punto de venta y cancelar lo dejaba
+         * elegido (y bloqueado) al reabrir el modal, en esa venta o en otra.
+         *
+         * La llaman terminar_emision() y el cierre del modal de confirmacion (Cancelar, la X,
+         * Esc, clic afuera). Es idempotente: cuando terminar_emision() cierra el modal corren
+         * las dos seguidas y la segunda no cambia nada.
+         *
+         * No toca la seleccion de ventas (la limpian quienes cierran) ni la fecha del
+         * comprobante (es data() del propio modal). Y no puede vaciar una emision en curso:
+         * items_desde_seleccion() ya copio estos valores a cada item en el clic de "Emitir
+         * Facturas", antes de cualquier cierre.
+         */
+        limpiar_datos_de_facturacion() {
+            this.ventas_afip_information_id = 0
+            this.afip_tipo_comprobante_id = 0
+
+            this.$store.commit('afip_ticket/set_punto_de_venta_por_sucursal', false)
+            this.$store.commit('afip_ticket/set_forma_de_pago', '')
+            this.$store.commit('afip_ticket/set_permiso_existente', '')
+            this.$store.commit('afip_ticket/set_incoterms', 'FOB')
+            this.$store.commit('afip_ticket/set_monto_a_facturar', '')
+            this.$store.commit('afip_ticket/set_importe_personalizado_ivas', [])
         },
         send_request(index) {
             let self = this
