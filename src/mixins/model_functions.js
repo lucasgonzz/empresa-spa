@@ -1663,6 +1663,18 @@ export default {
         },
 
         /**
+         * value_function de un campo de fecha que arranca en el dia de hoy (hoy: la fecha de
+         * emision de una factura de compra nueva). Corre al ABRIR el formulario, asi que no se
+         * congela con la fecha en que se cargo la pestaña. Formato 'YYYY-MM-DD', el que espera el
+         * <input type="date"> de common-vue/components/model/form/DatePicker.vue.
+         *
+         * @returns {String}
+         */
+        fecha_de_hoy_para_input() {
+            return moment().format('YYYY-MM-DD')
+        },
+
+        /**
          * Stock del combo para la columna `stock_disponible` (tabla del ABM, buscador de Vender).
          *
          * Devuelve el numero CRUDO (o null), nunca texto: TableComponent decide con este valor si

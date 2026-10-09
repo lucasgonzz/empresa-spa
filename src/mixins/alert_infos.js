@@ -124,4 +124,85 @@ export default {
             return this.$store.state.sync_to_tn_article.failed_count
         },
 	},
+	methods: {
+		/**
+		 * LA regla de qué solapas de Alertas puede ver esta persona (misión
+		 * permisos-navegacion-empleados, decisión de Lucas del 9/10/2026).
+		 *
+		 * Es una sola definición a propósito, porque la misma pregunta se hace en tres lugares y
+		 * tienen que contestar lo mismo:
+		 *   - views/Alertas.vue: qué pestañas se dibujan (`nav_items`) y adónde se lleva una URL
+		 *     con una solapa no permitida (`completar_ruta`).
+		 *   - lista-de-alertas-table/Index.vue: qué secciones se montan (recibe la lista ya armada
+		 *     por prop). Esconder solo la pestaña NO alcanzaba: cada sección se dibuja por la URL
+		 *     (/alertas/stock-minimo mostraba Stock mínimo aunque no hubiera pestaña), y Stock
+		 *     mínimo pedía su reporte apenas se entraba a Alertas por cualquier solapa.
+		 *   - mixins/nav_functions.js → alerts_count(): el número rojo del ítem Alertas del menú.
+		 *     Si sumara lo de una solapa que la persona no ve, la campana marcaría alertas que no
+		 *     puede encontrar.
+		 *
+		 * Antes Stock mínimo y Catálogo no pedían ningún permiso, y Movimientos de depósitos solo
+		 * la extensión: un empleado sin permisos veía el stock y el catálogo. Ahora:
+		 *   - cobros                     → cualquier usuario cargado (sin permiso, ver abajo)
+		 *   - stock-minimo               → article.index
+		 *   - catalogo (y el alias viejo imagenes, /alertas/imagenes) → article.index
+		 *   - pedidos-proveedor          → alerts.provider_orders
+		 *   - pedidos-online             → alerts.orders
+		 *   - mensajes                   → alerts.messages
+		 *   - movimientos-de-depositos   → la extensión deposit_movements Y article.index
+		 *   - facturacion                → alerts.problemas_al_facturar
+		 *   - cualquier otra             → false (una solapa inventada en la URL no se ve)
+		 *
+		 * `can()` ya le da true al dueño y al acceso maestro, así que para ellos todo queda como
+		 * antes (salvo Movimientos, que sigue pidiendo la extensión). `hasExtencion()` puede
+		 * devolver undefined mientras el usuario no cargó: se toma como falso.
+		 *
+		 * Esto es SOLO qué se dibuja: la API no valida estos permisos (hallazgo de la misión).
+		 *
+		 * 🔴 El nombre es largo y único a propósito: un método de mixin pisa en silencio a un
+		 * global con el mismo nombre (el 30/9/2026 eso bloqueó todas las ventas).
+		 *
+		 * @param {String} solapa El slug de la solapa en la URL (`$route.params.view`).
+		 * @returns {Boolean}
+		 */
+		puede_ver_solapa_de_alertas(solapa) {
+			if (!this.user) {
+				return false
+			}
+			/*
+				Cobros, sin permiso (Lucas lo re-decidió el 9/10/2026, en esta misma misión, al saber
+				esto): la API ya recorta las ventas sin cobrar de un empleado común a SUS propias
+				ventas (SaleController::ventas_sin_cobrar, `$ver_solo_las_ventas_suyas`, salvo
+				que el dueño le tilde `ver_alertas_de_todos_los_empleados`), así que la solapa no le
+				expone las de otros. Pedirle `client.index`, en cambio, le sacaba a un vendedor el
+				aviso de lo que él mismo tiene que cobrar, y dejaba sin efecto
+				`alerts.recordatorio_cobro` para quien no tuviera `client.index`.
+			*/
+			if (solapa == 'cobros') {
+				return true
+			}
+			if (solapa == 'stock-minimo') {
+				return this.can('article.index')
+			}
+			if (solapa == 'catalogo' || solapa == 'imagenes') {
+				return this.can('article.index')
+			}
+			if (solapa == 'pedidos-proveedor') {
+				return this.can('alerts.provider_orders')
+			}
+			if (solapa == 'pedidos-online') {
+				return this.can('alerts.orders')
+			}
+			if (solapa == 'mensajes') {
+				return this.can('alerts.messages')
+			}
+			if (solapa == 'movimientos-de-depositos') {
+				return !!this.hasExtencion('deposit_movements') && this.can('article.index')
+			}
+			if (solapa == 'facturacion') {
+				return this.can('alerts.problemas_al_facturar')
+			}
+			return false
+		},
+	},
 }
