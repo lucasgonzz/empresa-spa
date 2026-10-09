@@ -90,7 +90,7 @@ export default {
 		 * 🔴 La lista de partida es la que la tabla esta mostrando, no siempre `models`: el modo
 		 * Historico, el buscador y el modal de filtros son un FILTRO del store (cargan `filtered` y
 		 * ponen `is_filtered` en true), y con eso el display dibuja `filtered`. Filtrar siempre
-		 * `models` --la lista de "Por fecha"-- dejaba el filtro de la vista sin efecto en Historico.
+		 * `models` --la lista acotada que trae `getModels` (al entrar o en "Por fecha")-- dejaba el filtro de la vista sin efecto en Historico.
 		 * Mismo patron que `mixins/sale.js::sales()` y `mixins/provider_order/models_to_show.js`.
 		 */
 		sales() {
