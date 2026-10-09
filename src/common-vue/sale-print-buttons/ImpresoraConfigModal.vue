@@ -126,6 +126,7 @@
 			<p class="impresora-config-modal__hint">
 				Las comanderas mas comunes son de 80mm o de 58mm. El sistema lo usa para
 				calcular cuantos caracteres entran por linea.
+				Vale para el ticket de siempre y para la prueba: un ticket armado con cajas en Diseño de PDF usa el ancho de su diseño.
 			</p>
 		</div>
 

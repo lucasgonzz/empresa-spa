@@ -245,16 +245,28 @@ export default {
         },
 
         /**
-         * Imprime el Ticket 2.0 de una venta.
+         * Imprime el ticket de comandera de una venta.
          *
          * Cada salida por error avisa al operador. Antes todas terminaban en un
          * console.error que nadie mira: se apretaba imprimir y no pasaba nada, que es
          * el sintoma que el manual documenta como el que mas confunde.
          *
+         * Misión diseno-ticket-comandera (9/10/2026): antes de armar nada se le pregunta a la API
+         * si hay un diseño de ticket armado con cajas (ver armar_ticket_para_imprimir()). Si lo
+         * hay, la API devuelve los bytes ESC/POS ya armados y salen por el agente o por QZ igual
+         * que siempre; si no, o si la API es vieja, sale el Ticket 2.0 de siempre, byte a byte.
+         * La firma vieja `printTicket(sale)` sigue andando: sin opciones la API elige el diseño
+         * por defecto (el de factura si la venta tiene CAE, el de remito si no).
+         *
          * @param {Object} sale_to_print
+         * @param {Object} [opciones]
+         * @param {number|null} [opciones.pdf_column_profile_id] diseño de ticket elegido a mano
+         *        (una opción del menú Imprimir o del atajo `ticket:<id>`).
+         * @param {number|null} [opciones.afip_ticket_id] comprobante con CAE a imprimir (el del
+         *        renglón "Ticket factura N°X" del menú o el de la tarjeta de la factura ARCA).
          * @returns {Promise<boolean>} true si el trabajo se envio a la impresora.
          */
-        printTicket(sale_to_print) {
+        printTicket(sale_to_print, opciones) {
             let self = this
 
             self.sale_to_print = sale_to_print
@@ -274,7 +286,7 @@ export default {
              * estar en la maquina que tiene la impresora.
              */
             if (destino.origen === 'agente') {
-                return self.set_ticket_content()
+                return self.armar_ticket_para_imprimir(opciones)
                 .then(function () {
                     return self.imprimir_por_agente(destino)
                 })
@@ -292,7 +304,7 @@ export default {
                     return false
                 }
 
-                return self.set_ticket_content()
+                return self.armar_ticket_para_imprimir(opciones)
                 .then(function () {
                     // destino.nombre y no self.impresora: el valor guardado puede venir con el
                     // prefijo "qz:", y QZ necesita el nombre pelado de la impresora en Windows.
@@ -312,6 +324,231 @@ export default {
                 console.error('Error al imprimir el ticket:', error)
                 self.$toast.error('No se pudo imprimir en "' + destino.nombre + '". Fijate que este encendida, con papel, y que siga siendo la impresora elegida.')
                 return false
+            })
+        },
+
+        /**
+         * Deja en `this.content` lo que hay que mandarle a la comandera (misión
+         * diseno-ticket-comandera, sección 7.4 del plan).
+         *
+         * Le pregunta a la API por el diseño de ticket (`GET sale/{id}/ticket-comandera`):
+         *
+         * - `disenado: true`  -> la API ya armó el ticket entero (ESC t 2, logo, cajas, tabla, QR y
+         *   corte de papel) y lo manda en base64. Se decodifica y va tal cual, sin agregarle ni
+         *   sacarle nada: el camino de salida (agente o QZ) es el mismo de siempre.
+         * - `disenado: false` -> el diseño elegido nunca se armó con cajas (o no hay ningún diseño
+         *   de ticket): sale el Ticket 2.0 de siempre (`set_ticket_content()`), con dos retoques que
+         *   solo aplican cuando la API nueva lo pide (ver venta_para_el_ticket_de_siempre()).
+         * - 404, error de red o una respuesta que no se entiende -> el Ticket 2.0 de siempre, sin
+         *   tocar nada. 🔴 Es la compatibilidad con una API vieja: ahí la ruta no existe y la
+         *   impresión no se puede cortar por eso.
+         *
+         * Lo único que puede rechazar es el armado del Ticket 2.0 de siempre, igual que antes de
+         * esta misión (y printTicket() lo atiende con el mismo cartel de siempre).
+         *
+         * @param {Object} [opciones] {pdf_column_profile_id, afip_ticket_id}, ver printTicket().
+         * @returns {Promise}
+         */
+        armar_ticket_para_imprimir(opciones) {
+            let self = this
+            let venta = self.sale_to_print
+
+            return self.pedir_ticket_comandera(venta, opciones)
+            .then(function (respuesta) {
+                let bytes = self.bytes_del_ticket_disenado(respuesta)
+
+                if (bytes !== null) {
+                    self.content = [bytes]
+                    return
+                }
+
+                self.sale_to_print = self.venta_para_el_ticket_de_siempre(venta, opciones, respuesta)
+
+                return self.set_ticket_content()
+            })
+        },
+
+        /**
+         * Pide el ticket de comandera a la API. Resuelve SIEMPRE: con los datos de la respuesta, o
+         * con null cuando hay que seguir con el Ticket 2.0 de siempre.
+         *
+         * El error se maneja acá y no en el interceptor global (`skip_global_error_event` y
+         * `skip_global_validation_toast`): un 404 de una API vieja es el caso NORMAL durante el
+         * despliegue y no tiene que mostrarle nada a nadie. `skip_navigation_cancel` porque es una
+         * impresión que el operador ya pidió: si cambia de pantalla mientras viaja el pedido, el
+         * ticket tiene que salir igual (y con el diseño que corresponde, no con el de siempre por un
+         * pedido cancelado a mitad de camino).
+         *
+         * Un 422 con un diseño elegido a mano quiere decir que ese diseño ya no es un ticket del
+         * negocio (lo borraron, o lo pasaron a hoja): se avisa con claridad y se vuelve a pedir sin
+         * el diseño, para que la API use el ticket por defecto. El ticket sale igual: el operador ya
+         * cobró y lo necesita.
+         *
+         * @param {Object} venta
+         * @param {Object} [opciones] {pdf_column_profile_id, afip_ticket_id}
+         * @returns {Promise<Object|null>}
+         */
+        pedir_ticket_comandera(venta, opciones) {
+            let self = this
+
+            if (!venta || !venta.id) {
+                return Promise.resolve(null)
+            }
+
+            let params = self.parametros_del_ticket_comandera(opciones)
+
+            return self.$api.get('sale/' + venta.id + '/ticket-comandera', {
+                params: params,
+                skip_global_error_event: true,
+                skip_global_validation_toast: true,
+                skip_navigation_cancel: true,
+            })
+            .then(function (res) {
+                return res && res.data && typeof res.data === 'object' ? res.data : null
+            })
+            .catch(function (error) {
+                let response = error && error.response ? error.response : null
+                let status = response ? response.status : null
+
+                if (status === 422 && params.pdf_column_profile_id) {
+                    let data = response.data
+                    let motivo = data && typeof data.message === 'string' && data.message.trim().length
+                        ? data.message.trim()
+                        : 'El diseño de ticket elegido ya no existe.'
+
+                    self.$toast.warning(motivo + ' Se imprime el ticket por defecto.', {
+                        timeout: 10000,
+                    })
+
+                    // Sin el diseño: la API elige el por defecto. No puede volver a entrar acá,
+                    // porque sin pdf_column_profile_id este if no se cumple.
+                    let sin_diseno = Object.assign({}, opciones, {
+                        pdf_column_profile_id: null,
+                    })
+
+                    return self.pedir_ticket_comandera(venta, sin_diseno)
+                }
+
+                // El 404 es el esperado con una API vieja: no se ensucia la consola por eso.
+                if (status !== 404) {
+                    console.error('No se pudo pedir el ticket de comandera; sale el Ticket 2.0 de siempre:', error)
+                }
+
+                return null
+            })
+        },
+
+        /**
+         * Parámetros del GET del ticket de comandera: solo los que vinieron con valor, para que la
+         * firma vieja `printTicket(sale)` pida exactamente "el ticket por defecto".
+         *
+         * @param {Object} [opciones]
+         * @returns {Object}
+         */
+        parametros_del_ticket_comandera(opciones) {
+            let params = {}
+
+            if (opciones && opciones.pdf_column_profile_id) {
+                params.pdf_column_profile_id = opciones.pdf_column_profile_id
+            }
+
+            if (opciones && opciones.afip_ticket_id) {
+                params.afip_ticket_id = opciones.afip_ticket_id
+            }
+
+            return params
+        },
+
+        /**
+         * Los bytes del ticket diseñado, o null si hay que imprimir el Ticket 2.0 de siempre.
+         *
+         * `atob` devuelve un string "binario" (un caracter por byte, de 0 a 255): es exactamente lo
+         * que ya esperan contenido_a_base64() (agente) y QZ con `encoding: ISO-8859-1`, así que el
+         * ticket diseñado viaja por el mismo camino que el de siempre sin ninguna conversión más.
+         *
+         * @param {Object|null} respuesta
+         * @returns {string|null}
+         */
+        bytes_del_ticket_disenado(respuesta) {
+            if (!respuesta || respuesta.disenado !== true) {
+                return null
+            }
+
+            if (typeof respuesta.payload_base64 !== 'string' || !respuesta.payload_base64.length) {
+                return null
+            }
+
+            try {
+                return atob(respuesta.payload_base64)
+            } catch (error) {
+                console.error('El ticket de comandera vino con un base64 invalido; sale el Ticket 2.0 de siempre:', error)
+                return null
+            }
+        },
+
+        /**
+         * La venta con la que se arma el Ticket 2.0 de siempre.
+         *
+         * 🔴 Sin respuesta de la API nueva (API vieja, error de red) devuelve la MISMA venta, sin
+         * copiarla ni tocarla: el ticket tiene que salir byte a byte igual que antes de esta misión.
+         *
+         * Con la API nueva y un diseño sin cajas (`disenado: false`), dos retoques, sin tocar los
+         * mixins que arman el ticket (trabajan sobre una copia de la venta):
+         *
+         * 1. `es_factura === false` (un diseño de REMITO) en una venta que tiene comprobantes: se
+         *    saltea el bloque fiscal (afip_information() y print_iva_pagado(), que se fijan en
+         *    `afip_tickets.length`). Es lo que se pidió al elegir un ticket remito. Con
+         *    `es_factura` null (no hay ningún diseño de ticket) o true, la regla de siempre.
+         * 2. Un comprobante elegido a mano (`afip_ticket_id`: el renglón "Ticket factura N°X" del
+         *    menú o la tarjeta de la factura ARCA) que no es el primero: se lo pone primero, porque
+         *    el Ticket 2.0 de siempre imprime `afip_tickets[0]`. Sin esto, en una venta con dos
+         *    facturas el renglón "N°28" imprimía la N°27.
+         *
+         * @param {Object} venta
+         * @param {Object} [opciones]
+         * @param {Object|null} respuesta
+         * @returns {Object}
+         */
+        venta_para_el_ticket_de_siempre(venta, opciones, respuesta) {
+            if (!venta || !respuesta || respuesta.disenado !== false) {
+                return venta
+            }
+
+            let afip_tickets = Array.isArray(venta.afip_tickets) ? venta.afip_tickets : null
+
+            if (!afip_tickets || !afip_tickets.length) {
+                return venta
+            }
+
+            if (respuesta.es_factura === false) {
+                return Object.assign({}, venta, {
+                    afip_tickets: [],
+                })
+            }
+
+            let afip_ticket_id = opciones && opciones.afip_ticket_id ? Number(opciones.afip_ticket_id) : null
+
+            if (!afip_ticket_id || Number(afip_tickets[0].id) === afip_ticket_id) {
+                return venta
+            }
+
+            let elegido = null
+            let resto = []
+
+            afip_tickets.forEach(function (afip_ticket) {
+                if (!elegido && Number(afip_ticket.id) === afip_ticket_id) {
+                    elegido = afip_ticket
+                } else {
+                    resto.push(afip_ticket)
+                }
+            })
+
+            if (!elegido) {
+                return venta
+            }
+
+            return Object.assign({}, venta, {
+                afip_tickets: [elegido].concat(resto),
             })
         },
 
