@@ -59,9 +59,17 @@ export default {
 		},
 		/**
 		 * Preselecciona el punto de venta AFIP según la sucursal de la venta.
+		 *
+		 * Además deja marcado en el store si el punto de venta salió de la sucursal
+		 * (punto_de_venta_por_sucursal): solo en ese caso el modal bloquea el select. Se escribe
+		 * siempre, true o false, para que una venta sin sucursal -o con una sucursal sin punto de
+		 * venta- no herede el bloqueo de la anterior.
 		 */
 		set_punto_de_venta() {
 			let address_id = this.sale_details.address_id
+
+			// true solo si el punto de venta sale de la sucursal de la venta (ver más abajo).
+			let por_sucursal = false
 
 			console.log('set_punto_de_venta:')
 			console.log(address_id)
@@ -74,8 +82,12 @@ export default {
 
                 	this.$store.commit('afip_ticket/set_afip_information_id', afip_information.id)
 					console.log(afip_information.id)
+
+					por_sucursal = true
 				}
 			}
+
+			this.$store.commit('afip_ticket/set_punto_de_venta_por_sucursal', por_sucursal)
 		}
 	}
 }
