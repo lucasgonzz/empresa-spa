@@ -20,6 +20,20 @@ export default {
 			key: 'issued_at',
 			type: 'date',
 			value: '',
+			/*
+				Mision `factura-compra-tres-defectos` (9/10/2026): una factura NUEVA arranca con la
+				fecha de hoy, que es lo que el servidor ya guardaba cuando el campo viajaba vacio. Antes
+				el campo se veia en blanco (dd/mm/aaaa) y la persona no sabia con que fecha iba a quedar
+				el comprobante en el Libro IVA y en Posicion Fiscal.
+
+				🔴 Va por `value_function` y NO con `value: moment().format(...)`: un `value` de este
+				archivo se evalua una sola vez, cuando se carga la pestaña, y una pestaña abierta desde
+				el lunes le pondria el lunes a todas las facturas del jueves (ver el 🔴 de `created_at`
+				en src/models/provider_order.js). La funcion corre al abrir el formulario
+				(common-vue/mixins/display.js::getSelectAndCheckboxProps). Editando una factura que ya
+				existe no corre: el campo muestra la fecha guardada.
+			*/
+			value_function: 'fecha_de_hoy_para_input',
 			show: true,
 			is_date: true,
 		},
@@ -126,4 +140,25 @@ export default {
 	singular_model_name_spanish: 'Factura',
 	create_model_name_spanish: 'Nueva factura',
 	text_delete: 'esta',
+	/*
+		Mision `factura-compra-tres-defectos` (9/10/2026). 🔴 Sin esto, agregar una alicuota BORRABA
+		el numero y la fecha de la factura que ya se habian tipeado (la factura se guardaba con
+		`code: null`).
+
+		Sin `full_reactivity`, `common-vue/components/model/Index.vue` (computed `model()`) le pasa
+		al formulario una COPIA plana del modelo del store (`{...model}`). Lo que se tipea queda en
+		la copia; el store no se entera. Y la copia es un computed que lee todas las claves del
+		modelo del store: en cuanto algo escribe ahi --guardar la alicuota hace
+		`$set(factura, 'provider_order_afip_ticket_ivas', ...)` sobre el modelo del store (es el
+		`has_many_parent_model` de AlicuotasIva.vue)-- el computed se rehace desde el store y el
+		formulario recibe una copia nueva, sin el numero ni la fecha. Medido con Playwright el
+		9/10/2026: el formulario y `$store.state.provider_order_afip_ticket.model` eran dos objetos
+		distintos desde que se abria el modal.
+
+		Es la misma clase que ya tuvo la compra el 15/8/2026 (ver el comentario de
+		`full_reactivity` en src/models/provider_order.js) y se arregla igual: los dos lados sobre
+		el MISMO objeto. La contra es la misma y esta aceptada: editar una factura y cerrar sin
+		guardar deja los cambios en el objeto en memoria hasta que se vuelva a cargar la compra.
+	*/
+	full_reactivity: true,
 }
