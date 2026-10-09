@@ -10,6 +10,12 @@ import {
     parse_ancho_de_ticket_mm,
     hidratar_preferencias_del_puesto,
 } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
+/**
+ * Cuánto se espera la respuesta de `GET sale/{id}/ticket-comandera` antes de imprimir el Ticket 2.0
+ * de siempre (misión diseno-ticket-comandera).
+ */
+const TOPE_DEL_TICKET_COMANDERA_MS = 8000
+
 export default {
     mixins: [afip_information, afip_qr_iva, conectar_impresora, table_articles, info_cliente, descuentos_recargos],
     data() {
@@ -355,6 +361,17 @@ export default {
 
             return self.pedir_ticket_comandera(venta, opciones)
             .then(function (respuesta) {
+                /*
+                    `fallo_el_diseno: true`: la API tenía un ticket diseñado pero no lo pudo armar (un
+                    error del motor, un dato raro de la venta). Sale el de siempre, pero se avisa: si
+                    no, el negocio ve salir otro ticket y no sabe por qué.
+                */
+                if (respuesta && respuesta.fallo_el_diseno === true) {
+                    self.$toast.warning('No se pudo armar el ticket diseñado y salió el ticket de siempre. Avisá a soporte para revisarlo.', {
+                        timeout: 10000,
+                    })
+                }
+
                 let bytes = self.bytes_del_ticket_disenado(respuesta)
 
                 if (bytes !== null) {
@@ -370,8 +387,8 @@ export default {
         },
 
         /**
-         * Avisa (sin frenar la impresión) cuando un ticket DISEÑADO no es del ancho de la comandera
-         * de este puesto.
+         * Avisa (sin frenar la impresión) cuando un ticket DISEÑADO no entra en el papel de la
+         * comandera de este puesto.
          *
          * El ticket diseñado lo arma la API con el ancho de SU diseño (`ancho_mm` de la respuesta),
          * no con el del puesto: el ancho del puesto sigue valiendo solo para el Ticket 2.0 de
@@ -385,6 +402,11 @@ export default {
          * preferencias_del_puesto): el respaldo del dueño o el 80 por defecto no dicen qué
          * comandera hay de verdad en esta caja, y avisar con eso sería un falso positivo.
          *
+         * Y solo si el diseño NO ENTRA: se comparan los caracteres por renglón (48 en 80 mm, la
+         * misma cuenta que el motor de la API y que el Ticket 2.0), no los milímetros. Un diseño
+         * más angosto que el papel sale bien (le sobra margen a la derecha), y 55 contra 58 da 33
+         * contra 34 caracteres: entra. Avisar en esos casos sería ruido en cada impresión.
+         *
          * @param {Object} respuesta la de GET sale/{id}/ticket-comandera, con `disenado: true`.
          */
         avisar_si_el_ancho_del_diseno_no_coincide(respuesta) {
@@ -395,7 +417,7 @@ export default {
                 return
             }
 
-            if (ancho_del_puesto === ancho_del_diseno) {
+            if (Math.floor(ancho_del_diseno * 48 / 80) <= Math.floor(ancho_del_puesto * 48 / 80)) {
                 return
             }
 
@@ -439,6 +461,12 @@ export default {
                 skip_global_error_event: true,
                 skip_global_validation_toast: true,
                 skip_navigation_cancel: true,
+                /*
+                    Tope corto: el pedido va en serie ANTES de cada impresión. Si la API no contesta en
+                    8 segundos, sale el Ticket 2.0 de siempre (el .catch de abajo) en lugar de dejar al
+                    operador esperando el papel sin saber por qué.
+                */
+                timeout: TOPE_DEL_TICKET_COMANDERA_MS,
             })
             .then(function (res) {
                 return res && res.data && typeof res.data === 'object' ? res.data : null
@@ -507,7 +535,7 @@ export default {
          * @returns {string|null}
          */
         bytes_del_ticket_disenado(respuesta) {
-            if (!respuesta || respuesta.disenado !== true) {
+            if (!respuesta || respuesta.disenado !== true || respuesta.fallo_el_diseno === true) {
                 return null
             }
 
