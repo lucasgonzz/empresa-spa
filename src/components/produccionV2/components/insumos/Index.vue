@@ -6,6 +6,7 @@
 		@modelDeleted="insumo_deleted"
 		show_models_if_empty
 		mostrar_models_que_vinienen_por_prop_siempre
+		:extra_filters="filtros_de_insumos"
 		v-if="view == 'insumos'"
 		model_name="article">
 		</view-component>
@@ -22,6 +23,15 @@ export default {
 			insumos: [],
 			/* Flag para evitar descargar insumos repetidamente al alternar la vista. */
 			insumos_loaded: false,
+			/*
+				Filtro fijo del buscador general de esta solapa: solo artículos con es_insumo = 1. Va al
+				servidor con cada búsqueda. Sin él, el global-search devuelve una página de 50 artículos
+				mezclados y el filtrado del lado del cliente podía dejar la tabla vacía aunque los insumos
+				estuvieran en la página siguiente.
+			*/
+			filtros_de_insumos: [
+				{ key: 'es_insumo', operator: '=', value: 1 },
+			],
 		}
 	},
 	created() {
@@ -42,7 +52,8 @@ export default {
 		 *
 		 * Como la tabla ya no sigue al store, el buscador de la cabecera dejaría de verse. Para que
 		 * siga sirviendo, cuando hay una búsqueda del usuario activa (y no el listado por defecto) se
-		 * muestran los resultados de esa búsqueda que sean insumos.
+		 * muestran los resultados de esa búsqueda. El servidor ya los trae solo con es_insumo = 1 (ver
+		 * `filtros_de_insumos`); el `filter` de acá es la red por si llega algo que no lo es.
 		 *
 		 * @returns {Array}
 		 */
@@ -53,16 +64,56 @@ export default {
 			}
 			return this.insumos
 		},
+		/**
+		 * True cuando el store `article` quedó con el listado por defecto armado (no una búsqueda del
+		 * usuario): lo deja el Listado de artículos al pasar por ahí, o el botón "Limpiar filtros".
+		 *
+		 * @returns {boolean}
+		 */
+		listado_por_defecto_en_el_store() {
+			let article = this.$store.state.article
+			return !!(article.is_filtered && article.listado_por_defecto)
+		},
 	},
 	watch: {
 		view(new_view) {
 			/* Si se navega/activa la vista insumos luego de creado, descargamos en ese momento. */
 			if (new_view == 'insumos') {
 				this.get_insumos()
+				this.limpiar_listado_por_defecto_del_store()
 			}
+		},
+		/*
+			El paginador y el contador "N resultados" de la tabla leen el store `article`, no lo que esta
+			solapa dibuja: con el listado por defecto armado decían "49 resultados" arriba de una tabla de
+			1 insumo. Se limpia apenas aparece, tanto al entrar como después de "Limpiar filtros".
+		*/
+		listado_por_defecto_en_el_store: {
+			immediate: true,
+			handler(activo) {
+				if (activo && this.view == 'insumos') {
+					this.limpiar_listado_por_defecto_del_store()
+				}
+			},
 		},
 	},
 	methods: {
+		/**
+		 * Deja el store `article` sin el listado por defecto armado, si es eso lo que tiene.
+		 *
+		 * Es seguro hacerlo: ese estado no es de nadie, se regenera solo (el Listado de artículos lo pide de nuevo
+		 * al montarse, que es lo mismo que hace cuando se entra por primera vez) y una búsqueda real del
+		 * usuario NO se toca (esa tiene `listado_por_defecto` en false).
+		 *
+		 * @returns {void}
+		 */
+		limpiar_listado_por_defecto_del_store() {
+			if (!this.listado_por_defecto_en_el_store) {
+				return
+			}
+			this.$store.commit('article/setIsFiltered', false)
+			this.$store.commit('article/setFiltered', [])
+		},
 		/**
 		 * Descarga desde la API los artículos marcados como insumos (es_insumo = 1)
 		 * y los deja listos para pasarlos a `models_to_show`.

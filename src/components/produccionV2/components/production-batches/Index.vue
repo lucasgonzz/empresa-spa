@@ -7,6 +7,7 @@
 	@has_many_saved="update_info"
 
 	order_list_by="production_batch_status"
+	delete_text="¿Seguro que quiere eliminar el lote? Se le devuelven al stock los insumos que consumió y se le saca el producto que dio de alta. No se puede deshacer."
 	show_filter_modal>
 		
 
