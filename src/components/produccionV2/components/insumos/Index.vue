@@ -3,6 +3,7 @@
 		<view-component 
 		:models_to_show="insumos_a_mostrar"
 		@modelSaved="insumo_saved"
+		@modelDeleted="insumo_deleted"
 		show_models_if_empty
 		mostrar_models_que_vinienen_por_prop_siempre
 		v-if="view == 'insumos'"
@@ -111,8 +112,13 @@ export default {
 		 * @returns {void}
 		 */
 		insumo_saved(model) {
-			/* Si no es insumo, no hacemos nada en este módulo. */
-			if (!model || model.es_insumo != 1) {
+			if (!model) {
+				return
+			}
+
+			/* Si dejó de ser insumo, sale de la tabla: esta solapa muestra solo insumos. */
+			if (model.es_insumo != 1) {
+				this.remove_insumo_from_local_list(model)
 				return
 			}
 
@@ -121,6 +127,36 @@ export default {
 
 			/* Si el common-vue lo agregó al store `article`, lo removemos. */
 			this.remove_article_from_article_store(model)
+		},
+		/**
+		 * Saca de la tabla el insumo que se acaba de eliminar desde el modal.
+		 *
+		 * El view-component emite `modelDeleted` sin el modelo, pero la acción `article/delete` deja
+		 * el eliminado en `state.delete`. Como la tabla ya no sigue al store (ver `insumos_a_mostrar`),
+		 * sin esto el insumo borrado quedaba a la vista hasta recargar la solapa.
+		 *
+		 * @returns {void}
+		 */
+		insumo_deleted() {
+			let deleted = this.$store.state.article.delete
+			if (!deleted) {
+				return
+			}
+			this.remove_insumo_from_local_list(deleted)
+		},
+		/**
+		 * Quita el artículo de `insumos` si está.
+		 *
+		 * @param {Object} model Artículo que dejó de ser insumo o se eliminó.
+		 * @returns {void}
+		 */
+		remove_insumo_from_local_list(model) {
+			const index = this.insumos.findIndex(item => {
+				return item.id == model.id
+			})
+			if (index != -1) {
+				this.insumos.splice(index, 1)
+			}
 		},
 		/**
 		 * Inserta o actualiza el insumo en `insumos` sin duplicar.
