@@ -51,7 +51,7 @@ export default {
 			use_store_models: true,
 			select_prop_name: 'street',
 			descriptions: [
-				'Depostio para descontar el stock de los insumos',
+				'Depósito para descontar el stock de los insumos',
 				'Si indica el deposito en ESTE MOVIMIENTO, se utilizara este deposito para restar el stock de TODOS los insumos implicados en este movimiento.',
 				'Si no se indica, se utilizara el deposito indicado en la RUTA DE PRODUCCION utilizada para este LOTE.',
 				'En caso de no estar indicado el deposito en la ruta de produccion, se utilizara el deposito indicado de forma individual para cada articulo de la lista de insumos.',
@@ -66,7 +66,7 @@ export default {
 			use_store_models: true,
 			select_prop_name: 'street',
 			descriptions: [
-				'Depostio para aumentar con el stock producido',
+				'Depósito para aumentar con el stock producido',
 			],
 			disabled_to_edit: true,
 			not_show_on_form: true,
