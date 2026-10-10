@@ -8,6 +8,7 @@ id="seller-commission-saldo-inicial">
 	label-for="seller-commission-saldo-inicial-debe">
 		<b-form-input
 		id="seller-commission-saldo-inicial-debe"
+		type="number"
 		v-model="form.debe"
 		@keyup.enter="save"
 		placeholder="Ingresar en el debe (se le debe al vendedor)"></b-form-input>
@@ -17,6 +18,7 @@ id="seller-commission-saldo-inicial">
 	label-for="seller-commission-saldo-inicial-haber">
 		<b-form-input
 		id="seller-commission-saldo-inicial-haber"
+		type="number"
 		v-model="form.haber"
 		@keyup.enter="save"
 		placeholder="Ingresar en el haber (se le pagó al vendedor)"></b-form-input>
@@ -51,11 +53,12 @@ export default {
 	},
 	methods: {
 		/*
-			Un importe es un número mayor a cero. `parseFloat` lee el número del principio del texto,
-			igual que el `(float)` con el que la API decide lo mismo: vacío, cero o texto no cuentan.
+			Un importe es un número mayor a cero redondeado a centavos, con el mismo criterio que la
+			API (`is_numeric` + `round(…, 2)`): vacío, cero, negativo o texto no cuentan. `Number` y no
+			`parseFloat`, que de "50,5" lee 50 y dejaría pasar otro importe.
 		*/
 		tiene_importe(valor) {
-			return parseFloat(valor) > 0
+			return Math.round(Number(valor) * 100) / 100 > 0
 		},
 		save() {
 			// Enter dos veces seguidas mandaba dos POST: mientras se guarda, no sale otro.
@@ -72,6 +75,9 @@ export default {
 				...this.form,
 				seller_id: this.selected_model.id,
 				moneda_id: this.moneda_id,
+			}, {
+				// El error lo muestra el `catch` de abajo: sin esto el aviso global lo repetía.
+				skip_global_error_event: true,
 			})
 			.then(res => {
 				this.loading = false
@@ -97,6 +103,17 @@ export default {
 					mensaje = err.response.data.message
 				}
 				this.$toast.error(mensaje)
+				/*
+					"Ya tiene movimientos": el vendedor que estaba abierto era viejo (por ejemplo, otra
+					pestaña le cargó un movimiento). La API manda el vendedor actual: con él el botón
+					"Saldo inicial" se va, y el panel se refresca para mostrar lo que ya tiene.
+				*/
+				if (err.response && err.response.data && err.response.data.model) {
+					this.$store.commit('seller_commission/setSelectedModel', err.response.data.model)
+					this.$store.commit('seller/add', err.response.data.model)
+					this.$store.dispatch('seller_commission/getModels')
+					this.$bvModal.hide('seller-commission-saldo-inicial')
+				}
 			})
 		}
 	}
