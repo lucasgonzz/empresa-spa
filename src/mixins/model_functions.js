@@ -73,6 +73,12 @@ export default {
          * 🔴 La relación se llama `cheque_banco` y NUNCA `banco`: toArray() del backend mergea
          * las relaciones sobre los atributos y una relación `banco` pisaría el texto legacy.
          *
+         * 🔴 Esta regla está REPETIDA en la API y se cambia junto con ella (misión
+         * cheques-filtro-banco-catalogo, 10/10/2026): `Cheque::columnas_mostradas_para_filtros()`
+         * la usa para que la lupa y las flechas de la columna Banco filtren y ordenen por lo que
+         * se ve acá, y `ChequesFilteredExport` para la columna Banco del Excel. Si esta función
+         * muestra otra cosa y aquellas no, lo que se ve y lo que se filtra vuelven a no coincidir.
+         *
          * @param {Object} model el cheque.
          * @returns {String}
          */
