@@ -259,39 +259,17 @@
 								<!-- Toggle tipo iPhone con el valor actual (Sí/No) al lado, separado por margen.
 								     Antes se omitía el texto por redundante con el label de arriba; Lucas pidió
 								     mantenerlo visible, con el mismo estilo de badge que usa el tipo 'boolean'. -->
-								<div
+								<!-- La fila vive en FieldCheckboxToggle (mismo DOM) para que la pastilla siga al
+								     interruptor al instante aunque el modelo sea una copia que Vue no observa;
+								     ver el comentario de ese componente. `prendido` es lo que ve este formulario
+								     al dibujarse. -->
+								<field-checkbox-toggle
 								v-else-if="prop.type == 'checkbox'"
-								class="model-form__checkbox-row">
-									<span
-									class="model-form__boolean-badge"
-									:class="Number(model[prop.key]) === 1 ? 'model-form__boolean-badge--yes' : 'model-form__boolean-badge--no'">
-										{{ Number(model[prop.key]) === 1 ? 'Sí' : 'No' }}
-									</span>
-									<!-- El data-testid del label NO es un duplicado del que lleva el input: el input
-									     de un toggle esta oculto por CSS (el control visible es este label con su
-									     track y su thumb), asi que un test no lo puede clickear ni marcar con
-									     check() —Playwright exige que el elemento sea visible— y la unica salida
-									     seria forzar el click salteando esa verificacion. Con este testid el test
-									     clickea lo mismo que clickea una persona, y sigue leyendo el estado del
-									     input por su propio testid. -->
-									<label
-									:for="model_name+'-'+prop.key"
-									:data-testid="model_name+'-'+prop.key+'-toggle'"
-									class="model-form__toggle"
-									:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
-										<input
-										type="checkbox"
-										:id="model_name+'-'+prop.key"
-										:data-testid="model_name+'-'+prop.key"
-										:disabled="isDisabled(prop, form_to_filter)"
-										:checked="Number(model[prop.key]) === 1"
-										@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
-										<!-- Track: fondo del toggle; thumb: círculo deslizante -->
-										<span class="model-form__toggle-track">
-											<span class="model-form__toggle-thumb"></span>
-										</span>
-									</label>
-								</div>
+								:model="model"
+								:prop="prop"
+								:model_name="model_name"
+								:disabled="isDisabled(prop, form_to_filter)"
+								:prendido="Number(model[prop.key]) === 1"></field-checkbox-toggle>
 
 									<google-geocoder
 									v-else-if="prop.type == 'google_geocoder'"
@@ -568,6 +546,9 @@ import Cards from '@/common-vue/components/display/cards/Index'
 import Images from '@/common-vue/components/model/images/Index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import GroupPorps from '@/common-vue/components/model/GroupPorps'
+// Sincronico a proposito: el interruptor tiene que estar en el DOM en el mismo dibujo que el
+// resto del formulario, como cuando la fila vivia adentro de este archivo.
+import FieldCheckboxToggle from '@/common-vue/components/model/form/FieldCheckboxToggle'
 import PaymentMethodsTable from '@/components/expenses/components/PaymentMethodsTable'
 
 // import BtnDelete from '@/common-vue/components/BtnDelete'
@@ -600,6 +581,7 @@ export default {
 		Images,
 		GroupPorps,
 		BtnLoader,
+		FieldCheckboxToggle,
 		// BtnDelete,
 		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
 		PdfColumnProfileEditor: () => import('@/common-vue/components/pdf/PdfColumnProfileEditor.vue'),

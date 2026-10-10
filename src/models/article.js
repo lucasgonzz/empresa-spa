@@ -797,7 +797,8 @@ export default {
 		{
 			text: 'U x Bulto',
 			key: 'unidades_por_bulto',
-			type: 'text',
+			// Es una columna entera en la base: con 'text' un "12 u" llegaba a MySQL y daba 500 al guardar.
+			type: 'number',
 			not_show: true,
 			if_has_extencion: 'articulos_con_propiedades_de_distribuidora',
 		},

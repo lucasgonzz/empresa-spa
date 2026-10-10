@@ -11,15 +11,15 @@ export default {
 		fields() {
 			return [
 				{
-					text: 'N°',
+					label: 'N°',
 					key: 'num'
 				},
 				{
-					text: 'Total',
+					label: 'Total',
 					key: 'total',
 				},
 				{
-					text: 'Cliente',
+					label: 'Cliente',
 					key: 'client',
 				},
 			]

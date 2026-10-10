@@ -13,7 +13,7 @@
 		:options="order_options"></b-form-select>
 
 		<div
-		v-if="registros_para_mostrar.length > per_page"
+		v-if="total_de_registros > per_page"
 		class="current-page m-b-15 m-md-b-0">
 			<i class="icon-left"
 			@click="decrementPage"></i>
@@ -31,6 +31,9 @@ export default {
 		module_name: String,
 		total_registros_text: String,
 		registros_para_mostrar: Array,
+		// Total de registros cuando la lista llega paginada del servidor y `registros_para_mostrar` es
+		// solo la pagina vigente. Sin esta prop se cuenta lo que trae `registros_para_mostrar`.
+		total_registros: Number,
 	},
 	computed: {
 		order_by: {
@@ -44,8 +47,14 @@ export default {
 		current_page() {
 			return this.$store.state.chart[this.module_name].current_page 
 		},
+		total_de_registros() {
+			if (typeof this.total_registros == 'number') {
+				return this.total_registros
+			}
+			return this.registros_para_mostrar.length
+		},
 		total_pages() {
-			return Math.ceil(this.registros_para_mostrar.length / this.per_page)
+			return Math.ceil(this.total_de_registros / this.per_page)
 		},
 		order_options() {
 			return [
