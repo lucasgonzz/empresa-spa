@@ -268,24 +268,32 @@ const STORE_POR_TIPO = {
 }
 
 /**
- * Cómo se refresca la pantalla de cada store. Lo que no está acá es un catálogo del ABM (chico, sin
- * paginar): `getModels` y listo, que es lo mismo que hace tocar la solapa que ya está activa
- * (horizontal-nav::callMethods).
+ * Cómo se refresca la pantalla de cada store. Lo que no está acá es un catálogo del ABM o Empleados
+ * (chicos, sin paginar): view/Index.vue arma su tabla al entrar con el listado por defecto, pero
+ * `models` —lo que leen los selects del resto del sistema— queda viejo, así que al llegar también se
+ * pide `getModels`. Es lo mismo que tocar la solapa que ya está activa (horizontal-nav::callMethods):
+ * dos pedidos, y la tabla queda mostrando el catálogo entero. Parado en la pantalla, `getModels`
+ * borra una búsqueda, igual que esa solapa.
  *
- * - por_dia: lista un día (`from_dates`). "Ver en …" abre el día de lo registrado: `ruta.fecha` si
- *   el API lo manda (el gasto puede ser de otro día) o hoy. Si el store está en modo histórico
+ * - por_dia: lista un día (`from_dates`). "Ver en …" abre el día de lo registrado (dia_a_abrir:
+ *   `ruta.fecha`, hoy, o el que se está mirando si es una edición). Si el store está en modo histórico
  *   (`from_dates` en false, Compras) se trata como `listado` y `carga_sola`.
  * - carga_sola: la vista pide sus datos al montarse cuando se entra desde otra pantalla (relevado el
  *   10/10/2026: views/Ventas.vue, views/Budget.vue, clients/sellers/providers/cupons Index.vue,
  *   ofertas/Listado.vue y views/Listado.vue). Al llegar no se vuelve a pedir: serían dos pedidos
- *   del mismo listado y, sin guarda de orden en getModels, podría ganar el viejo.
+ *   del mismo listado y, sin guarda de orden en getModels, podría ganar el viejo. Salvo en una tabla
+ *   paginada con una búsqueda de la persona activa: ahí view/Index.vue no pide nada (para no
+ *   pisarla) y la tabla quedaría con el resultado viejo, así que se re-ejecuta la búsqueda.
+ * - vuelve_a_por_dia: la vista vuelve a prender `from_dates` al montarse aunque otra pantalla lo
+ *   haya apagado (views/Ventas.vue; Por entregar, Por estado y Depósito lo apagan). Se le pone el
+ *   día igual.
  * - listado: tabla paginada en el servidor (runListadoPorDefecto / runGlobalSearch). NUNCA
  *   `getModels`: en estos stores encadena TODAS las páginas (en el Listado, el catálogo entero).
  */
 const PANTALLAS = {
 	expense: { por_dia: true },
 	provider_order: { por_dia: true },
-	sale: { por_dia: true, carga_sola: true },
+	sale: { por_dia: true, carga_sola: true, vuelve_a_por_dia: true },
 	budget: { por_dia: true, carga_sola: true },
 	client: { listado: true, carga_sola: true },
 	seller: { listado: true, carga_sola: true },
@@ -367,6 +375,27 @@ function store_de_la_pantalla(accion, ruta) {
 		return ruta.name
 	}
 	return null
+}
+
+/**
+ * El día que tiene que abrir una pantalla por día al tocar "Ver en …": el que manda el API
+ * (`ruta.fecha`, hoy solo el gasto, que puede ser de otro día), u hoy para lo que se acaba de crear
+ * (una venta, un presupuesto, una compra). Una EDICIÓN genérica sin fecha devuelve null y no mueve
+ * el día: lo editado puede ser de cualquier día y el API no lo dice, así que se recarga el que se
+ * está mirando (hallazgo del chequeo de contrato).
+ *
+ * @param {Object} accion
+ * @param {Object} ruta la de ruta_de_la_accion
+ * @returns {String|null} AAAA-MM-DD
+ */
+function dia_a_abrir(accion, ruta) {
+	if (ruta.fecha) {
+		return ruta.fecha
+	}
+	if (accion.tipo == 'edicion') {
+		return null
+	}
+	return moment().format('YYYY-MM-DD')
 }
 
 /**
@@ -1120,7 +1149,7 @@ export default {
 				return
 			}
 			let pantalla = tiene(PANTALLAS, nombre) ? PANTALLAS[nombre] : {}
-			let por_dia = Boolean(pantalla.por_dia && estado.from_dates)
+			let por_dia = Boolean(pantalla.por_dia && (estado.from_dates || pantalla.vuelve_a_por_dia))
 			let historico = Boolean(pantalla.por_dia && !estado.from_dates)
 			let listado = Boolean(pantalla.listado || historico)
 			let carga_sola = Boolean(pantalla.carga_sola || historico)
@@ -1139,11 +1168,13 @@ export default {
 				return
 			}
 
-			if (por_dia && momento != 'al_llegar') {
-				commit(nombre + '/setFromDate', ruta.fecha || moment().format('YYYY-MM-DD'), { root: true })
+			let dia = por_dia && momento != 'al_llegar' ? dia_a_abrir(accion, ruta) : null
+			if (dia) {
+				commit(nombre + '/setFromDate', dia, { root: true })
 				commit(nombre + '/setUntilDate', '', { root: true })
 			}
-			if (momento == 'antes_de_navegar' || (momento == 'al_llegar' && carga_sola) || !a_la_vista) {
+			let la_vista_lo_pide = carga_sola && !(listado && busqueda_real(estado))
+			if (momento == 'antes_de_navegar' || (momento == 'al_llegar' && la_vista_lo_pide) || !a_la_vista) {
 				return
 			}
 			if (listado) {
