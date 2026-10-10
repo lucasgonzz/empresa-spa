@@ -1,9 +1,10 @@
 <template>
 	<div>
 		<view-component 
-		:models_to_show="insumos"
+		:models_to_show="insumos_a_mostrar"
 		@modelSaved="insumo_saved"
 		show_models_if_empty
+		mostrar_models_que_vinienen_por_prop_siempre
 		v-if="view == 'insumos'"
 		model_name="article">
 		</view-component>
@@ -27,6 +28,30 @@ export default {
 		if (this.view == 'insumos') {
 			this.get_insumos()
 		}
+	},
+	computed: {
+		/**
+		 * Artículos que dibuja la tabla de esta solapa: SOLO insumos.
+		 *
+		 * 🔴 El view-component, sin `mostrar_models_que_vinienen_por_prop_siempre`, dibuja lo que haya en
+		 * el store `article` (`filtered`) apenas éste queda "filtrado": el listado por defecto que se
+		 * dispara al montar, o el que dejó el Listado de artículos al pasar por ahí antes. Eso
+		 * mostraba el catálogo entero en la solapa Insumos (medido: 1 insumo, todos los artículos en pantalla).
+		 * Con esa prop la tabla dibuja siempre lo que se le pasa por `models_to_show`.
+		 *
+		 * Como la tabla ya no sigue al store, el buscador de la cabecera dejaría de verse. Para que
+		 * siga sirviendo, cuando hay una búsqueda del usuario activa (y no el listado por defecto) se
+		 * muestran los resultados de esa búsqueda que sean insumos.
+		 *
+		 * @returns {Array}
+		 */
+		insumos_a_mostrar() {
+			let article = this.$store.state.article
+			if (article.is_filtered && !article.listado_por_defecto) {
+				return article.filtered.filter(item => item.es_insumo == 1)
+			}
+			return this.insumos
+		},
 	},
 	watch: {
 		view(new_view) {
