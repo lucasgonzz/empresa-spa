@@ -20,7 +20,7 @@
 			<div
 			class="text-with-icon"
 			v-else-if="loading">
-				<i class="icon-spinner"></i>
+				<i class="icon-refresh"></i>
 				Cargando clientes deudores...
 			</div>
 
@@ -98,6 +98,9 @@ export default {
 			handler() {
 				if (this.sub_view == 'clientes') {
 					// Se entra siempre por la primera página: la del store sobrevive a la navegación.
+					// Y sin la lista de la visita anterior: hasta que llegue la respuesta se ve "Cargando".
+					this.clients = []
+					this.total = 0
 					if (this.current_page != 0) {
 						this.$store.commit('chart/client/setCurrentPage', 0)
 					}
