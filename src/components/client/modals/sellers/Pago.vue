@@ -161,6 +161,18 @@ export default {
 			})
 			.then(res => {
 				this.loading = false
+				/*
+					El pago es un movimiento más del vendedor: si era el primero, el botón "Saldo
+					inicial" de Comisiones (que sale con `seller_commissions_count == 0`) se tiene que
+					ir ya, no al cerrar y volver a abrir. La API devuelve la fila del pago y no el
+					vendedor, así que el conteo se suma acá, en el vendedor del modal y en el del
+					listado (de ahí se vuelve a abrir Comisiones).
+				*/
+				let seller = Object.assign({}, this.selected_model, {
+					seller_commissions_count: (Number(this.selected_model.seller_commissions_count) || 0) + 1,
+				})
+				this.$store.commit('seller_commission/setSelectedModel', seller)
+				this.$store.commit('seller/add', seller)
 				this.$store.dispatch('seller_commission/getModels')
 				this.$toast.success('Pago registrado')
 				this.$bvModal.hide('seller-commission-pago')

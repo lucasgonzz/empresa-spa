@@ -189,6 +189,11 @@ import { numero_es as numero_es_con_decimales } from '@/common-vue/helpers/forma
 	numero completo (items + descuentos + recargos + puntos + metodos de pago + forzado).
 */
 import vender_set_total from '@/mixins/vender_set_total'
+/*
+	Suma de cantidades sin el ruido de la coma flotante, para el resumen de unidades. Ver
+	total_unidades y utils/cantidades.js.
+*/
+import { sumar_cantidades } from '@/utils/cantidades'
 export default {
 	name: 'ContextBar',
 	mixins: [vender_set_total],
@@ -318,12 +323,19 @@ export default {
 		/**
 		 * Suma de unidades (amount) de todos los ítems del remito.
 		 *
+		 * Se acumula con sumar_cantidades y no con `+=`: aunque cada renglón tenga su cantidad
+		 * limpia, dos renglones de 0.17 y 0.25 kg volvían a dar "0,42000000000000004 unidades" en
+		 * el resumen (misión cantidad-balanza-redondeo, 10/10/2026). Con la suma limpia, el
+		 * singular/plural del template (`total_unidades === 1`) compara contra el valor justo.
+		 *
+		 * El `|| 1` es el de siempre: un renglón sin cantidad (o en 0) cuenta como una unidad.
+		 *
 		 * @returns {number}
 		 */
 		total_unidades() {
 			let suma = 0
 			this.items.forEach(item => {
-				suma += Number(item.amount) || 1
+				suma = sumar_cantidades(suma, Number(item.amount) || 1)
 			})
 			return suma
 		},
