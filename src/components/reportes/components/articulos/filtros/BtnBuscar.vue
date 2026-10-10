@@ -86,6 +86,9 @@ export default {
 				this.$store.commit('reportes/article_purchase/set_articles', res.data.models)
 				this.$store.commit('reportes/article_purchase/set_categories', res.data.categories)
 				this.$store.commit('reportes/article_purchase/set_providers', res.data.providers)
+				// Totales de todo el periodo. Una API vieja no los manda: queda null y
+				// totales/Index.vue vuelve a sumar la lista, como antes.
+				this.$store.commit('reportes/article_purchase/set_totales', res.data.totales || null)
 				this.$store.commit('reportes/article_purchase/set_loading', true)
 				this.$store.commit('auth/setLoading', false)
 			})
