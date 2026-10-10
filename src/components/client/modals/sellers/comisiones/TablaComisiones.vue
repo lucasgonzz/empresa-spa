@@ -46,6 +46,11 @@
 						@click="showSellerCommissionSale(fila.item)">
 							Venta N° {{ fila.item.sale ? fila.item.sale.num : fila.item.sale_id }}
 						</b-button>
+						<div
+						v-else-if="es_saldo_inicial(fila.item)"
+						class="comision-tabla__titulo">
+							Saldo inicial
+						</div>
 						<template v-else-if="tiene_valor(fila.item.haber)">
 							<div class="comision-tabla__titulo">Pago al vendedor</div>
 							<div
@@ -260,6 +265,16 @@ export default {
 		// `debe` / `haber` / `percentage` vienen null cuando no aplican; un 0 sí es un valor.
 		tiene_valor(valor) {
 			return valor !== null && typeof valor != 'undefined' && valor !== ''
+		},
+		/*
+			Saldo inicial cargado desde la misión saldo-inicial-vendedor (10/10/2026): la API lo
+			guarda con la descripción "Saldo inicial", y así se ve como tal aunque esté en el haber
+			(antes un saldo inicial en el haber se mostraba como "Pago al vendedor"). Las filas
+			viejas guardaban "Pago a vendedor": esas siguen decidiéndose por el haber, como siempre.
+			Solo se mira en filas sin venta (las de venta ya se resolvieron antes en el v-if).
+		*/
+		es_saldo_inicial(item) {
+			return item.description == 'Saldo inicial'
 		},
 		/*
 			Fecha en que el movimiento entró al ledger. La API la manda calculada en `fecha_mov`
