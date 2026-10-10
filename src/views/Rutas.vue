@@ -29,6 +29,7 @@ export default {
 		// quedaba vacío ("No hay hojas de ruta") hasta tocar un día. La fecha se calcula acá y no
 		// queda la que guardó el store al cargar la app, que puede ser de ayer.
 		this.$store.commit('road_map/setFromDate', moment().format('YYYY-MM-DD'))
+		this.$store.commit('road_map/setUntilDate', '')
 
 		// Con "Ver solo sus hojas de ruta" (y sin "Ver todas") el repartidor queda fijo en el propio
 		// usuario. La API aplica el mismo filtro por su cuenta: esto es para que el select y el
