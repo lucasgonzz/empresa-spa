@@ -64,7 +64,6 @@ export default {
 						'sale_type',
 						'sale_sender_info',
 						'client_reputation',
-						'dealer',
 						// Al final a proposito: el primero de la lista es la solapa que abre por defecto.
 						'vender_layout',
 					],

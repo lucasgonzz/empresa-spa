@@ -159,6 +159,8 @@
 </template>
 
 <script>
+import { ruta_de_la_accion } from '@/store/ai_chat'
+
 /**
  * Texto e ícono de cada estado cerrado de una tarjeta. Los textos son los del §4 del plan
  * de asistente-ia-acciones, literales. 'descartada' no está a propósito: esa tarjeta ni se
@@ -424,15 +426,13 @@ export default {
 			return this.accion.resultado ? this.accion.resultado.texto : ''
 		},
 		/**
-		 * Pantalla donde ver lo registrado ({ name, params, texto }), o null (los pagos no
-		 * tienen).
+		 * Pantalla donde ver lo registrado ({ name, params, texto, fecha }), o null (los pagos no
+		 * tienen). Sale de ruta_de_la_accion (store/ai_chat.js), que traduce los names viejos que
+		 * el router no tiene y deja `params` siempre como objeto: es la misma pantalla que después
+		 * refresca refrescarPantallaDeLaAccion.
 		 */
 		ruta() {
-			let resultado = this.accion.resultado
-			if (!resultado || !resultado.ruta || !resultado.ruta.name) {
-				return null
-			}
-			return resultado.ruta
+			return ruta_de_la_accion(this.accion)
 		},
 	},
 	methods: {
@@ -508,13 +508,29 @@ export default {
 				})
 		},
 		/**
-		 * Botón de `resultado.ruta` ("Ver en Gastos", "Ver en la Agenda"): cierra el panel y
-		 * navega, igual que ir_al_origen de Conversation.vue, con el mismo guard contra
-		 * NavigationDuplicated. Si ya se está parado en esa pantalla no navega: la vuelve a
-		 * cargar (ai_chat/refrescarPantallaDeLaAccion), porque ni la Agenda ni Gastos recargan
-		 * solas y cerrar el panel no alcanzaba para ver lo registrado. El .catch del push es por
-		 * si el router igual rechaza: desde vue-router 3.1 push devuelve una promesa que rechaza,
-		 * y sin atraparla queda un error suelto en la consola.
+		 * Botón de `resultado.ruta` ("Ver en Gastos", "Ver en la Agenda"): cierra el panel,
+		 * navega y deja la pantalla de destino con lo registrado a la vista
+		 * (ai_chat/refrescarPantallaDeLaAccion con `al_tocar_ver`).
+		 *
+		 * 🔴 Navegar no alcanza (misión ver-en-del-asistente-refresca-destino, 10/10/2026): la
+		 * carga de una pantalla de listado la hace el menú (common-vue/mixins/nav.js::setRoute,
+		 * `<model>/getModels`) o la solapa (horizontal-nav::callMethods), y entrando por
+		 * `$router.push` no la hace nadie. Desde Reportes, "Ver en Gastos" llegaba a una tabla
+		 * vacía ("No hay Gastos") aunque el gasto estaba en la base, y con el store ya cargado
+		 * mostraba la lista vieja, sin lo nuevo: el API no avisa las altas por broadcast.
+		 *
+		 * Son dos llamadas (ver el docblock de refrescarPantallaDeLaAccion): ANTES del push solo
+		 * se pone el día en las pantallas por día, para que la vista que se monta ya pida ese día;
+		 * DESPUÉS de que el push resuelve se pide lo que la vista no pide sola. Recién ahí la ruta
+		 * es la de destino y el store puede confirmar que esa pantalla es la que está a la vista.
+		 * Si ya se está parado en esa pantalla no navega: la refresca directo.
+		 *
+		 * El .catch es por si el router igual rechaza (NavigationDuplicated, un guard): desde
+		 * vue-router 3.1 push devuelve una promesa que rechaza, y sin atraparla queda un error
+		 * suelto en la consola. Rechazado, no se refresca nada: no se llegó a ningún lado.
+		 *
+		 * `store` y `accion` se toman antes del push: al cerrarse el panel la tarjeta puede
+		 * desmontarse antes de que la navegación termine.
 		 *
 		 * Desde el sidebar del informe del mostrador no hay panel que cerrar: ahí lo que se
 		 * cierra, al navegar, es el informe.
@@ -524,20 +540,37 @@ export default {
 			if (!ruta) {
 				return
 			}
-			// Un array PHP vacío viaja como [] y no como {}: se normaliza para no pasarle un
-			// array al router ni recorrerlo como objeto.
-			let params = ruta.params && !Array.isArray(ruta.params) ? ruta.params : {}
-			this.$store.commit('ai_chat/setPanelAbierto', false)
-			if (this.ya_esta_en(ruta.name, params)) {
-				this.$store.dispatch('ai_chat/refrescarPantallaDeLaAccion', {
-					accion: this.accion,
+			let store = this.$store
+			let accion = this.accion
+			store.commit('ai_chat/setPanelAbierto', false)
+			if (this.ya_esta_en(ruta.name, ruta.params)) {
+				store.dispatch('ai_chat/refrescarPantallaDeLaAccion', {
+					accion: accion,
 					ruta_actual: this.$route.name,
+					al_tocar_ver: true,
 				})
 				return
 			}
-			let navegacion = this.$router.push({ name: ruta.name, params: params })
-			if (navegacion && typeof navegacion.catch == 'function') {
-				navegacion.catch(function () {})
+			// Antes de navegar: el día de las pantallas por día, para que la vista que se monta ya
+			// pida ese día (Ventas y Presupuestos piden solos al montarse).
+			store.dispatch('ai_chat/refrescarPantallaDeLaAccion', {
+				accion: accion,
+				ruta_actual: this.$route.name,
+				al_tocar_ver: true,
+				momento: 'antes_de_navegar',
+			})
+			let navegacion = this.$router.push({ name: ruta.name, params: ruta.params })
+			if (navegacion && typeof navegacion.then == 'function') {
+				navegacion
+					.then(function (destino) {
+						store.dispatch('ai_chat/refrescarPantallaDeLaAccion', {
+							accion: accion,
+							ruta_actual: destino && destino.name ? destino.name : ruta.name,
+							al_tocar_ver: true,
+							momento: 'al_llegar',
+						})
+					})
+					.catch(function () {})
 			}
 		},
 		/**

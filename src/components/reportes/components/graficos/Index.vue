@@ -15,8 +15,6 @@
 		<clientes></clientes>	
 
 		<articulos></articulos>	
-
-		<cheques></cheques>	
 	</div>
 </template>
 <script>
@@ -29,7 +27,6 @@ export default {
 		Gastos: () => import('@/components/reportes/components/graficos/gastos/Index'),
 		Clientes: () => import('@/components/reportes/components/graficos/clientes/Index'),
 		Articulos: () => import('@/components/reportes/components/graficos/articulos/Index'),
-		Cheques: () => import('@/components/reportes/components/graficos/cheques/Index'),
 	},
 }
 </script>
