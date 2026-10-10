@@ -1,4 +1,5 @@
 import axios from 'axios'
+import moment from 'moment'
 import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = env('VUE_APP_API_URL')
@@ -208,6 +209,193 @@ function modal_de_cuenta_corriente_abierto() {
  */
 function trae_tarjetas(model) {
 	return Boolean(model) && model.estado == 'listo' && Array.isArray(model.acciones) && model.acciones.length > 0
+}
+
+/**
+ * true si `objeto` tiene `clave` propia (no una heredada como `toString`).
+ *
+ * @param {Object} objeto
+ * @param {String} clave
+ * @returns {Boolean}
+ */
+function tiene(objeto, clave) {
+	return Boolean(clave) && Object.prototype.hasOwnProperty.call(objeto, clave)
+}
+
+/**
+ * Names de ruta que el API mandó y que el router de la SPA no tiene, con la pantalla a la que
+ * tenían que llevar (misión ver-en-del-asistente-refresca-destino, 10/10/2026). vue-router 3
+ * resuelve un name que no existe a `/` sin componente: "Ver en …" dejaba la pantalla en blanco,
+ * sin ningún error. El API ya manda los correctos, pero cada tarjeta confirmada guarda su
+ * `resultado` en la base: las de antes siguen trayendo el viejo y se traducen acá.
+ *
+ * - 'listado': las tarjetas de stock (PropuestaStockIaHelper::RUTA_LISTADO). El Listado es 'article'.
+ * - 'proveedores': la compra con factura. Compras es la solapa 'compras' de 'provider'.
+ */
+const RUTAS_VIEJAS_DEL_API = {
+	listado: { name: 'article', params: {} },
+	proveedores: { name: 'provider', params: { view: 'compras' } },
+}
+
+/**
+ * La solapa de las pantallas que son una barra de solapas, para una ruta que llega sin `view`:
+ * todo el cuerpo de Clientes y de Proveedores cuelga de `params.view`
+ * (components/client/components/clients/Index.vue, components/provider/components/providers/Index.vue)
+ * y sin ella se dibuja solo la barra. El API ya la manda; esto es para las tarjetas viejas.
+ */
+const VIEW_POR_DEFECTO = {
+	client: 'clientes',
+	provider: 'proveedores',
+}
+
+/**
+ * La solapa del ABM de las tarjetas que la mandaban sin params: "Ver en Sucursales" (la foto de
+ * una sucursal) iba a /abm a secas, que abre Categorías.
+ */
+const ABM_POR_TIPO = {
+	foto_sucursal: { view: 'sucursales', sub_view: 'sucursales' },
+}
+
+/**
+ * Store de lo que registraron las propuestas específicas que van al ABM (las cargas genéricas
+ * traen `resultado.entidad`, ver store_de_la_pantalla).
+ */
+const STORE_POR_TIPO = {
+	diseno_pdf: 'pdf_column_profile',
+	imagen_categoria: 'category',
+	imagenes_categorias: 'category',
+	foto_sucursal: 'address',
+}
+
+/**
+ * Cómo se refresca la pantalla de cada store. Lo que no está acá es un catálogo del ABM (chico, sin
+ * paginar): `getModels` y listo, que es lo mismo que hace tocar la solapa que ya está activa
+ * (horizontal-nav::callMethods).
+ *
+ * - por_dia: lista un día (`from_dates`). "Ver en …" abre el día de lo registrado: `ruta.fecha` si
+ *   el API lo manda (el gasto puede ser de otro día) o hoy. Si el store está en modo histórico
+ *   (`from_dates` en false, Compras) se trata como `listado` y `carga_sola`.
+ * - carga_sola: la vista pide sus datos al montarse cuando se entra desde otra pantalla (relevado el
+ *   10/10/2026: views/Ventas.vue, views/Budget.vue, clients/sellers/providers/cupons Index.vue,
+ *   ofertas/Listado.vue y views/Listado.vue). Al llegar no se vuelve a pedir: serían dos pedidos
+ *   del mismo listado y, sin guarda de orden en getModels, podría ganar el viejo.
+ * - listado: tabla paginada en el servidor (runListadoPorDefecto / runGlobalSearch). NUNCA
+ *   `getModels`: en estos stores encadena TODAS las páginas (en el Listado, el catálogo entero).
+ */
+const PANTALLAS = {
+	expense: { por_dia: true },
+	provider_order: { por_dia: true },
+	sale: { por_dia: true, carga_sola: true },
+	budget: { por_dia: true, carga_sola: true },
+	client: { listado: true, carga_sola: true },
+	seller: { listado: true, carga_sola: true },
+	provider: { listado: true, carga_sola: true },
+	cupon: { listado: true, carga_sola: true },
+	article: { listado: true, carga_sola: true },
+	offer_suggestion: { carga_sola: true },
+}
+
+/**
+ * La pantalla donde se ve lo que registró una tarjeta confirmada: `resultado.ruta` con los arreglos
+ * de arriba (name viejo, solapa que falta) y `params` siempre como objeto (un array PHP vacío
+ * viaja como [] y no como {}). null si la tarjeta no tiene pantalla (los pagos, las bajas).
+ *
+ * La usan la tarjeta (AccionCard.vue, el botón "Ver en …") y refrescarPantallaDeLaAccion, para que
+ * las dos hablen de la misma pantalla.
+ *
+ * @param {Object} accion la AiMessageAction tal cual la manda el API
+ * @returns {Object|null} { name, params, texto, fecha } (`fecha` AAAA-MM-DD o null)
+ */
+export function ruta_de_la_accion(accion) {
+	let ruta = accion && accion.resultado ? accion.resultado.ruta : null
+	if (!ruta || !ruta.name) {
+		return null
+	}
+	let name = ruta.name
+	let params = ruta.params && !Array.isArray(ruta.params) ? Object.assign({}, ruta.params) : {}
+	if (tiene(RUTAS_VIEJAS_DEL_API, name)) {
+		params = Object.assign({}, RUTAS_VIEJAS_DEL_API[name].params, params)
+		name = RUTAS_VIEJAS_DEL_API[name].name
+	}
+	if (tiene(VIEW_POR_DEFECTO, name) && !params.view) {
+		params.view = VIEW_POR_DEFECTO[name]
+	}
+	if (name == 'abm' && !params.view && tiene(ABM_POR_TIPO, accion.tipo)) {
+		params = Object.assign({}, ABM_POR_TIPO[accion.tipo])
+	}
+	return {
+		name: name,
+		params: params,
+		texto: ruta.texto,
+		fecha: ruta.fecha || null,
+	}
+}
+
+/**
+ * El store de Vuex de lo que registró la tarjeta, o null si su pantalla no tiene uno que refrescar.
+ *
+ * Las cargas genéricas (alta y edición del catálogo de escritura) traen `resultado.entidad`, que es
+ * el nombre del store: verificado para las 41 entidades de CatalogoDeEscrituraIaHelper el
+ * 10/10/2026. Las propuestas específicas no la traen y salen de su tipo o de su pantalla.
+ *
+ * @param {Object} accion
+ * @param {Object} ruta la de ruta_de_la_accion
+ * @returns {String|null}
+ */
+function store_de_la_pantalla(accion, ruta) {
+	let resultado = accion.resultado
+	if (resultado && typeof resultado.entidad == 'string' && resultado.entidad) {
+		return resultado.entidad
+	}
+	if (tiene(STORE_POR_TIPO, accion.tipo)) {
+		return STORE_POR_TIPO[accion.tipo]
+	}
+	let view = ruta.params.view
+	if (ruta.name == 'client') {
+		return view == 'vendedores' ? 'seller' : 'client'
+	}
+	if (ruta.name == 'provider') {
+		return view == 'compras' ? 'provider_order' : 'provider'
+	}
+	if (ruta.name == 'online') {
+		return view == 'cupones' ? 'cupon' : null
+	}
+	if (ruta.name == 'ofertas') {
+		return 'offer_suggestion'
+	}
+	if (['expense', 'sale', 'budget', 'employee', 'article'].indexOf(ruta.name) != -1) {
+		return ruta.name
+	}
+	return null
+}
+
+/**
+ * true si la tabla muestra una búsqueda de la persona y no el listado por defecto: después del
+ * listado por defecto (view/Index.vue lo arma al entrar) `is_filtered` también queda en true.
+ *
+ * @param {Object} estado el state del store
+ * @returns {Boolean}
+ */
+function busqueda_real(estado) {
+	return Boolean(estado.is_filtered) && !estado.listado_por_defecto
+}
+
+/**
+ * Vuelve a pedir una página de una tabla paginada por el mismo camino que la armó: la búsqueda de
+ * la persona si hay una (no se le borra), el listado por defecto si no. Mismo criterio que
+ * mixins/listado/actualizar_lista_de_articulos.js.
+ *
+ * @param {Function} dispatch
+ * @param {String} nombre el store
+ * @param {Object} estado su state
+ * @param {Number} page
+ */
+function recargar_listado(dispatch, nombre, estado, page) {
+	if (busqueda_real(estado)) {
+		dispatch(nombre + '/runGlobalSearch', { page: page }, { root: true })
+		return
+	}
+	dispatch(nombre + '/runListadoPorDefecto', { page: page }, { root: true })
 }
 
 export default {
@@ -846,65 +1034,72 @@ export default {
 			return resolver_accion(commit, payload, 'cancelar')
 		},
 		/**
-		 * Hace que la pantalla donde quedó una carga confirmada se entere (arreglo tras el
-		 * chequeo independiente, §4 del plan de asistente-ia-acciones). Sin esto, parado en la
-		 * Agenda, "Ver en la Agenda" solo cerraba el panel y la tarea nueva no estaba:
-		 * components/agenda/Index.vue no recarga si la vista es la misma y el rango ya está
-		 * cargado, y Gastos solo carga cuando se toca un día (ControlFecha.vue).
+		 * Hace que la pantalla donde quedó una carga confirmada muestre lo registrado. La llaman
+		 * confirmarAccion (al confirmar) y la tarjeta (AccionCard.vue::ir_a_la_ruta, al tocar
+		 * "Ver en …"). Arreglo tras el chequeo independiente de asistente-ia-acciones (§4) y misión
+		 * ver-en-del-asistente-refresca-destino (10/10/2026).
 		 *
-		 * La pantalla sale de `resultado.ruta.name` y de nada más: la SPA no conoce la semántica
-		 * de cada tipo de tarjeta. Ninguna rama pisa lo que la persona está mirando ni dispara una
-		 * carga pesada para una pantalla que no está a la vista:
+		 * 🔴 Por qué existe: el API no avisa las altas por broadcast
+		 * (Controller::sendAddModelNotification arranca con `return;`) y la carga de una pantalla de
+		 * listado la hace el menú (nav.js::setRoute) o la solapa (horizontal-nav::callMethods). Ni
+		 * confirmar ni entrar por `$router.push` pasan por ahí: desde Reportes, "Ver en Gastos"
+		 * llegaba a "No hay Gastos" con el gasto en la base.
 		 *
-		 * - 'pending' -> agenda/cargar, que vuelve a pedir el rango vigente (vista, hoy y mes
-		 *   visible del store), solo si la agenda ya se cargó. `desde` es la misma señal que usa
-		 *   Agenda/Index.vue para NO recargar al volver, así que refrescarla acá aunque no esté
-		 *   montada es lo que evita encontrarla vieja al entrar; y es liviana (60 días o la
-		 *   grilla de un mes). La vista Realizadas no se refresca: su rango vive en el componente.
-		 * - 'expense' -> expense/getModels, que vuelve a pedir el día o el rango elegido
-		 *   (from_date/until_date del store), solo con la pantalla de Gastos a la vista
-		 *   (`ruta_actual`) y sin una búsqueda activa (`is_filtered`), que getModels borraría.
-		 *   A la vista y no "con modelos": un día sin gastos también es un listado cargado, y un
-		 *   rango largo que quedó guardado es una carga pesada para una pantalla que no se ve.
+		 * La pantalla sale de ruta_de_la_accion y el store de store_de_la_pantalla; la SPA no conoce
+		 * la semántica de cada tipo de tarjeta. Dos casos con reglas propias:
+		 *
+		 * - 'pending' -> agenda/cargar, que vuelve a pedir el rango vigente, solo si la agenda ya se
+		 *   cargó (`desde`). Si no, Agenda/Index.vue la carga al montarse. La vista Realizadas no se
+		 *   refresca: su rango vive en el componente.
+		 * - 'cheque' -> cheque_banco/getModels (el catálogo que lee el select de banco en cualquier
+		 *   pago: se refresca aunque no se esté en Cheques) y cheque/getModels solo con Tesorería >
+		 *   Cheques a la vista (GET cheque es la carga pesada del módulo). Al llegar no: la pide
+		 *   Cheques.vue al montarse.
 		 * - pago (ruta null) -> current_acount/getModels, solo con el modal de cuenta corriente
-		 *   abierto y su cuenta cargada (from_model y from_credit_account).
-		 * - 'cheque' (unificar bancos de cheques, misión cheques-endoso-y-bancos) ->
-		 *   cheque_banco/getModels SIEMPRE, y cheque/getModels solo con Tesorería > Cheques a
-		 *   la vista (`ruta_actual`), el mismo criterio que Gastos. El catálogo se refresca
-		 *   aunque no se esté en esa pantalla porque no es la pantalla la que lo lee: lo lee el
-		 *   select de banco del cheque en cualquier pago a proveedor o gasto, y el ABM. Los
-		 *   bancos que la IA acaba de crear tienen que estar ahí antes del próximo pago, y es
-		 *   una fila por banco: no hay carga pesada ni búsqueda que pisar.
+		 *   abierto y su cuenta cargada.
 		 *
-		 * @param {Object} payload { accion, ruta_actual } la AccionIa confirmada y el name de la ruta en pantalla
+		 * El resto, según PANTALLAS:
+		 *
+		 * - Al CONFIRMAR (sin `al_tocar_ver`): solo la pantalla que está a la vista (`ruta_actual`),
+		 *   en la página que se está mirando y sin borrar una búsqueda de la persona. Una pantalla que
+		 *   no se ve no se carga: puede ser un rango largo o un listado pesado.
+		 * - Al tocar "Ver en …" (`al_tocar_ver`), en tres momentos que manda la tarjeta:
+		 *   - 'antes_de_navegar': solo pone el día en las pantallas por día, para que la vista que
+		 *     se monta ya pida el día correcto. No pide nada.
+		 *   - 'al_llegar' (el push ya resolvió): pide lo que la vista no pide sola al montarse.
+		 *   - sin momento (ya se estaba en esa pantalla): pone el día y pide.
+		 *   Va a la página 1 (lo nuevo queda arriba, id DESC). Abrir un día borra una búsqueda de
+		 *   Gastos, como elegir un día en ControlFecha; en una tabla paginada se re-ejecuta la
+		 *   búsqueda en vez de borrarla.
+		 *
+		 * @param {Object} payload { accion, ruta_actual, al_tocar_ver, momento } la AiMessageAction
+		 *   confirmada, el name de la ruta en pantalla, si viene del botón "Ver en …" y, en ese caso,
+		 *   'antes_de_navegar' | 'al_llegar' | null
 		 */
-		refrescarPantallaDeLaAccion({ rootState, dispatch }, payload) {
+		refrescarPantallaDeLaAccion({ rootState, dispatch, commit }, payload) {
 			let accion = payload ? payload.accion : null
-			let ruta = accion && accion.resultado ? accion.resultado.ruta : null
-			let destino = ruta && ruta.name ? ruta.name : null
+			let ruta = ruta_de_la_accion(accion)
+			let destino = ruta ? ruta.name : null
+			let al_tocar_ver = Boolean(payload && payload.al_tocar_ver)
+			let momento = payload && payload.momento ? payload.momento : null
+			let a_la_vista = Boolean(destino) && payload.ruta_actual == destino
 
 			if (destino == 'pending') {
-				if (rootState.agenda && rootState.agenda.desde) {
+				if (momento != 'antes_de_navegar' && rootState.agenda && rootState.agenda.desde) {
 					dispatch('agenda/cargar', null, { root: true })
 				}
 				return
 			}
 
-			if (destino == 'expense') {
-				let gastos = rootState.expense
-				if (payload.ruta_actual == 'expense' && gastos && !gastos.is_filtered) {
-					dispatch('expense/getModels', null, { root: true })
-				}
-				return
-			}
-
 			if (destino == 'cheque') {
+				if (momento == 'antes_de_navegar') {
+					return
+				}
 				// El catálogo, siempre (ver el docblock): es lo que lee el select del cheque.
 				dispatch('cheque_banco/getModels', null, { root: true })
 
-				// La tabla de cheques, solo si está a la vista: GET cheque trae todos los
-				// cheques del dueño agrupados, que es la carga pesada de este módulo.
-				if (payload.ruta_actual == 'cheque') {
+				// La tabla de cheques, solo si está a la vista y la vista no la está pidiendo sola.
+				if (a_la_vista && momento != 'al_llegar') {
 					dispatch('cheque/getModels', null, { root: true })
 				}
 				return
@@ -916,7 +1111,46 @@ export default {
 				if (con_cuenta && modal_de_cuenta_corriente_abierto()) {
 					dispatch('current_acount/getModels', null, { root: true })
 				}
+				return
 			}
+
+			let nombre = store_de_la_pantalla(accion, ruta)
+			let estado = nombre ? rootState[nombre] : null
+			if (!estado) {
+				return
+			}
+			let pantalla = tiene(PANTALLAS, nombre) ? PANTALLAS[nombre] : {}
+			let por_dia = Boolean(pantalla.por_dia && estado.from_dates)
+			let historico = Boolean(pantalla.por_dia && !estado.from_dates)
+			let listado = Boolean(pantalla.listado || historico)
+			let carga_sola = Boolean(pantalla.carga_sola || historico)
+
+			if (!al_tocar_ver) {
+				if (!a_la_vista) {
+					return
+				}
+				if (listado) {
+					recargar_listado(dispatch, nombre, estado, estado.filter_page || 1)
+					return
+				}
+				if (!busqueda_real(estado)) {
+					dispatch(nombre + '/getModels', null, { root: true })
+				}
+				return
+			}
+
+			if (por_dia && momento != 'al_llegar') {
+				commit(nombre + '/setFromDate', ruta.fecha || moment().format('YYYY-MM-DD'), { root: true })
+				commit(nombre + '/setUntilDate', '', { root: true })
+			}
+			if (momento == 'antes_de_navegar' || (momento == 'al_llegar' && carga_sola) || !a_la_vista) {
+				return
+			}
+			if (listado) {
+				recargar_listado(dispatch, nombre, estado, 1)
+				return
+			}
+			dispatch(nombre + '/getModels', null, { root: true })
 		},
 		/**
 		 * Vuelve a pedir los mensajes en pantalla que tienen alguna tarjeta en 'propuesta'
