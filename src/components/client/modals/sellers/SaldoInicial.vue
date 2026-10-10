@@ -11,7 +11,7 @@ id="seller-commission-saldo-inicial">
 		type="number"
 		v-model="form.debe"
 		@keyup.enter="save"
-		placeholder="Ingresar en el debe (se le debe al vendedor)"></b-form-input>
+		placeholder="Se le debe al vendedor"></b-form-input>
 	</b-form-group>
 	<b-form-group
 	label="En el haber (lo que ya le pagaste)"
@@ -21,7 +21,7 @@ id="seller-commission-saldo-inicial">
 		type="number"
 		v-model="form.haber"
 		@keyup.enter="save"
-		placeholder="Ingresar en el haber (se le pagó al vendedor)"></b-form-input>
+		placeholder="Se le pagó al vendedor"></b-form-input>
 	</b-form-group>
 	<btn-loader
 	@clicked="save"
