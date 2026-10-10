@@ -8,6 +8,8 @@
 	</b-button>
 </template>
 <script>
+import { fecha_moneda_params } from '@/store/reportes/index'
+
 export default {
 	computed: {
 		/* Modo temporal del selector de fechas de reportes */
@@ -23,12 +25,15 @@ export default {
 			return this.mes_inicio > this.mes_fin
 		},
 
-		/* Solo se puede buscar con rango de fechas completo y válido */
+		/*
+			En «Rango de fechas» solo se busca con el rango completo y válido. En «Hoy» siempre se puede
+			buscar: va hoy–hoy (hasta el 10/10/2026 quedaba deshabilitado y la solapa no buscaba nada).
+		*/
 		disabled() {
-			if (this.rango_temporal != 'rango-de-fechas') {
-				return true
+			if (this.rango_temporal == 'rango-de-fechas') {
+				return !this.mes_inicio || !this.mes_fin || this.fecha_invalida
 			}
-			return !this.mes_inicio || !this.mes_fin || this.fecha_invalida
+			return false
 		},
 		client_id() {
 			return this.$store.state.reportes.article_purchase.client_id
@@ -71,6 +76,14 @@ export default {
 			this.$store.commit('auth/setLoading', true)
 				this.$store.commit('reportes/article_purchase/set_loading', true)
 
+			/*
+				Mismo criterio de fechas que el resto de Reportes: en «Hoy» desde y hasta son hoy, en
+				«Rango de fechas» las elegidas. Viajan con las claves de siempre (mes_inicio/mes_fin), asi
+				que una API vieja las lee igual.
+			*/
+			let fechas = fecha_moneda_params(this.$store.state.reportes, false)
+			let rango_buscado = this.rango_temporal
+
 			this.$api.post('article-purchase', {
 				client_id: this.client_id,
 				provider_id: this.provider_id,
@@ -79,10 +92,16 @@ export default {
 				cantidad_resultados: this.cantidad_resultados,
 				sale_channel_id: this.sale_channel_id,
 				orden: this.orden,
-				mes_inicio: this.mes_inicio,
-				mes_fin: this.mes_fin,
+				mes_inicio: fechas.desde,
+				mes_fin: fechas.hasta,
 			})
 			.then(res => {
+				// Si mientras volvia la respuesta se cambio de «Hoy» a «Rango de fechas» (o al reves),
+				// articulos/Index.vue ya vacio la pantalla: estos numeros son del otro modo y no se pintan.
+				if (this.$store.state.reportes.rango_temporal != rango_buscado) {
+					this.$store.commit('auth/setLoading', false)
+					return
+				}
 				this.$store.commit('reportes/article_purchase/set_articles', res.data.models)
 				this.$store.commit('reportes/article_purchase/set_categories', res.data.categories)
 				this.$store.commit('reportes/article_purchase/set_providers', res.data.providers)
@@ -92,7 +111,7 @@ export default {
 				this.$store.commit('reportes/article_purchase/set_loading', true)
 				this.$store.commit('auth/setLoading', false)
 			})
-			.catch(err => {
+			.catch(() => {
 				this.$toast.error('Error al buscar')
 				this.$store.commit('reportes/article_purchase/set_loading', true)
 				this.$store.commit('auth/setLoading', false)

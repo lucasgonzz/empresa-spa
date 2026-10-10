@@ -18,8 +18,11 @@ import article_purchase from '@/store/reportes/article_purchase'
  * @param {Object} state - state del modulo reportes
  * @param {Boolean} incluir_moneda - si el endpoint acepta dimension de moneda (posicion-fiscal no)
  * @returns {Object} parametros listos para pasar como `params` de axios
+ *
+ * Se exporta (ademas de usarse aca adentro) para que la solapa Articulos arme sus fechas con el
+ * mismo criterio que el resto de Reportes: en «Hoy» busca hoy–hoy (10/10/2026).
  */
-function fecha_moneda_params(state, incluir_moneda) {
+export function fecha_moneda_params(state, incluir_moneda) {
 	let params
 
 	if (state.rango_temporal == 'rango-de-fechas') {
