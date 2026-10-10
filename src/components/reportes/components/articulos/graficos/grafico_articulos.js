@@ -34,14 +34,17 @@ function redondear(valor) {
  * Las primeras `tope` filas tal cual vienen, y el resto sumado en una sola fila «Otros (N)».
  *
  * La API devuelve TODAS las categorias (o proveedores) del periodo, ya ordenadas segun
- * «Orden» (mayor-menor o menor-mayor): ese orden se respeta, no se reordena aca. Con `tope` filas
- * o menos no hay barra Otros. El corte es solo visual (decision de Lucas, 10/10/2026): la API no
- * recorta nada.
+ * «Orden» (mayor-menor o menor-mayor): ese orden se respeta, no se reordena aca. El corte es solo
+ * visual (decision de Lucas, 10/10/2026): la API no recorta nada.
+ *
+ * «Otros» aparece solo cuando junta 2 grupos o mas. Con `tope` filas o menos no hay nada que
+ * juntar, y con `tope + 1` el resto seria un solo grupo: una barra «Otros (1)» ocupa el mismo
+ * lugar que ese grupo y le esconde el nombre, asi que ahi se muestran las `tope + 1` filas tal cual.
  *
  * @param {Array} filas - categories o providers de la respuesta de article-purchase
  * @param {string} nombre_key - clave del nombre de cada fila (category_name / provider_name)
  * @param {number} [tope] - cuantas filas mostrar con nombre (por defecto TOPE_BARRAS)
- * @returns {Array} filas a graficar; la ultima es la de «Otros (N)» si hubo resto
+ * @returns {Array} filas a graficar; la ultima es la de «Otros (N)» si el resto junto 2 o mas
  */
 export function top_con_otros(filas, nombre_key, tope) {
 	if (!Array.isArray(filas)) {
@@ -52,7 +55,8 @@ export function top_con_otros(filas, nombre_key, tope) {
 		tope = TOPE_BARRAS
 	}
 
-	if (filas.length <= tope) {
+	// Sin resto, o con un resto de un solo grupo, no se arma «Otros» (ver arriba)
+	if (filas.length <= tope + 1) {
 		return filas.slice()
 	}
 
