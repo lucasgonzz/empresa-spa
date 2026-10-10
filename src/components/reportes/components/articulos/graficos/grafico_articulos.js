@@ -15,6 +15,9 @@ export const TOPE_BARRAS = 12
 const EJE_BENEFICIO = 'eje-beneficio'
 const EJE_UNIDADES = 'eje-unidades'
 
+/* Ancho minimo por grupo (dos barras) para que las etiquetas de datos no se pisen con las del vecino */
+const MIN_PX_POR_GRUPO_CON_ETIQUETAS = 80
+
 /* Colores de siempre de las dos series; los titulos de los ejes los repiten para atarlos a su barra */
 const COLOR_UNIDADES = '#007bff'
 const COLOR_BENEFICIO = '#4CAF50'
@@ -145,6 +148,11 @@ export default {
 						color: '#000',
 						font: {
 							weight: 'bold',
+						},
+						// Con menos de ~80 px por grupo las etiquetas se pisan (medido: 1254/13 se lee, 708/13 y 319/13 no); el valor sigue en el tooltip
+						display: function(context) {
+							let grupos = context.chart.data.labels.length
+							return grupos > 0 && context.chart.width / grupos >= MIN_PX_POR_GRUPO_CON_ETIQUETAS
 						},
 						formatter: function(value, context) {
 							if (context.dataset.label == 'Beneficio') {
