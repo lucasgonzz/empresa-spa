@@ -58,13 +58,6 @@ export default {
 			// 		name: 'articulos',
 			// 	})
 			// }
-
-			if (this.can('reportes.cheques')) {
-
-				items.push({
-					name: 'cheques',
-				})
-			}
 			
 			return items 
 		},
@@ -84,9 +77,6 @@ export default {
 		setSelected(item) {
 			if (item.name == 'proveedores') {
 				this.$store.dispatch('panel_control/getModels', 12)
-			}
-			if (item.name == 'cheques') {
-				this.$store.dispatch('cheque/getModels')
 			}
 		},
 	}
