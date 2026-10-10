@@ -71,7 +71,9 @@ export default {
 			/**
 			 * Valor que dejo el ultimo toque del interruptor (true/false), o null si no se toco
 			 * desde que ModelForm paso el `prendido` actual. Se vuelve a null cuando ModelForm
-			 * pasa un `prendido` distinto o un modelo nuevo: desde ahi manda lo que ve el form.
+			 * pasa un `prendido` distinto, un modelo nuevo u otra prop (la columna del form va
+			 * keyeada por indice, asi que esta instancia podria quedar con otro campo): desde ahi
+			 * manda lo que ve el form.
 			 */
 			valor_tocado: null,
 		}
@@ -81,6 +83,9 @@ export default {
 			this.valor_tocado = null
 		},
 		model() {
+			this.valor_tocado = null
+		},
+		prop() {
 			this.valor_tocado = null
 		},
 	},
