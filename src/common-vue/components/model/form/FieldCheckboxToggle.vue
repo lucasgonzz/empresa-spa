@@ -12,6 +12,11 @@
 		de esta fila, asi que se redibuja solo ella. Redibujar el formulario entero se probo y se
 		descarto: cambia otros campos (en Pendientes, prender "Es recurrente" en uno guardado
 		deshabilitaba todo el formulario al instante).
+
+		Lo que esta fila NO redibuja son los campos que dependen de este interruptor por
+		`v_if_function` (se evaluan en ModelForm). Para eso emite `cambio` cuando se toca, y
+		ModelForm redibuja el formulario solo si la propiedad declara `redibujar_al_cambiar`:
+		un modelo que no lo declara queda exactamente como antes (nadie mas escucha el evento).
 	-->
 	<div class="model-form__checkbox-row">
 		<span
@@ -103,12 +108,20 @@ export default {
 		 * Mismo `$set` que hacia ModelForm (0/1 en el modelo, que es lo que se guarda), mas el
 		 * dato propio que redibuja esta fila aunque el modelo sea una copia que Vue no observa.
 		 *
+		 * Despues avisa con el evento `cambio` (0/1, ya escrito en el modelo) para que el
+		 * formulario decida si se redibuja entero: lo hace solo si la propiedad lo pide con
+		 * `redibujar_al_cambiar` (ver ModelForm::al_cambiar_interruptor). Esta fila no decide
+		 * nada por su cuenta; el aviso existe porque los campos que dependen de este interruptor
+		 * por `v_if_function` se evaluan en ModelForm, no aca.
+		 *
 		 * @param {Event} event change del input checkbox
+		 * @emits cambio valor nuevo del interruptor (1 prendido, 0 apagado)
 		 */
 		cambiar(event) {
 			let valor = event.target.checked ? 1 : 0
 			this.$set(this.model, this.prop.key, valor)
 			this.valor_tocado = valor === 1
+			this.$emit('cambio', valor)
 		},
 	},
 }

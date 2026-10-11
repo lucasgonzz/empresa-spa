@@ -269,7 +269,8 @@
 								:prop="prop"
 								:model_name="model_name"
 								:disabled="isDisabled(prop, form_to_filter)"
-								:prendido="Number(model[prop.key]) === 1"></field-checkbox-toggle>
+								:prendido="Number(model[prop.key]) === 1"
+								@cambio="al_cambiar_interruptor(prop)"></field-checkbox-toggle>
 
 									<google-geocoder
 									v-else-if="prop.type == 'google_geocoder'"
@@ -1112,6 +1113,34 @@ export default {
 		colorLabel(prop) {
 			if (prop.color_function) {
 				return this[prop.color_function](this.model)
+			}
+		},
+		/**
+		 * Redibuja el formulario cuando se toca un interruptor cuya propiedad lo pide con
+		 * `redibujar_al_cambiar: true`. Sin esa clave no hace nada.
+		 *
+		 * Por qué existe: un modelo que no declara `full_reactivity` llega acá como una copia
+		 * plana que Vue no observa (`model/Index.vue::model()` devuelve `{...model}`). El `$set`
+		 * del interruptor deja el valor escrito (por eso se guarda bien) pero no redibuja este
+		 * formulario, que es quien evalúa los `v_if_function` de los demás campos: los que
+		 * dependen del interruptor quedaban un paso atrasados (no aparecían o no desaparecían
+		 * hasta que algo más redibujara).
+		 *
+		 * Por qué no `full_reactivity` en el modelo: el formulario trabajaría por referencia
+		 * sobre el registro del store. En el costo extra de una compra, editar una fila
+		 * existente la modificaría adentro de `provider_order.provider_order_extra_costs`, que
+		 * es la lista que suma el total de la compra, y cancelar no lo revertiría.
+		 *
+		 * Por qué no un redibujo global en todo interruptor: se probó y rompe
+		 * `deshabilitado_si_hay` de los recargos/descuentos de artículo (cambia el estado de
+		 * otros campos al instante). Por eso es opt-in por propiedad: se declara solo en los
+		 * interruptores que gobiernan la visibilidad de otros campos.
+		 *
+		 * @param {Object} prop Definición de la propiedad (interruptor) que cambió.
+		 */
+		al_cambiar_interruptor(prop) {
+			if (prop && prop.redibujar_al_cambiar) {
+				this.$forceUpdate()
 			}
 		},
 		isDisabled(prop, form_to_filter = false) {
