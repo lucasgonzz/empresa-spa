@@ -3,27 +3,17 @@
 	class="m-t-10"
 	v-if="view == 'articulos'">
 
-		<!-- Aviso cuando el selector global está en «Hoy»: no se fuerza el cambio para no alterar otras vistas -->
-		<b-alert
-		v-if="requiere_seleccionar_rango"
-		show
-		variant="warning"
-		class="articulos-rango-fechas-aviso">
-			Para consultar la información de artículos, seleccioná
-			<strong>Rango de fechas</strong>
-			en el selector superior, indicá el período y presioná
-			<strong>Buscar</strong>.
-		</b-alert>
+		<!--
+			En «Hoy» tambien se busca (hoy–hoy, como el resto de Reportes): hasta el 10/10/2026 esta
+			solapa mostraba un aviso pidiendo pasar a «Rango de fechas» y no dejaba buscar.
+		-->
+		<filtros></filtros>
 
-		<template v-if="!requiere_seleccionar_rango">
-			<filtros></filtros>
+		<graficos></graficos>
 
-			<graficos></graficos>
+		<totales></totales>
 
-			<totales></totales>
-
-			<lista></lista>
-		</template>
+		<lista></lista>
 	</div>
 </template>
 <script>
@@ -39,15 +29,19 @@ export default {
 		rango_temporal() {
 			return this.$store.state.reportes.rango_temporal
 		},
-
-		/* Artículos solo admite búsqueda por rango; en «Hoy» se muestra aviso sin forzar el cambio global */
-		requiere_seleccionar_rango() {
-			return this.rango_temporal == 'dia-actual'
+	},
+	watch: {
+		/*
+			Al pasar de «Hoy» a «Rango de fechas» (o al reves) se vacia lo que se habia buscado: los
+			numeros son de un periodo del otro modo y la pantalla nunca tiene que mostrarlos bajo
+			este. Se vuelve a ver algo recien al apretar Buscar.
+		*/
+		rango_temporal() {
+			this.$store.commit('reportes/article_purchase/set_articles', [])
+			this.$store.commit('reportes/article_purchase/set_categories', [])
+			this.$store.commit('reportes/article_purchase/set_providers', [])
+			this.$store.commit('reportes/article_purchase/set_totales', null)
 		},
 	},
 }
 </script>
-<style lang="sass">
-.articulos-rango-fechas-aviso
-	margin-bottom: 0
-</style>

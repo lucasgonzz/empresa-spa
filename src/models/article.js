@@ -621,11 +621,15 @@ export default {
 			keep_after_create: true,
 		},
 		{
+			text: 'Descripción',
 			key: 'descripcion',
 			type: 'textarea',
 			use_to_update: true,
 			not_show: true,
-			description: 'Utilice este campo como informacion complementaria del articulo, para de esa forma no tener un "Nombre tan extenso". Esta descripcion esta incluida como criterio de busqueda en el modulo de VENDER'
+			// El `text` es lo que hace que el buscador (Vender, Listado) ofrezca esta propiedad en el desplegable
+			// de "Donde buscar" (own_props de buscador-general/Index.vue exige `text`). No es criterio por defecto:
+			// cada usuario la tilda si la quiere.
+			description: 'Utilice este campo como informacion complementaria del articulo, para de esa forma no tener un "Nombre tan extenso". Para buscar por este campo en VENDER o en el Listado, tilde "Descripción" en el filtro de propiedades del buscador'
 		},
 
 
@@ -793,7 +797,8 @@ export default {
 		{
 			text: 'U x Bulto',
 			key: 'unidades_por_bulto',
-			type: 'text',
+			// Es una columna entera en la base: con 'text' un "12 u" llegaba a MySQL y daba 500 al guardar.
+			type: 'number',
 			not_show: true,
 			if_has_extencion: 'articulos_con_propiedades_de_distribuidora',
 		},

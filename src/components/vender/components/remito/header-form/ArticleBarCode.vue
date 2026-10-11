@@ -46,6 +46,15 @@ import vender_set_total from '@/mixins/vender_set_total'
 import varios_precios, { tiene_varios_precios } from '@/mixins/vender/varios_precios'
 import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout/foco'
 /*
+	Variantes desde la cache de articulos (mision variantes-mismo-articulo-en-vender, 8/10/2026): el
+	codigo del articulo padre abre el selector y el de una variante entra como esa variante, tambien
+	sin conexion. Ver set_finded_article() y src/utils/variantes_en_cache.js.
+*/
+import {
+	variantes_disponibles_en_cache,
+	item_de_variante_por_codigo_en_cache,
+} from '@/utils/variantes_en_cache'
+/*
 	Tickets de balanza (mision balanzas-configurables, 3/10/2026): la dinamica la elige el dueño en
 	Configuracion (users.tickets_de_balanza) y ya no sale de las extensiones. Ver src/utils/balanzas.js.
 */
@@ -183,7 +192,21 @@ export default {
 				// para un nuevo escaneo, tiene que volver a bloquear el agregado automatico.
 				this.opening_variant_selector = false
 
-				await this.set_finded_article(this.item_vender.codigo)
+				let resultado = await this.set_finded_article(this.item_vender.codigo)
+
+				/*
+					Variante encontrada en la cache sin conexion (mision
+					variantes-mismo-articulo-en-vender, 8/10/2026). Viaja en la PROMESA y no en
+					this.finded_article, a proposito: la busqueda en la cache es asincronica y, con el
+					lector disparando codigos seguidos, un escaneo que termina tarde escribiendo
+					this.finded_article podia pisar el de un escaneo posterior. Asi el item es de ESTE
+					escaneo y se asigna aca mismo, en la misma vuelta en que se usa (nada puede
+					meterse en el medio). No se descarta el resultado si ya empezo otro escaneo: seria
+					perder un articulo que el vendedor paso por el lector.
+				*/
+				if (resultado && resultado.variante_de_la_cache) {
+					this.finded_article = resultado.variante_de_la_cache
+				}
 
 				console.log('from_balanza: '+this.from_balanza)
 				console.log('finded_article: ')
@@ -233,6 +256,46 @@ export default {
 
 				if (typeof finded != 'undefined') {
 
+					/*
+						🔴 El articulo de la cache TIENE VARIANTES disponibles (mision
+						variantes-mismo-articulo-en-vender, 8/10/2026). Hasta esta mision se agregaba
+						pelado: el renglon quedaba sin variante y el stock salia del articulo y no de
+						la variante. Ahora se hace lo mismo que con conexion y sin cache (la API
+						responde has_variants y se abre el selector):
+						- con conexion se le pregunta a la API, que es el camino normal y manda las
+						  variantes con todo lo que la cache no tiene (el desglose por metodo de pago
+						  de cada una) y con las ocultas al dia;
+						- sin conexion se abre el selector con las variantes que guarda la cache, en la
+						  misma forma que manda la API (variantes_disponibles_en_cache).
+						Solo con la extension article_variants, como la API (sin ella no hay
+						variantes y el articulo entra como siempre).
+
+						Es un return de la promesa y no un await (regla del repo): set_article_from_barcode
+						la espera igual, porque esta funcion async adopta la promesa devuelta.
+					*/
+					let variantes_en_cache = this.hasExtencion('article_variants')
+						? variantes_disponibles_en_cache(finded)
+						: []
+
+					if (variantes_en_cache.length) {
+
+						if (this.$store.state.auth.online) {
+							/*
+								Con las variantes de la cache como respaldo: con una conexion
+								inestable la llamada puede fallar, y entonces se abre el selector
+								con lo que hay en la cache en vez de no agregar nada.
+							*/
+							return this.getArticleFromApi(codigo, {
+								article: finded,
+								variants: variantes_en_cache,
+							})
+						}
+
+						this.abrir_selector_de_variantes(finded, variantes_en_cache)
+
+						return
+					}
+
 					this.finded_article = finded
 				
 				} else if (this.usa_tickets_por_plu) {
@@ -280,6 +343,63 @@ export default {
 				}
 
 				/*
+					El codigo de una VARIANTE sin conexion (mision variantes-mismo-articulo-en-vender,
+					8/10/2026). Con conexion lo resuelve el respaldo por API de arriba; sin conexion era
+					"No se encontro articulo", porque el indice local solo busca por articles.bar_code.
+					Ahora se buscan las variantes que la cache guarda adentro de cada articulo y, si
+					una tiene ese codigo, entra como esa variante.
+
+					La busqueda usa un indice en memoria de los codigos de variante que se arma UNA vez
+					recorriendo la cache (item_de_variante_por_codigo_en_cache, en
+					utils/variantes_en_cache.js, con el porque y cuando se invalida): recorrer la tabla
+					en cada escaneo eran segundos con 30-50 mil articulos.
+
+					🔴 Un ticket de "Por balanza" NO busca variante (es_ticket_de_balanza): va directo a
+					la lectura de balanza del bloque siguiente, como siempre. Es una diferencia con la
+					API, que busca la variante antes que la balanza, y se acepta: sin conexion lo que
+					manda es que cada ticket de la balanza entre rapido. Una variante cuyo codigo
+					empiece con el prefijo de una balanza del dueño se lee como ticket sin conexion.
+					(El PLU se intento antes, como antes de esta mision: un codigo de variante solo
+					choca con un ticket PLU si ademas hay un articulo con ese PLU.)
+
+					La variante encontrada se DEVUELVE en la promesa ({variante_de_la_cache}) y no se
+					escribe en this.finded_article: set_article_from_barcode la toma de ahi (el porque
+					esta alla). Promesa devuelta y no await, igual que los dos bloques de arriba.
+				*/
+				if (
+					typeof this.finded_article == 'undefined'
+					&& !this.from_balanza
+					&& !this.$store.state.auth.online
+					&& this.hasExtencion('article_variants')
+					&& !this.es_ticket_de_balanza(codigo)
+				) {
+
+					let self = this
+
+					return item_de_variante_por_codigo_en_cache(codigo)
+					.catch(err => {
+						// Si no se pudo leer la cache, el codigo sigue como no encontrado
+						console.log('Error al buscar la variante en la cache de articulos')
+						console.log(err)
+						return null
+					})
+					.then(item => {
+
+						if (item) {
+							return {
+								variante_de_la_cache: item,
+							}
+						}
+
+						if (!self.usa_tickets_por_balanzas) {
+							return
+						}
+
+						return self.leer_ticket_por_balanzas_sin_conexion(codigo)
+					})
+				}
+
+				/*
 					"Por balanza" sin conexion, o con la cache de articulos (mision
 					balanzas-configurables, 3/10/2026). Con la vieja extension de importe, aca el ticket
 					daba "No se encontro articulo".
@@ -319,6 +439,64 @@ export default {
 			}
 
 		},
+		/**
+		 * Abre el selector de variantes (SelectVariant.vue) para un articulo con variantes
+		 * disponibles, en vez de agregarlo pelado.
+		 *
+		 * Lo usan los dos caminos que encuentran un articulo con variantes: la API (has_variants) y,
+		 * sin conexion, la cache de articulos (set_finded_article). Antes vivia adentro de
+		 * getArticleFromApi; se saco a un metodo para que la cache abra el selector exactamente igual.
+		 *
+		 * opening_variant_selector en true para que set_article_from_barcode no agregue nada ni
+		 * muestre "No se encontro articulo" mientras el vendedor elige.
+		 *
+		 * @param {Object} article Articulo padre (el de la API o el de la cache).
+		 * @param {Array} variants Variantes disponibles, con la forma de la API: variant_id,
+		 *                         variant_description, final_price, images, addresses, ...
+		 * @returns {void}
+		 */
+		abrir_selector_de_variantes(article, variants) {
+
+			this.opening_variant_selector = true
+			this.finded_article = undefined
+
+			// Se deja el articulo + sus variantes en el store para que SelectVariant
+			// las consuma (mismo shape que manda el back: variant_id/variant_description)
+			this.$store.commit('vender/setArticleForSale', {
+				...article,
+				variants: variants,
+			})
+
+			this.$bvModal.show('select-variant')
+
+			let input = document.getElementById('article-bar-code')
+
+			/*
+				Con guarda: con los diseños de Vender el codigo de barras puede no estar en la
+				pantalla (getElementById devuelve null).
+			*/
+			if (input) {
+				input.value = ''
+			}
+		},
+		/**
+		 * Si el codigo es un ticket de "Por balanza": empieza con el prefijo de alguna balanza del
+		 * dueño, con la misma regla que la lectura del ticket (leer_ticket_por_balanzas de
+		 * src/utils/balanzas.js). Fuera del modo "Por balanza" nunca lo es.
+		 *
+		 * Lo usa set_finded_article para no buscar variantes en la cache con un ticket (ver ahi).
+		 *
+		 * @param {String} codigo Codigo escaneado.
+		 * @returns {Boolean}
+		 */
+		es_ticket_de_balanza(codigo) {
+
+			if (!this.usa_tickets_por_balanzas) {
+				return false
+			}
+
+			return leer_ticket_por_balanzas(codigo, this.balanzas_del_dueno) !== null
+		},
 		check_article(article, codigo) {
 			if (this.usar_codigo_proveedor) {
 				return article.provider_code && article.provider_code.toLowerCase() == codigo.toLowerCase()
@@ -349,7 +527,18 @@ export default {
 			// getElementById devuelve null, no undefined. El guard vive adentro del helper.
 			this.setInputValueSync(input, this.finded_article.name)
 		},
-		getArticleFromApi(bar_code) {
+		/**
+		 * Busca el codigo en la API (vender/buscar-articulo-por-codido).
+		 *
+		 * @param {String} bar_code Codigo escaneado.
+		 * @param {Object|null} variantes_de_respaldo Solo cuando el codigo ya se encontro en la cache
+		 *        como un articulo con variantes (set_finded_article): `{article, variants}` con las
+		 *        variantes de la cache. Si la llamada FALLA (conexion inestable), se abre el selector
+		 *        con ellas en vez de avisar el error y no agregar nada (mision
+		 *        variantes-mismo-articulo-en-vender, 8/10/2026). Sin respaldo, el catch de siempre.
+		 * @returns {Promise}
+		 */
+		getArticleFromApi(bar_code, variantes_de_respaldo = null) {
 			this.$store.commit('auth/setMessage', 'Buscando articulo')
 			this.$store.commit('auth/setLoading', true)
 			
@@ -452,20 +641,7 @@ export default {
 
 					if (res.data.has_variants) {
 
-						this.opening_variant_selector = true
-						this.finded_article = undefined
-
-						// Se deja el articulo + sus variantes en el store para que SelectVariant
-						// las consuma (mismo shape que manda el back: variant_id/variant_description)
-						this.$store.commit('vender/setArticleForSale', {
-							...res.data.article,
-							variants: res.data.variants,
-						})
-
-						this.$bvModal.show('select-variant')
-
-						let input = document.getElementById('article-bar-code')
-						input.value = ''
+						this.abrir_selector_de_variantes(res.data.article, res.data.variants)
 
 						return
 					}
@@ -482,6 +658,20 @@ export default {
 			})
 			.catch(err => {
 				this.$store.commit('auth/setLoading', false)
+
+				/*
+					La cache ya sabia que es un articulo con variantes: se abre el selector con las
+					de la cache. abrir_selector_de_variantes deja opening_variant_selector en true,
+					asi que set_article_from_barcode tampoco muestra "No se encontro articulo" (antes
+					salian los dos avisos y no entraba nada).
+				*/
+				if (variantes_de_respaldo) {
+					console.log('Fallo la API, se abre el selector con las variantes de la cache')
+					console.log(err)
+					this.abrir_selector_de_variantes(variantes_de_respaldo.article, variantes_de_respaldo.variants)
+					return
+				}
+
 				this.$toast.error('Error al buscar codigo de barras: '+err)
 			})
 		},

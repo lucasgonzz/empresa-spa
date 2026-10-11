@@ -7,6 +7,12 @@
 		La vista previa imita el renglón del PDF (plan §4.4): "Rótulo: ejemplo" con el tamaño
 		escalado a la hoja, la negrita, la cursiva y la alineación del campo. La ✕ lleva la clase
 		dpdf-no-arrastra (el `filter` de Sortable): apretarla no arranca un arrastre.
+
+		En un ticket de comandera (misión diseno-ticket-comandera, plan §7.3) la vista previa son los
+		renglones que imprime la comandera para el ejemplo del catálogo, en el ancho de la caja
+		(`caracteres`) y con las reglas del motor (vista_de_ticket.js: "Rótulo: valor" partido por
+		palabras, alineación con espacios, negrita y los tres tamaños). El logo se ve como un logo de
+		muestra. Sin el agarre, y la ✕ flota arriba a la derecha (no le saca ancho a los renglones).
 	-->
 	<div
 	class="dpdf-campo dpdf-item-de-caja"
@@ -24,11 +30,13 @@
 	@keydown.space.self.prevent="seleccionar">
 
 		<i
+		v-if="!es_ticket"
 		class="bi bi-grip-vertical dpdf-campo__agarre"
 		aria-hidden="true"></i>
 
 		<!-- Solo ilustración: el nombre del campo ya lo lee el aria-label del renglón -->
 		<div
+		v-if="!es_ticket"
 		class="dpdf-campo__vista"
 		:class="'dpdf-campo__vista--' + (estilo.alineacion || 'izquierda')"
 		:style="estilo_de_la_vista"
@@ -57,6 +65,26 @@
 			</span>
 		</div>
 
+		<!-- Ticket: lo que imprime la comandera (solo ilustración, como la vista de la hoja) -->
+		<div
+		v-else
+		class="dpdf-campo__rollo"
+		aria-hidden="true">
+			<span
+			v-if="es_imagen_en_el_ticket"
+			class="dpdf-campo__logo"
+			:style="estilo_del_logo">
+				<i class="bi bi-image"></i>
+				<span>Logo</span>
+			</span>
+			<renglones-de-ticket
+			v-else-if="renglones_en_el_ticket.length"
+			:renglones="renglones_en_el_ticket"></renglones-de-ticket>
+			<span
+			v-else
+			class="dpdf-campo__sin-dato">{{ texto_sin_dato }}</span>
+		</div>
+
 		<button
 		type="button"
 		class="dpdf-campo__quitar dpdf-no-arrastra"
@@ -69,6 +97,8 @@
 </template>
 <script>
 import { KEY_TEXTO_LIBRE, estilo_efectivo, etiqueta_efectiva, texto_libre_largo, aviso_de_texto_largo } from './estado_del_disenador'
+import { renglones_de_campo, RENGLONES_DEL_LOGO } from './vista_de_ticket'
+import RenglonesDeTicket from './RenglonesDeTicket'
 
 /* Milímetros que mide un punto tipográfico (1 pt = 1/72 de pulgada = 0,3528 mm) */
 const MM_POR_PUNTO = 0.3528
@@ -96,6 +126,9 @@ const RENGLONES_DEL_TEXTO_LIBRE = 3
 export default {
 	name: 'CampoDeCaja',
 	inject: ['disenador'],
+	components: {
+		RenglonesDeTicket,
+	},
 	props: {
 		/* Campo de trabajo: {ui_id, key, etiqueta, tamano, negrita, cursiva, alineacion, (id, texto)} */
 		campo: {
@@ -107,8 +140,73 @@ export default {
 			type: Number,
 			default: 12,
 		},
+		/* Solo en un ticket: los caracteres de contenido de la caja (el ancho de los renglones) */
+		caracteres: {
+			type: Number,
+			default: 0,
+		},
 	},
 	computed: {
+		/**
+		 * Si el campo está en un ticket de comandera.
+		 *
+		 * @returns {boolean}
+		 */
+		es_ticket() {
+			return this.disenador.es_ticket
+		},
+		/**
+		 * Lo que imprime el campo en el ticket (el ejemplo, el rótulo y el estilo efectivos), o null
+		 * en una hoja o si la key ya no está en el catálogo.
+		 *
+		 * @returns {Object|null}
+		 */
+		datos_en_el_ticket() {
+			return this.es_ticket ? this.disenador.datos_del_campo_en_el_ticket(this.campo) : null
+		},
+		/**
+		 * Si es el logo del negocio (tipo `imagen`): se ve un logo de muestra.
+		 *
+		 * @returns {boolean}
+		 */
+		es_imagen_en_el_ticket() {
+			return !!(this.datos_en_el_ticket && this.datos_en_el_ticket.es_imagen)
+		},
+		/**
+		 * Los renglones que imprime la comandera para el ejemplo, en el ancho de la caja.
+		 *
+		 * @returns {Array}
+		 */
+		renglones_en_el_ticket() {
+			if (!this.datos_en_el_ticket || this.es_imagen_en_el_ticket) {
+				return []
+			}
+			return renglones_de_campo(this.datos_en_el_ticket, this.caracteres)
+		},
+		/**
+		 * Lo que se ve en un ticket cuando el campo no imprime nada con los datos de ejemplo.
+		 *
+		 * @returns {string}
+		 */
+		texto_sin_dato() {
+			if (!this.definicion && !this.es_texto_libre) {
+				return 'Este campo ya no existe (' + this.campo.key + '): no se imprime'
+			}
+			if (this.es_texto_libre) {
+				return 'Escribí el texto…'
+			}
+			return 'Sin dato de ejemplo: si la venta no lo tiene, no se imprime'
+		},
+		/**
+		 * El alto del logo de muestra: unos renglones del rollo (el de verdad depende de la imagen).
+		 *
+		 * @returns {Object}
+		 */
+		estilo_del_logo() {
+			return {
+				height: (RENGLONES_DEL_LOGO * this.disenador.renglon_del_rollo_px) + 'px',
+			}
+		},
 		/**
 		 * El data-testid del renglón: "campo-<key>-disenador-pdf", y el texto libre (que puede ir
 		 * varias veces) con su id: "campo-texto_libre-<id>-disenador-pdf". Lo dinámico va en el medio
@@ -130,6 +228,10 @@ export default {
 		 * @returns {boolean}
 		 */
 		texto_largo() {
+			/* En un ticket no aplica: el rollo es continuo, un texto largo solo ocupa más renglones */
+			if (this.es_ticket) {
+				return false
+			}
 			return texto_libre_largo(this.campo, this.cols_de_la_caja)
 		},
 		/**
@@ -292,6 +394,7 @@ export default {
 				'dpdf-campo--seleccionado': this.seleccionado,
 				'dpdf-campo--destacado': this.disenador.destacado === this.campo.ui_id,
 				'dpdf-campo--negrita': this.estilo.negrita,
+				'dpdf-campo--ticket': this.es_ticket,
 			}
 		},
 	},
@@ -448,4 +551,72 @@ export default {
 		.dpdf-campo__agarre,
 		.dpdf-campo__quitar
 			opacity: 1
+
+// ── Ticket de comandera ────────────────────────────────────────────────────────────────────────
+// Los renglones ocupan todo el ancho de la caja (sus caracteres justos): sin agarre, sin márgenes,
+// y la ✕ flota arriba a la derecha. Se esconde con visibility (no con opacity, que la dejaría
+// tocable) y aparece al pasar el mouse, al enfocar el campo o con el campo seleccionado; en una
+// pantalla táctil, solo con el campo seleccionado (si no, taparía el final de cada renglón).
+.dpdf-campo.dpdf-campo--ticket
+	gap: 0
+	margin: 0
+	padding: 0
+	border-radius: 2px
+	font-family: var(--font-family-sans-serif)
+
+	.dpdf-campo__quitar
+		position: absolute
+		top: -2px
+		right: -2px
+		z-index: 2
+		background: var(--bg-card)
+		box-shadow: 0 0 0 1px var(--color-border), 0 2px 6px var(--shadow-color)
+		visibility: hidden
+
+	&:hover,
+	&:focus-within,
+	&.dpdf-campo--seleccionado
+		.dpdf-campo__quitar
+			visibility: visible
+
+	// Seleccionado: el anillo por fuera, sin correr los renglones
+	&.dpdf-campo--seleccionado
+		box-shadow: 0 0 0 2px var(--color-primary)
+
+.dpdf-campo__rollo
+	flex: 1 1 auto
+	min-width: 0
+
+// El logo de muestra: a todo el ancho de la caja, centrado (en el papel, a todo el ancho del rollo)
+.dpdf-campo__logo
+	display: flex
+	align-items: center
+	justify-content: center
+	gap: 6px
+	width: 100%
+	border: 1px dashed var(--color-border)
+	border-radius: 4px
+	background: var(--bg-section)
+	color: var(--color-text-secondary)
+	font-size: 0.74rem
+	font-weight: 600
+
+	i
+		font-size: 1rem
+
+.dpdf-campo__sin-dato
+	display: block
+	padding: 1px 0
+	color: var(--color-text-secondary)
+	font-size: 0.7rem
+	font-style: italic
+	line-height: 1.3
+
+@media (hover: none)
+	.dpdf-campo.dpdf-campo--ticket
+		.dpdf-campo__quitar
+			visibility: hidden
+
+		&.dpdf-campo--seleccionado .dpdf-campo__quitar
+			visibility: visible
 </style>

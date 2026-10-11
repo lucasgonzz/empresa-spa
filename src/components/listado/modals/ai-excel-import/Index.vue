@@ -2698,10 +2698,17 @@ export default {
 					 * el 24/8/2026: está en su SYSTEM_PROPERTIES y tiene regla propia en el prompt,
 					 * así que la IA la sugiere sola. El usuario igual puede corregirla a mano.
 					 *
+					 * Hasta el 8/10/2026 el saldo de un proveedor NUEVO se perdía en silencio:
+					 * ProviderImport no le creaba la cuenta corriente y setSaldoInicial() salía sin
+					 * hacer nada. Desde la misión importacion-proveedores-saldo-inicial el proveedor
+					 * nace con su cuenta (y uno viejo sin cuenta la recibe al reimportarlo con saldo),
+					 * así que el saldo se carga.
+					 *
 					 * ⚠️ Lo que NO hace: si el proveedor ya tiene movimientos en su cuenta corriente,
-					 * LocalImportHelper::crearSaldoInicialPorImportacion() corta con un return y el
-					 * saldo no se aplica, sin avisar. O sea que esto es un saldo INICIAL, no un
-					 * "saldo actual" que pise lo que haya. Viene de antes de esta misión.
+					 * LocalImportHelper::crearSaldoInicialPorImportacion() no carga nada: esto es un
+					 * saldo INICIAL, no un "saldo actual" que pise lo que haya (a diferencia de
+					 * clientes, que ajustan con una nota). Desde esa misma fecha no es en silencio:
+					 * la notificación de fin de importación nombra a esos proveedores.
 					 */
 					{ value: 'saldo_actual',             text: 'Saldo actual' },
 				]

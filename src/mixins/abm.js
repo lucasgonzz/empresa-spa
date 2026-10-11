@@ -64,7 +64,6 @@ export default {
 						'sale_type',
 						'sale_sender_info',
 						'client_reputation',
-						'dealer',
 						// Al final a proposito: el primero de la lista es la solapa que abre por defecto.
 						'vender_layout',
 					],
@@ -99,6 +98,8 @@ export default {
 						'default_payment_method_caja',
 						// Bancos de cheques (misión cheques-endoso-y-bancos, 21/9/2026)
 						'cheque_banco',
+						// Impuestos de retención (misión retenciones-abm-impuestos, 8/10/2026)
+						'retencion_impuesto',
 					],
 				},
 				// Gastos

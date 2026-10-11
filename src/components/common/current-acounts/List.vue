@@ -176,11 +176,20 @@ export default {
             this.$store.commit('current_acount/setToShowPaymentMethods', current_acount)
             this.$bvModal.show('payment-methods-details')
         },
+        /**
+         * Una nota de crédito con comprobante que ya existe en ARCA no se elimina (con CAE, o con
+         * número y a la espera de confirmación): es la misma regla que la API aplica en
+         * `DELETE current-acount` y la que ya rige para una venta facturada. Un intento que ARCA no
+         * autorizó (sin CAE ni número) sí se puede eliminar.
+         */
         canDelete(current_acount) {
             return current_acount.status == 'pago_from_client' 
                     || (
                         current_acount.status == 'nota_credito'
-                        && !current_acount.afip_ticket
+                        && (
+                            !current_acount.afip_ticket
+                            || (!current_acount.afip_ticket.cae && !current_acount.afip_ticket.cbte_numero)
+                        )
                         // && !current_acount.sale_id
                     ) 
                     || current_acount.detalle == 'Nota de debito' 

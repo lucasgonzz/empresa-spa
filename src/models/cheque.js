@@ -1,3 +1,13 @@
+/*
+	Misión cheque-edicion-acotada (8/10/2026): el formulario del cheque deja editar SOLO número,
+	banco (el select del catálogo), notas, fecha de emisión y fecha de pago. El resto (tipo,
+	cliente, proveedor, monto, endosos, cobro y rechazo) mueve cuentas corrientes y cajas, así
+	que no se edita acá. Dos flags, y solo ellos, arman eso (no cambian columnas ni orden):
+	  - `only_show`: se dibuja en el formulario como valor gris, de contexto, sin input.
+	  - `not_show_on_form`: no se dibuja en el formulario. La tabla lo ignora (solo mira
+	    `not_show_on_table`), así que la columna sigue donde estaba.
+	El back (PUT api/cheque/{id}) ignora lo demás aunque lo manden: esto es solo la interfaz.
+*/
 export default {
 	properties: [
 		{
@@ -10,6 +20,7 @@ export default {
 			text: 'Tipo',
 			key: 'tipo',
 			type: 'select',
+			only_show: true,
 			options: [
 				'recibido',
 				'emitido',
@@ -19,6 +30,11 @@ export default {
 			text: 'Cliente',
 			key: 'client_id',
 			type: 'search',
+			// Contexto de solo lectura: solo tiene sentido en el cheque recibido. Va por
+			// v_if_function y no por v_if: showProperty() compara `typeof v_if == 'array'`, que nunca
+			// es cierto, así que un v_if en forma de array no oculta nada (ver models/order.js).
+			only_show: true,
+			v_if_function: 'cheque_es_recibido',
 			// Sin prop "store" el buscador resuelve el store por la key (client_id -> client), asi
 			// que este campo tiene el mismo problema que los de abajo: la busqueda va siempre
 			// contra la API (global-search/client) y nunca contra el store. No sacar.
@@ -27,6 +43,7 @@ export default {
 		{
 			text: 'Endozado desde cliente',
 			key: 'endosado_desde_client_id',
+			not_show_on_form: true,
 			// store: 'client' es el modelo contra el que busca el modal (search-from-modal/client),
 			// no el nombre de la relacion embebida: esa se llama endosado_desde_client y se deriva
 			// de la clave (grupo 332, 4/8/2026, ver propertyText()).
@@ -41,6 +58,10 @@ export default {
 			text: 'Proveedor',
 			key: 'provider_id',
 			type: 'search',
+			// Contexto de solo lectura: solo tiene sentido en el cheque emitido (por v_if_function,
+			// ver el aviso en `client_id`).
+			only_show: true,
+			v_if_function: 'cheque_es_emitido',
 			// Sin prop "store" el buscador resuelve el store por la key (provider_id -> provider),
 			// asi que este campo tiene el mismo problema que los de abajo: la busqueda va siempre
 			// contra la API (global-search/provider) y nunca contra el store. No sacar.
@@ -49,6 +70,7 @@ export default {
 		{
 			text: 'Endozado al proveedor',
 			key: 'endosado_a_provider_id',
+			not_show_on_form: true,
 			// store: 'provider' es el modelo contra el que busca el modal (search-from-modal/provider),
 			// no el nombre de la relacion embebida: esa se llama endosado_a_provider y se deriva de
 			// la clave (grupo 332, 4/8/2026, ver propertyText()).
@@ -71,6 +93,15 @@ export default {
 
 				No va al formulario: ahí el control es el select de abajo. El texto `banco` de un
 				cheque viejo no se pierde al editarlo porque el formulario manda el modelo entero.
+
+				Misión cheques-filtro-banco-catalogo (10/10/2026): la lupa y las flechas de esta
+				columna van por `POST global-search/cheque` con `key: 'banco'`, y la API los
+				resuelve sobre LO QUE SE VE (no sobre el texto guardado), con la misma regla que
+				`cheque_banco_texto`. Esa regla está repetida en la API
+				(`Cheque::columnas_mostradas_para_filtros()` para filtrar y ordenar,
+				`ChequesFilteredExport` para el Excel): si se cambia qué banco se muestra, se
+				cambian los tres juntos. No cambiar la key `banco` ni su `type: 'text'`: es lo que
+				la API mira para aplicar esa regla.
 			*/
 			text: 'Banco',
 			key: 'banco',
@@ -98,6 +129,7 @@ export default {
 			key: 'amount',
 			type: 'number',
 			is_price: true,
+			only_show: true,
 		},
 		{
 			text: 'Notas',
@@ -135,6 +167,7 @@ export default {
 			key: 'fecha_endoso',
 			type: 'date',
 			is_date: true,
+			not_show_on_form: true,
 		},
 		{
 			text: 'Cobrado en',
@@ -142,23 +175,50 @@ export default {
 			type: 'date',
 			v_if: ['estado_manual', '=', 'cobrado'],
 			is_date: true,
+			not_show_on_form: true,
 		},
 		{
 			text: 'Cobrado por',
 			key: 'cobrado_por_id',
 			v_if: ['estado_manual', '=', 'cobrado'],
+			not_show_on_form: true,
 		},
 		{
+			// La columna de la base es `rechazado_en`. Hasta la misión cheque-motivo-rechazo
+			// (9/10/2026) la key era `rechazo_en`, que no existe, y la columna salía siempre vacía.
 			text: 'Rechazado en',
-			key: 'rechazo_en',
+			key: 'rechazado_en',
 			v_if: ['estado_manual', '=', 'rechazado'],
 			type: 'date',
 			is_date: true,
+			not_show_on_form: true,
 		},
 		{
 			text: 'Rechazado por',
 			key: 'rechazado_por_id',
 			v_if: ['estado_manual', '=', 'rechazado'],
+			not_show_on_form: true,
+		},
+		{
+			/*
+				Misión cheque-motivo-rechazo (9/10/2026): el motivo que se escribe en el modal
+				Rechazar cheque (RechazarCheque.vue) y que la API guarda en
+				`cheques.rechazado_observaciones` (texto, hasta 1000 caracteres).
+
+				Solo en las solapas Rechazados (de Recibido y de Emitido): en el resto siempre está
+				vacía, y la saca base_properties_for_cheques_list en components/cheques/list/Index.vue.
+				No va al formulario: el motivo se escribe al rechazar, no al editar el cheque (el
+				PUT de edición tampoco lo lee).
+
+				`table_wrap_content`: un motivo largo se parte en varias líneas en vez de cortarse
+				(los td de la tabla son nowrap por defecto). Es el valor inicial del "salto de línea"
+				de la columna en las preferencias: el usuario lo puede cambiar.
+			*/
+			text: 'Motivo del rechazo',
+			key: 'rechazado_observaciones',
+			type: 'textarea',
+			table_wrap_content: true,
+			not_show_on_form: true,
 		},
 	],
 	singular_model_name_spanish: 'Cheque',

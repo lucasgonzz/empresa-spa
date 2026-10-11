@@ -1,25 +1,42 @@
 <template>
-	<!--
-		Guardar: botón primario a lo ancho del panel. Sin renglones queda deshabilitado (antes
-		desaparecía y el panel saltaba de alto). `btn-guardar-devolucion` es el testid de siempre,
-		para los dos modos.
-	-->
-	<b-button
-	class="dev-btn-guardar"
-	data-testid="btn-guardar-devolucion"
-	variant="primary"
-	block
-	:disabled="!items.length || guardando"
-	@click="guardar">
-		{{ texto }}
-	</b-button>
+	<div>
+		<!--
+			Guardar: botón primario a lo ancho del panel. Sin renglones queda deshabilitado (antes
+			desaparecía y el panel saltaba de alto). `btn-guardar-devolucion` es el testid de siempre,
+			para los dos modos.
+		-->
+		<b-button
+		class="dev-btn-guardar"
+		data-testid="btn-guardar-devolucion"
+		variant="primary"
+		block
+		:disabled="!items.length || guardando"
+		@click="guardar">
+			{{ texto }}
+		</b-button>
+
+		<!--
+			Aviso de que la venta ya tiene una nota de crédito con esas unidades (la API responde 409):
+			facturar la existente, crear otra de todos modos o cancelar.
+		-->
+		<notas-existentes-modal
+		:notas="notas_existentes"
+		@facturada="limpiar_devolucion"
+		@crear_igual="guardar_confirmando_la_duplicada"></notas-existentes-modal>
+	</div>
 </template>
 <script>
 import limpiar from '@/mixins/devoluciones/limpiar'
 export default {
 	mixins: [limpiar],
+	components: {
+		NotasExistentesModal: () => import('@/components/devoluciones/components/resumen/NotasExistentesModal'),
+	},
 	data() {
 		return {
+			// Notas de crédito de la venta que chocan con lo que se quiere devolver (las manda la
+			// API en el 409). Vacío si no hay aviso.
+			notas_existentes: [],
 			// true mientras el POST está en vuelo: el botón queda deshabilitado para que un
 			// segundo clic no mande otra nota de crédito igual (la API tiene candado, pero el
 			// segundo pedido terminaría en un 422 confuso o en una nota duplicada sin compra).
@@ -107,17 +124,30 @@ export default {
 		 * y deja el módulo en blanco (en el mismo modo).
 		 */
 		guardar() {
+			this.enviar(false)
+		},
+
+		/**
+		 * Cuerpo de guardar(). `confirmando_la_duplicada` es true solo en el reenvío que sigue a
+		 * "Crear otra de todos modos": le dice a la API que salte el aviso y no vuelve a preguntar por
+		 * facturar (el usuario ya eligió). Es un parámetro y no un dato del componente: así no puede
+		 * quedar encendido si el reenvío se corta antes de salir (por ejemplo, al cancelar el
+		 * confirm) y saltarse el aviso del próximo guardado sin que nadie lo haya elegido.
+		 *
+		 * @param {Boolean} confirmando_la_duplicada
+		 */
+		enviar(confirmando_la_duplicada) {
 			if (this.guardando) {
 				return
 			}
 
-			let ok = this.es_compra ? this.check_compra() : this.check_venta()
+			let ok = this.es_compra ? this.check_compra() : this.check_venta(confirmando_la_duplicada)
 			if (!ok) {
 				return
 			}
 
 			let self = this
-			let datos = this.es_compra ? this.datos_compra() : this.datos_venta()
+			let datos = this.es_compra ? this.datos_compra() : this.datos_venta(confirmando_la_duplicada)
 
 			this.guardando = true
 			this.$store.commit('auth/setMessage', 'Guardando')
@@ -139,11 +169,28 @@ export default {
 				self.guardando = false
 				self.$store.commit('auth/setLoading', false)
 
+				// 409: la venta ya tiene una nota con esas unidades. No es un error: se le ofrece al
+				// usuario facturar la existente, crear otra igual o cancelar.
+				let data = err && err.response ? err.response.data : null
+				if (err && err.response && err.response.status == 409 && data && data.nota_existente && data.notas && data.notas.length) {
+					self.notas_existentes = data.notas
+					self.$bvModal.show('devolucion-notas-existentes')
+					return
+				}
+
 				let mensaje = self.mensaje_de_error(err)
 				if (mensaje) {
 					self.$toast.error(mensaje, { duration: 10000 })
 				}
 			})
+		},
+
+		/**
+		 * "Crear otra de todos modos" del aviso de nota existente: reenvía la devolución diciéndole a
+		 * la API que salte el aviso. El tope de stock de la API sigue valiendo.
+		 */
+		guardar_confirmando_la_duplicada() {
+			this.enviar(true)
 		},
 
 		/**
@@ -186,7 +233,7 @@ export default {
 		 *
 		 * @returns {Object}
 		 */
-		datos_venta() {
+		datos_venta(confirmando_la_duplicada) {
 			return {
 				tipo: 'venta',
 				sale_id: this.sale ? this.sale.id : null,
@@ -201,6 +248,11 @@ export default {
 				descriptions: this.descriptions,
 				discounts: this.get_models_by_id('discount', this.discounts_id),
 				surchages: this.get_models_by_id('surchage', this.surchages_id),
+				// Pide el aviso si la venta ya tiene una nota con esas unidades; con `confirmar_duplicada`
+				// el usuario ya eligió "Crear otra de todos modos". Campos opcionales: una API que no los
+				// conoce los ignora.
+				verificar_notas_existentes: true,
+				confirmar_duplicada: !!confirmando_la_duplicada,
 			}
 		},
 
@@ -231,9 +283,11 @@ export default {
 		 * Validaciones de una devolución de venta: las tres de siempre (depósito, total en cero,
 		 * tope sobre la factura) y el confirm si la venta está facturada y no se factura la nota.
 		 *
+		 * @param {Boolean} sin_preguntar true en el reenvío de "Crear otra de todos modos": no se vuelve
+		 *   a mostrar el confirm de la venta facturada (el usuario ya decidió con el aviso).
 		 * @returns {Boolean} true si se puede guardar.
 		 */
-		check_venta() {
+		check_venta(sin_preguntar) {
 			let ok = true
 			if (
 				this.regresar_stock
@@ -276,6 +330,7 @@ export default {
 				this.sale
 				&& this.sale.afip_tickets.length
 				&& !this.facturar_nota_credito
+				&& !sin_preguntar
 			) {
 				return confirm('La venta sobre la cual vas a generar esta nota de credito esta facturada, recomendamos facturar esta nota de credito sobre alguna factura de esta venta. ¿Queres continuar de todas formas y no facturar esta nota de credito?')
 			}

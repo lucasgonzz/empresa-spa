@@ -67,12 +67,14 @@ export default {
 			return facturas
 		},
 		/**
-		 * El botón de facturar sale cuando la nota tiene venta y cliente, la venta tiene alguna
-		 * factura autorizada y la nota todavía no llegó a ARCA: sin comprobante, o con uno que no
-		 * tiene ni CAE ni número (un intento rechazado). Con número ya se envió: se consulta.
+		 * El botón de facturar sale cuando la nota es de una venta (con o sin cliente: una venta a
+		 * consumidor final también se factura), la venta tiene alguna factura autorizada y la nota
+		 * todavía no llegó a ARCA: sin comprobante, o con uno que no tiene ni CAE ni número (un
+		 * intento rechazado). Con número ya se envió: se consulta. Una nota de proveedor no se
+		 * factura por acá.
 		 */
 		puede_facturarse() {
-			if (!this.nota_credito.sale_id || !this.nota_credito.client_id || !this.facturas_de_la_venta.length) {
+			if (!this.nota_credito.sale_id || this.nota_credito.provider_id || !this.facturas_de_la_venta.length) {
 				return false
 			}
 

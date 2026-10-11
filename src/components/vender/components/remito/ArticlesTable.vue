@@ -30,13 +30,13 @@
 							@keyup="callSetTotal(false)" 
 							@change="personalizado_confirmado(items[data.index])"
 							type="number"
-							:data-testid="'venta-item-precio-'+items[data.index].id"
-							:id="'price-vender-'+items[data.index].id"
+							:data-testid="'venta-item-precio-'+id_de_renglon(items[data.index])"
+							:id="'price-vender-'+id_de_renglon(items[data.index])"
 							min="0"
 							v-model="items[data.index].price_vender_personalizado"></b-form-input>
 
 							<b-popover
-							:target="'price-vender-'+items[data.index].id" 
+							:target="'price-vender-'+id_de_renglon(items[data.index])" 
 							triggers="hover" 
 							placement="left">
 							    <template #title><strong>Instrucciones</strong></template>
@@ -91,7 +91,7 @@
 					class="input-name m-b-10">
 						<b-form-input
 						:placeholder="get_item_name_placeholder(items[data.index])"
-						:id="'name-vender-'+items[data.index].id"
+						:id="'name-vender-'+id_de_renglon(items[data.index])"
 						v-model="items[data.index].name_vender_personalizado"></b-form-input>
 					</b-input-group>
 					<span
@@ -125,7 +125,7 @@
 						@click="callSetTotal(true, items[data.index])"
 						type="number"
 						min="0"
-						:data-testid="'venta-item-cantidad-'+items[data.index].id"
+						:data-testid="'venta-item-cantidad-'+id_de_renglon(items[data.index])"
 						:dusk="'amount_'+data.index"
 						v-model="items[data.index].amount"></b-form-input>
 					</b-input-group>
@@ -240,7 +240,7 @@
 				v-for="prop in image_dynamic_fields"
 				v-slot:[cell_slot_name(prop.key)]="data">
 					<table-thumbnail-images
-					:key="'thumb-'+items[data.index].id+'-'+prop.key"
+					:key="'thumb-'+id_de_renglon(items[data.index])+'-'+prop.key"
 					:model="items[data.index]"
 					:prop="prop"></table-thumbnail-images>
 				</template>
@@ -281,6 +281,11 @@ import varios_precios, { tiene_varios_precios } from '@/mixins/vender/varios_pre
 	estar sacado o plegado. Ver layout/foco.js.
 */
 import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout/foco'
+/*
+	Id del renglon en el DOM (price-vender-, name-vender-, venta-item-...): con sufijo de variante solo
+	si el renglon tiene variante. El porque esta en el archivo.
+*/
+import { id_de_renglon_vender } from '@/utils/id_de_renglon_vender'
 export default {
 	mixins: [vender, vender_set_total, previus_sales, check_stock, varios_precios],
 	components: {
@@ -475,6 +480,17 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Id del renglon para los ids y data-testid del template (utils/id_de_renglon_vender.js):
+		 * el del articulo, con sufijo de variante solo si el renglon tiene variante, para que dos
+		 * variantes del mismo articulo no compartan id en el DOM.
+		 *
+		 * @param {Object} item Renglon del remito.
+		 * @returns {String}
+		 */
+		id_de_renglon(item) {
+			return id_de_renglon_vender(item)
+		},
 		/**
 		 * Nombre de slot dinamico de b-table para una columna de imagen configurable.
 		 *
@@ -786,7 +802,7 @@ export default {
 			} else {
 
 				setTimeout(() => {
-					document.getElementById('price-vender-'+item.id).focus()
+					document.getElementById('price-vender-'+id_de_renglon_vender(item)).focus()
 				}, 300)
 				
 			}

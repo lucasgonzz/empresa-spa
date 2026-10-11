@@ -5,6 +5,11 @@
 		y sacarlo. Los valores que se muestran son los EFECTIVOS (el del campo o, si es null, el del
 		catálogo); tocar − / +, B o I deja un valor propio. Los estilos de las clases dpdf-panel__*
 		están en PanelDePropiedades.vue.
+
+		En un ticket de comandera (misión diseno-ticket-comandera, D7) la letra es la de la comandera:
+		tres tamaños en tres botones (Normal, Alto doble y Grande, del catálogo), negrita y
+		alineación; sin cursiva (las térmicas no la tienen). El logo del negocio no lleva rótulo ni
+		letra.
 	-->
 	<div class="dpdf-panel__cuerpo">
 		<p
@@ -57,8 +62,20 @@
 				</p>
 			</div>
 
+			<!-- Ticket: el logo es una imagen, sin rótulo ni letra -->
+			<p
+			v-if="es_logo"
+			class="dpdf-panel__nota">
+				<i
+				class="bi bi-image"
+				aria-hidden="true"></i>
+				<span>Es una imagen: no lleva rótulo ni letra. En la vista se ve un logo de muestra.</span>
+			</p>
+
 			<!-- El rótulo: el del catálogo (vacío), uno propio o ninguno -->
-			<div class="dpdf-panel__bloque">
+			<div
+			v-if="!es_logo"
+			class="dpdf-panel__bloque">
 				<label
 				for="dpdf-panel-rotulo"
 				class="dpdf-panel__etiqueta">Rótulo</label>
@@ -82,8 +99,50 @@
 				</b-form-checkbox>
 			</div>
 
+			<!-- Ticket: los tres tamaños de la comandera y la negrita (sin cursiva) -->
+			<div
+			v-if="es_ticket && !es_logo"
+			class="dpdf-panel__bloque">
+				<span
+				id="dpdf-panel-etiqueta-letra-ticket"
+				class="dpdf-panel__etiqueta">Letra</span>
+				<div
+				class="dpdf-panel__tamanos"
+				role="radiogroup"
+				aria-labelledby="dpdf-panel-etiqueta-letra-ticket">
+					<button
+					v-for="opcion in tamanos_de_la_comandera"
+					:key="opcion.tamano"
+					type="button"
+					role="radio"
+					class="dpdf-panel__tamano"
+					:class="{ 'dpdf-panel__tamano--activo': es_el_tamano(opcion) }"
+					:aria-checked="es_el_tamano(opcion) ? 'true' : 'false'"
+					:data-testid="'tamano-' + opcion.tamano + '-panel-disenador-pdf'"
+					@click="campo.tamano = opcion.tamano">
+						{{ opcion.nombre }}
+					</button>
+				</div>
+				<div class="dpdf-panel__letra">
+					<button
+					type="button"
+					class="dpdf-panel__alternar"
+					:class="{ 'dpdf-panel__alternar--activo': estilo.negrita }"
+					:aria-pressed="estilo.negrita ? 'true' : 'false'"
+					title="Negrita"
+					aria-label="Negrita"
+					data-testid="negrita-panel-disenador-pdf"
+					@click="campo.negrita = !estilo.negrita">
+						<i class="bi bi-type-bold"></i>
+					</button>
+				</div>
+				<small class="dpdf-panel__ayuda">{{ ayuda_del_tamano }}</small>
+			</div>
+
 			<!-- La letra: tamaño, negrita y cursiva -->
-			<div class="dpdf-panel__bloque">
+			<div
+			v-if="!es_ticket"
+			class="dpdf-panel__bloque">
 				<span
 				id="dpdf-panel-etiqueta-letra"
 				class="dpdf-panel__etiqueta">Letra</span>
@@ -142,7 +201,9 @@
 			</div>
 
 			<!-- La alineación del renglón -->
-			<div class="dpdf-panel__bloque">
+			<div
+			v-if="!es_logo"
+			class="dpdf-panel__bloque">
 				<span
 				id="dpdf-panel-etiqueta-alineacion"
 				class="dpdf-panel__etiqueta">Alineación</span>
@@ -170,6 +231,7 @@
 			</div>
 
 			<button
+			v-if="!es_logo"
 			type="button"
 			class="dpdf-panel__restablecer"
 			:disabled="!con_estilo_propio"
@@ -201,6 +263,7 @@ import {
 	aviso_de_texto_largo,
 } from './estado_del_disenador'
 import { nombre_de_la_alineacion, icono_de_la_alineacion } from './estilos_de_caja'
+import { tamanos_de_ticket, clase_de_tamano, ALTO, GRANDE, TIPO_IMAGEN } from './vista_de_ticket'
 
 /**
  * Propiedades de un campo en el panel del diseñador de PDF (misión diseno-pdf-configurable,
@@ -224,6 +287,45 @@ export default {
 	},
 	computed: {
 		/**
+		 * Si el campo está en un ticket de comandera.
+		 *
+		 * @returns {boolean}
+		 */
+		es_ticket() {
+			return this.disenador.es_ticket
+		},
+		/**
+		 * Si es el logo del negocio (tipo `imagen`, solo en el ticket): sin rótulo ni letra.
+		 *
+		 * @returns {boolean}
+		 */
+		es_logo() {
+			return !!(this.definicion && this.definicion.tipo === TIPO_IMAGEN)
+		},
+		/**
+		 * Los tres tamaños de la comandera (`tamanos_de_ticket` del catálogo, o los de siempre).
+		 *
+		 * @returns {Array<{tamano: number, nombre: string}>}
+		 */
+		tamanos_de_la_comandera() {
+			return tamanos_de_ticket(this.disenador.catalogo)
+		},
+		/**
+		 * Qué hace el tamaño elegido en la comandera.
+		 *
+		 * @returns {string}
+		 */
+		ayuda_del_tamano() {
+			let clase = clase_de_tamano(this.estilo.tamano)
+			if (clase === GRANDE) {
+				return 'Grande: el doble de alto y de ancho. Cada letra ocupa dos lugares, así que por renglón entran la mitad.'
+			}
+			if (clase === ALTO) {
+				return 'Alto doble: el doble de alto, el mismo ancho. Entran los mismos caracteres por renglón.'
+			}
+			return 'Normal: la letra de siempre de la comandera.'
+		},
+		/**
 		 * Columnas de la caja donde está el campo.
 		 *
 		 * @returns {number}
@@ -237,6 +339,10 @@ export default {
 		 * @returns {boolean}
 		 */
 		texto_largo() {
+			/* En un ticket no aplica: el rollo es continuo, un texto largo solo ocupa más renglones */
+			if (this.es_ticket) {
+				return false
+			}
 			return texto_libre_largo(this.campo, this.cols_de_la_caja)
 		},
 		/**
@@ -337,6 +443,15 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Si una opción de tamaño de la comandera es la del campo (por clase: un 13 es "Alto doble").
+		 *
+		 * @param {{tamano: number}} opcion
+		 * @returns {boolean}
+		 */
+		es_el_tamano(opcion) {
+			return clase_de_tamano(this.estilo.tamano) === clase_de_tamano(opcion.tamano)
+		},
 		/**
 		 * Nombre de una alineación.
 		 *

@@ -3,6 +3,7 @@ import dates from '@/common-vue/mixins/dates'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import db from '@/offline/db'
 import { normalizar_telefono } from '@/utils/whatsapp_phone'
+import { es_perfil_de_ticket } from '@/constants/vender_print_shortcut_options'
 export default {
     mixins: [select_payment_methods],
     computed: {
@@ -71,6 +72,12 @@ export default {
          *
          * 🔴 La relación se llama `cheque_banco` y NUNCA `banco`: toArray() del backend mergea
          * las relaciones sobre los atributos y una relación `banco` pisaría el texto legacy.
+         *
+         * 🔴 Esta regla está REPETIDA en la API y se cambia junto con ella (misión
+         * cheques-filtro-banco-catalogo, 10/10/2026): `Cheque::columnas_mostradas_para_filtros()`
+         * la usa para que la lupa y las flechas de la columna Banco filtren y ordenen por lo que
+         * se ve acá, y `ChequesFilteredExport` para la columna Banco del Excel. Si esta función
+         * muestra otra cosa y aquellas no, lo que se ve y lo que se filtra vuelven a no coincidir.
          *
          * @param {Object} model el cheque.
          * @returns {String}
@@ -872,6 +879,47 @@ export default {
             return ''
         },
         /**
+         * Formulario del cheque (misión cheque-edicion-acotada, 8/10/2026): el Cliente de solo
+         * lectura se muestra únicamente en un cheque recibido. Es v_if_function y no `v_if` porque
+         * showProperty() compara `typeof v_if == 'array'`, que nunca se cumple.
+         *
+         * @param {object} prop
+         * @param {object} model El cheque.
+         * @returns {boolean}
+         */
+        cheque_es_recibido(prop, model) {
+            return !!model && model.tipo === 'recibido'
+        },
+        /**
+         * Idem para el Proveedor de solo lectura: solo en un cheque emitido.
+         *
+         * @param {object} prop
+         * @param {object} model El cheque.
+         * @returns {boolean}
+         */
+        cheque_es_emitido(prop, model) {
+            return !!model && model.tipo === 'emitido'
+        },
+        /**
+         * `v_if_function` del formulario de Diseño de PDF (misión diseno-ticket-comandera, 9/10/2026):
+         * esconde los campos que un ticket de comandera no tiene ("Predeterminado WhatsApp (remito)",
+         * "Predeterminado WhatsApp (factura ARCA)", "Predeterminado Tienda (ecommerce)" y "Mostrar
+         * pie de página en cada hoja") cuando el tipo de hoja elegido es un rollo (`sheet_type.height`
+         * null, D2 del plan). El selector "Hoja o comandera" deja el objeto en `model.sheet_type` al
+         * elegir, así que se esconden en el momento, sin guardar. La API igual los fuerza en false en
+         * un ticket (D4).
+         *
+         * Va en un mixin GLOBAL a propósito: showProperty() también se evalúa en la tabla del ABM
+         * (Tr.vue), y un v_if_function que no existe ahí rompe el render de la fila.
+         *
+         * @param {object} prop
+         * @param {object} model El diseño de PDF.
+         * @returns {boolean}
+         */
+        pdf_column_profile_campo_de_hoja(prop, model) {
+            return !es_perfil_de_ticket(model)
+        },
+        /**
          * `v_if_function` de "Envío elegido": solo tiene sentido en un pedido con envío a
          * domicilio.
          *
@@ -1638,6 +1686,18 @@ export default {
          */
         combo_descuento_tipo_inicial() {
             return null
+        },
+
+        /**
+         * value_function de un campo de fecha que arranca en el dia de hoy (hoy: la fecha de
+         * emision de una factura de compra nueva). Corre al ABRIR el formulario, asi que no se
+         * congela con la fecha en que se cargo la pestaña. Formato 'YYYY-MM-DD', el que espera el
+         * <input type="date"> de common-vue/components/model/form/DatePicker.vue.
+         *
+         * @returns {String}
+         */
+        fecha_de_hoy_para_input() {
+            return moment().format('YYYY-MM-DD')
         },
 
         /**

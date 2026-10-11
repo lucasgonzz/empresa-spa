@@ -114,6 +114,8 @@ import article_pre_import_range from '@/store/article_pre_import_range'
 import unidad_medida from '@/store/unidad_medida'
 import cheque from '@/store/cheque'
 import cheque_banco from '@/store/cheque_banco'
+// Impuestos de retención propios del dueño (misión retenciones-abm-impuestos, 8/10/2026).
+import retencion_impuesto from '@/store/retencion_impuesto'
 // Balanzas que imprimen tickets con codigo de barras (mision balanzas-configurables, 3/10/2026).
 import balanza from '@/store/balanza'
 import expense from '@/store/expense'
@@ -194,6 +196,8 @@ import column_position from '@/store/column_position'
 import table_column_preference from '@/store/table_column_preference'
 import pdf_column_option from '@/store/pdf_column_option'
 import pdf_column_profile from '@/store/pdf_column_profile'
+// Tipos de hoja y rollos de comandera de los diseños de PDF (misión diseno-ticket-comandera)
+import sheet_type from '@/store/sheet_type'
 
 import platform from '@/store/platform'
 import article_embeddings_estado from '@/store/article_embeddings_estado'
@@ -416,6 +420,7 @@ export default new Vuex.Store({
         unidad_medida,
         cheque,
         cheque_banco,
+        retencion_impuesto,
         balanza,
         expense,
         expense_concept,
@@ -490,6 +495,7 @@ export default new Vuex.Store({
         table_column_preference,
         pdf_column_option,
         pdf_column_profile,
+        sheet_type,
 
         platform,
         platform_connector,
