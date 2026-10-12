@@ -4,10 +4,11 @@
 	v-if="show">
 		<b-input-group prepend="Moneda">
 			<!--
-				:value + @change y no v-model: al cambiar la moneda de un presupuesto en edicion hace
-				falta saber de cual venia (para convertir los renglones) y poder RECHAZAR el cambio si
-				no hay cotizacion. :key se incrementa cuando se rechaza, para que el select vuelva a
-				mostrar la moneda del store (b-form-select guarda lo elegido en un estado local).
+				:value + @change y no v-model: al cambiar la moneda de un comprobante en edicion
+				(presupuesto o venta guardada) hace falta saber de cual venia (para convertir los
+				renglones) y poder RECHAZAR el cambio si no hay cotizacion o si hay importes que no se
+				convierten. :key se incrementa cuando se rechaza, para que el select vuelva a mostrar la
+				moneda del store (b-form-select guarda lo elegido en un estado local).
 			-->
 			<b-form-select
 			class="select-moneda"
@@ -70,16 +71,25 @@ export default {
 			}
 		},
 		/*
-			Una VENTA ya guardada sigue con la moneda bloqueada (editarla es otra mision: el punto 10 del
-			presupuesto de 2R). Un PRESUPUESTO sin confirmar, en cambio, se puede pasar de $ a USD y
-			viceversa (mision 2r-presupuestos-editables, 1/10/2026): los renglones se convierten con la
-			cotizacion del campo USD en elegir_moneda_del_comprobante(). Uno confirmado no llega aca:
-			el boton "Actualizar en VENDER" esta deshabilitado y la API lo rechaza con 422.
+			La moneda y la cotizacion ya no se bloquean para ningun comprobante.
+
+			Un PRESUPUESTO sin confirmar se puede pasar de $ a USD y viceversa desde la mision
+			2r-presupuestos-editables (1/10/2026), y una VENTA guardada desde la mision
+			edicion-completa-ventas-presupuestos (8/10/2026, el punto 10 del presupuesto de 2R; hasta
+			ahi la venta tenia la moneda y la cotizacion bloqueadas). En los dos los renglones se
+			convierten con la cotizacion del campo USD en elegir_moneda_del_comprobante(), y cambiar
+			solo la cotizacion no toca ningun precio guardado (decision 2 de Lucas).
+
+			Una venta a cuenta corriente que cambia de moneda cambia de CUENTA (la cuenta corriente esta
+			partida por moneda): la API mueve el debito y BtnGuardar avisa lo cobrado
+			(previus_sale/aviso_cambio_de_cuenta.js). Un presupuesto confirmado no llega aca: el boton
+			"Actualizar en VENDER" esta deshabilitado y la API lo rechaza con 422. Una venta que no se
+			puede editar (facturada con CAE, cerrada, etc.) tampoco: la API la rechaza entera.
+
+			Queda el computed (y no un `false` suelto en el template) para que el proximo que necesite
+			bloquearla tenga donde hacerlo.
 		*/
 		disabled() {
-			if (this.editando_venta_previa) {
-				return true
-			}
 			return false
 		},
 		editando_venta_previa() {
@@ -87,6 +97,21 @@ export default {
 		},
 		budget() {
 			return this.$store.state.vender.budget
+		},
+		/*
+			Se esta editando un comprobante GUARDADO: un presupuesto ("Actualizar en VENDER") o una venta.
+			Sus renglones toman el precio del pivot, que check_moneda no vuelve a cotizar, asi que un
+			cambio de moneda tiene que convertirlos (ver mixins/vender/reexpresar_comprobante.js).
+		*/
+		comprobante_en_edicion() {
+			return !!this.budget || this.editando_venta_previa
+		},
+		/*
+			"del presupuesto" o "de la venta", para los avisos. Hasta el 8/10/2026 decian siempre "del
+			presupuesto", que era el unico comprobante en edicion que podia cambiar de moneda.
+		*/
+		nombre_del_comprobante_en_edicion() {
+			return this.budget ? 'del presupuesto' : 'de la venta'
 		},
 	},
 	data() {
@@ -122,8 +147,8 @@ export default {
 			}
 
 			/*
-				🔴 La cotizacion cambio con un presupuesto en edicion: los renglones tienen que
-				re-expresarse con la nueva. Va ACA, en el watcher del store, y no en set_valor_dolar(),
+				🔴 La cotizacion cambio con un comprobante en edicion (presupuesto o venta guardada): los
+				renglones tienen que re-expresarse con la nueva. Va ACA, en el watcher del store, y no en set_valor_dolar(),
 				porque la cotizacion puede cambiar por cuatro caminos --el vendedor tipeando, el
 				restaurar_dolar_si_falta() al salir del campo vacio, iniciar_dolar() y el chequeo de
 				guardado que carga la del sistema-- y los cuatro terminan en un commit al store. Sin
@@ -173,18 +198,21 @@ export default {
 			this.setTotal()
 		},
 		/**
-		 * Con un presupuesto en edicion, vuelve a expresar los renglones con la cotizacion vigente
-		 * (la moneda no cambia). Si el presupuesto esta en su moneda original no cambia ningun
-		 * precio: los importes son los originales. Sin cotizacion mayor que cero no hace nada (el
-		 * campo puede estar vacio mientras el vendedor escribe; al salir se restaura el dolar del
-		 * sistema y este metodo vuelve a correr).
+		 * Con un comprobante en edicion (presupuesto o venta guardada), vuelve a expresar los
+		 * renglones con la cotizacion vigente (la moneda no cambia). Si el comprobante esta en su
+		 * moneda original no cambia ningun precio: los importes son los originales, y cambiar la
+		 * cotizacion solo cambia la que se guarda (decision 2 de Lucas, 8/10/2026). Sin cotizacion
+		 * mayor que cero no hace nada (el campo puede estar vacio mientras el vendedor escribe; al
+		 * salir se restaura el dolar del sistema y este metodo vuelve a correr).
+		 *
+		 * Hasta el 8/10/2026 la venta guardada salia por aca sin hacer nada (`editando_venta_previa`):
+		 * tenia la cotizacion bloqueada. Al abrirla tambien corre (el store recibe la cotizacion de la
+		 * venta) y no cambia nada, porque la venta esta en su moneda original: solo deja anotado el
+		 * origen de cada renglon.
 		 */
 		reexpresar_por_cambio_de_cotizacion() {
 
-			if (
-				!this.budget
-				|| this.editando_venta_previa
-			) {
+			if (!this.comprobante_en_edicion) {
 				return
 			}
 
@@ -204,13 +232,20 @@ export default {
 		 * Con una venta nueva o un presupuesto nuevo es lo de siempre: se guarda la moneda y se
 		 * recalcula el total (los precios salen del catalogo y check_moneda los cotiza).
 		 *
-		 * Con un presupuesto en edicion (`budget` en el store) los renglones NO salen del catalogo
-		 * sino de lo guardado, y check_moneda no cotiza lo que sale del pivot: por eso aca se
-		 * CONVIERTEN antes de recalcular (ver mixins/vender/reexpresar_comprobante.js, que explica la
-		 * regla). La cotizacion es la que muestra el campo USD en este momento; si el store no
-		 * tiene una (presupuesto en pesos, o en USD guardado sin cotizacion) se usa el dolar del
-		 * sistema, igual que al abrir Vender. Sin ninguna de las dos el cambio se RECHAZA: convertir
-		 * con una cotizacion inventada deja precios que parecen buenos y no lo son.
+		 * Con un comprobante en edicion (`budget` en el store, o una venta guardada desde el
+		 * 8/10/2026) los renglones NO salen del catalogo sino de lo guardado, y check_moneda no
+		 * cotiza lo que sale del pivot: por eso aca se CONVIERTEN antes de recalcular (ver
+		 * mixins/vender/reexpresar_comprobante.js, que explica la regla). La cotizacion es la que
+		 * muestra el campo USD en este momento; si el store no tiene una (comprobante en pesos, o en
+		 * USD guardado sin cotizacion) se usa el dolar del sistema, igual que al abrir Vender. Sin
+		 * ninguna de las dos el cambio se RECHAZA: convertir con una cotizacion inventada deja precios
+		 * que parecen buenos y no lo son.
+		 *
+		 * 🔴 Tambien se RECHAZA si el comprobante tiene importes fijos que el mixin no convierte (el
+		 * canje de puntos, el reparto en varios metodos de pago de una venta, una devolucion cargada
+		 * en esta edicion): el vendedor los saca primero. Convertir los renglones y dejarlos a ellos
+		 * en la moneda vieja guardaria la venta con importes en dos monedas. El porque de cada uno
+		 * esta en reexpresar_comprobante.js ("LO QUE NO SE CONVIERTE Y POR ESO FRENA").
 		 *
 		 * Los renglones se recalculan siempre desde sus importes originales (ver el mixin): volver a
 		 * la moneda original los devuelve exactos, y cambiar la cotizacion despues de convertir los
@@ -222,7 +257,7 @@ export default {
 
 			let moneda_anterior = this.moneda_id
 
-			if (!this.budget) {
+			if (!this.comprobante_en_edicion) {
 				this.moneda_id = moneda_nueva
 				this.setTotal()
 				return
@@ -234,6 +269,19 @@ export default {
 
 			if (cambia_de_expresion) {
 
+				let importes_sin_convertir = this.reexpresar_importes_fijos_sin_convertir()
+
+				if (importes_sin_convertir.length) {
+
+					this.$toast.warning('Para cambiar la moneda ' + this.nombre_del_comprobante_en_edicion + ' primero sacá ' + importes_sin_convertir.join(', ') + ': esos importes no se convierten solos y quedarían en la moneda anterior.', {
+						duration: 10000,
+					})
+
+					this.select_moneda_key++
+
+					return
+				}
+
 				if (!(Number(this.valor_dolar) > 0)) {
 					this.cargar_dolar_por_defecto()
 				}
@@ -242,7 +290,7 @@ export default {
 
 				if (!(cotizacion > 0)) {
 
-					this.$toast.warning('Para cambiar la moneda del presupuesto hace falta la cotización del dólar. Cargala en el campo USD y volvé a elegir la moneda.', {
+					this.$toast.warning('Para cambiar la moneda ' + this.nombre_del_comprobante_en_edicion + ' hace falta la cotización del dólar. Cargala en el campo USD y volvé a elegir la moneda.', {
 						duration: 8000,
 					})
 
@@ -260,7 +308,7 @@ export default {
 
 			if (cambia_de_expresion) {
 
-				this.$toast.info('Se convirtieron los renglones del presupuesto con la cotización del dólar de ' + cotizacion + '.', {
+				this.$toast.info('Se convirtieron los renglones ' + this.nombre_del_comprobante_en_edicion + ' con la cotización del dólar de ' + cotizacion + '.', {
 					duration: 6000,
 				})
 
@@ -279,8 +327,17 @@ export default {
 		 * Si el campo queda vacio o en cero NO se restaura el dolar del sistema acá, porque el vendedor
 		 * puede estar borrando para escribir otro valor: eso lo hace `restaurar_dolar_si_falta` cuando
 		 * sale del campo.
+		 *
+		 * Es el UNICO camino del vendedor (el @input de bootstrap-vue sale solo de lo que tipea una
+		 * persona, no de los cambios por codigo), asi que aca y solo aca se anota que la cotizacion la
+		 * edito a mano: con una venta guardada que no tenia cotizacion, es lo que decide si el PUT
+		 * manda la del campo o deja la guardada (ver store/vender/previus_sales.js,
+		 * `cotizacion_editada_a_mano`). iniciar_dolar(), restaurar_dolar_si_falta() y
+		 * cargar_dolar_por_defecto() no la prenden: ponen el dolar del sistema por su cuenta.
 		 */
 		set_valor_dolar() {
+			this.$store.commit('vender/previus_sales/set_cotizacion_editada_a_mano', true)
+
 			this.valor_dolar = Number(this.input_dolar_valor)
 
 			this.setTotal()
