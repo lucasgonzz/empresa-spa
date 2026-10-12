@@ -71,6 +71,17 @@ export default {
 							...prop,
 							value: 0,
 						})
+					} else if (prop.type == 'date' && prop.value_function) {
+						/*
+							Mision `factura-compra-tres-defectos` (9/10/2026): el valor inicial de
+							una fecha que tiene que calcularse AL ABRIR el formulario (por ejemplo,
+							hoy) y no cuando se cargo el archivo del modelo. Aditivo: solo lo usa
+							un campo de fecha que declare `value_function`.
+						*/
+						properties.push({
+							...prop,
+							value: this[prop.value_function](),
+						})
 					}
 				})
 			}

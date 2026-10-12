@@ -5,9 +5,11 @@
 	:class="afip_ticket.cae ? 'border-primary' : 'border-danger'">
 		<div class="factura-card__header">
 			<div class="factura-card__title">
-				<i class="bi bi-receipt factura-card__icon"></i>
+				<i
+				class="bi factura-card__icon"
+				:class="es_nota_credito ? 'bi-receipt-cutoff' : 'bi-receipt'"></i>
 				<span>
-					Factura
+					{{ nombre_comprobante }}
 					<strong v-if="afip_ticket.cbte_numero">N° {{ afip_ticket.cbte_numero }}</strong>
 					<span
 					v-else
@@ -19,7 +21,7 @@
 			v-if="afip_ticket.cae"
 			variant="primary"
 			size="sm"
-			title="Imprimir factura"
+			:title="'Imprimir '+nombre_comprobante.toLowerCase()"
 			@click.stop="print">
 				<i class="bi bi-printer"></i>
 			</b-button>
@@ -79,7 +81,7 @@
 			<b-button
 			@click.stop="delete_afip_ticket(afip_ticket)"
 			variant="outline-danger"
-			title="Eliminar factura"
+			:title="'Eliminar '+nombre_comprobante.toLowerCase()"
 			v-if="puede_eliminar(afip_ticket)">
 				<i class="bi bi-trash"></i>
 			</b-button>
@@ -173,6 +175,10 @@
 // cuando se invoca this.printTicket(sale) desde un método (ej. al click),
 // nunca automáticamente al crear/montar el componente.
 import print_ticket from '@/mixins/sale/print_ticket/index'
+import {
+	VENDER_PRINT_OPTION_TICKET_PREFIX,
+	find_vender_ticket_profile,
+} from '@/constants/vender_print_shortcut_options'
 import { env } from '@/runtime_config'
 
 export default {
@@ -199,7 +205,24 @@ export default {
 		resolved_sale_factura_print_option() {
 			return this.owner ? this.owner.sale_factura_print_option : null
 		},
+		/**
+		 * La tarjeta principal no siempre es una factura: en Comprobantes › Notas de credito llega el
+		 * comprobante de la NOTA (CurrentAcount::afip_ticket, por nota_credito_id) y tiene que
+		 * rotularse, imprimirse y explicarse como lo que es.
+		 *
+		 * @returns {boolean}
+		 */
+		es_nota_credito() {
+			return this.es_comprobante_nota_credito(this.afip_ticket)
+		},
+		nombre_comprobante() {
+			return this.es_nota_credito ? 'Nota de credito' : 'Factura'
+		},
 		title_description() {
+			if (this.es_nota_credito) {
+				return this.title_description_nota_credito(this.afip_ticket)
+			}
+
 			if (this.afip_ticket.cae) {
 				return 'Factura de ARCA'
 			} else {
@@ -208,6 +231,10 @@ export default {
 
 		},
 		descriptions() {
+			if (this.es_nota_credito) {
+				return this.descriptions_nota_credito(this.afip_ticket)
+			}
+
 			if (this.afip_ticket.cae) {
 				return [
 					'Factura de ARCA emitida correctamente',
@@ -235,6 +262,20 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Indica si un comprobante ARCA es una nota de credito y no una factura. `nota_credito_id`
+		 * lo trae desde que se crea (AfipNotaCreditoHelper), aunque ARCA no lo haya autorizado;
+		 * `cbte_tipo` recien se escribe con la respuesta de ARCA, por eso va de respaldo.
+		 *
+		 * @param {Object} afip_ticket
+		 * @returns {boolean}
+		 */
+		es_comprobante_nota_credito(afip_ticket) {
+			let tipos_nota_credito = ['3', '8', '13', '21', '53', '203', '208', '213']
+
+			return !!afip_ticket.nota_credito_id
+				|| tipos_nota_credito.indexOf(String(afip_ticket.cbte_tipo)) != -1
+		},
 		title_description_nota_credito(nota_credito_afip_ticket) {
 			if (nota_credito_afip_ticket.cae) {
 				return 'Nota de Credito Facturada ante ARCA'
@@ -268,9 +309,24 @@ export default {
 		},
 		print() {
 
-			if (this.afip_ticket.cae) {
-				this.print_afip_ticket()
+			if (!this.afip_ticket.cae) {
+				return
 			}
+
+			/*
+			 * Una nota de credito se imprime siempre con su propio PDF (el de la nota, con su CAE). La
+			 * preferencia del dueño (Ticket 2.0 o A4) arma el comprobante de la VENTA: no aplica.
+			 */
+			if (this.es_nota_credito) {
+				let url = this.print_url
+					? this.print_url
+					: '/current-acount/pdf/'+this.afip_ticket.nota_credito_id
+
+				window.open(env('VUE_APP_API_URL')+url)
+				return
+			}
+
+			this.print_afip_ticket()
 		},
 		puede_eliminar(afip_ticket) {
 			if (
@@ -341,6 +397,11 @@ export default {
 			}
 		},
 		delete_afip_ticket(afip_ticket) {
+			if (this.es_comprobante_nota_credito(afip_ticket)) {
+				this.delete_nota_credito_afip_ticket(afip_ticket)
+				return
+			}
+
 			let text = '¿Seguro que quiere eliminar esta factura?'
 
 			if (afip_ticket.cbte_numero) {
@@ -373,6 +434,8 @@ export default {
 		 * según la preferencia del dueño (sale_factura_print_option):
 		 * - 'ticket_2': Ticket 2.0 vía QZ Tray (this.printTicket, del mixin print_ticket).
 		 * - 'factura_a4:{id}': PDF A4 del perfil fiscal indicado.
+		 * - 'ticket:{id}': ese diseño de ticket de comandera, directo a la impresora (misión
+		 *   diseno-ticket-comandera), con el comprobante de esta tarjeta.
 		 * - default/sin preferencia/perfil inexistente: ticket común (comportamiento de siempre).
 		 *
 		 * @returns {void}
@@ -383,8 +446,20 @@ export default {
 
 			// Ticket 2.0: reutiliza el mixin print_ticket ya usado en sale-print-buttons/Index.vue.
 			// Requiere la venta completa (this.sale) para armar el contenido del ticket.
+			//
+			// Misión diseno-ticket-comandera: va con el comprobante de ESTA tarjeta. La API elige el
+			// ticket de factura por defecto y lo imprime con esta factura (y no con la primera de la
+			// venta, que era lo que hacía el Ticket 2.0 de siempre en una venta con dos facturas).
 			if (option === 'ticket_2' && this.sale) {
-				this.printTicket(this.sale)
+				this.printTicket(this.sale, {
+					afip_ticket_id: this.afip_ticket.id,
+				})
+				return
+			}
+
+			// Un diseño de ticket de comandera de factura en particular ('ticket:{id}').
+			if (option && this.sale && option.indexOf(VENDER_PRINT_OPTION_TICKET_PREFIX) === 0) {
+				this.imprimir_factura_con_ticket_de_comandera(option)
 				return
 			}
 
@@ -406,6 +481,39 @@ export default {
 			let link = env('VUE_APP_API_URL')+this.print_url
 			window.open(link)
 
+		},
+		/**
+		 * Imprime esta factura con un diseño de ticket de comandera elegido en Configuración
+		 * general (sale_factura_print_option = 'ticket:{id}', misión diseno-ticket-comandera).
+		 *
+		 * 🔴 Si el diseño ya no existe (lo borraron o lo pasaron a hoja) no se falla en silencio: se
+		 * avisa dónde se cambia y se imprime igual el ticket de factura por defecto. Si el store de
+		 * diseños todavía no bajó, no se puede saber: se manda el id y la API decide (un 422 hace
+		 * el mismo aviso desde el mixin print_ticket).
+		 *
+		 * @param {string} option 'ticket:{id}'
+		 */
+		imprimir_factura_con_ticket_de_comandera(option) {
+			const profiles = this.$store.state.pdf_column_profile.models || []
+			const encontrado = find_vender_ticket_profile(option, profiles)
+			const hay_disenos_de_venta = profiles.some(function (profile) {
+				return profile.model_name === 'sale'
+			})
+
+			if (!encontrado.profile && hay_disenos_de_venta) {
+				this.$toast.warning('El ticket elegido para imprimir la factura ya no existe. Se imprime el ticket de factura por defecto. Cambialo en Configuración general, Módulo de ventas.', {
+					timeout: 10000,
+				})
+				this.printTicket(this.sale, {
+					afip_ticket_id: this.afip_ticket.id,
+				})
+				return
+			}
+
+			this.printTicket(this.sale, {
+				pdf_column_profile_id: encontrado.profile_id,
+				afip_ticket_id: this.afip_ticket.id,
+			})
 		},
 		/**
 		 * Consulta en ARCA el estado de una nota de credito AFIP (mismo endpoint que factura).
@@ -491,6 +599,11 @@ export default {
 			}
 		},
 		consultar(afip_ticket) {
+			if (this.es_comprobante_nota_credito(afip_ticket)) {
+				this.consultar_nota_credito_afip_ticket(afip_ticket)
+				return
+			}
+
 			this.$store.commit('auth/setMessage', 'Consultando comprobante')
 			this.$store.commit('auth/setLoading', true)
 

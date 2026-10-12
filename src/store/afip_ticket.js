@@ -25,6 +25,18 @@ export default {
 		permiso_existente: '',
 		incoterms: 'FOB',
 		afip_information_id: 0,
+		/*
+			true SOLO cuando el punto de venta puesto no lo eligio el usuario sino el sistema:
+			BtnFacturar.vue lo prende cuando lo saca de la sucursal de la venta (el punto de
+			venta cuya address_id es la de la venta). Mientras esta en true, el select del modal
+			de confirmacion queda bloqueado, porque esa asignacion no se cambia a mano.
+
+			Es una bandera aparte y no se deduce de afip_information_id: con un punto de venta
+			elegido a mano el id tambien es distinto de cero, y bloquear por eso era justo el
+			defecto (el select se trababa en el acto al elegir uno). Se apaga junto con el id en
+			limpiar_datos_de_facturacion() del mixin sale/afip_ticket.
+		*/
+		punto_de_venta_por_sucursal: false,
 		afip_tipo_comprobante_id: 0,
 		monto_a_facturar: '',
 		/*
@@ -97,6 +109,9 @@ export default {
 		},
 		set_afip_information_id(state, value) {
 			state.afip_information_id = value
+		},
+		set_punto_de_venta_por_sucursal(state, value) {
+			state.punto_de_venta_por_sucursal = value
 		},
 		set_afip_tipo_comprobante_id(state, value) {
 			state.afip_tipo_comprobante_id = value

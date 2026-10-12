@@ -19,6 +19,14 @@ export default {
 		categories: [],
 		providers: [],
 
+		/*
+			Totales de TODO el periodo buscado (no solo de los articulos de la lista), como los
+			devuelve la API en `totales`: unidades_vendidas, price, cost, beneficio, sus tres
+			versiones en dolares y cantidad_articulos. Queda en null si la API es vieja y no lo
+			manda: ahi totales/Index.vue vuelve a sumar la lista, como siempre.
+		*/
+		totales: null,
+
 		loading: false,
 	},
 	mutations: {
@@ -51,6 +59,9 @@ export default {
 		},
 		set_providers(state, value) {
 			state.providers = value 
+		},
+		set_totales(state, value) {
+			state.totales = value
 		},
 		set_loading(state, value) {
 			state.loading = value 

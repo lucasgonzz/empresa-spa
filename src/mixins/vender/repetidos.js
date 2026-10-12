@@ -12,6 +12,11 @@ import { tiene_varios_precios } from '@/mixins/vender/varios_precios'
 	otra variante. Ver utils/id_de_renglon_vender.js.
 */
 import { id_de_renglon_vender } from '@/utils/id_de_renglon_vender'
+/*
+	Suma de cantidades sin el ruido de la coma flotante (0.17 + 0.25 = 0.42, no
+	0.42000000000000004). Ver actualizar_cantidad() y utils/cantidades.js.
+*/
+import { sumar_cantidades } from '@/utils/cantidades'
 export default {
 	mixins: [computed, vender_set_total, deteccion_combos],
 	methods: {
@@ -157,15 +162,19 @@ export default {
 					return
 				}
 
-				repetido.amount = Number(repetido.amount)
-				
 				let amount = this.item_vender.amount
 
 				if (amount == '') {
 					amount = 1
 				}
 
-				repetido.amount += Number(amount)
+				/*
+					Se suma con sumar_cantidades y no con `+=`: en coma flotante dos tickets de balanza
+					de 0.17 y 0.25 kg daban 0.42000000000000004, que se veia en el input de Cantidad del
+					renglon y viajaba en la venta (mision cantidad-balanza-redondeo, 10/10/2026).
+					sumar_cantidades ya pasa los dos lados por Number(), como hacia el par de antes.
+				*/
+				repetido.amount = sumar_cantidades(repetido.amount, amount)
 				
 				if (this.check_stock_disponible(repetido)) {
 

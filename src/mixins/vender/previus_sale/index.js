@@ -945,8 +945,11 @@ export default {
 					getPriceVender toma el del pivot y varios_precios_guardados agrupa por id +
 					article_variant_id, que no cambian.
 
-					Un presupuesto no guarda variante: su pivot no trae article_variant_id
-					(Number(undefined) = NaN, falsy), asi que queda sin variante como siempre.
+					Desde la mision presupuestos-con-variantes (8/10/2026) el presupuesto TAMBIEN guarda
+					la variante por renglon (article_budget.article_variant_id), asi que un presupuesto
+					reabierto vuelve con cada renglon en su variante, igual que una venta. Un presupuesto
+					guardado antes de esa mision (o con una API sin la columna) no trae la clave en el
+					pivot (Number(undefined) = NaN, falsy) y vuelve sin variante, como siempre.
 				*/
 				let variante_del_renglon = Number(article.pivot.article_variant_id || 0)
 

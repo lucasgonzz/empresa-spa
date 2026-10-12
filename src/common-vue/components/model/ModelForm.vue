@@ -259,39 +259,18 @@
 								<!-- Toggle tipo iPhone con el valor actual (Sí/No) al lado, separado por margen.
 								     Antes se omitía el texto por redundante con el label de arriba; Lucas pidió
 								     mantenerlo visible, con el mismo estilo de badge que usa el tipo 'boolean'. -->
-								<div
+								<!-- La fila vive en FieldCheckboxToggle (mismo DOM) para que la pastilla siga al
+								     interruptor al instante aunque el modelo sea una copia que Vue no observa;
+								     ver el comentario de ese componente. `prendido` es lo que ve este formulario
+								     al dibujarse. -->
+								<field-checkbox-toggle
 								v-else-if="prop.type == 'checkbox'"
-								class="model-form__checkbox-row">
-									<span
-									class="model-form__boolean-badge"
-									:class="Number(model[prop.key]) === 1 ? 'model-form__boolean-badge--yes' : 'model-form__boolean-badge--no'">
-										{{ Number(model[prop.key]) === 1 ? 'Sí' : 'No' }}
-									</span>
-									<!-- El data-testid del label NO es un duplicado del que lleva el input: el input
-									     de un toggle esta oculto por CSS (el control visible es este label con su
-									     track y su thumb), asi que un test no lo puede clickear ni marcar con
-									     check() —Playwright exige que el elemento sea visible— y la unica salida
-									     seria forzar el click salteando esa verificacion. Con este testid el test
-									     clickea lo mismo que clickea una persona, y sigue leyendo el estado del
-									     input por su propio testid. -->
-									<label
-									:for="model_name+'-'+prop.key"
-									:data-testid="model_name+'-'+prop.key+'-toggle'"
-									class="model-form__toggle"
-									:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
-										<input
-										type="checkbox"
-										:id="model_name+'-'+prop.key"
-										:data-testid="model_name+'-'+prop.key"
-										:disabled="isDisabled(prop, form_to_filter)"
-										:checked="Number(model[prop.key]) === 1"
-										@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
-										<!-- Track: fondo del toggle; thumb: círculo deslizante -->
-										<span class="model-form__toggle-track">
-											<span class="model-form__toggle-thumb"></span>
-										</span>
-									</label>
-								</div>
+								:model="model"
+								:prop="prop"
+								:model_name="model_name"
+								:disabled="isDisabled(prop, form_to_filter)"
+								:prendido="Number(model[prop.key]) === 1"
+								@cambio="al_cambiar_interruptor(prop)"></field-checkbox-toggle>
 
 									<google-geocoder
 									v-else-if="prop.type == 'google_geocoder'"
@@ -362,6 +341,12 @@
 									v-else-if="prop.type == 'display' && prop.key == 'pdf_column_profile_editor' && model_name == 'pdf_column_profile'"
 									:key="'pdf-column-profile-editor-' + (model.id || 'new') + '-' + (model.model_name || '')"
 									:model="model"></pdf-column-profile-editor>
+
+									<!-- "Hoja o comandera" del Diseño de PDF de venta (misión diseno-ticket-comandera) -->
+									<selector-de-hoja
+									v-else-if="prop.type == 'display' && prop.key == 'selector_de_hoja' && model_name == 'pdf_column_profile'"
+									:key="'selector-de-hoja-' + (model.id || 'new')"
+									:model="model"></selector-de-hoja>
 
 									</template>
 
@@ -562,6 +547,9 @@ import Cards from '@/common-vue/components/display/cards/Index'
 import Images from '@/common-vue/components/model/images/Index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import GroupPorps from '@/common-vue/components/model/GroupPorps'
+// Sincronico a proposito: el interruptor tiene que estar en el DOM en el mismo dibujo que el
+// resto del formulario, como cuando la fila vivia adentro de este archivo.
+import FieldCheckboxToggle from '@/common-vue/components/model/form/FieldCheckboxToggle'
 import PaymentMethodsTable from '@/components/expenses/components/PaymentMethodsTable'
 
 // import BtnDelete from '@/common-vue/components/BtnDelete'
@@ -594,9 +582,11 @@ export default {
 		Images,
 		GroupPorps,
 		BtnLoader,
+		FieldCheckboxToggle,
 		// BtnDelete,
 		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
 		PdfColumnProfileEditor: () => import('@/common-vue/components/pdf/PdfColumnProfileEditor.vue'),
+		SelectorDeHoja: () => import('@/common-vue/components/pdf/selector-de-hoja/Index.vue'),
 	},
 
 	mixins: [model_functions],
@@ -1123,6 +1113,34 @@ export default {
 		colorLabel(prop) {
 			if (prop.color_function) {
 				return this[prop.color_function](this.model)
+			}
+		},
+		/**
+		 * Redibuja el formulario cuando se toca un interruptor cuya propiedad lo pide con
+		 * `redibujar_al_cambiar: true`. Sin esa clave no hace nada.
+		 *
+		 * Por qué existe: un modelo que no declara `full_reactivity` llega acá como una copia
+		 * plana que Vue no observa (`model/Index.vue::model()` devuelve `{...model}`). El `$set`
+		 * del interruptor deja el valor escrito (por eso se guarda bien) pero no redibuja este
+		 * formulario, que es quien evalúa los `v_if_function` de los demás campos: los que
+		 * dependen del interruptor quedaban un paso atrasados (no aparecían o no desaparecían
+		 * hasta que algo más redibujara).
+		 *
+		 * Por qué no `full_reactivity` en el modelo: el formulario trabajaría por referencia
+		 * sobre el registro del store. En el costo extra de una compra, editar una fila
+		 * existente la modificaría adentro de `provider_order.provider_order_extra_costs`, que
+		 * es la lista que suma el total de la compra, y cancelar no lo revertiría.
+		 *
+		 * Por qué no un redibujo global en todo interruptor: se probó y rompe
+		 * `deshabilitado_si_hay` de los recargos/descuentos de artículo (cambia el estado de
+		 * otros campos al instante). Por eso es opt-in por propiedad: se declara solo en los
+		 * interruptores que gobiernan la visibilidad de otros campos.
+		 *
+		 * @param {Object} prop Definición de la propiedad (interruptor) que cambió.
+		 */
+		al_cambiar_interruptor(prop) {
+			if (prop && prop.redibujar_al_cambiar) {
+				this.$forceUpdate()
 			}
 		},
 		isDisabled(prop, form_to_filter = false) {

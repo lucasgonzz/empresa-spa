@@ -80,12 +80,13 @@ export default {
 		que_hace: 'Lleva a la pantalla donde quedó la carga: Gastos para un gasto, la Agenda para una tarea, Ventas para una venta, y la pantalla de lo que se dio de alta o se editó (Proveedores, Clientes, Listado...).',
 		repercute: [
 			'Desde el panel del asistente, lo cierra. Desde la conversación de un informe del mostrador, lo que se cierra es el informe.',
-			'Si ya estás en esa pantalla no navega: la vuelve a cargar para que aparezca lo que se registró. En Gastos, si hay una búsqueda activa, no se toca.',
+			'Llega con lo registrado a la vista: Gastos abre el día del gasto (aunque sea de otro día), Ventas y Presupuestos abren hoy, y las listas (Clientes, Proveedores, ABM...) se vuelven a pedir desde la primera página.',
+			'Si ya estás en esa pantalla no navega: la vuelve a cargar. En Gastos, abrir el día del gasto saca una búsqueda que hubiera; en Clientes, Proveedores y el Listado la búsqueda se mantiene y se vuelve a hacer.',
 			'No registra ni cambia nada.',
 			'Los pagos no tienen este botón: se ven en la cuenta corriente del cliente o del proveedor.',
 			'Una baja tampoco: no hay nada que ir a ver. Si el sistema no tiene una pantalla para lo que se registró, el botón directamente no aparece.',
 		],
-		nota_interna: 'La pantalla sale de resultado.ruta ({ name, params, texto }) que manda el API; la SPA no la decide, y con resultado.ruta en null (una baja, una entidad sin pantalla) AccionCard.vue no pinta el boton. La recarga es ai_chat/refrescarPantallaDeLaAccion: agenda/cargar si la agenda ya se cargo (la vista Realizadas no: su rango vive en el componente) y expense/getModels si no hay busqueda activa. Despues de Confirmar pasa lo mismo sin tocar este boton.',
+		nota_interna: 'La pantalla sale de resultado.ruta ({ name, params, texto, fecha? }) que manda el API, pasada por ruta_de_la_accion (store/ai_chat.js): traduce los names viejos que el router no tiene (listado -> article, proveedores -> provider/compras), completa la solapa que falte (client -> clientes, provider -> proveedores, la foto de sucursal -> abm/sucursales) y deja params como objeto. Con resultado.ruta en null (una baja, una entidad sin pantalla) AccionCard.vue no pinta el boton. La recarga es ai_chat/refrescarPantallaDeLaAccion con al_tocar_ver, en dos momentos: antes del push pone el dia en las pantallas por dia (ruta.fecha o hoy), y despues pide lo que la vista no pide sola al montarse (Gastos y Compras por dia; los models de Empleados y de los catalogos del ABM, que leen los selects; y la busqueda activa de una tabla paginada, que view/Index.vue no re-pide); agenda/cargar si la agenda ya se cargo. Una edicion generica sin fecha no mueve el dia. El store a refrescar sale de resultado.entidad (cargas genericas) o del tipo/pantalla (tabla PANTALLAS). Mision ver-en-del-asistente-refresca-destino, 10/10/2026.',
 	},
 
 	'asistente-adjunto-imagen': {

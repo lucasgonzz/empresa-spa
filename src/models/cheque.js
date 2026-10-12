@@ -93,6 +93,15 @@ export default {
 
 				No va al formulario: ahí el control es el select de abajo. El texto `banco` de un
 				cheque viejo no se pierde al editarlo porque el formulario manda el modelo entero.
+
+				Misión cheques-filtro-banco-catalogo (10/10/2026): la lupa y las flechas de esta
+				columna van por `POST global-search/cheque` con `key: 'banco'`, y la API los
+				resuelve sobre LO QUE SE VE (no sobre el texto guardado), con la misma regla que
+				`cheque_banco_texto`. Esa regla está repetida en la API
+				(`Cheque::columnas_mostradas_para_filtros()` para filtrar y ordenar,
+				`ChequesFilteredExport` para el Excel): si se cambia qué banco se muestra, se
+				cambian los tres juntos. No cambiar la key `banco` ni su `type: 'text'`: es lo que
+				la API mira para aplicar esa regla.
 			*/
 			text: 'Banco',
 			key: 'banco',
@@ -175,8 +184,10 @@ export default {
 			not_show_on_form: true,
 		},
 		{
+			// La columna de la base es `rechazado_en`. Hasta la misión cheque-motivo-rechazo
+			// (9/10/2026) la key era `rechazo_en`, que no existe, y la columna salía siempre vacía.
 			text: 'Rechazado en',
-			key: 'rechazo_en',
+			key: 'rechazado_en',
 			v_if: ['estado_manual', '=', 'rechazado'],
 			type: 'date',
 			is_date: true,
@@ -186,6 +197,27 @@ export default {
 			text: 'Rechazado por',
 			key: 'rechazado_por_id',
 			v_if: ['estado_manual', '=', 'rechazado'],
+			not_show_on_form: true,
+		},
+		{
+			/*
+				Misión cheque-motivo-rechazo (9/10/2026): el motivo que se escribe en el modal
+				Rechazar cheque (RechazarCheque.vue) y que la API guarda en
+				`cheques.rechazado_observaciones` (texto, hasta 1000 caracteres).
+
+				Solo en las solapas Rechazados (de Recibido y de Emitido): en el resto siempre está
+				vacía, y la saca base_properties_for_cheques_list en components/cheques/list/Index.vue.
+				No va al formulario: el motivo se escribe al rechazar, no al editar el cheque (el
+				PUT de edición tampoco lo lee).
+
+				`table_wrap_content`: un motivo largo se parte en varias líneas en vez de cortarse
+				(los td de la tabla son nowrap por defecto). Es el valor inicial del "salto de línea"
+				de la columna en las preferencias: el usuario lo puede cambiar.
+			*/
+			text: 'Motivo del rechazo',
+			key: 'rechazado_observaciones',
+			type: 'textarea',
+			table_wrap_content: true,
 			not_show_on_form: true,
 		},
 	],

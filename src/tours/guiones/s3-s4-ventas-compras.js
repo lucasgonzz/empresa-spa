@@ -444,7 +444,7 @@ export default {
 			},
 			{
 				selector: '#form-group-modo_facturacion',
-				texto: 'Tres formas: sin factura, automática o manual. El sistema no adivina cuál es tu caso.',
+				texto: 'Tres formas: sin factura, automática o manual. Arranca en automática: si tu proveedor facturó distinto o no te dio factura, cambialo acá.',
 				avanza: 'siguiente',
 			},
 			{
