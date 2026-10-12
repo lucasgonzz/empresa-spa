@@ -15,7 +15,7 @@ export default {
 			*/
 			if (sale_types.length == 1) {
 
-				if (this.sale_type_id != sale_types[0].id) {
+				if (this.$store.state.vender.sale_type_id != sale_types[0].id) {
 					this.$store.commit('vender/setSaleTypeId', sale_types[0].id)
 				}
 				return true
