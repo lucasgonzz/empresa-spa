@@ -1,3 +1,8 @@
+/*
+	Suma de cantidades sin el ruido de la coma flotante. Ver check_article_price_type_group y
+	utils/cantidades.js.
+*/
+import { sumar_cantidades } from '@/utils/cantidades'
 export default {
 	computed: {
 		items() {
@@ -141,7 +146,7 @@ export default {
 
                     	if (article_vendiendose.id != item.id) {
                     		
-	                        amount += Number(article_vendiendose.amount); // Sumar cantidades
+	                        amount = sumar_cantidades(amount, article_vendiendose.amount); // Sumar cantidades sin ruido de coma flotante: con `+=` puede caer para abajo (0.7 + 0.1 = 0.7999999999999999) y dejar sin aplicar un tramo de oferta alcanzado (misma clase que repetidos.js)
 	                        this.otros_articulos_relacionados.push(article_vendiendose);
                     	}
                     }

@@ -1,10 +1,10 @@
 <script>
 import { Bar } from 'vue-chartjs'
-import moment from 'moment'
 import chart_datalabels from '@/mixins/reportes/chart_datalabels'
+import grafico_articulos from '@/components/reportes/components/articulos/graficos/grafico_articulos'
 export default {
 	extends: Bar,
-	mixins: [chart_datalabels],
+	mixins: [chart_datalabels, grafico_articulos],
 	computed: { 
 		categories() {  
 			return this.$store.state.reportes.article_purchase.categories
@@ -15,11 +15,9 @@ export default {
 	},
 	watch: {
 		categories() {
-			console.log('wacth chart')
 			this.setChart()
 		},
 		loading() {
-			console.log('wacth chart')
 			this.setChart()
 		},
 	},
@@ -27,87 +25,12 @@ export default {
 		this.setChart()
 	},
 	methods: {
+		/*
+			Las barras (12 primeras + «Otros»), los dos ejes y el formato de etiquetas y tooltip son
+			los mismos que los del grafico de proveedores: viven en grafico_articulos.js.
+		*/
 		setChart() {	
-
-			console.log('setChart')
-
-			if (typeof this.categories == 'undefined' || !this.categories) {
-				return 
-			}
-
-			let labels = []
-			let unidades_vendidas = []
-			let beneficio = []
-			
-			this.categories.forEach(categoria => {
-				labels.push(categoria.category_name)
-				unidades_vendidas.push(categoria.unidades_vendidas)	
-				beneficio.push(categoria.beneficio)	
-			})
-
-			let datasets = [
-				{
-					label: 'Unidades vendidas',
-					backgroundColor: '#007bff',
-					data: unidades_vendidas,
-				},
-				{
-					label: 'Beneficio',
-					backgroundColor: '#4CAF50',
-					data: beneficio,
-				}
-			]
-
-			let that = this
-			this.renderChart({
-				labels: labels,
-				datasets: datasets,
-			}, {
-				plugins: {
-					datalabels: { 
-						color: '#000',
-						font: {
-							weight: 'bold',
-						},
-						formatter: function(value, context) {
-							if (context.dataset.label == 'Beneficio') {
-
-								return that.price(Math.round(value))
-							}
-							// El unico otro dataset de este grafico es 'Unidades vendidas'
-							// (se arman los dos mas arriba, en setChart), asi que este branch
-							// es siempre una cantidad: va con numero_es, no con price
-							// (mision del 21/8/2026 — separadores de numeros).
-							return that.numero_es(value)
-						},
-					},
-				},
-				maintainAspectRatio: false,	
-				onClick: function (event, elements, chart) {
-					// let provider = providers[elements[0]._index]
-					// that.setSelectedProvider(provider)
-				},
-				tooltips: {
-					callbacks: {
-						label: function(tooltipItem, data) {
-
-							const datasetLabel = data.datasets[tooltipItem.datasetIndex].label || '';
-							const value = tooltipItem.yLabel;
-
-							if (datasetLabel == 'Beneficio') {
-
-								let price = Math.round(tooltipItem.yLabel)
-
-								return that.price(price)
-
-							}
-
-							// Igual que en el formatter: el otro dataset es 'Unidades vendidas'.
-							return that.numero_es(value)
-						}
-					}
-				}
-			})
+			this.render_grafico_articulos(this.categories, 'category_name')
 		},
 	},
 }

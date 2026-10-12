@@ -1,9 +1,10 @@
 /*
-	Cambiar el ancho de algo de la grilla de 12 columnas de una zona del diseñador de PDF (misión
+	Cambiar el ancho de algo de una grilla de columnas del diseñador de PDF (misión
 	diseno-pdf-configurable, 1/10/2026): tirando de sus bordes o con − / +. Mixin de componente (no
-	es global) que comparten la caja (CajaDelDisenador.vue) y el bloque del cliente de la factura de
-	ARCA (BloqueFijo.vue): las mismas manijas, el mismo salto de a una columna y la misma insignia
-	N/12. Es la lógica de ElementoDelEditor.vue del editor de Diseños de Vender.
+	es global) que comparten la caja (CajaDelDisenador.vue), el bloque del cliente de la factura de
+	ARCA (BloqueFijo.vue) y, desde la misión diseno-ticket-comandera (9/10/2026), cada columna de la
+	tabla (ColumnaDeLaTabla.vue): las mismas manijas, el mismo salto de a una columna y la misma
+	insignia N/total. Es la lógica de ElementoDelEditor.vue del editor de Diseños de Vender.
 
 	El componente que lo usa declara dos computeds:
 	- item_redimensionable: el objeto de la lista de trabajo cuyo `cols` se cambia. 🔴 Se muta EN EL
@@ -12,16 +13,27 @@
 	- cols_minimo: el ancho mínimo (1 para una caja; para un bloque fijo, el `cols_min` del catálogo).
 	Y escucha 'redimension' (true / false) en la zona, que resalta las guías mientras se tira.
 
+	Puede declarar además (si no, valen los de acá, que son los de las zonas):
+	- total_de_columnas: las columnas de la grilla (12 en las zonas; 24 medias columnas en la tabla).
+	- cols_maximo: hasta dónde puede crecer (en la tabla, sus columnas más las libres de la fila: la
+	  suma nunca pasa de 24).
+	- avisar_tope_de_ancho(): qué hacer cuando se pide más que cols_maximo y cols_maximo es menor que
+	  la grilla (la tabla avisa que no hay lugar). Se llama una sola vez por tirón.
+
 	El ancho se cambia de dos formas, igual que en Vender:
 	- Tirando de un borde (pointer events + setPointerCapture: los movimientos le siguen llegando a la
 	  manija aunque el puntero se salga de ella). Salta de a una columna:
-	  cols = redondear(cols_inicial + Δx·signo / (anchoDeLaZona / 12)), acotado a cols_minimo..12.
-	  Borde derecho hacia la derecha agranda; borde izquierdo hacia la izquierda TAMBIÉN agranda.
+	  cols = redondear(cols_inicial + Δx·signo / (anchoDeLaLista / total)), acotado a
+	  cols_minimo..cols_maximo. Borde derecho hacia la derecha agranda; borde izquierdo hacia la
+	  izquierda TAMBIÉN agranda.
 	- Con los botones − / +, que además son el camino por teclado.
 
 	Los nombres se chequearon contra los mixins globales: ninguno pisa a uno de ellos.
 */
 import { acotar_entero } from './estado_del_disenador'
+
+/* Columnas de la grilla de las zonas (cajas y bloques fijos) */
+const COLUMNAS_DE_LAS_ZONAS = 12
 
 export default {
 	data() {
@@ -34,11 +46,31 @@ export default {
 			x_inicial: 0,
 			/* Ancho (en columnas) que tenía al empezar a tirar */
 			cols_inicial: 0,
-			/* Ancho en px de UNA columna de la zona, medido al empezar a tirar */
+			/* Ancho en px de UNA columna de la lista, medido al empezar a tirar */
 			ancho_de_columna: 0,
 			/* Puntero que está tirando (con dos dedos en una tablet solo cuenta el primero) */
 			id_de_puntero: null,
+			/* true si en el tirón en curso ya se avisó que no hay lugar (el pointermove llega muchas veces) */
+			tope_de_ancho_avisado: false,
 		}
+	},
+	computed: {
+		/**
+		 * Columnas de la grilla donde vive el ítem: 12 en las zonas. La tabla lo redefine (24).
+		 *
+		 * @returns {number}
+		 */
+		total_de_columnas() {
+			return COLUMNAS_DE_LAS_ZONAS
+		},
+		/**
+		 * Hasta dónde puede crecer: toda la grilla. La tabla lo redefine (lo libre de su fila).
+		 *
+		 * @returns {number}
+		 */
+		cols_maximo() {
+			return this.total_de_columnas
+		},
 	},
 	beforeDestroy() {
 		/* Si se destruye a mitad de un tirón (p. ej. se cerró el modal), avisar igual */
@@ -49,19 +81,38 @@ export default {
 	},
 	methods: {
 		/**
-		 * Cambia el ancho una columna con los botones − / +, acotado a cols_minimo..12.
+		 * Cambia el ancho una columna con los botones − / +, acotado a cols_minimo..cols_maximo. Si
+		 * se pide agrandar y no hay lugar (el tope es menor que la grilla), avisa.
 		 *
 		 * @param {number} paso -1 o 1
 		 * @returns {void}
 		 */
 		cambiar_cols(paso) {
 			let item = this.item_redimensionable
-			item.cols = acotar_entero(item.cols + paso, this.cols_minimo, 12, item.cols)
+			if (paso > 0 && item.cols >= this.cols_maximo) {
+				this.topar_el_ancho()
+				return
+			}
+			item.cols = acotar_entero(item.cols + paso, this.cols_minimo, this.cols_maximo, item.cols)
 		},
 		/**
-		 * Empieza a tirar de un borde: mide la zona, toma el puntero y avisa a la zona (que resalta
-		 * las guías de las 12 columnas). El ancho de UNA columna sale del ancho de la lista de la
-		 * zona (el padre de este ítem): los ítems ocupan calc(100% * N / 12) de esa lista.
+		 * Se pidió más ancho que el tope: si el tope no es la grilla entera (o sea, falta lugar en la
+		 * fila), el componente avisa con su avisar_tope_de_ancho(), si lo tiene.
+		 *
+		 * @returns {void}
+		 */
+		topar_el_ancho() {
+			if (this.cols_maximo >= this.total_de_columnas) {
+				return
+			}
+			if (typeof this.avisar_tope_de_ancho == 'function') {
+				this.avisar_tope_de_ancho()
+			}
+		},
+		/**
+		 * Empieza a tirar de un borde: mide la lista, toma el puntero y avisa a la zona (que resalta
+		 * las guías de las columnas). El ancho de UNA columna sale del ancho de la lista (el padre de
+		 * este ítem): los ítems ocupan calc(100% * N / total) de esa lista.
 		 *
 		 * @param {PointerEvent} evento pointerdown sobre la manija
 		 * @param {string} lado 'izquierda' | 'derecha'
@@ -89,8 +140,9 @@ export default {
 			this.lado = lado
 			this.x_inicial = evento.clientX
 			this.cols_inicial = this.item_redimensionable.cols
-			this.ancho_de_columna = ancho_de_la_lista / 12
+			this.ancho_de_columna = ancho_de_la_lista / this.total_de_columnas
 			this.id_de_puntero = evento.pointerId
+			this.tope_de_ancho_avisado = false
 			this.redimensionando = true
 
 			/* Con la captura, los pointermove siguen llegando a la manija aunque el puntero salga de ella */
@@ -103,7 +155,8 @@ export default {
 			this.$emit('redimension', true)
 		},
 		/**
-		 * Recalcula el ancho mientras se tira: salta de a una columna, nunca por píxeles.
+		 * Recalcula el ancho mientras se tira: salta de a una columna, nunca por píxeles. Si el
+		 * puntero pide más que el tope, se queda en el tope y avisa (una vez por tirón).
 		 *
 		 * @param {PointerEvent} evento
 		 * @returns {void}
@@ -116,7 +169,13 @@ export default {
 			/* Hacia afuera siempre agranda: a la derecha en el borde derecho, a la izquierda en el izquierdo */
 			let signo = this.lado === 'derecha' ? 1 : -1
 			let desplazamiento = (evento.clientX - this.x_inicial) * signo
-			let cols = acotar_entero(Math.round(this.cols_inicial + desplazamiento / this.ancho_de_columna), this.cols_minimo, 12, this.cols_inicial)
+			let pedidas = Math.round(this.cols_inicial + desplazamiento / this.ancho_de_columna)
+			let cols = acotar_entero(pedidas, this.cols_minimo, this.cols_maximo, this.cols_inicial)
+
+			if (pedidas > this.cols_maximo && !this.tope_de_ancho_avisado) {
+				this.tope_de_ancho_avisado = true
+				this.topar_el_ancho()
+			}
 
 			if (cols !== this.item_redimensionable.cols) {
 				this.item_redimensionable.cols = cols

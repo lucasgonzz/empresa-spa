@@ -15,7 +15,12 @@
 
 			15px es el mismo aire que el `p-t-15` de esos otros módulos, así que no estrena un valor.
 		-->
+		<!--
+			Sin ninguna solapa para ver no hay barra que dibujar (misión permisos-navegacion-empleados,
+			9/10/2026): quedaría una franja vacía arriba del aviso.
+		-->
 		<horizontal-nav
+		v-if="!alertas_sin_solapas_para_ver"
 		class="m-b-15"
 		@setSelected="setSelectedView"
 		set_view
@@ -23,7 +28,33 @@
 		:show_display="false"
 		:items="nav_items"></horizontal-nav>
 
-		<lista-de-alertas-table></lista-de-alertas-table>
+		<!--
+			Misión permisos-navegacion-empleados (9/10/2026): aviso para quien no tiene ninguna
+			solapa para ver, con el estado vacío del sistema (display/EmptyState, el mismo de las
+			secciones de Alertas), en vez de una pantalla en blanco.
+
+			🔴 HOY NO SE DISPARA: Cobros está permitida para cualquier usuario cargado (ver
+			puede_ver_solapa_de_alertas en mixins/alert_infos.js), así que todos tienen al menos
+			una solapa. Queda como red por si una regla futura deja a alguien sin ninguna: Alertas
+			está en el menú de todos y es el aterrizaje de quien no tiene otra pantalla.
+
+			Solo con el usuario ya cargado, para que no parpadee al entrar: antes de eso no se
+			sabe qué solapas le tocan.
+		-->
+		<empty-state
+		v-if="alertas_sin_solapas_para_ver"
+		data-testid="alertas-sin-solapas-permitidas"
+		icon_class="bi bi-bell-slash"
+		title="No tenés alertas para ver con tus permisos"
+		hint="Si necesitás alguna, pedíselo al dueño del negocio."></empty-state>
+
+		<!--
+			`solapas_permitidas`: qué secciones se pueden montar. Esconder solo la pestaña no
+			alcanzaba (ver puede_ver_solapa_de_alertas en mixins/alert_infos.js).
+		-->
+		<lista-de-alertas-table
+		v-else
+		:solapas_permitidas="solapas_de_alertas_permitidas"></lista-de-alertas-table>
 
 	</div>
 </template>
@@ -44,6 +75,7 @@ export default {
 	components: {
 		ListaDeAlertasTable: () => import('@/components/alertas/components/lista-de-alertas-table/Index'),
 		HorizontalNav: () => import('@/common-vue/components/horizontal-nav/Index'),
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 	},
 	created() {
 		this.completar_ruta()
@@ -75,6 +107,16 @@ export default {
 		sub_solapas_permitidas() {
 			this.completar_ruta()
 		},
+		/*
+			Lo mismo con las solapas de primer nivel (misión permisos-navegacion-empleados,
+			9/10/2026): dependen de los permisos del usuario, y si termina de cargarse después de
+			crear la vista, una URL con una solapa que no puede ver se corrige recién ahí.
+			`completar_ruta` sale temprano cuando la ruta ya está bien, así que dispararse cada vez
+			que cambia un número rojo (la lista sale de `nav_items`) no hace nada.
+		*/
+		solapas_de_alertas_permitidas() {
+			this.completar_ruta()
+		},
 	},
 	computed: {
 		/**
@@ -87,25 +129,46 @@ export default {
 			let usuario = this.$store.state.auth.user
 			return subsolapas_permitidas(!!this.is_owner, !!(usuario && usuario.es_acceso_maestro))
 		},
+		/*
+			Cada pestaña se agrega solo si `puede_ver_solapa_de_alertas` (mixins/alert_infos.js) dice
+			que esta persona la puede ver: es LA regla de las solapas de Alertas, la misma que decide
+			qué secciones se montan y qué suma el número rojo del menú (misión
+			permisos-navegacion-empleados, decisión de Lucas del 9/10/2026). Antes Stock mínimo y
+			Catálogo no pedían permiso y Movimientos de depósitos solo la extensión. Cobros sigue
+			sin permiso (ver el porqué en la regla).
+
+			El slug que se le pasa a la regla es el de la URL: el que sale de
+			routeString(route_value || name), que es como lo arma horizontal-nav.
+		*/
 		nav_items() {
 
-			let items = [
-				{
+			let items = []
+
+			if (this.puede_ver_solapa_de_alertas('cobros')) {
+				items.push({
 					name: 'Cobros',
 					alert: this.ventas_sin_cobrar.length	
-				},
-				{
+				})
+			}
+
+			if (this.puede_ver_solapa_de_alertas('stock-minimo')) {
+				items.push({
 					name: 'Stock minimo',
 					alert: this.stock_minimo_alert_count
-				},
+				})
+			}
+
+			if (this.puede_ver_solapa_de_alertas('catalogo')) {
 				/*
 					Catalogo: antes era la solapa "Imagenes" (busquedas de imagenes inteligentes,
 					mision imagenes-catalogo-completo, 27/9/2026) y desde la mision
 					categorizacion-tres-modelos (5/10/2026) agrupa dos sub-solapas: Imagenes
-					(exactamente como era) y Categorias (los sistemas de categorias con IA). Sin
-					permiso que la condicione: cualquiera que pida imagenes desde el listado tiene que
-					poder ver que paso con ellas. La sub-solapa Categorias, en cambio, la ven solo el
-					dueño o el acceso maestro (ver `sub_solapas_permitidas`).
+					(exactamente como era) y Categorias (los sistemas de categorias con IA). Desde la
+					mision permisos-navegacion-empleados (9/10/2026) pide `article.index`, el mismo
+					permiso que el listado desde donde se piden las imagenes: quien las pide puede
+					ver que paso con ellas, y un empleado sin acceso al catalogo ya no lo ve por
+					aca. La sub-solapa Categorias, ademas, la ven solo el dueño o el acceso maestro
+					(ver `sub_solapas_permitidas`).
 
 					🔴 Es la unica pestaña con acento en el nombre visible, y por eso lleva
 					`route_value` y `testid`: el slug sale de routeString() sobre el nombre, y
@@ -118,43 +181,44 @@ export default {
 					El numero rojo suma los de las dos sub-solapas (el mismo que suma la campana del
 					menu, ver mixins/nav_functions.js).
 				*/
-				{
+				items.push({
 					name: 'Catálogo',
 					route_value: 'catalogo',
 					testid: 'catalogo',
 					alert: this.imagenes_alert_count + this.categorias_alert_count
-				},
-			]
+				})
+			}
 
-			if (this.can('alerts.provider_orders')) {
+			if (this.puede_ver_solapa_de_alertas('pedidos-proveedor')) {
 				items.push({
 					name: 'Pedidos Proveedor',	
 					alert: this.provider_order_days_to_advise.length	
 				})
 			}
 
-			if (this.can('alerts.orders')) {
+			if (this.puede_ver_solapa_de_alertas('pedidos-online')) {
 				items.push({
 					name: 'Pedidos Online',	
 					alert: this.unconfirmed_orders.length	
 				})
 			}
 
-			if (this.can('alerts.messages')) {
+			if (this.puede_ver_solapa_de_alertas('mensajes')) {
 				items.push({
 					name: 'Mensajes',	
 					alert: this.messages_not_read		
 				})
 			}
 
-			if (this.hasExtencion('deposit_movements')) {
+			// Además de la extensión, pide `article.index` (misión permisos-navegacion-empleados).
+			if (this.puede_ver_solapa_de_alertas('movimientos-de-depositos')) {
 				items.push({
 					name: 'Movimientos de depositos',	
 					alert: this.deposit_movements_en_curso.length		
 				})
 			}
 
-			if (this.can('alerts.problemas_al_facturar')) {
+			if (this.puede_ver_solapa_de_alertas('facturacion')) {
 				items.push({
 					name: 'Facturacion',	
 					alert: this.problemas_al_facturar.length		
@@ -163,7 +227,31 @@ export default {
 
 			return items
 		},
-		
+		/**
+		 * Los slugs de URL de las solapas que esta persona puede ver, en el orden de las pestañas
+		 * (misión permisos-navegacion-empleados, 9/10/2026). Salen de `nav_items` y no de una lista
+		 * aparte, para que la pestaña que se dibuja, la sección que se monta y la URL a la que se
+		 * lleva una solapa no permitida no puedan decir cosas distintas. El slug se arma igual que
+		 * en horizontal-nav: routeString(route_value || name).
+		 *
+		 * @returns {Array<String>}
+		 */
+		solapas_de_alertas_permitidas() {
+			return this.nav_items.map(item => {
+				return this.routeString(item.route_value ? item.route_value : item.name)
+			})
+		},
+		/**
+		 * True cuando el usuario ya cargó y no tiene ninguna solapa para ver: en vez de las
+		 * secciones (que quedarían todas escondidas, una pantalla en blanco) se muestra el aviso.
+		 * Antes de que cargue el usuario es false, para que el aviso no parpadee al entrar.
+		 *
+		 * @returns {Boolean}
+		 */
+		alertas_sin_solapas_para_ver() {
+			return !!(this.authenticated && this.user) && !this.solapas_de_alertas_permitidas.length
+		},
+
 	},
 	methods: {
 		setSelectedView(item) {
@@ -306,6 +394,10 @@ export default {
 		 * perder su pagina. Cuando el usuario llega, el watcher de `sub_solapas_permitidas` vuelve a
 		 * llamar.
 		 *
+		 * Y una solapa de primer nivel que esta persona no puede ver (o una inventada) se lleva a
+		 * la primera que si pueda (mision permisos-navegacion-empleados, 9/10/2026). Ver el
+		 * comentario de adentro.
+		 *
 		 * @returns {void}
 		 */
 		completar_ruta() {
@@ -316,6 +408,29 @@ export default {
 
 			/** Combinacion valida a la que corresponde la ruta actual. */
 			let destino = ruta_normalizada(this.view, this.sub_view, this.sub_solapas_permitidas)
+
+			/*
+				Mision permisos-navegacion-empleados (decision de Lucas, 9/10/2026): una solapa que
+				esta persona no puede ver se lleva a la primera que si puede (sin sub_view, salvo que
+				esa primera sea el Catalogo, que `ruta_normalizada` completa con su sub-solapa).
+				Esconder la pestaña no alcanzaba: cada seccion se dibuja por la URL, asi que
+				/alertas/stock-minimo mostraba Stock minimo a un empleado sin `article.index`.
+
+				 - Sin ninguna solapa permitida no se toca la URL: Alertas muestra el aviso de que no
+				   tiene alertas para ver, y no hay adonde llevarlo.
+				 - Sin solapa (/alertas a secas) queda como siempre: no se inventa un default.
+				 - El alias viejo /alertas/imagenes ya viene convertido en `catalogo` por
+				   `ruta_normalizada`, asi que se mide contra el slug nuevo.
+
+				La query de la solapa original (`?asignacion=7&solapa=a_revisar` de Imagenes) no
+				significa nada en otra solapa, asi que en ese caso no se arrastra.
+			*/
+			let permitidas = this.solapas_de_alertas_permitidas
+			let cambio_de_solapa_por_permiso = false
+			if (destino.view && permitidas.length && permitidas.indexOf(destino.view) === -1) {
+				destino = ruta_normalizada(permitidas[0], null, this.sub_solapas_permitidas)
+				cambio_de_solapa_por_permiso = true
+			}
 
 			// La ruta ya es la que corresponde (en la ruta la ausencia llega como undefined: se
 			// comparan los dos como "sin valor").
@@ -337,7 +452,7 @@ export default {
 			this.$router.replace({
 				name: 'alertas',
 				params: params,
-				query: this.$route.query,
+				query: cambio_de_solapa_por_permiso ? {} : this.$route.query,
 			}).catch(() => {})
 		},
 	}

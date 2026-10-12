@@ -42,6 +42,7 @@
 		order_list_by="provider_order_status"
 		change_from_dates_option
 		:models_to_show="provider_orders_to_show"
+		:mostrar_models_que_vinienen_por_prop_siempre="filtrando_por_facturacion"
 		:show_previus_days="show_previus_days"
 		:props_to_send_on_save="props_to_send_on_save"
 		show_filter_modal>
@@ -197,6 +198,29 @@ export default {
 		AlicuotasIva: () => import('@/components/provider/components/orders/afip-ticket/AlicuotasIva'),
 	},
 	computed: {
+		/**
+		 * El select de facturacion (Con y sin factura / Solo CON / Solo SIN) esta filtrando.
+		 *
+		 * Alimenta `mostrar_models_que_vinienen_por_prop_siempre` del view-component. El display
+		 * (common-vue/components/display/Index.vue::models_to_show) con `is_filtered` en true
+		 * (Historico o buscador) IGNORA la prop `models_to_show` y dibuja `state.filtered`, o sea
+		 * que el filtro del select, que vive en `provider_orders_to_show`, no llegaba a la tabla.
+		 * Con esta prop en true se usa la lista del modulo, que arranca de `filtered` cuando
+		 * corresponde (ver mixins/provider_order/models_to_show.js).
+		 *
+		 * 🔴 Es dinamico y NO fijo en true como en views/Ventas.vue, a proposito: con "Con y sin
+		 * factura" la lista del mixin ES `filtered` (o la del dia), asi que la tabla se ve igual con
+		 * la prop en false; y en false se conserva el "Corte 3" de
+		 * view/Index.vue::disparar_listado_por_defecto(), que corta apenas la prop esta en true y es
+		 * lo que hoy refresca el listado de Historico al volver a la pestaña Compras. Fija en true
+		 * ese refresco se perderia sin que nadie lo pida. Solo cuando el select filtra hace falta que
+		 * el display use la lista del modulo en vez de `state.filtered`.
+		 *
+		 * @returns {Boolean}
+		 */
+		filtrando_por_facturacion() {
+			return this.$store.state.provider_order.afip_ticket_show_option != 'con-y-sin-factura'
+		},
 		show_previus_days() {
 			return this.$store.state.provider_order.from_dates
 		},

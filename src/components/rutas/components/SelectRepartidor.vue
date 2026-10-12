@@ -8,7 +8,8 @@
 			prepend="Que pertenezcan al repartidor">
 				<b-form-select
 				v-model="employee_id"
-				:options="getOptions({key: 'employee_id', store: 'employee', text: 'Seleccione Repartidor'})"></b-form-select>
+				:disabled="solo_sus_hojas"
+				:options="options"></b-form-select>
 			</b-input-group>
 		</b-col>
 	</b-row>
@@ -16,6 +17,17 @@
 <script>
 export default {
 	computed: {
+		solo_sus_hojas() {
+			return this.can('road_map.terminadas.only_your') && !this.can('road_map.terminadas.all')
+		},
+		options() {
+			// Con "solo sus hojas" el select tiene una única opción, la del propio usuario.
+			if (this.solo_sus_hojas) {
+				return [{value: this.user.id, text: this.user.name}]
+			}
+			// getOptions antepone "Seleccione ": el texto va sin eso (antes salía "Seleccione Seleccione Repartidor").
+			return this.getOptions({key: 'employee_id', store: 'employee', text: 'Repartidor'})
+		},
 		employee_id: {
 			get() {
 				return this.$store.state.road_map.route_prefix

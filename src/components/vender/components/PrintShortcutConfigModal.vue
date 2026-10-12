@@ -10,7 +10,9 @@
 		<p class="vender-print-shortcut-modal__help">
 			Define qué se imprime al presionar el atajo
 			<kbd>{{ print_shortcut_key }}</kbd>.
-			Si elegís Ticket 2.0, aplica tanto a ventas sin factura AFIP como facturadas.
+			Si elegís Ticket 2.0, aplica tanto a ventas sin factura AFIP como facturadas: sale directo
+			a la comandera el ticket por defecto (el de factura si la venta tiene CAE y el de remito si
+			no), con el diseño que tenga en ABM → Diseño de PDF.
 		</p>
 
 		<div class="vender-print-shortcut-modal__field">
@@ -137,7 +139,7 @@ export default {
 		 */
 		print_mode_options() {
 			return [
-				{ value: VENDER_PRINT_OPTION_TICKET_2, text: 'Ticket 2.0 (remito y facturado)' },
+				{ value: VENDER_PRINT_OPTION_TICKET_2, text: 'Ticket 2.0, el ticket por defecto (remito y facturado)' },
 				{ value: 'split', text: 'Opciones separadas sin AFIP / con AFIP' },
 			]
 		},
@@ -148,7 +150,10 @@ export default {
 		 * @returns {Array<{value: string, text: string}>}
 		 */
 		remito_print_options() {
-			return build_vender_remito_print_select_options(this.pdf_column_profiles)
+			return this.con_opcion_guardada(
+				build_vender_remito_print_select_options(this.pdf_column_profiles),
+				this.modal_print_options.remito
+			)
 		},
 
 		/**
@@ -157,10 +162,46 @@ export default {
 		 * @returns {Array<{value: string, text: string}>}
 		 */
 		facturado_print_options() {
-			return build_vender_facturado_print_select_options(this.pdf_column_profiles)
+			return this.con_opcion_guardada(
+				build_vender_facturado_print_select_options(this.pdf_column_profiles),
+				this.modal_print_options.facturado
+			)
 		},
 	},
 	methods: {
+		/**
+		 * Si la opción guardada ya no está en la lista (apunta a un diseño que se borró, o a un
+		 * ticket que pasaron a hoja), la agrega al final con un rótulo que lo dice.
+		 *
+		 * Sin esto el select quedaba en blanco y no había forma de darse cuenta de que el atajo
+		 * estaba roto hasta apretarlo (misión diseno-ticket-comandera: "una opción guardada que
+		 * apunta a un perfil borrado tiene que dar un aviso claro, no un error mudo").
+		 *
+		 * @param {Array<{value: string, text: string}>} options
+		 * @param {string} valor_guardado
+		 * @returns {Array<{value: string, text: string}>}
+		 */
+		con_opcion_guardada(options, valor_guardado) {
+			if (!valor_guardado) {
+				return options
+			}
+
+			let esta = false
+			options.forEach(function (option) {
+				if (option.value === valor_guardado) {
+					esta = true
+				}
+			})
+
+			if (esta) {
+				return options
+			}
+
+			return options.concat([
+				{ value: valor_guardado, text: 'Un diseño que ya no existe (elegí otro)' },
+			])
+		},
+
 		/**
 		 * Abre el modal de configuración de impresión.
 		 */

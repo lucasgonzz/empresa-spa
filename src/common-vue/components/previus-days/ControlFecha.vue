@@ -81,7 +81,7 @@ class="control-fecha">
 			<div
 			v-if="hay_rango"
 			class="control-fecha__rango">
-				<span>{{ texto_rango }}</span>
+				<span data-testid="control-fecha-rango">{{ texto_rango }}</span>
 				<button
 				type="button"
 				class="control-fecha__rango-quitar"
@@ -245,8 +245,25 @@ export default {
 		hay_rango() {
 			return this.has_until && this.until_date != ''
 		},
+		/**
+		 * Texto del chip del rango. Es lo unico que dice de donde a donde va el rango, asi que tiene
+		 * que nombrar el mes del principio cuando difiere del final: "1 – 9 oct." para un rango que
+		 * arranca el 1 de agosto se lee como si fuera de un solo mes. Si ademas cambia el año, va en
+		 * los dos extremos.
+		 *
+		 * @returns {String}
+		 */
 		texto_rango() {
-			return moment(this.from_date).format('D') + ' – ' + moment(this.until_date).format('D MMM')
+			let desde = moment(this.from_date)
+			let hasta = moment(this.until_date)
+
+			if (desde.year() != hasta.year()) {
+				return desde.format('D MMM YYYY') + ' – ' + hasta.format('D MMM YYYY')
+			}
+			if (desde.month() != hasta.month()) {
+				return desde.format('D MMM') + ' – ' + hasta.format('D MMM')
+			}
+			return desde.format('D') + ' – ' + hasta.format('D MMM')
 		},
 		has_permission() {
 			if (this.check_permissions) {

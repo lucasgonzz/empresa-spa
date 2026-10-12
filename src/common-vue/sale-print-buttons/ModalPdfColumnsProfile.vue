@@ -38,7 +38,7 @@
 			diseñador de PDF del ABM, no acá (se esconden abajo). Con un perfil de siempre, todo igual.
 		-->
 		<p
-		v-if="con_diseno_de_cajas"
+		v-if="con_diseno_de_cajas && !es_de_venta"
 		class="modal-pdf-columns-profile__con-cajas">
 			<i
 			class="bi bi-info-circle"
@@ -184,12 +184,51 @@
 		</b-col>
 	</b-form-row>
 
+		<!--
+			Misión diseno-ticket-comandera (pedido 5 de Lucas: la tabla se maneja adentro del modal del
+			diseño): en un perfil de VENTA la tabla de columnas en milímetros ya no se edita acá. Se
+			abre el mismo diseñador que en ABM -> Diseño de PDF, sobre el perfil del store; ahí se arman
+			las columnas (en la grilla de 24 medias columnas), la hoja y las cajas. El resto del modal
+			queda como estaba.
+		-->
+		<div
+		v-if="es_de_venta"
+		class="modal-pdf-columns-profile__disenar"
+		data-testid="modal-columnas-pdf-disenar">
+			<p class="modal-pdf-columns-profile__con-cajas">
+				<i
+				class="bi bi-info-circle"
+				aria-hidden="true"></i>
+				<span>Las columnas de la tabla, la hoja y las cajas de este diseño se arman en el diseñador.</span>
+			</p>
+			<b-button
+			variant="primary"
+			size="sm"
+			data-testid="modal-columnas-pdf-abrir-disenador"
+			@click="abrir_disenador">
+				Diseñar PDF
+			</b-button>
+		</div>
+
 		<pdf-columns-preferences-config-modal
+		v-else
 		:config_rows="pdf_config_rows"
 		:paper_width_mm.sync="local_paper_width_mm"
 		:printable_width_mm.sync="local_printable_width_mm"
 		:margin_mm="local_margin_mm"
 		:show_size_controls="false"></pdf-columns-preferences-config-modal>
+
+		<!--
+			El diseñador (modal propio, se apila sobre este). Se monta recién la primera vez que se lo
+			pide: es pesado y el menú Imprimir está en cada venta. Al guardar hace
+			commit('pdf_column_profile/add', ...) y el menú y este modal leen el perfil nuevo del store
+			(Index.vue refresca la hoja y las columnas: ver selected_profile_for_edit).
+		-->
+		<disenador-pdf
+		v-if="disenador_montado && perfil_del_disenador"
+		ref="disenador"
+		:model="perfil_del_disenador"
+		@hook:mounted="al_montarse_el_disenador"></disenador-pdf>
 
 		<template #modal-footer>
 			<b-button
@@ -199,7 +238,7 @@
 			</b-button>
 			<b-button
 			variant="primary"
-			:disabled="remaining_width_mm < 0"
+			:disabled="!es_de_venta && remaining_width_mm < 0"
 			@click="$emit('save_profile')">
 				Guardar perfil
 			</b-button>
@@ -213,6 +252,7 @@ import { tiene_diseno } from '@/common-vue/components/pdf/disenador-pdf/estado_d
 export default {
 	components: {
 		PdfColumnsPreferencesConfigModal: () => import('@/common-vue/components/pdf/PdfColumnsPreferencesConfigModal.vue'),
+		DisenadorPdf: () => import('@/common-vue/components/pdf/disenador-pdf/Index.vue'),
 	},
 	props: {
 		sale: Object,
@@ -322,7 +362,34 @@ export default {
 			},
 		},
 	},
+	data() {
+		return {
+			/**
+			 * El diseñador ya se montó (se monta recién la primera vez que se toca "Diseñar PDF").
+			 */
+			disenador_montado: false,
+			/**
+			 * El perfil que se le pasa al diseñador: el del store en el momento de abrirlo. Se fija al
+			 * abrir y no se sigue a `perfil`, porque al guardar el diseñador reemplaza el objeto del
+			 * store (commit 'add') y no conviene cambiarle el modelo mientras está abierto.
+			 */
+			perfil_del_disenador: null,
+			/**
+			 * Hay que abrir el diseñador apenas termine de montarse (la primera vez llega asincrónico).
+			 */
+			abrir_al_montarse: false,
+		}
+	},
 	computed: {
+		/**
+		 * Si el perfil es de VENTA: la tabla de columnas se arma en el diseñador y no acá (misión
+		 * diseno-ticket-comandera).
+		 *
+		 * @returns {boolean}
+		 */
+		es_de_venta() {
+			return !!(this.perfil && this.perfil.model_name === 'sale')
+		},
 		/**
 		 * Si el perfil que se edita tiene un diseño armado con cajas (page_layout). En ese caso la
 		 * hoja, el margen, el total en el pie, las comisiones, los costos y el texto del pie no se
@@ -532,6 +599,48 @@ export default {
 			},
 		},
 	},
+	methods: {
+		/**
+		 * "Diseñar PDF": abre el diseñador sobre el perfil del store (el mismo objeto que edita el
+		 * ABM). La primera vez lo monta y lo abre cuando termina de montarse.
+		 */
+		abrir_disenador() {
+			let self = this
+
+			if (!self.perfil) {
+				return
+			}
+
+			self.perfil_del_disenador = self.perfil
+
+			if (self.disenador_montado && self.$refs.disenador) {
+				self.$nextTick(function () {
+					self.$refs.disenador.abrir()
+				})
+				return
+			}
+
+			self.abrir_al_montarse = true
+			self.disenador_montado = true
+		},
+		/**
+		 * El diseñador terminó de montarse (la primera vez llega asincrónico): se abre si se pidió.
+		 */
+		al_montarse_el_disenador() {
+			let self = this
+
+			if (!self.abrir_al_montarse) {
+				return
+			}
+
+			self.abrir_al_montarse = false
+			self.$nextTick(function () {
+				if (self.$refs.disenador) {
+					self.$refs.disenador.abrir()
+				}
+			})
+		},
+	},
 }
 </script>
 <style lang="sass">
@@ -554,4 +663,11 @@ export default {
 		flex: 0 0 auto
 		margin-top: 2px
 		color: var(--color-primary)
+
+// El bloque "Diseñar PDF" de un perfil de venta, en el lugar de la tabla de columnas.
+.modal-pdf-columns-profile__disenar
+	margin: 4px 0 8px
+
+	.modal-pdf-columns-profile__con-cajas
+		margin-bottom: 8px
 </style>

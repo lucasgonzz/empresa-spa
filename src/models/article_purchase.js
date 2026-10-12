@@ -1,8 +1,17 @@
 export default {
 	properties: [
 		{
-			text: 'Num',
+			/*
+				N° del articulo, el mismo que muestra el Listado (key `id` de models/article.js).
+
+				La key termina en `_id`, asi que isRelationKey() (common-vue/mixins/generals.js) la trata
+				como relacion y pinta un campo del articulo embebido en la fila (`model.article`, que la
+				API ya manda). Sin relation_prop_name ese campo era `name`, y la columna "Num" mostraba
+				el nombre del articulo en vez del numero (10/10/2026).
+			*/
+			text: 'N°',
 			key: 'article_id',
+			relation_prop_name: 'id',
 			type: 'text',
 			show: true,
 		},
