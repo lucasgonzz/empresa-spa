@@ -10,8 +10,8 @@ export default {
 				que "lo indiquen" el usuario queda sin poder guardar y sin ningun campo donde
 				indicarlo (medido en demo2 el 12/10/2026). Se toma solo.
 
-				Tambien cubre un id que ya no esta entre los tipos (el de una venta editada cuyo
-				tipo se borro despues): con uno solo, lo unico valido es ese.
+				Tambien cubre un id que ya no esta entre los tipos (se borraron tipos en la misma
+				sesion y quedo uno solo): con uno solo, lo unico valido es ese.
 			*/
 			if (sale_types.length == 1) {
 
