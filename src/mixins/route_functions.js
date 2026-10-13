@@ -196,6 +196,15 @@ export default {
 			.catch(function (err) {
 				console.log(err)
 				self.cerrar_pestana_del_centro_de_recursos(ventana)
+				/*
+					Un 401 es la sesión vencida, no una falla: el pedido va con
+					skip_global_error_event, así que el manejo global del 401 no corre y este es el
+					único aviso que ve el usuario. Tiene que decirle qué hacer.
+				*/
+				if (err && err.response && err.response.status === 401) {
+					self.$toast.error('Tu sesión venció. Volvé a entrar al sistema y tocá de nuevo "Centro de recursos".')
+					return
+				}
 				self.$toast.error('No se pudo abrir el centro de recursos. Probá de nuevo en un momento.')
 			})
 		},
