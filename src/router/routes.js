@@ -611,8 +611,11 @@ export default [
 	},
 	{
 		/*
-			Centro de recursos (misión centro-de-recursos-clientes, 13/10/2026): la página con los
-			videos del sistema, en recursos.comerciocity.com. No es una pantalla de esta SPA: va con
+			Tutoriales: el centro de recursos (misión centro-de-recursos-clientes, 13/10/2026), la
+			página con los videos del sistema, en recursos.comerciocity.com. En el menú se llama
+			"Tutoriales" y no "Centro de recursos" a propósito: a 1366 px ese texto se cortaba en
+			"Centro de recurs…", y quedaba justo arriba de "Recursos" (la descarga de datos), que es
+			otra cosa. No es una pantalla de esta SPA: va con
 			`function:` y abrir_centro_de_recursos() (mixins/route_functions.js) la abre en otra
 			pestaña con un pase de un solo uso, así entra con el usuario logueado y guarda su avance.
 
@@ -622,7 +625,7 @@ export default [
 			Va al final del array: queda abajo de todo, justo arriba de "Recursos" (que es otra cosa,
 			la descarga de datos).
 		*/
-		text: 'Centro de recursos',
+		text: 'Tutoriales',
 		name: 'centro_de_recursos',
 		function: 'abrir_centro_de_recursos',
 		icon: 'collection-play',

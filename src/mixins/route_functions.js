@@ -136,8 +136,8 @@ export default {
 		},
 		/**
 		 * Abre el Centro de recursos (misión centro-de-recursos-clientes, 13/10/2026): la página con
-		 * los videos del sistema, entrando con el usuario logueado. Lo llama el ítem "Centro de
-		 * recursos" del menú (router/routes.js) y lo puede tocar cualquier usuario, dueño o empleado.
+		 * los videos del sistema, entrando con el usuario logueado. Lo llama el ítem "Tutoriales"
+		 * del menú (router/routes.js) y lo puede tocar cualquier usuario, dueño o empleado.
 		 *
 		 * La API emite un pase de un solo uso (POST centro-recursos/pase) y devuelve la URL de la
 		 * página con ese pase. No pasa por el router: es otra página, en otra pestaña.
@@ -202,7 +202,7 @@ export default {
 					único aviso que ve el usuario. Tiene que decirle qué hacer.
 				*/
 				if (err && err.response && err.response.status === 401) {
-					self.$toast.error('Tu sesión venció. Volvé a entrar al sistema y tocá de nuevo "Centro de recursos".')
+					self.$toast.error('Tu sesión venció. Volvé a entrar al sistema y tocá de nuevo "Tutoriales".')
 					return
 				}
 				self.$toast.error('No se pudo abrir el centro de recursos. Probá de nuevo en un momento.')
