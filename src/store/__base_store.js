@@ -114,7 +114,7 @@ export default function __base_store(options = {}) {
 			// click en el menu (nav.js::setRoute) y el created() de la pantalla piden `getModels` casi a la
 			// vez, porque la guarda `!models.length` de la pantalla no protege mientras la primera respuesta
 			// sigue en vuelo. En un store con `use_per_page` (`provider`, `client`, `article`,
-			// `panel_control`, `sync_to_tn_article`) las dos cadenas comparten `state.page` y cada respuesta
+			// `sync_to_tn_article`) las dos cadenas comparten `state.page` y cada respuesta
 			// hace `addModels` (concat): quedaba 20 + 20 = 40 filas, cada proveedor dos veces. En los stores
 			// que no paginan `setModels` reemplaza y el solape no se notaba.
 			//
@@ -125,6 +125,11 @@ export default function __base_store(options = {}) {
 			// 🔴 NO reutilizar `consulta_vigente_token`: a ese lo incrementan tambien runFilter y
 			// runGlobalSearch, asi que una busqueda tipeada mientras baja el catalogo cortaria la descarga
 			// de `models` a medias. Son dos intenciones distintas y cada una lleva su propio token.
+			//
+			// OJO, no lo cubre todo: `panel_control` tambien es `use_per_page`, pero es un store plano (no
+			// sale de este factory) con su propio getModels/_getModels, asi que este token no lo alcanza y su
+			// solape sigue siendo posible. Tampoco se consulta en `sale` ni en `whatsapp_bot_config`, que
+			// traen su `_getModels` propio (ahi el token se incrementa y no se mira: inocuo).
 			descarga_de_models_token: 0,
 
 			delete: null,
@@ -502,6 +507,21 @@ export default function __base_store(options = {}) {
 			})
 			if (index != -1) {
 				state.filtered.splice(index, 1)
+			}
+
+			// Catalogo liviano (`options`): `add` lo mantiene al dia cuando esta cargado, pero el borrado no
+			// lo hacia, asi que un registro borrado seguia ofreciendose en los selectores que leen `options`
+			// (el filtro fijo de Proveedor / Cliente del buscador general, EndozarCheque, SelectProvider...)
+			// hasta recargar la pagina. Elegirlo filtraba articulos que siguen apuntando a ese registro.
+			// Misma guarda que la de `models` de arriba: sin el registro en la lista no se borra nada
+			// (`splice(-1, 1)` se llevaria el ultimo).
+			if (state.options_loaded) {
+				index = state.options.findIndex(item => {
+					return item.id == state.delete.id
+				})
+				if (index != -1) {
+					state.options.splice(index, 1)
+				}
 			}
 
 			if (state.selected_model && state.selected_model[state.plural_model_name]) {
