@@ -2,9 +2,10 @@
 	<!--
 		Barra de filtros fijos (prompt 06 del grupo 179): un control por cada filtro configurado
 		en FiltroFijoModal.vue, renderizado a la par del pill del buscador general, con el mismo
-		lenguaje visual (pill blanco chico, borde sutil, sombra leve). Es presentacional: no toca
-		el store ni el $api, solo emite 'input' (cambio de valor), 'quitar' (boton x) y 'enter'
-		(para que el orquestador dispare la busqueda igual que con el input principal).
+		lenguaje visual (pill blanco chico, borde sutil, sombra leve). Es casi presentacional: no
+		toca el $api y lo unico que hace con el store es pedir el catalogo liviano de las relaciones
+		(asegurar_catalogos); fuera de eso solo emite 'input' (cambio de valor), 'quitar' (boton x)
+		y 'enter' (para que el orquestador dispare la busqueda igual que con el input principal).
 	-->
 	<div class="filtros-fijos" v-if="filtros && filtros.length">
 		<div
@@ -15,9 +16,14 @@
 			<!-- Etiqueta con el nombre de la propiedad, para saber que se esta filtrando -->
 			<span class="filtros-fijos__label">{{ filtro.text }}</span>
 
-			<!-- Caso relacion: select con las opciones de la relacion (get_options_simple ya
-				trae la primera opcion "Seleccione X" con value 0, igual que otros selects del
-				sistema) -->
+			<!-- Caso relacion: select con las opciones de la relacion (opcionesRelacion arma siempre
+				la primera opcion "Seleccione X" con value 0, igual que otros selects del sistema, y
+				no repite ninguna opcion). Ojo con el :selected de cada <option>: las opciones pueden
+				llegar DESPUES del primer render (el catalogo liviano se pide al montar) y un
+				<select :value> de Vue 2 no se vuelve a posicionar solo cuando aparecen opciones: un
+				valor guardado (default_value) quedaria mostrando "Seleccione" con el filtro activo. La
+				comparacion es con == y no con ===: el valor guardado puede venir como numero o como
+				string y las options llevan el id numerico. -->
 			<select
 			v-if="filtro.filter_kind === 'relation'"
 			class="filtros-fijos__select"
@@ -28,7 +34,8 @@
 				<option
 				v-for="option in opcionesRelacion(filtro)"
 				:key="option.value"
-				:value="option.value">{{ option.text }}</option>
+				:value="option.value"
+				:selected="option.value == valorActual(filtro)">{{ option.text }}</option>
 			</select>
 
 			<!-- Caso comparacion numerica: etiqueta del operador en texto + input numerico -->
@@ -67,13 +74,29 @@
 	</div>
 </template>
 <script>
+/**
+ * Stores que tienen CATALOGO LIVIANO: la API les expone `GET /api/<store>/options` (id + name) y
+ * el store lo guarda en `state.options` con la accion `getOptions` (`options_loaded` dice si ya
+ * llego). Desde el grupo 332 (4/8/2026) y la mision 43 (12/8/2026) `provider` y `client` ya no
+ * se descargan completos al iniciar sesion: `state.models` arranca vacio y el catalogo entero
+ * vive en `state.options`.
+ *
+ * Es una lista cerrada A PROPOSITO y no "todo store del factory __base_store": `category`,
+ * `sub_category` y `brand` no tienen ruta `/options` (`GET /api/category/options` lo resolveria
+ * el Route::resource como `show('options')` y dejaria `state.options` con basura), asi que
+ * siguen leyendo `models`, que para ellos viene cargado al entrar. Si un store nuevo suma su
+ * ruta `/options` en la API, se agrega ACA.
+ */
+const STORES_CON_CATALOGO_LIVIANO = ['provider', 'client']
+
 export default {
 	/**
 	 * FiltrosFijos — controles de los filtros fijos configurados por el usuario para el
 	 * buscador general (relacion / comparacion numerica / presencia de valor), renderizados a
-	 * la par del input de busqueda. Componente presentacional: recibe la configuracion y el
-	 * valor actual de cada filtro por props, y emite 'input' / 'quitar' / 'enter' hacia el
-	 * orquestador (Index.vue), que es quien arma el payload y persiste la configuracion.
+	 * la par del input de busqueda. Casi presentacional: recibe la configuracion y el valor actual
+	 * de cada filtro por props, y emite 'input' / 'quitar' / 'enter' hacia el orquestador
+	 * (Index.vue), que es quien arma el payload y persiste la configuracion. La unica excepcion es
+	 * que pide al store el catalogo liviano de las relaciones que lo tienen (asegurar_catalogos).
 	 */
 	props: {
 		/**
@@ -105,6 +128,25 @@ export default {
 				{ value: 'con_valor', text: 'Con valor cargado' },
 				{ value: 'positivo', text: 'Con valor positivo' },
 			]
+		},
+	},
+	created() {
+		// Filtros fijos que ya vienen configurados al montar el componente (los guardados del
+		// usuario): se pide el catalogo de sus relaciones ahora, no cuando abra el desplegable.
+		this.asegurar_catalogos()
+	},
+	watch: {
+		/**
+		 * Cuando se agrega un filtro fijo (o se reemplaza la lista entera al cargar la configuracion
+		 * guardada) hay que pedir el catalogo de la relacion nueva. Es un watch y NO un llamado desde
+		 * opcionesRelacion() / el render: `getOptions` solo se frena con `options_loaded`, asi que
+		 * despachar desde el render la volveria a pedir en cada re-render mientras la respuesta
+		 * esta en vuelo, y ademas un render no tiene que tener efectos secundarios.
+		 *
+		 * @return {void}
+		 */
+		filtros() {
+			this.asegurar_catalogos()
 		},
 	},
 	methods: {
@@ -140,14 +182,90 @@ export default {
 		},
 
 		/**
-		 * Options del select de relacion, obtenidas del mixin generals (get_options_simple),
-		 * a partir del modelo derivado de la key del filtro (ej: category_id -> category).
+		 * Si el store del modelo tiene catalogo liviano (ver STORES_CON_CATALOGO_LIVIANO).
+		 *
+		 * @param {String} model_name Nombre del store (ej: 'provider').
+		 * @returns {Boolean}
+		 */
+		tiene_catalogo_liviano(model_name) {
+			return STORES_CON_CATALOGO_LIVIANO.indexOf(model_name) !== -1
+		},
+
+		/**
+		 * Pide al store el catalogo liviano (`getOptions`) de cada filtro fijo de relacion cuyo store
+		 * lo tiene y todavia no lo cargo. Idempotente: se frena si ya esta cargado (`options_loaded`)
+		 * o si ya hay un pedido en vuelo (`loading_options`), asi que llamarla de nuevo es barato.
+		 * Se invoca desde created() y desde el watch de `filtros`; NUNCA desde el render.
+		 *
+		 * @returns {void}
+		 */
+		asegurar_catalogos() {
+			if (!this.filtros) {
+				return
+			}
+			this.filtros.forEach(filtro => {
+				if (filtro.filter_kind !== 'relation') {
+					return
+				}
+				let model_name = this.modelNameFromRelationKey({ key: filtro.key })
+				if (!this.tiene_catalogo_liviano(model_name)) {
+					return
+				}
+				let store = this.$store.state[model_name]
+				if (store && !store.options_loaded && !store.loading_options) {
+					this.$store.dispatch(model_name + '/getOptions')
+				}
+			})
+		},
+
+		/**
+		 * Options del select de relacion, a partir del modelo derivado de la key del filtro (ej:
+		 * category_id -> category). Devuelve SIEMPRE, como primera opcion, "Seleccione X" con value 0
+		 * (igual que get_options_simple), y despues:
+		 *
+		 * - store inexistente: nada mas (antes tiraba un TypeError en pleno render).
+		 * - store con catalogo liviano ya cargado: el catalogo completo (`options`).
+		 * - store con catalogo liviano todavia sin cargar: lo que haya en `models` mientras tanto,
+		 *   que puede estar vacio (se completa solo cuando llega `options`).
+		 * - resto de los stores: `models`, que para ellos viene cargado al entrar.
+		 *
+		 * Se deduplica por `id` en todos los casos. `models` puede traer un mismo registro dos veces
+		 * (dos descargas solapadas, ver `descarga_de_models_token` en __base_store) y un `:key`
+		 * repetido en el v-for rompe el render del select; por eso no se confia en que la fuente
+		 * venga limpia.
+		 *
+		 * No usa get_options_simple a proposito: ese helper lo comparten otros consumidores y solo
+		 * lee `models`, que para provider/client ya no es el catalogo completo.
 		 *
 		 * @param {Object} filtro
-		 * @returns {Array}
+		 * @returns {Array} [{ value, text }]
 		 */
 		opcionesRelacion(filtro) {
-			return this.get_options_simple(this.modelNameFromRelationKey({ key: filtro.key }))
+			let model_name = this.modelNameFromRelationKey({ key: filtro.key })
+			let opciones = [{ value: 0, text: 'Seleccione ' + this.singular(model_name) }]
+
+			let store = this.$store.state[model_name]
+			if (!store) {
+				return opciones
+			}
+
+			let fuente = store.models
+			if (this.tiene_catalogo_liviano(model_name) && store.options_loaded) {
+				fuente = store.options
+			}
+
+			/** Ids ya agregados: un objeto auxiliar mantiene la deduplicacion en O(n). */
+			let ya_vistos = {}
+			let items = fuente || []
+			items.forEach(item => {
+				if (Object.prototype.hasOwnProperty.call(ya_vistos, item.id)) {
+					return
+				}
+				ya_vistos[item.id] = true
+				opciones.push({ value: item.id, text: item.name })
+			})
+
+			return opciones
 		},
 
 		/**
