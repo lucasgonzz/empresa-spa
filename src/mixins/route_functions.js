@@ -134,6 +134,81 @@ export default {
 			}
 			this.$router.push({name: 'online', params: {view: 'promociones'}})
 		},
+		/**
+		 * Abre el Centro de recursos (misión centro-de-recursos-clientes, 13/10/2026): la página con
+		 * los videos del sistema, entrando con el usuario logueado. Lo llama el ítem "Centro de
+		 * recursos" del menú (router/routes.js) y lo puede tocar cualquier usuario, dueño o empleado.
+		 *
+		 * La API emite un pase de un solo uso (POST centro-recursos/pase) y devuelve la URL de la
+		 * página con ese pase. No pasa por el router: es otra página, en otra pestaña.
+		 *
+		 * 🔴 La pestaña se abre YA, vacía y sincrónica en el clic, y recibe la URL cuando vuelve el
+		 * pedido. Si se abriera recién en el .then(), el bloqueador de ventanas emergentes la frenaría:
+		 * para el navegador ya no sería un gesto del usuario. Es el mismo camino que el botón de
+		 * WhatsApp de los comprobantes (common-vue/sale-print-buttons/WhatsappBtn.vue). Sin opener,
+		 * para que la página que se cargue ahí no pueda tocar esta pestaña del sistema.
+		 *
+		 * Si la página todavía no responde (`disponible: false`) o el pedido falla, la pestaña se
+		 * cierra y se avisa: nunca se deja al usuario frente a una pestaña en blanco ni a un dominio
+		 * muerto. El pedido va con `skip_global_error_event` para que el interceptor global no tire
+		 * su propio cartel encima de este.
+		 */
+		abrir_centro_de_recursos() {
+			let self = this
+			let ventana = window.open('', '_blank')
+			if (ventana) {
+				ventana.opener = null
+			}
+			this.$api.post('centro-recursos/pase', {}, {
+				skip_global_error_event: true,
+			})
+			.then(function (res) {
+				let datos = res && res.data ? res.data : {}
+				if (!datos.disponible || !datos.url) {
+					self.cerrar_pestana_del_centro_de_recursos(ventana)
+					self.$toast.info('El centro de recursos va a estar disponible en breve')
+					return
+				}
+				if (ventana && !ventana.closed) {
+					ventana.location.href = datos.url
+					return
+				}
+				/*
+					El navegador no dejó abrir la pestaña en el clic (o el usuario ya la cerró): se
+					prueba una vez más con la URL. Si también la frena, se avisa en vez de navegar
+					esta pestaña y sacar al usuario del sistema.
+
+					Sin 'noopener' en las opciones a propósito: con esa opción window.open() devuelve
+					null AUNQUE la pestaña se abra, y no habría forma de saber si hay que avisar. El
+					opener se corta a mano, como arriba.
+				*/
+				let nueva = window.open(datos.url, '_blank')
+				if (!nueva) {
+					self.$toast.error('El navegador bloqueó la pestaña nueva. Permití las ventanas emergentes para este sitio y probá de nuevo.')
+					return
+				}
+				try {
+					nueva.opener = null
+				} catch (e) {
+					console.log(e)
+				}
+			})
+			.catch(function (err) {
+				console.log(err)
+				self.cerrar_pestana_del_centro_de_recursos(ventana)
+				self.$toast.error('No se pudo abrir el centro de recursos. Probá de nuevo en un momento.')
+			})
+		},
+		/**
+		 * Cierra la pestaña vacía que abrió abrir_centro_de_recursos(), si sigue abierta.
+		 *
+		 * @param {Window|null} ventana
+		 */
+		cerrar_pestana_del_centro_de_recursos(ventana) {
+			if (ventana && !ventana.closed) {
+				ventana.close()
+			}
+		},
 		toProduccion() {
 			if (this.user) {
 				if (this.hasExtencion('production.order_production')) {

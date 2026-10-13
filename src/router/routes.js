@@ -609,4 +609,23 @@ export default [
 		image_url: 'nav-icons/consulta_precios.png',
 		icon: 'graph-up-arrow',
 	},
+	{
+		/*
+			Centro de recursos (misión centro-de-recursos-clientes, 13/10/2026): la página con los
+			videos del sistema, en recursos.comerciocity.com. No es una pantalla de esta SPA: va con
+			`function:` y abrir_centro_de_recursos() (mixins/route_functions.js) la abre en otra
+			pestaña con un pase de un solo uso, así entra con el usuario logueado y guarda su avance.
+
+			Sin `can` ni extensión a propósito: lo ve todo usuario, dueño o empleado (decisión de
+			Lucas). `no_aterrizar: true` porque redirect() de common-vue/mixins/permissions.js
+			aterriza en la primera ruta sin `can`, y esta no tiene una ruta del router a la que ir.
+			Va al final del array: queda abajo de todo, justo arriba de "Recursos" (que es otra cosa,
+			la descarga de datos).
+		*/
+		text: 'Centro de recursos',
+		name: 'centro_de_recursos',
+		function: 'abrir_centro_de_recursos',
+		icon: 'collection-play',
+		no_aterrizar: true,
+	},
 ]
