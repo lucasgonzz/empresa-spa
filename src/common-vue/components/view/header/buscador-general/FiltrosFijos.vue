@@ -242,12 +242,18 @@ export default {
 		 */
 		opcionesRelacion(filtro) {
 			let model_name = this.modelNameFromRelationKey({ key: filtro.key })
-			let opciones = [{ value: 0, text: 'Seleccione ' + this.singular(model_name) }]
 
 			let store = this.$store.state[model_name]
 			if (!store) {
-				return opciones
+				// Sin store no hay de donde sacar opciones. Se chequea ANTES de singular(): ese helper hace
+				// `require('@/models/'+model_name)` y revienta si tampoco existe el modelo, que es lo que pasa
+				// con las relaciones cuya key no coincide con el store (ej: from_address_id), y justo ese es
+				// el caso en que este return tiene que evitar el error en pleno render. El rotulo sale del
+				// texto del propio filtro.
+				return [{ value: 0, text: 'Seleccione ' + (filtro.text || model_name) }]
 			}
+
+			let opciones = [{ value: 0, text: 'Seleccione ' + this.singular(model_name) }]
 
 			let fuente = store.models
 			if (this.tiene_catalogo_liviano(model_name) && store.options_loaded) {
