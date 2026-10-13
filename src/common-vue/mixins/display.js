@@ -37,6 +37,13 @@ export default {
 					properties = this.funcion_personalizada(properties)
 				} catch (err) {
 					console.error('setModel: no se pudieron preparar las props de ' + model_name, err)
+					/*
+						El overlay puede haberlo prendido el que llamo (show_model() de generals.js lo prende
+						ANTES de pedir el modelo y recien despues llama a setModel): si no se apaga aca, el
+						aviso sale pero la pantalla queda tapada hasta un F5. Apagarlo es idempotente.
+					*/
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
 					this.avisarQueNoSePudoAbrirElFormulario()
 					return
 				}
@@ -69,10 +76,15 @@ export default {
 		},
 		/**
 		 * Aviso visible cuando un formulario no llego a abrirse (ver el comentario de setModel).
-		 * El loader no lo toca: lo apaga el setTimeout de setModel en todos los casos.
+		 * El loader no lo toca: lo apagan setModel (en sus dos caminos) y no depende de este aviso:
+		 * si el toast mismo fallara, el error queda en la consola y el sistema sigue andando.
 		 */
 		avisarQueNoSePudoAbrirElFormulario() {
-			this.$toast.error('No se pudo abrir el formulario. Probá de nuevo; si sigue pasando, recargá la página.')
+			try {
+				this.$toast.error('No se pudo abrir el formulario. Probá de nuevo; si sigue pasando, recargá la página.')
+			} catch (err) {
+				console.error('setModel: tampoco se pudo mostrar el aviso', err)
+			}
 		},
 		funcion_personalizada(properties) {
 			console.log('funcion_personalizada props:')

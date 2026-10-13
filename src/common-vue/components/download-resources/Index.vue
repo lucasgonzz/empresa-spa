@@ -505,8 +505,8 @@ export default {
 			// nombres salen de nuestra propia lista o de lo que el backend devolvio en
 			// no_soportados, que es lo que le mandamos-- pero sin esto un dispatch a una accion
 			// inexistente devuelve undefined y el .then de abajo tira un TypeError SINCRONO,
-			// adentro del forEach, que se lleva puesto el .then de pedir_masivo y hace que se
-			// vuelvan a pedir de a uno los 69 que ya se habian commiteado.
+			// adentro de pedir_sueltos()/pedir_sueltos_en_tandas(), que se lleva puesto el .then de
+			// pedir_masivo y hace que se vuelvan a pedir de a uno los 69 que ya se habian commiteado.
 			if (!this.$store._actions[model_name + '/getModels']) {
 				console.log('recursos-iniciales: no hay store para ' + model_name + ', se saltea')
 				this.marcar_descargado(model_name)
