@@ -50,7 +50,13 @@ export default {
 		// o marcador) quedaba en blanco porque los tres hijos se gatean por
 		// $route.params.view. Se entra por Pedidos con replace (no push, para no
 		// ensuciar el historial) y catch anti-NavigationDuplicated.
-		if (!this.$route.params.view) {
+		/*
+			Una sección que ya no existe (/online/cupones desde un marcador, el historial o una pestaña
+			que quedó abierta cuando se sacaron los Cupones, 14/10/2026) también quedaba en blanco:
+			se la trata igual que /online pelado.
+		*/
+		let secciones = ['pedidos', 'clientes', 'mensajes', 'promociones']
+		if (!this.$route.params.view || secciones.indexOf(this.$route.params.view) == -1) {
 			this.$router.replace({name: 'online', params: {view: 'pedidos'}}).catch(() => {})
 		}
 	},
