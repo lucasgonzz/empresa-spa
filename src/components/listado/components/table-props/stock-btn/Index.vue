@@ -2,8 +2,12 @@
 	<div
 	class="j-center">
 			
+		<!--
+			align-center: en edición los botones Cancelar y Guardar stock van apilados, y sin esto el
+			botón azul del stock se estiraba al alto de los dos.
+		-->
 		<div
-		class="j-center"
+		class="j-center align-center"
 		v-if="can('article.edit_stock')">
 			
 			<stock-btn

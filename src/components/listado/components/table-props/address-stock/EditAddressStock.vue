@@ -11,8 +11,8 @@
 			:dusk="article.name+'-'+address.id"
 			type="number"
 			@click.stop
-			v-if="article_address"
-			v-model="article_address.pivot.amount"></b-form-input>
+			v-if="renglon"
+			v-model="renglon.pivot.amount"></b-form-input>
 		</b-input-group>
 
 		<b-input-group
@@ -25,8 +25,8 @@
 			:data-testid="'deposito-stock-min-'+address.id"
 			type="number"
 			@click.stop
-			v-if="article_address"
-			v-model="article_address.pivot.stock_min"></b-form-input>
+			v-if="renglon"
+			v-model="renglon.pivot.stock_min"></b-form-input>
 		</b-input-group>
 
 		<b-input-group
@@ -41,8 +41,8 @@
 			:data-testid="'deposito-stock-max-'+address.id"
 			type="number"
 			@click.stop
-			v-if="article_address"
-			v-model="article_address.pivot.stock_max"></b-form-input>
+			v-if="renglon"
+			v-model="renglon.pivot.stock_max"></b-form-input>
 		</b-input-group>
 	</div>
 </template>
@@ -53,12 +53,19 @@ export default {
 		address: Object
 	},
 	computed: {
-		article_address() {
-			let article_address = this.article.addresses.find(address => address.id == this.address.id)
+		/*
+			El renglón de esta sucursal en la edición del store (article/edit_addresses_stock), NO
+			el pivot de `article.addresses` (misión stock-sucursal-desde-listado, 14/10/2026). Así
+			lo tipeado no toca la fila: si se cancela, la celda vuelve a mostrar el stock real, y un
+			re-render de la fila (un loadModel, un reload del listado) no pisa lo que se está
+			escribiendo.
+		*/
+		renglon() {
+			let renglon = this.$store.state.article.edit_addresses_stock.addresses.find(_renglon => _renglon.id == this.address.id)
 
-			if (typeof article_address != 'undefined') {
+			if (typeof renglon != 'undefined') {
 
-				return article_address
+				return renglon
 			}
 
 			return null
