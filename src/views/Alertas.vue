@@ -67,6 +67,10 @@
 	normaliza cada una (incluida la URL de antes, /alertas/imagenes), vive en
 	components/alertas/solapas.js, para que esta vista, la sub-barra del catalogo y los llamadores
 	("Ver en Alertas") no tengan tres versiones de la misma regla.
+
+	Mision alertas-descripciones (14/10/2026): se suma una tercera sub-solapa,
+	/alertas/catalogo/descripciones, con las descripciones automaticas que la IA no pudo confirmar.
+	La ve todo el que ve Catalogo (como Imagenes).
 */
 import alert_infos from '@/mixins/alert_infos'
 import { ruta_normalizada, subsolapas_permitidas } from '@/components/alertas/solapas'
