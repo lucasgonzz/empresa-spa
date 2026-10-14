@@ -10,6 +10,8 @@ export default {
 
 			this.setEmployeeVender()
 
+			this.setSellerVender()
+
 			this.init_vender_address_id()
 
 			/*
