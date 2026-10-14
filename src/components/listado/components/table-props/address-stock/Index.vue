@@ -13,12 +13,14 @@
 </template>
 <script>
 import payment_method_discounts_addresses_columns from '@/mixins/listado/payment_method_discounts_addresses_columns'
+import permiso_stock_por_sucursal from '@/mixins/listado/permiso_stock_por_sucursal'
 export default {
 	components: {
 		EditAddressStock: () => import('@/components/listado/components/table-props/address-stock/EditAddressStock'),
 	},
 	mixins: [
 		payment_method_discounts_addresses_columns,
+		permiso_stock_por_sucursal,
 	],
 	props: {
 		article: Object,
@@ -26,15 +28,8 @@ export default {
 	},
 	computed: {
 		puede_editar_stock() {
-			if (this.is_admin) {
-				return true 
-			}
-
-			if (this.can('article.edit_stock_only_sucursal')) {
-				return Number(this.user.address_id) == Number(this.address.id)
-			}
-
-			return this.can('article.edit_stock')
+			// La regla vive en el mixin: la usa también el botón de guardar para armar el payload.
+			return this.puede_editar_stock_de_sucursal(this.address.id)
 		},
 		se_quiere_editar_stock() {
 			return this.article_to_edit_address && this.article_to_edit_address.id == this.article.id
