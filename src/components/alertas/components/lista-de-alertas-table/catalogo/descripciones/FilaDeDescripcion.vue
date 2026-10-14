@@ -513,9 +513,36 @@ export default {
 		padding-top: 12px
 		border-top: 1px solid var(--color-border-secondary, #e9ecef)
 
-	textarea
-		line-height: 1.45
-		resize: vertical
+// Los dos campos de la edicion con el mismo tamaño compacto de la maqueta. Hace falta pisar dos reglas
+// globales de src/sass/_inputs.sass que alcanzan solo al <input> y no al <textarea>:
+//   - `input.form-control` (0,1,1) le pone font-size 1.4rem: el Titulo salia a 22,4 px y el Texto a 16 px.
+//   - `input` / `input:focus` le ponen borde de 2 px y, con el foco, 3 px y un halo grande.
+// Con la clase de la edicion delante queda en (0,2,0), (0,2,1) y (0,3,0): les gana a esas sin !important
+// y no toca ningun otro input del sistema.
+.desc-rev-fila__edicion .form-control
+	font-size: 0.875rem
+	line-height: 1.45
+	padding: 6px 10px
+	border-width: 1px
+	border-radius: 6px
+
+	&:focus
+		border-width: 1px
+		border-color: var(--color-primary, #007bff)
+		box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring, rgba(0, 123, 255, .15))
+
+	// Campo vacio: el rojo de validacion de bootstrap se conserva tambien con el foco.
+	&.is-invalid,
+	&.is-invalid:focus
+		border-color: var(--btn-peligro-borde, #dc3545)
+
+// El titulo, de un renglon, con la altura del texto mas su relleno (≈34 px); el texto crece solo.
+.desc-rev-fila__edicion input.form-control
+	height: calc(1.45em + 14px)
+
+.desc-rev-fila__edicion textarea.form-control
+	height: auto
+	resize: vertical
 
 .desc-rev-fila__edicion-rotulo
 	display: block
