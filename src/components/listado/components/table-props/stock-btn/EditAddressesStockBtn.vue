@@ -70,7 +70,6 @@
 	</div>
 </template>
 <script>
-import axios from 'axios'
 import permiso_stock_por_sucursal from '@/mixins/listado/permiso_stock_por_sucursal'
 
 /*
@@ -222,17 +221,15 @@ export default {
 
 				self.$store.commit('article/edit_addresses_stock/iniciar_edicion', self.armar_edicion_de_stock())
 			})
-			.catch(err => {
+			.catch(() => {
+				/*
+					Sin toast propio: el aviso ya lo da el handler global de main.js (con respuesta,
+					el toast del errorEvent; sin respuesta, el de sin conexión; un pedido cancelado
+					por salir de la pantalla, ninguno). Acá solo se apaga lo que prendió este botón,
+					y la edición no se abre.
+				*/
 				self.$store.commit('article/edit_addresses_stock/set_trayendo_article_id', null)
 				self.$store.commit('auth/setLoading', false)
-				console.log(err)
-
-				// Un pedido cancelado porque el usuario se fue de la pantalla no es un error para él.
-				if (axios.isCancel(err)) {
-					return
-				}
-
-				self.$toast.error('No se abrió la edición del stock por depósito: no pudimos traer el stock actual del artículo. Volvé a intentar.')
 			})
 		},
 		/**
