@@ -20,7 +20,7 @@
 		@click="start_batch_flow(true)">
 			<div class="ai-desc-dropdown-option">
 				<div class="ai-desc-dropdown-option__title">Regenerar las descripciones de IA</div>
-				<small class="ai-desc-dropdown-option__hint">Vuelve a buscar y reemplaza solo las generadas por IA, incluidas las que esperan revisión. Nunca toca las cargadas a mano.</small>
+				<small class="ai-desc-dropdown-option__hint">Vuelve a buscar y reemplaza las descripciones de IA que nadie aprobó ni corrigió. Nunca toca las cargadas a mano.</small>
 			</div>
 		</dropdown-option-item>
 	</div>
