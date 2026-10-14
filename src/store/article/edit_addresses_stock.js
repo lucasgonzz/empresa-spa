@@ -46,6 +46,14 @@ export default {
 			segundo pedido.
 		*/
 		trayendo_article_id: null,
+
+		/*
+			Prendido mientras viaja el PUT de guardar. Un segundo click en "Guardar stock" con el
+			primero en vuelo se ignora: si salía igual, llegaba después de que el primero ya había
+			escrito y la API le contestaba 409 "No se guardó ningún cambio" sobre algo que sí se
+			guardó.
+		*/
+		guardando: false,
 	},
 	mutations: {
 		set_article(state, value) {
@@ -72,9 +80,13 @@ export default {
 			state.article = null
 			state.addresses = []
 			state.originales = {}
+			state.guardando = false
 		},
 		set_trayendo_article_id(state, value) {
 			state.trayendo_article_id = value
+		},
+		set_guardando(state, value) {
+			state.guardando = value
 		},
 		setLoading(state, value) {
 			state.loading = value

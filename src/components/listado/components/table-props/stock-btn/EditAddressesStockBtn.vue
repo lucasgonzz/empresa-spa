@@ -17,6 +17,7 @@
 			size="sm"
 			data-testid="btn-cancelar-depositos"
 			title="Cerrar la edición sin guardar: el stock de cada depósito queda como está"
+			:disabled="esta_guardando_stock"
 			@click.stop="cancel"
 			variant="outline-danger">
 				<i class="icon-cancel"></i>
@@ -28,6 +29,7 @@
 			dusk="btn_guardar_depositos"
 			data-testid="btn-guardar-depositos"
 			title="Guardar el stock y los mínimos y máximos que cambiaste en cada depósito"
+			:disabled="esta_guardando_stock"
 			@click.stop="actualizar"
 			variant="success">
 				<i class="icon-check"></i>
@@ -165,6 +167,9 @@ export default {
 		},
 		esta_trayendo_stock() {
 			return this.$store.state.article.edit_addresses_stock.trayendo_article_id == this.article.id
+		},
+		esta_guardando_stock() {
+			return this.$store.state.article.edit_addresses_stock.guardando
 		},
 	},
 	methods: {
@@ -351,6 +356,16 @@ export default {
 		actualizar() {
 			let self = this
 			let article_id = this.article.id
+
+			/*
+				Guarda contra el doble click: el estado vive en el store y el commit es sincrónico,
+				así que el segundo click lo ve prendido aunque llegue en el mismo tick. Se apaga en
+				todos los caminos (éxito, 409 y error) con `limpiar_edicion`.
+			*/
+			if (this.esta_guardando_stock) {
+				return
+			}
+			this.$store.commit('article/edit_addresses_stock/set_guardando', true)
 
 			this.$store.commit('auth/setMessage', 'Actualizando Stock')
 			this.$store.commit('auth/setLoading', true)
