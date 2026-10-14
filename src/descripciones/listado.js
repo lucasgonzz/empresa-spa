@@ -276,27 +276,30 @@ export default {
 
 	'btn-editar-depositos': {
 		titulo: 'Stock por depósito',
-		que_hace: 'Despliega, en la misma fila, el stock y el mínimo y máximo de este artículo en cada depósito, para cargarlos de una.',
+		que_hace: 'Trae el stock actual del artículo y despliega, en la misma fila, el stock y el mínimo y máximo de cada depósito, para cargarlos de una.',
 		repercute: [
 			'El valor de Stock que se guarda SOBREESCRIBE al actual de ese depósito: el sistema no suma, pisa. Por adentro registra la diferencia como un movimiento de stock ("Creación de depósito" la primera vez, "Actualización de depósito" después), así que el historial del artículo queda completo.',
+			'Al abrir, la fila se actualiza con el stock que hay en ese momento: si otro empleado movió stock mientras tenías el listado abierto, lo ves antes de editar.',
 			'El stock global del artículo se recalcula solo: es siempre la suma de todos los depósitos.',
 			'Los mínimos y máximos por depósito son los que después usan las sugerencias de reposición para decidir qué mover.',
 		],
-		requiere: 'Cargar Mínimo y Máximo de un depósito dejando el Stock vacío guarda los límites pero NO le crea stock: para las sugerencias ese depósito sigue sin existir hasta que reciba stock por primera vez.',
-		nota_interna: 'Defecto conocido (exploracion 3/9/2026): address_article.amount queda NULL y StockSuggestionService saltea pivots con amount NULL — un deposito con minimo definido y sin stock no genera deficit. Tambien: los inputs Min y Max comparten el mismo id HTML (EditAddressStock.vue, copy-paste). Y el boton entero solo existe si el usuario guardo alguna vez su configuracion de columnas (hallazgo de los puentes de slots con props_to_show vacio).',
+		requiere: 'Cargar Mínimo y Máximo de un depósito dejando el Stock vacío guarda los límites pero NO le crea stock: para las sugerencias ese depósito sigue sin existir hasta que reciba stock por primera vez. Si tu usuario solo puede editar el stock de su sucursal, los demás depósitos se ven como número y no se pueden cambiar.',
+		nota_interna: 'Defecto conocido (exploracion 3/9/2026): address_article.amount queda NULL y StockSuggestionService saltea pivots con amount NULL — un deposito con minimo definido y sin stock no genera deficit. El id repetido de los inputs Min y Max (EditAddressStock.vue) ya se corrigio en la exploracion de Alertas. Y el boton entero solo existe si el usuario guardo alguna vez su configuracion de columnas (hallazgo de los puentes de slots con props_to_show vacio). Desde la mision stock-sucursal-desde-listado (14/10/2026): al abrir hace GET article/<id> y pisa en el lugar addresses y stock de la fila; lo tipeado vive en el store article/edit_addresses_stock (renglones + originales), no en el pivot de la fila; la regla de permiso por sucursal esta en mixins/listado/permiso_stock_por_sucursal.js (espejo de PermisoStockPorSucursalHelper de empresa-api).',
 	},
 
 	'btn-guardar-depositos': {
 		titulo: 'Guardar stock por depósito',
-		que_hace: 'Guarda el stock y los mínimos y máximos cargados en la fila.',
+		que_hace: 'Guarda el stock y los mínimos y máximos que cambiaste en la fila. Los depósitos que no tocaste no se mandan.',
 		repercute: [
 			'Cada depósito cuyo stock cambió deja su movimiento en el historial del artículo, con la diferencia exacta.',
+			'Si mientras editabas otro empleado movió el stock de un depósito que cambiaste, NO se guarda nada: aparece un aviso con el stock que tenías en pantalla y el que hay ahora, y la fila queda con el stock real para que vuelvas a abrir y decidas.',
 			'El mínimo y el máximo se guardan tal cual; el reporte de inventario (Alertas → Stock mínimo) los toma cuando se vuelve a generar.',
 		],
+		nota_interna: 'Desde la mision stock-sucursal-desde-listado (14/10/2026): el PUT article-update-addresses lleva solo los renglones cambiados y editables, cada uno con pivot.amount_original (el stock al abrir; null si no habia fila). La API contesta 409 {message, conflictos, model} si la base cambio en una sucursal modificada; el SPA pisa la fila con model y sale de la edicion sin toast propio (el message lo muestra el handler global). El PUT sale siempre, aunque vaya vacio: los specs exploracion-depositos-* esperan el PUT y el GET de recarga.',
 	},
 
 	'btn-cancelar-depositos': {
-		titulo: 'Descartar cambios de stock',
-		que_hace: 'Cierra la edición de stock por depósito sin guardar nada.',
+		titulo: 'Cancelar la edición de stock',
+		que_hace: 'Cierra la edición de stock por depósito sin guardar nada: lo que hayas escrito se descarta y la fila vuelve a mostrar el stock real.',
 	},
 }

@@ -15,11 +15,32 @@
 				ya usa Ventas.vue. "Eliminar" masivo queda: el backend frena con 422 el de un
 				movimiento con el stock movido.
 			-->
-			<view-component 
+			<!--
+				`:show_btn_create="puede_crear"` (mision permiso-crear-movimiento-deposito,
+				14/10/2026): el "Crear" del encabezado solo se ofrece con el permiso
+				`deposit_movement.store` ("Crear movimientos de deposito"). Sin el, el modal no ofrece
+				el alta: es la UNICA puerta a un formulario de alta de esta pantalla (la tabla solo abre
+				filas ya creadas y, desde el 10/8/2026, el formulario guarda solo con "Guardar y
+				cerrar", asi que tampoco queda un "guardar y crear otro" que reabra uno en blanco).
+				La API responde 403 si alguien llega al POST por otro camino.
+
+				🔴 Se pasa `:show_btn_create` y NO `:check_permissions="true"`. check_permissions
+				activaria de golpe los permisos `deposit_movement.index`, `.update` y `.delete` del
+				modelo sobre la lista, el formulario y el boton Eliminar, y eso cambiaria
+				comportamiento que hoy es abierto a proposito: ver los movimientos lo decide
+				`article.index` (lo piden el Listado y Alertas) y la edicion se decide campo por campo
+				con `deposit_movement.update` / `.update_articles` (ver src/models/deposit_movement.js).
+				El dueño pasa siempre, porque `can()` le devuelve true.
+
+				El modal de Alertas -> Movimientos de depositos no cambia: ya pasa
+				`:show_btn_create="false"` (alli no hay altas).
+			-->
+			<view-component
 			model_name="deposit_movement"
 			order_list_by="deposit_movement_status"
 			change_from_dates_option
 			:check_permissions="false"
+			:show_btn_create="puede_crear"
 			:show_actualizar_option="false"
 			:show_btn_save="mostrar_btn_guardar"
 			:show_btn_delete="mostrar_btn_eliminar"
@@ -115,11 +136,28 @@ export default {
 			return this.$store.state.deposit_movement.model
 		},
 		/**
+		 * Si el usuario puede crear movimientos de deposito: tiene el permiso
+		 * `deposit_movement.store` ("Crear movimientos de deposito"). Decide si el modal ofrece el
+		 * "Crear" del encabezado (prop `show_btn_create` del view-component, ver el comentario de
+		 * arriba en el template). El dueño pasa siempre, porque `can()` le devuelve true.
+		 *
+		 * Es un permiso independiente de los de edicion: quien puede crear arma el movimiento
+		 * completo (depositos, estado, empleado, notas y los articulos del alta), pero despues, ya
+		 * creado, solo lo cambia si ademas tiene `deposit_movement.update` o `.update_articles`.
+		 *
+		 * @returns {Boolean}
+		 */
+		puede_crear() {
+			return this.can('deposit_movement.store')
+		},
+		/**
 		 * Si el formulario muestra "Guardar y cerrar".
 		 *
-		 * En un alta siempre (crear un movimiento no pide permiso). Con un movimiento ya creado, si
-		 * el usuario puede editar algo: los datos (`deposit_movement.update`) o los articulos
-		 * (`deposit_movement.update_articles`). El dueño pasa siempre.
+		 * En un alta siempre: el formulario de alta solo se abre con `deposit_movement.store` (el
+		 * "Crear" del encabezado no se ofrece sin el, ver `puede_crear`), asi que quien llega a un
+		 * alta ya tiene permiso para guardarla y aca no se vuelve a chequear. Con un movimiento ya
+		 * creado, si el usuario puede editar algo: los datos (`deposit_movement.update`) o los
+		 * articulos (`deposit_movement.update_articles`). El dueño pasa siempre.
 		 *
 		 * Antes se escondia con el estado "Recibido" (id 2), que era el que movia el stock. Ahora el
 		 * stock lo mueve el boton "Mover stock" y, con el stock movido, igual se pueden cambiar el

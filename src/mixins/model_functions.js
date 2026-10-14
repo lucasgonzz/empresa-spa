@@ -477,8 +477,11 @@ export default {
          *
          * Se bloquean cuando el movimiento ya existe y el usuario no tiene el permiso
          * `deposit_movement.update` ("Editar movimientos de deposito (estado, depositos y notas)").
-         * En un alta nunca se bloquean: crear un movimiento no pide ese permiso. El dueño pasa
-         * siempre, porque `can()` le devuelve true.
+         * En un alta nunca se bloquean: el alta no depende de `deposit_movement.update` sino de
+         * `deposit_movement.store` ("Crear movimientos de deposito"), que decide si el modal ofrece
+         * el "Crear" (ver `puede_crear` en deposit-movements/modal/Index.vue). Quien llega a un
+         * formulario de alta ya puede crear, y llena el estado, el empleado y las notas sin
+         * necesitar el permiso de edicion. El dueño pasa siempre, porque `can()` le devuelve true.
          *
          * @param {Object} model el movimiento de deposito que muestra el formulario.
          * @returns {Boolean} true si los campos tienen que quedar deshabilitados.
