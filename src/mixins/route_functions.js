@@ -136,6 +136,10 @@ export default {
 		 * La API emite un pase de un solo uso (POST centro-recursos/pase) y devuelve la URL de la
 		 * página con ese pase. No pasa por el router: es otra página, en otra pestaña.
 		 *
+		 * La URL se abre con el tema del sistema (`tema=dark|light`, ver url_del_centro_con_tema()): el
+		 * centro nace en el mismo tema que el usuario tiene acá (misión centro-recursos-soporte-y-tema,
+		 * 14/10/2026).
+		 *
 		 * 🔴 La pestaña se abre YA, vacía y sincrónica en el clic, y recibe la URL cuando vuelve el
 		 * pedido. Si se abriera recién en el .then(), el bloqueador de ventanas emergentes la frenaría:
 		 * para el navegador ya no sería un gesto del usuario. Es el mismo camino que el botón de
@@ -163,8 +167,9 @@ export default {
 					self.$toast.info('El centro de recursos va a estar disponible en breve')
 					return
 				}
+				let url = self.url_del_centro_con_tema(datos.url)
 				if (ventana && !ventana.closed) {
-					ventana.location.href = datos.url
+					ventana.location.href = url
 					return
 				}
 				/*
@@ -176,7 +181,7 @@ export default {
 					null AUNQUE la pestaña se abra, y no habría forma de saber si hay que avisar. El
 					opener se corta a mano, como arriba.
 				*/
-				let nueva = window.open(datos.url, '_blank')
+				let nueva = window.open(url, '_blank')
 				if (!nueva) {
 					self.$toast.error('El navegador bloqueó la pestaña nueva. Permití las ventanas emergentes para este sitio y probá de nuevo.')
 					return
@@ -201,6 +206,29 @@ export default {
 				}
 				self.$toast.error('No se pudo abrir el centro de recursos. Probá de nuevo en un momento.')
 			})
+		},
+		/**
+		 * Le agrega a la URL del centro de recursos el tema del sistema: `tema=dark` si el usuario lo
+		 * tiene en modo oscuro, `tema=light` si no (misión centro-recursos-soporte-y-tema, 14/10/2026).
+		 * La página lo usa como su tema inicial y lo recuerda.
+		 *
+		 * La fuente es la clase `dark-mode` de <html>, que pone utils/dark_mode.js y que ya está resuelta
+		 * contra `users.dark_mode`: es lo que el usuario está viendo en este momento. Si algo falla (una
+		 * URL que no se puede parsear, `document` no disponible), devuelve la URL tal cual: el tema es
+		 * un extra y nunca puede impedir que el centro abra.
+		 *
+		 * @param {string} url URL que devolvió la API (puede traer pase, api, v).
+		 * @returns {string}
+		 */
+		url_del_centro_con_tema(url) {
+			try {
+				let oscuro = document.documentElement.classList.contains('dark-mode')
+				let con_tema = new URL(url)
+				con_tema.searchParams.set('tema', oscuro ? 'dark' : 'light')
+				return con_tema.toString()
+			} catch (e) {
+				return url
+			}
 		},
 		/**
 		 * Cierra la pestaña vacía que abrió abrir_centro_de_recursos(), si sigue abierta.
