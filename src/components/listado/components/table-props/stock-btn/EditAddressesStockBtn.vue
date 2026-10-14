@@ -1,7 +1,7 @@
 <template>
 	<div
 	v-if="!article.article_variants.length && addresses.length">
-
+	
 		<!--
 			En edición: dos botones con texto, apilados para no ensanchar la columna Stock. Antes eran
 			dos íconos solos (cruz roja y check verde) al lado del botón verde de entrar, y se
@@ -12,7 +12,7 @@
 		v-if="se_esta_editando_stock"
 		key="acciones"
 		class="edit-addresses-stock-btn__acciones">
-
+			
 			<b-button
 			size="sm"
 			data-testid="btn-cancelar-depositos"
@@ -23,7 +23,7 @@
 				<i class="icon-cancel"></i>
 				<span class="edit-addresses-stock-btn__texto">Cancelar</span>
 			</b-button>
-
+			
 			<b-button
 			size="sm"
 			dusk="btn_guardar_depositos"
@@ -156,10 +156,10 @@ export default {
 	},
 	computed: {
 		addresses() {
-			return this.$store.state.address.models
+			return this.$store.state.address.models 
 		},
 		selected_article() {
-			return this.$store.state.article.edit_addresses_stock.article
+			return this.$store.state.article.edit_addresses_stock.article 
 		},
 		se_esta_editando_stock() {
 			return this.selected_article && this.selected_article.id == this.article.id

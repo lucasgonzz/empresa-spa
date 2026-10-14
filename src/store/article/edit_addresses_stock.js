@@ -57,7 +57,7 @@ export default {
 	},
 	mutations: {
 		set_article(state, value) {
-			state.article = value
+			state.article = value 
 		},
 		/**
 		 * Abre la edición de un artículo con sus renglones y lo que había al abrir.
@@ -96,7 +96,7 @@ export default {
 			state.guardando = value
 		},
 		setLoading(state, value) {
-			state.loading = value
+			state.loading = value 
 		},
 	},
 	actions: {
@@ -105,7 +105,7 @@ export default {
 			return axios.get('api/stock-movement/'+article.id)
 			.then(res => {
 				commit('setLoading', false)
-				commit('setModels', res.data.models)
+				commit('setModels', res.data.models) 
 			})
 			.catch(err => {
 				commit('setLoading', false)

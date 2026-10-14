@@ -4,7 +4,7 @@
 		v-if="se_quiere_editar_stock && puede_editar_stock"
 		:article="article"
 		:address="address"></edit-address-stock>
-
+		
 		<span
 		v-else>
 			{{ get_address_stock(article, address) }}
@@ -35,7 +35,7 @@ export default {
 			return this.article_to_edit_address && this.article_to_edit_address.id == this.article.id
 		},
 		article_to_edit_address() {
-			return this.$store.state.article.edit_addresses_stock.article
+			return this.$store.state.article.edit_addresses_stock.article 
 		},
 	}
 }
