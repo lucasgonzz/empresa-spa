@@ -68,7 +68,7 @@ class="desc-rev-fila"
 					<b-form-input
 					:id="id_del_campo('titulo', indice)"
 					v-model="seccion.title"
-					maxlength="255"
+					maxlength="191"
 					autocomplete="off"
 					:ref="indice === 0 ? 'primer_titulo' : null"
 					:state="seccion.title.trim() ? null : false"
@@ -288,8 +288,10 @@ export default {
 			}
 		},
 		/**
-		 * Lo mismo que valida la API (título y texto requeridos en cada sección): con algo vacío no se
-		 * deja guardar, así el 422 no llega nunca por esto.
+		 * Lo que la API le pide a cada sección: título y texto, los dos sin vaciar. Con alguno vacío no se
+		 * deja guardar, así que un 422 por eso no llega nunca. El otro límite del título (191 caracteres)
+		 * lo pone el `maxlength` del campo, no esta cuenta. La cantidad de secciones no se mira acá: se
+		 * editan las que vinieron, ni se agregan ni se sacan.
 		 *
 		 * @returns {Boolean}
 		 */
