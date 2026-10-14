@@ -542,4 +542,145 @@ export default {
 			'Esos artículos siguen sin categoría y pasan a la solapa Sin categoría.',
 		],
 	},
+
+	/* ---------------------------------------------------------------- catálogo: descripciones */
+
+	/*
+	 * Alertas → Catálogo → Descripciones (misión alertas-descripciones, 14/10/2026). Los `repercute` salen
+	 * de las decisiones de Lucas en la misión (D1: lo dudoso no se ve hasta aprobarlo; D2: la ve todo el que
+	 * ve Catálogo; D3: la solapa Publicadas) y del contrato §1.4 del plan: no hay spec de exploración que
+	 * los mida todavía (la suite la corre Lucas).
+	 *
+	 * Vocabulario: lo que se revisa es "la descripción" de un artículo, aunque tenga dos o tres secciones;
+	 * "propuesta" es palabra de la API y no se le muestra al cliente.
+	 */
+
+	'descripciones-buscador': {
+		titulo: 'Buscar en las descripciones',
+		que_hace: 'Filtra los artículos de la solapa abierta por nombre, código de barras o código de proveedor.',
+		repercute: [
+			'Busca solo entre los artículos de esta solapa (A revisar o Publicadas), no en todo el catálogo.',
+		],
+	},
+
+	'descripciones-por-pagina': {
+		titulo: 'Artículos por página',
+		que_hace: 'Cambia cuántos artículos se ven por página en la solapa: 25, 50 o 100.',
+	},
+
+	'descripciones-items-reintentar': {
+		titulo: 'Reintentar',
+		que_hace: 'Vuelve a pedir las descripciones de la solapa después de un error de conexión.',
+	},
+
+	'descripciones-aprobar-*': {
+		titulo: 'Aprobar la descripción',
+		que_hace: 'Publica la descripción que armó la IA para este artículo, tal como se ve en la fila.',
+		repercute: [
+			'Pasa a verse en tu tienda online y en la ficha del artículo, con todas sus secciones.',
+			'Si el negocio está conectado a Tienda Nube, también se manda allá.',
+			'Sale de A revisar y pasa a la solapa Publicadas, desde donde se puede corregir o quitar.',
+		],
+		nota_interna: 'POST article-description-ai/revision/{article_id}/aprobar sin cuerpo: la API crea las filas de descriptions con ai_generated=1 y ai_reviewed_at, y la propuesta queda aprobada. 404 si ya no estaba a revisar.',
+	},
+
+	'descripciones-descartar-*': {
+		titulo: 'Descartar la descripción',
+		que_hace: 'Tira la descripción que armó la IA para este artículo sin publicarla.',
+		repercute: [
+			'El artículo queda sin descripción; le podés escribir una a mano cuando quieras desde su ficha.',
+			'La generación automática no le vuelve a proponer una a ese artículo, salvo que se use "Regenerar las descripciones de IA" desde el listado.',
+		],
+		nota_interna: 'POST .../descartar: la propuesta queda descartada (AiDescriptionReviewHelper::motivo_para_saltear la saltea en el modo automático).',
+	},
+
+	'descripciones-editar-*': {
+		titulo: 'Editar la descripción',
+		que_hace: 'Abre en el lugar el título y el texto de cada sección para corregirlos.',
+		repercute: [
+			'No cambia nada hasta que guardes: Cancelar deja todo como estaba.',
+		],
+	},
+
+	'descripciones-guardar-*': {
+		titulo: 'Guardar',
+		que_hace: 'Guarda el título y el texto que escribiste. En A revisar, además, aprueba la descripción ("Guardar y aprobar").',
+		repercute: [
+			'Se ve así en tu tienda online y en la ficha del artículo; si el negocio está conectado a Tienda Nube, también se manda allá.',
+			'Cada sección necesita un título y un texto: con alguno vacío el botón queda apagado.',
+		],
+		nota_interna: 'En A revisar: POST .../aprobar con secciones [{title, content}]. En Publicadas: PUT .../publicada con secciones [{id, title, content}] (422 si alguna no es de IA o no es de ese artículo).',
+	},
+
+	'descripciones-cancelar-*': {
+		titulo: 'Cancelar',
+		que_hace: 'Cierra la edición sin guardar: la descripción queda como estaba.',
+	},
+
+	'descripciones-quitar-*': {
+		titulo: 'Quitar la descripción',
+		que_hace: 'Borra la descripción que cargó la IA para este artículo, después de confirmar.',
+		repercute: [
+			'Deja de verse en tu tienda online y en la ficha del artículo (y en Tienda Nube, si el negocio está conectado).',
+			'Las descripciones que se cargaron a mano nunca se tocan.',
+			'La generación automática no le vuelve a armar una a ese artículo, salvo que se use "Regenerar las descripciones de IA" desde el listado.',
+		],
+		nota_interna: 'POST .../quitar: borra las descriptions ai_generated del artículo y deja una propuesta descartada con esas secciones.',
+	},
+
+	'descripciones-fuente-*': {
+		titulo: 'De dónde lo sacó',
+		que_hace: 'Abre en otra pestaña la página donde la IA encontró la información de este producto.',
+		repercute: [
+			'Sirve para comparar: si la página habla de otro producto, conviene corregir o descartar la descripción.',
+		],
+	},
+
+	'descripciones-seleccionar-pagina': {
+		titulo: 'Seleccionar la página',
+		que_hace: 'Tilda todas las descripciones para revisar de la página que se ve, para aprobarlas o descartarlas juntas.',
+		repercute: [
+			'Solo toma las de esta página: las de las páginas siguientes no se tildan.',
+		],
+	},
+
+	'descripciones-tilde-*': {
+		titulo: 'Seleccionar esta descripción',
+		que_hace: 'La suma a las que se van a aprobar o descartar juntas.',
+	},
+
+	'descripciones-lote-aprobar': {
+		titulo: 'Aprobar las seleccionadas',
+		que_hace: 'Aprueba de una vez todas las descripciones tildadas, tal como las armó la IA, después de confirmar.',
+		repercute: [
+			'Pasan a verse en tu tienda online y en la ficha de cada artículo, igual que al aprobarlas de a una.',
+			'Si alguna ya no estaba para revisar (otra persona la resolvió, o se borró el artículo), se avisa cuántas; las demás se aprueban igual.',
+		],
+	},
+
+	'descripciones-lote-descartar': {
+		titulo: 'Descartar las seleccionadas',
+		que_hace: 'Descarta de una vez todas las descripciones tildadas, después de confirmar.',
+		repercute: [
+			'Esos artículos quedan sin descripción y la generación automática no se las vuelve a proponer.',
+		],
+	},
+
+	'descripciones-resumen-revisar': {
+		titulo: 'Revisar ahora',
+		que_hace: 'Lleva a Alertas → Catálogo → Descripciones, donde esperan las descripciones que la IA no pudo confirmar.',
+		repercute: [
+			'Solo navega: no aprueba ni descarta nada.',
+		],
+		nota_interna: 'Vive en el resumen del lote (BatchDescriptionsSummaryModal.vue). Reemplaza a la bandeja modal vieja (AiDescriptionsReviewModal), que se retiró en la misión alertas-descripciones.',
+	},
+
+	'proceso-revisar-descripciones': {
+		titulo: 'Revisar en Alertas',
+		que_hace: 'Lleva a Alertas → Catálogo → Descripciones, donde esperan las descripciones de este lote que la IA no pudo confirmar.',
+		repercute: [
+			'Solo navega: no cambia el lote ni las descripciones.',
+		],
+		nota_interna: 'Vive en la fila del modal de procesos en segundo plano (Fila.vue): solo en un proceso descripciones_ia completado con resultado.a_revisar > 0. Se documenta acá, como proceso-ver-en-alertas, porque lleva a esta pestaña.',
+	},
 }
