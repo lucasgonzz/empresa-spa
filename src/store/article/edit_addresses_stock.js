@@ -74,6 +74,12 @@ export default {
 		 * Cierra la edición y descarta lo tipeado. La fila vuelve a mostrar su stock real porque
 		 * nunca se escribió nada en ella.
 		 *
+		 * También la llama views/Listado.vue al salir de la vista: sin eso, al volver horas
+		 * después la fila seguía en edición con originales viejos y el botón azul de ese
+		 * artículo quedaba deshabilitado (también en el modal del artículo). Por eso borra
+		 * además la marca de "trayendo": un GET de apertura que vuelva después de salir no abre
+		 * nada.
+		 *
 		 * @param {Object} state
 		 */
 		limpiar_edicion(state) {
@@ -81,6 +87,7 @@ export default {
 			state.addresses = []
 			state.originales = {}
 			state.guardando = false
+			state.trayendo_article_id = null
 		},
 		set_trayendo_article_id(state, value) {
 			state.trayendo_article_id = value

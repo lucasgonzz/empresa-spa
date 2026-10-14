@@ -196,8 +196,16 @@ export default {
 
 			this.$api.get('article/'+article_id)
 			.then(res => {
+				// Si mientras tanto se salió del listado, `limpiar_edicion` ya borró la marca: no se
+				// abre una edición que nadie está mirando.
+				let sigue_vigente = self.$store.state.article.edit_addresses_stock.trayendo_article_id == article_id
+
 				self.$store.commit('article/edit_addresses_stock/set_trayendo_article_id', null)
 				self.$store.commit('auth/setLoading', false)
+
+				if (!sigue_vigente) {
+					return
+				}
 
 				let model = res.data ? res.data.model : null
 
