@@ -178,14 +178,16 @@ export default {
 					la pildora de procesos): `completar_ruta` la lleva a la nueva. `testid` deja el
 					data-testid en `nav-item-catalogo`, sin tilde.
 
-					El numero rojo suma los de las dos sub-solapas (el mismo que suma la campana del
-					menu, ver mixins/nav_functions.js).
+					El numero rojo suma los de las sub-solapas (el mismo que suma la campana del menu,
+					ver mixins/nav_functions.js). Desde la mision alertas-descripciones (14/10/2026) son
+					tres: Imagenes, Categorias y Descripciones (las descripciones automaticas que la IA
+					no pudo confirmar, para todo el que ve Catalogo).
 				*/
 				items.push({
 					name: 'Catálogo',
 					route_value: 'catalogo',
 					testid: 'catalogo',
-					alert: this.imagenes_alert_count + this.categorias_alert_count
+					alert: this.imagenes_alert_count + this.categorias_alert_count + this.descripciones_alert_count
 				})
 			}
 
@@ -343,6 +345,9 @@ export default {
 		 *    el resumen adentro).
 		 *  - Categorias: la corrida vigente y el numero rojo. Los dos son pedidos de fondo
 		 *    (silenciosos) que resuelven siempre.
+		 *  - Descripciones: el numero rojo, y el aviso a la seccion de que vuelva a traer su pagina
+		 *    (la lista vive en la seccion, que mira ese pedido en el store y muestra su propio estado
+		 *    de carga).
 		 *
 		 * Las acciones resuelven siempre, pero el catch va igual: el loading global no puede quedar
 		 * prendido por nada.
@@ -356,6 +361,8 @@ export default {
 			if (sub_solapa == 'categorias') {
 				pedidos.push(self.$store.dispatch('category_proposal/get_actual'))
 				pedidos.push(self.$store.dispatch('category_proposal/get_resumen'))
+			} else if (sub_solapa == 'descripciones') {
+				pedidos.push(self.$store.dispatch('ai_description_review/recargar_revision'))
 			} else {
 				pedidos.push(self.$store.dispatch('image_assignment/get_asignaciones'))
 			}

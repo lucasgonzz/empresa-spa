@@ -5,10 +5,10 @@ data-testid="alertas-catalogo"
 :data-subsolapa="sub_activa">
 
 	<!--
-		La segunda fila de solapas (Imagenes | Categorias), atada a la ruta: /alertas/catalogo/<sub>.
-		Solo se dibuja si la persona puede ver MAS DE UNA: un empleado no ve Categorias, y con una sola
-		solapa la barra no aporta nada (Imagenes queda para el exactamente como era cuando era la
-		solapa de primer nivel).
+		La segunda fila de solapas (Imagenes | Categorias | Descripciones), atada a la ruta:
+		/alertas/catalogo/<sub>. Solo se dibuja si la persona puede ver MAS DE UNA: con una sola solapa
+		la barra no aporta nada. Desde la mision alertas-descripciones (14/10/2026) un empleado ve dos
+		(Imagenes y Descripciones; Categorias sigue siendo solo del dueño), asi que tambien le aparece.
 
 		El margen negativo del contenedor (ver el <style>) deja las dos barras a 15px una de la otra,
 		como en Cheques: el nav trae 15px de aire arriba y el de Alertas ya le puso 15px abajo al
@@ -33,6 +33,7 @@ data-testid="alertas-catalogo"
 	-->
 	<imagenes v-if="sub_activa === 'imagenes'"></imagenes>
 	<categorias v-else-if="sub_activa === 'categorias'"></categorias>
+	<descripciones v-else-if="sub_activa === 'descripciones'"></descripciones>
 
 </div>
 </template>
@@ -49,8 +50,10 @@ import { SUBSOLAPAS_DEL_CATALOGO, ruta_normalizada, subsolapas_permitidas } from
  * el alias viejo /alertas/imagenes (que Alertas.vue convierte a la URL canónica con un `replace`): con
  * él, Imágenes se ve desde el primer instante, sin parpadeo.
  *
- * La lista de sub-solapas sale de un helper (`SUBSOLAPAS_DEL_CATALOGO`) para que Resumen, Marcas y
- * Descripciones (Fase 2) se sumen agregando un renglón allá y su sección acá, sin rehacer nada.
+ * La lista de sub-solapas sale de un helper (`SUBSOLAPAS_DEL_CATALOGO`) para que las que vienen se
+ * sumen agregando un renglón allá y su sección acá, sin rehacer nada. Así se sumó Descripciones
+ * (misión alertas-descripciones, 14/10/2026): la revisión de las descripciones que la IA no pudo
+ * confirmar, para todo el que ve Catálogo.
  *
  * Los números rojos de cada sub-solapa salen de los getters de sus stores (el mismo número que la
  * solapa de arriba suma y que la campana del menú).
@@ -60,6 +63,7 @@ export default {
 		HorizontalNav: () => import('@/common-vue/components/horizontal-nav/Index'),
 		Imagenes: () => import('@/components/alertas/components/lista-de-alertas-table/imagenes/Index'),
 		Categorias: () => import('@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/Index'),
+		Descripciones: () => import('@/components/alertas/components/lista-de-alertas-table/catalogo/descripciones/Index'),
 	},
 	computed: {
 		/**
@@ -96,6 +100,7 @@ export default {
 			return {
 				imagenes: this.$store.getters['image_assignment/badge'],
 				categorias: this.$store.getters['category_proposal/badge'],
+				descripciones: this.$store.getters['ai_description_review/badge'],
 			}
 		},
 		/**
@@ -128,8 +133,10 @@ export default {
 		 * se recarga lo suyo: es la forma de ver lo último, igual que volver a tocar una solapa de las de
 		 * arriba. Si es otra, no hace falta nada: su sección se monta sola y carga lo suyo.
 		 *
-		 * Los dos pedidos son los mismos que hace cada sección al entrar. El de imágenes muestra su propio
+		 * Los pedidos son los mismos que hace cada sección al entrar. El de imágenes muestra su propio
 		 * estado de carga en la tabla; el de categorías es silencioso (con datos a la vista no parpadea).
+		 * El de descripciones le pide a la sección que vuelva a traer su página (la lista vive en la
+		 * sección, que mira el pedido en el store) y el número rojo.
 		 *
 		 * @param {Object} item Item del nav ({ name, route_value, testid }).
 		 */
@@ -145,6 +152,10 @@ export default {
 			}
 			if (valor === 'imagenes') {
 				this.$store.dispatch('image_assignment/get_asignaciones')
+				return
+			}
+			if (valor === 'descripciones') {
+				this.$store.dispatch('ai_description_review/recargar_revision')
 			}
 		},
 	},

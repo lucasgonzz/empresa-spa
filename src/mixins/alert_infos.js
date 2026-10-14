@@ -55,6 +55,21 @@ export default {
         categorias_alert_count() {
             return this.$store.getters['category_proposal/badge']
         },
+        /**
+         * Numero rojo de la sub-solapa "Descripciones" de Alertas → Catalogo (y lo que suma a la
+         * solapa Catalogo y a la campana del menu): articulos con una descripcion automatica que la
+         * IA no pudo confirmar y que espera que alguien la apruebe o la descarte (mision
+         * alertas-descripciones, 14/10/2026).
+         *
+         * Sale del getter del store, que devuelve el `badge` que manda la API: no se recalcula aca.
+         * Contra una API que todavia no tiene la ruta vale 0. Lo ve todo el que ve Catalogo, como
+         * Imagenes.
+         *
+         * @returns {Number}
+         */
+        descripciones_alert_count() {
+            return this.$store.getters['ai_description_review/badge']
+        },
         deposit_movements_en_curso() {
             return this.$store.state.deposit_movement.en_curso.models 
         },
