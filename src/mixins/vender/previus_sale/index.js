@@ -24,6 +24,14 @@ import { comprobante_con_recargos_en_precios_sin_registro } from '@/utils/recarg
 	getItemsPreviusSale(), al final).
 */
 import { reagrupar_renglones_con_varios_precios } from '@/utils/varios_precios_guardados'
+/*
+	El aviso de que la venta cambio de cuenta corriente, que updateSale() muestra cuando el PUT sale
+	bien (mision edicion-completa-ventas-presupuestos, 8/10/2026). Solo metodos, con prefijo
+	`cambio_de_cuenta_` y sin data(): este mixin lo mezclan una docena de componentes.
+*/
+import aviso_cambio_de_cuenta, { moneda_de_cuenta_normalizada } from '@/mixins/vender/previus_sale/aviso_cambio_de_cuenta'
+// La moneda y la cotizacion que viajan en el PUT de la venta (updateSale). Ver el archivo.
+import { moneda_para_el_put_de_la_venta, cotizacion_para_el_put_de_la_venta } from '@/mixins/vender/previus_sale/moneda_y_cotizacion_del_put'
 
 /**
  * Reconstruye `modal_payment_methods` --los metodos de pago con su descuento / recargo-- a partir
@@ -66,7 +74,7 @@ export function ajustes_del_cobro_de_filas(filas, metodos_de_pago) {
 }
 
 export default {
-	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods, facturar],
+	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods, facturar, aviso_cambio_de_cuenta],
 	// mixins: [vender, set_employee_vender, vender_set_total],
 	data() {
 		return {
@@ -712,6 +720,29 @@ export default {
 		updateSale() {
 			const sale_id = this.previus_sale ? this.previus_sale.id : null
 			const pending = [...this.$store.state.vender.pending_attachments]
+			/*
+				La venta tal como estaba GUARDADA, para comparar con la que devuelve el PUT (aviso de
+				cambio de cuenta corriente). Se toma aca y no en el .then: cancelPreviusSale() la limpia.
+			*/
+			const venta_original = this.previus_sale
+			/*
+				La moneda que viaja en el PUT, del store --la que set_datos_para_actualizar_en_vender()
+				restauro de la venta, o la que el vendedor eligio en Moneda.vue-- y NORMALIZADA, nunca
+				null (ver moneda_para_el_put_de_la_venta). Se guarda aparte para comparar con la que
+				devuelve el servidor (ver el .then).
+			*/
+			const moneda_enviada = moneda_para_el_put_de_la_venta(this.$store.state.vender.moneda_id)
+			/*
+				La cotizacion que viaja: la del campo USD, o null si es el dolar del sistema que
+				Moneda.vue puso solo en una venta que no tenia cotizacion y nadie la toco (la API
+				conserva la guardada). La regla entera en cotizacion_para_el_put_de_la_venta.
+			*/
+			const valor_dolar_enviado = cotizacion_para_el_put_de_la_venta(
+				venta_original,
+				this.$store.state.vender.moneda_id,
+				this.valor_dolar,
+				this.$store.state.vender.previus_sales.cotizacion_editada_a_mano
+			)
 
 			this.$store.dispatch('vender/previus_sales/updateSale', {
 				client_id: this.client ? this.client.id : null, 
@@ -757,7 +788,14 @@ export default {
 					abrir la venta, o lo que el vendedor eligio si la cambio.
 				*/
 				created_at: this.$store.state.vender.created_at,
-				valor_dolar: this.valor_dolar,
+				/*
+					Moneda de la venta (mision edicion-completa-ventas-presupuestos, 8/10/2026). Es la
+					SEÑAL para la API: con `moneda_id` en el PUT guarda la moneda y, si es mayor que
+					cero, la cotizacion de abajo (null la conserva). El motivo completo esta en el PUT
+					de store/vender/previus_sales.js.
+				*/
+				moneda_id: moneda_enviada,
+				valor_dolar: valor_dolar_enviado,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
 				sale_status_id: this.$store.state.vender.sale_status_id,
@@ -785,6 +823,31 @@ export default {
 					this.upload_pending_attachments(sale_id, pending)
 				}
 				this.$toast.success('Venta actualizada')
+
+				// La respuesta la devuelve la action del store (res.data.model es la venta guardada).
+				let venta_guardada = res && res.data ? res.data.model : null
+
+				// Si la venta paso de una cuenta corriente a otra, se dice de cual a cual (decision 1 de Lucas).
+				this.cambio_de_cuenta_avisar_al_guardar(venta_original, venta_guardada)
+
+				/*
+					🔴 Una API anterior a esta mision IGNORA `moneda_id` en el PUT de venta (no lo
+					asignaba). Si el vendedor cambio la moneda, los renglones ya viajaron convertidos
+					(Moneda.vue) y la venta quedaria guardada con precios en la moneda nueva y la
+					moneda vieja, sin ningun error. Pasa solo si la SPA llega a un cliente antes que
+					la API (las dos salen en el mismo release): se avisa fuerte para que lo revisen.
+					Se compara normalizado (null/0 es pesos, como en la API): `moneda_enviada` ya lo
+					esta, y una venta vieja con moneda NULL a la que se le mando 1 no salta.
+				*/
+				if (
+					venta_guardada
+					&& moneda_de_cuenta_normalizada(venta_guardada.moneda_id) !== moneda_enviada
+				) {
+					this.$toast.error('El servidor no guardó la moneda de la venta: revisala.', {
+						duration: 20000,
+					})
+				}
+
 				this.cancelPreviusSale()
 			})
 			.catch(err => {
@@ -797,14 +860,33 @@ export default {
 					vendedor corrigio adentro: nada de cancelPreviusSale() aca. Este catch corre
 					desde que la action del store relanza el error (antes lo tragaba con un alert y
 					el .then de arriba daba la venta por actualizada).
+
+					Desde la mision edicion-completa-ventas-presupuestos (8/10/2026) llegan por aca,
+					con el mismo `message`, mas 422: el cambio de cliente o de moneda de una venta a
+					cuenta corriente que la API no puede mover (`cambio_de_cuenta_rechazado` con su
+					`motivo`: nota de credito en la cuenta corriente, facturacion consolidada, cliente
+					de otro comercio o inexistente, plan de pago en cuotas, combos), el paso a dolares
+					sin cotizacion (`sin_cotizacion_dolar`) y el limite de credito del cliente nuevo. En
+					todos la venta quedo como estaba y la edicion sigue abierta.
+
+					Esos mensajes son largos (dicen que paso y que hacer): duran 12 s y no 6, que no
+					alcanzaban para leerlos. Los demas rechazos siguen como estaban.
 				*/
 				if (
 					err.response
 					&& err.response.data
 					&& err.response.data.message
 				) {
-					this.$toast.error(err.response.data.message, {
-						duration: 6000
+					let datos = err.response.data
+
+					let es_rechazo_de_la_edicion = Boolean(
+						datos.cambio_de_cuenta_rechazado
+						|| datos.sin_cotizacion_dolar
+						|| datos.motivo
+					)
+
+					this.$toast.error(datos.message, {
+						duration: es_rechazo_de_la_edicion ? 12000 : 6000
 					})
 				} else {
 					this.$toast.error('Error al actualizar venta')

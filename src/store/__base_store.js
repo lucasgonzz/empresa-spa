@@ -104,6 +104,34 @@ export default function __base_store(options = {}) {
 			// cualquier orden, y el guard es lo unico que garantiza que gane la mas nueva.
 			consulta_vigente_token: 0,
 
+			// Token de la "descarga de models" vigente: identifica a la cadena de `_getModels` (pagina 1, 2,
+			// 3...) que tiene derecho a escribir en `models`. Lo incrementa `incrementar_descarga_de_models_
+			// token` cada vez que arranca `getModels` (el base y el wrapper de localStorage de `article`).
+			// Cada cadena captura el valor vigente al empezar, se lo pasa a sus paginas siguientes y, cuando
+			// llega una respuesta, solo escribe si el token sigue siendo el suyo.
+			//
+			// 🔴 Guarda contra la carrera medida el 13/10/2026 (T0.9 del relevamiento de demo2 4.3.9): el
+			// click en el menu (nav.js::setRoute) y el created() de la pantalla piden `getModels` casi a la
+			// vez, porque la guarda `!models.length` de la pantalla no protege mientras la primera respuesta
+			// sigue en vuelo. En un store con `use_per_page` (`provider`, `client`, `article`,
+			// `sync_to_tn_article`) las dos cadenas comparten `state.page` y cada respuesta
+			// hace `addModels` (concat): quedaba 20 + 20 = 40 filas, cada proveedor dos veces. En los stores
+			// que no paginan `setModels` reemplaza y el solape no se notaba.
+			//
+			// Con una sola cadena en vuelo el token no cambia y el comportamiento es el de siempre. Con dos,
+			// la respuesta de la cadena vieja se descarta entera (no toca `models`, `page` ni `loading`, y
+			// no encadena la pagina siguiente) y gana la ultima en arrancar.
+			//
+			// 🔴 NO reutilizar `consulta_vigente_token`: a ese lo incrementan tambien runFilter y
+			// runGlobalSearch, asi que una busqueda tipeada mientras baja el catalogo cortaria la descarga
+			// de `models` a medias. Son dos intenciones distintas y cada una lleva su propio token.
+			//
+			// OJO, no lo cubre todo: `panel_control` tambien es `use_per_page`, pero es un store plano (no
+			// sale de este factory) con su propio getModels/_getModels, asi que este token no lo alcanza y su
+			// solape sigue siendo posible. Tampoco se consulta en `sale` ni en `whatsapp_bot_config`, que
+			// traen su `_getModels` propio (ahi el token se incrementa y no se mira: inocuo).
+			descarga_de_models_token: 0,
+
 			delete: null,
 			delete_image_prop: null,
 			delete_image_model: null,
@@ -399,6 +427,18 @@ export default function __base_store(options = {}) {
 		incrementar_consulta_vigente_token(state) {
 			state.consulta_vigente_token++
 		},
+		/**
+		 * Incrementa el token de la "descarga de models" vigente (ver doc completa en
+		 * `state.descarga_de_models_token`). La llaman `getModels` (base y wrapper de localStorage) al
+		 * arrancar, ANTES de pedir la primera pagina, para que cualquier cadena de paginas anterior que
+		 * siga en vuelo quede vencida y descarte su respuesta cuando llegue.
+		 *
+		 * @param {Object} state Estado del modulo.
+		 * @returns {void}
+		 */
+		incrementar_descarga_de_models_token(state) {
+			state.descarga_de_models_token++
+		},
 		add(state, value) {
 			let index = state.models.findIndex(item => {
 				return item.id == value.id
@@ -467,6 +507,21 @@ export default function __base_store(options = {}) {
 			})
 			if (index != -1) {
 				state.filtered.splice(index, 1)
+			}
+
+			// Catalogo liviano (`options`): `add` lo mantiene al dia cuando esta cargado, pero el borrado no
+			// lo hacia, asi que un registro borrado seguia ofreciendose en los selectores que leen `options`
+			// (el filtro fijo de Proveedor / Cliente del buscador general, EndozarCheque, SelectProvider...)
+			// hasta recargar la pagina. Elegirlo filtraba articulos que siguen apuntando a ese registro.
+			// Misma guarda que la de `models` de arriba: sin el registro en la lista no se borra nada
+			// (`splice(-1, 1)` se llevaria el ultimo).
+			if (state.options_loaded) {
+				index = state.options.findIndex(item => {
+					return item.id == state.delete.id
+				})
+				if (index != -1) {
+					state.options.splice(index, 1)
+				}
 			}
 
 			if (state.selected_model && state.selected_model[state.plural_model_name]) {
@@ -720,6 +775,10 @@ export default function __base_store(options = {}) {
 			// invalida cualquier runFilter/runGlobalSearch que siga en vuelo de la intencion anterior.
 			// Ver doc completa en `state.consulta_vigente_token`.
 			commit('incrementar_consulta_vigente_token')
+			// Arranca una descarga nueva de `models`: invalida cualquier cadena de paginas anterior que
+			// siga en vuelo (ver doc completa en `state.descarga_de_models_token`). Va ANTES del reseteo de
+			// page/models y del dispatch de `_getModels`, que es quien captura el token.
+			commit('incrementar_descarga_de_models_token')
 			// Con el modo selección manual activo, lo tildado a mano se acumula entre búsquedas: no
 			// se pisa acá. Se limpia al apagar el modo (BtnSeleccion.vue) o al salir del módulo
 			// (beforeRouteLeave de cada vista), nunca por pedir datos de vuelta.
@@ -744,6 +803,14 @@ export default function __base_store(options = {}) {
 		_getModels({commit, state, dispatch}, payload = {}) {
 			/** Cuántas páginas ya se pidieron en esta corrida del encadenado (arranca en 1). */
 			let intentos = payload.intentos || 1
+			/**
+			 * Token de la descarga a la que pertenece esta pagina (ver `state.descarga_de_models_token`).
+			 * La primera pagina lo toma del state, que `getModels` acaba de incrementar; las siguientes lo
+			 * reciben por `payload.token` de la pagina anterior, para que toda la cadena lleve el mismo.
+			 * Se compara contra `undefined` y no por truthiness: un `_getModels` despachado sin pasar por
+			 * `getModels` podria traer token 0, que es un valor valido.
+			 */
+			let token = payload.token !== undefined ? payload.token : state.descarga_de_models_token
 			commit('setLoading', true)
 			let url = '/api/' + generals.methods.routeString(state.model_name)
 			if (state.plural_model_name) {
@@ -769,6 +836,12 @@ export default function __base_store(options = {}) {
 				skip_global_error_event: state.omitir_cartel_de_conexion_en_listado,
 			})
 			.then(res => {
+				// Respuesta de una descarga vencida: otra `getModels` arranco mientras esta pagina viajaba.
+				// Se descarta entera (ni `models`, ni `page`, ni `loading`, ni pagina siguiente): la cadena
+				// vigente es la duena de todo eso y es la que cierra el `loading` al terminar.
+				if (state.descarga_de_models_token !== token) {
+					return
+				}
 				if (state.use_per_page) {
 					let loaded_models = res.data.models.data
 					if (res.data.models.current_page == 1) {
@@ -796,7 +869,7 @@ export default function __base_store(options = {}) {
 							commit('setLoading', false)
 							commit('setPage', 1)
 						} else {
-							dispatch('_getModels', {intentos: intentos + 1})
+							dispatch('_getModels', {intentos: intentos + 1, token: token})
 						}
 					} else {
 						commit('setLoading', false)
@@ -808,6 +881,12 @@ export default function __base_store(options = {}) {
 				}
 			})
 			.catch(err => {
+				// Mismo descarte que en el `.then`: el error de una cadena vencida no le apaga el `loading`
+				// a la vigente. Se loguea igual para no perder el rastro.
+				if (state.descarga_de_models_token !== token) {
+					console.log(err)
+					return
+				}
 				commit('setLoading', false)
 				console.log(err)
 			})
@@ -1378,6 +1457,10 @@ export default function __base_store(options = {}) {
 			// token`): cambiar de fecha/rango/modo es una intencion nueva del usuario e invalida
 			// cualquier runFilter/runGlobalSearch que siga en vuelo de la intencion anterior.
 			commit('incrementar_consulta_vigente_token')
+			// Arranca una descarga nueva de `models`: invalida cualquier cadena de paginas anterior que
+			// siga en vuelo (ver doc completa en `state.descarga_de_models_token`). Va ANTES del reseteo de
+			// page/models y del dispatch de `_getModels`, que es quien captura el token.
+			commit('incrementar_descarga_de_models_token')
 			// Mismo guard que en el getModels base: con selección manual activa, no se pisa lo
 			// tildado a mano.
 			if (!state.is_selecteable) {
@@ -1413,6 +1496,14 @@ export default function __base_store(options = {}) {
 			 */
 			/** Cuántas páginas ya se pidieron en esta corrida del encadenado (arranca en 1). */
 			let intentos = payload.intentos || 1
+			/**
+			 * Token de la descarga a la que pertenece esta pagina (ver `state.descarga_de_models_token`).
+			 * La primera pagina lo toma del state, que `getModels` acaba de incrementar; las siguientes lo
+			 * reciben por `payload.token` de la pagina anterior, para que toda la cadena lleve el mismo.
+			 * Se compara contra `undefined` y no por truthiness: un `_getModels` despachado sin pasar por
+			 * `getModels` podria traer token 0, que es un valor valido.
+			 */
+			let token = payload.token !== undefined ? payload.token : state.descarga_de_models_token
 			commit('setLoading', true)
 			let url = '/api/' + generals.methods.routeString(state.model_name)
 			if (state.plural_model_name) {
@@ -1442,6 +1533,12 @@ export default function __base_store(options = {}) {
 			}
 			return axios.get(url)
 				.then(res => {
+					// Respuesta de una descarga vencida: otra `getModels` arranco mientras esta pagina viajaba.
+					// Se descarta entera (ni `models`, ni `page`, ni `loading`, ni pagina siguiente): la cadena
+					// vigente es la duena de todo eso y es la que cierra el `loading` al terminar.
+					if (state.descarga_de_models_token !== token) {
+						return
+					}
 					if (state.use_per_page) {
 						let loaded_models = res.data.models.data
 						if (res.data.models.current_page == 1) {
@@ -1472,7 +1569,7 @@ export default function __base_store(options = {}) {
 							backend ya devuelve current_page y last_page en la misma respuesta.
 						*/
 						if (res.data.models.current_page < res.data.models.last_page && intentos < TOPE_PAGINAS_SEGURIDAD) {
-							dispatch('_getModels', {intentos: intentos + 1})
+							dispatch('_getModels', {intentos: intentos + 1, token: token})
 						} else {
 							if (res.data.models.current_page < res.data.models.last_page) {
 								console.log('se corto la descarga de ' + state.model_name + ' por alcanzar el tope de seguridad de ' + TOPE_PAGINAS_SEGURIDAD + ' paginas (revisar last_page del backend)')
@@ -1494,6 +1591,12 @@ export default function __base_store(options = {}) {
 					}
 				})
 				.catch(err => {
+					// Mismo descarte que en el `.then`: el error de una cadena vencida no le apaga el `loading`
+					// a la vigente. Se loguea igual para no perder el rastro.
+					if (state.descarga_de_models_token !== token) {
+						console.log(err)
+						return
+					}
 					commit('setLoading', false)
 					console.log(err)
 				})

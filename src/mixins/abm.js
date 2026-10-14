@@ -20,6 +20,23 @@ export default {
 		// Cada recurso aparece en un solo grupo. El primer modelo de cada grupo es el
 		// que se abre por defecto al entrar a la pestania (Abm.vue -> setSelectedView).
 		abm_views() {
+			/*
+				Solapas de ABM -> Impresion. "Observaciones para el PDF de articulos" va solo si el
+				dueño tiene el PDF de articulos a medida de Truvari (users.article_pdf_personalizado
+				== 'truvari'): es el UNICO PDF que imprime esas observaciones (TruvariArticleListPdf de
+				la API, que ArticleController elige con esa misma condicion). Para cualquier otro
+				negocio la solapa guardaba textos que no salian en ningun lado.
+
+				Al no estar en la lista, tampoco la ofrece el buscador del ABM ni se abre entrando por
+				la URL: los dos leen esta misma lista. Sin dueño cargado todavia, no va (vuelve sola
+				cuando llega, porque `owner` es reactivo).
+			*/
+			let modelos_impresion = ['article_pdf']
+			if (this.owner && this.owner.article_pdf_personalizado == 'truvari') {
+				modelos_impresion.push('article_pdf_observation')
+			}
+			modelos_impresion.push('pdf_column_profile')
+
 			return [
 				// Clasificacion, atributos e importacion de articulos
 				{
@@ -141,11 +158,8 @@ export default {
 				// Todo lo de impresion / PDF junto
 				{
 					view: 'impresion',
-					models: [
-						'article_pdf',
-						'article_pdf_observation',
-						'pdf_column_profile',
-					],
+					// Ver arriba: las observaciones solo para el PDF a medida de Truvari.
+					models: modelos_impresion,
 				},
 				// Datos de la organizacion: sucursales y geografia
 				{

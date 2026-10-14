@@ -247,7 +247,10 @@ export const ELEMENTOS = [
 		obligatorio: true,
 		motivo_obligatorio: MOTIVO_NO_SE_GUARDA,
 		entrada_de_articulos: false,
-		/* SaleType.vue: v-if="sale_types.length > 1" */
+		/*
+			SaleType.vue: v-if="sale_types.length > 1". Con un solo tipo no hay nada que elegir, asi que
+			el selector no se dibuja y check_sale_type() lo toma solo al guardar (no pide indicarlo).
+		*/
 		disponible: function (vm) { return cantidad_en_store(vm, 'sale_type') > 1 },
 		aparece_cuando: null,
 	},

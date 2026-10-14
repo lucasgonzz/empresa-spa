@@ -7,6 +7,12 @@ const DECIMALES_BASE_SIN_RECARGOS = 6
  * Re-expresa en otra moneda (de $ a USD o de USD a $) los importes FIJOS de un presupuesto que se
  * esta editando en VENDER (mision 2r-presupuestos-editables, 1/10/2026).
  *
+ * Desde la mision edicion-completa-ventas-presupuestos (8/10/2026) sirve igual para una VENTA
+ * guardada que se esta editando: Moneda.vue lo usa para el "comprobante en edicion", que es el
+ * presupuesto o la venta. La logica no cambio: lee los renglones de `state.vender.items` y no sabe
+ * de donde salieron (los de una venta tambien toman el precio del pivot, y check_moneda tampoco los
+ * vuelve a cotizar). Donde abajo dice "presupuesto", vale para los dos.
+ *
  * POR QUE EXISTE. Un renglon que viene de un presupuesto guardado toma su precio del pivot
  * (generals.js::getPriceVender, rama `price_desde_pivot`) y check_moneda NO lo vuelve a cotizar:
  * "ya esta en la moneda del comprobante". Eso es correcto mientras la moneda no cambia, pero si el
@@ -72,11 +78,134 @@ const DECIMALES_BASE_SIN_RECARGOS = 6
  * una fila para la moneda vigente, su precio queda como estaba. Esos renglones se cuentan en
  * `con_precios_propios_por_moneda` para que el vendedor los revise; no se convierten.
  *
+ * 🔴 LO QUE NO SE CONVIERTE Y POR ESO FRENA EL CAMBIO DE MONEDA (mision
+ * edicion-completa-ventas-presupuestos, 8/10/2026). Una venta guardada trae importes fijos que un
+ * presupuesto no tiene y que este mixin NO re-expresa: el canje de puntos (`descuento_puntos`), las
+ * filas del reparto en varios metodos de pago (`selected_payment_methods` con sus montos y
+ * `modal_payment_methods` con sus descuentos y recargos) y la devolucion cargada en esta edicion
+ * (`returned_items`, que son COPIAS de los renglones con el precio de ese momento). Convertirlos
+ * aca seria inventar: el canje sale del saldo de puntos del cliente, el reparto es lo que el cliente
+ * pago con cada medio, y la nota de credito se arma con lo devuelto. Entonces no se convierten: el
+ * cambio de moneda se RECHAZA mientras alguno este cargado (Moneda.vue, con
+ * reexpresar_importes_fijos_sin_convertir) y el vendedor los saca primero. Nunca se guarda un
+ * comprobante con importes en dos monedas.
+ *
+ * 🔴 Y LOS COMBOS de una venta guardada tambien frenan (revision independiente, 8/10/2026). Su precio
+ * del pivot se convierte, pero su COSTO no: este mixin solo convierte el costo de los ARTICULOS
+ * (reexpresar_renglon_con_pivot, `es_articulo`) y la API tampoco recotiza el costo de un combo. La
+ * venta quedaria con el precio del combo en la moneda nueva y el costo en la vieja, o sea una
+ * ganancia inventada. La API rechaza el cambio con 422 (`motivo` combos); aca se frena antes, con
+ * un aviso que dice que hacer: sacar el combo, cambiar la moneda y volver a agregarlo (un combo
+ * nuevo sale del catalogo y check_moneda lo cotiza).
+ * En un PRESUPUESTO los combos NO frenan: es el mismo limite conocido desde la mision
+ * 2r-presupuestos-editables (1/10/2026), que esta mision no cambia.
+ *
+ * Una venta de contado con UN solo metodo de pago no frena: al abrirla queda el id del metodo y el
+ * reparto vacio (previus_sale/index.js::set_datos_para_actualizar_en_vender), o sea que no lleva
+ * ningun importe en filas, y la API lo cobra por el total que viaja.
+ *
  * Los nombres de este mixin llevan "reexpresar" a proposito: un metodo nuevo con el nombre de uno
  * global de la SPA lo pisa en silencio (paso el 30/9/2026 con check_cotizacion_dolar).
  */
+
+/**
+ * Los importes FIJOS del comprobante en edicion que este mixin NO convierte (ver "LO QUE NO SE
+ * CONVIERTE Y POR ESO FRENA EL CAMBIO DE MONEDA" arriba), dichos como los ve el vendedor, para el
+ * aviso que le dice que sacar primero. [] si no hay ninguno y el cambio de moneda puede seguir.
+ *
+ * Es pura (no lee el store) para poder probarla sin Vue.
+ *
+ * El reparto y los combos solo cuentan con `es_venta_guardada`:
+ *   - el reparto de una venta viaja tal cual en el PUT. En un presupuesto no frena, a proposito: el
+ *     cartel de guardar (modals/budget-cobro) siempre arranca el reparto de cero sobre el total
+ *     vigente, asi que lo que quedara en las filas no se guarda;
+ *   - los combos, ver "Y LOS COMBOS" arriba (en un presupuesto es un limite conocido del 1/10).
+ *
+ * Los ajustes del reparto (`modal_payment_methods`) solo cuentan sin un metodo unico elegido: con
+ * metodo unico setTotal() no los aplica (vender_set_total.js::aplicar_payment_method_discounts_a_total_repartido_del_modal)
+ * y son un sobrante que no mueve nada.
+ *
+ * @param {Object} estado { descuento_puntos, returned_items, selected_payment_methods,
+ *                          modal_payment_methods, current_acount_payment_method_id, items } del
+ *                          store de VENDER.
+ * @param {Boolean} es_venta_guardada true si el comprobante es una venta guardada.
+ * @returns {Array<String>}
+ */
+export function importes_fijos_que_no_se_convierten(estado, es_venta_guardada) {
+
+	let pendientes = []
+
+	if (Number(estado.descuento_puntos) > 0) {
+		pendientes.push('el canje de puntos')
+	}
+
+	/*
+		Solo lo devuelto EN ESTA EDICION: ArticlesTable.vue::addReturnedItem() le resta a cada renglon
+		lo que ya estaba devuelto antes, asi que una devolucion vieja queda en cero.
+	*/
+	let devoluciones = Array.isArray(estado.returned_items) ? estado.returned_items.filter(item => {
+		return item && Number(item.returned_amount) > 0
+	}) : []
+
+	if (devoluciones.length) {
+		pendientes.push('la devolución cargada')
+	}
+
+	if (es_venta_guardada) {
+
+		let combos = Array.isArray(estado.items) ? estado.items.filter(item => {
+			return item && item.is_combo
+		}) : []
+
+		if (combos.length) {
+			pendientes.push('los combos (después de cambiar la moneda los podés volver a agregar)')
+		}
+
+		let filas_con_monto = Array.isArray(estado.selected_payment_methods) ? estado.selected_payment_methods.filter(fila => {
+			return fila && Number(fila.amount) > 0
+		}) : []
+
+		let ajustes_del_reparto = []
+
+		if (
+			!Number(estado.current_acount_payment_method_id)
+			&& Array.isArray(estado.modal_payment_methods)
+		) {
+			ajustes_del_reparto = estado.modal_payment_methods.filter(fila => {
+				return fila && (Number(fila.discount_amount) || Number(fila.surchage_amount))
+			})
+		}
+
+		if (filas_con_monto.length || ajustes_del_reparto.length) {
+			pendientes.push('el reparto en varios métodos de pago')
+		}
+	}
+
+	return pendientes
+}
+
 export default {
 	methods: {
+		/**
+		 * Lo que frena el cambio de moneda del comprobante en edicion: ver
+		 * importes_fijos_que_no_se_convierten(), arriba. Lee el store de VENDER.
+		 *
+		 * @returns {Array<String>} [] si se puede cambiar la moneda.
+		 */
+		reexpresar_importes_fijos_sin_convertir() {
+
+			let vender = this.$store.state.vender
+
+			return importes_fijos_que_no_se_convierten({
+				descuento_puntos: vender.descuento_puntos,
+				returned_items: vender.returned_items,
+				selected_payment_methods: vender.selected_payment_methods,
+				modal_payment_methods: vender.modal_payment_methods,
+				current_acount_payment_method_id: vender.current_acount_payment_method_id,
+				items: vender.items,
+			}, this.$store.getters['vender/previus_sales/editando_venta_previa'])
+		},
+
 		/**
 		 * Si la moneda es el dolar. Todo lo demas (1, null, 0) es pesos: una venta o un presupuesto
 		 * sin moneda se trata como pesos (decision de Lucas, 30/9/2026).
