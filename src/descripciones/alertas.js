@@ -590,7 +590,7 @@ export default {
 		que_hace: 'Tira la descripción que armó la IA para este artículo sin publicarla.',
 		repercute: [
 			'El artículo queda sin descripción; le podés escribir una a mano cuando quieras desde su ficha.',
-			'La generación automática no le vuelve a proponer una a ese artículo, salvo que se use "Regenerar las descripciones de IA" desde el listado.',
+			'"Generar para los que no tienen descripción", desde el listado, no le vuelve a proponer una a ese artículo.',
 		],
 		nota_interna: 'POST .../descartar: la propuesta queda descartada (AiDescriptionReviewHelper::motivo_para_saltear la saltea en el modo automático).',
 	},
@@ -622,11 +622,12 @@ export default {
 		titulo: 'Quitar la descripción',
 		que_hace: 'Borra la descripción que cargó la IA para este artículo, después de confirmar.',
 		repercute: [
-			'Deja de verse en tu tienda online y en la ficha del artículo (y en Tienda Nube, si el negocio está conectado).',
+			'Deja de verse en tu tienda online y en la ficha del artículo.',
+			'Si el negocio está conectado a Tienda Nube, la descripción que ya se había mandado allá queda como estaba hasta que se la cambie ahí.',
 			'Las descripciones que se cargaron a mano nunca se tocan.',
-			'La generación automática no le vuelve a armar una a ese artículo, salvo que se use "Regenerar las descripciones de IA" desde el listado.',
+			'"Generar para los que no tienen descripción", desde el listado, no le vuelve a armar una a ese artículo.',
 		],
-		nota_interna: 'POST .../quitar: borra las descriptions ai_generated del artículo y deja una propuesta descartada con esas secciones.',
+		nota_interna: 'POST .../quitar: borra las descriptions ai_generated del artículo y deja una propuesta descartada con esas secciones. El sync a Tienda Nube no manda nada cuando el artículo queda sin descripción (limitación anterior a la misión alertas-descripciones): la de Tienda Nube no se borra.',
 	},
 
 	'descripciones-fuente-*': {
@@ -663,7 +664,7 @@ export default {
 		titulo: 'Descartar las seleccionadas',
 		que_hace: 'Descarta de una vez todas las descripciones tildadas, después de confirmar.',
 		repercute: [
-			'Esos artículos quedan sin descripción y la generación automática no se las vuelve a proponer.',
+			'Esos artículos quedan sin descripción, y "Generar para los que no tienen descripción", desde el listado, no les vuelve a proponer una.',
 		],
 	},
 
