@@ -238,6 +238,19 @@ const RUTAS_VIEJAS_DEL_API = {
 }
 
 /**
+ * Pantallas que el API mandaba en `resultado.ruta` y que la SPA ya no tiene: `{ name: [views] }`.
+ * Una tarjeta vieja que apunta acá no muestra "Ver en …" (ruta_de_la_accion devuelve null), porque
+ * la vista llegaría en blanco.
+ *
+ * - online/cupones: Tienda Online > Cupones se sacó el 14/10/2026 (misión
+ *   tiendas-demo-y-limpieza-tienda). El asistente ya no carga cupones, pero las tarjetas confirmadas
+ *   desde la 4.1.1 guardan esa ruta en la base.
+ */
+const PANTALLAS_QUE_YA_NO_EXISTEN = {
+	online: ['cupones'],
+}
+
+/**
  * La solapa de las pantallas que son una barra de solapas, para una ruta que llega sin `view`:
  * todo el cuerpo de Clientes y de Proveedores cuelga de `params.view`
  * (components/client/components/clients/Index.vue, components/provider/components/providers/Index.vue)
@@ -279,7 +292,7 @@ const STORE_POR_TIPO = {
  *   `ruta.fecha`, hoy, o el que se está mirando si es una edición). Si el store está en modo histórico
  *   (`from_dates` en false, Compras) se trata como `listado` y `carga_sola`.
  * - carga_sola: la vista pide sus datos al montarse cuando se entra desde otra pantalla (relevado el
- *   10/10/2026: views/Ventas.vue, views/Budget.vue, clients/sellers/providers/cupons Index.vue,
+ *   10/10/2026: views/Ventas.vue, views/Budget.vue, clients/sellers/providers Index.vue,
  *   ofertas/Listado.vue y views/Listado.vue). Al llegar no se vuelve a pedir: serían dos pedidos
  *   del mismo listado y, sin guarda de orden en getModels, podría ganar el viejo. Salvo en una tabla
  *   paginada con una búsqueda de la persona activa: ahí view/Index.vue no pide nada (para no
@@ -298,7 +311,6 @@ const PANTALLAS = {
 	client: { listado: true, carga_sola: true },
 	seller: { listado: true, carga_sola: true },
 	provider: { listado: true, carga_sola: true },
-	cupon: { listado: true, carga_sola: true },
 	article: { listado: true, carga_sola: true },
 	offer_suggestion: { carga_sola: true },
 }
@@ -330,6 +342,9 @@ export function ruta_de_la_accion(accion) {
 	}
 	if (name == 'abm' && !params.view && tiene(ABM_POR_TIPO, accion.tipo)) {
 		params = Object.assign({}, ABM_POR_TIPO[accion.tipo])
+	}
+	if (tiene(PANTALLAS_QUE_YA_NO_EXISTEN, name) && PANTALLAS_QUE_YA_NO_EXISTEN[name].indexOf(params.view) != -1) {
+		return null
 	}
 	return {
 		name: name,
@@ -364,9 +379,6 @@ function store_de_la_pantalla(accion, ruta) {
 	}
 	if (ruta.name == 'provider') {
 		return view == 'compras' ? 'provider_order' : 'provider'
-	}
-	if (ruta.name == 'online') {
-		return view == 'cupones' ? 'cupon' : null
 	}
 	if (ruta.name == 'ofertas') {
 		return 'offer_suggestion'

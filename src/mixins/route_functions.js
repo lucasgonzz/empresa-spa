@@ -116,12 +116,6 @@ export default {
 			}
 			this.$router.push({name: 'online', params: {view: 'mensajes'}})
 		},
-		ir_a_online_cupones() {
-			if (this.$route.name == 'online' && this.$route.params.view == 'cupones') {
-				return
-			}
-			this.$router.push({name: 'online', params: {view: 'cupones'}})
-		},
 		/**
 		 * Promociones: la vista del motor de ofertas por cliente, montada abajo de
 		 * Tienda Online. Hasta el 14/9/2026 era el MISMO componente que IA -> Ofertas;

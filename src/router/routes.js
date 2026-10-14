@@ -331,7 +331,7 @@ export default [
 			view: 'pedidos',
 		},
 		/*
-			Clic en el padre estando en Clientes/Cupones/Promociones vuelve a Pedidos. Sin este
+			Clic en el padre estando en Clientes/Mensajes/Promociones vuelve a Pedidos. Sin este
 			flag toRoute() corta por tener el mismo name 'online' (ver debeIrAParamsDeLaRuta en
 			common-vue/mixins/nav.js).
 		*/
@@ -379,13 +379,12 @@ export default [
 				can: 'buyer.index',
 				icon: 'chat-dots',
 			},
-			{
-				text: 'Cupones',
-				name: 'online_cupones',
-				function: 'ir_a_online_cupones',
-				can: 'cupon.index',
-				icon: 'ticket-perforated',
-			},
+			/*
+				Cupones: se sacó del menú el 14/10/2026 (misión tiendas-demo-y-limpieza-tienda,
+				pedido de Lucas). La tienda dejó de ofrecer cupones, así que la pantalla para
+				cargarlos no tenía a quién servirle. La tabla `cupons` y `orders.cupon_id` quedan:
+				un pedido viejo con cupón sigue mostrando su descuento (ventas/modals/details/SaleInfo.vue).
+			*/
 			{
 				/*
 					Promociones (motor de ofertas, 15/8/2026): va con `function:` como
