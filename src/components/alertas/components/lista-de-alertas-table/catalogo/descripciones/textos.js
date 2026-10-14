@@ -45,6 +45,13 @@ export const TEXTOS = {
 		titulo: 'No pudimos traer las descripciones',
 		pista: 'Revisá la conexión y volvé a intentar.',
 	},
+	/** Un refresco que falló con la lista a la vista: lo que se ve puede no ser lo último. */
+	error_al_actualizar: 'No pudimos actualizar la lista de descripciones. Revisá la conexión y volvé a intentar.',
+	/** API sin la ruta (404): el sistema del cliente todavía no tiene esta pantalla. */
+	no_disponible: {
+		titulo: 'Esta pantalla todavía no está disponible en tu sistema.',
+		pista: 'Se habilita sola cuando tu sistema reciba la próxima actualización.',
+	},
 }
 
 /**

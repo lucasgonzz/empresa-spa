@@ -4,124 +4,139 @@ class="desc-revision"
 data-testid="alertas-descripciones"
 :data-solapa="solapa">
 
-	<div
-	class="desc-revision__encabezado"
-	data-testid="descripciones-encabezado">
-		<h2 class="desc-revision__titulo">{{ textos.titulo }}</h2>
-		<p class="desc-revision__intro">{{ textos.intro }}</p>
-	</div>
+	<!--
+		Una API que todavia no tiene estas rutas (404 en la lista): estado neutro, sin ningun aviso de
+		error, como Categorias. Se resuelve solo cuando el sistema recibe la actualizacion.
+	-->
+	<empty-state
+	v-if="no_disponible"
+	data-testid="descripciones-no-disponible"
+	icon_class="bi bi-info-circle"
+	:title="textos.no_disponible.titulo"
+	:hint="textos.no_disponible.pista"></empty-state>
 
-	<div class="desc-revision__tarjeta">
+	<template v-else>
 
-		<!--
-			Las dos solapas con la cantidad de cada una en el nombre. Es el horizontal-nav del sistema en
-			modo autonomo, igual que la revision de categorias: el componente pinta y avisa; que pedir lo
-			decide esta seccion. Los numeros salen de los conteos vivos que mantiene el store.
-		-->
 		<div
-		ref="solapas"
-		class="desc-revision__solapas">
-			<horizontal-nav
-			v-if="solapa"
-			:items="items_de_solapas"
-			:selected_item_value="solapa"
-			:show_display="false"
-			emitir_setSelected_al_inicio
-			@setSelected="al_elegir_solapa"></horizontal-nav>
+		class="desc-revision__encabezado"
+		data-testid="descripciones-encabezado">
+			<h2 class="desc-revision__titulo">{{ textos.titulo }}</h2>
+			<p class="desc-revision__intro">{{ textos.intro }}</p>
 		</div>
 
-		<p
-		v-if="items.length"
-		class="desc-revision__nota"
-		:data-testid="'descripciones-nota-' + (solapa === 'a_revisar' ? 'a-revisar' : 'publicadas')">
-			<i
-			class="bi bi-info-circle"
-			aria-hidden="true"></i>
-			<span>{{ solapa === 'a_revisar' ? textos.nota_a_revisar : textos.nota_publicadas }}</span>
-		</p>
+		<div class="desc-revision__tarjeta">
 
-		<barra-de-descripciones
-		v-model="buscar_input"
-		:solapa="solapa"
-		:cantidad_en_pagina="items.length"
-		:cantidad_seleccionados="seleccionados.length"
-		:todos_seleccionados="todos_seleccionados"
-		:algunos_seleccionados="algunos_seleccionados"
-		:ocupado="lote_en_curso"
-		@seleccionar_pagina="seleccionar_pagina"
-		@aprobar_seleccionadas="resolver_seleccionadas('aprobar')"
-		@descartar_seleccionadas="resolver_seleccionadas('descartar')"></barra-de-descripciones>
-
-		<div
-		class="desc-revision__contenido"
-		:data-solapa="solapa">
-
+			<!--
+				Las dos solapas con la cantidad de cada una en el nombre. Es el horizontal-nav del sistema en
+				modo autonomo, igual que la revision de categorias: el componente pinta y avisa; que pedir lo
+				decide esta seccion. Los numeros salen de los conteos vivos que mantiene el store.
+			-->
 			<div
-			v-if="cargando_items && !items.length"
-			class="desc-revision__cargando"
-			data-testid="descripciones-items-cargando">
-				<b-spinner
-				small
-				variant="primary"></b-spinner>
-				<span>Cargando descripciones…</span>
+			ref="solapas"
+			class="desc-revision__solapas">
+				<horizontal-nav
+				v-if="solapa"
+				:items="items_de_solapas"
+				:selected_item_value="solapa"
+				:show_display="false"
+				emitir_setSelected_al_inicio
+				@setSelected="al_elegir_solapa"></horizontal-nav>
 			</div>
 
-			<empty-state
-			v-else-if="error_items && !items.length"
-			data-testid="descripciones-items-error"
-			icon_class="bi bi-cloud-slash"
-			:title="textos.error.titulo"
-			:hint="textos.error.pista">
-				<b-button
-				class="btn-modulo"
-				variant="outline-primary"
-				data-testid="descripciones-items-reintentar"
-				@click="cargar_items()">
-					Reintentar
-				</b-button>
-			</empty-state>
+			<p
+			v-if="items.length"
+			class="desc-revision__nota"
+			:data-testid="'descripciones-nota-' + (solapa === 'a_revisar' ? 'a-revisar' : 'publicadas')">
+				<i
+				class="bi bi-info-circle"
+				aria-hidden="true"></i>
+				<span>{{ solapa === 'a_revisar' ? textos.nota_a_revisar : textos.nota_publicadas }}</span>
+			</p>
 
-			<empty-state
-			v-else-if="!items.length"
-			data-testid="descripciones-vacio"
-			:icon_class="vacio.icono"
-			:title="vacio.titulo"
-			:hint="vacio.pista"></empty-state>
+			<barra-de-descripciones
+			v-model="buscar_input"
+			:solapa="solapa"
+			:cantidad_en_pagina="items.length"
+			:cantidad_seleccionados="seleccionados.length"
+			:todos_seleccionados="todos_seleccionados"
+			:algunos_seleccionados="algunos_seleccionados"
+			:ocupado="lote_en_curso"
+			@seleccionar_pagina="seleccionar_pagina"
+			@aprobar_seleccionadas="resolver_seleccionadas('aprobar')"
+			@descartar_seleccionadas="resolver_seleccionadas('descartar')"></barra-de-descripciones>
 
-			<transition-group
-			v-else
-			tag="ul"
-			name="desc-rev-fila"
-			class="desc-revision__lista"
-			:class="{ 'desc-revision__lista--cargando': cargando_items }"
-			:data-testid="'descripciones-lista-' + solapa">
-				<fila-de-descripcion
-				v-for="item in items"
-				:key="item.article_id"
-				:item="item"
-				:solapa="solapa"
-				:seleccionado="esta_seleccionado(item.article_id)"
-				:procesando="esta_procesando(item.article_id)"
-				:editando="esta_editando(item.article_id)"
-				@seleccionar="al_seleccionar(item, $event)"
-				@aprobar="aprobar(item)"
-				@descartar="descartar(item)"
-				@editar="empezar_a_editar(item)"
-				@cancelar_edicion="dejar_de_editar(item.article_id)"
-				@guardar="guardar(item, $event)"
-				@quitar="quitar(item)"></fila-de-descripcion>
-			</transition-group>
+			<div
+			class="desc-revision__contenido"
+			:data-solapa="solapa">
 
-			<paginacion-de-descripciones
-			:total="total_items"
-			:pagina="pagina"
-			:por_pagina="por_pagina"
-			:cargando="cargando_items"
-			@cambiar_pagina="cambiar_pagina"
-			@cambiar_por_pagina="cambiar_por_pagina"></paginacion-de-descripciones>
+				<div
+				v-if="cargando_items && !items.length"
+				class="desc-revision__cargando"
+				data-testid="descripciones-items-cargando">
+					<b-spinner
+					small
+					variant="primary"></b-spinner>
+					<span>Cargando descripciones…</span>
+				</div>
 
+				<empty-state
+				v-else-if="error_items && !items.length"
+				data-testid="descripciones-items-error"
+				icon_class="bi bi-cloud-slash"
+				:title="textos.error.titulo"
+				:hint="textos.error.pista">
+					<b-button
+					class="btn-modulo"
+					variant="outline-primary"
+					data-testid="descripciones-items-reintentar"
+					@click="cargar_items()">
+						Reintentar
+					</b-button>
+				</empty-state>
+
+				<empty-state
+				v-else-if="!items.length"
+				data-testid="descripciones-vacio"
+				:icon_class="vacio.icono"
+				:title="vacio.titulo"
+				:hint="vacio.pista"></empty-state>
+
+				<transition-group
+				v-else
+				tag="ul"
+				name="desc-rev-fila"
+				class="desc-revision__lista"
+				:class="{ 'desc-revision__lista--cargando': cargando_items }"
+				:data-testid="'descripciones-lista-' + solapa">
+					<fila-de-descripcion
+					v-for="item in items"
+					:key="item.article_id"
+					:item="item"
+					:solapa="solapa"
+					:seleccionado="esta_seleccionado(item.article_id)"
+					:procesando="esta_procesando(item.article_id)"
+					:editando="esta_editando(item.article_id)"
+					@seleccionar="al_seleccionar(item, $event)"
+					@aprobar="aprobar(item)"
+					@descartar="descartar(item)"
+					@editar="empezar_a_editar(item)"
+					@cancelar_edicion="dejar_de_editar(item.article_id)"
+					@guardar="guardar(item, $event)"
+					@quitar="quitar(item)"></fila-de-descripcion>
+				</transition-group>
+
+				<paginacion-de-descripciones
+				:total="total_items"
+				:pagina="pagina"
+				:por_pagina="por_pagina"
+				:cargando="cargando_items"
+				@cambiar_pagina="cambiar_pagina"
+				@cambiar_por_pagina="cambiar_por_pagina"></paginacion-de-descripciones>
+
+			</div>
 		</div>
-	</div>
+
+	</template>
 
 </div>
 </template>
@@ -190,6 +205,8 @@ export default {
 			ultima_pagina: 1,
 			cargando_items: false,
 			error_items: false,
+			/** true si la API contestó 404 a la lista: todavía no tiene esta pantalla (ver `cargar_items`). */
+			no_disponible: false,
 			/** true una vez que llegó al menos una página de la solapa actual. */
 			items_cargados: false,
 			/** Texto que se está escribiendo en el buscador. */
@@ -353,7 +370,7 @@ export default {
 		 * carga ni el de error (refrescos que la persona no pidió).
 		 *
 		 * Si la página quedó fuera de rango (se resolvieron las últimas de la última página), va a la
-		 * última que exista.
+		 * última que exista. Un 404 (API sin la ruta) deja la sección en "todavía no está disponible".
 		 *
 		 * @param {Object} opciones { silencioso: Boolean, reintento: Boolean }
 		 * @returns {Promise}
@@ -395,6 +412,7 @@ export default {
 				self.items_cargados = true
 				self.cargando_items = false
 				self.error_items = false
+				self.no_disponible = false
 			})
 			.catch(err => {
 				console.log(err)
@@ -411,9 +429,26 @@ export default {
 				if (es_cancelacion(err) && self.items_cargados) {
 					return
 				}
-				if (!silencioso) {
-					self.error_items = true
+				// El pedido de la lista es silencioso (ver `get_items` en el store): cada caso se dice acá.
+				// 404: la API todavía no tiene esta pantalla. Estado neutro, sin aviso de error.
+				let status = err && err.response ? err.response.status : 0
+				if (status === 404) {
+					self.no_disponible = true
+					self.items = []
+					self.total_items = 0
+					self.error_items = false
+					return
 				}
+				if (silencioso) {
+					return
+				}
+				// Con la lista a la vista, el estado de error no se dibuja (tapa lo que se estaba mirando):
+				// se avisa que no se pudo actualizar. Sin lista, el estado de error con Reintentar.
+				if (self.items.length) {
+					avisar(self, 'error', TEXTOS.error_al_actualizar)
+					return
+				}
+				self.error_items = true
 			})
 		},
 		/**

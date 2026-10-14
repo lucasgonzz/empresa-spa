@@ -547,8 +547,13 @@ export default {
 		 * Trae una página de una solapa de la revisión. Los conteos de las dos solapas que trae la
 		 * respuesta quedan aplicados.
 		 *
-		 * Rechaza si falla, para que la revisión muestre su propio estado de error. Una cancelación
-		 * rechaza marcada (ver `es_cancelacion`).
+		 * Rechaza si falla, para que la revisión muestre su propio estado. Una cancelación rechaza
+		 * marcada (ver `es_cancelacion`).
+		 *
+		 * Va SILENCIOSO (sin el toast del interceptor global), como `get_actual` de categorías: contra una
+		 * API que todavía no tiene la ruta (404) la sección muestra un estado neutro ("todavía no está
+		 * disponible") y un aviso rojo genérico no le diría nada a nadie. Los demás fallos los muestra la
+		 * sección: el estado de error con Reintentar o, si ya había una lista a la vista, su propio aviso.
 		 *
 		 * @param {Object} contexto
 		 * @param {Object} pedido `{solapa, pagina, por_pagina, buscar}`
@@ -567,7 +572,7 @@ export default {
 			if (pedido.buscar) {
 				params.buscar = pedido.buscar
 			}
-			return axios.get(RUTA_DE_LA_REVISION, opciones({ params: params }))
+			return axios.get(RUTA_DE_LA_REVISION, Object.assign({}, OPCIONES_SILENCIOSAS, { params: params }))
 				.then(res => {
 					let datos = res.data || {}
 					aplicar_conteos(commit, rootState, esta_secuencia, datos.conteos)
