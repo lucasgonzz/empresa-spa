@@ -592,9 +592,13 @@ export default {
 		 * rojo.
 		 *
 		 * Se anota de qué solapa era la fila: si cuando vuelve ya se está mirando la otra, no se toca la
-		 * lista. Si falla, el interceptor global ya mostró el motivo: la lista se vuelve a pedir para
-		 * mostrar lo real (404: otra persona ya la resolvió), salvo un 422, que deja la edición abierta
-		 * con lo escrito.
+		 * lista. Si falla, el interceptor global ya mostró el motivo (un 4xx con `message` sale como aviso
+		 * amarillo) y los conteos que haya traído el error ya los aplicó el store:
+		 *  - 404 (otra persona ya la resolvió, o el artículo ya no existe) y 409 (al aprobar: el artículo
+		 *    ya tiene una descripción cargada a mano y la API descartó la sugerencia): la fila ya no
+		 *    corresponde, sale en el momento y la lista se vuelve a pedir en silencio.
+		 *  - 422 (lo escrito no pasó la validación): la edición queda abierta con lo escrito.
+		 *  - Cualquier otro (red, 5xx): la lista se vuelve a pedir en silencio para mostrar lo real.
 		 *
 		 * @param {Object} item
 		 * @param {String} accion Acción del store.
@@ -635,7 +639,13 @@ export default {
 				self.marcar_procesando(id, false)
 				let status = err && err.response ? err.response.status : 0
 				if (!es_cancelacion(err) && status !== 422 && self.solapa === solapa_de_la_accion) {
-					self.cargar_items({ silencioso: true })
+					if (status === 404 || status === 409) {
+						self.sacar_item(id)
+					}
+					// `sacar_item` ya pide la página si quedó vacía; si no, se pide acá.
+					if (self.items.length) {
+						self.cargar_items({ silencioso: true })
+					}
 				}
 				self.programar_resumen()
 				return false
@@ -773,8 +783,8 @@ export default {
 			this.$store.commit('auth/setMessage', '')
 		},
 		/**
-		 * "12 descripciones aprobadas", y si algunas no se pudieron (ya estaban resueltas o el artículo
-		 * ya no existe), cuántas.
+		 * "12 descripciones aprobadas", y si algunas no se pudieron, cuántas y por qué (ver
+		 * `frase_de_las_omitidas`).
 		 *
 		 * @param {String} accion aprobar | descartar
 		 * @param {Number} pedidas Cuántas se mandaron.

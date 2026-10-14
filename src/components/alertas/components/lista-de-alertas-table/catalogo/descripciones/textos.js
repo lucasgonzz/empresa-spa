@@ -73,9 +73,11 @@ export function frase_del_lote(cantidad, accion) {
 }
 
 /**
- * Lo que dice el aviso cuando algunas de un lote no se pudieron resolver (ya las había resuelto otra
- * persona, o el artículo se borró): "2 no se pudieron aprobar porque ya estaban resueltas o el
- * artículo ya no existe."
+ * Lo que dice el aviso cuando algunas de un lote no se pudieron resolver. Tiene que ser cierto para
+ * cualquiera de las causas que la API deja afuera de `resueltos`:
+ *  - las dos acciones: ya no estaba para revisar (otra persona la resolvió, o el artículo se borró);
+ *  - solo al aprobar: el artículo ya tenía una descripción cargada a mano (la API descarta la
+ *    sugerencia en vez de publicarla).
  *
  * @param {Number} cantidad
  * @param {String} accion aprobar | descartar
@@ -83,11 +85,15 @@ export function frase_del_lote(cantidad, accion) {
  */
 export function frase_de_las_omitidas(cantidad, accion) {
 	let numero = Number(cantidad) || 0
-	let verbo = accion === 'aprobar' ? 'aprobar' : 'descartar'
-	if (numero === 1) {
-		return '1 no se pudo ' + verbo + ' porque ya estaba resuelta o el artículo ya no existe.'
+	let una = numero === 1
+	let inicio = una ? '1 no se pudo ' : entero_es(numero) + ' no se pudieron '
+	if (accion === 'aprobar') {
+		return inicio + 'aprobar: '
+			+ (una
+				? 'ya no estaba para revisar o el artículo ya tenía una descripción cargada a mano.'
+				: 'ya no estaban para revisar o esos artículos ya tenían una descripción cargada a mano.')
 	}
-	return entero_es(numero) + ' no se pudieron ' + verbo + ' porque ya estaban resueltas o los artículos ya no existen.'
+	return inicio + 'descartar porque ' + (una ? 'ya no estaba para revisar.' : 'ya no estaban para revisar.')
 }
 
 export { cantidad_de, entero_es }

@@ -580,8 +580,9 @@ export default {
 			'Pasa a verse en tu tienda online y en la ficha del artículo, con todas sus secciones.',
 			'Si el negocio está conectado a Tienda Nube, también se manda allá.',
 			'Sale de A revisar y pasa a la solapa Publicadas, desde donde se puede corregir o quitar.',
+			'Si mientras tanto alguien le cargó una descripción a mano al artículo, no se aprueba: la sugerencia de la IA se descarta, se avisa y la fila sale de la lista.',
 		],
-		nota_interna: 'POST article-description-ai/revision/{article_id}/aprobar sin cuerpo: la API crea las filas de descriptions con ai_generated=1 y ai_reviewed_at, y la propuesta queda aprobada. 404 si ya no estaba a revisar.',
+		nota_interna: 'POST article-description-ai/revision/{article_id}/aprobar sin cuerpo: la API crea las filas de descriptions con ai_generated=1 y ai_reviewed_at, y la propuesta queda aprobada. 404 si ya no estaba a revisar; 409 {message, conteos} si el artículo ya tiene una descripción humana (la API descarta la propuesta).',
 	},
 
 	'descripciones-descartar-*': {
@@ -654,7 +655,7 @@ export default {
 		que_hace: 'Aprueba de una vez todas las descripciones tildadas, tal como las armó la IA, después de confirmar.',
 		repercute: [
 			'Pasan a verse en tu tienda online y en la ficha de cada artículo, igual que al aprobarlas de a una.',
-			'Si alguna ya no estaba para revisar (otra persona la resolvió, o se borró el artículo), se avisa cuántas; las demás se aprueban igual.',
+			'Si alguna ya no estaba para revisar (otra persona la resolvió, o se borró el artículo) o su artículo ya tenía una descripción cargada a mano, se avisa cuántas; las demás se aprueban igual.',
 		],
 	},
 

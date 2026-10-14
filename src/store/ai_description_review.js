@@ -351,6 +351,10 @@ function aplicar_conteos(commit, root_state, secuencia, conteos) {
  * Lo común de las acciones de la revisión: el pedido, los conteos aplicados con su secuencia y la
  * respuesta normalizada para quien llamó. Rechaza si falla (una cancelación, marcada).
  *
+ * Un error también puede traer conteos: aprobar contesta 409 `{message, conteos}` cuando el artículo
+ * ya tiene una descripción cargada a mano (la API descarta la sugerencia). Esos conteos se aplican
+ * igual, con la misma secuencia, antes de rechazar.
+ *
  * @param {Object} contexto `{commit, rootState}` de la acción.
  * @param {String} metodo post | put
  * @param {String} ruta
@@ -366,7 +370,13 @@ function pedir_accion(contexto, metodo, ruta, cuerpo) {
 			aplicar_conteos(contexto.commit, contexto.rootState, esta_secuencia, datos.conteos)
 			return { datos: datos, conteos: normalizar_conteos(datos.conteos) }
 		})
-		.catch(relanzar_marcando_la_cancelacion)
+		.catch(err => {
+			let datos = err && err.response && err.response.data && typeof err.response.data === 'object' ? err.response.data : null
+			if (datos && datos.conteos) {
+				aplicar_conteos(contexto.commit, contexto.rootState, esta_secuencia, datos.conteos)
+			}
+			return relanzar_marcando_la_cancelacion(err)
+		})
 }
 
 /**
@@ -568,7 +578,9 @@ export default {
 		/**
 		 * Aprueba la descripción de un artículo: la API la pasa a las descripciones del artículo (se ve
 		 * en la tienda y en la ficha) y la saca de "A revisar". Con `secciones` aprueba lo editado; sin
-		 * ellas, tal cual la armó la IA. 404 con `message` si ya no estaba para revisar.
+		 * ellas, tal cual la armó la IA. 404 con `message` si ya no estaba para revisar; 409 con
+		 * `{message, conteos}` si el artículo ya tiene una descripción cargada a mano (la API descarta
+		 * la sugerencia y no publica nada).
 		 *
 		 * @param {Object} contexto
 		 * @param {{article_id: Number, secciones: Array|null}} pedido
