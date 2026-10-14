@@ -203,7 +203,8 @@ export default {
 		/**
 		* Llegó el aviso de fin del lote: se deja de esperar, se suelta el canal, se abre el
 		* resumen y se pide el número rojo de Alertas → Catálogo → Descripciones (lo que la IA no
-		* pudo confirmar quedó esperando revisión ahí).
+		* pudo confirmar quedó esperando revisión ahí). Si esa sección está abierta, además vuelve a
+		* traer su lista, en la solapa que tenga: lo nuevo aparece sin tocar nada.
 		*
 		* @param {Object} payload Payload recibido por Pusher.
 		* @return {void}
@@ -227,7 +228,7 @@ export default {
 			this.olvidar_lote_en_vuelo()
 			this.sincronizar_suscripcion()
 			this.open_summary(payload)
-			this.$store.dispatch('ai_description_review/get_resumen')
+			this.$store.dispatch('ai_description_review/recargar_revision')
 		},
 		/**
 		* Escribe la marca de "esta pestaña está esperando un lote", para que un F5 en el medio

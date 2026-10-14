@@ -302,19 +302,19 @@ export default {
 			})
 		},
 		/**
-		 * Cierra el modal de procesos y lleva a Alertas → Catálogo → Descripciones, donde esperan las
-		 * descripciones que la IA no pudo confirmar. Si ya se está ahí, `replace` (como con imágenes)
-		 * y se le pide a la sección que vuelva a traer su lista: la ruta no cambia, así que sola no se
-		 * enteraría de lo nuevo.
+		 * Cierra el modal de procesos y lleva a Alertas → Catálogo → Descripciones, en "A revisar", donde
+		 * esperan las descripciones que la IA no pudo confirmar. Si ya se está ahí, `replace` (como con
+		 * imágenes) y se le pide a la sección que vuelva a traer su lista y que pase a "A revisar" si
+		 * estaba en Publicadas: la sección no se vuelve a montar, así que sola no se enteraría.
 		 *
 		 * @return {void}
 		 */
 		revisar_descripciones_en_alertas() {
 			this.$bvModal.hide('procesos-en-segundo-plano')
-			let destino = destino_de_descripciones()
+			let destino = destino_de_descripciones({ solapa: 'a_revisar' })
 			let ya_esta_ahi = es_ruta_de_descripciones(this.$route)
 			if (ya_esta_ahi) {
-				this.$store.dispatch('ai_description_review/recargar_revision')
+				this.$store.dispatch('ai_description_review/recargar_revision', { solapa: 'a_revisar' })
 			}
 			let navegacion = ya_esta_ahi ? this.$router.replace(destino) : this.$router.push(destino)
 			navegacion.catch(() => {

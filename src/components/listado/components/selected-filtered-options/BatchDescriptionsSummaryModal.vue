@@ -207,18 +207,21 @@ export default {
 		 * abría una bandeja modal propia (`AiDescriptionsReviewModal`), que se retiró: una sola puerta
 		 * de revisión, como imágenes.
 		 *
+		 * Abre siempre en "A revisar" (`?solapa=a_revisar`): es lo que el resumen anuncia.
+		 *
 		 * Si ya se está ahí, `replace` (con `push` quedaban dos entradas iguales en el historial y el
-		 * botón Atrás parecía no hacer nada) y se le pide a la sección que vuelva a traer su lista: la
-		 * ruta no cambia, así que sola no se enteraría de lo que acaba de llegar.
+		 * botón Atrás parecía no hacer nada) y se le pide a la sección que vuelva a traer su lista y que
+		 * pase a "A revisar" si estaba en Publicadas: la sección no se vuelve a montar, así que sola no
+		 * se enteraría.
 		 *
 		 * @return {void}
 		 */
 		on_review_click() {
 			this.visible_proxy = false
-			let destino = destino_de_descripciones()
+			let destino = destino_de_descripciones({ solapa: 'a_revisar' })
 			let ya_esta_ahi = es_ruta_de_descripciones(this.$route)
 			if (ya_esta_ahi) {
-				this.$store.dispatch('ai_description_review/recargar_revision')
+				this.$store.dispatch('ai_description_review/recargar_revision', { solapa: 'a_revisar' })
 			}
 			let navegacion = ya_esta_ahi ? this.$router.replace(destino) : this.$router.push(destino)
 			navegacion.catch(() => {

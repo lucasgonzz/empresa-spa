@@ -410,11 +410,17 @@ export default {
 		conteos_de_usuario: null,
 		/**
 		 * Se incrementa cada vez que alguien pide que la revisión vuelva a traer su lista (volver a
-		 * tocar la pestaña Descripciones o Catálogo, "Revisar ahora" estando ya ahí). La lista vive en
-		 * el componente de la sección, que mira este número: así quien lo pide no necesita una
-		 * referencia a un componente que puede no estar montado.
+		 * tocar la pestaña Descripciones o Catálogo, "Revisar ahora" estando ya ahí, el fin de un lote
+		 * de descripciones). La lista vive en el componente de la sección, que mira este número: así
+		 * quien lo pide no necesita una referencia a un componente que puede no estar montado.
 		 */
 		pedidos_de_recarga: 0,
+		/**
+		 * La solapa que pidió el último pedido de recarga (a_revisar | publicadas), o null si pidió
+		 * quedarse en la que está. "Revisar ahora" y "Revisar en Alertas" piden A revisar: si la sección
+		 * estaba abierta en Publicadas, cambia.
+		 */
+		solapa_de_la_recarga: null,
 	},
 	getters: {
 		/**
@@ -432,8 +438,9 @@ export default {
 			return a_numero(state.resumen.badge)
 		},
 		/**
-		 * Los números de las solapas internas. Mientras no llegó ninguna lista, los del resumen (son
-		 * los mismos números, y así "A revisar (3)" se ve desde el primer instante).
+		 * Los números de las solapas internas: los más nuevos que mandó la API, por cualquier camino (el
+		 * resumen, la lista o una acción; ver `aplicar_conteos`). Así "A revisar (N)" nunca queda atrás
+		 * del número rojo. Si son de otra persona, ceros.
 		 *
 		 * @returns {{a_revisar: Number, publicadas: Number}}
 		 */
@@ -441,9 +448,6 @@ export default {
 			let usuario_id = usuario_actual_id(root_state)
 			if (usuario_id !== null && state.conteos_de_usuario === usuario_id) {
 				return state.conteos
-			}
-			if (usuario_id !== null && state.resumen_de_usuario === usuario_id) {
-				return { a_revisar: state.resumen.a_revisar, publicadas: state.resumen.publicadas }
 			}
 			return { a_revisar: 0, publicadas: 0 }
 		},
@@ -465,7 +469,12 @@ export default {
 			state.conteos = pedido.valor
 			state.conteos_de_usuario = pedido.usuario_id
 		},
-		pedir_recarga_de_la_revision(state) {
+		/**
+		 * @param {Object} state
+		 * @param {String|null} solapa La solapa a la que tiene que pasar la sección, o null.
+		 */
+		pedir_recarga_de_la_revision(state, solapa) {
+			state.solapa_de_la_recarga = solapa === 'a_revisar' || solapa === 'publicadas' ? solapa : null
 			state.pedidos_de_recarga++
 		},
 	},
@@ -475,12 +484,18 @@ export default {
 		 * no se muestra nada; contra una API que todavía no tiene la ruta (404) queda en cero. Resuelve
 		 * siempre, porque start_methods.js lo encadena con el resto del arranque.
 		 *
+		 * El resumen trae los mismos dos números que las solapas internas, así que también se aplican
+		 * como conteos, con el resguardo de secuencia: si ya llegó una foto más nueva (una lista o una
+		 * acción que salieron después), no la pisa.
+		 *
 		 * @returns {Promise}
 		 */
 		get_resumen({ commit, rootState }) {
 			ultimo_pedido_de_resumen++
 			let este_resumen = ultimo_pedido_de_resumen
 			let usuario_id = usuario_actual_id(rootState)
+			secuencia_de_conteos++
+			let esta_secuencia = secuencia_de_conteos
 
 			return axios.get('/api/article-description-ai/resumen', OPCIONES_SILENCIOSAS)
 				.then(res => {
@@ -488,6 +503,8 @@ export default {
 						return
 					}
 					commit('set_resumen', { valor: res.data, usuario_id: usuario_id })
+					let resumen = normalizar_resumen(res.data)
+					aplicar_conteos(commit, rootState, esta_secuencia, { a_revisar: resumen.a_revisar, publicadas: resumen.publicadas })
 				})
 				.catch(err => {
 					if (es_cancelacion(err) || este_resumen !== ultimo_pedido_de_resumen) {
@@ -496,6 +513,7 @@ export default {
 					// Un 404 es una API que todavía no tiene estas rutas: el número vale cero y no se anuncia.
 					if (err && err.response && err.response.status === 404) {
 						commit('set_resumen', { valor: resumen_vacio(), usuario_id: usuario_id })
+						aplicar_conteos(commit, rootState, esta_secuencia, { a_revisar: 0, publicadas: 0 })
 						return
 					}
 					console.log('article-description-ai/resumen: no se pudo traer el resumen del badge')
@@ -503,12 +521,16 @@ export default {
 				})
 		},
 		/**
-		 * Pide que la revisión vuelva a traer su lista (si está montada) y el número rojo.
+		 * Pide que la revisión vuelva a traer su lista (si está montada) y el número rojo. Con
+		 * `{solapa}`, además, que pase a esa solapa ("Revisar ahora" y "Revisar en Alertas" piden A
+		 * revisar aunque la sección estuviera abierta en Publicadas).
 		 *
+		 * @param {Object} contexto
+		 * @param {{solapa: String}} [opciones]
 		 * @returns {Promise} La del resumen (resuelve siempre).
 		 */
-		recargar_revision({ commit, dispatch }) {
-			commit('pedir_recarga_de_la_revision')
+		recargar_revision({ commit, dispatch }, opciones) {
+			commit('pedir_recarga_de_la_revision', opciones && opciones.solapa ? opciones.solapa : null)
 			return dispatch('get_resumen')
 		},
 		/**

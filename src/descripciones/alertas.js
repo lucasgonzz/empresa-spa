@@ -668,7 +668,7 @@ export default {
 
 	'descripciones-resumen-revisar': {
 		titulo: 'Revisar ahora',
-		que_hace: 'Lleva a Alertas → Catálogo → Descripciones, donde esperan las descripciones que la IA no pudo confirmar.',
+		que_hace: 'Lleva a Alertas → Catálogo → Descripciones, a la solapa A revisar, donde esperan las descripciones que la IA no pudo confirmar.',
 		repercute: [
 			'Solo navega: no aprueba ni descarta nada.',
 		],
@@ -677,7 +677,7 @@ export default {
 
 	'proceso-revisar-descripciones': {
 		titulo: 'Revisar en Alertas',
-		que_hace: 'Lleva a Alertas → Catálogo → Descripciones, donde esperan las descripciones de este lote que la IA no pudo confirmar.',
+		que_hace: 'Lleva a Alertas → Catálogo → Descripciones, a la solapa A revisar, donde esperan las descripciones de este lote que la IA no pudo confirmar.',
 		repercute: [
 			'Solo navega: no cambia el lote ni las descripciones.',
 		],

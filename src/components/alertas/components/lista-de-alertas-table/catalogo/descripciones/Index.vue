@@ -290,8 +290,17 @@ export default {
 				this.cargar_items()
 			}, ESPERA_BUSCADOR_MS)
 		},
-		/** Alguien pidió volver a traer la lista: la página actual, con lo que está a la vista apagado. */
+		/**
+		 * Alguien pidió volver a traer la lista. Si pidió una solapa ("Revisar ahora" y "Revisar en
+		 * Alertas" piden A revisar) y es otra que la abierta, se pasa a esa; si no, se vuelve a pedir la
+		 * página actual, con lo que está a la vista apagado.
+		 */
 		pedidos_de_recarga() {
+			let pedida = this.$store.state.ai_description_review.solapa_de_la_recarga
+			if (SOLAPAS_VALIDAS.indexOf(pedida) !== -1 && pedida !== this.solapa) {
+				this.cambiar_solapa(pedida)
+				return
+			}
 			this.cargar_items()
 		},
 	},
@@ -323,8 +332,9 @@ export default {
 			return Number(this.conteos ? this.conteos[valor] : 0) || 0
 		},
 		/**
-		 * Con qué solapa abrir: la que pida la URL (`?solapa=publicadas`); si no, "A revisar", salvo que
-		 * no tenga nada y "Publicadas" sí (así no se abre en una lista vacía teniendo algo para mirar).
+		 * Con qué solapa abrir: la que pida la URL (`?solapa=a_revisar`, que es lo que mandan "Revisar
+		 * ahora" y "Revisar en Alertas"); si no, "A revisar", salvo que no tenga nada y "Publicadas" sí
+		 * (así no se abre en una lista vacía teniendo algo para mirar).
 		 *
 		 * @returns {String}
 		 */
