@@ -70,6 +70,7 @@
 	</div>
 </template>
 <script>
+import axios from 'axios'
 import permiso_stock_por_sucursal from '@/mixins/listado/permiso_stock_por_sucursal'
 
 /*
@@ -331,24 +332,36 @@ export default {
 					}
 				}
 
-				let cambio = numeros_distintos(stock_como_numero(renglon.pivot.amount), stock_como_numero(original.amount))
-					|| numeros_distintos(limite_como_numero(renglon.pivot.stock_min), limite_como_numero(original.stock_min))
+				let cambio_stock = numeros_distintos(stock_como_numero(renglon.pivot.amount), stock_como_numero(original.amount))
+
+				let cambio_limites = numeros_distintos(limite_como_numero(renglon.pivot.stock_min), limite_como_numero(original.stock_min))
 					|| numeros_distintos(limite_como_numero(renglon.pivot.stock_max), limite_como_numero(original.stock_max))
 
-				if (!cambio) {
+				if (!cambio_stock && !cambio_limites) {
 					return
 				}
 
-				// Viajan los tres campos aunque haya cambiado uno solo: la API escribe el mínimo y
-				// el máximo juntos, y uno ausente lo dejaría en null.
+				// `amount` y `amount_original` viajan siempre (la API vieja necesita `amount`).
+				let pivot = {
+					amount: renglon.pivot.amount,
+					amount_original: original.amount,
+				}
+
+				/*
+					El mínimo y el máximo viajan SOLO si alguno de los dos cambió, y en ese caso los
+					dos juntos: la API vieja escribe los dos a la vez (uno ausente quedaría en null).
+					Si cambió solo el stock no viajan: la API nueva no toca una clave ausente, y la
+					vieja tampoco toca los dos si llegan ausentes. Así, guardar solo el stock no borra
+					un mínimo o máximo que otro cargó mientras se editaba (verificación 14/10/2026).
+				*/
+				if (cambio_limites) {
+					pivot.stock_min = limite_para_enviar(renglon.pivot.stock_min)
+					pivot.stock_max = limite_para_enviar(renglon.pivot.stock_max)
+				}
+
 				para_guardar.push({
 					id: renglon.id,
-					pivot: {
-						amount: renglon.pivot.amount,
-						stock_min: limite_para_enviar(renglon.pivot.stock_min),
-						stock_max: limite_para_enviar(renglon.pivot.stock_max),
-						amount_original: original.amount,
-					},
+					pivot: pivot,
 				})
 			})
 
@@ -400,15 +413,23 @@ export default {
 					usuario vuelva a abrir y decida. Sin toast propio: el `message` de la API ya lo
 					muestra el handler global de errores (10 segundos).
 				*/
+				// Primero se limpia la edición (apaga `guardando`): si algo de lo que sigue fallara,
+				// los botones de esta y de cualquier otra fila no quedan bloqueados.
+				self.$store.commit('article/edit_addresses_stock/limpiar_edicion')
+
 				if (err && err.response && err.response.status == 409) {
 					if (err.response.data && err.response.data.model) {
 						self.actualizar_stock_de_la_fila(err.response.data.model)
 					}
-					self.$store.commit('article/edit_addresses_stock/limpiar_edicion')
 					return
 				}
 
-				self.$store.commit('article/edit_addresses_stock/limpiar_edicion')
+				// Un PUT cancelado (se salió del Listado mientras viajaba) no es un error para el
+				// usuario: el servidor puede haberlo guardado, y al volver el stock se trae fresco.
+				if (axios.isCancel(err)) {
+					return
+				}
+
 				console.log(err)
 				self.$toast.error('Error al actualizar')
 			})
