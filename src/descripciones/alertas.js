@@ -551,7 +551,7 @@ export default {
 	 * ve Catálogo; D3: la solapa Publicadas) y del contrato §1.4 del plan: no hay spec de exploración que
 	 * los mida todavía (la suite la corre Lucas).
 	 *
-	 * Vocabulario: lo que se revisa es "la descripción" de un artículo, aunque tenga dos o tres secciones;
+	 * Vocabulario: lo que se revisa es "la descripción" de un artículo, aunque tenga varias secciones;
 	 * "propuesta" es palabra de la API y no se le muestra al cliente.
 	 */
 

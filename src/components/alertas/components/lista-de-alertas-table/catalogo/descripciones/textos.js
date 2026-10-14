@@ -8,7 +8,7 @@ import { cantidad_de, entero_es } from '@/components/alertas/components/lista-de
  * es-AR).
  *
  * 🔴 Estos textos los lee un cliente: van con acentos, en voseo, sin jerga y sin emojis. Vocabulario
- * fijo: lo que se revisa es "la descripción" de un artículo (aunque tenga dos o tres secciones);
+ * fijo: lo que se revisa es "la descripción" de un artículo (aunque tenga varias secciones);
  * "propuesta" es palabra de la API y no se le muestra a nadie.
  */
 

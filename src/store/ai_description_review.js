@@ -28,11 +28,15 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * Quién la ve: todo el que ve Catálogo, como Imágenes (decisión D2). La API acota todo al negocio de
  * la sesión y contesta 404 a lo ajeno; la SPA no filtra nada por permisos.
  *
- * Compatibilidad hacia atrás: contra una API que todavía no tiene estas rutas (404), `get_resumen`
- * no muestra NINGÚN error y deja el número en cero. Es un pedido de fondo y va silencioso (sin el toast
- * del interceptor global). Los pedidos que dispara una persona (la lista, aprobar, descartar, guardar,
- * quitar) pasan por el interceptor global de main.js, que muestra el `message` de la API (un 4xx con
- * `message` sale como aviso amarillo): por eso quien los llama NO repite el toast de error.
+ * Compatibilidad hacia atrás: contra una API que todavía no tiene estas rutas (404), ni `get_resumen`
+ * ni la lista (`get_items`) muestran NINGÚN error: los dos van silenciosos (sin el toast del interceptor
+ * global); el número queda en cero y la sección dice "todavía no está disponible". Las acciones que
+ * dispara una persona (aprobar, descartar, guardar, quitar) pasan por el interceptor global de main.js,
+ * que muestra el `message` de la API (un 4xx con `message` sale como aviso amarillo): por eso quien las
+ * llama NO repite el toast de error.
+ *
+ * Secciones: la SPA no les pone tope. Edita las que trae cada artículo y las manda todas; la API acepta
+ * hasta 10 al aprobar y al editar una publicada.
  *
  * 🔴 TODOS los pedidos de este módulo van con `skip_navigation_cancel`: main.js cancela los pedidos en
  * vuelo al irse a OTRA pantalla, y una aprobación en lote se tiene que terminar aunque la persona salga
