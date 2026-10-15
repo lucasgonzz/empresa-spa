@@ -32,7 +32,6 @@ export default {
 			[
 				'Dejar vacio para aplicar a cualquier metodo de pago (regla generica).',
 				'Si se elige un metodo, esta regla tiene prioridad sobre una generica con la misma cantidad de cuotas.',
-				'Si es el método vinculado a Mercado Pago en tu tienda, estas cuotas también se ofrecen ahí.',
 			],
 		},
 	],
