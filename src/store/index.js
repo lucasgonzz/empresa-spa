@@ -50,7 +50,6 @@ import order_status from '@/store/order_status'
 import buyer from '@/store/buyer'
 import delivery_zone from '@/store/delivery_zone'
 import payment_method from '@/store/payment_method'
-import cupon from '@/store/cupon'
 import deposit from '@/store/deposit'
 import size from '@/store/size'
 import color from '@/store/color'
@@ -363,7 +362,6 @@ export default new Vuex.Store({
         buyer,
         delivery_zone,
         payment_method,
-        cupon,
         deposit,
         size,
         color,
