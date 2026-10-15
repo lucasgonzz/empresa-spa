@@ -93,8 +93,8 @@
 				v-if="sale_details.order.cupon"
 				class="m-b-0 m-t-15">
 					<span
-					v-if="sale_details.order.cupon.percetage">
-						Cupon del {{ porcentaje_es(sale_details.order.cupon.percetage) }}%
+					v-if="sale_details.order.cupon.percentage">
+						Cupon del {{ porcentaje_es(sale_details.order.cupon.percentage) }}%
 					</span>
 					<span
 					v-else>
