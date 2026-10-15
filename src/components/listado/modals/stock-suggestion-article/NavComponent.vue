@@ -46,7 +46,18 @@
 			class="m-r-10 text-muted small">
 				{{ selected_line_ids.length }} seleccionado/s
 			</span>
+			<!--
+				Permiso `deposit_movement.store` ("Crear movimientos de deposito", mision
+				permiso-crear-movimiento-deposito, 14/10/2026): crear movimientos desde una sugerencia
+				es el segundo camino que genera movimientos (el primero es el "Crear" del modal de
+				movimientos), y la API lo cierra con el mismo permiso: sin el responde 403.
+
+				Por eso el boton se OCULTA y no queda deshabilitado: un boton habilitado que despues
+				devuelve un 403 seria una promesa rota. En su lugar sale un aviso chico y apagado que
+				explica por que no esta. El dueño pasa siempre (`can()` le devuelve true).
+			-->
 			<b-button
+			v-if="puede_crear_movimientos"
 			size="sm"
 			variant="primary"
 			:disabled="!selected_line_ids.length || loading_crear"
@@ -58,6 +69,11 @@
 				</b-spinner>
 				Crear Movimiento/s de Deposito
 			</b-button>
+			<span
+			v-else
+			class="text-muted small">
+				No tenés permiso para crear movimientos de depósito.
+			</span>
 		</div>
 
 		<articles-table
@@ -101,6 +117,17 @@ export default {
 		},
 		hay_resultados() {
 			return this.stock_suggestion_articles.length > 0
+		},
+		/**
+		 * Si el usuario puede crear movimientos de deposito: tiene el permiso
+		 * `deposit_movement.store`. Decide si se ofrece el boton "Crear Movimiento/s de Deposito" o
+		 * el aviso de que no tiene permiso. Es el mismo permiso que chequea la API en
+		 * `StockSuggestionController@create_deposit_movement`. El dueño pasa siempre.
+		 *
+		 * @returns {Boolean}
+		 */
+		puede_crear_movimientos() {
+			return this.can('deposit_movement.store')
 		},
 		todos_seleccionados() {
 			return this.hay_resultados && this.selected_line_ids.length === this.stock_suggestion_articles.length

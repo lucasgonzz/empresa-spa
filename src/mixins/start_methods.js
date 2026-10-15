@@ -10,6 +10,8 @@ export default {
 
 			this.setEmployeeVender()
 
+			this.setSellerVender()
+
 			this.init_vender_address_id()
 
 			/*
@@ -76,6 +78,8 @@ export default {
 			.then(() => this.get_resumen_de_imagenes())
 			.catch(err => console.log(err))
 			.then(() => this.get_resumen_de_categorias())
+			.catch(err => console.log(err))
+			.then(() => this.get_resumen_de_descripciones())
 			.catch(err => console.log(err))
 			.then(() => this.check_synced_version_notifications())
 			.catch(err => console.log(err))
@@ -315,6 +319,20 @@ export default {
 		 */
 		get_resumen_de_categorias() {
 			return this.$store.dispatch('category_proposal/get_resumen')
+		},
+		/**
+		 * Trae el resumen de las descripciones automaticas que esperan revision (cuantos articulos
+		 * tienen una descripcion que la IA no pudo confirmar) para el numero rojo de Alertas ->
+		 * Catalogo -> Descripciones y de la campana (mision alertas-descripciones, 14/10/2026).
+		 *
+		 * Sin extension ni permiso que lo condicione, como el de imagenes. La accion del store es
+		 * silenciosa y resuelve siempre (un 404 de una API que todavia no tiene la ruta deja el numero
+		 * en cero sin mostrar nada), asi que no le puede cortar el turno al eslabon que sigue.
+		 *
+		 * @returns {Promise}
+		 */
+		get_resumen_de_descripciones() {
+			return this.$store.dispatch('ai_description_review/get_resumen')
 		},
 		get_ventas_sin_cobrar() {
 			if (this.owner.dias_alertar_empleados_ventas_no_cobradas) {

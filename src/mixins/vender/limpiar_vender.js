@@ -149,7 +149,8 @@ export default {
 
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
-			this.$store.commit('vender/setSellerId', 0)
+			// El vendedor vuelve al del empleado logueado (su "Perfil de Vendedor"), o a 0 si no tiene
+			this.setSellerVender()
 
 			this.$store.commit('vender/set_fecha_entrega', null)
 

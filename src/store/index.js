@@ -50,7 +50,6 @@ import order_status from '@/store/order_status'
 import buyer from '@/store/buyer'
 import delivery_zone from '@/store/delivery_zone'
 import payment_method from '@/store/payment_method'
-import cupon from '@/store/cupon'
 import deposit from '@/store/deposit'
 import size from '@/store/size'
 import color from '@/store/color'
@@ -269,6 +268,10 @@ import image_assignment from '@/store/image_assignment'
 // (mision categorizacion-tres-modelos, 5/10/2026). Igual que image_assignment, no sale del factory
 // comun: no es un ABM, es el estado de lectura de un modulo con su propio contrato.
 import category_proposal from '@/store/category_proposal'
+// Revisión de las descripciones automáticas que la IA no pudo confirmar: la sub-solapa Alertas ->
+// Catálogo -> Descripciones y su número rojo (misión alertas-descripciones, 14/10/2026). Mismo
+// criterio que los dos de arriba: no es un ABM, no sale del factory común.
+import ai_description_review from '@/store/ai_description_review'
 
 import provider_order_afip_ticket_iva from '@/store/provider_order_afip_ticket_iva'
 import provider_order_discount from '@/store/provider_order_discount'
@@ -359,7 +362,6 @@ export default new Vuex.Store({
         buyer,
         delivery_zone,
         payment_method,
-        cupon,
         deposit,
         size,
         color,
@@ -557,6 +559,7 @@ export default new Vuex.Store({
         filter_history,
         image_assignment,
         category_proposal,
+        ai_description_review,
 
         provider_order_afip_ticket_iva,
         provider_order_discount,

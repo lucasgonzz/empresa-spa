@@ -103,6 +103,11 @@ export default {
 				// dueño o el acceso maestro vale 0; va adentro del mismo `if` porque se ve en la
 				// misma solapa (Catalogo → Categorias).
 				total += Number(this.categorias_alert_count)
+
+				// Descripciones automaticas que esperan revision (mision alertas-descripciones,
+				// 14/10/2026). Se ve en la misma solapa (Catalogo → Descripciones) y la ve todo el que
+				// ve Catalogo, asi que va adentro del mismo `if`.
+				total += Number(this.descripciones_alert_count)
 			}
 
 			return  total
