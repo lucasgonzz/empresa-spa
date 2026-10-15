@@ -28,6 +28,8 @@ export default {
 			type: 'select',
 			value: 0,
 			show: true,
+			// Redibuja el formulario: de este select depende que aparezca el vínculo de más abajo.
+			on_change: 'redibujar_formulario_al_cambiar',
 		},
 		/*
 		 * Vínculo con las cuotas de la tienda (misión tienda-cuotas-mercado-pago, 15/10/2026).
@@ -37,16 +39,20 @@ export default {
 		 * tipo Mercado Pago. Sin vínculo, o sin cuotas cargadas para ese método, el checkout de la
 		 * tienda queda como siempre.
 		 *
-		 * 🔴 Se muestra SIEMPRE, sea cual sea el "Tipo", y la descripción del campo lo aclara. No se
-		 * condiciona al tipo porque el `v_if` de array no filtra nada (showProperty() compara
-		 * `typeof v_if == 'array'`, que nunca es cierto: el `v_if` de "Cuotas" de más abajo
-		 * tampoco), y el id del tipo MercadoPago no es fijo (`payment_method_types` se siembra con
-		 * firstOrCreate, sin ids garantizados). Ocultarlo bien pide un `v_if_function` que resuelva
-		 * el tipo por NOMBRE en src/mixins/model_functions.js (como `mostrar_order_envio_resumen`).
+		 * 🔴 Solo se ve cuando el "Tipo" del método es MercadoPago, y eso lo decide
+		 * `es_metodo_de_pago_de_mercado_pago` (src/mixins/model_functions.js), que resuelve el tipo
+		 * por NOMBRE: el id de MercadoPago no es fijo (`payment_method_types` se siembra con
+		 * firstOrCreate). Es `v_if_function` y no `v_if` porque showProperty() compara
+		 * `typeof v_if == 'array'`, que nunca es cierto (el `v_if` de "Cuotas" de más abajo tampoco
+		 * filtra nada). Y el select "Tipo" declara `on_change` porque este modelo no tiene
+		 * `full_reactivity`: sin él, al elegir Mercado Pago el campo no aparecería hasta que algo
+		 * más redibujara el formulario.
 		 *
 		 * `value: 0` es el "Seleccione ..." del select: la API lo guarda como NULL (sin vínculo). La
 		 * API asigna este campo solo si el request lo trae (patrón de `access_token`): una SPA vieja
-		 * que no lo conoce no puede borrar el vínculo, y esta lo manda con lo que trajo la API.
+		 * que no lo conoce no puede borrar el vínculo, y esta lo manda con lo que trajo la API. Si
+		 * el método deja de ser de Mercado Pago, el campo se oculta pero el vínculo guardado queda;
+		 * la tienda solo lo usa en los de tipo MercadoPago.
 		 */
 		{
 			text: 'Método de pago de cuenta corriente',
@@ -54,11 +60,12 @@ export default {
 			type: 'select',
 			store: 'current_acount_payment_method',
 			value: 0,
+			v_if_function: 'es_metodo_de_pago_de_mercado_pago',
 			descriptions:
 			[
-				'Solo se usa con los métodos de tipo Mercado Pago. Elegí el método de pago de cuenta corriente cuyas cuotas querés ofrecer en la tienda.',
+				'Solo aparece en los métodos de tipo Mercado Pago. Elegí el método de pago de cuenta corriente cuyas cuotas querés ofrecer en la tienda.',
 				'La tienda le muestra al comprador «Contado» y una opción «N cuotas de $X» por cada cuota que cargaste en ABM → Cuenta corriente → Cuotas para ESE método de pago (campo «Método de pago»), con su recargo ya incluido en el valor de cada cuota. Las cuotas genéricas (sin método de pago) no se ofrecen en la tienda.',
-				'Si no elegís ninguno, o el método elegido no tiene cuotas cargadas, la tienda funciona como siempre. En un método que no es de Mercado Pago este campo no tiene efecto.',
+				'Si no elegís ninguno, o el método elegido no tiene cuotas cargadas, la tienda funciona como siempre.',
 			],
 		},
 		/*
