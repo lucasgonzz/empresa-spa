@@ -32,7 +32,8 @@ export default {
 			[
 				'Dejar vacio para aplicar a cualquier metodo de pago (regla generica).',
 				'Si se elige un metodo, esta regla tiene prioridad sobre una generica con la misma cantidad de cuotas.',
-				'Tienda online: las cuotas que tienen un metodo de pago elegido tambien se ofrecen en la tienda, cuando el metodo de Mercado Pago de la tienda esta vinculado con ese metodo de pago (ABM -> Tienda online -> Metodos de pago). Las genericas, sin metodo, no se ofrecen en la tienda.',
+				'Tienda online: las cuotas que tienen un método de pago elegido también se ofrecen en la tienda cuando el método de Mercado Pago de la tienda está vinculado con ese método (ABM → Tienda online → Métodos de pago). Las genéricas, sin método de pago, no se ofrecen en la tienda.',
+				'Para que el comprador pague exactamente la cuota que ve en la tienda, activá las «cuotas sin interés» para esas cantidades en tu cuenta de Mercado Pago (Negocio → Costos y cuotas); si no, Mercado Pago le suma su propio interés encima. El recargo que cargás acá es el que cubre lo que Mercado Pago te descuenta por ofrecer esas cuotas.',
 			],
 		},
 	],
