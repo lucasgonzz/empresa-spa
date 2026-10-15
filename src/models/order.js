@@ -74,7 +74,7 @@ export default {
 			description: 'El recargo neto (recargo menos descuento de la cuota, en porcentaje) con el que se calculó el valor de las cuotas elegidas. Se aplicó sobre todo lo que se cobró (artículos, envío y demás) y viajó a Mercado Pago como un ítem aparte. Hoy el total del pedido en el sistema no lo incluye.',
 		},
 		{
-			text: 'Cuotas cobradas por Mercado Pago',
+			text: 'Cuotas cobradas',
 			key: 'cuotas_cobradas',
 			type: 'number',
 			only_show: true,

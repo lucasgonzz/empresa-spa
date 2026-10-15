@@ -1034,6 +1034,43 @@ export default {
             return nombre.replace(/\s+/g, '').toLowerCase() === 'mercadopago'
         },
         /**
+         * `dynamic_options_function` del select "Método de pago de cuenta corriente" de un método de
+         * pago de la tienda (src/models/payment_method.js): los métodos de pago de cuenta corriente
+         * de siempre, pero con "Seleccione ..." en `null` y no en 0.
+         *
+         * 🔴 La API devuelve NULL para un método sin vínculo. Con el "Seleccione ..." en 0 ninguna
+         * opción coincidía con el valor y el select quedaba EN BLANCO en todos los métodos ya
+         * cargados (misma razón por la que el tipo de descuento de un combo ofrece un `null`). Elegir
+         * "Seleccione ..." manda null, que la API guarda como NULL (sin vínculo).
+         *
+         * Reusa getOptions() para armar la lista (mismo orden y mismos nombres que el select de la
+         * cuota); lo único que cambia es el valor de la opción vacía.
+         *
+         * @param {object} prop El select (usa `prop.store`).
+         * @param {object} model El método de pago de la tienda.
+         * @param {string} model_name
+         * @returns {Array<{value: (number|null), text: string}>}
+         */
+        metodos_de_pago_de_cuenta_corriente_para_vincular(prop, model, model_name) {
+            let opciones = this.getOptions({ ...prop, dynamic_options_function: null }, model, model_name)
+            return opciones.map(function (opcion) {
+                if (opcion.value === 0) {
+                    return { value: null, text: opcion.text }
+                }
+                return opcion
+            })
+        },
+        /**
+         * `value_function` del select "Método de pago de cuenta corriente" en un método NUEVO. Sin
+         * esto el motor le pone 0 a todo select sin `value` (display.js::getSelectAndCheckboxProps) y
+         * no coincidiría con la opción vacía, que vale null. null = sin vínculo.
+         *
+         * @returns {null}
+         */
+        metodo_de_pago_vinculado_inicial() {
+            return null
+        },
+        /**
          * `on_change` del select "Tipo" de un método de pago de la tienda: redibuja el formulario
          * para que "Método de pago de cuenta corriente" aparezca o desaparezca en el momento.
          *

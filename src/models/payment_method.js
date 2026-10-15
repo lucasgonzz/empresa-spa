@@ -48,25 +48,36 @@ export default {
 		 * `full_reactivity`: sin él, al elegir Mercado Pago el campo no aparecería hasta que algo
 		 * más redibujara el formulario.
 		 *
-		 * `value: 0` es el "Seleccione ..." del select: la API lo guarda como NULL (sin vínculo). La
-		 * API asigna este campo solo si el request lo trae (patrón de `access_token`): una SPA vieja
-		 * que no lo conoce no puede borrar el vínculo, y esta lo manda con lo que trajo la API. Si
-		 * el método deja de ser de Mercado Pago, el campo se oculta pero el vínculo guardado queda;
-		 * la tienda solo lo usa en los de tipo MercadoPago.
+		 * 🔴 "Sin vínculo" es NULL, no 0: la API devuelve NULL para un método sin vínculo y, si la
+		 * opción "Seleccione ..." valiera 0, el select quedaría EN BLANCO (ninguna opción coincide
+		 * con null y el navegador deja `selectedIndex = -1`) en todos los métodos ya cargados. Por
+		 * eso las opciones son propias (`dynamic_options_function`: las de siempre, pero con el
+		 * "Seleccione ..." en null) y un método nuevo arranca en null (`value_function`: sin ella el
+		 * motor le pone 0 a todo select sin `value`, ver display.js::getSelectAndCheckboxProps).
+		 * Mismo patrón que `descuento_tipo` de combo.js. Elegir "Seleccione ..." manda null y la API
+		 * lo guarda como NULL.
+		 *
+		 * La API asigna este campo solo si el request lo trae (patrón de `access_token`): una SPA
+		 * vieja que no lo conoce no puede borrar el vínculo, y esta lo manda con lo que trajo la API.
+		 * Si el método deja de ser de Mercado Pago, el campo se oculta pero el vínculo guardado
+		 * queda; la tienda solo lo usa en los de tipo MercadoPago.
+		 *
+		 * 🔴 La ayuda es CORTA a propósito: el popover (`.model-form-help-popover`) no puede pasar de
+		 * ~350 px de alto y lo importante (el aviso de las cuotas sin interés) quedaba cortado. El
+		 * texto completo vive en `abm_descripcion`.
 		 */
 		{
 			text: 'Método de pago de cuenta corriente',
 			key: 'current_acount_payment_method_id',
 			type: 'select',
 			store: 'current_acount_payment_method',
-			value: 0,
+			dynamic_options_function: 'metodos_de_pago_de_cuenta_corriente_para_vincular',
+			value_function: 'metodo_de_pago_vinculado_inicial',
 			v_if_function: 'es_metodo_de_pago_de_mercado_pago',
 			descriptions:
 			[
-				'Solo aparece en los métodos de tipo Mercado Pago. Elegí el método de pago de cuenta corriente cuyas cuotas querés ofrecer en la tienda.',
-				'La tienda le muestra al comprador «Contado» y una opción «N cuotas de $X» por cada cuota que cargaste en ABM → Cuenta corriente → Cuotas para ESE método de pago (campo «Método de pago»), con su recargo ya incluido en el valor de cada cuota. Las cuotas genéricas (sin método de pago) no se ofrecen en la tienda.',
-				'Si no elegís ninguno, o el método elegido no tiene cuotas cargadas, la tienda funciona como siempre.',
-				'Para que el comprador pague exactamente la cuota que ve en la tienda, activá las «cuotas sin interés» para esas cantidades de cuotas en tu cuenta de Mercado Pago (Negocio → Costos y cuotas). Si no las activás, Mercado Pago le suma su propio interés encima. El recargo que cargás en las cuotas es el que cubre lo que Mercado Pago te descuenta por ofrecerlas.',
+				'Elegí el método de cuenta corriente cuyas cuotas cargaste: se ofrecen en tu tienda, con el recargo ya incluido en cada cuota.',
+				'Activá las «cuotas sin interés» en tu cuenta de Mercado Pago (Negocio → Costos y cuotas), o el comprador paga además el interés de Mercado Pago.',
 			],
 		},
 		/*
