@@ -41,7 +41,7 @@
 		class="whatsapp-config__demo"
 		variant="warning"
 		show>
-			<i class="bi bi-cone-striped"></i>
+			<i class="bi bi-info-circle-fill"></i>
 			<strong>Modo demostración:</strong>
 			los mensajes no se envían. Todo se ve como enviado en las conversaciones, pero no sale
 			nada por WhatsApp.

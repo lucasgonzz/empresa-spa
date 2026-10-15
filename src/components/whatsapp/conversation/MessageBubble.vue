@@ -204,9 +204,11 @@
 				class="bi bi-exclamation-circle whatsapp-bubble__status--failed"></i>
 			</span>
 			<!-- Saliente de un chat en simulación: el envío hacia WhatsApp lo frenó el backend,
-			así que el reloj de "pendiente de entrega" sería mentira: no está por salir, no sale. -->
+			así que el reloj de "pendiente de entrega" sería mentira: no está por salir, no sale.
+			No aplica al envío de una demo (`envio_de_demo`): ahí el backend lo dio por enviado a
+			propósito y los tildes de arriba ya lo muestran. -->
 			<span
-			v-else-if="is_out && es_simulado"
+			v-else-if="is_out && es_simulado && !envio_de_demo"
 			class="whatsapp-bubble__status whatsapp-bubble__status--blocked"
 			title="No salió hacia WhatsApp: el chat está en simulación. El cliente no recibió este mensaje.">
 				<i class="bi bi-slash-circle"></i>
@@ -313,7 +315,19 @@ export default {
 			if (!this.is_out) {
 				return false
 			}
-			return !this.espera_confirmacion && !this.esta_enviandose && !this.es_simulado
+			return !this.espera_confirmacion && !this.esta_enviandose && (!this.es_simulado || this.envio_de_demo)
+		},
+		/**
+		 * El mensaje saliente lo dio por enviado el modo demostración de una instancia de demo
+		 * (misión whatsapp-envio-simulado-demos): el backend no le habló a Kapso y le puso un
+		 * `wa_message_id` que empieza con `SIMULADO.`. Es lo que distingue este caso del
+		 * saliente frenado de un chat en simulación (que no tiene id): el de demo se muestra como
+		 * enviado, con sus tildes, y el otro sigue diciendo «No se envió». Sin `wa_message_id` en
+		 * el mensaje (una API vieja) es falso y todo se ve como siempre.
+		 */
+		envio_de_demo() {
+			let wa_message_id = this.message.wa_message_id
+			return this.is_out && typeof wa_message_id == 'string' && wa_message_id.indexOf('SIMULADO.') === 0
 		},
 		bubble_class() {
 			return {
