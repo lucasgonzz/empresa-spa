@@ -58,7 +58,7 @@ export default {
 		},
 		/**
 		 * Margen que implica el precio cargado a mano, derivado en vivo de articles.base_margen_final
-		 * (la base de abajo, llevada a precio de venta) o, si no viene, de articles.base_margen
+		 * (la base de abajo, llevada a precio de venta)
 		 * (grupo 357, prompt 02). La base NO es el costo real pelado: es el resultado de la cadena
 		 * costo real -> margen de usuario -> unidades individuales -> cotizacion -> margen de
 		 * proveedor -> margen de categoria, que es justo donde el sistema aplica percentage_gain.
@@ -76,12 +76,9 @@ export default {
 			// manual es lo que paga el cliente, con el IVA y los impuestos adentro, y la base neta
 			// (base_margen) inflaba el margen en el IVA entero (3.600 sobre 2.263,64 decia ~59 % y
 			// el real es ~31 %). Los articulos calculados antes de que existiera esa columna no la
-			// traen: caen a base_margen, que es lo que se mostraba hasta ahora.
+			// traen y NO se cae a base_margen: se mostraria el numero inflado. El aviso aparece cuando
+			// el articulo se vuelve a calcular (guardarlo, o cambiarle el costo).
 			let base = parseFloat(this.article.base_margen_final)
-
-			if (isNaN(base)) {
-				base = parseFloat(this.article.base_margen)
-			}
 
 			let precio = parseFloat(this.article.price)
 
