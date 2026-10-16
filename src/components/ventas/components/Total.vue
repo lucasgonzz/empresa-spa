@@ -284,8 +284,15 @@ export default {
 		 * daría el total de esas 25 filas y no el del día: los números vienen calculados en SQL por
 		 * la API (`totales_del_dia`, ver mixins/sale.js) sobre el mismo conjunto que se está
 		 * mostrando (día o rango + solapa de sucursal/empleado + show options). Cuando no hay
-		 * totales del servidor —modo filtrado (buscador general / filtro de columna), API vieja u
-		 * otro módulo— cada computed hace EXACTAMENTE la cuenta de siempre sobre `sales_to_show`.
+		 * totales del servidor —API vieja, otro módulo, o modo filtrado con una API que no mandó
+		 * `totales`— cada computed hace EXACTAMENTE la cuenta de siempre sobre `sales_to_show`.
+		 *
+		 * (16/10/2026) El modo filtrado (buscador general / filtro de columna / N° de factura) ya
+		 * tiene fuente del servidor: la pantalla de Ventas marca su pedido de búsqueda y la API
+		 * responde `totales` sobre TODAS las páginas del resultado, acotados a lo que el usuario
+		 * puede ver. `totales_del_dia` (mixins/sale.js) los devuelve en ese modo, así que los
+		 * computed de abajo no se enteran de si vienen del día o de la búsqueda; solo las
+		 * explicaciones lo distinguen (`totales_son_de_busqueda`).
 		 *
 		 * Las claves del contrato son `pesos.total`, `pesos.costos`, `pesos.ganancia`,
 		 * `pesos.cuenta_corriente` (ídem en `dolares`), `cantidad` y `metodo_de_pago.total`.
@@ -469,6 +476,9 @@ export default {
 			let contexto = {
 				formatear: this.price,
 				usa_totales_del_servidor: !!this.totales_del_dia,
+				// true si esos totales del servidor son los de una BÚSQUEDA (suma de cualquier fecha, sin
+				// período) y no los del día: las explicaciones dejan de hablar de fechas.
+				de_busqueda: this.totales_son_de_busqueda,
 				total: this.total,
 				costos: this.total_cost,
 				ganancia: this.total_ganancia,
