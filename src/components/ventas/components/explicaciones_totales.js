@@ -104,7 +104,7 @@ function frase_de_que_ventas(c) {
 			buscador no tiene período, así que "fechas" no puede figurar entre los filtros. Tampoco se dice
 			"de cualquier fecha": quien no tiene permiso para ver días anteriores solo encuentra las de hoy.
 		*/
-		frase = 'Con el buscador o un filtro de columna activo, suma las ventas terminadas encontradas (de todas las páginas), con los filtros elegidos (sucursal, vendedor, cobradas, factura, método de pago).'
+		frase = 'Con el buscador o un filtro de columna activo, suma las ventas encontradas (de todas las páginas), con los filtros elegidos (sucursal, vendedor, cobradas, factura, método de pago).'
 	} else if (c.usa_totales_del_servidor) {
 		frase = 'Suma las ventas terminadas que ves, con los filtros elegidos (fechas, sucursal, vendedor, cobradas, factura, método de pago).'
 	} else {
