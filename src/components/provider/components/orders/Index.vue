@@ -30,6 +30,14 @@
 		<scan-invoice-review></scan-invoice-review>
 		<!-- Historial de escaneos de la compra (mision historial-escaneos-compra). -->
 		<scan-invoice-history></scan-invoice-history>
+		<!--
+			Mision asistente-aviso-escaneo-factura (16/10/2026): el link que el asistente manda por
+			WhatsApp (/proveedores/compras?compra={id}&escaneo={uuid}) abre la compra en su dia y la
+			revision del escaneo. Sin interfaz propia: va al lado de los modales del escaneo porque
+			deja la orden de apertura que consume <scan-invoice-review>. Sin v-if, igual que ellos:
+			tiene que estar montado cuando se entra por la URL.
+		-->
+		<abrir-compra-por-link></abrir-compra-por-link>
 
 		<price-description></price-description>
 
@@ -186,6 +194,8 @@ export default {
 		ScanInvoice: () => import('@/components/provider/modals/orders/ScanInvoice'),
 		ScanInvoiceReview: () => import('@/components/provider/modals/orders/ScanInvoiceReview'),
 		ScanInvoiceHistory: () => import('@/components/provider/modals/orders/ScanInvoiceHistory'),
+		// Mision asistente-aviso-escaneo-factura (16/10/2026): abrir la compra y su escaneo por link
+		AbrirCompraPorLink: () => import('@/components/provider/components/orders/AbrirCompraPorLink'),
 		IvaBreakdown: () => import('@/components/provider/components/orders/IvaBreakdown'),
 		NavComponent: () => import('@/components/provider/components/orders/nav/Index'),
 		Total: () => import('@/components/provider/components/orders/Total'),
