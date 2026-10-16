@@ -300,7 +300,9 @@ export default {
 		 */
 		clearChatFollowUp(state, chat_id) {
 			let index = state.chats.findIndex(c => c.id == chat_id)
-			if (index != -1) {
+			// Solo si el chat ya trae el campo: contra una API vieja no existe y agregarlo haría que
+			// `follow_up_soportado` creyera que la API lo manda (y mostraría las tarjetas violetas en 0).
+			if (index != -1 && 'follow_up' in state.chats[index]) {
 				state.chats.splice(index, 1, Object.assign({}, state.chats[index], {
 					follow_up: null,
 					follow_up_note: null,
