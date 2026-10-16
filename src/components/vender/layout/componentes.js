@@ -50,6 +50,7 @@ const cantidad = () => import('@/components/vender/components/remito/header-form
 
 /* ---------------------------------------------------------------- Etapa 3 */
 
+const chequeo_de_deposito = () => import('@/components/vender/components/remito/total-previus-sales/CheckSale')
 const estado = () => import('@/components/vender/components/remito/header-2/buttons/SaleStatus')
 const fecha_de_entrega = () => import('@/components/vender/components/remito/header-2/buttons/FechaEntrega')
 const orden_de_compra = () => import('@/components/vender/components/remito/header-2/buttons/NumeroOrdenDeCompra')
@@ -91,6 +92,7 @@ export const COMPONENTES_DE_ELEMENTOS = Object.freeze({
 	servicio: servicio,
 	cantidad: cantidad,
 
+	chequeo_de_deposito: chequeo_de_deposito,
 	estado: estado,
 	fecha_de_entrega: fecha_de_entrega,
 	orden_de_compra: orden_de_compra,
