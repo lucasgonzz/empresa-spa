@@ -85,6 +85,12 @@ export default {
 					this.ticket_demorado()
 				}, 5000)
 
+				/*
+					La tarjeta arranca limpia: si la anterior quedó en rojo por un rechazo de ARCA y no
+					se cerró con "Cerrar", seguiría mostrando ese rechazo en lugar del "Enviando".
+				*/
+				this.$store.commit('vender/setAfipResult', [])
+
 				this.mostrar_tarjeta()
 
 				this.$api.post('afip-ticket', {
@@ -129,6 +135,11 @@ export default {
 						de arriba se mantiene.
 					*/
 					if (this.arca_rechazo_el_comprobante(sale)) {
+						if (!sale.afip_errors || !sale.afip_errors.length) {
+							this.$toast.error('Afip informo errores', {
+								duration: 6000
+							})
+						}
 						this.$store.commit('vender/setAfipResult', this.mensajes_de_arca(sale))
 						return
 					}
@@ -177,36 +188,44 @@ export default {
 			return ultimo
 		},
 		/*
-			ARCA rechazó el comprobante: la venta trae errores y el ÚLTIMO ticket (el que se acaba de
-			pedir) no tiene CAE. Se mira el último y no "alguno": en una facturación parcial la venta
-			ya puede tener otro ticket autorizado, y con el rechazo de la parte nueva la tarjeta no
-			tiene que ponerse verde. Si el último tiene CAE, los errores son de un intento anterior
-			y la tarjeta sigue el camino de siempre.
+			Los errores de ARCA del ULTIMO intento. Salen del ticket (`afip_tickets.afip_errors`, que la
+			venta trae cargado): el rechazo tipico de ARCA (AfipWsfeHelper::checkErrors) graba el error
+			con `afip_ticket_id` bien pero con `sale_id` = id del TICKET, asi que `sale.afip_errors`
+			(por sale_id) viene vacio o con errores de otra venta. Es la misma fuente que usan Alertas y
+			BtnFactura. Si el ticket no trae errores (los que se graban sin ticket, como una falla de
+			conexion con ARCA), se usan los de la venta.
+		*/
+		errores_del_ultimo_intento(sale) {
+			let ultimo = this.ultimo_ticket_de_la_venta(sale)
+			if (ultimo && ultimo.afip_errors && ultimo.afip_errors.length) {
+				return ultimo.afip_errors
+			}
+			return sale && sale.afip_errors ? sale.afip_errors : []
+		},
+		/*
+			ARCA rechazó el comprobante: el ÚLTIMO ticket de la venta (el que se acaba de pedir) no
+			tiene CAE y hay errores que mostrar. Se mira el último y no "alguno": en una facturación
+			parcial la venta ya puede tener otro ticket autorizado, y con el rechazo de la parte nueva
+			la tarjeta no tiene que ponerse verde. Si el último tiene CAE, la tarjeta sigue el camino de
+			siempre (y los errores que pudiera traer la venta son de un intento anterior).
 		*/
 		arca_rechazo_el_comprobante(sale) {
-			if (!sale || !sale.afip_errors || !sale.afip_errors.length) {
+			if (!sale) {
 				return false
 			}
 			let ultimo = this.ultimo_ticket_de_la_venta(sale)
-			return !(ultimo && ultimo.cae)
+			if (ultimo && ultimo.cae) {
+				return false
+			}
+			return this.errores_del_ultimo_intento(sale).length > 0
 		},
 		/*
 			Los errores de ARCA en la forma que dibuja la tarjeta (LoadingAfipTicket: una línea por
-			cada `Msg`). `AfipError` guarda `message`, `code` y (desde 12/2025) `afip_ticket_id`: si
-			hay errores de este último intento se muestran solo esos, para no mezclar los de intentos
-			anteriores sobre la misma venta; si no (errores viejos sin ticket), todos.
+			cada `Msg`). `AfipError` guarda `message` y `code`.
 		*/
 		mensajes_de_arca(sale) {
 			let mensajes = []
-			let ultimo = this.ultimo_ticket_de_la_venta(sale)
-			let errores = sale.afip_errors
-			if (ultimo) {
-				let de_este_intento = errores.filter(afip_error => afip_error.afip_ticket_id == ultimo.id)
-				if (de_este_intento.length) {
-					errores = de_este_intento
-				}
-			}
-			errores.forEach(afip_error => {
+			this.errores_del_ultimo_intento(sale).forEach(afip_error => {
 				let texto = afip_error.message || ''
 				if (afip_error.code && texto.indexOf(String(afip_error.code)) == -1) {
 					texto = afip_error.code + ' - ' + texto

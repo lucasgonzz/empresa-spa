@@ -476,6 +476,13 @@ export const ELEMENTOS = [
 		entrada_de_articulos: false,
 		disponible: function (vm) { return tiene_extencion(vm, 'check_sales') },
 		aparece_cuando: 'Mientras la venta no se guarde como presupuesto ni esté terminada',
+		/*
+			Con check_sales, BtnGuardar exige los tildes ("Indique la venta como checkeada"): si un
+			diseño lo saca, una venta para chequear vuelve a no poder guardarse. Se fuerza al dibujar,
+			igual que `cantidad`.
+		*/
+		se_fuerza_si: function (vm) { return tiene_extencion(vm, 'check_sales') },
+		motivo_forzado: 'Con el chequeo de depósito activo aparece igual en Vender: sin estos tildes una venta para chequear no se puede guardar.',
 	},
 	{
 		key: 'estado',

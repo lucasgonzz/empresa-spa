@@ -172,6 +172,11 @@ export default {
 			key: 'precio_base_incluye_tarjeta',
 			type: 'checkbox',
 			value: 0,
+			// Solo lo ve el dueño (mision destrabar-videos-centro, 16/10/2026), igual que
+			// aplicar_descuentos_proveedor_al_asignar: vive en la fila del dueño y el guard de
+			// UserController::update() no deja que un empleado lo escriba. Sin esto el empleado veria
+			// su propia columna (siempre 0), lo prenderia, diria "Actualizado" y volveria apagado.
+			v_if_function: 'is_owner_v_if_function',
 			descriptions:
 			[
 				'Si se activa, el precio final del articulo ya incluye el recargo del metodo de pago mas caro configurado.',
