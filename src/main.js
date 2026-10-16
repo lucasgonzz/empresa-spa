@@ -545,54 +545,20 @@ function montar_aplicacion() {
 }
 
 /**
- * Arranque condicionado (misión redireccion-version-antes-del-login, 24/9/2026).
+ * Arranque directo (misión quitar-animacion-de-actualizacion, 16/10/2026).
  *
- * El script inline de `public/index.html` deja `window.__CC_ARRANQUE__` con una promesa `listo`
- * que resuelve cuando ya sabe si hay una versión nueva del sistema esperando:
+ * La aplicación se monta apenas están listos los módulos, sin esperar a nadie. Hasta esta misión
+ * acá se esperaba una promesa (`window.__CC_ARRANQUE__.listo`) del script inline de
+ * `public/index.html`, que decidía si había que mostrar una pantalla de "descargando la versión
+ * nueva" y, en ese caso, no montaba nada hasta recargar.
  *
- * - 'normal': no hay (o no se pudo saber a tiempo) → se monta como siempre.
- * - 'actualizando': hay una y ese mismo script está mostrando la pantalla de descarga y va a
- *   recargar solo → NO se monta nada. Es el punto de todo esto: sin Vue montado no hay `auth/me`,
- *   ni pantalla de login, ni las ~15 llamadas de arranque que hasta ahora corrían contra la API
- *   con una versión que se iba a descartar. Solo si esa actualización se abandona (descarga
- *   lenta o fallida) se monta igual, para no dejar a nadie mirando una pantalla vacía.
+ * Esa espera ya no tiene razón de ser: el service worker (ver `pwa.workboxOptions` de
+ * `vue.config.js`) pide el `index.html` a la red en cada entrada, así que el documento y los
+ * bundles que llegan hasta acá YA SON los de la última versión. No hay nada que descargar antes de
+ * arrancar ni recarga posterior. NO volver a condicionar el montaje a una promesa de ese script:
+ * si esa promesa no resolviera, la aplicación quedaría en blanco.
  *
- * Si el objeto no existe (un index.html sin el script, o un navegador sin Promise) se monta directo.
+ * `window.__CC_ARRANQUE__` sigue existiendo, pero solo con `version_activa` (la consulta anticipada
+ * que usa `src/mixins/check_version.js`); no tiene nada que ver con el montaje.
  */
-var arranque_de_version = window.__CC_ARRANQUE__
-
-if (arranque_de_version && arranque_de_version.listo && typeof arranque_de_version.listo.then === 'function') {
-    var ya_montada = false
-
-    var montar_una_vez = function () {
-        if (!ya_montada) {
-            ya_montada = true
-            montar_aplicacion()
-        }
-    }
-
-    /**
-     * Defensa propia, independiente de la del script de arranque: si `listo` no resuelve nunca, la
-     * aplicación se monta a los 4 s. Se cancela apenas `listo` resuelve, porque una actualización
-     * en curso puede tardar más que esto y ahí NO se tiene que montar.
-     */
-    var defensa_de_montaje = window.setTimeout(montar_una_vez, 4000)
-
-    arranque_de_version.listo.then(function (estado) {
-        window.clearTimeout(defensa_de_montaje)
-
-        if (estado === 'actualizando') {
-            if (arranque_de_version.abandonada && typeof arranque_de_version.abandonada.then === 'function') {
-                arranque_de_version.abandonada.then(montar_una_vez)
-            }
-            return
-        }
-
-        montar_una_vez()
-    }, function () {
-        window.clearTimeout(defensa_de_montaje)
-        montar_una_vez()
-    })
-} else {
-    montar_aplicacion()
-}
+montar_aplicacion()
