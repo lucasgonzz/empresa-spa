@@ -72,6 +72,14 @@ const MODAL_AVISO_DE_ESCANEO = 'provider-order-scan-ready-notification'
 /* Cuánto queda a la vista el toast que explica por qué no se abrió la revisión. */
 const DURACION_TOAST_MS = 9000
 
+/*
+ * Dónde sale ese toast: ARRIBA y no en la esquina de abajo de siempre. El link se abre casi
+ * siempre desde el celular, y en Compras a 375 px la página desborda unos 34 px de ancho: el
+ * viewport de layout queda más alto que lo visible y un toast de abajo sale cortado (medido el
+ * 16/10/2026: se leía solo «No se pudo leer la factura: La foto está»). Arriba se lee entero.
+ */
+const POSICION_TOAST = 'top'
+
 export default {
 	name: 'AbrirCompraPorLink',
 	render() {
@@ -205,6 +213,7 @@ export default {
 					self.apagar_carga()
 					self.$toast.error('No encontramos la compra del link. Puede que se haya eliminado.', {
 						duration: DURACION_TOAST_MS,
+						position: POSICION_TOAST,
 					})
 					return null
 				}
@@ -459,6 +468,7 @@ export default {
 			if (motivo) {
 				this.$toast.info(motivo, {
 					duration: DURACION_TOAST_MS,
+					position: POSICION_TOAST,
 				})
 			}
 
