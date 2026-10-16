@@ -359,9 +359,12 @@ export default {
 		{
 			text: 'Direccion comercial para mostrar en los comprobantes de venta',
 			key: 'address_company',
+			// Ayuda corregida en la mision destrabar-videos-centro (16/10/2026): ningun PDF de venta lee
+			// hoy este dato (el encabezado toma el domicilio comercial de los datos de ARCA), asi que la
+			// ayuda vieja ("se mostrara siempre en todos los comprobantes") prometia algo que no pasa.
 			descriptions: [
-				'Si completa este dato, se mostrara siempre en todos los comprobantes de venta',
-				'Si trabaja con sucursales, se mostrara junto con la direccion de la sucursal de donde se hizo la venta',
+				'Este dato queda guardado en tu perfil, pero por ahora NO se imprime en los comprobantes de venta.',
+				'El domicilio que sale en el encabezado de facturas y remitos es el domicilio comercial de tus datos de facturacion (ARCA).',
 			],
 			type: 'text',
 		},
@@ -369,6 +372,10 @@ export default {
 		{
 			text: 'Mostrar la direccion de todas las sucursales en los comprobantes de venta',
 			key: 'all_addresses_in_sale_pdf',
+			// Misma correccion que la de address_company: hoy ningun PDF de venta lee esta opcion.
+			descriptions: [
+				'Por ahora esta opcion no cambia lo que se imprime en los comprobantes de venta.',
+			],
 			type: 'checkbox',
 		},
 		{
