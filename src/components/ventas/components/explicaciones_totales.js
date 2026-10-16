@@ -398,7 +398,7 @@ function ventas(c) {
 			{
 				titulo: 'De dónde sale',
 				items: [
-					'Cuenta las ventas terminadas, en pesos y en dólares.',
+					c.de_busqueda ? 'Cuenta las ventas encontradas, en pesos y en dólares.' : 'Cuenta las ventas terminadas, en pesos y en dólares.',
 					frase_de_que_ventas(c),
 				],
 			},
