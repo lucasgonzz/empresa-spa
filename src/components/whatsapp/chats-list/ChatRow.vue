@@ -46,22 +46,23 @@
 					<i class="bi bi-cone-striped"></i>
 					SIM
 				</span>
-				<!-- Lo que el agente dejó para que una persona atienda: un pedido armado o un «lo consulto
-				y te confirmo». Va siempre que el chat lo tenga, también si la fila está en rojo o amarillo.
-				La nota que escribió el modelo está en el `title`. -->
-				<span
-				v-if="chat.follow_up"
-				class="whatsapp-chat-row__seguimiento"
-				:class="'whatsapp-chat-row__seguimiento--' + chat.follow_up"
-				:title="titulo_seguimiento">
-					<i
-					class="bi"
-					:class="chat.follow_up == 'pedido' ? 'bi-bag-check-fill' : 'bi-question-circle-fill'"></i>
-					{{ chat.follow_up == 'pedido' ? 'Pedido' : 'Consulta' }}
-				</span>
+			</span>
+			<!-- Lo que el agente dejó para que una persona atienda: un pedido armado o un «lo consulto
+			y te confirmo». Va siempre que el chat lo tenga, también si la fila está en rojo o amarillo.
+			La nota que escribió el modelo está en el `title`. -->
+			<span
+			v-if="chat.follow_up"
+			class="whatsapp-chat-row__seguimiento"
+			:class="'whatsapp-chat-row__seguimiento--' + chat.follow_up"
+			:title="titulo_seguimiento">
+				<i
+				class="bi"
+				:class="chat.follow_up == 'pedido' ? 'bi-bag-check-fill' : 'bi-question-circle-fill'"></i>
+				{{ chat.follow_up == 'pedido' ? 'Pedido' : 'Consulta' }}
 			</span>
 			<b-badge
 			v-if="chat.unread_count > 0"
+			class="whatsapp-chat-row__unread"
 			variant="success"
 			pill>
 				{{ chat.unread_count }}
@@ -216,7 +217,13 @@ export default {
 	&__sub
 		display: flex
 		flex-direction: row
-		justify-content: space-between
+		// `text-align: left` porque la lista hereda `center` y, con el chip en medio, un teléfono que pasa a la
+		// línea de abajo se veía centrado.
+		text-align: left
+		// Antes space-between (teléfono a la izquierda, badge a la derecha); con el chip de seguimiento en el
+		// medio, el badge se pega a la derecha con margin-left: auto y el chip baja de línea si no entra.
+		justify-content: flex-start
+		flex-wrap: wrap
 		align-items: center
 		margin-top: 2px
 		gap: 8px
@@ -240,6 +247,8 @@ export default {
 		border-radius: 4px
 		padding: 0 4px
 		margin-left: 5px
+	&__unread
+		margin-left: auto
 	// Chip «Pedido» / «Consulta»: misma forma que la marca SIM de arriba, con los tokens del seguimiento.
 	&__seguimiento
 		display: inline-flex
@@ -253,6 +262,5 @@ export default {
 		border: 1px solid var(--wa-seguimiento-borde)
 		border-radius: 4px
 		padding: 0 5px
-		margin-left: 5px
 		white-space: nowrap
 </style>

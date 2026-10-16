@@ -77,26 +77,32 @@ export default {
 					clase: 'whatsapp-dashboard__tarjeta--hoy',
 					tour: 'whatsapp.tablero_conversaciones_hoy',
 				},
-				// Segunda fila (misión senal-pedidos-y-consultas-del-agente): lo que el agente dejó para
-				// que una persona atienda. Mismo vocabulario que el rojo y el amarillo de arriba, en
-				// violeta, y anchas (la grilla es de 6 columnas: 3 + 3 acá, 2 + 2 + 2 arriba).
-				{
-					key: 'pedidos_para_confirmar',
-					icono: 'bi-bag-check-fill',
-					etiqueta: 'Pedidos para confirmar',
-					valor: this.$store.getters['whatsapp_chat/chats_con_pedido_count'],
-					clase: 'whatsapp-dashboard__tarjeta--seguimiento whatsapp-dashboard__tarjeta--ancha',
-					tour: 'whatsapp.tablero_pedidos_para_confirmar',
-				},
-				{
-					key: 'consultas_pendientes',
-					icono: 'bi-question-circle-fill',
-					etiqueta: 'Consultas pendientes',
-					valor: this.$store.getters['whatsapp_chat/chats_con_consulta_count'],
-					clase: 'whatsapp-dashboard__tarjeta--seguimiento whatsapp-dashboard__tarjeta--ancha',
-					tour: 'whatsapp.tablero_consultas_pendientes',
-				},
 			]
+
+			// Segunda fila (misión senal-pedidos-y-consultas-del-agente): lo que el agente dejó para que una
+			// persona atienda. Mismo vocabulario que el rojo y el amarillo de arriba, en violeta, y anchas (la
+			// grilla es de 6 columnas: 3 + 3 acá, 2 + 2 + 2 arriba). Solo si la API ya manda el seguimiento: contra
+			// una API vieja mostrarían un «0» engañoso.
+			if (this.$store.getters['whatsapp_chat/follow_up_soportado']) {
+				tarjetas = tarjetas.concat([
+					{
+						key: 'pedidos_para_confirmar',
+						icono: 'bi-bag-check-fill',
+						etiqueta: 'Pedidos para confirmar',
+						valor: this.$store.getters['whatsapp_chat/chats_con_pedido_count'],
+						clase: 'whatsapp-dashboard__tarjeta--seguimiento whatsapp-dashboard__tarjeta--ancha',
+						tour: 'whatsapp.tablero_pedidos_para_confirmar',
+					},
+					{
+						key: 'consultas_pendientes',
+						icono: 'bi-question-circle-fill',
+						etiqueta: 'Consultas pendientes',
+						valor: this.$store.getters['whatsapp_chat/chats_con_consulta_count'],
+						clase: 'whatsapp-dashboard__tarjeta--seguimiento whatsapp-dashboard__tarjeta--ancha',
+						tour: 'whatsapp.tablero_consultas_pendientes',
+					},
+				])
+			}
 
 			if (this.hasExtencion('whatsapp_ia') && this.embeddings_estado_cargado) {
 				tarjetas = tarjetas.concat([
@@ -297,6 +303,19 @@ export default {
 			gap: 10px
 		&__valor
 			font-size: 1.4rem
+
+// Tablet angosto (768-900px): la columna del tablero mide ~450px y cada tarjeta común (dos de las seis
+// columnas), ~135px: ícono + número + «Conversaciones de hoy» no entran en fila y el texto se sale de la
+// tarjeta (medido en vivo a 820 y 768px, ya pasaba con las tres tarjetas de antes). Se apilan como en el
+// teléfono: ícono arriba, número y etiqueta abajo. Las anchas del seguimiento sí entran en fila.
+@media screen and (min-width: 768px) and (max-width: 900px)
+	.whatsapp-dashboard
+		&__tarjeta:not(.whatsapp-dashboard__tarjeta--ancha)
+			flex-direction: column
+			text-align: center
+			gap: 4px
+		&__tarjeta:not(.whatsapp-dashboard__tarjeta--ancha) &__etiqueta
+			font-size: .72rem
 
 // Teléfono (<768px): la vista se apila (ver views/Whatsapp.vue) y el tablero pasa a ocupar el
 // ancho completo arriba de la lista. Tres tarjetas chicas en fila siguen entrando (y las dos del

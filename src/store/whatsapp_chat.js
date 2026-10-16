@@ -288,6 +288,26 @@ export default {
 				return new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0)
 			})
 		},
+		/**
+		 * Apaga en la bandeja el seguimiento (pedido o consulta del agente) de un chat, sin esperar el
+		 * broadcast. Lo usan los envíos manuales que SALIERON: una persona le escribió al cliente y el
+		 * backend ya apagó la marca (`WhatsappChatHelper::store_outbound_message()`). Se espeja acá porque
+		 * hay entornos sin broadcast (Echo caído, el slot con BROADCAST_DRIVER=log) y, sin esto, el menú
+		 * bajaba por `getResumen` pero la tarjeta, el chip y la franja quedaban hasta recargar.
+		 * Mismo criterio que ya espejan `estado_pendiente` y las respuestas pendientes en estas acciones.
+		 *
+		 * @param {number} chat_id
+		 */
+		clearChatFollowUp(state, chat_id) {
+			let index = state.chats.findIndex(c => c.id == chat_id)
+			if (index != -1) {
+				state.chats.splice(index, 1, Object.assign({}, state.chats[index], {
+					follow_up: null,
+					follow_up_note: null,
+					follow_up_at: null,
+				}))
+			}
+		},
 		setSelectedChatId(state, id) {
 			state.selected_chat_id = id
 		},
@@ -508,6 +528,14 @@ export default {
 		 */
 		chats_esperando_aprobacion_count(state) {
 			return state.chats.filter(c => c.estado_pendiente == 'esperando_aprobacion').length
+		},
+		/**
+		 * La API ya manda el seguimiento (`follow_up`) en los chats. Contra una API vieja el campo ni existe y
+		 * las tarjetas violetas del tablero mostrarían un «0» engañoso: con este getter el tablero las
+		 * esconde. Sin chats todavía no hay forma de saberlo y se muestran.
+		 */
+		follow_up_soportado(state) {
+			return state.chats.length == 0 || state.chats.some(c => 'follow_up' in c)
 		},
 		/**
 		 * Cantidad de chats donde el agente dejó un PEDIDO armado para que una persona lo confirme
@@ -770,6 +798,10 @@ export default {
 					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
 					// respuesta y ya haber agregado el mensaje.
 					commit('appendOrPatchSentMessage', res.data.model)
+					// Si salió de verdad, el backend apagó el pedido/consulta que el agente había dejado en este chat.
+					if (res.data.enviado !== false) {
+						commit('clearChatFollowUp', payload.chat_id)
+					}
 					// Una respuesta pendiente menos (si había una): el badge del menú y la tarjeta
 					// del tablero tienen que enterarse aunque nadie mire este chat en particular.
 					dispatch('getResumen')
@@ -813,6 +845,9 @@ export default {
 					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
 					// respuesta y ya haber agregado el mensaje.
 					commit('appendOrPatchSentMessage', res.data.model)
+					if (res.data.enviado !== false) {
+						commit('clearChatFollowUp', payload.chat_id)
+					}
 					dispatch('getResumen')
 					return res.data
 				})
@@ -839,6 +874,9 @@ export default {
 					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
 					// respuesta y ya haber agregado el mensaje.
 					commit('appendOrPatchSentMessage', res.data.model)
+					if (res.data.enviado !== false) {
+						commit('clearChatFollowUp', payload.chat_id)
+					}
 					dispatch('getResumen')
 					return res.data.model
 				})

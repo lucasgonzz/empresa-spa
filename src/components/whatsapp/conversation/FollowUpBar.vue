@@ -139,6 +139,7 @@ export default {
 		color: var(--wa-seguimiento-borde)
 	// `min-width: 0` deja que el texto se achique en vez de empujar el botón fuera de la franja.
 	&__texto
+		text-align: left
 		display: flex
 		flex-direction: column
 		min-width: 0
