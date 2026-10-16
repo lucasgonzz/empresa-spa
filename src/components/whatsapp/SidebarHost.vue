@@ -186,8 +186,12 @@ export default {
 				return
 			}
 
-			// Actualiza (sin pisar props que este payload liviano no trae) la fila de la bandeja.
-			this.$store.commit('whatsapp_chat/patchChatFromBroadcast', payload.chat)
+			/*
+				Actualiza la fila de la bandeja sin pisar las props que este payload liviano no trae. Un chat que
+				todavía no está en la bandeja (un cliente que escribe por PRIMERA VEZ) no se puede armar con este
+				payload: la acción lo pide al backend y lo inserta con su fila completa (misión patch-chat-nuevo-en-vivo).
+			*/
+			this.$store.dispatch('whatsapp_chat/aplicarBroadcastDeChat', payload.chat)
 			// El badge del menú y la tarjeta del tablero también tienen que enterarse: cualquier
 			// novedad puede sumar o sacar un mensaje `a_confirmar` (una sugerencia, una respuesta
 			// automática del agente, o alguien confirmando/descartando desde otra pestaña).

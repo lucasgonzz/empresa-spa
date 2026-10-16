@@ -92,6 +92,31 @@ function navegar_pestana(pestana, url) {
 }
 
 /**
+ * Opciones de axios de los pedidos de fondo de la bandeja (los que no pidió el operador con un clic: un
+ * chat que llegó por broadcast, la recarga silenciosa de respaldo).
+ *
+ * - `skip_navigation_cancel`: los dispara `SidebarHost.vue`, montado en `App.vue`; cambiar de pantalla con uno
+ *   en vuelo es lo normal y no tiene que cancelarlo (ver main.js).
+ * - `skip_global_error_event`: si falla (por ejemplo una API vieja que todavía no tiene `GET whatsapp-chats/{id}`
+ *   y contesta 404) el store cae a su respaldo y no hay nada que mostrarle al operador: sin esta bandera el
+ *   interceptor global dejaría un cartel de error por algo que el sistema resuelve solo.
+ */
+const OPCIONES_DE_FONDO = {
+	skip_navigation_cancel: true,
+	skip_global_error_event: true,
+	skip_global_validation_toast: true,
+}
+
+/**
+ * Chats desconocidos que se están pidiendo al backend ahora mismo (ver `traerChatNuevo`), por id de chat.
+ * Cada entrada es `{ repetir }`: true si llegó otro aviso del mismo chat mientras el pedido estaba en vuelo.
+ *
+ * Va fuera del `state` a propósito: es contabilidad de pedidos, no hay nada que dibujar con esto y no
+ * tiene por qué ser reactivo.
+ */
+let chats_en_busqueda = {}
+
+/**
  * Store del módulo WhatsApp (grupo 137, Prompt 06): lista de chats + conversación abierta.
  *
  * No usa el factory `__base_store` porque el módulo no es un ABM estándar (filtros, tabla,
@@ -123,6 +148,12 @@ function navegar_pestana(pestana, url) {
  *                                             422 { message } (validación de `body`)
  * - GET    whatsapp-chats/resumen          -> { mensajes_por_aprobar, chats_esperando_aprobacion }
  *
+ * Contrato agregado en la misión patch-chat-nuevo-en-vivo (16/10/2026): un cliente que escribe por primera vez
+ * llega por broadcast como un chat que la bandeja no tiene todavía, y el payload liviano no alcanza para armar su fila.
+ * - GET    whatsapp-chats/{id}              -> { model } con la forma de una fila del índice (client, estado_pendiente,
+ *                                             follow_up*) | 404. Una API que todavía no lo tiene da 404 y el store pide el
+ *                                             índice entero en su lugar (ver `traerChatNuevo`).
+ *
  * Contrato agregado en la misión senal-pedidos-y-consultas-del-agente (16/10/2026): cuando el agente arma
  * un pedido o promete "lo consulto y te confirmo", el chat queda marcado hasta que una persona lo atienda.
  * Todo opcional: contra una API que no lo manda, no se dibuja nada.
@@ -151,6 +182,10 @@ export default {
 		chats: [],
 		// true mientras se pide GET whatsapp-chats.
 		loading_chats: false,
+		// true una vez que la bandeja se pidió al menos una vez con éxito. Antes de eso `chats` está vacío porque
+		// nadie abrió el módulo, no porque no haya chats: un aviso en vivo de un chat «desconocido» no significa nada
+		// (la primera carga lo va a traer), y pedirlo sería un GET inútil por cada mensaje que llegue estando en otra pantalla.
+		chats_cargados: false,
 		// Texto de búsqueda actual (pega a `?q=`).
 		search_query: '',
 
@@ -242,6 +277,8 @@ export default {
 		},
 		setChats(state, value) {
 			state.chats = value || []
+			// Solo se llama con la respuesta de `GET whatsapp-chats`: la bandeja ya se cargó.
+			state.chats_cargados = true
 		},
 		setSearchQuery(state, value) {
 			state.search_query = value
@@ -270,14 +307,16 @@ export default {
 		 * estado_pendiente, ver el evento en empresa-api) sin pisar el resto de props (client,
 		 * phone, display_name, ai_enabled) que ese evento no manda.
 		 *
-		 * 🔴 SOLO ACTUALIZA UN CHAT QUE YA ESTÁ EN LA BANDEJA (el `if (index != -1)` no inserta).
-		 * Un cliente que escribe por PRIMERA VEZ dispara este mismo evento para un chat que
-		 * todavía no existe en `state.chats`, y acá no pasa nada: ni la fila aparece, ni
-		 * `chats_sin_responder_count` (la tarjeta roja del tablero) se entera, hasta que se
-		 * recargue el módulo. Es una limitación preexistente de esta mutación (no la introduce
-		 * la misión whatsapp-tablero-clientes) y queda fuera de este alcance arreglarla: el
-		 * payload liviano no trae `client`/`phone`/`display_name`, así que insertar acá de
-		 * verdad dejaría una fila a medias en la bandeja.
+		 * 🔴 SOLO ACTUALIZA UN CHAT QUE YA ESTÁ EN LA BANDEJA (el `if (index != -1)` no inserta), y
+		 * así tiene que seguir: el payload liviano no trae `client`/`phone`/`display_name`, así que
+		 * insertar acá dejaría una fila a medias (nombre equivocado, cabecera sin ficha).
+		 *
+		 * Un cliente que escribe por PRIMERA VEZ dispara el mismo evento para un chat que todavía no
+		 * existe en `state.chats`. De ese caso se ocupa la acción `aplicarBroadcastDeChat`, que es la
+		 * puerta del broadcast: si el chat es conocido llega acá, y si no lo pide al backend
+		 * (`traerChatNuevo`) y lo inserta con la fila completa. Hasta la misión patch-chat-nuevo-en-vivo
+		 * (16/10/2026) ese caso no hacía nada y la fila, la tarjeta roja y el pedido del agente aparecían
+		 * recién al recargar el módulo.
 		 */
 		patchChatFromBroadcast(state, chat_patch) {
 			let index = state.chats.findIndex(c => c.id == chat_patch.id)
@@ -570,22 +609,112 @@ export default {
 	actions: {
 		/**
 		 * Carga la bandeja de chats (respeta `state.search_query`).
+		 *
+		 * @param {Object} [opciones]
+		 * @param {boolean} [opciones.silent] Recarga SIN prender «Cargando chats...» (que reemplaza la lista
+		 *                                    entera) y sin carteles de error: es el respaldo de fondo de
+		 *                                    `traerChatNuevo`, que el operador no pidió.
 		 */
-		getChats({ commit, state }) {
-			commit('setLoadingChats', true)
-			return axios.get('/api/whatsapp-chats', {
+		getChats({ commit, state }, opciones) {
+			let silent = !!(opciones && opciones.silent)
+			if (!silent) {
+				commit('setLoadingChats', true)
+			}
+			return axios.get('/api/whatsapp-chats', Object.assign({
 				params: {
 					q: state.search_query || '',
 				},
-			})
+			}, silent ? OPCIONES_DE_FONDO : {}))
 				.then(res => {
-					commit('setLoadingChats', false)
+					if (!silent) {
+						commit('setLoadingChats', false)
+					}
 					commit('setChats', res.data.models)
 				})
 				.catch(err => {
-					commit('setLoadingChats', false)
+					if (!silent) {
+						commit('setLoadingChats', false)
+					}
 					console.log(err)
 				})
+		},
+		/**
+		 * Puerta de entrada del broadcast `WhatsappChatUpdated` a la bandeja (la usa `SidebarHost.vue`).
+		 *
+		 * - Chat que la bandeja ya tiene → `patchChatFromBroadcast`, como siempre (mezcla el payload liviano
+		 *   sin pisar `client`, `phone`, etc.).
+		 * - Chat que NO tiene (un cliente que escribe por PRIMERA VEZ) → lo pide al backend con
+		 *   `traerChatNuevo`, porque el payload liviano no alcanza para armar la fila.
+		 *
+		 * El chat desconocido se IGNORA en dos casos, a propósito:
+		 * 1. La bandeja nunca se cargó (`chats_cargados` en false): nadie abrió el módulo, la primera carga trae
+		 *    todo y pedirlo ahora sería un GET por cada mensaje que llegue estando en cualquier otra pantalla.
+		 * 2. Hay una búsqueda activa: la bandeja es un resultado de búsqueda y un chat que no está puede ser
+		 *    simplemente uno que no coincide. Insertarlo metería filas que no corresponden; el que sabe si
+		 *    coincide es el backend, y se va a enterar cuando se cambie o se limpie la búsqueda.
+		 *
+		 * @param {Object} chat_patch El `chat` liviano del broadcast ({ id, unread_count, last_message_at, estado_pendiente, follow_up* }).
+		 * @returns {Promise|undefined} Resuelve cuando el chat desconocido ya quedó en la bandeja (o falló el respaldo).
+		 */
+		aplicarBroadcastDeChat({ commit, dispatch, state }, chat_patch) {
+			if (!chat_patch || !chat_patch.id) {
+				return
+			}
+			let conocido = state.chats.some(c => c.id == chat_patch.id)
+			if (conocido) {
+				commit('patchChatFromBroadcast', chat_patch)
+				return
+			}
+			// `trim` porque el índice también recorta `q` en el backend: una búsqueda de puros espacios no filtra nada.
+			let hay_busqueda = String(state.search_query || '').trim() !== ''
+			if (!state.chats_cargados || hay_busqueda) {
+				return
+			}
+			return dispatch('traerChatNuevo', chat_patch.id)
+		},
+		/**
+		 * Pide al backend un chat que llegó por broadcast y la bandeja todavía no tiene, y lo inserta con la
+		 * misma fila que arma el índice (`GET whatsapp-chats/{id}`: relación `client`, `estado_pendiente`,
+		 * `follow_up*`). Con eso aparecen solos la fila, la tarjeta roja del tablero y, si el primer mensaje
+		 * terminó en pedido, la tarjeta violeta, el chip y la franja.
+		 *
+		 * - Un solo pedido en vuelo por chat. Si mientras tanto llega OTRO aviso del mismo chat (el cliente mandó
+		 *   un segundo mensaje, contestó el agente), ese aviso no se puede aplicar —el chat todavía no está— y el
+		 *   GET que ya salió puede reflejar el estado anterior: por eso, al volver, se pide una vez más. En cuanto
+		 *   el chat entra a la bandeja los avisos siguientes van por `patchChatFromBroadcast` y esto no se repite.
+		 * - Si el pedido falla (una API que todavía no tiene el endpoint contesta 404, o se cortó la red) se
+		 *   cae al respaldo: recargar la bandeja en silencio. Es más pesado pero deja el chat en pantalla igual.
+		 *
+		 * @param {number} chat_id
+		 * @returns {Promise} Resuelve (sin valor) al terminar; nunca rechaza.
+		 */
+		traerChatNuevo({ commit, dispatch }, chat_id) {
+			let en_vuelo = chats_en_busqueda[chat_id]
+			if (en_vuelo) {
+				en_vuelo.repetir = true
+				return Promise.resolve()
+			}
+			let entrada = { repetir: false }
+			chats_en_busqueda[chat_id] = entrada
+			function pedir() {
+				entrada.repetir = false
+				return axios.get('/api/whatsapp-chats/' + chat_id, OPCIONES_DE_FONDO)
+					.then(res => {
+						commit('upsertChat', res.data.model)
+					})
+					.catch(err => {
+						console.log(err)
+						return dispatch('getChats', { silent: true })
+					})
+					.then(() => {
+						if (entrada.repetir) {
+							return pedir()
+						}
+					})
+			}
+			return pedir().then(() => {
+				delete chats_en_busqueda[chat_id]
+			})
 		},
 		/**
 		 * Crea (o recupera, si ya existía) un chat por teléfono.
