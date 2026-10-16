@@ -82,6 +82,14 @@
 				class="whatsapp-agent-config__objective-error">
 					Escribí el objetivo: si queda vacío, el agente funciona sin objetivo.
 				</small>
+				<!-- El agente no carga ventas: el pedido queda solo en el texto del chat. Se dice acá
+				para que el dueño no espere un aviso que no existe. -->
+				<small
+				v-if="form.agent_objective === 'order_by_whatsapp'"
+				class="text-muted whatsapp-agent-config__hint">
+					El pedido queda escrito en la conversación: no se carga solo como venta ni te llega
+					un aviso aparte. Lo confirmás vos (o un empleado) respondiendo en ese chat.
+				</small>
 			</div>
 
 			<!-- Vista previa de los datos reales que va a usar el agente. Solo para los dos
@@ -146,8 +154,8 @@
 					class="whatsapp-agent-config__objective-warning">
 						<i class="bi bi-exclamation-triangle whatsapp-agent-config__objective-warning-icon"></i>
 						<span>
-							Tu cuenta no tiene cargada la dirección de la tienda online: el agente no
-							va a pasar ningún link que no tenga. Si tenés tienda, pedile a
+							Tu cuenta no tiene cargada la dirección de la tienda online: hasta que
+							esté, el agente funciona sin objetivo. Si tenés tienda, pedile a
 							ComercioCity que la cargue.
 						</span>
 					</div>
@@ -463,7 +471,7 @@ export default {
 		 * Aplica el objetivo elegido en el picker. A diferencia de personalidad y habilidades, no
 		 * copia ningún texto: solo cambia la clave, así que no hay nada del dueño que pisar ni
 		 * nada que confirmar. Las indicaciones ya escritas se conservan al cambiar de objetivo
-		 * (quedan a la vista en el textarea, que se muestra con cualquier objetivo).
+		 * (vuelven a verse en el textarea al elegir cualquier objetivo; con «Sin objetivo» el textarea se oculta, el texto viaja igual y la API lo ignora).
 		 *
 		 * @param {Object} objective Ítem emitido por el picker ({ key, name, ... }).
 		 * @returns {void}
@@ -572,6 +580,9 @@ export default {
 		&--inline
 			display: inline
 			margin-bottom: 0
+			// El espacio entre los dos <span> lo descarta el compilador de templates (los renglones
+			// en blanco entre elementos no llegan al DOM): sin este margen sale "Tienda online:http…".
+			margin-right: 4px
 	&__objective-preview-list
 		list-style: none
 		margin: 0
