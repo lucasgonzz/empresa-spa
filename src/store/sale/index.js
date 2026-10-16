@@ -62,6 +62,41 @@ function sale_filters_have_active_criteria_except_afip(filters) {
 }
 
 /**
+ * Filtros de pantalla de Ventas tal como viajan al servidor: la solapa de sucursal / empleado ya
+ * resuelta a ids (`alcance_de_pantalla`), las tres show options y "ver consolidadas".
+ *
+ * Es UNA sola función porque la usan dos caminos que tienen que decir exactamente lo mismo: la
+ * query string del listado paginado del día (`_getModels`) y el cuerpo del buscador (getter
+ * `cuerpo_extra_de_busqueda`). El servidor aplica los dos con el mismo código, así que si uno
+ * mandara un nombre o un valor distinto, el listado y la búsqueda de la misma pantalla recortarían
+ * distinto sin ningún error a la vista.
+ *
+ * 🔴 `address_id` y `employee_id` viajan SOLO cuando hay solapa elegida: una clave en null llegaría
+ * como el string "null" en la query string. `only_owner` y `mostrar_consolidadas` van como 0/1.
+ * El ORDEN de las claves importa: de acá sale la clave del dedupe de `_getModels`.
+ *
+ * @param {Object} state Estado del módulo `sale`.
+ * @returns {Object} `{ address_id?, employee_id?, only_owner, ventas_cobradas_show_option,
+ *   afip_ticket_show_option, payment_method_show_option, mostrar_consolidadas }`.
+ */
+function filtros_de_pantalla_de_ventas(state) {
+	let alcance = state.alcance_de_pantalla || {}
+	let filtros = {}
+	if (alcance.address_id) {
+		filtros.address_id = alcance.address_id
+	}
+	if (alcance.employee_id) {
+		filtros.employee_id = alcance.employee_id
+	}
+	filtros.only_owner = alcance.only_owner ? 1 : 0
+	filtros.ventas_cobradas_show_option = state.ventas_cobradas_show_option
+	filtros.afip_ticket_show_option = state.afip_ticket_show_option
+	filtros.payment_method_show_option = state.payment_method_show_option
+	filtros.mostrar_consolidadas = state.mostrar_consolidadas ? 1 : 0
+	return filtros
+}
+
+/**
  * Mutation `delete` tal como la arma el factory, para envolverla en este store sin copiar su
  * cuerpo (saca la venta de `models`, `filtered` y del `selected_model`). El factory con opciones
  * vacías devuelve exactamente las mutations base; no construye state ni registra nada.
@@ -85,6 +120,28 @@ export default __base_store({
 	},
 	state: {
 		modulo: 'ventas',
+
+		/**
+		 * true cuando el botón de CALENDARIO del control de fechas (ControlFecha.vue, en common-vue)
+		 * depende del permiso `sale.index.previus_days`: sin el permiso, el botón no se muestra.
+		 *
+		 * Lo lee ControlFecha.vue (`muestra_calendario`), leyendo `state[model_name]`, o sea que es un
+		 * contrato de ESTE store con ese componente común. Los demás stores no declaran la clave
+		 * (queda `undefined`) y su calendario se comporta como siempre.
+		 *
+		 * POR QUÉ existe: el permiso "Ver ventas de días anteriores" dice «sin esto solo ve las de
+		 * hoy», pero hasta la misión alcance-de-ventas-caminos-faltantes (16/10/2026) solo escondía la
+		 * tira de días: el calendario se mostraba igual y el empleado sin el permiso elegía cualquier
+		 * fecha o rango. Ahora la API recorta a hoy a quien no tiene el permiso, y esconder el botón
+		 * es la contraparte de la pantalla (lo que impone es el servidor, esto es solo no ofrecer una
+		 * fecha que no va a dar nada).
+		 *
+		 * 🔴 NO es una constante: sigue al módulo (ver la mutation `set_modulo`). Este store lo comparten
+		 * Ventas, Por entregar, Por estado y Depósito, y el candado de días del servidor es SOLO de
+		 * Ventas (`from-date/ventas`): los otros tres tienen permisos propios y su calendario no tiene
+		 * que cambiar. Arranca en true porque `modulo` arranca en 'ventas'.
+		 */
+		calendario_sujeto_a_permiso: true,
 
 		model_name: 'sale',
 		from_dates: true,
@@ -189,6 +246,35 @@ export default __base_store({
 		 */
 		secuencia_de_carga: 0,
 	},
+	getters: {
+		/**
+		 * Claves extra que `runGlobalSearch` y `runFilter` (del factory común, `__base_store.js`) suman al
+		 * cuerpo del POST del buscador. Es el gancho opt-in por el que esta pantalla marca sus pedidos.
+		 *
+		 * Con el módulo 'ventas' devuelve `{ ventas_pantalla: {...} }`: la sola presencia de la clave es
+		 * la MARCA que le dice a la API «este pedido lo hace la pantalla de Ventas». Solo entonces la API
+		 * acota la búsqueda a lo que el usuario puede ver, la limita a hoy si no tiene el permiso de días
+		 * anteriores, y responde `totales` calculados sobre todas las páginas. Adentro van los mismos
+		 * filtros de pantalla que viajan en la query string del listado del día (ver
+		 * `filtros_de_pantalla_de_ventas`).
+		 *
+		 * 🔴 Con CUALQUIER otro módulo devuelve null y el pedido sale sin marca: Depósito, Por entregar
+		 * y Por estado comparten este store y el endpoint de búsqueda, tienen permisos propios y tienen
+		 * que seguir buscando como siempre. No simplificar a «siempre mandarla».
+		 *
+		 * Se evalúa en cada pedido (los getters de Vuex se recalculan cuando cambia el state que leen),
+		 * así que refleja la solapa y las show options del momento en que se busca o se cambia de página.
+		 *
+		 * @param {Object} state Estado del módulo `sale`.
+		 * @returns {Object|null}
+		 */
+		cuerpo_extra_de_busqueda(state) {
+			if (state.modulo != 'ventas') {
+				return null
+			}
+			return { ventas_pantalla: filtros_de_pantalla_de_ventas(state) }
+		},
+	},
 	mutations: {
 		/**
 		 * Guarda la preferencia del modal de borrado: compensar caja o no en el próximo DELETE.
@@ -207,12 +293,19 @@ export default __base_store({
 		 * sin esperar a que llegue la respuesta del otro módulo: `paginado_por_fecha` lo leen la barra
 		 * de paginación y la tabla común, y en Por Entregar / Depósito, si la respuesta del módulo
 		 * tarda, la barra se mostraba un instante con los números del día de Ventas.
+		 *
+		 * También acompaña al módulo: `calendario_sujeto_a_permiso` es true solo en 'ventas', y los
+		 * totales de una búsqueda (`totales_de_busqueda`) se descartan al salir de Ventas.
 		 */
 		set_modulo(state, value) {
 			state.modulo = value
+			// El candado de calendario por permiso es solo de Ventas (ver el state).
+			state.calendario_sujeto_a_permiso = value == 'ventas'
 			if (value != 'ventas') {
 				state.paginado_por_fecha = false
 				state.totales_del_dia = null
+				// Los totales de una búsqueda hecha en Ventas no describen nada de los otros módulos.
+				state.totales_de_busqueda = null
 			}
 		},
 		/**
@@ -487,21 +580,12 @@ export default __base_store({
 			// como el string "null".
 			let params = null
 			if (state.modulo == 'ventas') {
-				let alcance = state.alcance_de_pantalla || {}
 				params = {}
 				params.per_page = state.filter_per_page
 				params.page = page
-				if (alcance.address_id) {
-					params.address_id = alcance.address_id
-				}
-				if (alcance.employee_id) {
-					params.employee_id = alcance.employee_id
-				}
-				params.only_owner = alcance.only_owner ? 1 : 0
-				params.ventas_cobradas_show_option = state.ventas_cobradas_show_option
-				params.afip_ticket_show_option = state.afip_ticket_show_option
-				params.payment_method_show_option = state.payment_method_show_option
-				params.mostrar_consolidadas = state.mostrar_consolidadas ? 1 : 0
+				// Los filtros de pantalla salen de la misma función que arma el cuerpo del buscador (ver
+				// `filtros_de_pantalla_de_ventas`): mismas claves, mismo orden, mismos valores.
+				Object.assign(params, filtros_de_pantalla_de_ventas(state))
 			}
 
 			/** Clave del pedido: la URL completa con sus params serializados en el orden de arriba. */
