@@ -128,7 +128,7 @@ export default {
 						con lo que dijo ARCA y queda abierta hasta que el usuario toca «Cerrar». El toast
 						de arriba se mantiene.
 					*/
-					if (this.arca_rechazo_el_comprobante(sale, res.data.afip_ticket)) {
+					if (this.arca_rechazo_el_comprobante(sale)) {
 						this.$store.commit('vender/setAfipResult', this.mensajes_de_arca(sale))
 						return
 					}
@@ -163,30 +163,50 @@ export default {
 			}
 		},
 		/*
-			ARCA rechazó el comprobante: la venta trae errores y el ticket que se acaba de pedir no
-			tiene CAE. Si hay CAE (errores viejos de un intento anterior sobre la misma venta, que
-			después se autorizó) no es un rechazo y la tarjeta sigue el camino de siempre.
-			`afip_ticket` es el que devuelve `POST afip-ticket` junto a la venta; si no viniera, se
-			mira cualquiera de los tickets de la venta.
+			El ticket que se acaba de pedir: el de id más alto de la venta. `POST afip-ticket`
+			(SaleController@makeAfipTicket) devuelve solo la venta, sin el ticket aparte.
 		*/
-		arca_rechazo_el_comprobante(sale, afip_ticket) {
+		ultimo_ticket_de_la_venta(sale) {
+			let ultimo = null
+			let tickets = sale && sale.afip_tickets ? sale.afip_tickets : []
+			tickets.forEach(ticket => {
+				if (ticket && (!ultimo || ticket.id > ultimo.id)) {
+					ultimo = ticket
+				}
+			})
+			return ultimo
+		},
+		/*
+			ARCA rechazó el comprobante: la venta trae errores y el ÚLTIMO ticket (el que se acaba de
+			pedir) no tiene CAE. Se mira el último y no "alguno": en una facturación parcial la venta
+			ya puede tener otro ticket autorizado, y con el rechazo de la parte nueva la tarjeta no
+			tiene que ponerse verde. Si el último tiene CAE, los errores son de un intento anterior
+			y la tarjeta sigue el camino de siempre.
+		*/
+		arca_rechazo_el_comprobante(sale) {
 			if (!sale || !sale.afip_errors || !sale.afip_errors.length) {
 				return false
 			}
-			if (afip_ticket) {
-				return !afip_ticket.cae
-			}
-			let tickets = sale.afip_tickets || []
-			let alguno_con_cae = tickets.some(ticket => ticket && ticket.cae)
-			return !alguno_con_cae
+			let ultimo = this.ultimo_ticket_de_la_venta(sale)
+			return !(ultimo && ultimo.cae)
 		},
 		/*
 			Los errores de ARCA en la forma que dibuja la tarjeta (LoadingAfipTicket: una línea por
-			cada `Msg`). `AfipError` guarda `message` y `code`.
+			cada `Msg`). `AfipError` guarda `message`, `code` y (desde 12/2025) `afip_ticket_id`: si
+			hay errores de este último intento se muestran solo esos, para no mezclar los de intentos
+			anteriores sobre la misma venta; si no (errores viejos sin ticket), todos.
 		*/
 		mensajes_de_arca(sale) {
 			let mensajes = []
-			sale.afip_errors.forEach(afip_error => {
+			let ultimo = this.ultimo_ticket_de_la_venta(sale)
+			let errores = sale.afip_errors
+			if (ultimo) {
+				let de_este_intento = errores.filter(afip_error => afip_error.afip_ticket_id == ultimo.id)
+				if (de_este_intento.length) {
+					errores = de_este_intento
+				}
+			}
+			errores.forEach(afip_error => {
 				let texto = afip_error.message || ''
 				if (afip_error.code && texto.indexOf(String(afip_error.code)) == -1) {
 					texto = afip_error.code + ' - ' + texto
