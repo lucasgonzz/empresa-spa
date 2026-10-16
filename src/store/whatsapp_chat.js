@@ -100,8 +100,12 @@ function navegar_pestana(pestana, url) {
  * - `skip_global_error_event`: si falla (por ejemplo una API vieja que todavía no tiene `GET whatsapp-chats/{id}`
  *   y contesta 404) el store cae a su respaldo y no hay nada que mostrarle al operador: sin esta bandera el
  *   interceptor global dejaría un cartel de error por algo que el sistema resuelve solo.
+ * - `timeout`: axios no trae ninguno. Sin él, un pedido que nunca contesta dejaría al chat anotado como «en
+ *   búsqueda» para siempre (ver `chats_en_busqueda`): los avisos siguientes solo se anotarían y la fila no
+ *   entraría nunca. Los 60 s alcanzan de sobra para un chat y para el índice entero (el respaldo).
  */
 const OPCIONES_DE_FONDO = {
+	timeout: 60000,
 	skip_navigation_cancel: true,
 	skip_global_error_event: true,
 	skip_global_validation_toast: true,
@@ -109,12 +113,34 @@ const OPCIONES_DE_FONDO = {
 
 /**
  * Chats desconocidos que se están pidiendo al backend ahora mismo (ver `traerChatNuevo`), por id de chat.
- * Cada entrada es `{ repetir }`: true si llegó otro aviso del mismo chat mientras el pedido estaba en vuelo.
+ * Cada entrada es `{ ultimo_aviso }`: el último aviso del broadcast que llegó para ese chat mientras el pedido
+ * estaba en vuelo (null si no llegó ninguno). No se pudo aplicar —el chat todavía no estaba en la bandeja— y se
+ * reaplica apenas el chat entra.
  *
  * Va fuera del `state` a propósito: es contabilidad de pedidos, no hay nada que dibujar con esto y no
  * tiene por qué ser reactivo.
  */
 let chats_en_busqueda = {}
+
+/**
+ * Recarga de respaldo de la bandeja entera que está en vuelo ahora mismo (ver `recargarBandejaDeRespaldo`),
+ * o null. Es una sola para todos los chats: una API sin `GET whatsapp-chats/{id}` hace caer a CADA chat nuevo en
+ * el respaldo, y sin compartirla una ráfaga de chats nuevos pediría el índice completo una vez por cada uno.
+ */
+let recarga_de_respaldo = null
+
+/**
+ * ¿Hay una búsqueda escrita en la bandeja? El `trim` es porque el índice también recorta `q` en el backend
+ * (`WhatsappChatController::index`): una búsqueda de puros espacios no filtra nada.
+ *
+ * Con una búsqueda activa la bandeja es un resultado de búsqueda, no la lista de todos los chats.
+ *
+ * @param {Object} state
+ * @returns {boolean}
+ */
+function hay_busqueda_activa(state) {
+	return String(state.search_query || '').trim() !== ''
+}
 
 /**
  * Store del módulo WhatsApp (grupo 137, Prompt 06): lista de chats + conversación abierta.
@@ -665,12 +691,10 @@ export default {
 				commit('patchChatFromBroadcast', chat_patch)
 				return
 			}
-			// `trim` porque el índice también recorta `q` en el backend: una búsqueda de puros espacios no filtra nada.
-			let hay_busqueda = String(state.search_query || '').trim() !== ''
-			if (!state.chats_cargados || hay_busqueda) {
+			if (!state.chats_cargados || hay_busqueda_activa(state)) {
 				return
 			}
-			return dispatch('traerChatNuevo', chat_patch.id)
+			return dispatch('traerChatNuevo', chat_patch)
 		},
 		/**
 		 * Pide al backend un chat que llegó por broadcast y la bandeja todavía no tiene, y lo inserta con la
@@ -678,43 +702,67 @@ export default {
 		 * `follow_up*`). Con eso aparecen solos la fila, la tarjeta roja del tablero y, si el primer mensaje
 		 * terminó en pedido, la tarjeta violeta, el chip y la franja.
 		 *
-		 * - Un solo pedido en vuelo por chat. Si mientras tanto llega OTRO aviso del mismo chat (el cliente mandó
-		 *   un segundo mensaje, contestó el agente), ese aviso no se puede aplicar —el chat todavía no está— y el
-		 *   GET que ya salió puede reflejar el estado anterior: por eso, al volver, se pide una vez más. En cuanto
-		 *   el chat entra a la bandeja los avisos siguientes van por `patchChatFromBroadcast` y esto no se repite.
-		 * - Si el pedido falla (una API que todavía no tiene el endpoint contesta 404, o se cortó la red) se
-		 *   cae al respaldo: recargar la bandeja en silencio. Es más pesado pero deja el chat en pantalla igual.
+		 * - Un solo pedido en vuelo por chat. Si mientras tanto llegan OTROS avisos del mismo chat (el cliente mandó
+		 *   un segundo mensaje, contestó el agente), no se pueden aplicar —el chat todavía no está— y el GET que ya
+		 *   salió puede reflejar un estado más viejo que ellos. Se anota el último y, apenas el chat entra a la bandeja,
+		 *   se reaplica con `patchChatFromBroadcast`: así el resultado final es siempre el del aviso más nuevo, sin
+		 *   un segundo GET que a su vez pudiera pisar un aviso posterior con una respuesta vieja. El GET solo aporta lo
+		 *   que el aviso liviano no trae (`client`, `phone`, `display_name`, `ai_enabled`...).
+		 * - Si el pedido falla (una API que todavía no tiene el endpoint contesta 404, se cortó la red, vence el
+		 *   `timeout`, o contesta sin el chat) se cae al respaldo: recargar la bandeja en silencio. Es más pesado pero
+		 *   deja el chat en pantalla igual.
+		 * - Si mientras el pedido volaba el operador escribió una búsqueda, la fila no se inserta: la bandeja pasó a
+		 *   ser un resultado de búsqueda (ver `aplicarBroadcastDeChat`).
 		 *
-		 * @param {number} chat_id
+		 * @param {Object} chat_patch El `chat` liviano del broadcast que descubrió el chat desconocido.
 		 * @returns {Promise} Resuelve (sin valor) al terminar; nunca rechaza.
 		 */
-		traerChatNuevo({ commit, dispatch }, chat_id) {
-			let en_vuelo = chats_en_busqueda[chat_id]
-			if (en_vuelo) {
-				en_vuelo.repetir = true
+		traerChatNuevo({ commit, dispatch, state }, chat_patch) {
+			let chat_id = chat_patch.id
+			let entrada = chats_en_busqueda[chat_id]
+			if (entrada) {
+				entrada.ultimo_aviso = chat_patch
 				return Promise.resolve()
 			}
-			let entrada = { repetir: false }
+			entrada = { ultimo_aviso: null }
 			chats_en_busqueda[chat_id] = entrada
-			function pedir() {
-				entrada.repetir = false
-				return axios.get('/api/whatsapp-chats/' + chat_id, OPCIONES_DE_FONDO)
-					.then(res => {
+			return axios.get('/api/whatsapp-chats/' + chat_id, OPCIONES_DE_FONDO)
+				.then(res => {
+					if (!res.data || !res.data.model) {
+						throw new Error('GET whatsapp-chats/' + chat_id + ' contestó sin el chat')
+					}
+					if (!hay_busqueda_activa(state)) {
 						commit('upsertChat', res.data.model)
-					})
-					.catch(err => {
-						console.log(err)
-						return dispatch('getChats', { silent: true })
-					})
-					.then(() => {
-						if (entrada.repetir) {
-							return pedir()
-						}
-					})
+					}
+				})
+				.catch(err => {
+					console.log(err)
+					return dispatch('recargarBandejaDeRespaldo')
+				})
+				.then(() => {
+					let ultimo_aviso = entrada.ultimo_aviso
+					delete chats_en_busqueda[chat_id]
+					if (ultimo_aviso && state.chats.some(c => c.id == chat_id)) {
+						commit('patchChatFromBroadcast', ultimo_aviso)
+					}
+				})
+		},
+		/**
+		 * Respaldo de `traerChatNuevo`: recarga la bandeja entera en silencio. Una sola a la vez para toda la
+		 * bandeja (ver `recarga_de_respaldo`): los que lleguen mientras corre comparten su promesa.
+		 *
+		 * Un chat que se crea justo después de que esa recarga salió no entra en ella; no se pierde: su próximo
+		 * aviso lo vuelve a descubrir como desconocido y vuelve a intentar.
+		 *
+		 * @returns {Promise} Resuelve (sin valor) cuando termina la recarga; nunca rechaza.
+		 */
+		recargarBandejaDeRespaldo({ dispatch }) {
+			if (!recarga_de_respaldo) {
+				recarga_de_respaldo = dispatch('getChats', { silent: true }).then(() => {
+					recarga_de_respaldo = null
+				})
 			}
-			return pedir().then(() => {
-				delete chats_en_busqueda[chat_id]
-			})
+			return recarga_de_respaldo
 		},
 		/**
 		 * Crea (o recupera, si ya existía) un chat por teléfono.
