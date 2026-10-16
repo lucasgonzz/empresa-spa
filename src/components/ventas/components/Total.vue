@@ -8,11 +8,18 @@
 		grande abajo— porque ese problema ya estaba resuelto en este sistema y no hacía falta un
 		quinto estilo de tarjeta.
 
-		Los permisos NO cambiaron: `can('sale.index.total')` gobierna el bloque entero y `is_admin`
-		gobierna costos, ganancia y los dos Excel, igual que antes.
+		Permisos (misión ventas-total-visible-al-empleado, 16/10/2026): TODO usuario ve el chip
+		Total (y Total USD si la cuenta vende en dólares), tenga o no `sale.index.total`. Antes ese
+		permiso gobernaba el bloque entero y un empleado sin él no veía ningún número. Ahora
+		`can('sale.index.total')` gobierna solo lo demás que no es el Total: Cuenta corriente (pesos
+		y USD) y el contador de Ventas. `is_admin` sigue gobernando costos, ganancia y los dos
+		Excel, igual que antes.
+
+		Lo que el empleado ve en el Total NO depende de este archivo: la API le acota las ventas a
+		las que tiene permitido ver (sale.index.addresses.* / sale.index.employees.*, ver
+		ListadoVentasHelper::alcance_permitido) y calcula la suma de todas las páginas.
 	-->
 	<div
-	v-if="can('sale.index.total')"
 	data-tour="ventas.totales"
 	class="ventas-totales">
 
@@ -103,6 +110,7 @@
 			-->
 			<explicacion-de-numero
 			class="totales-chip"
+			v-if="can('sale.index.total')"
 			:explicacion="explicaciones.cuenta_corriente">
 				<div class="totales-chip__icon-wrap">
 					<i
@@ -185,6 +193,7 @@
 
 				<explicacion-de-numero
 				class="totales-chip totales-chip--usd"
+				v-if="can('sale.index.total')"
 				:explicacion="explicaciones.cuenta_corriente_usd">
 					<div class="totales-chip__icon-wrap">
 						<i
@@ -199,7 +208,9 @@
 			</template>
 
 			<!-- ============ Contador y acciones, a la derecha ============ -->
-			<div class="ventas-totales__derecha">
+			<div
+			v-if="can('sale.index.total')"
+			class="ventas-totales__derecha">
 				<explicacion-de-numero
 				class="totales-chip"
 				:explicacion="explicaciones.ventas">
