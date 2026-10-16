@@ -983,6 +983,171 @@ export default {
             let surchages = Array.isArray(model.surchages) ? model.surchages.length : 0
             return discounts + surchages > 0
         },
+        /**
+         * Nombre del TIPO de un método de pago de la tienda (`payment_method_types.name`), o '' si
+         * no se puede resolver (misión tienda-cuotas-mercado-pago, 15/10/2026).
+         *
+         * Se resuelve por el `payment_method_type_id` del modelo contra el store de tipos, que se
+         * descarga al iniciar sesión (mixins/call_methods.js). Si el store no lo tiene, se usa la
+         * relación embebida que manda la API, pero solo si es del mismo id: tras cambiar el select de
+         * "Tipo" en el formulario la relación embebida es la VIEJA y no vale.
+         *
+         * 🔴 Por nombre y no por id: `payment_method_types` se siembra con firstOrCreate, así que el
+         * id de MercadoPago no es el mismo en todas las instalaciones.
+         *
+         * @param {object} model El método de pago de la tienda (payment_method).
+         * @returns {string}
+         */
+        nombre_del_tipo_de_metodo_de_pago(model) {
+            if (!model) {
+                return ''
+            }
+            let tipo_id = Number(model.payment_method_type_id)
+            if (!tipo_id) {
+                return ''
+            }
+            let store_de_tipos = this.$store.state.payment_method_type
+            let tipos = store_de_tipos && Array.isArray(store_de_tipos.models) ? store_de_tipos.models : []
+            let tipo = tipos.find(function (_tipo) {
+                return Number(_tipo.id) === tipo_id
+            })
+            if (!tipo && model.payment_method_type && Number(model.payment_method_type.id) === tipo_id) {
+                tipo = model.payment_method_type
+            }
+            return tipo && tipo.name ? String(tipo.name) : ''
+        },
+        /**
+         * `v_if_function` de "Método de pago de cuenta corriente" (src/models/payment_method.js): el
+         * vínculo con las cuotas de la tienda solo existe en un método de tipo MercadoPago. Va como
+         * v_if_function y no como `v_if` porque showProperty() compara `typeof v_if == 'array'`, que
+         * nunca se cumple.
+         *
+         * Compara sin espacios ni mayúsculas ("MercadoPago" y "Mercado Pago" valen lo mismo). Un
+         * método sin tipo elegido, o con un tipo que el store no conoce, no lo muestra.
+         *
+         * @param {object} prop
+         * @param {object} model El método de pago de la tienda.
+         * @returns {boolean}
+         */
+        es_metodo_de_pago_de_mercado_pago(prop, model) {
+            let nombre = this.nombre_del_tipo_de_metodo_de_pago(model)
+            return nombre.replace(/\s+/g, '').toLowerCase() === 'mercadopago'
+        },
+        /**
+         * `dynamic_options_function` del select "Método de pago de cuenta corriente" de un método de
+         * pago de la tienda (src/models/payment_method.js): los métodos de pago de cuenta corriente
+         * de siempre, pero con "Seleccione ..." en `null` y no en 0.
+         *
+         * 🔴 La API devuelve NULL para un método sin vínculo. Con el "Seleccione ..." en 0 ninguna
+         * opción coincidía con el valor y el select quedaba EN BLANCO en todos los métodos ya
+         * cargados (misma razón por la que el tipo de descuento de un combo ofrece un `null`). Elegir
+         * "Seleccione ..." manda null, que la API guarda como NULL (sin vínculo).
+         *
+         * Reusa getOptions() para armar la lista (mismo orden y mismos nombres que el select de la
+         * cuota); lo único que cambia es el valor de la opción vacía.
+         *
+         * @param {object} prop El select (usa `prop.store`).
+         * @param {object} model El método de pago de la tienda.
+         * @param {string} model_name
+         * @returns {Array<{value: (number|null), text: string}>}
+         */
+        metodos_de_pago_de_cuenta_corriente_para_vincular(prop, model, model_name) {
+            let opciones = this.getOptions({ ...prop, dynamic_options_function: null }, model, model_name)
+            return opciones.map(function (opcion) {
+                if (opcion.value === 0) {
+                    return { value: null, text: opcion.text }
+                }
+                return opcion
+            })
+        },
+        /**
+         * `value_function` del select "Método de pago de cuenta corriente" en un método NUEVO. Sin
+         * esto el motor le pone 0 a todo select sin `value` (display.js::getSelectAndCheckboxProps) y
+         * no coincidiría con la opción vacía, que vale null. null = sin vínculo.
+         *
+         * @returns {null}
+         */
+        metodo_de_pago_vinculado_inicial() {
+            return null
+        },
+        /**
+         * `on_change` del select "Tipo" de un método de pago de la tienda: redibuja el formulario
+         * para que "Método de pago de cuenta corriente" aparezca o desaparezca en el momento.
+         *
+         * Hace falta porque `payment_method` no declara `full_reactivity`: el formulario recibe una
+         * copia plana ({...model}) y el `$set` del select deja el valor escrito pero no avisa a un
+         * `v_if_function` que lee OTRA clave (misma trampa que `descuento_tipo` de combo.js). No se
+         * activa `full_reactivity` porque el formulario editaría la fila del store por referencia y
+         * cancelar no la revertiría. ModelForm llama a este método dentro de un `$nextTick`, con el
+         * valor ya escrito, y `this` es el propio formulario.
+         *
+         * @param {object} prop El select que cambió.
+         * @param {object} model El modelo del formulario.
+         * @returns {void}
+         */
+        redibujar_formulario_al_cambiar(prop, model) {
+            this.$forceUpdate()
+        },
+        /**
+         * `v_if_function` de las cuatro filas de cuotas de Mercado Pago del pedido (`cuotas`,
+         * `cuotas_cobradas`, `cuotas_recargo`, `medio_de_pago_cobrado` de src/models/order.js): solo
+         * se ven si el pedido trae ese dato. Un pedido viejo, de contado o de otro método de pago se
+         * ve exactamente como antes, sin filas vacías. Tampoco se ven en un cliente cuya API no corrió
+         * todavía la migración (la clave ni llega).
+         *
+         * - `cuotas` y `cuotas_cobradas`: si son mayores que 0.
+         * - `medio_de_pago_cobrado`: si es un texto no vacío.
+         * - `cuotas_recargo`: si el pedido tiene cuotas elegidas y el recargo no es null ni vacío. El
+         *   `0.00` SÍ se muestra: con cuotas elegidas es un dato ("N cuotas sin recargo"), no una
+         *   ausencia. Un pedido sin cuotas lo deja en null.
+         *
+         * @param {object} prop La fila declarada en el modelo (usa `prop.key`).
+         * @param {object} model El pedido.
+         * @returns {boolean}
+         */
+        mostrar_order_dato_de_cuotas(prop, model) {
+            if (!prop || !model) {
+                return false
+            }
+            let valor = model[prop.key]
+            if (prop.key === 'medio_de_pago_cobrado') {
+                return typeof valor === 'string' && valor.trim() !== ''
+            }
+            if (prop.key === 'cuotas_recargo') {
+                return Number(model.cuotas) > 0
+                    && valor !== null
+                    && typeof valor !== 'undefined'
+                    && valor !== ''
+                    && !isNaN(Number(valor))
+            }
+            return Number(valor) > 0
+        },
+        /**
+         * "Medio de pago cobrado" del pedido: el `payment_type_id` que Mercado Pago informó al
+         * cobrar (lo anota `tienda-api` en el webhook), traducido. Un valor que no conocemos se
+         * muestra tal cual, para no esconder un tipo nuevo de Mercado Pago.
+         *
+         * @param {object} order
+         * @returns {string}
+         */
+        getOrderMedioDePagoCobrado(order) {
+            let valor = order ? order.medio_de_pago_cobrado : null
+            if (valor === null || typeof valor === 'undefined' || valor === '') {
+                return ''
+            }
+            let etiquetas = {
+                credit_card: 'Tarjeta de crédito',
+                debit_card: 'Tarjeta de débito',
+                account_money: 'Dinero en cuenta de Mercado Pago',
+                ticket: 'Efectivo (cupón de pago)',
+                bank_transfer: 'Transferencia',
+                prepaid_card: 'Tarjeta prepaga',
+            }
+            if (Object.prototype.hasOwnProperty.call(etiquetas, valor)) {
+                return etiquetas[valor]
+            }
+            return String(valor)
+        },
         currentAcountStatus(current_acount) {
             if (current_acount.status == 'sin_pagar') {
                 return 'Sin pagar'
