@@ -104,6 +104,15 @@
 	--wa-pendiente-borde: #d39e00
 	--wa-pendiente-texto: #8a5b00
 
+	// --- Seguimiento (mision senal-pedidos-y-consultas-del-agente, 16/10/2026) ----------------
+	// Pedidos y consultas que el agente dejo para que una persona atienda: violeta, el cuarto
+	// color del tablero. No reusa ni el rojo (nadie esta esperando una respuesta: el agente ya
+	// contesto), ni el ambar (no hay nada sin aprobar: el mensaje ya salio), ni el verde (que es
+	// "actividad", no "hace falta una persona"). Texto oscuro sobre el velo claro: ~8:1.
+	--wa-seguimiento-bg: #f1efff
+	--wa-seguimiento-borde: #6f5bd6
+	--wa-seguimiento-texto: #4630b0
+
 	// --- Composer -----------------------------------------------------------------------------
 	// Fondo de la capsula donde se escribe. En claro es blanco sobre el panel gris del composer.
 	--wa-input-bg: #ffffff
@@ -147,3 +156,7 @@ html.dark-mode
 	--wa-pendiente-bg: rgba(217, 158, 0, .16)
 	--wa-pendiente-borde: rgba(217, 158, 0, .55)
 	--wa-pendiente-texto: #e0b64a
+	// Seguimiento en oscuro: mismo criterio de veladura translucida y texto aclarado (~8:1).
+	--wa-seguimiento-bg: rgba(129, 110, 235, .18)
+	--wa-seguimiento-borde: rgba(129, 110, 235, .6)
+	--wa-seguimiento-texto: #b9adff

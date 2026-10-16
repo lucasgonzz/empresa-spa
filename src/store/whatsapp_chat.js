@@ -123,6 +123,16 @@ function navegar_pestana(pestana, url) {
  *                                             422 { message } (validación de `body`)
  * - GET    whatsapp-chats/resumen          -> { mensajes_por_aprobar, chats_esperando_aprobacion }
  *
+ * Contrato agregado en la misión senal-pedidos-y-consultas-del-agente (16/10/2026): cuando el agente arma
+ * un pedido o promete "lo consulto y te confirmo", el chat queda marcado hasta que una persona lo atienda.
+ * Todo opcional: contra una API que no lo manda, no se dibuja nada.
+ * - chat.follow_up ('pedido' | 'consulta' | null), chat.follow_up_note, chat.follow_up_at: en el índice, en
+ *   el modelo del chat y en el `chat` liviano del broadcast `WhatsappChatUpdated`.
+ * - message.ai_follow_up / message.ai_follow_up_note: lo que el modelo marcó en ESE mensaje del agente.
+ * - GET    whatsapp-chats/resumen          -> además { chats_con_seguimiento, pedidos_para_confirmar,
+ *                                             consultas_pendientes }
+ * - PUT    whatsapp-chats/{id}/resolve-follow-up -> { model } (idempotente) | 404
+ *
  * Contrato agregado en la misión whatsapp-agente (confirmado contra empresa-api):
  * - POST   whatsapp-bot/simulate-inbound   -> 201 { model } (phone, body) | 403 no dueño | 429 throttle 10/min
  * - PUT    whatsapp-chats/messages/{id}/confirm -> { model } | 422 { code: 'ya_en_envio' | 'ya_no_esta_pendiente' | 'fuera_de_ventana' | 'envio_fallido' }
@@ -218,6 +228,12 @@ export default {
 		resumen: {
 			mensajes_por_aprobar: 0,
 			chats_esperando_aprobacion: 0,
+			// Misión senal-pedidos-y-consultas-del-agente: chats con un pedido o una consulta que el
+			// agente dejó para que una persona atienda. Suman al número del menú; contra una API
+			// que todavía no los manda quedan en 0 y el menú sigue siendo el de siempre.
+			chats_con_seguimiento: 0,
+			pedidos_para_confirmar: 0,
+			consultas_pendientes: 0,
 		},
 	},
 	mutations: {
@@ -430,6 +446,9 @@ export default {
 			state.resumen = {
 				mensajes_por_aprobar: Number(value && value.mensajes_por_aprobar) || 0,
 				chats_esperando_aprobacion: Number(value && value.chats_esperando_aprobacion) || 0,
+				chats_con_seguimiento: Number(value && value.chats_con_seguimiento) || 0,
+				pedidos_para_confirmar: Number(value && value.pedidos_para_confirmar) || 0,
+				consultas_pendientes: Number(value && value.consultas_pendientes) || 0,
 			}
 		},
 	},
@@ -489,6 +508,23 @@ export default {
 		 */
 		chats_esperando_aprobacion_count(state) {
 			return state.chats.filter(c => c.estado_pendiente == 'esperando_aprobacion').length
+		},
+		/**
+		 * Cantidad de chats donde el agente dejó un PEDIDO armado para que una persona lo confirme
+		 * (tarjeta violeta del tablero, misión senal-pedidos-y-consultas-del-agente). Sale de
+		 * `chat.follow_up`, que viaja por chat desde el índice y se mantiene al día por el broadcast
+		 * `WhatsappChatUpdated`; es un eje APARTE de `estado_pendiente`, así que un chat puede contar
+		 * acá y además en "sin responder" a la vez.
+		 */
+		chats_con_pedido_count(state) {
+			return state.chats.filter(c => c.follow_up == 'pedido').length
+		},
+		/**
+		 * Cantidad de chats donde el agente prometió "lo consulto y te confirmo" y todavía nadie
+		 * atendió (tarjeta violeta del tablero). Mismo criterio que `chats_con_pedido_count`.
+		 */
+		chats_con_consulta_count(state) {
+			return state.chats.filter(c => c.follow_up == 'consulta').length
 		},
 		/**
 		 * Cantidad de chats con actividad en el día de hoy (tarjeta verde del tablero).
@@ -820,6 +856,28 @@ export default {
 					if (!res.data.model.ai_enabled) {
 						commit('removePendingAiMessages')
 					}
+					dispatch('getResumen')
+					return res.data.model
+				})
+		},
+		/**
+		 * "Ya lo atendí": da por atendido el pedido o la consulta que el agente dejó marcados en el
+		 * chat (misión senal-pedidos-y-consultas-del-agente). Es para cuando la persona lo resolvió
+		 * por otro lado; si le escribe al cliente desde el módulo, el backend lo apaga solo.
+		 *
+		 * El PUT devuelve el chat completo y `upsertChat` lo mezcla en la bandeja, así la tarjeta y la
+		 * fila se actualizan acá mismo sin esperar el broadcast. Se refresca el resumen porque el número
+		 * del menú también cuenta este chat.
+		 *
+		 * Sin `.catch()` a propósito: el error lo interpreta el componente que dispara la acción y
+		 * muestra un toast propio.
+		 *
+		 * @param {number} chat_id
+		 */
+		resolveFollowUp({ commit, dispatch }, chat_id) {
+			return axios.put('/api/whatsapp-chats/' + chat_id + '/resolve-follow-up', null, { skip_navigation_cancel: true })
+				.then(res => {
+					commit('upsertChat', res.data.model)
 					dispatch('getResumen')
 					return res.data.model
 				})

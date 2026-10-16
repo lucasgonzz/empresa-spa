@@ -19,6 +19,18 @@
 			class="whatsapp-bubble__sender">
 				{{ sender_label }}
 			</span>
+			<!-- Lo que el agente marcó en ESTE mensaje (misión senal-pedidos-y-consultas-del-agente): un pedido
+			armado o un «lo consulto y te confirmo». Se ve también en el borrador que espera aprobación, para
+			que quien lo revisa sepa que lo que va a mandar deja algo pendiente. -->
+			<span
+			v-if="is_out && message.ai_follow_up"
+			class="whatsapp-bubble__seguimiento"
+			:title="titulo_seguimiento">
+				<i
+				class="bi"
+				:class="message.ai_follow_up == 'pedido' ? 'bi-bag-check-fill' : 'bi-question-circle-fill'"></i>
+				{{ message.ai_follow_up == 'pedido' ? 'Pedido' : 'Consulta' }}
+			</span>
 			<span
 			v-if="es_simulado"
 			class="whatsapp-bubble__sim"
@@ -379,6 +391,20 @@ export default {
 				return 'Se está enviando solo...'
 			}
 			return 'Se envía solo en ' + this.format_cuenta_regresiva(this.segundos_para_auto_envio)
+		},
+		/**
+		 * Tooltip del badge de seguimiento: qué dejó marcado el agente y, si lo escribió, el detalle.
+		 *
+		 * @returns {string}
+		 */
+		titulo_seguimiento() {
+			let titulo = this.message.ai_follow_up == 'pedido'
+				? 'El agente dejó un pedido para confirmar.'
+				: 'El agente prometió consultar y confirmarle algo al cliente.'
+			if (this.message.ai_follow_up_note) {
+				titulo += ' ' + this.message.ai_follow_up_note
+			}
+			return titulo
 		},
 		/**
 		 * Quién mandó el mensaje saliente: empleado, IA o plantilla usada.
@@ -891,6 +917,21 @@ export default {
 		// (`v-if="is_out"`), que en claro es verde palido: el verde de marca encima da 1,8:1 y se
 		// lee como una mancha. El token propio es el verde oscuro de WhatsApp, 6,9:1.
 		color: var(--wa-sender)
+	// Badge «Pedido» / «Consulta» del agente: sobre la burbuja saliente (verde), así que lleva su propio fondo
+	// de los tokens del seguimiento y no el texto suelto, que sobre el verde no contrasta.
+	&__seguimiento
+		display: inline-flex
+		align-items: center
+		gap: 4px
+		font-size: .65rem
+		font-weight: 700
+		text-transform: uppercase
+		letter-spacing: .03em
+		color: var(--wa-seguimiento-texto)
+		background: var(--wa-seguimiento-bg)
+		border: 1px solid var(--wa-seguimiento-borde)
+		border-radius: 4px
+		padding: 0 5px
 	&__sim
 		display: inline-flex
 		align-items: center
