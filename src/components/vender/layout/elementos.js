@@ -453,6 +453,37 @@ export const ELEMENTOS = [
 
 	/* ---------------------------------------------------------------- Etapa 3 */
 
+	/*
+		Chequeo de deposito (extension check_sales): los tildes "Para chequear / Chequeada /
+		Confirmada" de remito/total-previus-sales/CheckSale.vue. Volvio a Vender en la mision
+		destrabar-videos-centro (16/10/2026): desde el wizard de 3 etapas (7/6/2026) solo lo montaba
+		vender/components/client/Index.vue, que no importa nadie, y BtnGuardar seguia exigiendo los
+		tildes ("Indique la venta como checkeada"), asi que una venta para chequear no se podia
+		guardar. Va primero en la etapa 3 para que sea lo primero que se ve al abrirla, y no en la
+		etapa 2, que es un bloque pegado arriba: una caja de 12 columnas ahi le comeria lugar a cada
+		venta.
+
+		El v-if raiz de CheckSale (no es presupuesto, la venta previa no esta terminada) es
+		transitorio y se queda en el componente; aca solo la extension.
+	*/
+	{
+		key: 'chequeo_de_deposito',
+		nombre: 'Chequeo de depósito',
+		nombre_corto: 'chequeo de depósito',
+		etapa: 'etapa_3',
+		cols: 12,
+		obligatorio: false,
+		entrada_de_articulos: false,
+		disponible: function (vm) { return tiene_extencion(vm, 'check_sales') },
+		aparece_cuando: 'Mientras la venta no se guarde como presupuesto ni esté terminada',
+		/*
+			Con check_sales, BtnGuardar exige los tildes ("Indique la venta como checkeada"): si un
+			diseño lo saca, una venta para chequear vuelve a no poder guardarse. Se fuerza al dibujar,
+			igual que `cantidad`.
+		*/
+		se_fuerza_si: function (vm) { return tiene_extencion(vm, 'check_sales') },
+		motivo_forzado: 'Con el chequeo de depósito activo aparece igual en Vender: sin estos tildes una venta para chequear no se puede guardar.',
+	},
 	{
 		key: 'estado',
 		nombre: 'Estado de la venta',
