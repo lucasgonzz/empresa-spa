@@ -201,6 +201,16 @@ export default {
 			group_title: 'Inicio (Home)'
 		},
 		{
+			text: 'Diseño del inicio de la tienda',
+			key: 'diseno_home',
+			type: 'select',
+			options: [
+				{ value: 'ultimos_ingresos', text: 'Destacados y últimos ingresos (el de siempre)' },
+				{ value: 'lista_categorias', text: 'Lista de categorías desplegables' },
+			],
+			description: 'Con "Lista de categorías desplegables", la portada de tu tienda muestra debajo del banner todas tus categorías en una lista: al tocar una se despliegan sus productos ahí mismo, con un botón para ver todos. En la portada ya no aparecen Destacados, Novedades ni Últimos ingresos. Cuando el cliente elige una categoría o hace una búsqueda, la tienda se ve igual que siempre.',
+		},
+		{
 			text: 'Scroll infinito en el Inicio',
 			key: 'scroll_infinito_en_home',
 			type: 'checkbox',
