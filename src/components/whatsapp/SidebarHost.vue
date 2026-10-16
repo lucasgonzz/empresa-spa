@@ -177,7 +177,8 @@ export default {
 		/**
 		 * Refleja en vivo lo que llega por el canal: nuevos mensajes entrantes, respuestas de
 		 * la IA o de otro empleado, y cambios de estado de entrega (checks). La bandeja se
-		 * actualiza siempre; la conversación, solo si es la que se está mirando.
+		 * actualiza cuando ya está cargada (con un chat que todavía no tiene, ver la acción
+		 * `aplicarBroadcastDeChat` del store); la conversación, solo si es la que se está mirando.
 		 *
 		 * @param {Object} payload { chat, chat_id, message }
 		 */

@@ -130,10 +130,19 @@ let chats_en_busqueda = {}
 let recarga_de_respaldo = null
 
 /**
- * ¿Hay una búsqueda escrita en la bandeja? El `trim` es porque el índice también recorta `q` en el backend
+ * true si se pidió otra recarga de respaldo mientras la que está en vuelo corría (ver `recargarBandejaDeRespaldo`):
+ * esa recarga pudo salir antes de que naciera el chat que la pide, así que al terminar hace falta una más.
+ */
+let recarga_de_respaldo_pendiente = false
+
+/**
+ * ¿Hay algo escrito en el buscador de la bandeja? El `trim` es porque el índice también recorta `q` en el backend
  * (`WhatsappChatController::index`): una búsqueda de puros espacios no filtra nada.
  *
- * Con una búsqueda activa la bandeja es un resultado de búsqueda, no la lista de todos los chats.
+ * Mira el TEXTO escrito (`search_query` se commitea en cada tecla), no el filtro que ya se aplicó: este llega ~400 ms
+ * después, con el debounce de `ChatSearch.vue`. Cuando difieren no pasa nada grave, porque la búsqueda que corre a
+ * continuación recarga la lista entera. Con algo escrito la bandeja es (o está por ser) un resultado de búsqueda y no
+ * la lista de todos los chats.
  *
  * @param {Object} state
  * @returns {boolean}
@@ -643,17 +652,25 @@ export default {
 		 */
 		getChats({ commit, state }, opciones) {
 			let silent = !!(opciones && opciones.silent)
+			// Búsqueda con la que sale el pedido: ver más abajo por qué la recarga silenciosa la compara al volver.
+			let q_del_pedido = state.search_query || ''
 			if (!silent) {
 				commit('setLoadingChats', true)
 			}
 			return axios.get('/api/whatsapp-chats', Object.assign({
 				params: {
-					q: state.search_query || '',
+					q: q_del_pedido,
 				},
 			}, silent ? OPCIONES_DE_FONDO : {}))
 				.then(res => {
 					if (!silent) {
 						commit('setLoadingChats', false)
+					}
+					// 🔴 Una recarga silenciosa que salió SIN búsqueda no puede pisar una búsqueda que el operador
+					// escribió y aplicó mientras volvía: dejaría la lista completa con el texto de la búsqueda en el
+					// input. La que pidió el operador (no silenciosa) sí se aplica siempre.
+					if (silent && (state.search_query || '') !== q_del_pedido) {
+						return
 					}
 					commit('setChats', res.data.models)
 				})
@@ -680,11 +697,21 @@ export default {
 		 *    coincide es el backend, y se va a enterar cuando se cambie o se limpie la búsqueda.
 		 *
 		 * @param {Object} chat_patch El `chat` liviano del broadcast ({ id, unread_count, last_message_at, estado_pendiente, follow_up* }).
-		 * @returns {Promise|undefined} Resuelve cuando el chat desconocido ya quedó en la bandeja (o falló el respaldo).
+		 * @returns {Promise|undefined} Con un chat desconocido que se pide: la promesa de `traerChatNuevo` (los avisos
+		 *                              que llegan con el pedido en vuelo solo se anotan y resuelven al instante).
+		 *                              En cualquier otro caso, `undefined`.
 		 */
 		aplicarBroadcastDeChat({ commit, dispatch, state }, chat_patch) {
 			if (!chat_patch || !chat_patch.id) {
 				return
+			}
+			// Si el chat tiene un pedido en vuelo (`traerChatNuevo`), este aviso es el más nuevo que se vio: se anota
+			// SIEMPRE, también cuando el chat ya entró a la bandeja por otro camino (una recarga completa que ganó la
+			// carrera). Cuando vuelva el GET, la fila que traiga puede ser más vieja que este aviso, y el que se
+			// reaplica al final tiene que ser el último.
+			let en_busqueda = chats_en_busqueda[chat_patch.id]
+			if (en_busqueda) {
+				en_busqueda.ultimo_aviso = chat_patch
 			}
 			let conocido = state.chats.some(c => c.id == chat_patch.id)
 			if (conocido) {
@@ -726,12 +753,25 @@ export default {
 			}
 			entrada = { ultimo_aviso: null }
 			chats_en_busqueda[chat_id] = entrada
+			// Cierra el pedido: saca la anotación y reaplica el último aviso que llegó mientras volaba (el más nuevo que
+			// se vio). Va por las DOS salidas de la cadena (`.then(cerrar, cerrar)`) para que ningún rechazo inesperado
+			// deje al chat anotado «en búsqueda» para siempre, que es lo que lo dejaría sin volver a pedirse jamás.
+			let cerrar = () => {
+				let ultimo_aviso = entrada.ultimo_aviso
+				delete chats_en_busqueda[chat_id]
+				if (ultimo_aviso && state.chats.some(c => c.id == chat_id)) {
+					commit('patchChatFromBroadcast', ultimo_aviso)
+				}
+			}
 			return axios.get('/api/whatsapp-chats/' + chat_id, OPCIONES_DE_FONDO)
 				.then(res => {
 					if (!res.data || !res.data.model) {
 						throw new Error('GET whatsapp-chats/' + chat_id + ' contestó sin el chat')
 					}
-					if (!hay_busqueda_activa(state)) {
+					// Solo se inserta si el chat sigue sin estar: si una recarga completa lo trajo mientras tanto, la fila
+					// de este GET puede ser más vieja que lo que ya tiene la bandeja y la pisaría (el `Object.assign` de
+					// `upsertChat`). Y tampoco con algo escrito en el buscador (ver `aplicarBroadcastDeChat`).
+					if (!hay_busqueda_activa(state) && !state.chats.some(c => c.id == chat_id)) {
 						commit('upsertChat', res.data.model)
 					}
 				})
@@ -739,29 +779,33 @@ export default {
 					console.log(err)
 					return dispatch('recargarBandejaDeRespaldo')
 				})
-				.then(() => {
-					let ultimo_aviso = entrada.ultimo_aviso
-					delete chats_en_busqueda[chat_id]
-					if (ultimo_aviso && state.chats.some(c => c.id == chat_id)) {
-						commit('patchChatFromBroadcast', ultimo_aviso)
-					}
-				})
+				.then(cerrar, cerrar)
 		},
 		/**
 		 * Respaldo de `traerChatNuevo`: recarga la bandeja entera en silencio. Una sola a la vez para toda la
 		 * bandeja (ver `recarga_de_respaldo`): los que lleguen mientras corre comparten su promesa.
 		 *
-		 * Un chat que se crea justo después de que esa recarga salió no entra en ella; no se pierde: su próximo
-		 * aviso lo vuelve a descubrir como desconocido y vuelve a intentar.
+		 * Si llega otro pedido con la recarga en vuelo, esa recarga pudo salir ANTES de que naciera el chat que ahora
+		 * la pide: al terminar se hace una más (`recarga_de_respaldo_pendiente`), y la promesa que reciben todos recién
+		 * resuelve cuando termina esa última. Sin esto el chat quedaba sin fila hasta su próximo aviso, que puede no
+		 * llegar nunca (la IA en modo manual, un único mensaje).
 		 *
-		 * @returns {Promise} Resuelve (sin valor) cuando termina la recarga; nunca rechaza.
+		 * @returns {Promise} Resuelve (sin valor) cuando termina la recarga (y la repetición, si hizo falta); nunca rechaza.
 		 */
 		recargarBandejaDeRespaldo({ dispatch }) {
-			if (!recarga_de_respaldo) {
-				recarga_de_respaldo = dispatch('getChats', { silent: true }).then(() => {
-					recarga_de_respaldo = null
-				})
+			if (recarga_de_respaldo) {
+				recarga_de_respaldo_pendiente = true
+				return recarga_de_respaldo
 			}
+			// Por las dos salidas, igual que `cerrar` de `traerChatNuevo`: la variable no puede quedar con una promesa vieja.
+			let terminar = () => {
+				recarga_de_respaldo = null
+				if (recarga_de_respaldo_pendiente) {
+					recarga_de_respaldo_pendiente = false
+					return dispatch('recargarBandejaDeRespaldo')
+				}
+			}
+			recarga_de_respaldo = dispatch('getChats', { silent: true }).then(terminar, terminar)
 			return recarga_de_respaldo
 		},
 		/**
