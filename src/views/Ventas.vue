@@ -240,9 +240,24 @@ export default {
 				return
 			}
 			let state = this.$store.state.sale
-			// En modo filtrado (buscador general / filtro de columna) los filtros de pantalla
-			// siguen aplicándose en el navegador sobre `filtered`, como hasta ahora.
+			// En modo filtrado (buscador general / filtro de columna):
+			//
+			// 🔴 Si el servidor mandó los totales de la búsqueda (`totales_de_busqueda`, misión
+			// alcance-de-ventas-caminos-faltantes), él también recortó las filas y contó las solapas
+			// con la solapa y las show options que había al buscar. Cambiar cualquiera de ellas sin
+			// volver a pedir dejaba el Total y los "(N)" del filtro anterior (y la tabla, que el
+			// navegador re-filtra, sin las filas que el servidor ya había dejado afuera). Se pide la
+			// búsqueda de vuelta desde la página 1: `runGlobalSearch` reusa el texto persistido y
+			// lee los filtros de columna del store, el mismo camino de la barra y del ordenar.
+			// `sincronizar_alcance` va ANTES, porque el pedido arma la marca con el alcance del store.
+			//
+			// Sin totales del servidor (API vieja) los filtros de pantalla siguen aplicándose en el
+			// navegador sobre `filtered`, como hasta ahora, y no hay nada que pedir.
 			if (state.is_filtered) {
+				if (state.totales_de_busqueda) {
+					this.sincronizar_alcance()
+					this.$store.dispatch('sale/runGlobalSearch', {page: 1})
+				}
 				return
 			}
 			// Con la API vieja el listado ya es el día entero y se filtra en el navegador: pedirlo
@@ -266,6 +281,11 @@ export default {
 				let state = self.$store.state.sale
 				if (state.paginado_por_fecha && !state.is_filtered) {
 					self.$store.dispatch('sale/refrescar_totales_del_dia')
+				} else if (state.is_filtered && state.totales_de_busqueda) {
+					// En modo búsqueda con totales del servidor el navegador ya no suma: se vuelve a
+					// pedir la MISMA página de la búsqueda, sin overlay, para que el Total se mueva
+					// con la venta editada o borrada (antes lo recalculaba el navegador solo).
+					self.$store.dispatch('sale/runGlobalSearch', {page: state.filter_page, silencioso: true})
 				}
 			}, 400)
 		},
