@@ -285,7 +285,13 @@ export default {
 					// En modo búsqueda con totales del servidor el navegador ya no suma: se vuelve a
 					// pedir la MISMA página de la búsqueda, sin overlay, para que el Total se mueva
 					// con la venta editada o borrada (antes lo recalculaba el navegador solo).
-					self.$store.dispatch('sale/runGlobalSearch', {page: state.filter_page, silencioso: true})
+					//
+					// 🔴 La marca de «desactualizados» se apaga ACÁ: la apaga `_getModels` en el modo por
+					// fecha, pero `runGlobalSearch` no. Sin esto quedaba en true, el watcher (que solo
+					// dispara cuando el valor CAMBIA) no volvía a ver un true → true, y desde la segunda
+					// edición o borrado el Total de la búsqueda quedaba viejo.
+					self.$store.commit('sale/set_totales_desactualizados', false)
+					self.$store.dispatch('sale/runGlobalSearch', {page: state.filter_page, silencioso: true, conservar_seleccion: true})
 				}
 			}, 400)
 		},

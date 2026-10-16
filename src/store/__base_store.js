@@ -1291,7 +1291,11 @@ export default function __base_store(options = {}) {
 					let rows = (res.data.models && res.data.models.data) ? res.data.models.data : []
 					// Con selección manual activa, cada búsqueda/filtro nuevo NO pisa lo ya tildado
 					// (ver el mismo guard en getModels de acá arriba).
-					if (!state.is_selecteable) {
+					//
+					// 🔴 `conservar_seleccion` lo manda el refresco silencioso de Ventas (misión
+					// alcance-de-ventas-caminos-faltantes): volver a pedir la MISMA página de la búsqueda después de
+					// editar una venta no tiene que destildar lo que el usuario había seleccionado.
+					if (!state.is_selecteable && !(payload && payload.conservar_seleccion)) {
 						commit('setSelected', [])
 					}
 					commit('setFilterPage', page)
