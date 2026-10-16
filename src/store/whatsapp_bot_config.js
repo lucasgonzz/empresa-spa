@@ -15,6 +15,27 @@ export default __base_store({
 		route_string: 'whatsapp-bot/config',
 		from_dates: false,
 		use_per_page: false,
+		/**
+		 * Datos reales del negocio que el agente usa para el objetivo de la conversación (misión
+		 * objetivo-agente-whatsapp): `{ tienda_online: string|null, sucursales: string[],
+		 * hay_horario: boolean }`. Viene AL LADO de `model` en el GET y en la respuesta del PUT, y
+		 * la solapa "Agente" lo muestra en el recuadro "Lo que va a usar el agente".
+		 *
+		 * Queda en `null` cuando la API todavía no lo manda (cliente con una versión anterior de
+		 * empresa-api): la pantalla anda igual, solo que sin esa vista previa.
+		 */
+		objective_context: null,
+	},
+	mutations: {
+		/**
+		 * Guarda el contexto del objetivo que mandó la API (o `null` si no vino).
+		 *
+		 * @param {Object} state
+		 * @param {Object|null} value `{ tienda_online, sucursales, hay_horario }` o null.
+		 */
+		setObjectiveContext(state, value) {
+			state.objective_context = value || null
+		},
 	},
 	actions: {
 		/**
@@ -34,6 +55,10 @@ export default __base_store({
 					} else {
 						commit('setModels', [])
 					}
+
+					// Contexto del objetivo del agente: opcional en el contrato. Una API vieja no
+					// lo manda (undefined) y queda en null, que es "sin vista previa".
+					commit('setObjectiveContext', res.data.objective_context || null)
 				})
 				.catch(err => {
 					commit('setLoading', false)
@@ -45,11 +70,17 @@ export default __base_store({
 		 * Guarda la configuración funcional del agente (grupo 137, Prompt 07): personalidad,
 		 * habilidades, los dos toggles de automatización, los dos tiempos de espera, el
 		 * interruptor de visión (misión whatsapp-sidebar-multimedia) y el de simulación desde la
-		 * conversación (misión personalizacion-agente-whatsapp). Pega al mismo endpoint que la
+		 * conversación (misión personalizacion-agente-whatsapp), y el objetivo de la conversación
+		 * con sus indicaciones (misión objetivo-agente-whatsapp). Pega al mismo endpoint que la
 		 * config técnica de Kapso (ABM → Integraciones y la solapa "Conexión"), pero manda solo
-		 * estos 8 campos: el controller de la API arma el `updateOrCreate` con
+		 * estos 10 campos: el controller de la API arma el `updateOrCreate` con
 		 * `$request->has(...)` por campo, así que no pisa los campos técnicos que esta pantalla
 		 * no conoce.
+		 *
+		 * Compatibilidad con una API vieja (cliente sin la versión del objetivo): los dos campos
+		 * del objetivo viajan igual y el controller viejo los ignora (arma el guardado solo con
+		 * los campos que conoce), así que se guarda todo lo demás y el objetivo no persiste.
+		 * Tampoco vuelve `objective_context`, y en ese caso no se toca lo que había en el estado.
 		 *
 		 * @param {Object} payload
 		 * @param {string} payload.agent_personality Texto libre con la personalidad del agente.
@@ -60,9 +91,16 @@ export default __base_store({
 		 * @param {number|string} payload.ai_confirm_delay_seconds Espera de confirmación antes de enviar.
 		 * @param {boolean} payload.ai_vision_enabled Si el agente interpreta las fotos que llegan.
 		 * @param {boolean} payload.chat_simulation_enabled Si se puede simular un mensaje del cliente desde la conversación.
+		 * @param {string|null} payload.agent_objective Clave del objetivo (`visit_branch`, `buy_online`, `order_by_whatsapp`, `custom`) o null = sin objetivo.
+		 * @param {string} payload.agent_objective_detail Indicaciones libres del dueño para el objetivo (en `custom`, el objetivo mismo).
 		 * @returns {Promise}
 		 */
 		updateAgentConfig({ commit, state }, payload) {
+			// Indicaciones del objetivo recortadas; si quedan vacías viajan como null, que es como
+			// las guarda la base cuando no hay nada escrito (y lo que el backend toma como "sin
+			// detalle": en `custom`, eso equivale a no tener objetivo).
+			let objective_detail = (payload.agent_objective_detail || '').trim()
+
 			return axios.put('/api/' + state.route_string, {
 				agent_personality: payload.agent_personality,
 				agent_skills: payload.agent_skills,
@@ -80,10 +118,22 @@ export default __base_store({
 				// misma razón por la que la personalidad y las habilidades tampoco viajan de allá.
 				ai_vision_enabled: !!payload.ai_vision_enabled,
 				chat_simulation_enabled: !!payload.chat_simulation_enabled,
+				// Objetivo de la conversación. Igual que la visión y la simulación, viaja SOLO
+				// desde acá y nunca desde `updateConnectionConfig`: si viajara también en la de
+				// Conexión, guardar las credenciales le borraría el objetivo al agente. La tarjeta
+				// "Sin objetivo" no tiene clave propia en la base: viaja como null.
+				agent_objective: payload.agent_objective || null,
+				agent_objective_detail: objective_detail.length ? objective_detail : null,
 			})
 				.then(res => {
 					// Refleja el modelo guardado (incluye los campos técnicos que ya tenía).
 					commit('setModels', [res.data.model])
+					// Si la API ya expone el contexto del objetivo, se refresca (el dueño pudo
+					// haber cargado una sucursal o la tienda en el medio). Si no viene, se deja lo
+					// que había: una API vieja tampoco lo mandó en el GET.
+					if (res.data.objective_context !== undefined) {
+						commit('setObjectiveContext', res.data.objective_context)
+					}
 					return res
 				})
 		},
