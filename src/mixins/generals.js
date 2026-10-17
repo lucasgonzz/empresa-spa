@@ -1350,11 +1350,35 @@ export default {
          * round($price, -2). Para precios positivos, Math.round de JS y round de PHP coinciden
          * (los dos mandan el .5 hacia arriba).
          *
+         * Con la opcion `redondear_centenas_para_arriba` del usuario va siempre a la centena de
+         * arriba (Math.ceil), igual que el `ceil($price / 100) * 100` del backend.
+         *
          * @param {number} num
          * @returns {number}
          */
         redondear_centenas(num) {
+            // Opcion "Redondear centenas hacia arriba" (redondear_centenas_para_arriba): el backend
+            // pasa de round a ceil, igual que ArticleHelper::redondear(). Apagada es lo de siempre.
+            if (this.owner.redondear_centenas_para_arriba) {
+                return Math.ceil(num / 100) * 100;
+            }
             return Math.round(num / 100) * 100;
+        },
+        /**
+         * Muestra la tilde "Redondear centenas hacia arriba" del formulario de configuracion SOLO
+         * cuando el modo de redondeo elegido es el de centenas: es el sentido de ese modo, no un
+         * modo aparte, y sin centenas prendido el backend la ignora. Dejarla a la vista con otro
+         * modo invita a tocarla creyendo que hace algo.
+         *
+         * Lee `modo_redondeo` del modelo en edicion (no de `owner`), asi que aparece o desaparece
+         * apenas el usuario cambia el select, antes de guardar.
+         *
+         * @param {Object} prop propiedad del modelo que declara este v_if_function.
+         * @param {Object} model el usuario (users) que se esta editando.
+         * @returns {Boolean}
+         */
+        mostrar_centenas_para_arriba_si_redondea_por_centenas_v_if_function(prop, model) {
+            return !!(model && model.modo_redondeo == 'centenas')
         },
         aplicar_tipos_de_precio(item, price) {
 
