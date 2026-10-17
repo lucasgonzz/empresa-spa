@@ -234,6 +234,24 @@ export default {
 				'Se aplica al recalcular los precios: al elegir una opcion distinta se vuelven a calcular los precios de todos los articulos.',
 			],
 		},
+		/*
+		 * Sentido del redondeo por centenas. No es un sexto modo del select: es una columna aparte
+		 * (users.redondear_centenas_para_arriba) que solo tiene efecto con el modo "centenas", asi
+		 * que solo se muestra cuando ese modo esta elegido. Apagada (default) el redondeo va a la
+		 * centena mas cercana; prendida, siempre hacia arriba (ceil).
+		 */
+		{
+			text: 'Redondear centenas hacia arriba',
+			key: 'redondear_centenas_para_arriba',
+			type: 'checkbox',
+			value: 0,
+			v_if_function: 'mostrar_centenas_para_arriba_si_redondea_por_centenas_v_if_function',
+			descriptions:
+			[
+				'Si se activa, el redondeo de a 100 sube siempre a la centena de arriba (por ejemplo $159.907 queda en $160.000) en lugar de ir a la mas cercana ($159.900).',
+				'Al cambiar esta opcion se vuelven a calcular los precios de todos los articulos.',
+			],
+		},
 		{
 			text: 'Aplicar los descuentos y recargos en los articulos antes del margen de ganancia',
 			key: 'aplicar_descuentos_en_articulos_antes_del_margen_de_ganancia',

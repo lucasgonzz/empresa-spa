@@ -1896,7 +1896,7 @@ export default {
 			let options = [
 				{ value: 'sin_redondeo', text: 'Sin redondeo' },
 				{ value: 'miles', text: 'Redondear de a 1000 (al mas cercano)' },
-				{ value: 'centenas', text: 'Redondear de a 100 (al mas cercano, solo en precios mayores a $100)' },
+				{ value: 'centenas', text: 'Redondear de a 100 (por defecto al mas cercano, solo en precios mayores a $100)' },
 				{ value: 'cincuenta', text: 'Redondear de a 50 (siempre hacia arriba)' },
 				{ value: 'decenas', text: 'Redondear de a 10 (al mas cercano)' },
 				{ value: 'centavos', text: 'Redondear a peso entero (sin centavos)' },
