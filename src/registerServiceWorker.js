@@ -308,8 +308,50 @@ function instalar_red_de_seguridad_de_archivos_faltantes() {
     }
 }
 
+/**
+ * Guarda la primera copia de `config.js` para poder abrir sin conexión (misión
+ * config-js-sin-conexion, 17/10/2026).
+ *
+ * Por qué. El build de release no lleva ninguna `VUE_APP_*` adentro: la URL de la API, la clave de
+ * Pusher, etc. salen de `config.js` (ver `src/runtime_config.js`), y sin esa configuración la app
+ * ni monta. `config.js` NO está en el precache a propósito (el precache responde caché primero y
+ * serviría una configuración vieja): lo atiende una ruta propia del service worker
+ * (`vue.config.js`, caché `cc-config`) que va red primero y guarda la última copia buena. Esa ruta
+ * solo ve los pedidos que pasan POR el service worker, y la primera carga de la página (la que
+ * instala el service worker) se hizo antes de que existiera: sin esto, quien abre el sistema por
+ * primera vez y queda sin red en esa misma sesión no tendría copia, y cuando un service worker
+ * viejo (sin la ruta) cede el control a uno nuevo pasa lo mismo.
+ *
+ * Qué hace. Escucha `controllerchange` (el service worker TOMÓ el control de esta página: la
+ * primera instalación, o el relevo de uno viejo; el `clientsClaim` de `vue.config.js` lo dispara) y
+ * entonces pide `config.js` otra vez. Ese pedido ya pasa por el service worker, que lo guarda si es
+ * una configuración de verdad. En las visitas siguientes la página nace controlada y su propio
+ * `<script src="config.js">` ya queda guardado, así que no hace falta nada más. Nunca lanza ni
+ * rechaza: es una comodidad, y un fallo acá no puede afectar a la aplicación.
+ *
+ * @returns {void}
+ */
+function guardar_copia_de_config_para_sin_conexion() {
+    try {
+        if (!('serviceWorker' in navigator) || typeof window.fetch !== 'function') {
+            return
+        }
+
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+            try {
+                window.fetch(process.env.BASE_URL + 'config.js', { credentials: 'same-origin' }).catch(function () {})
+            } catch (e) {
+                // Sin nada que hacer: la copia se guarda en la próxima visita.
+            }
+        })
+    } catch (e) {
+        // Sin nada que hacer: la aplicación no depende de esto.
+    }
+}
+
 if (process.env.NODE_ENV === 'production') {
     instalar_red_de_seguridad_de_archivos_faltantes()
+    guardar_copia_de_config_para_sin_conexion()
 
     register(`${process.env.BASE_URL}service-worker.js`, {
         ready () {
