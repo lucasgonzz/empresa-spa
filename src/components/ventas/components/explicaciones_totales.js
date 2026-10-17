@@ -158,7 +158,10 @@ function total(c) {
 		*/
 		frase_de_que_ventas(c) + (c.usa_totales_del_servidor && !c.de_busqueda ? ' ' + frase_de_fechas() : ''),
 		'Las notas de crédito no lo bajan: una venta devuelta sigue por su importe completo.',
-		'Usa el mismo criterio de IVA que "Ventas brutas" del Estado de Resultados, pero no mide exactamente las mismas ventas: acá quedan afuera las que están en revisión o con estado.',
+		// En una búsqueda solo quedan afuera las que están en revisión: el buscador no filtra por terminada ni por estado de venta.
+		c.de_busqueda
+			? 'Usa el mismo criterio de IVA que "Ventas brutas" del Estado de Resultados, pero no mide exactamente las mismas ventas: acá quedan afuera las que están en revisión.'
+			: 'Usa el mismo criterio de IVA que "Ventas brutas" del Estado de Resultados, pero no mide exactamente las mismas ventas: acá quedan afuera las que están en revisión o con estado.',
 		frase_de_sin_iva(),
 	]
 
