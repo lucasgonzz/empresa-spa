@@ -172,8 +172,9 @@ module.exports = {
                 // del .env del slot y por eso ahí sí abrían sin red).
                 //
                 // Cómo evita servir una configuración vieja:
-                //   - ONLINE siempre se pide a la red (el pedido se reescribe con cache: 'no-cache', como las
-                //     navegaciones) y la respuesta buena refresca la copia. La copia SOLO se usa si no hay
+                //   - ONLINE siempre se pide a la red (el pedido se reescribe con cache: 'no-cache') y la
+                //     respuesta vuelve a la página con Cache-Control: no-cache, así que Chromium no la reusa desde
+                //     su caché aunque el servidor mande un max-age largo; la respuesta buena refresca la copia. La copia SOLO se usa si no hay
                 //     red, si la red pasa del tope (3 s) o si el servidor contesta 5xx.
                 //   - La caché de un service worker es por origen: cada frente de cada cliente guarda su
                 //     propio config.js y nunca se mezclan.
@@ -204,7 +205,21 @@ module.exports = {
                             if (args.response && args.response.status >= 500) {
                                 throw new Error('El servidor contestó ' + args.response.status);
                             }
-                            return args.response;
+                            if (!args.response || args.response.status !== 200) {
+                                return args.response;
+                            }
+                            // La respuesta que recibe la página (y la copia que se guarda, que sale de esta misma
+                            // respuesta) lleva Cache-Control: no-cache. Sin esto, un servidor que mande un max-age
+                            // largo (el nginx de los clientes del VPS manda 10 años para config.js) hace que
+                            // Chromium reuse la configuración desde su caché de memoria en las recargas
+                            // siguientes de la misma pestaña, SIN pasar por el service worker, y la
+                            // configuración vieja sigue sirviéndose aunque el servidor ya tenga otra.
+                            var cabeceras = new Headers(args.response.headers);
+                            cabeceras.set('Cache-Control', 'no-cache');
+                            cabeceras.delete('Expires');
+                            return args.response.blob().then(function (cuerpo) {
+                                return new Response(cuerpo, { status: 200, statusText: args.response.statusText, headers: cabeceras });
+                            });
                         },
                         // Decide si lo que contestó el servidor se guarda: solo una configuración de verdad.
                         // Devolver null = no guardar. Con un 404/410 o un 200 que no es configuración
@@ -235,23 +250,31 @@ module.exports = {
                                 var fin_bloque = '*' + '/';
                                 var inicio_linea = '/' + '/';
                                 var limpio = String(texto);
-                                var desde = limpio.indexOf(inicio_bloque);
+                                var desde = -1;
                                 var hasta = -1;
-                                // Se sacan los comentarios: el config.js vacío por defecto del release de la
-                                // tienda trae VUE_APP_API_URL escrita DENTRO de un comentario de ejemplo.
-                                while (desde !== -1) {
-                                    hasta = limpio.indexOf(fin_bloque, desde + 2);
-                                    limpio = limpio.slice(0, desde) + (hasta === -1 ? '' : limpio.slice(hasta + 2));
-                                    desde = limpio.indexOf(inicio_bloque);
-                                }
+                                // Se sacan los comentarios: el config.js vacío por defecto del release trae
+                                // VUE_APP_API_URL escrita DENTRO de un comentario de ejemplo. Primero los de línea
+                                // (que pueden nombrar un comienzo de bloque) y después los de bloque; un bloque sin
+                                // cierre no se toca, para no borrar la configuración que viene después.
                                 limpio = limpio.split(String.fromCharCode(10)).filter(function (linea) {
                                     return linea.replace(/^\s+/, '').indexOf(inicio_linea) !== 0;
                                 }).join(String.fromCharCode(10));
-                                // Una configuración buena asigna un objeto a window.__CC_CONFIG__ y trae la URL de
-                                // la API con valor. "window.__CC_CONFIG__ = window.__CC_CONFIG__ || {}" (el vacío
-                                // del release) no cumple: después del "=" no viene una llave.
+                                desde = limpio.indexOf(inicio_bloque);
+                                while (desde !== -1) {
+                                    hasta = limpio.indexOf(fin_bloque, desde + 2);
+                                    if (hasta === -1) {
+                                        break;
+                                    }
+                                    limpio = limpio.slice(0, desde) + limpio.slice(hasta + 2);
+                                    desde = limpio.indexOf(inicio_bloque);
+                                }
+                                // Una configuración buena empieza una sentencia asignando un objeto a
+                                // window.__CC_CONFIG__ y trae la URL de la API con valor ANTES de que ese objeto cierre.
+                                // "window.__CC_CONFIG__ = window.__CC_CONFIG__ || {}" (el vacío del release) no cumple:
+                                // después del "=" no viene una llave. Un HTML con un script en el medio tampoco: la
+                                // asignación no está al comienzo de una sentencia.
                                 var es_buena = limpio.length < 200000
-                                    && /__CC_CONFIG__\s*=\s*\{[\s\S]*?VUE_APP_API_URL["']?\s*:\s*["'][^"'\s]/.test(limpio);
+                                    && /(^|[\n\r;])\s*window\.__CC_CONFIG__\s*=\s*\{[^}]*?VUE_APP_API_URL["']?\s*:\s*["'][^"'\s]/.test(limpio);
                                 return es_buena ? respuesta : borrar_copia();
                             });
                         }
