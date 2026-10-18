@@ -98,7 +98,14 @@ function frase_de_sin_iva() {
  */
 function frase_de_que_ventas(c) {
 	let frase
-	if (c.usa_totales_del_servidor) {
+	if (c.usa_totales_del_servidor && c.de_busqueda) {
+		/*
+			Totales de una BÚSQUEDA calculados por el servidor: suman todas las páginas del resultado, y el
+			buscador no tiene período, así que "fechas" no puede figurar entre los filtros. Tampoco se dice
+			"de cualquier fecha": quien no tiene permiso para ver días anteriores solo encuentra las de hoy.
+		*/
+		frase = 'Con el buscador o un filtro de columna activo, suma las ventas encontradas (de todas las páginas), con los filtros elegidos (sucursal, vendedor, cobradas, factura, método de pago).'
+	} else if (c.usa_totales_del_servidor) {
 		frase = 'Suma las ventas terminadas que ves, con los filtros elegidos (fechas, sucursal, vendedor, cobradas, factura, método de pago).'
 	} else {
 		/*
@@ -125,6 +132,18 @@ function frase_de_fechas() {
 }
 
 /**
+ * Título del bloque "cuenta" (la resta Total − IVA, Costos − IVA de compra, etc.). Con los totales de
+ * un período dice "este período"; con los de una búsqueda (`c.de_busqueda`) no hay período, y decirlo
+ * sería afirmar una fecha que el buscador no tiene.
+ *
+ * @param {Object} c contexto.
+ * @returns {string}
+ */
+function titulo_de_la_cuenta(c) {
+	return c.de_busqueda ? 'Con los números de esta búsqueda' : 'Con los números de este período'
+}
+
+/**
  * Total en pesos.
  *
  * @param {Object} c contexto.
@@ -132,10 +151,17 @@ function frase_de_fechas() {
  */
 function total(c) {
 	let items = [
-		/* Sin totales del servidor no hay período elegido: la frase de fechas no aplica (ver frase_de_que_ventas). */
-		frase_de_que_ventas(c) + (c.usa_totales_del_servidor ? ' ' + frase_de_fechas() : ''),
+		/*
+			Sin totales del servidor no hay período elegido: la frase de fechas no aplica (ver
+			frase_de_que_ventas). Con los totales de una BÚSQUEDA (`de_busqueda`) tampoco: el servidor
+			los trae del buscador, que suma de cualquier fecha y no tiene período.
+		*/
+		frase_de_que_ventas(c) + (c.usa_totales_del_servidor && !c.de_busqueda ? ' ' + frase_de_fechas() : ''),
 		'Las notas de crédito no lo bajan: una venta devuelta sigue por su importe completo.',
-		'Usa el mismo criterio de IVA que "Ventas brutas" del Estado de Resultados, pero no mide exactamente las mismas ventas: acá quedan afuera las que están en revisión o con estado.',
+		// En una búsqueda solo quedan afuera las que están en revisión: el buscador no filtra por terminada ni por estado de venta.
+		c.de_busqueda
+			? 'Usa el mismo criterio de IVA que "Ventas brutas" del Estado de Resultados, pero no mide exactamente las mismas ventas: acá quedan afuera las que están en revisión.'
+			: 'Usa el mismo criterio de IVA que "Ventas brutas" del Estado de Resultados, pero no mide exactamente las mismas ventas: acá quedan afuera las que están en revisión o con estado.',
 		frase_de_sin_iva(),
 	]
 
@@ -163,7 +189,7 @@ function total(c) {
 	if (c.usa_totales_del_servidor && vino(c.total_sin_iva)) {
 		let iva_declarado = c.total - c.total_sin_iva
 		explicacion.cuenta = {
-			titulo: 'Con los números de este período',
+			titulo: titulo_de_la_cuenta(c),
 			filas: [
 				{ etiqueta: 'Total (con IVA de lo facturado)', valor: dinero(c.formatear, c.total) },
 				{ etiqueta: '(–) IVA de las facturas emitidas', valor: dinero(c.formatear, iva_declarado), tipo: 'resta' },
@@ -201,7 +227,7 @@ function costos(c) {
 				detalle: 'Tu cuenta guarda los costos con el IVA de compra incluido. Ese IVA lo recuperás como crédito fiscal, así que no es un costo real: la Ganancia ya lo descuenta.',
 			}
 			cuenta = {
-				titulo: 'Con los números de este período',
+				titulo: titulo_de_la_cuenta(c),
 				filas: [
 					{ etiqueta: 'Costos (con IVA de compra)', valor: dinero(c.formatear, c.costos) },
 					{ etiqueta: '(–) IVA de compra recuperable', valor: dinero(c.formatear, credito), tipo: 'resta' },
@@ -304,7 +330,7 @@ function ganancia(c) {
 		}
 
 		explicacion.cuenta = {
-			titulo: 'Con los números de este período',
+			titulo: titulo_de_la_cuenta(c),
 			filas: filas,
 		}
 	}
@@ -312,9 +338,12 @@ function ganancia(c) {
 	/*
 		La fecha NO es la misma para todos: depende de cuándo actualizó cada comercio a la versión que
 		descuenta el IVA. Por eso se dice "según cuándo actualizaste" y no se afirma un corte. Sin totales
-		del servidor no hay período elegido (el buscador suma de cualquier fecha), así que no se avisa.
+		del servidor no hay período elegido (el buscador suma de cualquier fecha), así que no se avisa. Con
+		los totales de una BÚSQUEDA calculados por el servidor (`de_busqueda`) pasa lo mismo: `desde` es el
+		día que mira la pantalla y no delimita lo que el buscador sumó, así que la condición por fecha no
+		tiene con qué decidir y, igual que sin totales del servidor, no se avisa.
 	*/
-	if (c.usa_totales_del_servidor && typeof c.desde == 'string' && /^\d{4}-\d{2}-\d{2}/.test(c.desde) && c.desde.substr(0, 10) < FECHA_DESDE_LA_QUE_LA_GANANCIA_DESCUENTA_IVA) {
+	if (c.usa_totales_del_servidor && !c.de_busqueda && typeof c.desde == 'string' && /^\d{4}-\d{2}-\d{2}/.test(c.desde) && c.desde.substr(0, 10) < FECHA_DESDE_LA_QUE_LA_GANANCIA_DESCUENTA_IVA) {
 		avisos.push('Las ventas hechas antes de que tu sistema se actualizara a la versión que descuenta el IVA de las facturas (desde el 17/9/2026, según cuándo actualizaste) pueden tener la ganancia guardada con el criterio anterior, hasta que se recalculen.')
 	}
 
@@ -372,7 +401,7 @@ function ventas(c) {
 			{
 				titulo: 'De dónde sale',
 				items: [
-					'Cuenta las ventas terminadas, en pesos y en dólares.',
+					c.de_busqueda ? 'Cuenta las ventas encontradas, en pesos y en dólares.' : 'Cuenta las ventas terminadas, en pesos y en dólares.',
 					frase_de_que_ventas(c),
 				],
 			},
@@ -444,6 +473,11 @@ function en_dolares(c, cual) {
  * El contexto que espera (todo lo arma `Total.vue`):
  *   formatear                 función que da formato de moneda (el `price()` del sistema)
  *   usa_totales_del_servidor  true si los números vienen calculados por la API (no del navegador)
+ *   de_busqueda               true si esos números del servidor son los de una BÚSQUEDA (buscador general,
+ *                             filtro de columna o N° de factura) y no los de un día o rango: suman de
+ *                             cualquier fecha, así que NO se agrega la frase de fechas ni el aviso de
+ *                             ventas viejas, y la cuenta se titula "de esta búsqueda". Opcional: ausente
+ *                             o false equivale al comportamiento de siempre
  *   total, costos, ganancia   los tres importes en pesos que muestra la pantalla
  *   total_sin_iva             opcional, de la API
  *   costos_sin_iva            opcional, de la API

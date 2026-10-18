@@ -35,17 +35,19 @@ export default {
 			return total
 		},
 		/**
-		 * Total para el badge del ítem "WhatsApp": cantidad de mensajes de la IA esperando
-		 * aprobación del negocio (misión sugerencia-ia-como-borrador, 29/9/2026). Mismo patrón
-		 * que `online_menu_alert_count` con `tienda_mensajes.resumen`: sale del resumen que pide
-		 * `SidebarHost.vue` apenas el módulo está habilitado, así que está prendido desde el
-		 * login sin entrar a la vista de WhatsApp. Sin la extensión (o antes de la primera
-		 * carga) da 0: `state.whatsapp_chat.resumen` nace en ese valor.
+		 * Total para el badge del ítem "WhatsApp" (misión senal-pedidos-y-consultas-del-agente,
+		 * 16/10/2026, decisión de Lucas): lo que necesita a una persona = respuestas del agente esperando
+		 * aprobación + chats donde el agente armó un pedido o prometió "lo consulto y te confirmo" y
+		 * nadie atendió. Es lo que hace que el pedido no se pierda aunque nadie abra la bandeja: el
+		 * número se ve desde cualquier pantalla del sistema. Cuenta pedidos Y consultas (decisión de
+		 * Lucas). Contra una API que todavía no manda los campos nuevos, `chats_con_seguimiento` queda
+		 * en 0 y el número es el de antes.
 		 *
 		 * @returns {number}
 		 */
-		whatsapp_por_aprobar_count() {
-			return Number(this.$store.state.whatsapp_chat.resumen.mensajes_por_aprobar) || 0
+		whatsapp_atencion_count() {
+			let resumen = this.$store.state.whatsapp_chat.resumen
+			return (Number(resumen.mensajes_por_aprobar) || 0) + (Number(resumen.chats_con_seguimiento) || 0)
 		},
 		/**
 		 * El número rojo del ítem Alertas del menú (`budget_function: 'alerts_count'` en

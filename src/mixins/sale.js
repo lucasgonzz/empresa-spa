@@ -200,21 +200,44 @@ export default {
 			return this.$store.state.sale.payment_method_show_option
 		},
 		/**
-		 * Totales del día completo calculados por la API (modo paginado por fecha), o null.
+		 * Totales calculados por la API sobre el conjunto COMPLETO que se está mirando, o null.
 		 *
-		 * null en modo filtrado aunque el store tenga totales guardados: con el buscador general o
-		 * un filtro de columna lo que se ve es `filtered` (todas las fechas), y ahí los totales y
-		 * los conteos de las solapas siguen calculándose en el navegador sobre lo que se ve, como
-		 * hasta ahora. Los totales del servidor describen el día, no la búsqueda.
+		 * Dos fuentes, según el modo de la pantalla:
+		 * - Modo por fecha (sin búsqueda): los del día o rango, que llegan con el listado paginado
+		 *   (`state.totales_del_dia`, solo si el último listado vino paginado).
+		 * - Modo filtrado (buscador general, filtro de columna, búsqueda por N° de factura): los de la
+		 *   BÚSQUEDA (`state.totales_de_busqueda`), solo si el servidor los mandó. Los manda cuando la
+		 *   pantalla de Ventas marca su pedido (getter `cuerpo_extra_de_busqueda` del store) y la API
+		 *   es lo bastante nueva como para entender la marca; incluyen todas las páginas del resultado.
+		 *
+		 * 🔴 null en modo filtrado cuando el servidor NO los mandó (API vieja, que ignora la marca):
+		 * ahí los totales y los conteos de las solapas se siguen calculando en el navegador sobre lo
+		 * que se ve, que es lo que hacía este computed siempre antes del 16/10/2026. Ese null es la
+		 * compatibilidad con una API vieja: no "arreglarlo" devolviendo `totales_del_dia` en modo
+		 * filtrado, que describe el día y no la búsqueda.
 		 *
 		 * @returns {Object|null}
 		 */
 		totales_del_dia() {
 			let state = this.$store.state.sale
-			if (state.paginado_por_fecha && !state.is_filtered) {
+			if (state.is_filtered) {
+				return state.totales_de_busqueda || null
+			}
+			if (state.paginado_por_fecha) {
 				return state.totales_del_dia
 			}
 			return null
+		},
+		/**
+		 * true cuando `totales_del_dia` es el cálculo del servidor para una BÚSQUEDA (modo filtrado con
+		 * totales del servidor) y no el del día. Lo lee Total.vue para que las explicaciones de las
+		 * tarjetas no hablen de un período que, en el buscador, no existe (suma de cualquier fecha).
+		 *
+		 * @returns {Boolean}
+		 */
+		totales_son_de_busqueda() {
+			let state = this.$store.state.sale
+			return !!state.is_filtered && !!state.totales_de_busqueda
 		},
 		sales_to_show() {
 			/*

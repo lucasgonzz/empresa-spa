@@ -152,7 +152,7 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
-				/* Está bajo `can('sale.index.total')`: sin ese permiso el motor lo saltea. */
+				/* El bloque de totales lo ve todo usuario (el chip Total no pide `sale.index.total` desde el 16/10/2026): el motor ya no lo saltea por permisos. */
 				ruta: RUTA_VENTAS,
 				ancla: 'ventas.totales',
 				texto: 'Acá arriba, cuánta plata entró hoy.',

@@ -345,6 +345,25 @@ html.dark-mode
 		.price-type-card__dato--ganancia
 			font-weight: bold
 
+	// Una moneda de la lista en una cuenta con `ventas_en_dolares` (PriceTypeMonedas.vue): la misma
+	// tarjeta que la de una cuenta sin dolares, repetida una vez por moneda. El nombre de la moneda
+	// hace de titulo chico de cada bloque.
+	.moneda-block
+		width: 100%
+
+	.price-type-moneda__nombre
+		font-size: 0.8em
+		font-weight: bold
+		text-transform: uppercase
+		letter-spacing: 0.04em
+		color: var(--color-text-secondary, rgba(0, 0, 0, .55))
+		margin-bottom: 4px
+
+	// Con dolares hay dos interruptores en la misma tarjeta (setear precio final y cotizar desde la
+	// otra moneda): se separan entre si.
+	.price-type-card__interruptor + .price-type-card__interruptor
+		margin-top: 8px
+
 	.price-type-card__excel
 		margin-top: 8px
 		padding-top: 8px

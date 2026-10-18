@@ -417,8 +417,8 @@ export default [
 		// Solo visible con la extensión 'whatsapp' activa (mismo gateo que usa el backend en check_extencion_empresa).
 		if_has_extencion: 'whatsapp',
 		icon: 'whatsapp',
-		/* Badge con la cantidad de mensajes de la IA esperando aprobación (misión sugerencia-ia-como-borrador, 29/9/2026) */
-		budget_function: 'whatsapp_por_aprobar_count',
+		/* Badge con lo que necesita a una persona: mensajes de la IA esperando aprobación (misión sugerencia-ia-como-borrador, 29/9/2026) + chats con un pedido o una consulta del agente sin atender (misión senal-pedidos-y-consultas-del-agente, 16/10/2026) */
+		budget_function: 'whatsapp_atencion_count',
 	},
 	{
 		text: 'Tienda Nube',

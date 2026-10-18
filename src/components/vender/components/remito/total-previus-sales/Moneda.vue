@@ -19,8 +19,13 @@
 			:options="getOptions({key: 'moneda_id', text: 'Moneda'}, null, null, false)"></b-form-select>
 		</b-input-group>
 
+		<!--
+			La cotizacion se ve y se edita SIEMPRE, tambien en cuentas con listas de precio por moneda
+			(pedido de Lucas, 16/10/2026): aunque los items con price_type_monedas traen su precio en
+			su moneda, la venta lleva esta cotizacion y se usa para facturar a ARCA, el costo, el PDF y
+			los articulos sin price_type_monedas.
+		-->
 		<b-input-group
-		v-if="mostrar_input_dolar"
 		class="m-t-10"
 		prepend="USD">
 			<b-form-input
@@ -43,16 +48,6 @@ export default {
 	computed: {
 		show() {
 			return this.user && this.hasExtencion('ventas_en_dolares')
-		},
-		/*
-			El campo de la cotizacion se ve siempre, salvo en las cuentas con listas de precio por
-			moneda (los precios ya vienen en su moneda y el campo no pinta nada)... y salvo que el
-			comercio NO tenga dolar cargado en el sistema: sin dolar por defecto el vendedor no tiene
-			otro lugar donde ponerlo, y una venta en dolares sin cotizacion la API la rechaza.
-		*/
-		mostrar_input_dolar() {
-			return !this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')
-				|| this.valor_dolar_por_defecto === null
 		},
 		valor_dolar: {
 			get() {
@@ -169,8 +164,8 @@ export default {
 		 * el campo) se quedaba en cero y la venta en dolares salia sin con que convertir. Ahora
 		 * null, 0 o vacio se tratan igual: sin cotizacion -> la del sistema.
 		 *
-		 * Sin dolar configurado en el comercio no se inventa nada: queda vacio y el campo USD se ve
-		 * (`mostrar_input_dolar`) para que el vendedor lo cargue.
+		 * Sin dolar configurado en el comercio no se inventa nada: queda vacio y el vendedor lo
+		 * carga en el campo USD, que se ve siempre.
 		 */
 		iniciar_dolar() {
 

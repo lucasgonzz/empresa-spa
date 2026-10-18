@@ -29,6 +29,11 @@
  * (`WhatsappChatHelper::attach_estados_pendientes()` / `WhatsappChat::estado_pendiente()` en
  * empresa-api), así que el tablero queda sincronizado solo, sin pedir nada aparte.
  *
+ * Desde la misión senal-pedidos-y-consultas-del-agente (16/10/2026) hay una segunda fila con dos
+ * tarjetas violetas: «Pedidos para confirmar» y «Consultas pendientes», los chats donde el agente armó un
+ * pedido o prometió «lo consulto y te confirmo» y ninguna persona lo atendió todavía. Salen de
+ * `chat.follow_up`, igual que las primeras tres salen de `estado_pendiente`: mismo array, mismo broadcast.
+ *
  * Desde la misión embeddings-estado-whatsapp-dashboard (15/9/2026) se suman hasta tres tarjetas
  * más con el estado de los embeddings del catálogo (sin generar / desactualizados / generándose),
  * SOLO si el comercio tiene la extensión `whatsapp_ia` (la que habilita que se generen embeddings
@@ -73,6 +78,31 @@ export default {
 					tour: 'whatsapp.tablero_conversaciones_hoy',
 				},
 			]
+
+			// Segunda fila (misión senal-pedidos-y-consultas-del-agente): lo que el agente dejó para que una
+			// persona atienda. Mismo vocabulario que el rojo y el amarillo de arriba, en violeta, y anchas (la
+			// grilla es de 6 columnas: 3 + 3 acá, 2 + 2 + 2 arriba). Solo si la API ya manda el seguimiento: contra
+			// una API vieja mostrarían un «0» engañoso.
+			if (this.$store.getters['whatsapp_chat/follow_up_soportado']) {
+				tarjetas = tarjetas.concat([
+					{
+						key: 'pedidos_para_confirmar',
+						icono: 'bi-bag-check-fill',
+						etiqueta: 'Pedidos para confirmar',
+						valor: this.$store.getters['whatsapp_chat/chats_con_pedido_count'],
+						clase: 'whatsapp-dashboard__tarjeta--seguimiento whatsapp-dashboard__tarjeta--ancha',
+						tour: 'whatsapp.tablero_pedidos_para_confirmar',
+					},
+					{
+						key: 'consultas_pendientes',
+						icono: 'bi-question-circle-fill',
+						etiqueta: 'Consultas pendientes',
+						valor: this.$store.getters['whatsapp_chat/chats_con_consulta_count'],
+						clase: 'whatsapp-dashboard__tarjeta--seguimiento whatsapp-dashboard__tarjeta--ancha',
+						tour: 'whatsapp.tablero_consultas_pendientes',
+					},
+				])
+			}
 
 			if (this.hasExtencion('whatsapp_ia') && this.embeddings_estado_cargado) {
 				tarjetas = tarjetas.concat([
@@ -186,10 +216,14 @@ export default {
 	background: var(--bg-section)
 	padding: 24px
 	display: grid
-	grid-template-columns: repeat(3, 1fr)
+	// Seis columnas y no tres: las tarjetas comunes ocupan dos (tres por fila, como siempre) y las dos
+	// del seguimiento ocupan tres (dos por fila), así 3 + 2 + 3 no deja huecos en ningún ancho, con o
+	// sin las tres tarjetas de embeddings.
+	grid-template-columns: repeat(6, 1fr)
 	gap: 16px
 	align-content: start
 	&__tarjeta
+		grid-column: span 2
 		display: flex
 		align-items: center
 		gap: 14px
@@ -245,6 +279,18 @@ export default {
 			color: var(--wa-verde)
 		.whatsapp-dashboard__valor
 			color: var(--wa-texto)
+	// --- Pedidos para confirmar / Consultas pendientes: violeta -------------------------------
+	// Lo que el agente dejó para que una persona atienda (misión senal-pedidos-y-consultas-del-agente).
+	// Mismo par bg/borde que el chip y el borde de la fila en ChatRow.vue.
+	&__tarjeta--ancha
+		grid-column: span 3
+	&__tarjeta--seguimiento
+		background: var(--wa-seguimiento-bg)
+		border-left-color: var(--wa-seguimiento-borde)
+		.whatsapp-dashboard__icono
+			color: var(--wa-seguimiento-borde)
+		.whatsapp-dashboard__valor
+			color: var(--wa-seguimiento-texto)
 
 // Tablet (768-1024px, ver CLAUDE.md — regla de los tres anchos): todavía entran las tres en
 // fila, solo se acota el padding para que no se aprieten contra la lista de chats.
@@ -258,13 +304,27 @@ export default {
 		&__valor
 			font-size: 1.4rem
 
+// Tablet angosto (768-900px): la columna del tablero mide ~450px y cada tarjeta común (dos de las seis
+// columnas), ~135px: ícono + número + «Conversaciones de hoy» no entran en fila y el texto se sale de la
+// tarjeta (medido en vivo a 820 y 768px, ya pasaba con las tres tarjetas de antes). Se apilan como en el
+// teléfono: ícono arriba, número y etiqueta abajo. Las anchas del seguimiento sí entran en fila.
+@media screen and (min-width: 768px) and (max-width: 900px)
+	.whatsapp-dashboard
+		&__tarjeta:not(.whatsapp-dashboard__tarjeta--ancha)
+			flex-direction: column
+			text-align: center
+			gap: 4px
+		&__tarjeta:not(.whatsapp-dashboard__tarjeta--ancha) &__etiqueta
+			font-size: .72rem
+
 // Teléfono (<768px): la vista se apila (ver views/Whatsapp.vue) y el tablero pasa a ocupar el
-// ancho completo arriba de la lista. Tres tarjetas chicas en fila siguen entrando: son número +
-// etiqueta corta, no hace falta apilarlas también a ellas.
+// ancho completo arriba de la lista. Tres tarjetas chicas en fila siguen entrando (y las dos del
+// seguimiento, de a dos en la fila de abajo): son número + etiqueta corta, no hace falta apilarlas
+// también a ellas.
 @media screen and (max-width: 767px)
 	.whatsapp-dashboard
 		height: auto
-		grid-template-columns: repeat(3, 1fr)
+		grid-template-columns: repeat(6, 1fr)
 		padding: 12px
 		gap: 8px
 		&__tarjeta
