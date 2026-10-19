@@ -1,6 +1,7 @@
 import { numero_o_null, redondear_a_centavos } from '@/utils/recargos_en_precios'
 
 // Decimales de article_budget.price_sin_recargos_de_venta (decimal(25,6)): la base sin recargos.
+// price_sin_descuentos_de_venta (la base sin descuentos, el precio original) es decimal(25,6) tambien.
 const DECIMALES_BASE_SIN_RECARGOS = 6
 
 /**
@@ -57,9 +58,10 @@ const DECIMALES_BASE_SIN_RECARGOS = 6
  * budget/{id} no valida ese total. Redondeando aca, lo que se ve es lo que se guarda.
  *
  * QUE SE CONVIERTE (todo lo que es un importe fijo y NO se vuelve a derivar del catalogo):
- *   - pivot.price y pivot.price_sin_recargos_de_venta de cada renglon guardado (articulos,
- *     servicios, combos y promociones de vinoteca). La base sin recargos tiene que ir en la misma
- *     moneda que el price: getPriceVender() rearma el precio desde ella.
+ *   - pivot.price, pivot.price_sin_recargos_de_venta y pivot.price_sin_descuentos_de_venta de cada
+ *     renglon guardado (articulos, servicios, combos y promociones de vinoteca). Las dos bases (la
+ *     sin recargos y la sin descuentos, o sea el precio original) tienen que ir en la misma moneda
+ *     que el price: getPriceVender() rearma el precio desde ellas.
  *   - el costo del renglon (item.cost y pivot.cost): la API devuelve tal cual el costo que trae el
  *     pivot ("ya cotizado", SaleHelper::getCost), asi que un precio en USD con el costo en pesos
  *     daria una ganancia absurda y dispararia la correccion de "costo de bulto".
@@ -376,6 +378,8 @@ export default {
 
 			pivot.price = this.reexpresar_desde_origen(o.price, origen.dolar, nueva_es_dolar, cotizacion)
 			pivot.price_sin_recargos_de_venta = this.reexpresar_desde_origen(o.base, origen.dolar, nueva_es_dolar, cotizacion, DECIMALES_BASE_SIN_RECARGOS)
+			// La base de los descuentos (el precio original) se convierte igual que la de recargos.
+			pivot.price_sin_descuentos_de_venta = this.reexpresar_desde_origen(o.base_descuentos, origen.dolar, nueva_es_dolar, cotizacion, DECIMALES_BASE_SIN_RECARGOS)
 
 			if (es_articulo) {
 				pivot.cost = this.reexpresar_desde_origen(o.pivot_cost, origen.dolar, nueva_es_dolar, cotizacion)
@@ -449,6 +453,7 @@ function valores_de_renglon(item) {
 	return {
 		price: item.pivot.price,
 		base: item.pivot.price_sin_recargos_de_venta,
+		base_descuentos: item.pivot.price_sin_descuentos_de_venta,
 		pivot_cost: item.pivot.cost,
 		item_cost: item.cost,
 	}
