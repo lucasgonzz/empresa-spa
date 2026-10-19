@@ -83,6 +83,19 @@
 					:buyer="slotProps.model.buyer"></badge-sin-vincular>
 				</div>
 			</template>
+
+			<!--
+				"Ver en el mapa" debajo de "Direccion de envio" del formulario del pedido (misión
+				formas-envio-direcciones-maps, 19/10/2026). `prop_extras` es un punto de extensión
+				ADITIVO de ModelForm (se dibuja debajo de cada campo con `prop` y `model` en el scope):
+				se filtra por la key. No se usa `#address`: ese slot REEMPLAZA el campo entero. El botón
+				se esconde solo en un pedido sin envío o sin dirección.
+			-->
+			<template #prop_extras="extras">
+				<btn-ver-en-mapa
+				v-if="extras.prop.key == 'address'"
+				:model="extras.model"></btn-ver-en-mapa>
+			</template>
 		</view-component>
 	</div>
 </template>
@@ -113,6 +126,7 @@ export default {
 		LimiteCreditoPedido: () => import('@/components/online/modals/orders/LimiteCreditoPedido'),
 		BtnWhatsappChat: () => import('@/components/common/BtnWhatsappChat'),
 		EnvioBtn: () => import('@/components/online/components/orders/envio/EnvioBtn'),
+		BtnVerEnMapa: () => import('@/components/online/components/orders/envio/BtnVerEnMapa'),
 		BadgeSinVincular,
 	},
 	data() {
