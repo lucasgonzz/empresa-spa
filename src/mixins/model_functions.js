@@ -973,6 +973,39 @@ export default {
             return !es_forma_propia_a_convenir(model)
         },
         /**
+         * `v_if_function` de "El costo se coordina con el comprador" (src/models/delivery_zone.js):
+         * la casilla se ofrece solo si la API tiene la columna `delivery_zones.costo_a_convenir`.
+         * Contra una API vieja se tildaría, no se guardaría, y la forma quedaría cobrando el precio
+         * (que además se esconde al tildarla).
+         *
+         * - Forma ya guardada: la API manda la clave si tiene la columna.
+         * - Forma nueva: el modelo se arma con las props de src/models/delivery_zone.js y trae la
+         *   clave siempre, así que no dice nada de la API. Se mira una forma ya cargada en el store
+         *   y, si no hay ninguna, la configuración de la tienda: `ofrecer_envio_zipnova` sale de la
+         *   MISMA migración que `costo_a_convenir` (2026_10_19_100200 de empresa-api). Sin ninguna
+         *   de las dos señales no se ofrece.
+         *
+         * @param {object} prop
+         * @param {object} model La forma de envío.
+         * @returns {boolean}
+         */
+        mostrar_costo_a_convenir(prop, model) {
+            if (model && model.id) {
+                return typeof model.costo_a_convenir != 'undefined'
+            }
+            let store_formas = this.$store.state.delivery_zone
+            let formas = store_formas && Array.isArray(store_formas.models) ? store_formas.models : []
+            if (formas.length) {
+                return typeof formas[0].costo_a_convenir != 'undefined'
+            }
+            let store_configuracion = this.$store.state.online_configuration
+            let configuraciones = store_configuracion && Array.isArray(store_configuracion.models) ? store_configuracion.models : []
+            if (configuraciones.length) {
+                return typeof configuraciones[0].ofrecer_envio_zipnova != 'undefined'
+            }
+            return false
+        },
+        /**
          * Columna "Costo" de la tabla de Formas de envío propias: "A convenir" si el costo se
          * coordina con el comprador, o el precio. Nunca "$ 0" para una forma a convenir: el precio
          * guardado es 0 justamente porque no se cobra en la tienda.

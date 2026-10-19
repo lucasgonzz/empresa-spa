@@ -322,7 +322,8 @@ export default {
 				elige si además del envío por sus formas propias (ABM → Tienda online → Formas de envío
 				propias) ofrece el envío por correo con Zipnova. Destildado, la tienda no ofrece Zipnova
 				aunque el conector esté conectado. La columna es nullable con 1 por defecto: null o
-				ausente = se ofrece (el comportamiento de siempre).
+				ausente = se ofrece (el comportamiento de siempre). Un null se dibuja PRENDIDO: el
+				store le pasa al formulario una copia con 1 (ver src/store/online_configuration.js).
 
 				Solo se ve con "Ofrecer opcion de envio" prendido, y solo si la API manda la clave
 				(`mostrar_ofrecer_envio_zipnova`, src/mixins/model_functions.js): contra una API sin la

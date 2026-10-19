@@ -45,13 +45,18 @@ export default {
 				esconde con un `v_if_function` que lee esta clave, y el modelo del formulario es una
 				copia que Vue no observa (ver ModelForm::al_cambiar_interruptor). `not_show`: en la
 				tabla lo resume la columna "Costo".
+
+				Solo se ofrece si la API tiene la columna (`mostrar_costo_a_convenir`, en
+				src/mixins/model_functions.js): contra una API vieja la casilla se tildaría y no se
+				guardaría, y la forma quedaría cobrando el precio.
 			*/
 			text: 'El costo se coordina con el comprador (no se cobra en la tienda)',
 			key: 'costo_a_convenir',
 			type: 'checkbox',
 			not_show: true,
 			redibujar_al_cambiar: true,
-			description: 'Si lo tildás, la tienda no le cobra nada al comprador por el envío y le muestra "A coordinar con el vendedor". Vos acordás la entrega y el costo con el comprador cuando gestionás el pedido (por WhatsApp o por teléfono). Sirve, por ejemplo, para una forma "Acordar con el vendedor".',
+			v_if_function: 'mostrar_costo_a_convenir',
+			description: 'Si lo tildás, la tienda no le cobra nada al comprador por el envío y le muestra "A coordinar con el vendedor". Vos acordás la entrega y el costo con el comprador cuando gestionás el pedido (por WhatsApp o por teléfono). Sirve, por ejemplo, para una forma "Acordar con el vendedor". Si ya tenés pedidos con esta forma, conviene crear una nueva en lugar de cambiarla: el cambio también se ve en los pedidos anteriores.',
 		},
 		{
 			// Solo cuando la forma cobra un precio fijo (ver `delivery_zone_cobra_precio`, en
