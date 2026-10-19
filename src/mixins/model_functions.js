@@ -4,6 +4,8 @@ import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import db from '@/offline/db'
 import { normalizar_telefono } from '@/utils/whatsapp_phone'
 import { es_perfil_de_ticket } from '@/constants/vender_print_shortcut_options'
+/* Formas de envío del pedido: Zipnova o forma propia, y el costo a convenir (misión formas-envio-direcciones-maps). */
+import { es_forma_propia_a_convenir } from '@/utils/formas_de_envio'
 export default {
     mixins: [select_payment_methods],
     computed: {
@@ -932,6 +934,58 @@ export default {
          */
         mostrar_order_envio_resumen(prop, model) {
             return !!model && Number(model.deliver) === 1
+        },
+        /**
+         * `v_if_function` del Precio de una forma de envío propia (src/models/delivery_zone.js,
+         * misión formas-envio-direcciones-maps, 19/10/2026): solo se carga cuando la forma cobra un
+         * precio fijo. Con "El costo se coordina con el comprador" tildado se esconde, porque la
+         * tienda no cobra nada y la API guarda el precio en 0.
+         *
+         * Va en este mixin GLOBAL por lo mismo que `pdf_column_profile_campo_de_hoja`: showProperty()
+         * también se evalúa en la tabla del ABM, y un v_if_function que no existe ahí rompe la fila.
+         *
+         * @param {object} prop
+         * @param {object} model La forma de envío.
+         * @returns {boolean}
+         */
+        delivery_zone_cobra_precio(prop, model) {
+            return !es_forma_propia_a_convenir(model)
+        },
+        /**
+         * Columna "Costo" de la tabla de Formas de envío propias: "A convenir" si el costo se
+         * coordina con el comprador, o el precio. Nunca "$ 0" para una forma a convenir: el precio
+         * guardado es 0 justamente porque no se cobra en la tienda.
+         *
+         * @param {object} model La forma de envío.
+         * @returns {string}
+         */
+        getDeliveryZoneCostoTexto(model) {
+            if (!model) {
+                return ''
+            }
+            if (es_forma_propia_a_convenir(model)) {
+                return 'A convenir'
+            }
+            return this.price(model.price)
+        },
+        /**
+         * `v_if_function` de "Ofrecer envío por correo con Zipnova" en la configuración de la
+         * tienda (src/models/online_configuration.js): solo con "Ofrecer opcion de envio en la
+         * Tienda" prendido, y solo si la API manda la columna `ofrecer_envio_zipnova`.
+         *
+         * 🔴 Lo segundo no es decorativo. Contra una API vieja (sin la columna) la clave no viene,
+         * el interruptor se dibujaría apagado (`Number(undefined) === 1` es falso) y la tienda
+         * seguiría ofreciendo Zipnova: el dueño leería lo contrario de lo que pasa.
+         *
+         * @param {object} prop
+         * @param {object} model La configuración de la tienda online.
+         * @returns {boolean}
+         */
+        mostrar_ofrecer_envio_zipnova(prop, model) {
+            if (!model || Number(model.has_delivery) !== 1) {
+                return false
+            }
+            return typeof model.ofrecer_envio_zipnova != 'undefined'
         },
         /**
          * "Descuentos y recargos del cliente" del formulario del pedido (misión

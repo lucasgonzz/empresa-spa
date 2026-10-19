@@ -311,6 +311,29 @@ export default {
 			text: 'Ofrecer opcion de envio en la Tienda',
 			key: 'has_delivery',
 			type: 'checkbox',
+			// Redibuja el formulario para que "Ofrecer envío por correo con Zipnova" (que depende de
+			// esta clave por `v_if_function`) aparezca o desaparezca en el momento: el modelo del
+			// formulario es una copia que Vue no observa (ver ModelForm::al_cambiar_interruptor).
+			redibujar_al_cambiar: true,
+		},
+		{
+			/*
+				Misión formas-envio-direcciones-maps (19/10/2026): con el envío prendido, el comercio
+				elige si además del envío por sus formas propias (ABM → Tienda online → Formas de envío
+				propias) ofrece el envío por correo con Zipnova. Destildado, la tienda no ofrece Zipnova
+				aunque el conector esté conectado. La columna es nullable con 1 por defecto: null o
+				ausente = se ofrece (el comportamiento de siempre).
+
+				Solo se ve con "Ofrecer opcion de envio" prendido, y solo si la API manda la clave
+				(`mostrar_ofrecer_envio_zipnova`, src/mixins/model_functions.js): contra una API sin la
+				columna el interruptor se vería apagado mientras la tienda sigue ofreciendo Zipnova.
+			*/
+			text: 'Ofrecer envío por correo con Zipnova',
+			key: 'ofrecer_envio_zipnova',
+			type: 'checkbox',
+			value: 1,
+			v_if_function: 'mostrar_ofrecer_envio_zipnova',
+			description: 'Requiere tener Zipnova conectado en ABM → Integraciones. Destildalo para ofrecer solo tus formas de envío propias.',
 		},
 		{
 			text: 'Mostrar boton "Comprar ahora" en la ficha del articulo',
