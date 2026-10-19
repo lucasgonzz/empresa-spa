@@ -60,6 +60,10 @@
 	:filtros_fijos_por_defecto="filtros_fijos_por_defecto"
 	model_name="article">
 
+		<template #model_modal_header="props">
+			<product-facts-proposal :model="props.model"></product-facts-proposal>
+		</template>
+
 		<template #excel_drop_down_options>
 			<excel-dropdown-options></excel-dropdown-options>
 		</template>
@@ -175,6 +179,7 @@ export default {
 	mixins: [payment_method_discounts_addresses_columns, actualizar_lista_de_articulos],
 	name: 'Lisado',
 	components: {
+		ProductFactsProposal: () => import('@/components/listado/components/ProductFactsProposal'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 
 
