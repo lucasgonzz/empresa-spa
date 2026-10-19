@@ -36,6 +36,62 @@ export default {
 			is_price: true,
 			show: true,
 		},
+		/*
+		 * Cuotas de Mercado Pago (mision tienda-cuotas-mercado-pago, 15/10/2026). Cuatro columnas de
+		 * `orders` que escribe `tienda-api` (las crea la migracion 2026_10_15_100000), SOLO LECTURA y
+		 * solo en el detalle (`not_show`: no son columnas de la tabla):
+		 *
+		 *  - `cuotas` y `cuotas_recargo`: lo que el comprador ELIGIO en el checkout y el recargo neto
+		 *    (%) con el que se cobro, resuelto por el servidor de la tienda al crear el pedido.
+		 *  - `cuotas_cobradas` y `medio_de_pago_cobrado`: lo que Mercado Pago dice que se COBRO de
+		 *    verdad (lo anota el webhook). Checkout Pro no puede forzar la cantidad de cuotas ni
+		 *    excluir "dinero en cuenta", asi que lo cobrado puede diferir de lo elegido.
+		 *
+		 * 🔴 Cada fila se ve SOLO si el pedido trae ese dato (`mostrar_order_dato_de_cuotas`, en
+		 * src/mixins/model_functions.js): un pedido viejo, de contado, de otro método de pago o de un
+		 * cliente cuya API todavía no migró se ve exactamente como antes, sin filas vacías. Es
+		 * `v_if_function` y no `v_if` porque el `v_if` de array no filtra nada (ver "Envío elegido").
+		 *
+		 * `medio_de_pago_cobrado` guarda el `payment_type_id` crudo de Mercado Pago (credit_card,
+		 * debit_card, account_money...) y se muestra traducido por `getOrderMedioDePagoCobrado`.
+		 */
+		{
+			text: 'Cuotas elegidas',
+			key: 'cuotas',
+			type: 'number',
+			only_show: true,
+			not_show: true,
+			v_if_function: 'mostrar_order_dato_de_cuotas',
+			description: 'La cantidad de cuotas que el comprador eligió en el checkout de la tienda al pagar con Mercado Pago. Solo aparece en los pedidos en los que el comprador eligió pagar en cuotas.',
+		},
+		{
+			text: 'Recargo por cuotas (%)',
+			key: 'cuotas_recargo',
+			type: 'number',
+			only_show: true,
+			not_show: true,
+			v_if_function: 'mostrar_order_dato_de_cuotas',
+			description: 'El recargo neto (recargo menos descuento de la cuota, en porcentaje) con el que se calculó el valor de las cuotas elegidas. Se aplicó sobre todo lo que se cobró (artículos, envío y demás) y viajó a Mercado Pago como un ítem aparte. Hoy el total del pedido en el sistema no lo incluye.',
+		},
+		{
+			text: 'Cuotas cobradas',
+			key: 'cuotas_cobradas',
+			type: 'number',
+			only_show: true,
+			not_show: true,
+			v_if_function: 'mostrar_order_dato_de_cuotas',
+			description: 'Las cuotas con las que Mercado Pago dice que se cobró de verdad (lo anota el aviso de pago). Puede ser distinto de las cuotas elegidas: en Mercado Pago el comprador puede pagar en menos cuotas o con dinero en cuenta, siempre por el mismo total.',
+		},
+		{
+			text: 'Medio de pago cobrado',
+			key: 'medio_de_pago_cobrado',
+			type: 'text',
+			only_show: true,
+			not_show: true,
+			function: 'getOrderMedioDePagoCobrado',
+			v_if_function: 'mostrar_order_dato_de_cuotas',
+			description: 'El tipo de medio de pago con el que Mercado Pago cobró (tarjeta de crédito, tarjeta de débito, dinero en cuenta, etc.). Lo anota el aviso de pago, así que solo aparece en los pedidos que ya se cobraron por Mercado Pago.',
+		},
 		{
 			text: 'Estado',
 			key: 'order_status_id',

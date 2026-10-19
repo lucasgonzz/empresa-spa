@@ -8,6 +8,8 @@ v-if="view == 'contraseña'">
 	label-for="current-password">
 		<b-form-input
 		id="current-password"
+		type="password"
+		autocomplete="current-password"
 		v-model="form.current_password"
 		@keyup.enter="updatePassword"
 		placeholder="Ingrese la contraseña actual"></b-form-input>
@@ -17,6 +19,8 @@ v-if="view == 'contraseña'">
 	label-for="new-password">
 		<b-form-input
 		id="new-password"
+		type="password"
+		autocomplete="new-password"
 		v-model="form.new_password"
 		@keyup.enter="updatePassword"
 		placeholder="Ingrese la nueva contraseña"></b-form-input>
@@ -26,6 +30,8 @@ v-if="view == 'contraseña'">
 	label-for="confirm-new-password">
 		<b-form-input
 		id="confirm-new-password"
+		type="password"
+		autocomplete="new-password"
 		v-model="form.confirm_new_password"
 		@keyup.enter="updatePassword"
 		placeholder="Confirme la nueva contraseña"></b-form-input>

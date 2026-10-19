@@ -172,6 +172,11 @@ export default {
 			key: 'precio_base_incluye_tarjeta',
 			type: 'checkbox',
 			value: 0,
+			// Solo lo ve el dueño (mision destrabar-videos-centro, 16/10/2026), igual que
+			// aplicar_descuentos_proveedor_al_asignar: vive en la fila del dueño y el guard de
+			// UserController::update() no deja que un empleado lo escriba. Sin esto el empleado veria
+			// su propia columna (siempre 0), lo prenderia, diria "Actualizado" y volveria apagado.
+			v_if_function: 'is_owner_v_if_function',
 			descriptions:
 			[
 				'Si se activa, el precio final del articulo ya incluye el recargo del metodo de pago mas caro configurado.',
@@ -227,6 +232,24 @@ export default {
 			[
 				'Define como se redondean los precios finales de venta.',
 				'Se aplica al recalcular los precios: al elegir una opcion distinta se vuelven a calcular los precios de todos los articulos.',
+			],
+		},
+		/*
+		 * Sentido del redondeo por centenas. No es un sexto modo del select: es una columna aparte
+		 * (users.redondear_centenas_para_arriba) que solo tiene efecto con el modo "centenas", asi
+		 * que solo se muestra cuando ese modo esta elegido. Apagada (default) el redondeo va a la
+		 * centena mas cercana; prendida, siempre hacia arriba (ceil).
+		 */
+		{
+			text: 'Redondear centenas hacia arriba',
+			key: 'redondear_centenas_para_arriba',
+			type: 'checkbox',
+			value: 0,
+			v_if_function: 'mostrar_centenas_para_arriba_si_redondea_por_centenas_v_if_function',
+			descriptions:
+			[
+				'Si se activa, el redondeo de a 100 sube siempre a la centena de arriba (por ejemplo $159.907 queda en $160.000) en lugar de ir a la mas cercana ($159.900).',
+				'Al cambiar esta opcion se vuelven a calcular los precios de todos los articulos.',
 			],
 		},
 		{
@@ -359,9 +382,12 @@ export default {
 		{
 			text: 'Direccion comercial para mostrar en los comprobantes de venta',
 			key: 'address_company',
+			// Ayuda corregida en la mision destrabar-videos-centro (16/10/2026): ningun PDF de venta lee
+			// hoy este dato (el encabezado toma el domicilio comercial de los datos de ARCA), asi que la
+			// ayuda vieja ("se mostrara siempre en todos los comprobantes") prometia algo que no pasa.
 			descriptions: [
-				'Si completa este dato, se mostrara siempre en todos los comprobantes de venta',
-				'Si trabaja con sucursales, se mostrara junto con la direccion de la sucursal de donde se hizo la venta',
+				'Este dato queda guardado en tu perfil, pero por ahora NO se imprime en los comprobantes de venta.',
+				'El domicilio que sale en el encabezado de facturas y remitos es el domicilio comercial de tus datos de facturacion (ARCA).',
 			],
 			type: 'text',
 		},
@@ -369,6 +395,10 @@ export default {
 		{
 			text: 'Mostrar la direccion de todas las sucursales en los comprobantes de venta',
 			key: 'all_addresses_in_sale_pdf',
+			// Misma correccion que la de address_company: hoy ningun PDF de venta lee esta opcion.
+			descriptions: [
+				'Por ahora esta opcion no cambia lo que se imprime en los comprobantes de venta.',
+			],
 			type: 'checkbox',
 		},
 		{

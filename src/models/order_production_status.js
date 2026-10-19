@@ -9,7 +9,7 @@ export default {
 			show: true,
 		},
 		{
-			text: 'Pocision',
+			text: 'Posición',
 			key: 'position',
 			type: 'number',
 			value: '',

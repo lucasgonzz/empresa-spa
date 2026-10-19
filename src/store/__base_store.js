@@ -104,6 +104,34 @@ export default function __base_store(options = {}) {
 			// cualquier orden, y el guard es lo unico que garantiza que gane la mas nueva.
 			consulta_vigente_token: 0,
 
+			// Token de la "descarga de models" vigente: identifica a la cadena de `_getModels` (pagina 1, 2,
+			// 3...) que tiene derecho a escribir en `models`. Lo incrementa `incrementar_descarga_de_models_
+			// token` cada vez que arranca `getModels` (el base y el wrapper de localStorage de `article`).
+			// Cada cadena captura el valor vigente al empezar, se lo pasa a sus paginas siguientes y, cuando
+			// llega una respuesta, solo escribe si el token sigue siendo el suyo.
+			//
+			// 🔴 Guarda contra la carrera medida el 13/10/2026 (T0.9 del relevamiento de demo2 4.3.9): el
+			// click en el menu (nav.js::setRoute) y el created() de la pantalla piden `getModels` casi a la
+			// vez, porque la guarda `!models.length` de la pantalla no protege mientras la primera respuesta
+			// sigue en vuelo. En un store con `use_per_page` (`provider`, `client`, `article`,
+			// `sync_to_tn_article`) las dos cadenas comparten `state.page` y cada respuesta
+			// hace `addModels` (concat): quedaba 20 + 20 = 40 filas, cada proveedor dos veces. En los stores
+			// que no paginan `setModels` reemplaza y el solape no se notaba.
+			//
+			// Con una sola cadena en vuelo el token no cambia y el comportamiento es el de siempre. Con dos,
+			// la respuesta de la cadena vieja se descarta entera (no toca `models`, `page` ni `loading`, y
+			// no encadena la pagina siguiente) y gana la ultima en arrancar.
+			//
+			// 🔴 NO reutilizar `consulta_vigente_token`: a ese lo incrementan tambien runFilter y
+			// runGlobalSearch, asi que una busqueda tipeada mientras baja el catalogo cortaria la descarga
+			// de `models` a medias. Son dos intenciones distintas y cada una lleva su propio token.
+			//
+			// OJO, no lo cubre todo: `panel_control` tambien es `use_per_page`, pero es un store plano (no
+			// sale de este factory) con su propio getModels/_getModels, asi que este token no lo alcanza y su
+			// solape sigue siendo posible. Tampoco se consulta en `sale` ni en `whatsapp_bot_config`, que
+			// traen su `_getModels` propio (ahi el token se incrementa y no se mira: inocuo).
+			descarga_de_models_token: 0,
+
 			delete: null,
 			delete_image_prop: null,
 			delete_image_model: null,
@@ -184,6 +212,19 @@ export default function __base_store(options = {}) {
 			// columnas de saldo (el backend solo lo calcula si la tabla tiene `saldo_pesos`) y para
 			// cuando todavía no corrió ninguna búsqueda.
 			saldos_filtrados: null,
+
+			// Totales que el SERVIDOR calculó para la busqueda vigente, sobre el conjunto completo y no
+			// sobre la pagina que se ve. Los llenan runGlobalSearch y runFilter con `res.data.totales`.
+			// `null` cuando la respuesta no los trae: es lo que pasa en TODOS los modelos salvo cuando el
+			// store concreto manda una marca en el pedido a traves del getter `cuerpo_extra_de_busqueda`
+			// (hoy solo `sale`, en la pantalla de Ventas, ver src/store/sale/index.js) y la API es lo
+			// bastante nueva como para responderla. Tambien es `null` con una API vieja, que ignora la
+			// marca: el que lo lee (mixins/sale.js) vuelve entonces al calculo del navegador de siempre.
+			//
+			// 🔴 Se vuelve a null en los mismos lugares donde se resetea `saldos_filtrados` (los dos
+			// getModels): son el mismo tipo de dato, "lo que calculo el backend para la busqueda vigente",
+			// y no tiene que sobrevivir a una busqueda que ya no esta en pantalla.
+			totales_de_busqueda: null,
 
 			/**
 			 * Origen del último dropdown masivo (filtrados vs seleccionados).
@@ -399,6 +440,18 @@ export default function __base_store(options = {}) {
 		incrementar_consulta_vigente_token(state) {
 			state.consulta_vigente_token++
 		},
+		/**
+		 * Incrementa el token de la "descarga de models" vigente (ver doc completa en
+		 * `state.descarga_de_models_token`). La llaman `getModels` (base y wrapper de localStorage) al
+		 * arrancar, ANTES de pedir la primera pagina, para que cualquier cadena de paginas anterior que
+		 * siga en vuelo quede vencida y descarte su respuesta cuando llegue.
+		 *
+		 * @param {Object} state Estado del modulo.
+		 * @returns {void}
+		 */
+		incrementar_descarga_de_models_token(state) {
+			state.descarga_de_models_token++
+		},
 		add(state, value) {
 			let index = state.models.findIndex(item => {
 				return item.id == value.id
@@ -467,6 +520,21 @@ export default function __base_store(options = {}) {
 			})
 			if (index != -1) {
 				state.filtered.splice(index, 1)
+			}
+
+			// Catalogo liviano (`options`): `add` lo mantiene al dia cuando esta cargado, pero el borrado no
+			// lo hacia, asi que un registro borrado seguia ofreciendose en los selectores que leen `options`
+			// (el filtro fijo de Proveedor / Cliente del buscador general, EndozarCheque, SelectProvider...)
+			// hasta recargar la pagina. Elegirlo filtraba articulos que siguen apuntando a ese registro.
+			// Misma guarda que la de `models` de arriba: sin el registro en la lista no se borra nada
+			// (`splice(-1, 1)` se llevaria el ultimo).
+			if (state.options_loaded) {
+				index = state.options.findIndex(item => {
+					return item.id == state.delete.id
+				})
+				if (index != -1) {
+					state.options.splice(index, 1)
+				}
 			}
 
 			if (state.selected_model && state.selected_model[state.plural_model_name]) {
@@ -548,6 +616,17 @@ export default function __base_store(options = {}) {
 		 */
 		setSaldosFiltrados(state, value) {
 			state.saldos_filtrados = value
+		},
+		/**
+		 * Persiste (o limpia, con `null`) los totales que el backend calculó para la búsqueda vigente.
+		 * Ver la doc de `totales_de_busqueda` en el state. Cualquier valor falsy se guarda como `null`
+		 * para que quien lo lea tenga un solo "no hay" que preguntar.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Object|null} value El objeto `totales` de la respuesta, o `null`.
+		 */
+		set_totales_de_busqueda(state, value) {
+			state.totales_de_busqueda = value ? value : null
 		},
 		addFiltered(state, value) {
 			state.filtered = state.filtered.concat(value)
@@ -720,6 +799,10 @@ export default function __base_store(options = {}) {
 			// invalida cualquier runFilter/runGlobalSearch que siga en vuelo de la intencion anterior.
 			// Ver doc completa en `state.consulta_vigente_token`.
 			commit('incrementar_consulta_vigente_token')
+			// Arranca una descarga nueva de `models`: invalida cualquier cadena de paginas anterior que
+			// siga en vuelo (ver doc completa en `state.descarga_de_models_token`). Va ANTES del reseteo de
+			// page/models y del dispatch de `_getModels`, que es quien captura el token.
+			commit('incrementar_descarga_de_models_token')
 			// Con el modo selección manual activo, lo tildado a mano se acumula entre búsquedas: no
 			// se pisa acá. Se limpia al apagar el modo (BtnSeleccion.vue) o al salir del módulo
 			// (beforeRouteLeave de cada vista), nunca por pedir datos de vuelta.
@@ -729,6 +812,10 @@ export default function __base_store(options = {}) {
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
 			commit('setSaldosFiltrados', null)
+			// Mismo criterio para los totales de la busqueda (ver `state.totales_de_busqueda`): cargar
+			// los modelos del dia/modo vuelve a un listado sin busqueda, y los totales de la anterior
+			// ya no describen nada de lo que se ve.
+			commit('set_totales_de_busqueda', null)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
 			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
@@ -744,6 +831,14 @@ export default function __base_store(options = {}) {
 		_getModels({commit, state, dispatch}, payload = {}) {
 			/** Cuántas páginas ya se pidieron en esta corrida del encadenado (arranca en 1). */
 			let intentos = payload.intentos || 1
+			/**
+			 * Token de la descarga a la que pertenece esta pagina (ver `state.descarga_de_models_token`).
+			 * La primera pagina lo toma del state, que `getModels` acaba de incrementar; las siguientes lo
+			 * reciben por `payload.token` de la pagina anterior, para que toda la cadena lleve el mismo.
+			 * Se compara contra `undefined` y no por truthiness: un `_getModels` despachado sin pasar por
+			 * `getModels` podria traer token 0, que es un valor valido.
+			 */
+			let token = payload.token !== undefined ? payload.token : state.descarga_de_models_token
 			commit('setLoading', true)
 			let url = '/api/' + generals.methods.routeString(state.model_name)
 			if (state.plural_model_name) {
@@ -769,6 +864,12 @@ export default function __base_store(options = {}) {
 				skip_global_error_event: state.omitir_cartel_de_conexion_en_listado,
 			})
 			.then(res => {
+				// Respuesta de una descarga vencida: otra `getModels` arranco mientras esta pagina viajaba.
+				// Se descarta entera (ni `models`, ni `page`, ni `loading`, ni pagina siguiente): la cadena
+				// vigente es la duena de todo eso y es la que cierra el `loading` al terminar.
+				if (state.descarga_de_models_token !== token) {
+					return
+				}
 				if (state.use_per_page) {
 					let loaded_models = res.data.models.data
 					if (res.data.models.current_page == 1) {
@@ -796,7 +897,7 @@ export default function __base_store(options = {}) {
 							commit('setLoading', false)
 							commit('setPage', 1)
 						} else {
-							dispatch('_getModels', {intentos: intentos + 1})
+							dispatch('_getModels', {intentos: intentos + 1, token: token})
 						}
 					} else {
 						commit('setLoading', false)
@@ -808,6 +909,12 @@ export default function __base_store(options = {}) {
 				}
 			})
 			.catch(err => {
+				// Mismo descarte que en el `.then`: el error de una cadena vencida no le apaga el `loading`
+				// a la vigente. Se loguea igual para no perder el rastro.
+				if (state.descarga_de_models_token !== token) {
+					console.log(err)
+					return
+				}
 				commit('setLoading', false)
 				console.log(err)
 			})
@@ -903,12 +1010,16 @@ export default function __base_store(options = {}) {
 		 * Ejecuta búsqueda filtrada (POST search) con los criterios actuales del store.
 		 * Esto permite re-ejecutar el filtro luego de operaciones masivas (ej: eliminar seleccionados).
 		 *
-		 * @param {Object} context commit, state
+		 * Si el store del modelo define el getter `cuerpo_extra_de_busqueda`, lo que devuelva se suma al
+		 * body del POST (ver `cuerpo_extra_de_busqueda` más abajo, en runGlobalSearch), y la clave
+		 * `totales` de la respuesta, si viene, se guarda en `state.totales_de_busqueda`.
+		 *
+		 * @param {Object} context commit, state, getters
 		 * @param {Object} payload
 		 * @param {Number|null} payload.page Página a consultar (si no viene, usa state.filter_page).
 		 * @returns {Promise}
 		 */
-		runFilter({commit, state}, payload = {}) {
+		runFilter({commit, state, getters}, payload = {}) {
 			/** Página objetivo: por defecto, la actual del store. */
 			let page = (payload && payload.page) ? payload.page : state.filter_page
 			/** Cantidad por página para resultados filtrados (alineado con backend search). */
@@ -925,11 +1036,20 @@ export default function __base_store(options = {}) {
 			commit('auth/setMessage', 'Filtrando ' + plural_model_name, {root: true})
 			commit('auth/setLoading', true, {root: true})
 
-			return axios.post('/api/search/' + generals.methods.routeString(state.model_name) + '/null/1?page=' + page, {
+			/** Cuerpo del POST. Sin getter `cuerpo_extra_de_busqueda` es EXACTAMENTE el de siempre. */
+			let cuerpo = {
 				filters: state.filters,
 				papelera: false,
 				per_page: per_page,
-			})
+			}
+			// Gancho opt-in del store concreto (ver la doc completa en runGlobalSearch). Los stores que
+			// no definen el getter devuelven `undefined` acá y no se les agrega ni una clave.
+			let cuerpo_extra = getters.cuerpo_extra_de_busqueda
+			if (cuerpo_extra) {
+				Object.assign(cuerpo, cuerpo_extra)
+			}
+
+			return axios.post('/api/search/' + generals.methods.routeString(state.model_name) + '/null/1?page=' + page, cuerpo)
 				.then(res => {
 					// El overlay de carga se apaga siempre, gane o pierda la carrera: nada mas lo
 					// prende a partir de aca, y dejarlo pisado con "Filtrando..." serio peor que el bug
@@ -952,6 +1072,11 @@ export default function __base_store(options = {}) {
 					commit('setFiltered', rows)
 					commit('setTotalFilterPages', res.data.last_page)
 					commit('setTotalFilterResults', res.data.total)
+					// Totales del universo buscado completo, si el backend los mandó (solo cuando este
+					// pedido llevó la marca del getter `cuerpo_extra_de_busqueda`). Con una API vieja o sin
+					// marca la clave no está y queda `null`. Va acá, junto al resto del `.then` vigente, y
+					// nunca antes del guard de carrera de arriba: una respuesta vencida no escribe nada.
+					commit('set_totales_de_busqueda', res.data.totales || null)
 					// Un filtro real del formulario de filtros nunca es el listado por defecto.
 					commit('set_listado_por_defecto', false)
 				})
@@ -968,7 +1093,14 @@ export default function __base_store(options = {}) {
 		 * Persiste el payload completo en el store para que la paginación pueda repetir la misma
 		 * búsqueda solo pisando la página, sin volver a armar props/relation_props/extra_filters.
 		 *
-		 * @param {Object} context commit, state
+		 * Gancho opt-in por store (getter `cuerpo_extra_de_busqueda`): si el store concreto lo define y
+		 * devuelve un objeto, esas claves se suman al body del POST. Existe para que una pantalla pueda
+		 * marcar su pedido ("esto lo hace la pantalla de Ventas") sin meter lógica de un módulo dentro
+		 * de este factory común. Los stores que no lo definen —todos menos `sale`— mandan el MISMO body
+		 * de siempre, clave por clave. La respuesta puede traer `totales` (cálculo del servidor sobre
+		 * todas las páginas), que se guarda en `state.totales_de_busqueda`.
+		 *
+		 * @param {Object} context commit, state, getters
 		 * @param {Object} payload
 		 * @param {Number} [payload.page] Página a consultar (si no viene, usa state.filter_page).
 		 * @param {String} [payload.query_value] Criterio de texto. Si el payload no trae `props`
@@ -987,7 +1119,7 @@ export default function __base_store(options = {}) {
 		 *   dispara solo al entrar al módulo y no debería sentirse como una búsqueda del usuario.
 		 * @returns {Promise}
 		 */
-		runGlobalSearch({commit, state}, payload = {}) {
+		runGlobalSearch({commit, state, getters}, payload = {}) {
 			// Esta llamada pasa a ser la intencion vigente (ver doc de consulta_vigente_token), sea
 			// busqueda nueva o cambio de pagina: las dos formas pueden solaparse con un cambio de
 			// fecha (getModels) o entre si. Se captura el token DESPUES de incrementarlo: es el numero
@@ -1114,6 +1246,22 @@ export default function __base_store(options = {}) {
 			let cuerpo = Object.assign({}, search_payload, {per_page: per_page, filters: column_filters, extra_filters: extra_filters_request})
 			delete cuerpo.page
 
+			// Gancho opt-in del store concreto: claves extra que se suman al cuerpo (ver la doc de la
+			// action). Hoy lo define solo `sale`, y solo con el módulo 'ventas' activo, para marcar que el
+			// pedido lo hace la pantalla de Ventas.
+			//
+			// 🔴 Va DESPUÉS del `delete cuerpo.page` y se lee del getter EN CADA request, igual que los
+			// filtros de columna y los de barra: describe lo que la pantalla tiene puesto ahora, no la
+			// búsqueda persistida en `global_search_payload`. Si viajara adentro de ese payload, un filtro
+			// de pantalla que el usuario cambió seguiría aplicándose al paginar.
+			//
+			// Para cualquier store sin el getter, `getters.cuerpo_extra_de_busqueda` es `undefined` y el
+			// cuerpo queda como estaba, byte a byte.
+			let cuerpo_extra = getters.cuerpo_extra_de_busqueda
+			if (cuerpo_extra) {
+				Object.assign(cuerpo, cuerpo_extra)
+			}
+
 			return axios.post(
 				'/api/global-search/' + generals.methods.routeString(state.model_name) + '?page=' + page,
 				cuerpo
@@ -1143,7 +1291,11 @@ export default function __base_store(options = {}) {
 					let rows = (res.data.models && res.data.models.data) ? res.data.models.data : []
 					// Con selección manual activa, cada búsqueda/filtro nuevo NO pisa lo ya tildado
 					// (ver el mismo guard en getModels de acá arriba).
-					if (!state.is_selecteable) {
+					//
+					// 🔴 `conservar_seleccion` lo manda el refresco silencioso de Ventas (misión
+					// alcance-de-ventas-caminos-faltantes): volver a pedir la MISMA página de la búsqueda después de
+					// editar una venta no tiene que destildar lo que el usuario había seleccionado.
+					if (!state.is_selecteable && !(payload && payload.conservar_seleccion)) {
 						commit('setSelected', [])
 					}
 					commit('setFilterPage', page)
@@ -1154,6 +1306,12 @@ export default function __base_store(options = {}) {
 					// Suma de saldos del universo filtrado completo (sin paginar), calculada en el
 					// backend. `null` en los modelos que no tienen columnas de saldo.
 					commit('setSaldosFiltrados', res.data.saldos || null)
+					// Totales del universo buscado completo, calculados por el backend (ver
+					// `state.totales_de_busqueda`). Solo vienen cuando el pedido llevó la marca del getter
+					// `cuerpo_extra_de_busqueda` y la API la entiende; si no, queda `null`. Está dentro del
+					// `.then` vigente, o sea DESPUÉS del guard de carrera: una respuesta que perdió la
+					// carrera no pisa los totales de la búsqueda que sí está en pantalla.
+					commit('set_totales_de_busqueda', res.data.totales || null)
 					// Marca que lo que se ve salio del buscador general de texto libre y NO de un filtro
 					// estructurado. El dropdown del embudo lo lee para deshabilitar Actualizar/Eliminar masivos
 					// (OptionsDropdown.vue, ocultar_actualizar_eliminar_por_filtro).
@@ -1378,6 +1536,10 @@ export default function __base_store(options = {}) {
 			// token`): cambiar de fecha/rango/modo es una intencion nueva del usuario e invalida
 			// cualquier runFilter/runGlobalSearch que siga en vuelo de la intencion anterior.
 			commit('incrementar_consulta_vigente_token')
+			// Arranca una descarga nueva de `models`: invalida cualquier cadena de paginas anterior que
+			// siga en vuelo (ver doc completa en `state.descarga_de_models_token`). Va ANTES del reseteo de
+			// page/models y del dispatch de `_getModels`, que es quien captura el token.
+			commit('incrementar_descarga_de_models_token')
 			// Mismo guard que en el getModels base: con selección manual activa, no se pisa lo
 			// tildado a mano.
 			if (!state.is_selecteable) {
@@ -1386,6 +1548,10 @@ export default function __base_store(options = {}) {
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
 			commit('setSaldosFiltrados', null)
+			// Mismo criterio para los totales de la busqueda (ver `state.totales_de_busqueda`): cargar
+			// los modelos del dia/modo vuelve a un listado sin busqueda, y los totales de la anterior
+			// ya no describen nada de lo que se ve.
+			commit('set_totales_de_busqueda', null)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
 			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
@@ -1413,6 +1579,14 @@ export default function __base_store(options = {}) {
 			 */
 			/** Cuántas páginas ya se pidieron en esta corrida del encadenado (arranca en 1). */
 			let intentos = payload.intentos || 1
+			/**
+			 * Token de la descarga a la que pertenece esta pagina (ver `state.descarga_de_models_token`).
+			 * La primera pagina lo toma del state, que `getModels` acaba de incrementar; las siguientes lo
+			 * reciben por `payload.token` de la pagina anterior, para que toda la cadena lleve el mismo.
+			 * Se compara contra `undefined` y no por truthiness: un `_getModels` despachado sin pasar por
+			 * `getModels` podria traer token 0, que es un valor valido.
+			 */
+			let token = payload.token !== undefined ? payload.token : state.descarga_de_models_token
 			commit('setLoading', true)
 			let url = '/api/' + generals.methods.routeString(state.model_name)
 			if (state.plural_model_name) {
@@ -1442,6 +1616,12 @@ export default function __base_store(options = {}) {
 			}
 			return axios.get(url)
 				.then(res => {
+					// Respuesta de una descarga vencida: otra `getModels` arranco mientras esta pagina viajaba.
+					// Se descarta entera (ni `models`, ni `page`, ni `loading`, ni pagina siguiente): la cadena
+					// vigente es la duena de todo eso y es la que cierra el `loading` al terminar.
+					if (state.descarga_de_models_token !== token) {
+						return
+					}
 					if (state.use_per_page) {
 						let loaded_models = res.data.models.data
 						if (res.data.models.current_page == 1) {
@@ -1472,7 +1652,7 @@ export default function __base_store(options = {}) {
 							backend ya devuelve current_page y last_page en la misma respuesta.
 						*/
 						if (res.data.models.current_page < res.data.models.last_page && intentos < TOPE_PAGINAS_SEGURIDAD) {
-							dispatch('_getModels', {intentos: intentos + 1})
+							dispatch('_getModels', {intentos: intentos + 1, token: token})
 						} else {
 							if (res.data.models.current_page < res.data.models.last_page) {
 								console.log('se corto la descarga de ' + state.model_name + ' por alcanzar el tope de seguridad de ' + TOPE_PAGINAS_SEGURIDAD + ' paginas (revisar last_page del backend)')
@@ -1494,6 +1674,12 @@ export default function __base_store(options = {}) {
 					}
 				})
 				.catch(err => {
+					// Mismo descarte que en el `.then`: el error de una cadena vencida no le apaga el `loading`
+					// a la vigente. Se loguea igual para no perder el rastro.
+					if (state.descarga_de_models_token !== token) {
+						console.log(err)
+						return
+					}
 					commit('setLoading', false)
 					console.log(err)
 				})

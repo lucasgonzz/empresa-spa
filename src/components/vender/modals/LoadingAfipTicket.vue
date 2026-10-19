@@ -86,6 +86,9 @@ export default {
 
 #loading-afip-ticket
 	width: 500px
+	// En un teléfono no entra: sin tope, la tarjeta roja de un rechazo de ARCA (que queda abierta
+	// hasta "Cerrar") se cortaba por la izquierda (misión destrabar-videos-centro, 16/10/2026).
+	max-width: calc(100vw - 20px)
 	// height: 250px
 	position: fixed 
 	bottom: 50px
@@ -118,6 +121,8 @@ export default {
 
 .loading-afip-ticket-active
 	right: 50px !important
+	@media screen and (max-width: 575px)
+		right: 10px !important
 
 .loading-afip-ticket-success
 	border: 5px solid $green !important

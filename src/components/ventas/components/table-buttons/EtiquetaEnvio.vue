@@ -136,6 +136,18 @@
 				</b-form-row>
 				<b-form-row>
 					<b-col
+					md="12">
+						<!-- Dirección: calle y número; por defecto, el domicilio del cliente -->
+						<b-form-group
+						label="Dirección">
+							<b-form-input
+							v-model="form.address"
+							placeholder="Calle y número"></b-form-input>
+						</b-form-group>
+					</b-col>
+				</b-form-row>
+				<b-form-row>
+					<b-col
 					md="4">
 						<b-form-group
 						label="Localidad">
@@ -187,6 +199,7 @@ function form_vacio() {
 		phone: '',
 		dni: '',
 		cuit: '',
+		address: '',
 		locality: '',
 		province: '',
 		postal_code: '',
@@ -349,6 +362,14 @@ export default {
 			out.province = pick('province', prov && prov.name ? String(prov.name) : '')
 			out.postal_code = pick('postal_code', loc && loc.codigo_postal != null ? String(loc.codigo_postal) : '')
 			out.email = pick('email', c && c.email ? String(c.email) : '')
+			/**
+			 * Dirección: la guardada o, si no, el domicilio del cliente. `c.address` se toma solo si es
+			 * texto: si algún día viene la relación con la sucursal (address_id), es un objeto.
+			 * Espacios y saltos de línea colapsados a uno, como en la API: un <input> borra el salto
+			 * sin poner un espacio ("Av Pellegrini\n1500" se vería "Av Pellegrini1500").
+			 */
+			var domicilio = c && typeof c.address === 'string' ? String(c.address).replace(/\s+/g, ' ').trim() : ''
+			out.address = pick('address', domicilio)
 
 			// DNI / CUIT: si en overrides hay alguno, se usan; si no, se toma del cliente.
 			var dni_o = o && o.dni != null && String(o.dni).trim() !== '' ? String(o.dni).trim() : ''
@@ -357,10 +378,13 @@ export default {
 				out.dni = dni_o
 				out.cuit = cuit_o
 			} else if (c) {
-				if (c.dni) {
-					out.dni = String(c.dni)
-				} else if (c.cuit) {
-					out.cuit = String(c.cuit)
+				// Recortados antes de decidir: un DNI de solo espacios cae al CUIT, como en la API.
+				var dni_c = c.dni != null ? String(c.dni).trim() : ''
+				var cuit_c = c.cuit != null ? String(c.cuit).trim() : ''
+				if (dni_c) {
+					out.dni = dni_c
+				} else if (cuit_c) {
+					out.cuit = cuit_c
 				}
 			}
 
@@ -400,6 +424,7 @@ export default {
 				phone: self.form.phone,
 				dni: self.form.dni,
 				cuit: self.form.cuit,
+				address: self.form.address,
 				locality: self.form.locality,
 				province: self.form.province,
 				postal_code: self.form.postal_code,

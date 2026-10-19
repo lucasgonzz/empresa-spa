@@ -100,6 +100,7 @@ data-testid="recursos-estado"
 import call_methods from '@/mixins/call_methods'
 import { mark_dynamic_dependency_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
 import { reconcile_article_dynamic_columns_if_needed } from '@/common-vue/helpers/column_preferences_helper'
+import { ejecutar_con_tope } from '@/common-vue/helpers/ejecutar_con_tope'
 
 /**
  * Modelos del arranque que NO entran en la llamada masiva.
@@ -126,6 +127,19 @@ const MODELOS_FUERA_DE_LA_LLAMADA_MASIVA = [
 	'pdf_column_profile',
 	'table_column_preference',
 ]
+
+/**
+ * Tope de pedidos simultaneos del REPLIEGUE (cuando la llamada masiva no alcanza o se cae y los
+ * catalogos hay que pedirlos de a uno).
+ *
+ * El shared hosting de Hostinger rechaza las conexiones nuevas a MySQL por encima de ~20 por
+ * segundo para TODA la cuenta (error 2002 `Operation not permitted`, que llega como un 500). Con
+ * ~70 catalogos pedidos a la vez, justo cuando el servidor ya estaba saturado, la SPA le tiraba
+ * encima otras ~70 conexiones y la mayoria volvia a fallar (medido en Unicas el 13/10/2026: ~60
+ * errores en un solo segundo, del mismo usuario). Con 5 en vuelo el ritmo queda muy por debajo
+ * del tope y el repliegue tarda unos pocos segundos mas, solo en el camino de error.
+ */
+const TOPE_DE_PEDIDOS_DEL_REPLIEGUE = 5
 
 export default {
 	mixins: [call_methods],
@@ -419,7 +433,7 @@ export default {
 
 				if (a_replegar.length) {
 					console.log('recursos-iniciales: se piden de a uno ' + a_replegar.join(', '))
-					return this.pedir_sueltos(a_replegar)
+					return this.pedir_sueltos_en_tandas(a_replegar)
 				}
 			})
 			.catch(err => {
@@ -428,53 +442,87 @@ export default {
 				// endpoint individual, y la sesion arranca igual.
 				//
 				// Ojo con una diferencia que NO es menor: el camino viejo mandaba esas requests en
-				// serie, o sea con contrapresion natural. Este repliegue las manda todas juntas, asi
-				// que si la masiva fallo justamente porque el servidor esta saturado, la SPA le tira
-				// encima ~70 requests en el mismo instante. Es el precio de no dejar la pantalla
-				// vacia, pero conviene saberlo antes de tocar esto: si algun dia hay que amortiguarlo,
-				// se hace de a tandas aca, no volviendo a encadenar el camino feliz.
+				// serie, o sea con contrapresion natural. Mandarlas todas juntas, con el servidor
+				// saturado (que es justamente cuando la masiva falla), le tiraba encima ~70
+				// requests en el mismo instante y la mayoria volvia a fallar (Unicas, 13/10/2026).
+				// Por eso este repliegue sale de a tandas (ver pedir_sueltos_en_tandas): el camino
+				// feliz de la llamada masiva no se toco ni se volvio a encadenar.
 				console.log(err)
-				return this.pedir_sueltos(model_names)
+				return this.pedir_sueltos_en_tandas(model_names)
 			})
 		},
 		/**
 		 * Pide cada modelo por su endpoint individual. Salen todos juntos: ya no hay motivo para
 		 * encadenarlos.
 		 *
+		 * Es el camino de los pocos modelos que la llamada masiva no soporta (MODELOS_FUERA_DE_LA_
+		 * LLAMADA_MASIVA). El repliegue de verdad, que puede ser de ~70, NO pasa por aca: va por
+		 * pedir_sueltos_en_tandas.
+		 *
 		 * @param {Array} model_names
 		 * @returns {Promise}
 		 */
 		pedir_sueltos(model_names) {
+			let self = this
 			let promesas = []
 
 			model_names.forEach(model_name => {
-				// Guarda contra un nombre que no tenga modulo Vuex. Hoy no puede pasar --los
-				// nombres salen de nuestra propia lista o de lo que el backend devolvio en
-				// no_soportados, que es lo que le mandamos-- pero sin esto un dispatch a una accion
-				// inexistente devuelve undefined y el .then de abajo tira un TypeError SINCRONO,
-				// adentro del forEach, que se lleva puesto el .then de pedir_masivo y hace que se
-				// vuelvan a pedir de a uno los 69 que ya se habian commiteado.
-				if (!this.$store._actions[model_name + '/getModels']) {
-					console.log('recursos-iniciales: no hay store para ' + model_name + ', se saltea')
-					this.marcar_descargado(model_name)
-					return
-				}
-
-				promesas.push(
-					this.$store.dispatch(model_name + '/getModels')
-					.then(() => {
-						this.marcar_descargado(model_name)
-					})
-					.catch(err => {
-						// Se marca igual: si falla uno, su fila no puede quedarse con el spinner
-						// girando para siempre y la barra de progreso trabada.
-						console.log(err)
-						this.marcar_descargado(model_name)
-					})
-				)
+				promesas.push(self.pedir_uno(model_name))
 			})
 
 			return Promise.all(promesas)
+		},
+		/**
+		 * Igual que pedir_sueltos, pero con un TOPE de pedidos simultaneos (ver
+		 * TOPE_DE_PEDIDOS_DEL_REPLIEGUE). Es el repliegue: se usa cuando la llamada masiva se cae o
+		 * deja modelos sin resolver, o sea, cuando el servidor probablemente ya esta saturado.
+		 *
+		 * Resuelve cuando terminaron todos, igual que pedir_sueltos, asi que el bootstrap de columnas
+		 * dinamicas de downloadModels() sigue corriendo recien con todo commiteado.
+		 *
+		 * @param {Array} model_names
+		 * @returns {Promise}
+		 */
+		pedir_sueltos_en_tandas(model_names) {
+			let self = this
+			let tareas = []
+
+			model_names.forEach(model_name => {
+				tareas.push(() => self.pedir_uno(model_name))
+			})
+
+			return ejecutar_con_tope(tareas, TOPE_DE_PEDIDOS_DEL_REPLIEGUE)
+		},
+		/**
+		 * Pide UN modelo por su endpoint individual. Nunca rechaza: si falla, igual lo marca como
+		 * descargado para que su fila no se quede girando (ver marcar_descargado).
+		 *
+		 * @param {string} model_name
+		 * @returns {Promise}
+		 */
+		pedir_uno(model_name) {
+			// Guarda contra un nombre que no tenga modulo Vuex. Hoy no puede pasar --los
+			// nombres salen de nuestra propia lista o de lo que el backend devolvio en
+			// no_soportados, que es lo que le mandamos-- pero sin esto un dispatch a una accion
+			// inexistente devuelve undefined y el .then de abajo tira un TypeError SINCRONO,
+			// adentro de pedir_sueltos()/pedir_sueltos_en_tandas(), que se lleva puesto el .then de
+			// pedir_masivo y hace que se vuelvan a pedir de a uno los 69 que ya se habian commiteado.
+			if (!this.$store._actions[model_name + '/getModels']) {
+				console.log('recursos-iniciales: no hay store para ' + model_name + ', se saltea')
+				this.marcar_descargado(model_name)
+				return Promise.resolve()
+			}
+
+			return this.$store.dispatch(model_name + '/getModels')
+			.then(() => {
+				this.marcar_descargado(model_name)
+			})
+			.catch(err => {
+				// Se marca igual: si falla uno, su fila no puede quedarse con el spinner
+				// girando para siempre y la barra de progreso trabada.
+				console.log(err)
+				this.marcar_descargado(model_name)
+			})
 		},
 		/**
 		 * Deja los modelos que trajo la llamada masiva en el store de ese modulo.

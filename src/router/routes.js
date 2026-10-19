@@ -162,6 +162,18 @@ export default [
 				},
 			},
 			{
+				/*
+					Misión permisos-navegacion-empleados (decisión de Lucas, 9/10/2026): "Por
+					Estados" pide `sale.index`, el mismo permiso que el listado de Ventas. Antes no
+					tenía `can` y lo veía cualquiera con la extensión: muestra las ventas con sus
+					importes, así que un empleado sin permiso para ver ventas tampoco tiene que
+					verlas desde acá.
+
+					Además, como hijo sin `can`, hacía aparecer el padre Ventas en el menú de un
+					empleado sin ningún permiso (showRoute() en common-vue/mixins/nav.js contaba al
+					hijo como permitido). Ese conteo también se corrigió: ahora un hijo cuenta solo
+					si el propio hijo se mostraría.
+				*/
 				path: '/por-estado',
 				text: 'Por Estados',
 				name: 'por-estado',
@@ -169,6 +181,7 @@ export default [
 				image_url: 'nuevos-nav-icons/por_entregar.png',
 				icon: 'ui-checks-grid',
 				if_has_extencion: 'ventas_con_estados',
+				can: 'sale.index',
 				params: {
 					view: 'ventas',
 				},
@@ -318,7 +331,7 @@ export default [
 			view: 'pedidos',
 		},
 		/*
-			Clic en el padre estando en Clientes/Cupones/Promociones vuelve a Pedidos. Sin este
+			Clic en el padre estando en Clientes/Mensajes/Promociones vuelve a Pedidos. Sin este
 			flag toRoute() corta por tener el mismo name 'online' (ver debeIrAParamsDeLaRuta en
 			common-vue/mixins/nav.js).
 		*/
@@ -366,13 +379,12 @@ export default [
 				can: 'buyer.index',
 				icon: 'chat-dots',
 			},
-			{
-				text: 'Cupones',
-				name: 'online_cupones',
-				function: 'ir_a_online_cupones',
-				can: 'cupon.index',
-				icon: 'ticket-perforated',
-			},
+			/*
+				Cupones: se sacó del menú el 14/10/2026 (misión tiendas-demo-y-limpieza-tienda,
+				pedido de Lucas). La tienda dejó de ofrecer cupones, así que la pantalla para
+				cargarlos no tenía a quién servirle. La tabla `cupons` y `orders.cupon_id` quedan:
+				un pedido viejo con cupón sigue mostrando su descuento (ventas/modals/details/SaleInfo.vue).
+			*/
 			{
 				/*
 					Promociones (motor de ofertas, 15/8/2026): va con `function:` como
@@ -405,8 +417,8 @@ export default [
 		// Solo visible con la extensión 'whatsapp' activa (mismo gateo que usa el backend en check_extencion_empresa).
 		if_has_extencion: 'whatsapp',
 		icon: 'whatsapp',
-		/* Badge con la cantidad de mensajes de la IA esperando aprobación (misión sugerencia-ia-como-borrador, 29/9/2026) */
-		budget_function: 'whatsapp_por_aprobar_count',
+		/* Badge con lo que necesita a una persona: mensajes de la IA esperando aprobación (misión sugerencia-ia-como-borrador, 29/9/2026) + chats con un pedido o una consulta del agente sin atender (misión senal-pedidos-y-consultas-del-agente, 16/10/2026) */
+		budget_function: 'whatsapp_atencion_count',
 	},
 	{
 		text: 'Tienda Nube',
@@ -560,10 +572,26 @@ export default [
 		]
 	},
 	{
+		/*
+			Misión permisos-navegacion-empleados (decisión de Lucas, 9/10/2026): Comprobantes
+			pide un permiso propio, `comprobantes.index` ("Ver Comprobantes (notas de crédito y
+			pagos de clientes)", grupo Ventas del catálogo de permisos de empresa-api). Antes no
+			tenía `can` y cualquier empleado, aun sin ningún permiso, veía las notas de crédito y
+			los pagos de los clientes con sus importes.
+
+			🔴 El slug tiene que coincidir carácter por carácter con el que crea
+			PermisosCatalogoHelper en la API. Y para que los empleados que hoy usan Comprobantes no
+			lo pierdan de golpe con el release, el seeder suelto PermissionComprobantesIndexSeeder
+			se lo da a los que ya tienen `sale.index`, `client.index` o `devolucion.store` (en
+			Comprobantes se reintenta facturar con ARCA una nota de crédito sin CAE): tiene que correr en el
+			despliegue de cada cliente. Sin ese seeder los empleados dejan de ver el módulo (el
+			dueño y el acceso maestro lo siguen viendo: `can()` les da true siempre).
+		*/
 		text: 'Comprobantes',
 		path: '/comprobantes',
 		name: 'comprobantes',
 		component: '@/views/Comprobantes',
+		can: 'comprobantes.index',
 		image_url: 'nuevos-nav-icons/comprobantes.png',
 		icon: 'file-earmark-text',
 		// image_url: 'nav-icons/comprobantes.png',
@@ -579,5 +607,27 @@ export default [
 		if_has_extencion: 'consultora_de_precios',
 		image_url: 'nav-icons/consulta_precios.png',
 		icon: 'graph-up-arrow',
+	},
+	{
+		/*
+			Tutoriales: el centro de recursos (misión centro-de-recursos-clientes, 13/10/2026), la
+			página con los videos del sistema, en recursos.comerciocity.com. En el menú se llama
+			"Tutoriales" y no "Centro de recursos" a propósito: a 1366 px ese texto se cortaba en
+			"Centro de recurs…", y quedaba justo arriba de "Recursos" (la descarga de datos), que es
+			otra cosa. No es una pantalla de esta SPA: va con
+			`function:` y abrir_centro_de_recursos() (mixins/route_functions.js) la abre en otra
+			pestaña con un pase de un solo uso, así entra con el usuario logueado y guarda su avance.
+
+			Sin `can` ni extensión a propósito: lo ve todo usuario, dueño o empleado (decisión de
+			Lucas). `no_aterrizar: true` porque redirect() de common-vue/mixins/permissions.js
+			aterriza en la primera ruta sin `can`, y esta no tiene una ruta del router a la que ir.
+			Va al final del array: queda abajo de todo, justo arriba de "Recursos" (que es otra cosa,
+			la descarga de datos).
+		*/
+		text: 'Tutoriales',
+		name: 'centro_de_recursos',
+		function: 'abrir_centro_de_recursos',
+		icon: 'collection-play',
+		no_aterrizar: true,
 	},
 ]

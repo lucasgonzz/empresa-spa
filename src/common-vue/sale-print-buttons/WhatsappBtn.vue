@@ -19,6 +19,8 @@
 
 <script>
 
+import { is_vender_print_profile_a4 } from '@/constants/vender_print_shortcut_options'
+
 export default {
 
 	props: {
@@ -155,6 +157,32 @@ export default {
 
 		 * Abre WhatsApp con el mensaje y el enlace al PDF del comprobante.
 
+		 *
+
+		 * El enlace lleva el token del link (?t=, misión pdf-de-venta-publico, 10/10/2026): desde
+
+		 * esa versión de la API el PDF ya no es público, y el cliente que lo abre no tiene sesión.
+
+		 * El token lo da GET api/pdf-link/{tipo}/{id} (ver pedir_token_del_link()).
+
+		 *
+
+		 * 🔴 POR QUÉ LA PESTAÑA SE ABRE ANTES DE TENER EL TOKEN. Chrome (y Safari) solo dejan abrir
+
+		 * una ventana nueva DENTRO del click: un window.open() que corre después de esperar una
+
+		 * respuesta de la API ya no cuenta como gesto del usuario y lo frena el bloqueador de
+
+		 * popups. Pedir el token al montar el componente tampoco sirve: este botón se monta una vez
+
+		 * por FILA en los listados (ClientBtn.vue), y eso sería un pedido —y un token emitido— por
+
+		 * cada venta de la pantalla, aunque nadie la comparta. Así que se elige lo otro: la pestaña
+
+		 * se abre vacía acá, sincrónica en el click, y recibe la URL de WhatsApp cuando llega el
+
+		 * token (o cuando falla: ver abrir_link_de_whatsapp()).
+
 		 */
 
 		whatsapp() {
@@ -173,7 +201,11 @@ export default {
 
 			const saludo = this.client_name() ? ('Hola ' + this.client_name() + ', ') : 'Hola, '
 
-			let mensaje = saludo + 'te acercamos el comprobante de tu compra N° ' + this.sale.num + ': '
+			const mensaje = saludo + 'te acercamos el comprobante de tu compra N° ' + this.sale.num + ': '
+
+			let pdf_url = ''
+
+			let tipo = 'sale'
 
 			if (this.from_budget) {
 
@@ -185,33 +217,185 @@ export default {
 
 				 * de presupuesto por defecto, el link lo lleva (build_budget_pdf_url). */
 
-				mensaje += this.build_budget_pdf_url()
+				pdf_url = this.build_budget_pdf_url()
+
+				tipo = 'budget'
 
 			} else {
 
-				mensaje += this.build_sale_pdf_url()
+				pdf_url = this.build_sale_pdf_url()
 
 			}
 
-			/* encodeURIComponent NO es defensivo: el mensaje termina con la URL del PDF, que trae
+			/* La pestaña, YA: sincrónica dentro del click (ver el docblock). Sin opener, para que la
 
-			 * ?pdf_column_profile_id=..&afip_ticket_id=.. Sin codificar, ese & lo lee api.whatsapp.com
+			 * página que se cargue ahí no pueda tocar esta pestaña del sistema. */
 
-			 * como separador de SUS parametros y el texto compartido se corta ahi, dejando al cliente
+			const ventana = window.open('', '_blank')
 
-			 * un link sin afip_ticket_id (o sea, el PDF sin la factura ARCA). El telefono ya es solo
+			if (ventana) {
 
-			 * digitos, asi que no necesita codificarse. */
+				ventana.opener = null
+
+			}
+
+			let self = this
+
+			this.pedir_token_del_link(tipo)
+
+			.then(function (token) {
+
+				self.abrir_link_de_whatsapp(ventana, mensaje + self.agregar_token(pdf_url, token))
+
+			})
+
+			/* Avisa al padre el telefono usado -- VenderActionsBar lo escucha para ofrecer actualizar el telefono del cliente */
+
+			this.$emit('sent', this.effective_phone)
+
+		},
+
+		/**
+
+		 * Pide el token del link del PDF a la API. Nunca falla: resuelve con el token, o con null si
+
+		 * no se pudo conseguir.
+
+		 *
+
+		 * null cubre la API vieja (un cliente con la SPA nueva y la API de antes de esta misión: el
+
+		 * endpoint no existe y da 404), un corte de red, un timeout y un recurso que la API no
+
+		 * reconoce. En todos esos casos se manda el link de siempre, sin token: compartir por
+
+		 * WhatsApp no puede romperse por esto, y con la API vieja ese link sigue abriendo porque
+
+		 * ahí la ruta es pública.
+
+		 *
+
+		 * skip_global_error_event / skip_global_validation_toast: un 404 de una API vieja no es un
+
+		 * error que el usuario tenga que ver. skip_navigation_cancel: si el usuario cambia de
+
+		 * pantalla apenas apretó, el pedido se termina igual y la pestaña recibe su link con token.
+
+		 *
+
+		 * @param {string} tipo 'sale' o 'budget'.
+
+		 * @returns {Promise<string|null>}
+
+		 */
+
+		pedir_token_del_link(tipo) {
+
+			return this.$api.get('pdf-link/' + tipo + '/' + this.sale.id, {
+
+				timeout: 8000,
+
+				skip_global_error_event: true,
+
+				skip_global_validation_toast: true,
+
+				skip_navigation_cancel: true,
+
+			})
+
+			.then(function (res) {
+
+				return res && res.data && res.data.token ? res.data.token : null
+
+			})
+
+			.catch(function () {
+
+				return null
+
+			})
+
+		},
+
+		/**
+
+		 * Suma t=<token> a la URL del PDF, con ? o & según si ya trae query (los ?pdf_column_profile_id=
+
+		 * y &afip_ticket_id= de build_sale_pdf_url / build_budget_pdf_url). Sin token, la URL queda
+
+		 * como estaba.
+
+		 *
+
+		 * @param {string} pdf_url
+
+		 * @param {string|null} token
+
+		 * @returns {string}
+
+		 */
+
+		agregar_token(pdf_url, token) {
+
+			if (!token) {
+
+				return pdf_url
+
+			}
+
+			const separador = pdf_url.indexOf('?') === -1 ? '?' : '&'
+
+			return pdf_url + separador + 't=' + encodeURIComponent(token)
+
+		},
+
+		/**
+
+		 * Lleva la pestaña que se abrió en el click a WhatsApp con el mensaje.
+
+		 *
+
+		 * encodeURIComponent NO es defensivo: el mensaje termina con la URL del PDF, que trae
+
+		 * ?pdf_column_profile_id=..&afip_ticket_id=..&t=.. Sin codificar, ese & lo lee api.whatsapp.com
+
+		 * como separador de SUS parametros y el texto compartido se corta ahi, dejando al cliente
+
+		 * un link sin afip_ticket_id ni token. El telefono ya es solo digitos, asi que no necesita
+
+		 * codificarse.
+
+		 *
+
+		 * Si la pestaña no existe (el navegador la bloqueó igual) o el usuario la cerró mientras se
+
+		 * esperaba el token, se intenta abrir una nueva: es lo mismo que hacía este botón antes, y
+
+		 * si el navegador la bloquea, avisa como siempre con su ícono de popup bloqueado.
+
+		 *
+
+		 * @param {Window|null} ventana La pestaña abierta en el click.
+
+		 * @param {string} mensaje Texto completo, con el link del PDF al final.
+
+		 */
+
+		abrir_link_de_whatsapp(ventana, mensaje) {
 
 			const link = 'https://api.whatsapp.com/send?phone=' + this.effective_phone +
 
 				'&text=' + encodeURIComponent(mensaje)
 
+			if (ventana && !ventana.closed) {
+
+				ventana.location.href = link
+
+				return
+
+			}
+
 			window.open(link)
-
-			/* Avisa al padre el telefono usado -- VenderActionsBar lo escucha para ofrecer actualizar el telefono del cliente */
-
-			this.$emit('sent', this.effective_phone)
 
 		},
 
@@ -423,7 +607,14 @@ export default {
 
 			const models = this.$store.state.pdf_column_profile.models || []
 
-			return models.filter(profile => profile.model_name == this.model_name)
+			/*
+				Solo diseños de HOJA (misión diseno-ticket-comandera, D4/D5): por WhatsApp se manda un
+				PDF, y un ticket de comandera nunca se dibuja como PDF. Sin este filtro, el respaldo
+				"el por defecto" de get_whatsapp_remito_pdf_profile_id() y del fiscal podía elegir el
+				ticket por defecto (el "por defecto" es por clase: hay uno de hoja y uno de ticket), y
+				la API caía al de hoja sin decir nada.
+			*/
+			return models.filter(profile => profile.model_name == this.model_name && is_vender_print_profile_a4(profile))
 
 		},
 

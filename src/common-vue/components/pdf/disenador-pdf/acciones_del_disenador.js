@@ -49,6 +49,9 @@ export default {
 		 * - Lo que ENTRA a una zona o a una caja (nuevo, o traído de otra) se rechaza si ya tiene el
 		 *   tope del catálogo (24 ítems por zona, 30 campos por caja), con un aviso. Reordenar dentro
 		 *   de la misma lista siempre se puede.
+		 * - La tabla va aparte (misión diseno-ticket-comandera): una columna solo se mueve dentro de
+		 *   la tabla, entra desde "Columnas de la tabla" de la bandeja o vuelve ahí (sale de la
+		 *   tabla); y a la tabla solo entran columnas.
 		 *
 		 * @param {Object} evento evento de vuedraggable (to, from, draggedContext, relatedContext)
 		 * @returns {boolean} false cancela el movimiento
@@ -58,6 +61,23 @@ export default {
 			let origen = evento && evento.from && evento.from.getAttribute ? evento.from.getAttribute('data-lista') : null
 			let arrastrado = evento && evento.draggedContext ? evento.draggedContext.element : null
 			let lista_destino = evento && evento.relatedContext ? evento.relatedContext.list : null
+
+			/*
+				Las columnas de la tabla tienen su propio grupo (pdf-columnas) y no se mezclan con cajas
+				ni campos: es la segunda red, como la de abajo para las zonas.
+			*/
+			let sale_de_columnas = origen === 'tabla' || origen === 'columnas'
+			let va_a_columnas = destino === 'tabla' || destino === 'columnas'
+			if (sale_de_columnas || va_a_columnas) {
+				if (!sale_de_columnas || !va_a_columnas) {
+					return false
+				}
+				/* A la bandeja solo vuelve lo que sale de la tabla (no se reordena la bandeja) */
+				if (destino === 'columnas') {
+					return origen === 'tabla'
+				}
+				return true
+			}
 
 			/*
 				🔴 Cada cosa en su lista. En SortableJS `put: true` acepta elementos de CUALQUIER grupo
@@ -165,6 +185,17 @@ export default {
 						this.seleccionar('campo', campo)
 					}
 				}
+				return
+			}
+
+			/*
+				Una columna de la bandeja soltada en la tabla: se le hace lugar (si no entra, se le saca a
+				la más ancha) y queda seleccionada (acciones_de_la_tabla.js). Una columna de la tabla
+				soltada en la bandeja ya salió de la tabla (vuedraggable la sacó de `tabla.visibles`) y
+				vuelve a ofrecerse ahí sola: no hay nada más que hacer.
+			*/
+			if (desde === 'columnas' && hacia === 'tabla') {
+				this.columna_soltada_en_la_tabla(indice)
 			}
 		},
 		/**

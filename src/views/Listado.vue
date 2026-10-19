@@ -235,6 +235,13 @@ export default {
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])
+		/*
+			La edición de stock por depósito de una fila (botón verde de la columna Stock) vive en
+			el store y sobrevive a la vista: sin limpiarla, al volver la fila seguía en edición con
+			los originales de cuando se abrió, y el botón azul de ese artículo quedaba deshabilitado
+			también en el modal del artículo (misión stock-sucursal-desde-listado, 14/10/2026).
+		*/
+		this.$store.commit('article/edit_addresses_stock/limpiar_edicion')
 		next()
 	},
 	computed: {

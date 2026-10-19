@@ -28,7 +28,7 @@
 		<b-button
 		variant="outline-primary"
 		@click="marcar_todo_como_entregado">
-			Marcaro todo como entregado
+			Marcar todo como entregado
 		</b-button>
 
 		<b-button

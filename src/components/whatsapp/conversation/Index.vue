@@ -20,6 +20,9 @@
 		v-else
 		class="whatsapp-conversation__content">
 			<header-component></header-component>
+			<!-- Pedido o consulta que el agente dejó para atender (misión senal-pedidos-y-consultas-del-agente):
+			solo se dibuja mientras el chat tiene la marca. -->
+			<follow-up-bar></follow-up-bar>
 			<messages></messages>
 			<composer></composer>
 		</div>
@@ -27,11 +30,13 @@
 </template>
 <script>
 import HeaderComponent from '@/components/whatsapp/conversation/Header'
+import FollowUpBar from '@/components/whatsapp/conversation/FollowUpBar'
 import Messages from '@/components/whatsapp/conversation/Messages'
 import Composer from '@/components/whatsapp/conversation/Composer'
 export default {
 	components: {
 		HeaderComponent,
+		FollowUpBar,
 		Messages,
 		Composer,
 	},

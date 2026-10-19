@@ -85,6 +85,8 @@ export default {
 		que_hace: 'Da por bueno el mapeo y pasa al paso de duplicados, donde la IA recomienda una configuración.',
 		repercute: [
 			'El sistema recorre el archivo y cuenta códigos repetidos (en el archivo y contra lo ya cargado): de eso salen las decisiones del paso 3.',
+			'También revisa si los nombres de proveedor, categoría, subcategoría y marca (en clientes: provincia, localidad, vendedor y lista de precios; en proveedores: localidad) se parecen a otros que ya tenés cargados, para que no se creen duplicados.',
+			'En clientes y proveedores el paso 3 es solo esa revisión: si no encuentra nombres parecidos, pasa directo a las opciones finales.',
 		],
 	},
 
@@ -117,6 +119,99 @@ export default {
 			'"Ignorar": los del otro proveedor no se tocan y se crean artículos nuevos para el proveedor elegido.',
 			'"Actualizar": las filas pisan los artículos del otro proveedor (para corregir importaciones que entraron con el proveedor equivocado).',
 		],
+	},
+
+	/*
+	 * Nombres parecidos (misión importacion-relaciones-parecidas, 8/10/2026). Sale en el paso 3
+	 * (al final en artículos; solo eso en clientes y proveedores). Lo que hace cada opción del
+	 * lado del backend está en el plan de la misión, "Resolución en el worker".
+	 */
+	'ai-import-relaciones-lista': {
+		titulo: 'Nombres parecidos',
+		que_hace: 'Lista los nombres del Excel que se parecen a otros que ya tenés cargados, o que se parecen entre sí dentro del mismo archivo. En artículos: proveedor, categoría, subcategoría y marca; en clientes: provincia, localidad, vendedor y lista de precios; en proveedores: localidad.',
+		repercute: [
+			'Cada nombre trae marcada la opción que proponemos: si no tocás nada, se importa con esa opción.',
+			'"Es «…», que ya está cargado" lleva las filas con ese nombre al que ya existe, sin crear otro.',
+			'"Es uno nuevo" crea uno con el nombre exacto del Excel, aunque exista otro que solo cambia en mayúsculas o tildes.',
+			'Cuando elegís uno que ya está cargado, queda recordado para tu comercio: la próxima importación con ese mismo nombre lo trae resuelto, en "Confirmadas en importaciones anteriores".',
+		],
+		requiere: 'Aparece solo si el archivo trae nombres parecidos. Un nombre escrito exactamente igual que uno cargado no se pregunta nunca.',
+		nota_interna: 'Viene en resultado.relaciones_parecidas de la corrida de get-recomendacion, que el SPA pide con chequear_relaciones: true (sin la bandera el backend no lo calcula). Las elecciones viajan como equivalencias [{ tipo, valor, padre?, accion: usar|crear|unir, id?|con? }] en POST ai-excel-import/import, para los tres modelos, y solo si hubo lista. Lo que se ve y lo que se manda lo decide ai-excel-import/relaciones_parecidas.js: la API manda cada subcategoría (o localidad) una vez por cada resolución posible de su categoría (o provincia), con padre_ref ("id:X" / "nuevo:<nombre>"), y se ve y viaja solo la que coincide con lo elegido para el padre; con una API sin padre_ref, la que no coincide con padre_id se oculta y no viaja. Un clic redibuja un solo ítem (RelacionesParecidasItem.vue) y la lista llega congelada (Object.freeze): con cientos de ítems no se nota. Del lado de la API, "usar" guarda la equivalencia en import_equivalencias, "crear" la borra y "unir" la guarda el worker cuando conoce el id.',
+	},
+
+	'ai-import-relaciones-opcion-*': {
+		titulo: 'Qué es este nombre',
+		que_hace: 'Decide a qué registro van las filas del Excel que traen este nombre.',
+		repercute: [
+			'"Es «…», que ya está cargado": las filas se asignan al existente y no se crea nada.',
+			'"Es uno nuevo": se crea uno con el nombre exacto del Excel; las filas que traen el nombre del existente siguen yendo al existente.',
+			'"Es el mismo que «…» (también nuevo)": los dos nombres se cargan como uno solo, con el nombre que más se repite en el archivo.',
+			'"Son distintos": se crean los dos.',
+		],
+		nota_interna: 'El índice elegido es el de opciones[] del ítem (decisiones_relaciones de Index.vue). En subcategoría, "usar" solo se aplica si la subcategoría elegida pertenece a la categoría que resolvió la fila; si no, el worker la ignora y sigue el camino normal. Lo mismo para localidad dentro de provincia. El testid queda en el input del radio, que está oculto: la ayuda no aparece al pasar el mouse por el texto.',
+	},
+
+	'ai-import-relaciones-usar-todas': {
+		titulo: 'Usar el existente en todas',
+		que_hace: 'Marca en todos los nombres pendientes la opción "es el que ya está cargado" (o "es el mismo", cuando los dos nombres parecidos son nuevos).',
+		repercute: [
+			'Ningún nombre de la lista crea un registro aparte: se asigna al que ya existe, y los parecidos entre sí se cargan como uno solo.',
+			'No toca las confirmadas en importaciones anteriores: esas se cambian de a una.',
+			'Es solo una marca en pantalla: después podés cambiar cualquier nombre, uno por uno.',
+		],
+		requiere: 'Aparece con dos o más nombres pendientes de revisar.',
+	},
+
+	'ai-import-relaciones-crear-todas': {
+		titulo: 'Crear todas como nuevas',
+		que_hace: 'Marca en todos los nombres pendientes la opción "es uno nuevo".',
+		repercute: [
+			'Cada nombre se carga tal como está escrito en el Excel, aunque ya exista uno que solo cambia en mayúsculas, tildes o espacios: puede dejar duplicados.',
+			'Si una categoría pasa a ser nueva, sus subcategorías se vuelven a comparar contra esa categoría nueva: pueden cambiar las que se preguntan.',
+			'No toca las confirmadas en importaciones anteriores.',
+		],
+		requiere: 'Aparece con dos o más nombres pendientes de revisar.',
+		nota_interna: 'Viaja como accion "crear" por cada ítem: el worker busca un registro con ese nombre exacto (comparación binaria) y, si no hay, lo crea; además el controller borra la equivalencia recordada de ese valor si existía.',
+	},
+
+	'ai-import-relaciones-recordadas': {
+		titulo: 'Confirmadas en importaciones anteriores',
+		que_hace: 'Despliega los nombres que tu comercio ya resolvió en una importación anterior. Vienen marcados como los dejaste.',
+		repercute: [
+			'Si no los tocás, se importan igual que la vez pasada.',
+			'Si cambiás uno a "es uno nuevo", deja de estar recordado y la próxima importación no lo va a traer resuelto.',
+		],
+		nota_interna: 'Ítems con motivo "recordado" (tabla import_equivalencias: user_id, tipo, contexto_id, valor_clave -> model_id, solo si el modelo sigue vivo). La equivalencia también se aplica en los caminos que no muestran esta lista (AdminSync, import clásico). Arranca plegado por decisión de Lucas.',
+	},
+
+	'ai-import-relaciones-recortado': {
+		titulo: 'Revisión acotada',
+		que_hace: 'Avisa que el archivo tiene tantos nombres que solo se revisaron los más probables.',
+		repercute: [
+			'Puede haber nombres parecidos a otros cargados que no aparecen en la lista: esos se cargan como en cualquier importación: el que coincide con uno ya cargado, aunque cambien las mayúsculas, se asigna a ese, y el resto se crea.',
+		],
+		nota_interna: 'relaciones_parecidas.recortado === true: alguna capa del chequeo se acotó (más ítems de los que entran en la IA, una columna con demasiados valores distintos o el presupuesto de comparaciones agotado). Cuenta como "hay algo que mostrar": con recortado y sin ningún ítem, la sección sale igual (solo este aviso) y en clientes y proveedores se pasa por el paso 3 en vez de saltar al 4. Tanda 2 de la misión importacion-relaciones-parecidas.',
+	},
+
+	'ai-import-relaciones-sin-ia': {
+		titulo: 'Revisión sin IA',
+		que_hace: 'Avisa que no se pudo consultar a la IA: la lista salió solo de la comparación automática de los nombres.',
+		repercute: [
+			'Los que solo cambian en mayúsculas, tildes o espacios vienen marcados como el que ya está cargado.',
+			'El resto viene marcado como nuevo, que es lo que pasaría sin esta revisión: conviene mirarlos uno por uno.',
+			'Si la lista quedó vacía (solo aparece el aviso de revisión acotada), dice que se revisaron solo los casos claros: mayúsculas, tildes y espacios.',
+		],
+		nota_interna: 'relaciones_parecidas.ia_consultada === false. Fallback del chequeo cuando la IA falla (error, timeout o JSON inválido): quedan los de clave fuerte y, de los parecidos, solo los de puntaje >= 0,85, con motivo "posible" y preseleccionados en "crear". Sin ítems (sección visible solo por recortado) el texto cambia para no hablar de "estos nombres" que no están en pantalla.',
+	},
+
+	'ai-import-relaciones-saltear': {
+		titulo: 'Seguir sin revisar los nombres',
+		que_hace: 'Deja de esperar la revisión de nombres parecidos y pasa a las opciones de importación.',
+		repercute: [
+			'La importación funciona como siempre: los nombres que ya existen se asignan y los que no, se crean.',
+		],
+		requiere: 'Solo en clientes y proveedores, cuando la revisión tarda más de 20 segundos.',
+		nota_interna: 'Suelta el polling, marca la corrida como vista (no la cancela: es un job y termina igual) y la anota en excel_analysis.salteados (si el POST de get-recomendacion todavía no volvió, se anota el token y la marca se hace al volver el POST, con el uuid nuevo: tokens_salteados_en_vuelo en Index.vue): cuando termina, el broadcast excel_analysis_ready llega igual, pero ExcelAnalysisReadyModal cancela su apertura (evento show) para no ofrecer "Ver resultado" sobre un archivo que el usuario ya pudo haber importado. Aparece a los 20 s contados desde el clic en Confirmar, aunque la corrida siga "en espera" (cola ocupada o sin worker). Si la corrida falla o se pierde la conexión, clientes y proveedores siguen al paso 4 solos, sin mostrar error; lo mismo si la revisión se retoma después de cerrar el modal.',
 	},
 
 	'ai-import-btn-continuar': {
@@ -178,6 +273,7 @@ export default {
 			'Un costo nuevo recalcula el costo real, el precio final y el precio de cada lista de precios del artículo; una lista con "setear precio final" conserva su precio y lo que cambia es su margen.',
 			'El stock por sucursal se compara contra el actual y la diferencia queda como movimiento de stock ("Importacion de excel") hacia esa sucursal; si el número coincide, no se genera ningún movimiento.',
 			'Las categorías del Excel que no existen se crean; las que existen se asignan aunque estén escritas con otras mayúsculas.',
+			'Si apareció la lista de nombres parecidos, cada uno de esos nombres se carga según lo que elegiste ahí.',
 			'Cada sobrescritura, fila salteada o valor ilegible queda en el Historial de importaciones, con su número de fila.',
 		],
 		requiere: 'Elegir una de las dos operaciones (solo editar / crear y editar); sin eso el botón está deshabilitado.',

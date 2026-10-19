@@ -422,6 +422,20 @@ export default {
 			key: 'modo_facturacion',
 			type: 'select',
 			not_show: true,
+			/*
+				Mision `factura-compra-tres-defectos` (9/10/2026), decision de Lucas: una compra NUEVA
+				arranca en 'automatico', y el select lo MUESTRA.
+
+				🔴 Antes no declaraba `value`, asi que el motor le ponia 0 (display.js) y el select
+				decia "Seleccione Modo Facturacion". La API recibia `modo_facturacion: 0` y en PHP 7.4
+				`0 == 'automatico'` es verdadero: la compra se facturaba sola como automatica, pero
+				quedaba guardada con "0" y al reabrirla seguia diciendo "Seleccione". La persona no
+				podia ver en que modo habia quedado. Del lado de la API el 0 (de una SPA vieja) ahora
+				tambien se guarda como 'automatico' (ModoFacturacionHelper::normalizar).
+
+				Al editar una compra que ya existe no aplica: el select muestra el modo guardado.
+			*/
+			value: 'automatico',
 			options: [
 				'sin factura',
 				'automatico',

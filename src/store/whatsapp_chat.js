@@ -92,6 +92,66 @@ function navegar_pestana(pestana, url) {
 }
 
 /**
+ * Opciones de axios de los pedidos de fondo de la bandeja (los que no pidió el operador con un clic: un
+ * chat que llegó por broadcast, la recarga silenciosa de respaldo).
+ *
+ * - `skip_navigation_cancel`: los dispara `SidebarHost.vue`, montado en `App.vue`; cambiar de pantalla con uno
+ *   en vuelo es lo normal y no tiene que cancelarlo (ver main.js).
+ * - `skip_global_error_event`: si falla (por ejemplo una API vieja que todavía no tiene `GET whatsapp-chats/{id}`
+ *   y contesta 404) el store cae a su respaldo y no hay nada que mostrarle al operador: sin esta bandera el
+ *   interceptor global dejaría un cartel de error por algo que el sistema resuelve solo.
+ * - `timeout`: axios no trae ninguno. Sin él, un pedido que nunca contesta dejaría al chat anotado como «en
+ *   búsqueda» para siempre (ver `chats_en_busqueda`): los avisos siguientes solo se anotarían y la fila no
+ *   entraría nunca. Los 60 s alcanzan de sobra para un chat y para el índice entero (el respaldo).
+ */
+const OPCIONES_DE_FONDO = {
+	timeout: 60000,
+	skip_navigation_cancel: true,
+	skip_global_error_event: true,
+	skip_global_validation_toast: true,
+}
+
+/**
+ * Chats desconocidos que se están pidiendo al backend ahora mismo (ver `traerChatNuevo`), por id de chat.
+ * Cada entrada es `{ ultimo_aviso }`: el último aviso del broadcast que llegó para ese chat mientras el pedido
+ * estaba en vuelo (null si no llegó ninguno). No se pudo aplicar —el chat todavía no estaba en la bandeja— y se
+ * reaplica apenas el chat entra.
+ *
+ * Va fuera del `state` a propósito: es contabilidad de pedidos, no hay nada que dibujar con esto y no
+ * tiene por qué ser reactivo.
+ */
+let chats_en_busqueda = {}
+
+/**
+ * Recarga de respaldo de la bandeja entera que está en vuelo ahora mismo (ver `recargarBandejaDeRespaldo`),
+ * o null. Es una sola para todos los chats: una API sin `GET whatsapp-chats/{id}` hace caer a CADA chat nuevo en
+ * el respaldo, y sin compartirla una ráfaga de chats nuevos pediría el índice completo una vez por cada uno.
+ */
+let recarga_de_respaldo = null
+
+/**
+ * true si se pidió otra recarga de respaldo mientras la que está en vuelo corría (ver `recargarBandejaDeRespaldo`):
+ * esa recarga pudo salir antes de que naciera el chat que la pide, así que al terminar hace falta una más.
+ */
+let recarga_de_respaldo_pendiente = false
+
+/**
+ * ¿Hay algo escrito en el buscador de la bandeja? El `trim` es porque el índice también recorta `q` en el backend
+ * (`WhatsappChatController::index`): una búsqueda de puros espacios no filtra nada.
+ *
+ * Mira el TEXTO escrito (`search_query` se commitea en cada tecla), no el filtro que ya se aplicó: este llega ~400 ms
+ * después, con el debounce de `ChatSearch.vue`. Cuando difieren no pasa nada grave, porque la búsqueda que corre a
+ * continuación recarga la lista entera. Con algo escrito la bandeja es (o está por ser) un resultado de búsqueda y no
+ * la lista de todos los chats.
+ *
+ * @param {Object} state
+ * @returns {boolean}
+ */
+function hay_busqueda_activa(state) {
+	return String(state.search_query || '').trim() !== ''
+}
+
+/**
  * Store del módulo WhatsApp (grupo 137, Prompt 06): lista de chats + conversación abierta.
  *
  * No usa el factory `__base_store` porque el módulo no es un ABM estándar (filtros, tabla,
@@ -123,6 +183,22 @@ function navegar_pestana(pestana, url) {
  *                                             422 { message } (validación de `body`)
  * - GET    whatsapp-chats/resumen          -> { mensajes_por_aprobar, chats_esperando_aprobacion }
  *
+ * Contrato agregado en la misión patch-chat-nuevo-en-vivo (16/10/2026): un cliente que escribe por primera vez
+ * llega por broadcast como un chat que la bandeja no tiene todavía, y el payload liviano no alcanza para armar su fila.
+ * - GET    whatsapp-chats/{id}              -> { model } con la forma de una fila del índice (client, estado_pendiente,
+ *                                             follow_up*) | 404. Una API que todavía no lo tiene da 404 y el store pide el
+ *                                             índice entero en su lugar (ver `traerChatNuevo`).
+ *
+ * Contrato agregado en la misión senal-pedidos-y-consultas-del-agente (16/10/2026): cuando el agente arma
+ * un pedido o promete "lo consulto y te confirmo", el chat queda marcado hasta que una persona lo atienda.
+ * Todo opcional: contra una API que no lo manda, no se dibuja nada.
+ * - chat.follow_up ('pedido' | 'consulta' | null), chat.follow_up_note, chat.follow_up_at: en el índice, en
+ *   el modelo del chat y en el `chat` liviano del broadcast `WhatsappChatUpdated`.
+ * - message.ai_follow_up / message.ai_follow_up_note: lo que el modelo marcó en ESE mensaje del agente.
+ * - GET    whatsapp-chats/resumen          -> además { chats_con_seguimiento, pedidos_para_confirmar,
+ *                                             consultas_pendientes }
+ * - PUT    whatsapp-chats/{id}/resolve-follow-up -> { model } (idempotente) | 404
+ *
  * Contrato agregado en la misión whatsapp-agente (confirmado contra empresa-api):
  * - POST   whatsapp-bot/simulate-inbound   -> 201 { model } (phone, body) | 403 no dueño | 429 throttle 10/min
  * - PUT    whatsapp-chats/messages/{id}/confirm -> { model } | 422 { code: 'ya_en_envio' | 'ya_no_esta_pendiente' | 'fuera_de_ventana' | 'envio_fallido' }
@@ -141,6 +217,10 @@ export default {
 		chats: [],
 		// true mientras se pide GET whatsapp-chats.
 		loading_chats: false,
+		// true una vez que la bandeja se pidió al menos una vez con éxito. Antes de eso `chats` está vacío porque
+		// nadie abrió el módulo, no porque no haya chats: un aviso en vivo de un chat «desconocido» no significa nada
+		// (la primera carga lo va a traer), y pedirlo sería un GET inútil por cada mensaje que llegue estando en otra pantalla.
+		chats_cargados: false,
 		// Texto de búsqueda actual (pega a `?q=`).
 		search_query: '',
 
@@ -218,6 +298,12 @@ export default {
 		resumen: {
 			mensajes_por_aprobar: 0,
 			chats_esperando_aprobacion: 0,
+			// Misión senal-pedidos-y-consultas-del-agente: chats con un pedido o una consulta que el
+			// agente dejó para que una persona atienda. Suman al número del menú; contra una API
+			// que todavía no los manda quedan en 0 y el menú sigue siendo el de siempre.
+			chats_con_seguimiento: 0,
+			pedidos_para_confirmar: 0,
+			consultas_pendientes: 0,
 		},
 	},
 	mutations: {
@@ -226,6 +312,8 @@ export default {
 		},
 		setChats(state, value) {
 			state.chats = value || []
+			// Solo se llama con la respuesta de `GET whatsapp-chats`: la bandeja ya se cargó.
+			state.chats_cargados = true
 		},
 		setSearchQuery(state, value) {
 			state.search_query = value
@@ -254,14 +342,16 @@ export default {
 		 * estado_pendiente, ver el evento en empresa-api) sin pisar el resto de props (client,
 		 * phone, display_name, ai_enabled) que ese evento no manda.
 		 *
-		 * 🔴 SOLO ACTUALIZA UN CHAT QUE YA ESTÁ EN LA BANDEJA (el `if (index != -1)` no inserta).
-		 * Un cliente que escribe por PRIMERA VEZ dispara este mismo evento para un chat que
-		 * todavía no existe en `state.chats`, y acá no pasa nada: ni la fila aparece, ni
-		 * `chats_sin_responder_count` (la tarjeta roja del tablero) se entera, hasta que se
-		 * recargue el módulo. Es una limitación preexistente de esta mutación (no la introduce
-		 * la misión whatsapp-tablero-clientes) y queda fuera de este alcance arreglarla: el
-		 * payload liviano no trae `client`/`phone`/`display_name`, así que insertar acá de
-		 * verdad dejaría una fila a medias en la bandeja.
+		 * 🔴 SOLO ACTUALIZA UN CHAT QUE YA ESTÁ EN LA BANDEJA (el `if (index != -1)` no inserta), y
+		 * así tiene que seguir: el payload liviano no trae `client`/`phone`/`display_name`, así que
+		 * insertar acá dejaría una fila a medias (nombre equivocado, cabecera sin ficha).
+		 *
+		 * Un cliente que escribe por PRIMERA VEZ dispara el mismo evento para un chat que todavía no
+		 * existe en `state.chats`. De ese caso se ocupa la acción `aplicarBroadcastDeChat`, que es la
+		 * puerta del broadcast: si el chat es conocido llega acá, y si no lo pide al backend
+		 * (`traerChatNuevo`) y lo inserta con la fila completa. Hasta la misión patch-chat-nuevo-en-vivo
+		 * (16/10/2026) ese caso no hacía nada y la fila, la tarjeta roja y el pedido del agente aparecían
+		 * recién al recargar el módulo.
 		 */
 		patchChatFromBroadcast(state, chat_patch) {
 			let index = state.chats.findIndex(c => c.id == chat_patch.id)
@@ -271,6 +361,28 @@ export default {
 			state.chats.sort((a, b) => {
 				return new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0)
 			})
+		},
+		/**
+		 * Apaga en la bandeja el seguimiento (pedido o consulta del agente) de un chat, sin esperar el
+		 * broadcast. Lo usan los envíos manuales que SALIERON: una persona le escribió al cliente y el
+		 * backend ya apagó la marca (`WhatsappChatHelper::store_outbound_message()`). Se espeja acá porque
+		 * hay entornos sin broadcast (Echo caído, el slot con BROADCAST_DRIVER=log) y, sin esto, el menú
+		 * bajaba por `getResumen` pero la tarjeta, el chip y la franja quedaban hasta recargar.
+		 * Mismo criterio que ya espejan `estado_pendiente` y las respuestas pendientes en estas acciones.
+		 *
+		 * @param {number} chat_id
+		 */
+		clearChatFollowUp(state, chat_id) {
+			let index = state.chats.findIndex(c => c.id == chat_id)
+			// Solo si el chat ya trae el campo: contra una API vieja no existe y agregarlo haría que
+			// `follow_up_soportado` creyera que la API lo manda (y mostraría las tarjetas violetas en 0).
+			if (index != -1 && 'follow_up' in state.chats[index]) {
+				state.chats.splice(index, 1, Object.assign({}, state.chats[index], {
+					follow_up: null,
+					follow_up_note: null,
+					follow_up_at: null,
+				}))
+			}
 		},
 		setSelectedChatId(state, id) {
 			state.selected_chat_id = id
@@ -430,6 +542,9 @@ export default {
 			state.resumen = {
 				mensajes_por_aprobar: Number(value && value.mensajes_por_aprobar) || 0,
 				chats_esperando_aprobacion: Number(value && value.chats_esperando_aprobacion) || 0,
+				chats_con_seguimiento: Number(value && value.chats_con_seguimiento) || 0,
+				pedidos_para_confirmar: Number(value && value.pedidos_para_confirmar) || 0,
+				consultas_pendientes: Number(value && value.consultas_pendientes) || 0,
 			}
 		},
 	},
@@ -491,6 +606,31 @@ export default {
 			return state.chats.filter(c => c.estado_pendiente == 'esperando_aprobacion').length
 		},
 		/**
+		 * La API ya manda el seguimiento (`follow_up`) en los chats. Contra una API vieja el campo ni existe y
+		 * las tarjetas violetas del tablero mostrarían un «0» engañoso: con este getter el tablero las
+		 * esconde. Sin chats todavía no hay forma de saberlo y se muestran.
+		 */
+		follow_up_soportado(state) {
+			return state.chats.length == 0 || state.chats.some(c => 'follow_up' in c)
+		},
+		/**
+		 * Cantidad de chats donde el agente dejó un PEDIDO armado para que una persona lo confirme
+		 * (tarjeta violeta del tablero, misión senal-pedidos-y-consultas-del-agente). Sale de
+		 * `chat.follow_up`, que viaja por chat desde el índice y se mantiene al día por el broadcast
+		 * `WhatsappChatUpdated`; es un eje APARTE de `estado_pendiente`, así que un chat puede contar
+		 * acá y además en "sin responder" a la vez.
+		 */
+		chats_con_pedido_count(state) {
+			return state.chats.filter(c => c.follow_up == 'pedido').length
+		},
+		/**
+		 * Cantidad de chats donde el agente prometió "lo consulto y te confirmo" y todavía nadie
+		 * atendió (tarjeta violeta del tablero). Mismo criterio que `chats_con_pedido_count`.
+		 */
+		chats_con_consulta_count(state) {
+			return state.chats.filter(c => c.follow_up == 'consulta').length
+		},
+		/**
 		 * Cantidad de chats con actividad en el día de hoy (tarjeta verde del tablero).
 		 *
 		 * Mismo criterio "es de hoy" que ya usa `ChatRow.vue::format_time()` sobre
@@ -504,22 +644,169 @@ export default {
 	actions: {
 		/**
 		 * Carga la bandeja de chats (respeta `state.search_query`).
+		 *
+		 * @param {Object} [opciones]
+		 * @param {boolean} [opciones.silent] Recarga SIN prender «Cargando chats...» (que reemplaza la lista
+		 *                                    entera) y sin carteles de error: es el respaldo de fondo de
+		 *                                    `traerChatNuevo`, que el operador no pidió.
 		 */
-		getChats({ commit, state }) {
-			commit('setLoadingChats', true)
-			return axios.get('/api/whatsapp-chats', {
+		getChats({ commit, state }, opciones) {
+			let silent = !!(opciones && opciones.silent)
+			// Búsqueda con la que sale el pedido: ver más abajo por qué la recarga silenciosa la compara al volver.
+			let q_del_pedido = state.search_query || ''
+			if (!silent) {
+				commit('setLoadingChats', true)
+			}
+			return axios.get('/api/whatsapp-chats', Object.assign({
 				params: {
-					q: state.search_query || '',
+					q: q_del_pedido,
 				},
-			})
+			}, silent ? OPCIONES_DE_FONDO : {}))
 				.then(res => {
-					commit('setLoadingChats', false)
+					if (!silent) {
+						commit('setLoadingChats', false)
+					}
+					// 🔴 Una recarga silenciosa que salió SIN búsqueda no puede pisar una búsqueda que el operador
+					// escribió y aplicó mientras volvía: dejaría la lista completa con el texto de la búsqueda en el
+					// input. La que pidió el operador (no silenciosa) sí se aplica siempre.
+					if (silent && (state.search_query || '') !== q_del_pedido) {
+						return
+					}
 					commit('setChats', res.data.models)
 				})
 				.catch(err => {
-					commit('setLoadingChats', false)
+					if (!silent) {
+						commit('setLoadingChats', false)
+					}
 					console.log(err)
 				})
+		},
+		/**
+		 * Puerta de entrada del broadcast `WhatsappChatUpdated` a la bandeja (la usa `SidebarHost.vue`).
+		 *
+		 * - Chat que la bandeja ya tiene → `patchChatFromBroadcast`, como siempre (mezcla el payload liviano
+		 *   sin pisar `client`, `phone`, etc.).
+		 * - Chat que NO tiene (un cliente que escribe por PRIMERA VEZ) → lo pide al backend con
+		 *   `traerChatNuevo`, porque el payload liviano no alcanza para armar la fila.
+		 *
+		 * El chat desconocido se IGNORA en dos casos, a propósito:
+		 * 1. La bandeja nunca se cargó (`chats_cargados` en false): nadie abrió el módulo, la primera carga trae
+		 *    todo y pedirlo ahora sería un GET por cada mensaje que llegue estando en cualquier otra pantalla.
+		 * 2. Hay una búsqueda activa: la bandeja es un resultado de búsqueda y un chat que no está puede ser
+		 *    simplemente uno que no coincide. Insertarlo metería filas que no corresponden; el que sabe si
+		 *    coincide es el backend, y se va a enterar cuando se cambie o se limpie la búsqueda.
+		 *
+		 * @param {Object} chat_patch El `chat` liviano del broadcast ({ id, unread_count, last_message_at, estado_pendiente, follow_up* }).
+		 * @returns {Promise|undefined} Con un chat desconocido que se pide: la promesa de `traerChatNuevo` (los avisos
+		 *                              que llegan con el pedido en vuelo solo se anotan y resuelven al instante).
+		 *                              En cualquier otro caso, `undefined`.
+		 */
+		aplicarBroadcastDeChat({ commit, dispatch, state }, chat_patch) {
+			if (!chat_patch || !chat_patch.id) {
+				return
+			}
+			// Si el chat tiene un pedido en vuelo (`traerChatNuevo`), este aviso es el más nuevo que se vio: se anota
+			// SIEMPRE, también cuando el chat ya entró a la bandeja por otro camino (una recarga completa que ganó la
+			// carrera). Cuando vuelva el GET, la fila que traiga puede ser más vieja que este aviso, y el que se
+			// reaplica al final tiene que ser el último.
+			let en_busqueda = chats_en_busqueda[chat_patch.id]
+			if (en_busqueda) {
+				en_busqueda.ultimo_aviso = chat_patch
+			}
+			let conocido = state.chats.some(c => c.id == chat_patch.id)
+			if (conocido) {
+				commit('patchChatFromBroadcast', chat_patch)
+				return
+			}
+			if (!state.chats_cargados || hay_busqueda_activa(state)) {
+				return
+			}
+			return dispatch('traerChatNuevo', chat_patch)
+		},
+		/**
+		 * Pide al backend un chat que llegó por broadcast y la bandeja todavía no tiene, y lo inserta con la
+		 * misma fila que arma el índice (`GET whatsapp-chats/{id}`: relación `client`, `estado_pendiente`,
+		 * `follow_up*`). Con eso aparecen solos la fila, la tarjeta roja del tablero y, si el primer mensaje
+		 * terminó en pedido, la tarjeta violeta, el chip y la franja.
+		 *
+		 * - Un solo pedido en vuelo por chat. Si mientras tanto llegan OTROS avisos del mismo chat (el cliente mandó
+		 *   un segundo mensaje, contestó el agente), no se pueden aplicar —el chat todavía no está— y el GET que ya
+		 *   salió puede reflejar un estado más viejo que ellos. Se anota el último y, apenas el chat entra a la bandeja,
+		 *   se reaplica con `patchChatFromBroadcast`: así el resultado final es siempre el del aviso más nuevo, sin
+		 *   un segundo GET que a su vez pudiera pisar un aviso posterior con una respuesta vieja. El GET solo aporta lo
+		 *   que el aviso liviano no trae (`client`, `phone`, `display_name`, `ai_enabled`...).
+		 * - Si el pedido falla (una API que todavía no tiene el endpoint contesta 404, se cortó la red, vence el
+		 *   `timeout`, o contesta sin el chat) se cae al respaldo: recargar la bandeja en silencio. Es más pesado pero
+		 *   deja el chat en pantalla igual.
+		 * - Si mientras el pedido volaba el operador escribió una búsqueda, la fila no se inserta: la bandeja pasó a
+		 *   ser un resultado de búsqueda (ver `aplicarBroadcastDeChat`).
+		 *
+		 * @param {Object} chat_patch El `chat` liviano del broadcast que descubrió el chat desconocido.
+		 * @returns {Promise} Resuelve (sin valor) al terminar; nunca rechaza.
+		 */
+		traerChatNuevo({ commit, dispatch, state }, chat_patch) {
+			let chat_id = chat_patch.id
+			let entrada = chats_en_busqueda[chat_id]
+			if (entrada) {
+				entrada.ultimo_aviso = chat_patch
+				return Promise.resolve()
+			}
+			entrada = { ultimo_aviso: null }
+			chats_en_busqueda[chat_id] = entrada
+			// Cierra el pedido: saca la anotación y reaplica el último aviso que llegó mientras volaba (el más nuevo que
+			// se vio). Va por las DOS salidas de la cadena (`.then(cerrar, cerrar)`) para que ningún rechazo inesperado
+			// deje al chat anotado «en búsqueda» para siempre, que es lo que lo dejaría sin volver a pedirse jamás.
+			let cerrar = () => {
+				let ultimo_aviso = entrada.ultimo_aviso
+				delete chats_en_busqueda[chat_id]
+				if (ultimo_aviso && state.chats.some(c => c.id == chat_id)) {
+					commit('patchChatFromBroadcast', ultimo_aviso)
+				}
+			}
+			return axios.get('/api/whatsapp-chats/' + chat_id, OPCIONES_DE_FONDO)
+				.then(res => {
+					if (!res.data || !res.data.model) {
+						throw new Error('GET whatsapp-chats/' + chat_id + ' contestó sin el chat')
+					}
+					// Solo se inserta si el chat sigue sin estar: si una recarga completa lo trajo mientras tanto, la fila
+					// de este GET puede ser más vieja que lo que ya tiene la bandeja y la pisaría (el `Object.assign` de
+					// `upsertChat`). Y tampoco con algo escrito en el buscador (ver `aplicarBroadcastDeChat`).
+					if (!hay_busqueda_activa(state) && !state.chats.some(c => c.id == chat_id)) {
+						commit('upsertChat', res.data.model)
+					}
+				})
+				.catch(err => {
+					console.log(err)
+					return dispatch('recargarBandejaDeRespaldo')
+				})
+				.then(cerrar, cerrar)
+		},
+		/**
+		 * Respaldo de `traerChatNuevo`: recarga la bandeja entera en silencio. Una sola a la vez para toda la
+		 * bandeja (ver `recarga_de_respaldo`): los que lleguen mientras corre comparten su promesa.
+		 *
+		 * Si llega otro pedido con la recarga en vuelo, esa recarga pudo salir ANTES de que naciera el chat que ahora
+		 * la pide: al terminar se hace una más (`recarga_de_respaldo_pendiente`), y la promesa que reciben todos recién
+		 * resuelve cuando termina esa última. Sin esto el chat quedaba sin fila hasta su próximo aviso, que puede no
+		 * llegar nunca (la IA en modo manual, un único mensaje).
+		 *
+		 * @returns {Promise} Resuelve (sin valor) cuando termina la recarga (y la repetición, si hizo falta); nunca rechaza.
+		 */
+		recargarBandejaDeRespaldo({ dispatch }) {
+			if (recarga_de_respaldo) {
+				recarga_de_respaldo_pendiente = true
+				return recarga_de_respaldo
+			}
+			// Por las dos salidas, igual que `cerrar` de `traerChatNuevo`: la variable no puede quedar con una promesa vieja.
+			let terminar = () => {
+				recarga_de_respaldo = null
+				if (recarga_de_respaldo_pendiente) {
+					recarga_de_respaldo_pendiente = false
+					return dispatch('recargarBandejaDeRespaldo')
+				}
+			}
+			recarga_de_respaldo = dispatch('getChats', { silent: true }).then(terminar, terminar)
+			return recarga_de_respaldo
 		},
 		/**
 		 * Crea (o recupera, si ya existía) un chat por teléfono.
@@ -734,6 +1021,10 @@ export default {
 					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
 					// respuesta y ya haber agregado el mensaje.
 					commit('appendOrPatchSentMessage', res.data.model)
+					// Si salió de verdad, el backend apagó el pedido/consulta que el agente había dejado en este chat.
+					if (res.data.enviado !== false) {
+						commit('clearChatFollowUp', payload.chat_id)
+					}
 					// Una respuesta pendiente menos (si había una): el badge del menú y la tarjeta
 					// del tablero tienen que enterarse aunque nadie mire este chat en particular.
 					dispatch('getResumen')
@@ -777,6 +1068,9 @@ export default {
 					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
 					// respuesta y ya haber agregado el mensaje.
 					commit('appendOrPatchSentMessage', res.data.model)
+					if (res.data.enviado !== false) {
+						commit('clearChatFollowUp', payload.chat_id)
+					}
 					dispatch('getResumen')
 					return res.data
 				})
@@ -803,6 +1097,9 @@ export default {
 					// `mutations` — el broadcast de este mismo envío puede llegar antes que esta
 					// respuesta y ya haber agregado el mensaje.
 					commit('appendOrPatchSentMessage', res.data.model)
+					if (res.data.enviado !== false) {
+						commit('clearChatFollowUp', payload.chat_id)
+					}
 					dispatch('getResumen')
 					return res.data.model
 				})
@@ -820,6 +1117,28 @@ export default {
 					if (!res.data.model.ai_enabled) {
 						commit('removePendingAiMessages')
 					}
+					dispatch('getResumen')
+					return res.data.model
+				})
+		},
+		/**
+		 * "Ya lo atendí": da por atendido el pedido o la consulta que el agente dejó marcados en el
+		 * chat (misión senal-pedidos-y-consultas-del-agente). Es para cuando la persona lo resolvió
+		 * por otro lado; si le escribe al cliente desde el módulo, el backend lo apaga solo.
+		 *
+		 * El PUT devuelve el chat completo y `upsertChat` lo mezcla en la bandeja, así la tarjeta y la
+		 * fila se actualizan acá mismo sin esperar el broadcast. Se refresca el resumen porque el número
+		 * del menú también cuenta este chat.
+		 *
+		 * Sin `.catch()` a propósito: el error lo interpreta el componente que dispara la acción y
+		 * muestra un toast propio.
+		 *
+		 * @param {number} chat_id
+		 */
+		resolveFollowUp({ commit, dispatch }, chat_id) {
+			return axios.put('/api/whatsapp-chats/' + chat_id + '/resolve-follow-up', null, { skip_navigation_cancel: true })
+				.then(res => {
+					commit('upsertChat', res.data.model)
 					dispatch('getResumen')
 					return res.data.model
 				})

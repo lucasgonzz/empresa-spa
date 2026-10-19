@@ -8,7 +8,7 @@
 	dialog-class="confirm-afip-dialog"
 	title="Emitir facturas"
 	@show="al_abrir"
-	@hidden="quitar_seleccionable">
+	@hidden="al_cerrar">
 
 		<div
 		class="confirm-afip"
@@ -250,15 +250,25 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * El select de punto de venta se bloquea SOLO cuando el punto de venta no lo eligio el
+		 * usuario: lo preseleccionó BtnFacturar.vue a partir de la sucursal de la venta, y esa
+		 * asignación no se cambia a mano.
+		 *
+		 * 🔴 Se mira la bandera punto_de_venta_por_sucursal y NO "el comercio tiene sucursales y
+		 * hay un punto de venta elegido": esa condición no distingue el preseleccionado del
+		 * elegido a mano, así que apenas había sucursales el select se trababa en el acto al
+		 * elegir cualquiera, y seguía trabado al reabrir porque el id vive en el store. No
+		 * vuelvas a deducirlo de addresses ni de ventas_afip_information_id.
+		 *
+		 * El id distinto de cero va igual como guarda: si algun dia alguien limpia el punto de
+		 * venta sin apagar la bandera, el select no puede quedar trabado en "Seleccione".
+		 *
+		 * @returns {Boolean}
+		 */
 		disabled() {
-			let addresses = this.$store.state.address.models
-			if (
-				addresses.length > 0
-				&& this.ventas_afip_information_id
-			) {
-				return true
-			}
-			return false
+			return this.$store.state.afip_ticket.punto_de_venta_por_sucursal
+				&& this.ventas_afip_information_id != 0
 		},
 		description_importe_a_facturar() {
 			return 'Completar SOLO si querés facturar un importe distinto al de la venta. En blanco se facturan '+this.total_a_facturar
@@ -506,13 +516,18 @@ export default {
 			]
 		},
 		/**
-		 * 🔴 Se limpian LAS DOS cosas, y esa simetria es el punto: monto_a_facturar vive en el
+		 * 🔴 Se limpian las tres cosas, y esa simetria es el punto: monto_a_facturar vive en el
 		 * store y hasta ahora solo se borraba al terminar la emision. O sea que abrir el modal para
 		 * la venta A, escribir un importe, cancelar y abrir el modal para la venta B dejaba el
 		 * importe de A cargado -ahora sin reparto- listo para facturarse sobre otra venta.
+		 *
+		 * Con la fecha del comprobante pasa lo mismo: afip_fecha_emision es data() de este modal,
+		 * que nunca se desmonta, así que una fecha elegida para una venta cancelada quedaba puesta
+		 * para la siguiente. En blanco significa "hoy", como dice la ayuda del campo.
 		 */
 		al_abrir() {
 			this.monto_a_facturar = ''
+			this.afip_fecha_emision = null
 			this.filas_ivas = this.filas_ivas_vacias()
 		},
 		/**
@@ -634,6 +649,23 @@ export default {
 		quitar_seleccionable() {
 			this.$store.commit('sale/setIsSelecteable', false)
 			this.$store.commit('sale/setSelected', [])
+		},
+		/**
+		 * Cierre del modal, venga por donde venga: Cancelar, la X, Esc, clic afuera o el hide() que
+		 * hace terminar_emision() cuando termina de emitir. Suelta la selección de ventas y deja
+		 * el store de facturación limpio.
+		 *
+		 * 🔴 Este modal es global (se monta una vez en App.vue) y el punto de venta, el tipo de
+		 * comprobante y los datos de exportación viven en el store, no acá. Si no se limpian al
+		 * cerrar, lo que se eligió para una venta cancelada aparece ya elegido -y, con el punto de
+		 * venta de la sucursal, bloqueado- en la siguiente. La fecha y el importe, que son de este
+		 * modal, se limpian al abrirlo (al_abrir).
+		 *
+		 * Cuando viene de terminar_emision(), que ya limpió, repetirlo no cambia nada.
+		 */
+		al_cerrar() {
+			this.quitar_seleccionable()
+			this.limpiar_datos_de_facturacion()
 		},
 		emitir_facturas() {
 			if (this.check()) {

@@ -16,29 +16,74 @@ export default {
 			} else {
 				this.$bvModal.hide(model_name+'-pre-view')
 
-				let properties = this.getSelectAndCheckboxProps(model, model_name)
-				properties = properties.concat(this.getPivotProperties(model, model_name))
-				properties = this.overrideProperties(properties, properties_to_override)
-				
-				properties = this.funcion_personalizada(properties)
+				/*
+					Cuelgue silencioso al abrir un formulario (Unicas, 13/10/2026: "se queda cargando y no
+					aparece ningun mensaje"). Esta secuencia prende el overlay global de "Cargando
+					formulario" y lo apaga RECIEN despues de commitear el modelo y abrir el modal, dentro de
+					un setTimeout. Si cualquiera de esos pasos tiraba una excepcion, el error iba solo a la
+					consola y el overlay quedaba tapando el sistema hasta un F5. O, si tiraba en la
+					preparacion de las props (antes de prender el overlay), el click no hacia nada y no
+					avisaba.
+
+					Ahora cualquier error en la apertura muestra un aviso y el overlay se apaga SIEMPRE. El
+					camino feliz es el de antes: mismo orden, mismos 30 ms.
+				*/
+				let properties
+				try {
+					properties = this.getSelectAndCheckboxProps(model, model_name)
+					properties = properties.concat(this.getPivotProperties(model, model_name))
+					properties = this.overrideProperties(properties, properties_to_override)
+
+					properties = this.funcion_personalizada(properties)
+				} catch (err) {
+					console.error('setModel: no se pudieron preparar las props de ' + model_name, err)
+					/*
+						El overlay puede haberlo prendido el que llamo (show_model() de generals.js lo prende
+						ANTES de pedir el modelo y recien despues llama a setModel): si no se apaga aca, el
+						aviso sale pero la pantalla queda tapada hasta un F5. Apagarlo es idempotente.
+					*/
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
+					this.avisarQueNoSePudoAbrirElFormulario()
+					return
+				}
 
 				if (show_modal) {
 					this.$store.commit('auth/setMessage', 'Cargando formulario')
 					this.$store.commit('auth/setLoading', true)
 				}			
 				setTimeout(() => {
-					this.$store.commit(model_name+'/setModel', {
-						model, 
-						properties
-					})
+					try {
+						this.$store.commit(model_name+'/setModel', {
+							model, 
+							properties
+						})
+						if (show_modal) {
+							this.$bvModal.show(model_name)
+						}
+					} catch (err) {
+						console.error('setModel: no se pudo abrir el formulario de ' + model_name, err)
+						this.avisarQueNoSePudoAbrirElFormulario()
+					}
 					if (show_modal) {
-						this.$bvModal.show(model_name)
 						setTimeout(() => {
 							this.$store.commit('auth/setLoading', false)
 							this.$store.commit('auth/setMessage', '')
 						}, 30)
 					}
 				}, 30)
+			}
+		},
+		/**
+		 * Aviso visible cuando un formulario no llego a abrirse (ver el comentario de setModel).
+		 * El loader no lo toca: lo apagan setModel (en sus dos caminos) y no depende de este aviso:
+		 * si el toast mismo fallara, el error queda en la consola y el sistema sigue andando.
+		 */
+		avisarQueNoSePudoAbrirElFormulario() {
+			try {
+				this.$toast.error('No se pudo abrir el formulario. Probá de nuevo; si sigue pasando, recargá la página.')
+			} catch (err) {
+				console.error('setModel: tampoco se pudo mostrar el aviso', err)
 			}
 		},
 		funcion_personalizada(properties) {
@@ -70,6 +115,17 @@ export default {
 						properties.push({
 							...prop,
 							value: 0,
+						})
+					} else if (prop.type == 'date' && prop.value_function) {
+						/*
+							Mision `factura-compra-tres-defectos` (9/10/2026): el valor inicial de
+							una fecha que tiene que calcularse AL ABRIR el formulario (por ejemplo,
+							hoy) y no cuando se cargo el archivo del modelo. Aditivo: solo lo usa
+							un campo de fecha que declare `value_function`.
+						*/
+						properties.push({
+							...prop,
+							value: this[prop.value_function](),
 						})
 					}
 				})

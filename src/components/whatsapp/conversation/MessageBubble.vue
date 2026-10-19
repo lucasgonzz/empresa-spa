@@ -19,6 +19,18 @@
 			class="whatsapp-bubble__sender">
 				{{ sender_label }}
 			</span>
+			<!-- Lo que el agente marcó en ESTE mensaje (misión senal-pedidos-y-consultas-del-agente): un pedido
+			armado o un «lo consulto y te confirmo». Se ve también en el borrador que espera aprobación, para
+			que quien lo revisa sepa que lo que va a mandar deja algo pendiente. -->
+			<span
+			v-if="is_out && message.ai_follow_up"
+			class="whatsapp-bubble__seguimiento"
+			:title="titulo_seguimiento">
+				<i
+				class="bi"
+				:class="message.ai_follow_up == 'pedido' ? 'bi-bag-check-fill' : 'bi-question-circle-fill'"></i>
+				{{ message.ai_follow_up == 'pedido' ? 'Pedido' : 'Consulta' }}
+			</span>
 			<span
 			v-if="es_simulado"
 			class="whatsapp-bubble__sim"
@@ -204,9 +216,11 @@
 				class="bi bi-exclamation-circle whatsapp-bubble__status--failed"></i>
 			</span>
 			<!-- Saliente de un chat en simulación: el envío hacia WhatsApp lo frenó el backend,
-			así que el reloj de "pendiente de entrega" sería mentira: no está por salir, no sale. -->
+			así que el reloj de "pendiente de entrega" sería mentira: no está por salir, no sale.
+			No aplica al envío de una demo (`envio_de_demo`): ahí el backend lo dio por enviado a
+			propósito y los tildes de arriba ya lo muestran. -->
 			<span
-			v-else-if="is_out && es_simulado"
+			v-else-if="is_out && es_simulado && !envio_de_demo"
 			class="whatsapp-bubble__status whatsapp-bubble__status--blocked"
 			title="No salió hacia WhatsApp: el chat está en simulación. El cliente no recibió este mensaje.">
 				<i class="bi bi-slash-circle"></i>
@@ -313,7 +327,19 @@ export default {
 			if (!this.is_out) {
 				return false
 			}
-			return !this.espera_confirmacion && !this.esta_enviandose && !this.es_simulado
+			return !this.espera_confirmacion && !this.esta_enviandose && (!this.es_simulado || this.envio_de_demo)
+		},
+		/**
+		 * El mensaje saliente lo dio por enviado el modo demostración de una instancia de demo
+		 * (misión whatsapp-envio-simulado-demos): el backend no le habló a Kapso y le puso un
+		 * `wa_message_id` que empieza con `SIMULADO.`. Es lo que distingue este caso del
+		 * saliente frenado de un chat en simulación (que no tiene id): el de demo se muestra como
+		 * enviado, con sus tildes, y el otro sigue diciendo «No se envió». Sin `wa_message_id` en
+		 * el mensaje (una API vieja) es falso y todo se ve como siempre.
+		 */
+		envio_de_demo() {
+			let wa_message_id = this.message.wa_message_id
+			return this.is_out && typeof wa_message_id == 'string' && wa_message_id.indexOf('SIMULADO.') === 0
 		},
 		bubble_class() {
 			return {
@@ -365,6 +391,20 @@ export default {
 				return 'Se está enviando solo...'
 			}
 			return 'Se envía solo en ' + this.format_cuenta_regresiva(this.segundos_para_auto_envio)
+		},
+		/**
+		 * Tooltip del badge de seguimiento: qué dejó marcado el agente y, si lo escribió, el detalle.
+		 *
+		 * @returns {string}
+		 */
+		titulo_seguimiento() {
+			let titulo = this.message.ai_follow_up == 'pedido'
+				? 'El agente dejó un pedido para confirmar.'
+				: 'El agente prometió consultar y confirmarle algo al cliente.'
+			if (this.message.ai_follow_up_note) {
+				titulo += ' ' + this.message.ai_follow_up_note
+			}
+			return titulo
 		},
 		/**
 		 * Quién mandó el mensaje saliente: empleado, IA o plantilla usada.
@@ -877,6 +917,21 @@ export default {
 		// (`v-if="is_out"`), que en claro es verde palido: el verde de marca encima da 1,8:1 y se
 		// lee como una mancha. El token propio es el verde oscuro de WhatsApp, 6,9:1.
 		color: var(--wa-sender)
+	// Badge «Pedido» / «Consulta» del agente: sobre la burbuja saliente (verde), así que lleva su propio fondo
+	// de los tokens del seguimiento y no el texto suelto, que sobre el verde no contrasta.
+	&__seguimiento
+		display: inline-flex
+		align-items: center
+		gap: 4px
+		font-size: .65rem
+		font-weight: 700
+		text-transform: uppercase
+		letter-spacing: .03em
+		color: var(--wa-seguimiento-texto)
+		background: var(--wa-seguimiento-bg)
+		border: 1px solid var(--wa-seguimiento-borde)
+		border-radius: 4px
+		padding: 0 5px
 	&__sim
 		display: inline-flex
 		align-items: center

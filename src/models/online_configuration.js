@@ -201,6 +201,16 @@ export default {
 			group_title: 'Inicio (Home)'
 		},
 		{
+			text: 'Diseño del inicio de la tienda',
+			key: 'diseno_home',
+			type: 'select',
+			options: [
+				{ value: 'ultimos_ingresos', text: 'Destacados y últimos ingresos (el de siempre)' },
+				{ value: 'lista_categorias', text: 'Lista de categorías desplegables' },
+			],
+			description: 'Con "Lista de categorías desplegables", la portada de tu tienda muestra debajo del banner todas tus categorías en una lista: al tocar una se despliegan sus productos ahí mismo, con un botón para ver todos. En la portada ya no aparecen Destacados, Novedades ni Últimos ingresos. Cuando el cliente elige una categoría o hace una búsqueda, la tienda se ve igual que siempre.',
+		},
+		{
 			text: 'Scroll infinito en el Inicio',
 			key: 'scroll_infinito_en_home',
 			type: 'checkbox',
@@ -314,36 +324,14 @@ export default {
 			type: 'checkbox',
 		},
 
-		{
-			// Grupo nuevo: login con Google para la tienda online (prompt 588).
-			// Antes las credenciales de Google vivian en el .env de tienda-api;
-			// se mudan aca para que cada dueño las cargue desde su propio online_configuration
-			// (ver prompt 589 para las columnas/backend en empresa-api).
-			group_title: 'Login con Google'
-		},
-		{
-			text: 'Activar login con Google en la tienda',
-			key: 'google_login_enabled',
-			type: 'checkbox',
-			description: 'Permite a los clientes iniciar sesion en la tienda usando su cuenta de Google.',
-		},
-		{
-			text: 'Google Client ID',
-			key: 'google_client_id',
-			type: 'text',
-			// No se condiciona la visibilidad al toggle porque el modelo declarativo
-			// no soporta mostrar/ocultar un campo segun el valor de otro campo (no existe
-			// un "show_when"/"depends_on" en generals.js); por eso queda siempre visible
-			// con esta aclaracion en la description.
-			description: 'Solo aplica si "Activar login con Google" esta activo. Se obtiene desde Google Cloud Console.',
-		},
-		{
-			text: 'Google Client Secret',
-			key: 'google_client_secret',
-			type: 'password',
-			description: 'Solo aplica si "Activar login con Google" esta activo. Por seguridad no se muestra el valor guardado; dejalo vacio si no queres cambiarlo.',
-		},
-
+		/*
+			El grupo "Login con Google" (google_login_enabled, google_client_id y
+			google_client_secret) se sacó el 14/10/2026 (misión tiendas-demo-y-limpieza-tienda,
+			pedido de Lucas): la tienda dejó de ofrecer el ingreso con Google. Las columnas quedan
+			en online_configurations con su valor, porque una tienda vieja todavía las lee; y como
+			el formulario manda el modelo entero (model/Index.vue::getModelToSend), guardar la
+			configuración no las pisa.
+		*/
 		{
 			group_title: 'Redes sociales'
 		},

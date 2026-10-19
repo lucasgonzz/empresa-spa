@@ -11,7 +11,7 @@
 		@click="start_batch_flow()">
 			<div class="ai-desc-dropdown-option">
 				<div class="ai-desc-dropdown-option__title">Generar para los que no tienen descripción</div>
-				<small class="ai-desc-dropdown-option__hint">No toca los artículos que ya tienen una, sea generada por IA o cargada a mano.</small>
+				<small class="ai-desc-dropdown-option__hint">No toca los artículos que ya tienen una (generada por IA o cargada a mano), ni los que esperan revisión en Alertas o descartaste ahí.</small>
 			</div>
 		</dropdown-option-item>
 
@@ -20,7 +20,7 @@
 		@click="start_batch_flow(true)">
 			<div class="ai-desc-dropdown-option">
 				<div class="ai-desc-dropdown-option__title">Regenerar las descripciones de IA</div>
-				<small class="ai-desc-dropdown-option__hint">Vuelve a buscar y reemplaza solo las que fueron generadas por IA. Nunca toca las cargadas a mano.</small>
+				<small class="ai-desc-dropdown-option__hint">Vuelve a buscar y reemplaza las descripciones de IA que nadie aprobó ni corrigió. Nunca toca las cargadas a mano.</small>
 			</div>
 		</dropdown-option-item>
 	</div>

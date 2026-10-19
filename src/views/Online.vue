@@ -13,7 +13,10 @@
 			acá: vive en el sidebar global (mensajes/SidebarHost.vue, montado en App.vue).
 		-->
 		<mensajes></mensajes>
-		<cupons></cupons>
+		<!--
+			Cupones: la vista se sacó el 14/10/2026 (misión tiendas-demo-y-limpieza-tienda): la
+			tienda ya no ofrece cupones. Los pedidos viejos con cupón siguen mostrando su descuento.
+		-->
 		<!--
 			Promociones (15/8/2026): wrapper fino del motor de ofertas por cliente.
 			Hasta el 14/9/2026 montaba el MISMO componente que IA -> Ofertas; con el
@@ -39,7 +42,6 @@ export default {
 		Orders: () => import('@/components/online/components/orders/Index'),
 		Buyers: () => import('@/components/online/components/buyer/Index'),
 		Mensajes: () => import('@/components/online/components/mensajes/Index'),
-		Cupons: () => import('@/components/online/components/cupons/Index'),
 		Promociones: () => import('@/components/online/components/promociones/Index'),
 		VincularComprador: () => import('@/components/online/components/vincular-comprador/Index'),
 	},
@@ -48,7 +50,13 @@ export default {
 		// o marcador) quedaba en blanco porque los tres hijos se gatean por
 		// $route.params.view. Se entra por Pedidos con replace (no push, para no
 		// ensuciar el historial) y catch anti-NavigationDuplicated.
-		if (!this.$route.params.view) {
+		/*
+			Una sección que ya no existe (/online/cupones desde un marcador, el historial o una pestaña
+			que quedó abierta cuando se sacaron los Cupones, 14/10/2026) también quedaba en blanco:
+			se la trata igual que /online pelado.
+		*/
+		let secciones = ['pedidos', 'clientes', 'mensajes', 'promociones']
+		if (!this.$route.params.view || secciones.indexOf(this.$route.params.view) == -1) {
 			this.$router.replace({name: 'online', params: {view: 'pedidos'}}).catch(() => {})
 		}
 	},

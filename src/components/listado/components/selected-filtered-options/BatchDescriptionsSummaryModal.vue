@@ -39,6 +39,7 @@
 					<button
 					type="button"
 					class="btn btn-sm btn-warning batch-summary-review-btn"
+					data-testid="descripciones-resumen-revisar"
 					@click="on_review_click">
 						Revisar ahora
 					</button>
@@ -109,6 +110,8 @@
 	</b-modal>
 </template>
 <script>
+import { destino_de_descripciones, es_ruta_de_descripciones } from '@/components/alertas/solapas'
+
 export default {
 	props: {
 		/**
@@ -199,19 +202,31 @@ export default {
 			this.$emit('confirmed')
 		},
 		/**
-		 * Cierra este modal y le pide al padre que abra la bandeja de revisión.
+		 * Cierra este modal y lleva a Alertas → Catálogo → Descripciones, donde se revisan las
+		 * descripciones que la IA no pudo confirmar (misión alertas-descripciones, 14/10/2026). Antes
+		 * abría una bandeja modal propia (`AiDescriptionsReviewModal`), que se retiró: una sola puerta
+		 * de revisión, como imágenes.
 		 *
-		 * Hoy `needs_review_items` viene `undefined`: se sacó del payload de Pusher porque el
-		 * detalle por artículo no entra en el límite de 10240 bytes con lotes grandes. No se
-		 * pierde nada visible — `AiDescriptionsReviewModal` nunca leyó esos items: al abrirse
-		 * pide la bandeja completa a `GET article-description-ai/pending-review`, que es la
-		 * única fuente que tiene el título, el contenido y las fuentes editables.
+		 * Abre siempre en "A revisar" (`?solapa=a_revisar`): es lo que el resumen anuncia.
+		 *
+		 * Si ya se está ahí, `replace` (con `push` quedaban dos entradas iguales en el historial y el
+		 * botón Atrás parecía no hacer nada) y se le pide a la sección que vuelva a traer su lista y que
+		 * pase a "A revisar" si estaba en Publicadas: la sección no se vuelve a montar, así que sola no
+		 * se enteraría.
 		 *
 		 * @return {void}
 		 */
 		on_review_click() {
 			this.visible_proxy = false
-			this.$emit('review', this.batch_result ? this.batch_result.needs_review_items : [])
+			let destino = destino_de_descripciones({ solapa: 'a_revisar' })
+			let ya_esta_ahi = es_ruta_de_descripciones(this.$route)
+			if (ya_esta_ahi) {
+				this.$store.dispatch('ai_description_review/recargar_revision', { solapa: 'a_revisar' })
+			}
+			let navegacion = ya_esta_ahi ? this.$router.replace(destino) : this.$router.push(destino)
+			navegacion.catch(() => {
+				// Ya estaba en esa misma URL (NavigationDuplicated): no hay nada que hacer.
+			})
 		},
 	},
 }

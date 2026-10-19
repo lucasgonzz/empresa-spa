@@ -147,6 +147,14 @@ export default {
 		flex-direction: row !important
 		justify-content: center 
 		align-items: center 
+		// En un telefono los tres tildes no entran en una fila y se salian por la izquierda (mision
+		// destrabar-videos-centro, 16/10/2026): bajan de renglon.
+		flex-wrap: wrap
+		@media screen and (max-width: 575px)
+			padding: 15px
+			justify-content: flex-start
 	.custom-control
 		margin-right: 35px
+		@media screen and (max-width: 575px)
+			margin: 5px 20px 5px 0
 </style>

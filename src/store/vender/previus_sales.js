@@ -20,6 +20,21 @@ export default {
 		*/
 		abriendo_venta_previa: false,
 		updating: false,
+		/*
+			El vendedor escribio en el campo USD de Moneda.vue (su @input, que bootstrap-vue emite
+			solo cuando lo tipea una persona). La prenden SOLO ese camino: iniciar_dolar(),
+			cargar_dolar_por_defecto() y restaurar_dolar_si_falta() ponen el dolar del sistema por su
+			cuenta y no cuentan como "la toco el vendedor".
+
+			Para que sirve: una venta que se abrio SIN cotizacion recibe el dolar del sistema en el
+			campo (iniciar_dolar), y si el PUT lo mandara, la API le grabaria el dolar del dia a una
+			venta que nadie quiso recotizar (ver cotizacion_para_el_put_de_la_venta, en
+			mixins/vender/previus_sale/moneda_y_cotizacion_del_put.js).
+
+			Vuelve a false con cada setPreviusSale: al abrir otra venta y al limpiar VENDER
+			(limpiar_vender commitea setPreviusSale({})).
+		*/
+		cotizacion_editada_a_mano: false,
 	},
 	getters: {
 		/*
@@ -38,8 +53,13 @@ export default {
 		},
 		setPreviusSale(state, value) {
 			state.previus_sale = value
+			// Otra venta (o ninguna): lo que el vendedor tipeo en el campo USD era de la anterior.
+			state.cotizacion_editada_a_mano = false
 			console.log('store/setPreviusSale')
 			console.log(state.previus_sale)
+		},
+		set_cotizacion_editada_a_mano(state, value) {
+			state.cotizacion_editada_a_mano = value
 		},
 		setPreviusReturnedArticles(state, value) {
 			state.previus_returned_articles = value
@@ -175,6 +195,31 @@ export default {
 					campo, el dia es el mismo que ya tenia la venta y el back no la toca.
 				*/
 				created_at: info.created_at,
+				/*
+					🔴 LA MONEDA VIAJA EN EL PUT Y ES LA SEÑAL DE LA COTIZACION (mision
+					edicion-completa-ventas-presupuestos, 8/10/2026).
+
+					`valor_dolar` viaja en TODOS los PUT de venta desde hace meses, y si la venta tenia
+					la cotizacion en null viaja con el dolar del sistema que Moneda.vue carga al
+					abrirla. Por eso la API no lo puede honrar solo: cualquier edicion comun pisaria la
+					cotizacion. La señal es `moneda_id` (SaleController@update):
+					  - ausente o null -> ni la moneda ni la cotizacion se tocan (es lo que manda una
+					    SPA vieja, y por eso el cambio es compatible hacia atras);
+					  - presente -> se guarda la moneda, y la cotizacion si es mayor que cero (null o
+					    0 conservan la guardada). Pasar a dolares sin ninguna cotizacion valida es 422
+					    `sin_cotizacion_dolar`, y si la venta va a la cuenta corriente el debito pasa a
+					    la cuenta de la moneda nueva.
+					Esta SPA la manda siempre y NORMALIZADA (nunca null: una venta vieja con moneda
+					NULL viaja con 1, si no la API descartaria la cotizacion que el vendedor corrigio).
+					No sacarla "porque casi nunca cambia": sin ella la cotizacion editada en el campo
+					USD no se guarda.
+
+					Y `valor_dolar` viaja en null cuando es el dolar del sistema que Moneda.vue puso
+					solo en una venta que no tenia cotizacion, sin cambio de moneda y sin que el
+					vendedor tocara el campo: asi la API no le graba el dolar del dia. Las dos reglas
+					estan en mixins/vender/previus_sale/moneda_y_cotizacion_del_put.js.
+				*/
+				moneda_id: info.moneda_id,
 				valor_dolar: info.valor_dolar,
 				observations_ocultas: info.observations_ocultas,
 				aplicar_recargos_directo_a_items: info.aplicar_recargos_directo_a_items,
@@ -224,8 +269,9 @@ export default {
 		}, {
 			/*
 				El aviso global del interceptor de main.js se apaga para este PUT: el rechazo
-				(409 de venta facturada o cerrada, 422 sin lista de precios) lo muestra el catch
-				de updateSale() en previus_sale/index.js, con el mensaje del back. Sin esto el
+				(409 de venta facturada o cerrada, 422 sin lista de precios, sin cotizacion o con
+				un cambio de cuenta corriente que no se puede hacer) lo muestra el catch de
+				updateSale() en previus_sale/index.js, con el mensaje del back. Sin esto el
 				mismo mensaje salia dos veces.
 			*/
 			skip_global_error_event: true,
@@ -247,6 +293,14 @@ export default {
 					},
 					diff: null,
 				}, { root: true })
+
+				/*
+					Se devuelve la respuesta: updateSale() (previus_sale/index.js) compara la venta que
+					guardo el servidor con la original para avisar el cambio de cuenta corriente y para
+					detectar una API que no guardo la moneda. Hasta esta mision la promesa resolvia en
+					undefined y nadie la leia.
+				*/
+				return res
 			})
 			.catch(err => {
 				commit('setUpdating', false)

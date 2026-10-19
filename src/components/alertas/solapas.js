@@ -5,9 +5,10 @@
  * "Imágenes" (/alertas/imagenes). Ahora esa solapa se llama "Catálogo" y adentro lleva sub-solapas:
  *
  *   Fila 1 (view):       Cobros | Stock mínimo | Catálogo | Pedidos Proveedor | ...
- *   Fila 2 (sub_view):   Imágenes | Categorías          (solo dentro de Catálogo)
+ *   Fila 2 (sub_view):   Imágenes | Categorías | Descripciones     (solo dentro de Catálogo)
  *
- * La URL canónica es /alertas/catalogo/imagenes y /alertas/catalogo/categorias. Pero la URL vieja
+ * La URL canónica es /alertas/catalogo/imagenes, /alertas/catalogo/categorias y (desde la misión
+ * alertas-descripciones, 14/10/2026) /alertas/catalogo/descripciones. Pero la URL vieja
  * /alertas/imagenes (con o sin `?asignacion=7&solapa=a_revisar`) sigue siendo la que usan los links
  * de "Revisar en Alertas", el historial del listado, la píldora de procesos y cualquier favorito:
  * tiene que seguir andando. Este archivo es la ÚNICA definición de "qué sub-solapa corresponde a la
@@ -18,6 +19,9 @@
  *   - procesos-en-segundo-plano/Fila.vue y BatchImagesSummaryModal.vue
  *                                            -> el destino de "Ver en Alertas" (`destino_de_imagenes`)
  *                                               y el `replace` vs `push` (`es_ruta_de_imagenes`).
+ *   - procesos-en-segundo-plano/Fila.vue y BatchDescriptionsSummaryModal.vue
+ *                                            -> lo mismo para "Revisar en Alertas" de las descripciones
+ *                                               (`destino_de_descripciones`, `es_ruta_de_descripciones`).
  * Si la regla estuviera repetida en cada uno, bastaría que uno se olvide del alias viejo para que la
  * pestaña muestre una cosa y la URL otra.
  *
@@ -30,7 +34,7 @@
  * NUNCA tiran excepción: en el render de Vue una excepción es una pantalla en blanco.
  */
 
-/** `view` de la solapa de primer nivel que agrupa imágenes y categorías. */
+/** `view` de la solapa de primer nivel que agrupa imágenes, categorías y descripciones. */
 export const VISTA_DEL_CATALOGO = 'catalogo'
 
 /**
@@ -50,14 +54,16 @@ export const VISTA_VIEJA_DE_IMAGENES = 'imagenes'
  *   - nombre: el texto de la pestaña.
  *   - testid: el que usa HorizontalNav para el `data-testid` (`nav-item-<testid>`).
  *
- * Para sumar Resumen, Marcas y Descripciones (Fase 2) alcanza con agregar un renglón acá y su
- * sección en catalogo/Index.vue.
+ * Para sumar una sub-solapa alcanza con agregar un renglón acá, decir quién la ve en
+ * `subsolapas_permitidas` y montar su sección en catalogo/Index.vue. Así se sumó Descripciones (misión
+ * alertas-descripciones, 14/10/2026); Resumen y Marcas siguen pendientes.
  *
  * @type {Array<{valor: String, nombre: String, testid: String}>}
  */
 export const SUBSOLAPAS_DEL_CATALOGO = Object.freeze([
 	Object.freeze({valor: 'imagenes', nombre: 'Imágenes', testid: 'imagenes'}),
 	Object.freeze({valor: 'categorias', nombre: 'Categorías', testid: 'categorias'}),
+	Object.freeze({valor: 'descripciones', nombre: 'Descripciones', testid: 'descripciones'}),
 ])
 
 /** Sub-solapa a la que se cae cuando la ruta no trae una válida y permitida (la de siempre). */
@@ -93,6 +99,10 @@ export function es_subsolapa_del_catalogo(sub_view) {
  * sistema de categorías cambia todo el catálogo, y la API contesta 403 a cualquier otro. Un
  * empleado ni la ve (`ruta_normalizada` lo lleva a Imágenes si llega por URL).
  *
+ * Descripciones es para todos, como Imágenes (decisión D2 de Lucas en la misión alertas-descripciones):
+ * es el contenido de cada artículo, no un cambio de todo el catálogo. La API la acota al negocio de la
+ * sesión, igual que Imágenes.
+ *
  * Esto es SOLO "qué pestaña se dibuja": la autoridad sobre quién puede elegir o revisar es de la API.
  *
  * @param {*} es_dueno true si el usuario no tiene `owner_id` (computed global `is_owner`).
@@ -104,6 +114,7 @@ export function subsolapas_permitidas(es_dueno, es_acceso_maestro) {
 	if (es_dueno === true || es_acceso_maestro === true) {
 		permitidas.push('categorias')
 	}
+	permitidas.push('descripciones')
 	return permitidas
 }
 
@@ -181,6 +192,28 @@ export function ruta_normalizada(view, sub_view, permitidas) {
  * @returns {Boolean}
  */
 export function es_ruta_de_imagenes(route) {
+	return es_ruta_de_la_subsolapa(route, 'imagenes')
+}
+
+/**
+ * Lo mismo que `es_ruta_de_imagenes`, para Alertas → Catálogo → Descripciones. La usan "Revisar
+ * ahora" del resumen del lote de descripciones y "Revisar en Alertas" de la píldora de procesos.
+ *
+ * @param {*} route Un objeto de ruta de vue-router (`this.$route`): `{name, params}`.
+ * @returns {Boolean}
+ */
+export function es_ruta_de_descripciones(route) {
+	return es_ruta_de_la_subsolapa(route, 'descripciones')
+}
+
+/**
+ * Dice si una ruta, ya normalizada, es Alertas → Catálogo → <la sub-solapa pedida>.
+ *
+ * @param {*} route Un objeto de ruta de vue-router.
+ * @param {String} valor `valor` de la sub-solapa.
+ * @returns {Boolean}
+ */
+function es_ruta_de_la_subsolapa(route, valor) {
 	if (!route || typeof route != 'object' || route.name !== 'alertas') {
 		return false
 	}
@@ -190,7 +223,7 @@ export function es_ruta_de_imagenes(route) {
 		todas.push(subsolapa.valor)
 	})
 	let destino = ruta_normalizada(params.view, params.sub_view, todas)
-	return destino.view === VISTA_DEL_CATALOGO && destino.sub_view === 'imagenes'
+	return destino.view === VISTA_DEL_CATALOGO && destino.sub_view === valor
 }
 
 /**
@@ -207,6 +240,22 @@ export function destino_de_imagenes(query) {
 	return {
 		name: 'alertas',
 		params: {view: VISTA_DEL_CATALOGO, sub_view: 'imagenes'},
+		query: query && typeof query == 'object' ? query : {},
+	}
+}
+
+/**
+ * La ubicación de Alertas → Catálogo → Descripciones (misión alertas-descripciones, 14/10/2026), con
+ * la query que se le pida (`solapa`: a_revisar | publicadas). Mismo criterio que
+ * `destino_de_imagenes`: `name` y `params` exactos.
+ *
+ * @param {Object} [query] Por ejemplo `{solapa: 'publicadas'}`.
+ * @returns {{name: String, params: Object, query: Object}}
+ */
+export function destino_de_descripciones(query) {
+	return {
+		name: 'alertas',
+		params: {view: VISTA_DEL_CATALOGO, sub_view: 'descripciones'},
 		query: query && typeof query == 'object' ? query : {},
 	}
 }

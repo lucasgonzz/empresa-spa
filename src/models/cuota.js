@@ -37,9 +37,9 @@ export default {
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Define las opciones de cuotas de los planes de pago, con su descuento o recargo.',
-		implicancias: 'Al armar un plan de pago en cuenta corriente, las opciones de cantidad de cuotas disponibles y su ajuste (descuento o recargo porcentual) salen de acá.',
-		como_se_utiliza: 'Creá cada opción indicando la cantidad de cuotas y, si corresponde, el descuento o recargo que aplica. Se usan al generar planes de pago para los clientes.',
-		palabras_clave: ['plan de pago', 'financiacion', 'cuotas', 'recargo', 'interes'],
+		implicancias: 'Al armar un plan de pago en cuenta corriente, las opciones de cantidad de cuotas disponibles y su ajuste (descuento o recargo porcentual) salen de acá. Las cuotas cargadas para un método de pago de cuenta corriente también se ofrecen en la tienda online cuando el método de Mercado Pago de la tienda está vinculado con ese método de pago (ABM → Tienda online → Métodos de pago): el comprador ve «N cuotas de $X», con el recargo ya incluido en cada cuota. Solo se ofrecen las que tienen un método de pago elegido y un ajuste neto (recargo menos descuento) de cero o más; las genéricas no. Para que el comprador pague exactamente la cuota que ve en la tienda, activá las «cuotas sin interés» para esas cantidades en tu cuenta de Mercado Pago (Negocio → Costos y cuotas); si no, Mercado Pago le suma su propio interés encima. El recargo que cargás acá es el que cubre lo que Mercado Pago te descuenta por ofrecer esas cuotas.',
+		como_se_utiliza: 'Creá cada opción indicando la cantidad de cuotas y, si corresponde, el descuento o recargo que aplica. Se usan al generar planes de pago para los clientes. Para ofrecerlas también en la tienda, elegí el método de pago en cada cuota y, en ABM → Tienda online → Métodos de pago, vinculá tu método de Mercado Pago con ese mismo método.',
+		palabras_clave: ['plan de pago', 'financiacion', 'cuotas', 'recargo', 'interes', 'tienda', 'mercado pago', 'cuotas en la tienda'],
 	},
 	singular_model_name_spanish: 'Cuota',
 	plural_model_name_spanish: 'Cuotas',

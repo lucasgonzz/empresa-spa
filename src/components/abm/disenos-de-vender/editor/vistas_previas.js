@@ -65,6 +65,7 @@ export const VISTAS_PREVIAS = {
 
 	/* ---------------------------------------------------------------- Etapa 3 */
 
+	chequeo_de_deposito: { tipo: 'checkbox', texto: 'Para chequear · Chequeada · Confirmada' },
 	estado: { tipo: 'select', prepend: 'Estado', valor: 'Sin estado' },
 	fecha_de_entrega: { tipo: 'fecha', prepend: 'Fecha de entrega', valor: 'dd/mm/aaaa' },
 	orden_de_compra: { tipo: 'input', prepend: 'N° Orden compra', placeholder: '' },

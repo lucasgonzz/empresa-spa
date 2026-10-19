@@ -12,7 +12,14 @@ class="control-fecha">
 		reportado el 11/8/2026. Con la clase, esos modulos conservan la fila unica tambien en
 		telefono, que es como se ve en escritorio.
 	-->
+	<!--
+		`v-if="hay_algo_que_mostrar"`: sin NINGUNA de las tres piezas (modo, calendario, dias) la
+		pastilla quedaba como una barra gris vacia, de 36px de alto y con sombra. Pasa solo con el
+		calendario sujeto a permiso (Ventas) y un usuario sin `sale.index.previus_days`, que ademas
+		no ve los dias. En cualquier otro caso alguna de las tres siempre esta, y no cambia nada.
+	-->
 	<div
+	v-if="hay_algo_que_mostrar"
 	class="control-fecha__pastilla"
 	:data-tour="model_name === 'sale' ? 'ventas.control_fecha' : model_name === 'provider_order' ? 'compras.control_fecha' : null"
 	:class="{ 'control-fecha__pastilla--sin-modo': !change_from_dates_option }">
@@ -81,7 +88,7 @@ class="control-fecha">
 			<div
 			v-if="hay_rango"
 			class="control-fecha__rango">
-				<span>{{ texto_rango }}</span>
+				<span data-testid="control-fecha-rango">{{ texto_rango }}</span>
 				<button
 				type="button"
 				class="control-fecha__rango-quitar"
@@ -245,8 +252,25 @@ export default {
 		hay_rango() {
 			return this.has_until && this.until_date != ''
 		},
+		/**
+		 * Texto del chip del rango. Es lo unico que dice de donde a donde va el rango, asi que tiene
+		 * que nombrar el mes del principio cuando difiere del final: "1 – 9 oct." para un rango que
+		 * arranca el 1 de agosto se lee como si fuera de un solo mes. Si ademas cambia el año, va en
+		 * los dos extremos.
+		 *
+		 * @returns {String}
+		 */
 		texto_rango() {
-			return moment(this.from_date).format('D') + ' – ' + moment(this.until_date).format('D MMM')
+			let desde = moment(this.from_date)
+			let hasta = moment(this.until_date)
+
+			if (desde.year() != hasta.year()) {
+				return desde.format('D MMM YYYY') + ' – ' + hasta.format('D MMM YYYY')
+			}
+			if (desde.month() != hasta.month()) {
+				return desde.format('D MMM') + ' – ' + hasta.format('D MMM')
+			}
+			return desde.format('D') + ' – ' + hasta.format('D MMM')
 		},
 		has_permission() {
 			if (this.check_permissions) {
@@ -270,13 +294,51 @@ export default {
 		 * si ese store arranca en false. Por eso son dos casos: sin selector, siempre; con
 		 * selector, solo en "Por fecha".
 		 *
+		 * 🔴 Excepción por permiso (misión alcance-de-ventas-caminos-faltantes, 16/10/2026): si el store
+		 * del modelo declara `calendario_sujeto_a_permiso` y el usuario NO tiene
+		 * `<model>.index.previus_days` (`has_permission`), el calendario no se muestra, en ninguno de los
+		 * dos casos. Antes el permiso solo escondía la tira de días (`muestra_dias`) y el calendario
+		 * quedaba disponible, así que un empleado sin el permiso elegía cualquier fecha o rango aunque
+		 * el permiso diga «sin esto solo ve las de hoy». La API ahora impone ese recorte; esto es no
+		 * ofrecerle una fecha que no va a dar nada.
+		 *
+		 * Para cualquier modelo cuyo store no declara la clave (todos menos `sale`, y `sale` solo
+		 * dentro de Ventas) `calendario_sujeto_a_permiso` es false y esta rama no se ejecuta nunca.
+		 * `has_permission` ya vale true cuando `check_permissions` es false, así que los consumidores
+		 * que no chequean permisos (Depósito, Caja vieja) tampoco cambian.
+		 *
 		 * @returns {Boolean}
 		 */
 		muestra_calendario() {
+			if (this.calendario_sujeto_a_permiso && !this.has_permission) {
+				return false
+			}
 			if (!this.change_from_dates_option) {
 				return true
 			}
 			return this.es_modo(true)
+		},
+		/**
+		 * ¿El store de este modelo declara que su calendario depende del permiso de días anteriores?
+		 *
+		 * La clave la define el store (hoy solo `sale`, ver `calendario_sujeto_a_permiso` en
+		 * src/store/sale/index.js); en los demás es `undefined` y esto da false. Se lee con la misma
+		 * guarda que el resto de los computed de acá: `state[model_name]` es el store del modelo.
+		 *
+		 * @returns {Boolean}
+		 */
+		calendario_sujeto_a_permiso() {
+			let store_del_modelo = this.$store.state[this.model_name]
+			return !!(store_del_modelo && store_del_modelo.calendario_sujeto_a_permiso)
+		},
+		/**
+		 * Si queda al menos una de las tres piezas del control (modo, calendario, días). Cuando no queda
+		 * ninguna no tiene sentido dibujar la pastilla vacía; ver el `v-if` de la pastilla.
+		 *
+		 * @returns {Boolean}
+		 */
+		hay_algo_que_mostrar() {
+			return this.change_from_dates_option || this.muestra_calendario || this.muestra_dias
 		},
 	},
 	watch: {

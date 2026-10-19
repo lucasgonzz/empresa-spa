@@ -62,6 +62,11 @@ export default {
 			key: 'facturado',
 			type: 'checkbox',
 			value: 0,
+			// Clave opcional que lee ModelForm::al_cambiar_interruptor: este interruptor
+			// gobierna la visibilidad de otros campos (v_if_function) y el modelo llega como
+			// copia no observada, así que sin esto los campos aparecen recién al redibujarse
+			// el formulario por otro motivo.
+			redibujar_al_cambiar: true,
 			description: 'Indica si este costo extra (flete, seguro, etc.) vino facturado. Si está facturado, genera IVA crédito y hay que indicar con qué alícuota; si no, suma al costo sin IVA.',
 		},
 		{
@@ -84,6 +89,9 @@ export default {
 			key: 'en_factura_compra',
 			type: 'checkbox',
 			value: 1,
+			// Igual que en "facturado": decide si se ven CUIT y razón social del emisor
+			// (show_costo_extra_si_factura_aparte), así que pide redibujar al cambiar.
+			redibujar_al_cambiar: true,
 			v_if_function: 'show_costo_extra_si_facturado',
 			description: 'Activado: este costo extra va dentro de la misma factura de la compra. Desactivado: se factura aparte (por ejemplo, cuando el transporte lo hizo otra empresa): se va a generar automaticamente un comprobante separado con el total de este costo extra, para completar despues con los datos del emisor (CUIT y razón social).',
 		},

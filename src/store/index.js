@@ -50,7 +50,6 @@ import order_status from '@/store/order_status'
 import buyer from '@/store/buyer'
 import delivery_zone from '@/store/delivery_zone'
 import payment_method from '@/store/payment_method'
-import cupon from '@/store/cupon'
 import deposit from '@/store/deposit'
 import size from '@/store/size'
 import color from '@/store/color'
@@ -196,6 +195,8 @@ import column_position from '@/store/column_position'
 import table_column_preference from '@/store/table_column_preference'
 import pdf_column_option from '@/store/pdf_column_option'
 import pdf_column_profile from '@/store/pdf_column_profile'
+// Tipos de hoja y rollos de comandera de los diseños de PDF (misión diseno-ticket-comandera)
+import sheet_type from '@/store/sheet_type'
 
 import platform from '@/store/platform'
 import article_embeddings_estado from '@/store/article_embeddings_estado'
@@ -267,6 +268,10 @@ import image_assignment from '@/store/image_assignment'
 // (mision categorizacion-tres-modelos, 5/10/2026). Igual que image_assignment, no sale del factory
 // comun: no es un ABM, es el estado de lectura de un modulo con su propio contrato.
 import category_proposal from '@/store/category_proposal'
+// Revisión de las descripciones automáticas que la IA no pudo confirmar: la sub-solapa Alertas ->
+// Catálogo -> Descripciones y su número rojo (misión alertas-descripciones, 14/10/2026). Mismo
+// criterio que los dos de arriba: no es un ABM, no sale del factory común.
+import ai_description_review from '@/store/ai_description_review'
 
 import provider_order_afip_ticket_iva from '@/store/provider_order_afip_ticket_iva'
 import provider_order_discount from '@/store/provider_order_discount'
@@ -357,7 +362,6 @@ export default new Vuex.Store({
         buyer,
         delivery_zone,
         payment_method,
-        cupon,
         deposit,
         size,
         color,
@@ -493,6 +497,7 @@ export default new Vuex.Store({
         table_column_preference,
         pdf_column_option,
         pdf_column_profile,
+        sheet_type,
 
         platform,
         platform_connector,
@@ -554,6 +559,7 @@ export default new Vuex.Store({
         filter_history,
         image_assignment,
         category_proposal,
+        ai_description_review,
 
         provider_order_afip_ticket_iva,
         provider_order_discount,

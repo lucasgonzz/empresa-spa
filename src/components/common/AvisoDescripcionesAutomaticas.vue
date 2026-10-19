@@ -3,12 +3,7 @@
 		<batch-descriptions-summary-modal
 		:visible.sync="batch_summary_visible"
 		:batch_result="batch_result"
-		@confirmed="on_batch_summary_confirmed"
-		@review="on_review_requested"></batch-descriptions-summary-modal>
-
-		<ai-descriptions-review-modal
-		:visible.sync="review_modal_visible"
-		:initial_items="review_initial_items"></ai-descriptions-review-modal>
+		@confirmed="on_batch_summary_confirmed"></batch-descriptions-summary-modal>
 	</div>
 </template>
 <script>
@@ -29,8 +24,12 @@ import actualizar_lista_de_articulos from '@/mixins/listado/actualizar_lista_de_
  * no aparecía nunca, sin error, sin log y sin nada en la consola. Ese era el defecto.
  *
  * Este componente es entonces el DUEÑO ÚNICO de: la suscripción al canal del lote, la marca de
- * "hay un lote en vuelo en esta pestaña", el modal de resumen y la bandeja de revisión. El
- * disparador quedó reducido a pedir el POST y avisar por el bus de `$root`.
+ * "hay un lote en vuelo en esta pestaña" y el modal de resumen. El disparador quedó reducido a
+ * pedir el POST y avisar por el bus de `$root`.
+ *
+ * Desde la misión alertas-descripciones (14/10/2026) ya no monta una bandeja de revisión propia:
+ * lo que la IA no pudo confirmar se revisa en Alertas → Catálogo → Descripciones ("Revisar ahora"
+ * del resumen lleva ahí) y, al terminar el lote, acá solo se pide el número rojo de esa solapa.
  *
  * 🔴 La suscripción es BAJO DEMANDA, no permanente, y la diferencia no es de estilo:
  * `article_batch_descriptions.{id}` es un canal del OWNER, no del usuario. Si este anfitrión se
@@ -69,7 +68,6 @@ export default {
 	mixins: [actualizar_lista_de_articulos],
 	components: {
 		BatchDescriptionsSummaryModal: () => import('@/components/listado/components/selected-filtered-options/BatchDescriptionsSummaryModal'),
-		AiDescriptionsReviewModal: () => import('@/components/listado/components/selected-filtered-options/AiDescriptionsReviewModal'),
 	},
 	data() {
 		return {
@@ -101,21 +99,6 @@ export default {
 			batch_summary_visible: false,
 			/* Payload recibido desde Pusher con el resumen del procesamiento. */
 			batch_result: null,
-			/* Controla visibilidad de la bandeja de revisión de baja confianza. */
-			review_modal_visible: false,
-			/**
-			 * Items pre-cargados para la bandeja de revisión.
-			 *
-			 * Hoy queda siempre vacío, y está bien: el payload de Pusher dejó de mandar
-			 * `needs_review_items` porque el detalle por artículo no entra en el límite de 10240
-			 * bytes de Pusher con lotes grandes (ver `broadcastWith()` de
-			 * ArticleBatchDescriptionsProcessed). No se pierde nada: `AiDescriptionsReviewModal`
-			 * nunca leyó esta prop — al abrirse pide la bandeja completa a
-			 * `GET article-description-ai/pending-review`, que es la única fuente que tiene el
-			 * título, el contenido y las fuentes editables. El cableado se deja armado para el
-			 * día que el resumen se sirva por HTTP, como ya se hace en imágenes.
-			 */
-			review_initial_items: [],
 		}
 	},
 	created() {
@@ -218,8 +201,10 @@ export default {
 			})
 		},
 		/**
-		* Llegó el aviso de fin del lote: se deja de esperar, se suelta el canal y se abre el
-		* resumen.
+		* Llegó el aviso de fin del lote: se deja de esperar, se suelta el canal, se abre el
+		* resumen y se pide el número rojo de Alertas → Catálogo → Descripciones (lo que la IA no
+		* pudo confirmar quedó esperando revisión ahí). Si esa sección está abierta, además vuelve a
+		* traer su lista, en la solapa que tenga: lo nuevo aparece sin tocar nada.
 		*
 		* @param {Object} payload Payload recibido por Pusher.
 		* @return {void}
@@ -243,6 +228,7 @@ export default {
 			this.olvidar_lote_en_vuelo()
 			this.sincronizar_suscripcion()
 			this.open_summary(payload)
+			this.$store.dispatch('ai_description_review/recargar_revision')
 		},
 		/**
 		* Escribe la marca de "esta pestaña está esperando un lote", para que un F5 en el medio
@@ -336,17 +322,6 @@ export default {
 				return
 			}
 			this.get_ultimos_articulos_actualizados()
-		},
-		/**
-		* Abre la bandeja de revisión. Los items que llegan acá son solo una pista: la bandeja
-		* siempre se recarga sola desde el backend al mostrarse (ver `review_initial_items`).
-		*
-		* @param {Array} needs_review_items Items pendientes de revisión, si el payload los trajo.
-		* @return {void}
-		*/
-		on_review_requested(needs_review_items) {
-			this.review_initial_items = needs_review_items || []
-			this.review_modal_visible = true
 		},
 		/**
 		* Indica si la ruta activa es el listado de artículos.

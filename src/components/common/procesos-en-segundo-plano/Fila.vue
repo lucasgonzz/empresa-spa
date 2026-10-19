@@ -88,6 +88,27 @@ tabindex="0"
 			</button>
 		</div>
 
+		<!--
+			Descripciones inteligentes (mision alertas-descripciones, 14/10/2026): si el lote termino
+			con descripciones que la IA no pudo confirmar, esperan revision en Alertas -> Catalogo ->
+			Descripciones, y la fila lleva ahi. Sirve sobre todo para el lote que no largo esta pestaña
+			(el del motor de implementacion, o el de otra persona): ese no abre el resumen con "Revisar
+			ahora". Mismos `keydown.stop` que el boton de imagenes.
+		-->
+		<div
+		v-if="descripciones_a_revisar > 0"
+		class="proceso-fila__acciones">
+			<button
+			type="button"
+			class="proceso-fila__accion"
+			data-testid="proceso-revisar-descripciones"
+			@keydown.enter.stop
+			@keydown.space.stop
+			@click.stop="revisar_descripciones_en_alertas">
+				Revisar en Alertas
+			</button>
+		</div>
+
 	</div>
 
 	<button
@@ -105,7 +126,7 @@ tabindex="0"
 <script>
 import moment from 'moment'
 import { tipo_de, es_de_importacion, esta_activo, asignacion_de_imagenes, duracion_de, espera_de, formatear_duracion } from '@/components/common/procesos-en-segundo-plano/tipos'
-import { destino_de_imagenes, es_ruta_de_imagenes } from '@/components/alertas/solapas'
+import { destino_de_imagenes, es_ruta_de_imagenes, destino_de_descripciones, es_ruta_de_descripciones } from '@/components/alertas/solapas'
 
 /**
  * Una fila (tarjeta) del modal de procesos en segundo plano: icono por tipo, titulo, detalle,
@@ -172,6 +193,21 @@ export default {
 		 */
 		asignacion_de_imagenes_id() {
 			return asignacion_de_imagenes(this.proceso)
+		},
+		/**
+		 * Cuántas descripciones dejó esperando revisión un lote de descripciones ya terminado (el
+		 * `a_revisar` de su `resultado`). Cero para cualquier otro proceso, para uno que sigue
+		 * corriendo o que falló: decide si va el botón "Revisar en Alertas".
+		 *
+		 * @returns {Number}
+		 */
+		descripciones_a_revisar() {
+			let proceso = this.proceso
+			if (proceso.tipo !== 'descripciones_ia' || proceso.status !== 'completado') {
+				return 0
+			}
+			let resultado = proceso.resultado && typeof proceso.resultado === 'object' ? proceso.resultado : {}
+			return Number(resultado.a_revisar) || 0
 		},
 		medible() {
 			return this.proceso.porcentaje !== null && typeof this.proceso.porcentaje !== 'undefined'
@@ -260,6 +296,26 @@ export default {
 			// botón Atrás parecía no hacer nada. Con la URL canónica, `params.view === 'imagenes'`
 			// da falso siempre: por eso se pregunta con `es_ruta_de_imagenes`.
 			let ya_esta_ahi = es_ruta_de_imagenes(this.$route)
+			let navegacion = ya_esta_ahi ? this.$router.replace(destino) : this.$router.push(destino)
+			navegacion.catch(() => {
+				// Ya estaba en esa misma URL (NavigationDuplicated): no hay nada que hacer.
+			})
+		},
+		/**
+		 * Cierra el modal de procesos y lleva a Alertas → Catálogo → Descripciones, en "A revisar", donde
+		 * esperan las descripciones que la IA no pudo confirmar. Si ya se está ahí, `replace` (como con
+		 * imágenes) y se le pide a la sección que vuelva a traer su lista y que pase a "A revisar" si
+		 * estaba en Publicadas: la sección no se vuelve a montar, así que sola no se enteraría.
+		 *
+		 * @return {void}
+		 */
+		revisar_descripciones_en_alertas() {
+			this.$bvModal.hide('procesos-en-segundo-plano')
+			let destino = destino_de_descripciones({ solapa: 'a_revisar' })
+			let ya_esta_ahi = es_ruta_de_descripciones(this.$route)
+			if (ya_esta_ahi) {
+				this.$store.dispatch('ai_description_review/recargar_revision', { solapa: 'a_revisar' })
+			}
 			let navegacion = ya_esta_ahi ? this.$router.replace(destino) : this.$router.push(destino)
 			navegacion.catch(() => {
 				// Ya estaba en esa misma URL (NavigationDuplicated): no hay nada que hacer.
