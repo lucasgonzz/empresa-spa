@@ -381,6 +381,8 @@ export default {
 					el motivo esta explicado alla arriba.
 				*/
 				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
+				// El flag EFECTIVO, igual que el POST online (store/vender/vender.js): ahi esta el porque.
+				aplicar_descuentos_directo_a_items: this.$store.getters['vender/descuentos_en_precios_efectivos'] ? 1 : 0,
 				puntos_canjeados: this.$store.state.vender.puntos_canjeados,
 				descuento_puntos: this.$store.state.vender.descuento_puntos,
 				sale_status_id: this.$store.state.vender.sale_status_id,

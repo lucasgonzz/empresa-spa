@@ -22,6 +22,7 @@
  * node la pueda cargar tal cual, sin webpack.
  */
 import { numero_o_null, precio_sin_recargos_guardado, redondear_a_centavos } from './recargos_en_precios'
+import { precio_base_guardado } from './descuentos_en_precios'
 
 /**
  * Si una cantidad de deposito, de devolucion o de acopio (checked_amount, returned_amount,
@@ -214,12 +215,14 @@ function cantidad_de_la_fila(cantidad) {
 /**
  * El precio de la fila de varios precios que sale de un renglon guardado.
  *
- * Una fila de varios precios lleva en `price_vender` el precio SIN los recargos de venta (lo que
- * tipeo el vendedor): set_varios_precios_con_recargos() le aplica el factor de los recargos en su
- * propia clave. Por eso, en un comprobante normal, es el precio sin recargos que guardo el renglon
- * (pivot.price_sin_recargos_de_venta) y, si esa base es null, el price tal cual: con base null el
- * price NO tiene recargos adentro (la invariante de utils/recargos_en_precios.js). Es exactamente lo
- * que hace getPriceVender() en la rama del pivot.
+ * Una fila de varios precios lleva en `price_vender` el precio ORIGINAL, sin descuentos ni recargos
+ * de venta (lo que tipeo el vendedor): set_varios_precios_con_recargos() le aplica los factores de
+ * los descuentos y de los recargos en su propia clave. Por eso, en un comprobante normal, es el
+ * precio original que guardo el renglon (precio_base_guardado: pivot.price_sin_descuentos_de_venta
+ * y, si esa base es null, pivot.price_sin_recargos_de_venta) y, si las dos son null, el price tal
+ * cual: con las dos bases en null el price NO tiene ajustes de venta adentro (la pila de capas de
+ * utils/descuentos_en_precios.js). Es exactamente lo que hace getPriceVender() en la rama del
+ * pivot, y por eso las dos tienen que usar la MISMA funcion.
  *
  * 🔴 En un comprobante LEGADO el precio es SIEMPRE el price tal cual, tenga o no base, porque ahi
  * getPriceVender() usa `item.pivot.price` sin mirar la base, y set_varios_precios_con_recargos() no
@@ -230,22 +233,31 @@ function cantidad_de_la_fila(cantidad) {
  *
  * Number() porque la API devuelve las columnas decimales como string ("100.00").
  *
+ * 🔴 En un comprobante LEGADO DE DESCUENTOS (y no de recargos) el precio es la base de los recargos si
+ * existe, y si no el price tal cual: nunca la columna de descuentos ni el original. Ahi el precio
+ * guardado tiene el descuento adentro de una base que no se conoce, y getPriceVender() lo usa asi (rama
+ * del pivot del legado de descuentos) y set_varios_precios_con_recargos() no vuelve a descontar la
+ * fila. Las tres tienen que usar el mismo criterio o la fila cambiaria de precio al reabrir.
+ *
  * @param {Object} pivot Pivot del renglon guardado.
  * @param {Boolean} legado comprobante_con_recargos_en_precios_sin_registro() del comprobante.
+ * @param {Boolean} [legado_descuentos] comprobante_con_descuentos_en_precios_sin_registro() del comprobante.
  * @returns {Number}
  */
-function precio_de_la_fila(pivot, legado) {
+function precio_de_la_fila(pivot, legado, legado_descuentos) {
 
-	if (!legado) {
+	if (legado) {
+		return Number(pivot.price)
+	}
+
+	if (legado_descuentos) {
 
 		let precio_sin_recargos = precio_sin_recargos_guardado(pivot)
 
-		if (precio_sin_recargos !== null) {
-			return precio_sin_recargos
-		}
+		return precio_sin_recargos === null ? Number(pivot.price) : precio_sin_recargos
 	}
 
-	return Number(pivot.price)
+	return precio_base_guardado(pivot)
 }
 
 /**
@@ -270,9 +282,10 @@ function precio_de_la_fila(pivot, legado) {
  *
  * @param {Array} renglones Los renglones de articulo de una identidad, en el orden del pivot.
  * @param {Boolean} legado comprobante_con_recargos_en_precios_sin_registro() del comprobante.
+ * @param {Boolean} [legado_descuentos] comprobante_con_descuentos_en_precios_sin_registro() del comprobante.
  * @returns {Array|null}
  */
-function filas_del_renglon_reagrupado(renglones, legado) {
+function filas_del_renglon_reagrupado(renglones, legado, legado_descuentos) {
 
 	if (renglones.length < 2) {
 		return null
@@ -295,7 +308,7 @@ function filas_del_renglon_reagrupado(renglones, legado) {
 
 	renglones.forEach((renglon, indice) => {
 
-		let precio = precio_de_la_fila(renglon.pivot, legado)
+		let precio = precio_de_la_fila(renglon.pivot, legado, legado_descuentos)
 		let cantidad = Number(renglon.amount)
 
 		suma_de_las_filas += precio * cantidad
@@ -366,6 +379,8 @@ function filas_del_renglon_reagrupado(renglones, legado) {
  * @param {Object} [opciones]
  * @param {*} [opciones.to_check] El `to_check` del comprobante (un presupuesto no lo tiene).
  * @param {*} [opciones.checked] El `checked` del comprobante (un presupuesto no lo tiene).
+ * @param {Boolean} [opciones.legado_descuentos] comprobante_con_descuentos_en_precios_sin_registro()
+ *        del comprobante: la fila toma el precio guardado sin volver a descontarlo (ver precio_de_la_fila).
  * @param {Boolean} [opciones.legado] comprobante_con_recargos_en_precios_sin_registro() del
  *        comprobante (ver precio_de_la_fila).
  * @param {Boolean} [opciones.con_acopios] Si la cuenta tiene la extension acopios: con true no se
@@ -418,6 +433,7 @@ export function reagrupar_renglones_con_varios_precios(items, opciones) {
 	}
 
 	let legado = Boolean(config.legado)
+	let legado_descuentos = Boolean(config.legado_descuentos)
 
 	/*
 		Primera pasada: TODOS los renglones de articulo por identidad (id + variante), en el orden en
@@ -446,7 +462,7 @@ export function reagrupar_renglones_con_varios_precios(items, opciones) {
 
 	Object.keys(renglones_por_identidad).forEach(identidad => {
 
-		let filas = filas_del_renglon_reagrupado(renglones_por_identidad[identidad], legado)
+		let filas = filas_del_renglon_reagrupado(renglones_por_identidad[identidad], legado, legado_descuentos)
 
 		if (filas) {
 			filas_por_identidad[identidad] = filas
