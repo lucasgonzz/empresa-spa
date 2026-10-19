@@ -65,6 +65,31 @@ function con_pais(texto) {
 }
 
 /**
+ * Una coordenada como número, o null si no hay una.
+ *
+ * 🔴 Un string vacío o de solo espacios es "sin coordenada", no 0: `Number('  ')` da 0, y una
+ * latitud 0 con una longitud real dejaría el marcador sobre el ecuador. Solo se aceptan números y
+ * strings numéricos: `Number(true)` (1) o `Number([])` (0) tampoco son coordenadas.
+ *
+ * @param {*} valor
+ * @returns {Number|null}
+ */
+function coordenada_numerica(valor) {
+	if (typeof valor == 'number') {
+		return isFinite(valor) ? valor : null
+	}
+	if (typeof valor != 'string') {
+		return null
+	}
+	let recortado = valor.trim()
+	if (recortado === '') {
+		return null
+	}
+	let numero = Number(recortado)
+	return isFinite(numero) ? numero : null
+}
+
+/**
  * Las coordenadas como números, o null si no son válidas. Un 0,0 (el golfo de Guinea) se descarta:
  * es lo que deja un campo numérico vacío, no una dirección real.
  *
@@ -73,12 +98,9 @@ function con_pais(texto) {
  * @returns {{lat: Number, lng: Number}|null}
  */
 export function coordenadas_de(lat, lng) {
-	if (lat === null || lng === null || lat === '' || lng === '' || typeof lat == 'undefined' || typeof lng == 'undefined') {
-		return null
-	}
-	let lat_numero = Number(lat)
-	let lng_numero = Number(lng)
-	if (!isFinite(lat_numero) || !isFinite(lng_numero)) {
+	let lat_numero = coordenada_numerica(lat)
+	let lng_numero = coordenada_numerica(lng)
+	if (lat_numero === null || lng_numero === null) {
 		return null
 	}
 	if (lat_numero < -90 || lat_numero > 90 || lng_numero < -180 || lng_numero > 180) {

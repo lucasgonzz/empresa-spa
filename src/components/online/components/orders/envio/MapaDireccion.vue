@@ -32,11 +32,11 @@
 			class="mapa-direccion__detalle">
 				Referencia: {{ direccion.referencia }}
 			</p>
+			<!-- Sin coordenadas el mapa ubica la dirección por el texto: el marcador puede no ser exacto -->
 			<p
 			v-if="!tiene_coordenadas"
 			class="mapa-direccion__detalle">
-				La dirección no tiene coordenadas: el mapa la ubica por el texto y el marcador puede no
-				caer en el lugar exacto.
+				La ubicación es aproximada: se buscó por la dirección escrita.
 			</p>
 
 			<div class="mapa-direccion__acciones">

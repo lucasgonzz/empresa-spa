@@ -126,11 +126,12 @@
 						<strong>Envío a domicilio (sin forma elegida)</strong>
 					</div>
 				</div>
+				<!-- Con el teléfono del comprador a mano, la ayuda lo nombra (sin botones nuevos) -->
 				<p
 				v-if="!va_por_zipnova"
-				class="envio-modal__ayuda">
-					Coordiná la entrega (y el costo, si corresponde) con el comprador por WhatsApp o
-					teléfono.
+				class="envio-modal__ayuda"
+				:data-testid="'envio-ayuda-coordinar-' + order.id">
+					{{ texto_ayuda_coordinar }}
 				</p>
 			</div>
 
@@ -393,6 +394,9 @@ export default {
 			// `order_statuses` cambian entre instalaciones.
 			estado_sin_confirmar: 'Sin confirmar',
 			estado_cancelado: 'Cancelado',
+			// Espejo de OrderStatusHelper::AVANCE sin "Sin confirmar": los únicos estados en los que
+			// se puede generar el envío. Uno desconocido (o que no se puede resolver) no habilita.
+			estados_confirmados: ['Confirmado', 'Terminado', 'Entregado'],
 		}
 	},
 	computed: {
@@ -426,13 +430,17 @@ export default {
 		/**
 		 * Costo de la forma propia, para el renglón de "Forma de envío elegida". 🔴 Una forma a
 		 * convenir dice "A convenir", nunca "Gratis" ni "$ 0": el costo lo arregla el vendedor.
+		 *
+		 * Sin afirmar nada sobre lo que se cobró: el pedido apunta a la forma VIVA
+		 * (`delivery_zone_id`), no a una foto. Si el comercio cambió la forma después de la compra,
+		 * lo que se ve acá es la forma de hoy, no necesariamente lo que vio el comprador.
 		 */
 		texto_costo_forma_propia() {
 			if (!this.forma_propia) {
 				return ''
 			}
 			if (es_forma_propia_a_convenir(this.forma_propia)) {
-				return 'A convenir (no se cobró en la tienda)'
+				return 'A convenir'
 			}
 			if (Number(this.forma_propia.price) > 0) {
 				return this.price(this.forma_propia.price)
@@ -463,6 +471,17 @@ export default {
 				return this.destino.email
 			}
 			return this.order.buyer && this.order.buyer.email ? this.order.buyer.email : ''
+		},
+		/**
+		 * Ayuda de una forma propia o de un envío sin forma: la entrega (y el costo, si
+		 * corresponde) se coordina con el comprador. Si hay teléfono, lo nombra.
+		 */
+		texto_ayuda_coordinar() {
+			let texto = 'Coordiná la entrega (y el costo, si corresponde) con el comprador por WhatsApp o teléfono'
+			if (this.telefono_destinatario) {
+				return texto + ' al ' + this.telefono_destinatario + '.'
+			}
+			return texto + '.'
 		},
 		/**
 		 * Para un retiro en una sucursal del correo: la sucursal elegida ("{descripción} · {calle}
@@ -530,8 +549,12 @@ export default {
 			return estado && estado.name ? estado.name : null
 		},
 		/**
-		 * Por qué no se puede generar el envío en Zipnova ahora, o '' si se puede. Mismo criterio
-		 * que EnvioController@generar: un estado que no se puede resolver no frena.
+		 * Por qué no se puede generar el envío en Zipnova ahora, o '' si se puede.
+		 *
+		 * Solo se puede con el pedido en un estado confirmado que se conoce (`estados_confirmados`).
+		 * 🔴 Un estado que no se puede resolver (fila borrada, relación que no vino) o con un nombre
+		 * que no es ninguno de los conocidos TAMBIÉN frena: la API responde 422 en ese caso
+		 * (EnvioController@generar), y crear el envío en Zipnova es lo que le cobra al comercio.
 		 */
 		texto_generacion_frenada() {
 			if (this.nombre_estado == this.estado_sin_confirmar) {
@@ -539,6 +562,9 @@ export default {
 			}
 			if (this.nombre_estado == this.estado_cancelado) {
 				return 'El pedido está cancelado: el envío no se genera en Zipnova.'
+			}
+			if (this.estados_confirmados.indexOf(this.nombre_estado) == -1) {
+				return 'Confirmá el pedido para poder generar el envío en Zipnova.'
 			}
 			return ''
 		},
