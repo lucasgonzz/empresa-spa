@@ -330,10 +330,11 @@ import { direccion_de_envio_del_pedido, direccion_desde_envio_direccion } from '
  * 🔴 "Va por Zipnova" se decide igual que en la API (`envio_va_por_zipnova`, espejo de
  * `Order::envio_va_por_zipnova()`): `envio_opcion` con algo y `envio_proveedor` vacío o 'zipnova'.
  *
- * 🔴 "Generar envío" aparece solo con el pedido confirmado (estado distinto de "Sin confirmar" y de
- * "Cancelado", comparado por NOMBRE como `OrderStatusHelper`): crear el envío en Zipnova es lo que
- * le cobra el envío al comercio, y desde esta misión la API lo rechaza (422) sobre un pedido sin
- * confirmar o cancelado. En su lugar se explica que se genera al confirmar.
+ * 🔴 "Generar envío" aparece solo con el pedido en un estado confirmado conocido ("Confirmado",
+ * "Terminado" o "Entregado", comparado por NOMBRE como `OrderStatusHelper`): crear el envío en
+ * Zipnova es lo que le cobra el envío al comercio, y desde esta misión la API lo rechaza (422) sobre
+ * un pedido sin confirmar, cancelado o con un estado que no se puede resolver. En su lugar se
+ * explica por qué (`texto_generacion_frenada`).
  *
  * Acciones, todas contra `EnvioController` de empresa-api:
  * - Generar envío  → `POST envio/generar/{order_id}` responde `{model}` = el PEDIDO completo con
