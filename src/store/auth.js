@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { env } from '@/runtime_config'
+import { set_canales_en_vivo } from '@/utils/canales_en_vivo'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = env('VUE_APP_API_URL')
 // axios.defaults.baseURL = 'https://micovid.online'
@@ -99,6 +100,17 @@ export default {
 				&& typeof user.es_acceso_maestro === 'undefined'
 				&& typeof state.user.es_acceso_maestro !== 'undefined') {
 				user.es_acceso_maestro = state.user.es_acceso_maestro
+			}
+			/*
+				Espacio de los canales en vivo (misión pusher-canales-por-sistema, 19/10/2026): se
+				guarda ANTES de asignar `state.user`, porque las suscripciones de Echo arrancan con los
+				watchers de `user.id` y `authenticated`, y tienen que encontrar el espacio ya cargado
+				para pedir el nombre físico del canal. Vive en su propio módulo y no en `state.user`:
+				los reemplazos del usuario que vienen sin la clave (la foto de perfil, las direcciones)
+				no lo borran. Ver `src/utils/canales_en_vivo.js`.
+			*/
+			if (user && user.canales_en_vivo) {
+				set_canales_en_vivo(user.canales_en_vivo)
 			}
 			if (user && user.owner_id) {
 				user.addresses = user.owner_addresses

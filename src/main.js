@@ -7,6 +7,7 @@ import { apply_dark_mode_class, read_stored_dark_mode } from '@/utils/dark_mode'
 import { get_tab_id } from '@/utils/tab_id'
 import { registrar_llegada_por_redireccion } from '@/utils/version_de_direccion'
 import { env } from '@/runtime_config'
+import { envolver_echo } from '@/utils/canales_en_vivo'
 
 // Vue Scrool
 Vue.prototype.$scrollToTop = (() => {
@@ -39,7 +40,20 @@ Vue.use(VueScrollTo, {
 window.Pusher = require('pusher-js');
 import Echo from "laravel-echo"
 
-Vue.prototype.Echo = new Echo({
+/**
+ * La instancia de Echo va ENVUELTA (misión pusher-canales-por-sistema, 19/10/2026).
+ *
+ * Toda la flota usa una sola app de Pusher, y desde esta misión empresa-api emite cada canal con el
+ * sufijo `@{espacio}` del sistema: sin él, dos sistemas con el mismo id de dueño se escuchaban entre
+ * sí (demo3 y Ferretotal, los dos con el 2600). `envolver_echo()` traduce en el momento de cada
+ * llamada el nombre lógico que piden los componentes (`global_notification.2600`) al físico
+ * (`global_notification.2600@26d5013a6846`), con el espacio que manda la API en
+ * `user.canales_en_vivo`. Es el único punto central del lado del SPA: ningún componente se toca.
+ *
+ * La config de Echo no cambia. Contra una API vieja (sin `canales_en_vivo`) los nombres no se
+ * traducen y todo queda como antes. Detalle en `src/utils/canales_en_vivo.js`.
+ */
+Vue.prototype.Echo = envolver_echo(new Echo({
     broadcaster: 'pusher',
     key: env('VUE_APP_PUSHER_KEY'),
     cluster: env('VUE_APP_PUSHER_CLUSTER'),
@@ -70,7 +84,7 @@ Vue.prototype.Echo = new Echo({
             }
         }
     },
-});
+}));
 
 /**
  * Estado de la conexión al broadcast, publicado en el store (misión procesos-en-segundo-plano,
