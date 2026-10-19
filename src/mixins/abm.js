@@ -179,6 +179,13 @@ export default {
 						'delivery_zone',
 						'payment_method',
 					],
+					// Las zonas de envío ahora son las formas de envío propias del comercio (misión
+					// formas-envio-direcciones-maps, 19/10/2026). La solapa se llama así sin cambiar
+					// el plural del modelo, para que la URL /abm/tienda-online/zonas-de-envio siga
+					// resolviendo (la usan el asistente IA y un clip del centro de recursos).
+					nombres: {
+						delivery_zone: 'Formas de envío',
+					},
 				},
 				// Integraciones externas, en tres solapas: lo que conecta el SISTEMA con otra
 				// plataforma (Mercado Libre, Tienda Nube), lo que conecta la TIENDA ONLINE

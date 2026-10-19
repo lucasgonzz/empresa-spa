@@ -14,8 +14,10 @@
 	vieja, que no conoce la columna, cobraría el precio guardado. Por eso el Precio se esconde en el
 	formulario al tildarlo, y la columna "Costo" de la tabla dice "A convenir" en vez de "$ 0".
 
-	🔴 Cambiar el plural cambia el segmento de la URL del ABM (Abm.vue lo arma con el plural): era
-	/abm/tienda-online/zonas-de-envio y pasa a /abm/tienda-online/formas-de-envío-propias.
+	🔴 El plural queda "Zonas de envio" A PROPÓSITO: Abm.vue arma el segmento de la URL con el plural, y
+	/abm/tienda-online/zonas-de-envio lo usan el asistente IA (CatalogoDeEscrituraIaHelper) y el clip
+	T9.39 del centro de recursos. La solapa se ve como "Formas de envío" por `nombres` en
+	src/mixins/abm.js, el mismo mecanismo que usa Integraciones.
 */
 export default {
 	properties: [
@@ -78,7 +80,7 @@ export default {
 		palabras_clave: ['envio', 'formas de envio', 'costo', 'reparto', 'zonas', 'a convenir', 'acordar con el vendedor', 'tienda'],
 	},
 	singular_model_name_spanish: 'Forma de envío',
-	plural_model_name_spanish: 'Formas de envío propias',
+	plural_model_name_spanish: 'Zonas de envio',
 	create_model_name_spanish: 'Nueva forma de envío',
 	text_delete: 'la',
 }
