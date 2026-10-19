@@ -10,9 +10,9 @@
 // el .env / .env.local de siempre.
 //
 // Contrato:
-//   - Las keys son exactamente los 22 nombres VUE_APP_* que la SPA lee. Las 13 sin comentar son las
+//   - Las keys son exactamente los 23 nombres VUE_APP_* que la SPA lee. Las 13 sin comentar son las
 //     que el admin escribe hoy en cada deploy (VUE_APP_API_URL, VUE_APP_APP_URL, las dos de Pusher y
-//     las de services.deploy.spa_build_env); las 9 comentadas son opcionales: si no vienen, el código
+//     las de services.deploy.spa_build_env); las 10 comentadas son opcionales: si no vienen, el código
 //     toma su valor por defecto, igual que en producción hoy.
 //   - Todos los valores son STRINGS, también los booleanos ('true'/'false'): es lo mismo que salía
 //     del .env y el código compara contra esas cadenas.
@@ -73,4 +73,9 @@ window.__CC_CONFIG__ = {
 	// VUE_APP_TESTING_DUSK: 'true',
 	// Sin uso: solo aparece en código comentado del mixin generals.
 	// VUE_APP_CANT_MODELS_TO_SHOW: '10',
+	// Clave de Google Maps para el mapa de la dirección de entrega de un pedido online
+	// (components/online/components/orders/envio/MapaDireccion.vue). Con valor, el mapa usa la Maps
+	// Embed API oficial (el proyecto de Google tiene que tener esa API habilitada y permitir este
+	// dominio); ausente o vacía, usa el mapa embebido clásico de maps.google.com, que no pide clave.
+	// VUE_APP_GOOGLE_MAPS_API_KEY: '',
 }

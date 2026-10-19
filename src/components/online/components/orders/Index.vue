@@ -44,10 +44,11 @@
 				:display_name="slotProps.model.buyer ? slotProps.model.buyer.name : ''"></btn-whatsapp-chat>
 
 				<!--
-					Envío por correo (Zipnova): el botón se dibuja solo si el pedido trae una opción
-					de envío elegida en la tienda o un envío ya generado. Abre el modal con el
-					destinatario, la opción y el estado, y desde ahí se genera, se sincroniza, se
-					imprime la etiqueta y se cancela.
+					Envío: el botón se dibuja en todo pedido con envío a domicilio (Zipnova o forma de
+					envío propia) y en los que traen algo de Zipnova. Abre el modal con el
+					destinatario, la dirección (que abre el mapa) y la forma elegida; si va por
+					Zipnova, también el estado, y desde ahí se genera, se sincroniza, se imprime la
+					etiqueta y se cancela.
 				-->
 				<envio-btn
 				:order="slotProps.model"></envio-btn>
