@@ -11,7 +11,7 @@
 			</header>
 			<div ref="hilo" class="demo-ai__hilo" role="log" aria-live="polite" aria-label="Conversación de la demo">
 				<div v-if="cargando && !mensajes.length" class="demo-ai__inicio"><span class="demo-ai__orb">✦</span><p>Preparando tu recorrido</p></div>
-				<article v-for="mensaje in mensajes" :key="mensaje.id" class="demo-ai__mensaje" :class="{ 'demo-ai__mensaje--lead': mensaje.rol === 'lead' }">
+				<article v-for="mensaje in mensajes" :key="mensaje.id" :data-demo-mensaje="mensaje.id" class="demo-ai__mensaje" :class="{ 'demo-ai__mensaje--lead': mensaje.rol === 'lead' }">
 					<small>{{ mensaje.rol === 'lead' ? 'Vos' : 'Asistente' }}</small>
 					<p v-if="mensaje.contenido">{{ mensaje.contenido }}</p>
 					<section v-for="video in mensaje.videos || []" :key="video.clave" class="demo-ai__video" :class="{ 'demo-ai__video--hecho': video.completado }">
@@ -36,7 +36,7 @@
 				<small class="demo-ai__ayuda">Preguntá lo que necesites. Vamos a tu ritmo.</small>
 			</footer>
 		</aside>
-		<selector-videos-demo ref="selector" :catalogo="catalogo" :seleccionando="seleccionando" :error="error_seleccion" @seleccionar="seleccionar_video" @cerrado="error_seleccion = ''"></selector-videos-demo>
+		<selector-videos-demo ref="selector" :catalogo="catalogo" :seleccionando="seleccionando" :error="error_seleccion" @seleccionar="seleccionar_video" @cerrado="selector_cerrado"></selector-videos-demo>
 	</div>
 </template>
 <script>
@@ -48,7 +48,7 @@ export default {
 	components: { TarjetaClip, SelectorVideosDemo },
 	props: { colapsado: { type: Boolean, default: false } },
 	data() {
-		return { mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0 }
+		return { mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, foco_seleccion: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0 }
 	},
 	computed: {
 		reserva_launcher() {
@@ -216,7 +216,25 @@ export default {
 			if (!actual) return
 			this.pausar()
 			this.error_seleccion = ''
+			this.foco_seleccion = null
 			this.$refs.selector.abrir(actual)
+		},
+		selector_cerrado() {
+			this.error_seleccion = ''
+			let id = this.foco_seleccion
+			this.foco_seleccion = null
+			if (id === null) return
+			let self = this
+			// BootstrapVue restaura el foco al disparador en su nextTick de hidden. Después
+			// llevamos la elección al chat; al cancelar se conserva el retorno al origen.
+			this.$nextTick(function () {
+				if (self.destruido || !self.$refs.hilo) return
+				let articulo = Array.from(self.$refs.hilo.querySelectorAll('[data-demo-mensaje]')).find(item => item.getAttribute('data-demo-mensaje') === String(id))
+				if (!articulo) return
+				let boton = articulo.querySelector('.demo-ai__ver')
+				if (boton) boton.focus({ preventScroll: true })
+				articulo.scrollIntoView({ block: 'nearest' })
+			})
 		},
 		seleccionar_video(video) {
 			if (this.seleccionando) return
@@ -229,8 +247,9 @@ export default {
 				if (self.destruido) return
 				self.aplicar(res.data)
 				self.seleccion_pendiente = null
+				let elegido = self.mensajes.slice().reverse().find(mensaje => (mensaje.videos || []).some(item => item.clave === video.clave))
+				self.foco_seleccion = elegido ? elegido.id : null
 				self.$refs.selector.cerrar()
-				self.al_final()
 			}).catch(function (e) {
 				if (self.destruido) return
 				self.error_seleccion = e.response && e.response.status === 422 ? 'Este video ya no está disponible. Elegí otro.' : 'No pudimos enviar el video. Volvé a intentarlo.'
