@@ -291,14 +291,6 @@ export default {
 			},
 		},
 		/**
-		 * El diseñador de PDF cambió las columnas del modelo (perfil nuevo: las deja con $set; perfil
-		 * guardado: copia las que devolvió la API): las filas se rearman desde el modelo, así el
-		 * guardado del ABM no las pisa con las viejas. Si el cambio lo hizo este mismo editor (misma
-		 * firma), no se hace nada.
-		 *
-		 * @param {Array} opciones
-		 */
-		/**
 		 * Misión pdf-negrita-perfil: el diseñador de PDF cambió `bold_columns` del modelo (perfil nuevo
 		 * o después de guardar). Las filas lo siguen, así el guardado del ABM no pisa la negrita con la
 		 * que tenían. Si ya dicen lo mismo (lo escribió este mismo editor), no se hace nada.
@@ -318,6 +310,14 @@ export default {
 				this.$set(row, 'bold', ids.indexOf(Number(row.key)) !== -1)
 			})
 		},
+		/**
+		 * El diseñador de PDF cambió las columnas del modelo (perfil nuevo: las deja con $set; perfil
+		 * guardado: copia las que devolvió la API): las filas se rearman desde el modelo, así el
+		 * guardado del ABM no las pisa con las viejas. Si el cambio lo hizo este mismo editor (misma
+		 * firma), no se hace nada.
+		 *
+		 * @param {Array} opciones
+		 */
 		'model.pdf_column_options'(opciones) {
 			if (!this.pdf_column_options_catalog.length) {
 				return
