@@ -135,16 +135,17 @@ export default {
 			this.reserva_compositor = Math.max(0, innerHeight - top + 12)
 		},
 		actualizar_espacio() { document.body.classList.toggle('demo-chat-abierto', !this.colapsado) },
+		// El panel vive entre módulos: sus pedidos no pertenecen a la pantalla que se abandona.
 		iniciar() {
 			let self = this
-			this.$axios.post('/api/demo/chat/iniciar').then(function (res) { self.aplicar(res.data); self.error = '' }).catch(function (e) { self.fallar(e) }).then(function () { self.cargando = false })
+			this.$axios.post('/api/demo/chat/iniciar', {}, { skip_navigation_cancel: true }).then(function (res) { self.aplicar(res.data); self.error = '' }).catch(function (e) { self.fallar(e) }).then(function () { self.cargando = false })
 		},
 		refrescar() {
 			this.programar_ubicacion_launcher()
 			if (this.consultando || this.destruido) return
 			let self = this
 			this.consultando = true
-			this.$axios.get('/api/demo/chat').then(function (res) {
+			this.$axios.get('/api/demo/chat', { skip_navigation_cancel: true }).then(function (res) {
 				self.aplicar(res.data)
 				if (!self.pendiente_envio) self.error = ''
 				Object.keys(self.pendientes_video).forEach(function (clave) { self.enviar_progreso(clave) })
@@ -175,7 +176,7 @@ export default {
 			this.esperando_local = true
 			this.error = ''
 			this.al_final()
-			this.$axios.post('/api/demo/chat/mensajes', this.pendiente_envio).then(function (res) {
+			this.$axios.post('/api/demo/chat/mensajes', this.pendiente_envio, { skip_navigation_cancel: true }).then(function (res) {
 				self.aplicar(res.data)
 				if (self.texto.trim() === contenido) self.texto = ''
 				self.pendiente_envio = null
@@ -228,7 +229,7 @@ export default {
 			let pendiente = cola[0]
 			let self = this
 			this.enviando_video[clave] = true
-			this.$axios.post('/api/demo/chat/videos/progreso', { clave: clave, segundos_vistos: pendiente.segundos, duracion: pendiente.duracion, terminado: pendiente.terminado }).then(function (res) {
+			this.$axios.post('/api/demo/chat/videos/progreso', { clave: clave, segundos_vistos: pendiente.segundos, duracion: pendiente.duracion, terminado: pendiente.terminado }, { skip_navigation_cancel: true }).then(function (res) {
 				cola.shift()
 				self.aplicar(res.data)
 				if (pendiente.video.origen === 'demo') {
@@ -247,7 +248,7 @@ export default {
 		omitir(video) {
 			this.pausar()
 			let self = this
-			this.$axios.post('/api/demo/chat/videos/omitir', { clave: video.clave }).then(function (res) { self.aplicar(res.data) }).catch(function (e) { self.fallar(e) })
+			this.$axios.post('/api/demo/chat/videos/omitir', { clave: video.clave }, { skip_navigation_cancel: true }).then(function (res) { self.aplicar(res.data) }).catch(function (e) { self.fallar(e) })
 		},
 	},
 }
