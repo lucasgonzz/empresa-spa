@@ -237,6 +237,14 @@ export default {
 						izquierda: this.encabezado.receptor.izquierda.slice(),
 					},
 				}
+
+				/*
+					Misión pdf-negrita-perfil: los datos con el valor en negrita (lista de keys de chips
+					colocados). Sin ninguna, la clave no viaja: el layout queda como el de siempre.
+				*/
+				if (this.negritas_del_encabezado.length) {
+					datos.header_layout.bold = this.negritas_del_encabezado.slice()
+				}
 			}
 
 			if (this.logo_tocado) {

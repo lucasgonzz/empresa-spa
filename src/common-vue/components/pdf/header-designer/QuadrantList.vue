@@ -7,13 +7,19 @@
 		:list="items"
 		:group="group"
 		:animation="150"
+		filter=".header-designer-chip__bold"
+		:prevent-on-filter="false"
 		ghost-class="header-designer-quadrant__ghost">
 			<chip-item
 			v-for="key in items"
 			:key="key"
+			:chip_key="key"
 			:label="chip_label(key)"
 			:locked="is_locked(key)"
-			:data-chip-locked="is_locked(key)"></chip-item>
+			:bold="is_bold(key)"
+			:can_bold="!!bold_keys"
+			:data-chip-locked="is_locked(key)"
+			@toggle_bold="toggle_bold(key)"></chip-item>
 		</draggable>
 
 		<p
@@ -87,8 +93,43 @@ export default {
 			type: String,
 			default: 'Arrastrá campos acá',
 		},
+		/**
+		 * Misión pdf-negrita-perfil: claves de los chips cuyo VALOR sale en negrita (header_layout.bold,
+		 * una sola lista para todo el encabezado). Se muta directamente, como `items`. Opcional: sin
+		 * ella (null) los chips no llevan el botón B y se ven como siempre.
+		 */
+		bold_keys: {
+			type: Array,
+			default: null,
+		},
 	},
 	methods: {
+		/**
+		 * Si el valor de un chip sale en negrita.
+		 *
+		 * @param {string} key Clave del chip.
+		 * @return {boolean}
+		 */
+		is_bold(key) {
+			return !!this.bold_keys && this.bold_keys.indexOf(key) !== -1
+		},
+		/**
+		 * Prende o apaga la negrita del valor de un chip, mutando la lista del padre por referencia.
+		 *
+		 * @param {string} key Clave del chip.
+		 * @return {void}
+		 */
+		toggle_bold(key) {
+			if (!this.bold_keys) {
+				return
+			}
+			const index = this.bold_keys.indexOf(key)
+			if (index === -1) {
+				this.bold_keys.push(key)
+			} else {
+				this.bold_keys.splice(index, 1)
+			}
+		},
 		/**
 		 * Label legible de un chip según el catálogo compartido.
 		 *
