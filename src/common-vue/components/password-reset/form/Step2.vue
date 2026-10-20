@@ -83,10 +83,35 @@ export default {
 				.catch(err => {
 					this.loading = false
 					console.log(err)
+					this.showTooManyAttempts(err)
 				})
 			} else {
 				this.$toast.error('Escribí el código completo')
 			}
+		},
+		/**
+		 * Si la API respondió 429 (throttle por IP de recuperar clave), muestra su `message` como
+		 * toast de error. No avanza de paso: la persona se queda en esta pantalla y el botón vuelve
+		 * a andar (el cargando ya se apagó en el `.catch`). Cualquier otro error no se toca.
+		 *
+		 * Sin sesión (lo normal acá) el interceptor global de axios NO avisa de un 429, por eso lo
+		 * hace cada paso. Con sesión iniciada el interceptor ya muestra el `message` de la API, y
+		 * acá no se repite para no duplicar el aviso.
+		 *
+		 * @param {Object} err Error de axios del `.catch`.
+		 */
+		showTooManyAttempts(err) {
+			if (!err || !err.response || err.response.status !== 429) {
+				return
+			}
+			let ya_avisado = this.$store.state.auth.authenticated === true && !(err.config && err.config.skip_global_error_event)
+			if (ya_avisado) {
+				return
+			}
+			let message = err.response.data && err.response.data.message
+			this.$toast.error(message || 'Hiciste demasiados intentos. Esperá unos minutos y volvé a probar.', {
+				duration: 10000,
+			})
 		},
 	}
 }
