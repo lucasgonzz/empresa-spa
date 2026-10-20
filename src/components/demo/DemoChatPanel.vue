@@ -6,7 +6,7 @@
 		<aside v-show="!colapsado" class="demo-ai__panel" aria-label="Asistente de la demo">
 			<header class="demo-ai__header">
 				<span class="demo-ai__orb" aria-hidden="true">✦</span>
-				<div><h2>Tu asistente de la demo</h2><p>Explorá, preguntá y probá</p></div>
+				<div><h2>Tu asistente de la demo</h2><p>Explorá, preguntá y probá</p><a v-if="tienda_url" class="demo-ai__tienda" :href="tienda_url" target="_blank" rel="noopener noreferrer" data-demo-tienda @click="pausar">Tu tienda <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
 				<button type="button" aria-label="Minimizar asistente" @click="minimizar"><i class="bi bi-dash-lg"></i></button>
 			</header>
 			<div ref="hilo" class="demo-ai__hilo" role="log" aria-live="polite" aria-label="Conversación de la demo">
@@ -48,20 +48,35 @@ export default {
 		return { mensajes: [], conversacion: {}, texto: '', error: '', cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1 }
 	},
 	computed: {
+		tienda_url() {
+			let usuario = this.$store.state.auth.user
+			let dueno = usuario && (usuario.owner || usuario)
+			if (!dueno || typeof dueno.online !== 'string') return null
+			try {
+				let url = new URL(dueno.online.trim())
+				return ['http:', 'https:'].indexOf(url.protocol) !== -1 && !url.username && !url.password ? url.href : null
+			} catch (e) { return null }
+		},
 		estado() { return this.esperando_local ? 'esperando' : this.conversacion.estado },
 		pensando() { return ['esperando', 'pensando', 'listo'].indexOf(this.estado) !== -1 },
 	},
+	watch: {
+		colapsado() { this.actualizar_espacio() },
+	},
 	mounted() {
+		this.actualizar_espacio()
 		this.iniciar()
 		let self = this
 		this.temporizador = setInterval(function () { self.refrescar() }, 3000)
 	},
 	beforeDestroy() {
+		document.body.classList.remove('demo-chat-abierto')
 		this.destruido = true
 		clearInterval(this.temporizador)
 		this.pausar()
 	},
 	methods: {
+		actualizar_espacio() { document.body.classList.toggle('demo-chat-abierto', !this.colapsado) },
 		iniciar() {
 			let self = this
 			this.$axios.post('/api/demo/chat/iniciar').then(function (res) { self.aplicar(res.data); self.error = '' }).catch(function (e) { self.fallar(e) }).then(function () { self.cargando = false })
@@ -178,6 +193,10 @@ export default {
 }
 </script>
 <style lang="sass">
+// El acceso al asistente del negocio vuelve al minimizar la guía de la demo.
+body.demo-chat-abierto .asistente-ia-fab
+	visibility: hidden
+	pointer-events: none
 .demo-ai
 	--demo-ink: #e8edf8
 	--demo-muted: #a3aec6
@@ -190,6 +209,7 @@ export default {
 	max-width: calc(100vw - 24px)
 	color: var(--demo-ink)
 	font-family: inherit
+	text-align: left
 	&--cerrado
 		top: 76px
 		bottom: auto
@@ -237,6 +257,15 @@ export default {
 		border-radius: 10px
 		width: 34px
 		height: 34px
+.demo-ai__tienda
+	display: inline-flex
+	align-items: center
+	gap: 4px
+	margin-top: 5px
+	font-size: 12px
+	color: #b7c9ff
+	&:hover, &:focus
+		color: #fff
 .demo-ai__orb
 	display: inline-flex
 	align-items: center
