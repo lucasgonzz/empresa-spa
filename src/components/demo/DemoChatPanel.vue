@@ -20,7 +20,8 @@
 						<button v-if="video_abierto !== mensaje.id + ':' + video.clave" class="demo-ai__ver" type="button" @click="abrir_video(mensaje, video)"><i class="bi bi-play-fill"></i>{{ video.completado ? 'Volver a ver' : 'Ver video' }}</button>
 						<tarjeta-clip v-else ref="tarjeta_chat" :clip="clip_de(video)" :rastrear_segundos="true" :con_tour="tiene_tour(video)" :puede_probar="video.completado || !video.url" :probado="fue_probado(video)" @segundos="registrar_segundos(video, $event)" @probar="probar(video)" @terminado="refrescar"></tarjeta-clip>
 						<div class="demo-ai__avance" role="progressbar" :aria-valuenow="video.porcentaje || 0" aria-valuemin="0" aria-valuemax="100" :aria-label="'Progreso de ' + video.titulo"><span :style="{ width: (video.porcentaje || 0) + '%' }"></span></div>
-						<div class="demo-ai__video-pie"><span>{{ video.completado ? 'Listo, ya lo viste' : (video.porcentaje || 0) + '% visto' }}</span><button v-if="!video.completado && !video.omitido" type="button" @click="omitir(video)">Saltear</button><span v-else-if="video.omitido">Para después</span></div>
+						<div class="demo-ai__video-pie"><span>{{ video.porcentaje || 0 }}% visto<span v-if="video.completado"> · Listo</span></span><button v-if="!video.completado && !video.omitido" type="button" @click="omitir(video)">Saltear</button><span v-else-if="video.omitido">Para después</span></div>
+						<button v-if="ubicacion_video(video)" type="button" class="demo-ai__seccion" aria-haspopup="dialog" @click="abrir_selector(video)">{{ ubicacion_video(video) }} <i class="bi bi-chevron-down" aria-hidden="true"></i></button>
 					</section>
 				</article>
 				<div v-if="pensando" class="demo-ai__pensando" role="status"><span class="demo-ai__constelacion" aria-hidden="true"><i></i><i></i><i></i></span><span>{{ estado === 'listo' ? 'Preparando tu respuesta' : 'Pensando' }}<small>{{ estado === 'esperando' ? 'Te leo. Podés seguir escribiendo.' : 'Buscando cómo ayudarte' }}</small></span></div>
@@ -35,17 +36,19 @@
 				<small class="demo-ai__ayuda">Preguntá lo que necesites. Vamos a tu ritmo.</small>
 			</footer>
 		</aside>
+		<selector-videos-demo ref="selector" :catalogo="catalogo" :seleccionando="seleccionando" :error="error_seleccion" @seleccionar="seleccionar_video" @cerrado="error_seleccion = ''"></selector-videos-demo>
 	</div>
 </template>
 <script>
 import TarjetaClip from '@/components/demo/TarjetaClip'
+import SelectorVideosDemo from '@/components/demo/SelectorVideosDemo'
 import { tour_habilitado } from '@/tours/habilitados'
 
 export default {
-	components: { TarjetaClip },
+	components: { TarjetaClip, SelectorVideosDemo },
 	props: { colapsado: { type: Boolean, default: false } },
 	data() {
-		return { mensajes: [], conversacion: {}, texto: '', error: '', cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0 }
+		return { mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0 }
 	},
 	computed: {
 		reserva_launcher() {
@@ -160,6 +163,8 @@ export default {
 			let anterior = this.mensajes.length ? this.mensajes[this.mensajes.length - 1].id : null
 			this.revision = revision
 			this.conversacion = snapshot.conversacion || {}
+			// Una API anterior no anuncia el selector: el chat y su progreso siguen disponibles.
+			this.catalogo = Array.isArray(snapshot.catalogo) ? snapshot.catalogo : []
 			this.mensajes = nuevos
 			let self = this
 			nuevos.forEach(function (mensaje) { (mensaje.videos || []).forEach(function (video) {
@@ -202,6 +207,35 @@ export default {
 		},
 		tiene_tour(video) { return video.origen === 'demo' && tour_habilitado(this.clip_de(video)) },
 		fue_probado(video) { return this.$store.state.demo.clips_probados.indexOf(video.clip_id) !== -1 },
+		ubicacion_video(video) {
+			let actual = this.catalogo.find(item => item.clave === video.clave)
+			return actual && actual.seccion && actual.posicion > 0 && actual.cantidad > 0 ? actual.seccion + ' · ' + actual.posicion + ' de ' + actual.cantidad : ''
+		},
+		abrir_selector(video) {
+			let actual = this.catalogo.find(item => item.clave === video.clave)
+			if (!actual) return
+			this.pausar()
+			this.error_seleccion = ''
+			this.$refs.selector.abrir(actual)
+		},
+		seleccionar_video(video) {
+			if (this.seleccionando) return
+			// El mismo intento conserva UUID ante una respuesta perdida; no duplica la tarjeta.
+			if (!this.seleccion_pendiente || this.seleccion_pendiente.clave !== video.clave) this.seleccion_pendiente = { clave: video.clave, cliente_uuid: this.uuid() }
+			let self = this
+			this.seleccionando = video.clave
+			this.error_seleccion = ''
+			this.$axios.post('/api/demo/chat/videos/seleccionar', this.seleccion_pendiente, { skip_navigation_cancel: true }).then(function (res) {
+				if (self.destruido) return
+				self.aplicar(res.data)
+				self.seleccion_pendiente = null
+				self.$refs.selector.cerrar()
+				self.al_final()
+			}).catch(function (e) {
+				if (self.destruido) return
+				self.error_seleccion = e.response && e.response.status === 422 ? 'Este video ya no está disponible. Elegí otro.' : 'No pudimos enviar el video. Volvé a intentarlo.'
+			}).then(function () { self.seleccionando = '' })
+		},
 		abrir_video(mensaje, video) {
 			this.pausar()
 			this.video_abierto = mensaje.id + ':' + video.clave
@@ -429,6 +463,22 @@ body.demo-chat-abierto .asistente-ia-fab
 	color: #c3c9f7
 	padding: 3px
 	text-decoration: underline
+.demo-ai__seccion
+	display: inline-flex
+	align-items: center
+	gap: 7px
+	max-width: 100%
+	margin-top: 9px
+	padding: 6px 8px
+	border: 1px solid #8299da55
+	border-radius: 8px
+	background: #ffffff08
+	color: #cbd4f5
+	font-size: 11px !important
+	text-align: left
+	overflow-wrap: anywhere
+	&:hover
+		background: #ffffff12
 .demo-ai__footer
 	background: #151b2e
 	padding: 14px
