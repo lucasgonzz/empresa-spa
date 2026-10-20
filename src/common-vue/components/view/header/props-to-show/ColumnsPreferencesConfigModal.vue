@@ -1597,6 +1597,8 @@ export default {
 		max-height: 420px
 
 		overflow-y: auto
+		/* Si la tabla no entra a lo ancho (tablet), scrollea sola en vez de cortar la última columna */
+		overflow-x: auto
 
 		border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.08))
 
