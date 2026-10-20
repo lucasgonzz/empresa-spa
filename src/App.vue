@@ -354,10 +354,15 @@ export default {
          * esperar la decisión previa al login (`resolver_version_antes_del_login`) antes de
          * navegar.
          *
+         * No saca de `passwordReset` (recuperar contraseña): es una pantalla pública pensada
+         * justo para quien no puede iniciar sesión. Sin esta excepción, abrir la dirección
+         * `/recuperar-clave` directamente (un favorito, un link, recargar la página en el paso del
+         * código) resolvía `auth/me` como "no autenticado" y lo devolvía al login.
+         *
          * @returns {void}
          */
         ir_a_login() {
-            if (this.$route.name !== 'login') {
+            if (this.$route.name !== 'login' && this.$route.name !== 'passwordReset') {
                 this.$router.replace({name: 'login'}).catch(() => {})
             }
         },
