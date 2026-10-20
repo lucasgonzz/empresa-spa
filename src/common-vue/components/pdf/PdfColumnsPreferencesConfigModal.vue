@@ -69,7 +69,8 @@
 		<columns-preferences-config-modal
 		:config_rows="config_rows"
 		:layout_table="layout_table"
-		:show_typography_columns="show_typography_columns"></columns-preferences-config-modal>
+		:show_typography_columns="show_typography_columns"
+		:show_bold_column="show_bold_column"></columns-preferences-config-modal>
 	</div>
 </template>
 
@@ -116,6 +117,15 @@ export default {
 		 * Muestra columnas de tipografía (tamaño y alineación) en perfiles PDF de artículos.
 		 */
 		show_typography_columns: {
+			type: Boolean,
+			default: false,
+		},
+		/**
+		 * Misión pdf-negrita-perfil: muestra el interruptor "Negrita" por columna (el valor de la
+		 * columna sale en negrita en el PDF). Opcional, apagado por defecto: el modal de columnas de
+		 * la venta (sale-print-buttons) no lo pide y se ve igual que siempre.
+		 */
+		show_bold_column: {
 			type: Boolean,
 			default: false,
 		},

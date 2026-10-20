@@ -369,6 +369,39 @@ export function pivot_es_visible(pivot) {
 }
 
 /**
+ * Misión pdf-negrita-perfil (20/10/2026): la lista de ids de opciones de columna cuyo VALOR va en
+ * negrita (`bold_columns` del perfil), normalizada: enteros positivos, sin repetir y ordenados. Acepta
+ * el array que devuelve la API, un string JSON (por las dudas) o null/undefined (= ninguna: un perfil
+ * que nunca se tocó, o una API vieja que no manda la clave).
+ *
+ * @param {Array|string|null|undefined} lista
+ * @returns {Array<number>}
+ */
+export function ids_en_negrita(lista) {
+	let valor = lista
+	if (typeof valor == 'string') {
+		try {
+			valor = JSON.parse(valor)
+		} catch (e) {
+			valor = []
+		}
+	}
+	let ids = []
+	if (!Array.isArray(valor)) {
+		return ids
+	}
+	valor.forEach(function (id) {
+		let numero = parseInt(id, 10)
+		if (numero > 0 && ids.indexOf(numero) === -1) {
+			ids.push(numero)
+		}
+	})
+	return ids.sort(function (a, b) {
+		return a - b
+	})
+}
+
+/**
  * Booleano de un pivot o de la API (true/1/'1').
  *
  * @param {*} valor
