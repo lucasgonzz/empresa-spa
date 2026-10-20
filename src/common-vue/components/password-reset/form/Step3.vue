@@ -2,19 +2,22 @@
 <div
 v-if="view == 'nueva-clave'">
 	<p>
-		Ingrese su nueva contraseña.
+		Ingresá tu nueva contraseña.
 	</p>
 	<b-form-group>
 		<b-form-input
 		v-model="register_user.password"
 		type="password"
-		placeholder="Ingrese su nueva contraseña"></b-form-input>
+		autocomplete="new-password"
+		placeholder="Ingresá tu nueva contraseña"></b-form-input>
 	</b-form-group>
 	<b-form-group>
 		<b-form-input
 		v-model="register_user.password_confirm"
 		type="password"
-		placeholder="Confirme su nueva contraseña"></b-form-input>
+		autocomplete="new-password"
+		@keyup.enter="updatePassword"
+		placeholder="Confirmá tu nueva contraseña"></b-form-input>
 	</b-form-group>
 	<btn-loader
 	@clicked="updatePassword"
@@ -24,6 +27,12 @@ v-if="view == 'nueva-clave'">
 </template>
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'
+/**
+ * Largo mínimo de la contraseña nueva. Es el mismo que exige la API
+ * (`PasswordResetController::MINIMO_DE_LA_CONTRASENA`): si la SPA dejara pasar menos, la API
+ * la rechazaría con un 422.
+ */
+const MIN_PASSWORD_LENGTH = 6
 export default {
 	props: {
 		register_user: Object,
@@ -36,13 +45,13 @@ export default {
 			return !this.register_user.terminos_y_condiciones
 		},
 		is_code_typed() {
-			if (this.register_user.verification_code.length < 6) {
+			if (this.register_user.verification_code.length < 4) {
 				return false
 			}
 			return true
 		},
 		is_password_typed() {
-			if (this.register_user.password.length > 6 && this.register_user.password == this.register_user.password_confirm) {
+			if (this.register_user.password.length >= MIN_PASSWORD_LENGTH && this.register_user.password == this.register_user.password_confirm) {
 				return true
 			}
 			return false
@@ -54,16 +63,37 @@ export default {
 		}
 	},
 	methods: {
+		/**
+		 * Cambia la contraseña con el código ya verificado.
+		 *
+		 * Si sale bien, la API deja la sesión abierta. Para que la persona quede ADENTRO del
+		 * sistema se hace lo mismo que cuando entra por el login: se va a `login` y se pide
+		 * `auth/me`; al quedar autenticado, App.vue la lleva a su pantalla de inicio. Si por lo
+		 * que sea no queda autenticada (por ejemplo, la cuenta está abierta en otro dispositivo),
+		 * queda en el login con un aviso para que entre con la contraseña nueva.
+		 *
+		 * Los errores 422 (código vencido o inválido, contraseña inválida) los muestra con su motivo
+		 * el interceptor global de axios; acá solo se apaga el cargando.
+		 */
 		updatePassword() {
 			if (this.checkPassword()) {
 				this.loading = true
 				this.$axios.post('password-reset/update-password', {
 					...this.register_user,
+					verification_code: String(this.register_user.verification_code),
+				})
+				.then(() => {
+					this.$toast.success('Tu contraseña se actualizó')
+					return this.$router.push({name: 'login'}).catch(() => {})
+				})
+				.then(() => {
+					return this.$store.dispatch('auth/me')
 				})
 				.then(() => {
 					this.loading = false
-					this.$router.push({name: this.route_index})
-					this.$store.dispatch('auth/me')
+					if (!this.$store.state.auth.authenticated) {
+						this.$toast.info('Ingresá con tu nueva contraseña')
+					}
 				})
 				.catch(err => {
 					this.loading = false
@@ -73,11 +103,15 @@ export default {
 		},
 		checkPassword() {
 			if (this.register_user.password == '') {
-				this.$toast.error('Ingrese una nueva contraseña')
+				this.$toast.error('Ingresá una nueva contraseña')
+				return false
+			}
+			if (this.register_user.password.length < MIN_PASSWORD_LENGTH) {
+				this.$toast.error('La contraseña tiene que tener al menos ' + MIN_PASSWORD_LENGTH + ' caracteres')
 				return false
 			}
 			if (this.register_user.password_confirm == '') {
-				this.$toast.error('Confirme la nueva contraseña')
+				this.$toast.error('Confirmá la nueva contraseña')
 				return false
 			}
 			if (this.register_user.password != this.register_user.password_confirm) {
