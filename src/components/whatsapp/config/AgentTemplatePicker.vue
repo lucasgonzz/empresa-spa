@@ -5,6 +5,7 @@
 		<button
 		v-for="item in templates"
 		:key="item.key"
+		:data-agent-template="item.key"
 		type="button"
 		class="agent-template-picker__item"
 		:class="{'agent-template-picker__item--selected': item.key === selected_key}"
@@ -65,8 +66,8 @@ export default {
 		gap: 4px
 		border: 1px solid var(--color-border)
 		background: var(--bg-card)
-		border-radius: 10px
-		padding: 12px
+		border-radius: 14px
+		padding: 16px
 		cursor: pointer
 		text-align: left
 		position: relative
@@ -76,6 +77,7 @@ export default {
 			background: var(--bg-hover)
 		&--selected
 			box-shadow: inset 0 0 0 1px var(--color-primary)
+			background: #eff1ff
 	&__check
 		position: absolute
 		top: 8px

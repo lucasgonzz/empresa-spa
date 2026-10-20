@@ -1,5 +1,13 @@
 <template>
-	<div class="panel-demo" :class="{ 'panel-demo--colapsado': colapsado }">
+	<div>
+	<demo-chat-panel
+	v-if="chat_disponible"
+	:colapsado="colapsado"
+	@no-disponible="chat_disponible = false"
+	@alternar="alternar_colapso"
+	@probar="probar"
+	@terminado="al_terminar"></demo-chat-panel>
+	<div v-else class="panel-demo" :class="{ 'panel-demo--colapsado': colapsado }">
 
 		<!--
 			Tirador ("alita") a media altura sobre el borde del panel. Es la unica forma de que
@@ -242,9 +250,11 @@
 		<!-- Fondo difuminado detrás del video agrandado. Solo aparece con el video reproduciendo. -->
 		<div v-if="video_grande" class="panel-demo__fondo" @click="pausar_video"></div>
 	</div>
+	</div>
 </template>
 <script>
 import TarjetaClip from '@/components/demo/TarjetaClip'
+import DemoChatPanel from '@/components/demo/DemoChatPanel'
 import motor from '@/tours/motor'
 import { tour_habilitado } from '@/tours/habilitados'
 
@@ -325,9 +335,11 @@ const INTERVALO_HEARTBEAT = 300000
 export default {
 	components: {
 		TarjetaClip,
+		DemoChatPanel,
 	},
 	data() {
 		return {
+			chat_disponible: true,
 			// El panel arranca abierto: es lo primero que el lead tiene que ver al entrar.
 			colapsado: false,
 			// El tirador late para invitar a volver, después de que "Probar" colapsó el panel.
