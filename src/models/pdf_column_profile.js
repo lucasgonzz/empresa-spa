@@ -249,6 +249,30 @@ export default {
 			},
 		},
 		{
+			/**
+			 * Misión pdf-negrita-perfil (20/10/2026): ids de las opciones de columna (`pdf_column_options`)
+			 * cuyo VALOR se imprime en negrita en la tabla del PDF. Es una lista de ids (p. ej. [3, 7]) y
+			 * no un campo del pivot de cada columna a propósito: la API la guarda en una columna JSON
+			 * propia del perfil (`pdf_column_profiles.bold_columns`), así un despliegue a medias no rompe
+			 * la lectura de los pivots. Null (o lista vacía) = ninguna columna en negrita, como siempre.
+			 *
+			 * No tiene input en este form: la editan el editor de columnas de artículos
+			 * (PdfColumnProfileEditor.vue) y el diseñador de PDF (disenador-pdf/), que la arman desde el
+			 * interruptor "Negrita" de cada columna. Se declara igual para que un perfil NUEVO nazca con
+			 * la clave (null) y para que getModelToSend() (arma el payload por spread de `model`) la
+			 * lleve al crear/actualizar y no se pierda en el round-trip. Una API vieja la ignora.
+			 */
+			text: 'Columnas en negrita',
+			key: 'bold_columns',
+			type: 'text',
+			value: null,
+			not_show: true,
+			not_show_on_form: true,
+			not_show_on_table: true,
+			// Una lista de ids no se busca con el buscador del ABM (buscador-general lo excluye con este flag).
+			not_use_in_global_search: true,
+		},
+		{
 			text: 'Perfil por defecto',
 			key: 'is_default',
 			type: 'checkbox',
