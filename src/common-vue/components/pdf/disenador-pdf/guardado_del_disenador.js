@@ -25,7 +25,7 @@ import {
 	tiene_diseno,
 	ancho_util,
 } from './estado_del_disenador'
-import { opciones_para_guardar, suma_mm_visible } from './tabla_del_disenador'
+import { opciones_para_guardar, suma_mm_visible, bold_columns_para_guardar } from './tabla_del_disenador'
 import { guardar_diseno, traer_ticket_en_texto, mensaje_de_error } from './api_del_disenador'
 import { caracteres_por_renglon } from './vista_de_ticket'
 import { avisar } from '@/components/abm/disenos-de-vender/avisos'
@@ -34,8 +34,12 @@ import { env } from '@/runtime_config'
 /*
 	Lo que el diseñador guarda del perfil: lo único que copia al formulario después de guardar. La
 	tabla (`pdf_column_options`) va aparte: se copia solo si viajó (ver aplicar_lo_guardado).
+
+	`bold_columns` (misión pdf-negrita-perfil): las columnas con el valor en negrita. Viaja junto con la
+	tabla y, como es del perfil y no del pivot, se copia de la respuesta de la API (que la normaliza). Una
+	API vieja no la devuelve: entonces no se copia nada y la tabla vuelve a armarse sin negrita.
 */
-const CLAVES_DEL_DISENO = ['page_layout', 'paper_width_mm', 'printable_width_mm', 'margin_mm', 'paper_height_mm', 'header_layout', 'logo_size_mm']
+const CLAVES_DEL_DISENO = ['page_layout', 'paper_width_mm', 'printable_width_mm', 'margin_mm', 'paper_height_mm', 'header_layout', 'logo_size_mm', 'bold_columns']
 
 /* Comienzo del mensaje del 422 de columnas (PdfColumnProfileController::assert_sum_of_column_widths_not_exceeds_paper) */
 const MENSAJE_DEL_422_DE_COLUMNAS = 'La suma de los anchos visibles'
@@ -163,7 +167,7 @@ export default {
 		 * (printable = ancho de la hoja).
 		 *
 		 * La tabla (`pdf_column_options` completo, plan §7.2) viaja si cambió (columnas, orden,
-		 * anchos, salto, o el ancho útil: cambiar la hoja recalcula los mm, D9), y también si la hoja
+		 * anchos, salto, negrita, o el ancho útil: cambiar la hoja recalcula los mm, D9), y también si la hoja
 		 * que se guarda no deja entrar los mm que tiene guardados (la API rechazaría con 422; en la
 		 * grilla las columnas siempre entran). Y al revés: si viaja la tabla sin hoja y en la hoja
 		 * GUARDADA no entra (un perfil de siempre viejo con imprimible de comandera, por ejemplo),
@@ -204,6 +208,8 @@ export default {
 
 			if (mandar_tabla) {
 				datos.pdf_column_options = opciones_para_guardar(this.tabla.columnas, this.tabla.visibles, this.ancho_util_de_la_tabla_mm, this.total_de_la_tabla)
+				/* Misión pdf-negrita-perfil: la negrita del valor de cada columna viaja con la tabla (null = ninguna) */
+				datos.bold_columns = bold_columns_para_guardar(this.tabla.visibles)
 
 				if (!hoja && suma_mm_visible(datos.pdf_column_options) > this.ancho_disponible_guardado()) {
 					hoja = this.sigue_de_siempre ? this.hoja_de_siempre_para_guardar() : {

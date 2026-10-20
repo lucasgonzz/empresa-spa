@@ -2,7 +2,8 @@
 	<!--
 		Propiedades de la columna de la tabla seleccionada (misión diseno-ticket-comandera, 9/10/2026;
 		plan §7.2): el rótulo que imprime, el ancho (− N/24 +, de a media columna), "Salto de línea"
-		si la opción lo permite y "Quitar de la tabla". Todo se cambia EN EL LUGAR sobre la columna (la
+		si la opción lo permite, la negrita del valor (misión pdf-negrita-perfil, solo en una hoja:
+		el ticket de comandera no la lleva por columna) y "Quitar de la tabla". Todo se cambia EN EL LUGAR sobre la columna (la
 		misma de la tabla de trabajo): la hoja lo ve al instante. Los estilos de las clases
 		dpdf-panel__* y dpdf-toggle están en PanelDePropiedades.vue.
 	-->
@@ -70,6 +71,38 @@
 			</small>
 		</div>
 
+		<!--
+			Negrita del VALOR de la columna (el rótulo del encabezado ya sale en negrita). Es el mismo B
+			que el de los campos (dpdf-panel__alternar). No se ofrece en un ticket de comandera: su tabla
+			se imprime con el motor ESC/POS y la negrita se elige por campo, no por columna.
+		-->
+		<div
+		v-if="!disenador.es_ticket"
+		class="dpdf-panel__bloque">
+			<span
+			id="dpdf-panel-etiqueta-negrita-columna"
+			class="dpdf-panel__etiqueta">Letra del valor</span>
+			<div
+			class="dpdf-panel__letra"
+			role="group"
+			aria-labelledby="dpdf-panel-etiqueta-negrita-columna">
+				<button
+				type="button"
+				class="dpdf-panel__alternar"
+				:class="{ 'dpdf-panel__alternar--activo': columna.negrita }"
+				:aria-pressed="columna.negrita ? 'true' : 'false'"
+				title="Negrita en el valor de esta columna"
+				aria-label="Negrita en el valor de esta columna"
+				data-testid="negrita-columna-panel-disenador-pdf"
+				@click="disenador.alternar_negrita_de_columna(columna)">
+					<i class="bi bi-type-bold"></i>
+				</button>
+			</div>
+			<small class="dpdf-panel__ayuda">
+				{{ columna.negrita ? 'Los valores de esta columna salen en negrita.' : 'Los valores de esta columna salen en letra normal.' }}
+			</small>
+		</div>
+
 		<b-button
 		variant="outline-danger"
 		size="sm"
@@ -84,7 +117,7 @@
 <script>
 /**
  * Propiedades de una columna de la tabla en el panel del diseñador de PDF (misión
- * diseno-ticket-comandera, 9/10/2026). Las acciones (ancho con el tope de la fila, salto, quitar)
+ * diseno-ticket-comandera, 9/10/2026). Las acciones (ancho con el tope de la fila, salto, negrita, quitar)
  * las resuelve el diseñador, que llega por `inject`.
  */
 export default {
