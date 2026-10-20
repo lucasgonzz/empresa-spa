@@ -556,6 +556,7 @@ import PaymentMethodsTable from '@/components/expenses/components/PaymentMethods
 // import Model from '@/common-vue/components/model/Index'
 
 import model_functions from '@/common-vue/mixins/model_functions'
+import { propiedades_de_cliente_desde_arca } from '@/utils/datos_de_arca_en_cliente'
 import {
 	belongs_to_many_columns_modal_id,
 	belongs_to_many_preference_type,
@@ -1019,52 +1020,27 @@ export default {
 				this.$toast.error('Error al buscar CUIT')
 			})
 		},
-        async useAfipData(afip_data) {
-			console.log('afip_Data', afip_data);
-            let new_model = { ...this.model };
-            new_model.name = afip_data.nombre
-            // `razon_social` en snake_case: es la clave que manda
-            // AfipConstanciaInscripcionController de empresa-api (solo en personas juridicas). El
-            // `razonSocial` que se leia antes es el campo crudo de ARCA y no llega nunca aca, asi que
-            // la razon social se perdia siempre (mision cliente-desde-arca-en-vender, 4/10/2026).
-            new_model.razon_social = afip_data.razon_social
-            new_model.address = afip_data.direccion
-
-            if (afip_data.provincia) {
-                new_model.provincia_id = await this.findOrCreateRelation('provincia', afip_data.provincia);
-            }
-            console.log('afip_data', afip_data);
-            if (afip_data.localidad) {
-                new_model.location_id = await this.findOrCreateRelation('location', afip_data.localidad);
-            }
-
-            
-			new_model.iva_condition_id = afip_data.condicion_iva == 'RESPONSABLE INSCRIPTO' ? 1 : afip_data.condicion_iva == 'MONOTRIBUTO' ? 2 : 3
-			
-            this.setModel(new_model, this.model_name, [], false);
-        },
-        async findOrCreateRelation(modelName, name) {
-            if (!name) {
-                return null;
-            }
-
-            let modelInStore = this.$store.state[modelName].models.find(m => m.name.toLowerCase() == name.toLowerCase());
-
-            if (modelInStore) {
-                return modelInStore.id;
-            } else {
-                try {
-                    const res = await this.$api.post(`/${modelName}`, { name: name });
-                    this.$store.commit(`${modelName}/add`, res.data.model);
-                    this.$toast.success(`${this.capitalize(modelName)} "${name}" se ha creado`);
-                    return res.data.model.id;
-                } catch (err) {
-                    console.error(`Error creating ${modelName}:`, err);
-                    this.$toast.error(`Error al crear ${modelName}`);
-                    return null;
-                }
-            }
-        },		
+		/*
+			"Usar estos datos" del modal de ARCA. Las propiedades las arma
+			utils/datos_de_arca_en_cliente.js, el MISMO helper que usa el buscador de cliente de Vender
+			(ModalResult.vue): lo que ARCA devuelve se carga igual desde los dos lugares (nombre y
+			apellido, CUIT, DNI, razon social, domicilio, provincia, localidad y condicion de IVA).
+		*/
+		useAfipData(afip_data) {
+			let self = this
+			propiedades_de_cliente_desde_arca(this, afip_data)
+			.then(function(properties) {
+				let new_model = { ...self.model }
+				properties.forEach(function(property) {
+					new_model[property.key] = property.value
+				})
+				self.setModel(new_model, self.model_name, [], false)
+			})
+			.catch(function(err) {
+				console.log(err)
+				self.$toast.error('No se pudieron cargar los datos de AFIP')
+			})
+		},
 		search_from_api(prop) {
 			if (prop.search_from_api) {
 				return true
