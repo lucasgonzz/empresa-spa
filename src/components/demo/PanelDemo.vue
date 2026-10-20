@@ -37,18 +37,15 @@
 
 					Se ve en dos casos:
 
-					1. Durante el propio ingreso por el link. `DemoIngreso.vue` prende
-					`demo/setEsDemo` ANTES de esperar el plan, y ese commit ya hace true al
-					getter `demo/panel_visible`, asi que App.vue monta el panel enseguida. Queda
-					detras del overlay del ingreso, pero montado y con el esqueleto puesto.
+					1. Durante el ingreso por el link, cuando el servidor ya confirmó la sesión
+					de demo pero el plan sigue en vuelo. Queda detrás del overlay del ingreso.
 
 					2. Si en ese ingreso salta el techo de espera (TECHO_ESPERA_PLAN): el lead
 					entra al sistema con el plan todavia en vuelo y ve el esqueleto de verdad. Es
 					el caso que este esqueleto existe para cubrir.
 
-					El caso "F5 con la sesion viva" ya no esta en la lista, y no por olvido: desde
-					el 25/8/2026 el panel sale unicamente si se entro con el token en la URL, asi
-					que despues de una recarga no se monta (ver el getter en store/demo.js).
+					Al recargar una sesión demo validada se restaura compacto; si el lead abre
+					el acceso antes de recibir el plan también puede ver este estado de carga.
 				-->
 				<div
 				v-if="cargando"
@@ -322,11 +319,10 @@ const INTERVALO_HEARTBEAT = 300000
 /**
  * Panel lateral de tutoriales de la demo (misión 51).
  *
- * Este componente solo se monta cuando se entró a la demo con el token en la URL: `App.vue` lo
- * condiciona al getter `demo/panel_visible`, que mira únicamente el marcador que prende el
- * ingreso. Un cliente real nunca lo crea ni ejecuta, y un lead que vuelve a abrir la demo sin el
- * `?t=` entra sin panel (pedido de Lucas, 25/8/2026). No confundirlo con `demo/activa`, que sigue
- * mirando las dos fuentes y es el que gatea el plan y los eventos.
+ * App.vue lo monta sólo con la identidad de demo validada por el servidor. El ingreso por token
+ * lo presenta abierto; tras F5 mantiene el acceso compacto al chat, la única entrada a videos.
+ * Conserva así el espacio pedido el 25/8 sin perder el recorrido del pedido del 19/10/2026.
+ * Un usuario común o una sesión invalidada no montan el componente ni piden el plan.
  *
  * 🔴 El panel NO marca nada como `completo`. `clip.terminado` lleva el hito del roadmap a
  * `parcial` del lado del admin; a `completo` lo lleva el evento de negocio que dispara el lead
@@ -340,8 +336,8 @@ export default {
 	data() {
 		return {
 			chat_disponible: true,
-			// El panel arranca abierto: es lo primero que el lead tiene que ver al entrar.
-			colapsado: false,
+			// El ingreso por token presenta el chat; al recargar conserva sólo el acceso compacto.
+			colapsado: !this.$store.state.demo.es_demo && this.$route.name !== 'demoIngreso',
 			// El tirador late para invitar a volver, después de que "Probar" colapsó el panel.
 			llamando_la_atencion: false,
 			// Id del clip cuya tarjeta está desplegada. Uno solo a la vez.
@@ -446,9 +442,8 @@ export default {
 		// ingreso ya la despachó y el store memorizó la promesa, así que acá no se paga un
 		// segundo GET: se reusa el mismo.
 		//
-		// 🔴 Acá decía además "después de un F5 este es el que la dispara". Desde el 25/8/2026 es
-		// falso: tras una recarga sin token este componente no se monta, así que ese despacho no
-		// existe más y el plan no se vuelve a pedir. Es la consecuencia asumida del gate nuevo.
+		// Al recargar una sesión demo validada también restaura el plan, con el panel compacto:
+		// desde el 19/10/2026 el chat es la única entrada a los videos y debe seguir accesible.
 		this.$store.dispatch('demo/cargar_plan')
 
 		// El panel es el componente que vive exactamente mientras dura la demo (mision

@@ -151,25 +151,26 @@ export default {
 		minimizar() { this.pausar(); this.$emit('alternar') },
 		probar(video) { this.pausar(); this.$emit('probar', this.clip_de(video)) },
 		registrar_segundos(video, datos) {
-			let pendiente = this.pendientes_video[video.clave] || { video: video, segundos: {}, duracion: datos.duracion, terminado: false }
-			datos.segundos_vistos.forEach(function (segundo) { pendiente.segundos[segundo] = true })
-			pendiente.duracion = datos.duracion
-			pendiente.terminado = pendiente.terminado || datos.terminado === true
-			this.pendientes_video[video.clave] = pendiente
+			let cola = this.pendientes_video[video.clave] || []
+			let segundos = datos.segundos_vistos.slice()
+			if (!segundos.length && datos.terminado !== true) return
+			// Cada evento conserva su frontera: un ended previo no puede incorporar segundos
+			// de una reproducción posterior mientras todavía hay un pedido en vuelo.
+			for (let inicio = 0; inicio < segundos.length || inicio === 0; inicio += 600) {
+				cola.push({ video: video, segundos: segundos.slice(inicio, inicio + 600), duracion: datos.duracion, terminado: datos.terminado === true && inicio + 600 >= segundos.length })
+			}
+			this.pendientes_video[video.clave] = cola
 			this.enviar_progreso(video.clave)
 		},
 		enviar_progreso(clave) {
 			if (this.enviando_video[clave]) return
-			let pendiente = this.pendientes_video[clave]
-			if (!pendiente || (!Object.keys(pendiente.segundos).length && !pendiente.terminado)) return
+			let cola = this.pendientes_video[clave]
+			if (!cola || !cola.length) return
+			let pendiente = cola[0]
 			let self = this
-			let segundos = Object.keys(pendiente.segundos).map(Number).slice(0, 600)
-			segundos.forEach(function (segundo) { delete pendiente.segundos[segundo] })
-			// El final va después de todos los bloques, también cuando no quedan segundos nuevos.
-			let terminado = pendiente.terminado && !Object.keys(pendiente.segundos).length
-			if (terminado) pendiente.terminado = false
 			this.enviando_video[clave] = true
-			this.$axios.post('/api/demo/chat/videos/progreso', { clave: clave, segundos_vistos: segundos, duracion: pendiente.duracion, terminado: terminado }).then(function (res) {
+			this.$axios.post('/api/demo/chat/videos/progreso', { clave: clave, segundos_vistos: pendiente.segundos, duracion: pendiente.duracion, terminado: pendiente.terminado }).then(function (res) {
+				cola.shift()
 				self.aplicar(res.data)
 				if (pendiente.video.origen === 'demo') {
 					let video = self.buscar_video(clave)
@@ -177,7 +178,7 @@ export default {
 				}
 				self.enviando_video[clave] = false
 				self.enviar_progreso(clave)
-			}).catch(function (e) { segundos.forEach(function (segundo) { pendiente.segundos[segundo] = true }); pendiente.terminado = pendiente.terminado || terminado; self.enviando_video[clave] = false; self.fallar(e) })
+			}).catch(function (e) { self.enviando_video[clave] = false; self.fallar(e) })
 		},
 		buscar_video(clave) {
 			let encontrado = null

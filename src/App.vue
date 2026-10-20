@@ -125,15 +125,10 @@
             prioridad, no ejecución — pero no es cero, y decir que sí lo era fue una afirmación
             falsa en la misión 51.
 
-            🔴 El getter es `panel_visible` y NO `demo/activa`, y la diferencia importa (pedido de
-            Lucas, 25/8/2026): `panel_visible` mira solo el marcador en memoria que prende
-            DemoIngreso.vue al canjear el token, así que el panel aparece únicamente cuando se
-            entró con el `?t=` en la URL. Entrar a la demo sin el parámetro con la sesión todavía
-            viva deja pasar al lead —la sesión se respeta— pero sin panel. `demo/activa` sigue
-            existiendo y mirando las dos fuentes: responde "¿esta sesión es una demo?", que es otra
-            pregunta y es la que gatea las llamadas a la API. Ojo con la explicación fácil de por
-            qué se dejó: NO es que salve la telemetría después de un F5 —los eventos los emite este
-            mismo panel, así que sin panel no hay eventos—. Está en store/demo.js, escrito bien.
+            El servidor debe confirmar que la sesión autenticada es una demo. El chat es ahora
+            el único acceso a los videos, así que una recarga conserva su launcher compacto;
+            sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
+            para autorizar el panel. Ver store/demo.js y el estado inicial de PanelDemo.
         -->
         <panel-demo v-if="$store.getters['demo/panel_visible']"></panel-demo>
 
