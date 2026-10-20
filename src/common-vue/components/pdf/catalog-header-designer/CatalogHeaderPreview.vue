@@ -495,6 +495,19 @@ $papel-placeholder-borde: rgba(0, 0, 0, .3)
 		&:hover:not(:disabled)
 			color: $papel-texto
 
+	// Botón B de negrita del valor: colores del papel (la hoja es blanca también en modo oscuro)
+	.catalog-row__bold
+		color: $papel-texto-suave
+
+		&:hover:not(:disabled)
+			color: $papel-texto
+			border-color: $papel-borde
+
+	.catalog-row__bold--activo
+		color: $papel-encabezado-tabla
+		background: $papel-fila-impar
+		border-color: $papel-encabezado-tabla
+
 	.catalog-row-list__drop
 		border-color: $papel-borde
 

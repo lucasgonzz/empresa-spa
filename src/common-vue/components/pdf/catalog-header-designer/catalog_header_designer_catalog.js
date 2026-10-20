@@ -13,9 +13,15 @@
  *     logo:         { show: true, pages: 'all'|'first', size_mm: 25 },
  *     company_name: { show: true },
  *     rows_pages:   'all'|'first',
- *     izquierda:    [ { title, value, source } ],
- *     derecha:      [ { title, value, source } ],
+ *     izquierda:    [ { title, value, source, bold } ],
+ *     derecha:      [ { title, value, source, bold } ],
  *   }
+ *
+ * `bold` (misión pdf-negrita-perfil, 20/10/2026) es un booleano opcional por renglón, default
+ * false: pone el VALOR del renglón en negrita en el PDF (el título ya sale en negrita siempre,
+ * sea texto libre o dato del negocio). Un diseño guardado sin la clave (anterior a esta misión, o
+ * guardado por una SPA vieja) se lee como false y el PDF sale como siempre. Una API vieja ignora
+ * la clave al normalizar.
  *
  * Las filas llevan además un `uid` LOCAL mientras se editan (para las :key de Vue y el
  * drag & drop); `strip_for_save()` lo saca antes de mandar a la API.
@@ -82,15 +88,18 @@ let uid_counter = 0
  * @param {string}      title  Título del renglón (ej. "Teléfono").
  * @param {string}      value  Valor del renglón (ej. "11 5555-5555").
  * @param {string|null} source Clave de SOURCE_LABELS si el valor sale de los datos del negocio; null si es libre.
- * @return {{uid: string, title: string, value: string, source: string|null}}
+ * @param {boolean}     [bold] Si el valor del renglón sale en negrita (default false).
+ * @return {{uid: string, title: string, value: string, source: string|null, bold: boolean}}
  */
-export function new_row(title, value, source) {
+export function new_row(title, value, source, bold) {
 	uid_counter += 1
 	return {
 		uid: 'r' + Date.now() + '-' + uid_counter,
 		title: title == null ? '' : String(title),
 		value: value == null ? '' : String(value),
 		source: (source && SOURCE_LABELS[source]) ? source : null,
+		/* Misión pdf-negrita-perfil: siempre un booleano, así la clave es reactiva desde que nace la fila */
+		bold: as_bool(bold, false),
 	}
 }
 
@@ -172,7 +181,8 @@ function rows_from_saved(rows) {
 		if (!row || typeof row !== 'object') {
 			return
 		}
-		result.push(new_row(row.title, row.value, row.source))
+		/* `bold` ausente (diseño anterior a la misión pdf-negrita-perfil) = false */
+		result.push(new_row(row.title, row.value, row.source, row.bold))
 	})
 	return result
 }
@@ -225,7 +235,7 @@ export function build_layout_from_saved(saved, default_layout) {
 }
 
 /**
- * Serializa las filas de trabajo al esquema persistido: SOLO title, value y source.
+ * Serializa las filas de trabajo al esquema persistido: SOLO title, value, source y bold.
  *
  * @param {Array} rows
  * @return {Array}
@@ -239,6 +249,8 @@ function strip_rows(rows) {
 			title: row.title == null ? '' : String(row.title).trim(),
 			value: row.value == null ? '' : String(row.value).trim(),
 			source: (row.source && SOURCE_LABELS[row.source]) ? row.source : null,
+			/* Negrita del valor (misión pdf-negrita-perfil): booleano, false si no se tocó */
+			bold: as_bool(row.bold, false),
 		}
 	})
 }
