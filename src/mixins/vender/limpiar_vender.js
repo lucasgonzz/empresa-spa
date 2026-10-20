@@ -147,6 +147,23 @@ export default {
 			*/
 			this.$store.commit('vender/set_recargos_en_precios_sin_registro', false)
 
+			/*
+				🔴 Y el de DESCUENTOS adentro del precio (mision descuentos-aplicar-al-precio-del-articulo,
+				8/10/2026) va con los dos de arriba, por el mismo motivo: set_datos_para_actualizar_en_vender()
+				lo prende con solo ABRIR una venta o un presupuesto guardado con la opcion activa. Si
+				sobreviviera a limpiar_vender, la venta SIGUIENTE -nueva, de otro cliente- arrancaria con
+				los descuentos metidos en el precio de cada articulo, sin discriminar en el comprobante,
+				y sin que nadie lo haya pedido. Mismo defecto A del 9/9/2026.
+			*/
+			this.$store.commit('vender/set_aplicar_descuentos_directo_a_items', 0)
+
+			/*
+				🔴 Y el LEGADO de descuentos, que set_datos_para_actualizar_en_vender() calcula al abrir un
+				comprobante: si sobreviviera, la venta SIGUIENTE arrancaria con los descuentos bloqueados, el
+				pie sin restarlos y el flag en 1 sin que nadie lo haya pedido.
+			*/
+			this.$store.commit('vender/set_descuentos_en_precios_sin_registro', false)
+
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
 			// El vendedor vuelve al del empleado logueado (su "Perfil de Vendedor"), o a 0 si no tiene

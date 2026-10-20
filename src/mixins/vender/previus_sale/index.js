@@ -19,6 +19,7 @@ import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_meth
 import facturar from '@/mixins/vender/guardar_venta/facturar'
 import { env } from '@/runtime_config'
 import { comprobante_con_recargos_en_precios_sin_registro } from '@/utils/recargos_en_precios'
+import { comprobante_con_descuentos_en_precios_sin_registro } from '@/utils/descuentos_en_precios'
 /*
 	Junta en UN renglon con varios precios las filas que guardo un renglon de varios precios (ver
 	getItemsPreviusSale(), al final).
@@ -330,6 +331,42 @@ export default {
 				cancelar, limpiar, guardar el presupuesto).
 			*/
 			this.$store.commit('vender/set_recargos_en_precios_sin_registro', comprobante_con_recargos_en_precios_sin_registro(model))
+
+			/*
+				🔴 El flag de los DESCUENTOS adentro del precio (mision
+				descuentos-aplicar-al-precio-del-articulo, 8/10/2026) se restaura igual que el de recargos, y
+				por lo mismo: sin esto quedaba en 0 al abrir una venta o un presupuesto para editarlo, y
+				aplicar_discounts() volvia a restar al total un descuento que el precio del renglon ya
+				traia adentro (el comprobante se re-guardaba con el descuento DOS veces).
+
+				Se restaura el flag que el comprobante tiene guardado; que sea EFECTIVO lo decide
+				factor_de_descuentos_de_venta() con los descuentos que carga mas abajo, y es lo que viaja
+				al guardar. Number() y no la verdad del valor a secas: la columna es nullable (un
+				comprobante viejo lo trae en null y queda en 0) y un "0" serializado seria truthy.
+
+				Un legado de recargos NO apaga este flag: puede venir en 1 (los dos flags guardados en 1 con
+				las bases en NULL), y entonces los precios ya traen el descuento adentro. Apagarlo hacia que
+				el pie lo restara de nuevo y que se guardara con el flag en 0.
+			*/
+			this.$store.commit('vender/set_aplicar_descuentos_directo_a_items', Number(model.aplicar_descuentos_directo_a_items) ? 1 : 0)
+
+			/*
+				🔴 Comprobante LEGADO DE DESCUENTOS: guardado con la opcion en 1 pero sin el precio original
+				de algun renglon elegible. Puede pasar porque un presupuesto con el descuento adentro se
+				edito en el ABM generico de Presupuestos (la API pone las bases en NULL y preserva el flag) o
+				porque una SPA vieja cacheada lo reescribio. Sus precios YA tienen el descuento adentro: sin
+				este chequeo, getPriceVender() tomaba el price como si estuviera limpio y le metia el
+				descuento otra vez (95 -> 85,50 al abrirlo, sin tocar nada), y de ahi se guardaba.
+
+				Queda bloqueado como el legado de recargos: los precios guardados se usan tal cual, el pie
+				no resta los descuentos, el flag sigue en 1 y Discounts.vue bloquea los controles. La regla,
+				y por que no se adivina la base, esta en utils/descuentos_en_precios.js.
+
+				Se calcula UNA vez, aca, con lo que el comprobante tiene GUARDADO (su flag, sus descuentos,
+				su discounts_in_services y sus pivots) y no con el store, y va ANTES del setTotal() del final
+				de este metodo, que es el primero en leerlo. Lo resetea limpiar_vender().
+			*/
+			this.$store.commit('vender/set_descuentos_en_precios_sin_registro', comprobante_con_descuentos_en_precios_sin_registro(model))
 
 			if (model.discounts.length) {
 				
@@ -798,6 +835,11 @@ export default {
 				valor_dolar: valor_dolar_enviado,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
+				/*
+					El flag EFECTIVO de los descuentos adentro del precio, no el crudo: el porque esta en el
+					POST de store/vender/vender.js. Viaja siempre, tambien en 0.
+				*/
+				aplicar_descuentos_directo_a_items: this.$store.getters['vender/descuentos_en_precios_efectivos'] ? 1 : 0,
 				sale_status_id: this.$store.state.vender.sale_status_id,
 				// Enviamos el valor actual de discount_stock al actualizar la venta
 				discount_stock: this.$store.state.vender.discount_stock,
@@ -1116,6 +1158,9 @@ export default {
 				  comprobante legado toma el precio guardado tal cual (ver precio_de_la_fila en
 				  utils/varios_precios_guardados.js); el "no recargarla" lo resuelve
 				  set_varios_precios_con_recargos() (set_items_prices.js), que lee el store.
+				- legado_descuentos: lo mismo para el legado de descuentos (comprobante_con_descuentos_en_precios_sin_registro):
+				  la fila toma el precio guardado SIN volver a descontarlo, y set_varios_precios_con_recargos()
+				  no la descuenta.
 				- con_acopios: con la extension acopios NO se reagrupa nada y queda un renglon por fila,
 				  como antes. Al editar, la columna "U. Entregadas" de ArticlesTable.vue es un input por
 				  renglon, y en un renglon reagrupado la entrega quedaria en el padre, que la API no
@@ -1128,6 +1173,7 @@ export default {
 				to_check: model.to_check,
 				checked: model.checked,
 				legado: comprobante_con_recargos_en_precios_sin_registro(model),
+				legado_descuentos: comprobante_con_descuentos_en_precios_sin_registro(model),
 				con_acopios: !!this.hasExtencion('acopios'),
 			})
 		},

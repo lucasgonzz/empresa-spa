@@ -44,10 +44,11 @@
 				:display_name="slotProps.model.buyer ? slotProps.model.buyer.name : ''"></btn-whatsapp-chat>
 
 				<!--
-					Envío por correo (Zipnova): el botón se dibuja solo si el pedido trae una opción
-					de envío elegida en la tienda o un envío ya generado. Abre el modal con el
-					destinatario, la opción y el estado, y desde ahí se genera, se sincroniza, se
-					imprime la etiqueta y se cancela.
+					Envío: el botón se dibuja en todo pedido con envío a domicilio (Zipnova o forma de
+					envío propia) y en los que traen algo de Zipnova. Abre el modal con el
+					destinatario, la dirección (que abre el mapa) y la forma elegida; si va por
+					Zipnova, también el estado, y desde ahí se genera, se sincroniza, se imprime la
+					etiqueta y se cancela.
 				-->
 				<envio-btn
 				:order="slotProps.model"></envio-btn>
@@ -82,6 +83,19 @@
 					:buyer="slotProps.model.buyer"></badge-sin-vincular>
 				</div>
 			</template>
+
+			<!--
+				"Ver en el mapa" debajo de "Direccion de envio" del formulario del pedido (misión
+				formas-envio-direcciones-maps, 19/10/2026). `prop_extras` es un punto de extensión
+				ADITIVO de ModelForm (se dibuja debajo de cada campo con `prop` y `model` en el scope):
+				se filtra por la key. No se usa `#address`: ese slot REEMPLAZA el campo entero. El botón
+				se esconde solo en un pedido sin envío o sin dirección.
+			-->
+			<template #prop_extras="extras">
+				<btn-ver-en-mapa
+				v-if="extras.prop.key == 'address'"
+				:model="extras.model"></btn-ver-en-mapa>
+			</template>
 		</view-component>
 	</div>
 </template>
@@ -112,6 +126,7 @@ export default {
 		LimiteCreditoPedido: () => import('@/components/online/modals/orders/LimiteCreditoPedido'),
 		BtnWhatsappChat: () => import('@/components/common/BtnWhatsappChat'),
 		EnvioBtn: () => import('@/components/online/components/orders/envio/EnvioBtn'),
+		BtnVerEnMapa: () => import('@/components/online/components/orders/envio/BtnVerEnMapa'),
 		BadgeSinVincular,
 	},
 	data() {

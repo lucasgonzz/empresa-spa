@@ -20,6 +20,8 @@
 			@play="al_reproducir"
 			@pause="al_pausar"
 			@timeupdate="al_avanzar_video"
+			@seeking="reiniciar_tramo"
+			@seeked="reiniciar_tramo"
 			@ended="al_terminar"></video>
 
 			<!--
@@ -111,6 +113,10 @@
  */
 export default {
 	props: {
+		rastrear_segundos: {
+			type: Boolean,
+			default: false,
+		},
 		clip: {
 			type: Object,
 			required: true,
@@ -149,6 +155,9 @@ export default {
 	},
 	data() {
 		return {
+			segundos_pendientes: {},
+			ultimo_tiempo: null,
+			ultimo_reloj: null,
 			// Arranca en true: el marco se dibuja negro desde el primer cuadro, asi que el
 			// indicador tiene que estar puesto antes del `loadstart` y no despues.
 			cargando: true,
@@ -231,6 +240,7 @@ export default {
 		 * @returns {void}
 		 */
 		al_reproducir() {
+			this.reiniciar_tramo()
 			if (this.cargando) {
 				this.quiere_reproducir = true
 				return
@@ -246,6 +256,8 @@ export default {
 		 * @returns {void}
 		 */
 		al_pausar() {
+			this.registrar_tramo()
+			this.enviar_segundos()
 			this.quiere_reproducir = false
 
 			/**
@@ -269,6 +281,7 @@ export default {
 		 * @returns {void}
 		 */
 		al_avanzar_video() {
+			this.registrar_tramo()
 			const porcentaje = this.porcentaje_actual()
 			const decimo = Math.floor(porcentaje / 10)
 
@@ -357,8 +370,42 @@ export default {
 		 * @returns {void}
 		 */
 		al_terminar() {
+			this.registrar_tramo()
+			this.enviar_segundos(true)
 			this.cargando = false
 			this.$emit('terminado')
+		},
+		// Contar tramos realmente reproducidos: mover el cursor no equivale a mirar el video.
+		reiniciar_tramo() {
+			let video = this.$refs.video
+			this.ultimo_tiempo = video ? video.currentTime : null
+			this.ultimo_reloj = Date.now()
+		},
+		registrar_tramo() {
+			if (!this.rastrear_segundos) return
+			let video = this.$refs.video
+			if (!video || !isFinite(video.duration)) return
+			let actual = video.currentTime
+			let reloj = Date.now()
+			let delta = this.ultimo_tiempo === null ? 0 : actual - this.ultimo_tiempo
+			let transcurrido = this.ultimo_reloj === null ? 0 : (reloj - this.ultimo_reloj) / 1000
+			if (!video.seeking && delta > 0 && delta <= Math.max(1.5, transcurrido * video.playbackRate + 0.75)) {
+				for (let segundo = Math.floor(this.ultimo_tiempo); segundo < Math.ceil(actual); segundo++) {
+					if (segundo >= 0 && segundo < Math.ceil(video.duration)) this.segundos_pendientes[segundo] = true
+				}
+			}
+			this.ultimo_tiempo = actual
+			this.ultimo_reloj = reloj
+			if (Object.keys(this.segundos_pendientes).length >= 10) this.enviar_segundos()
+		},
+		enviar_segundos(terminado = false) {
+			if (!this.rastrear_segundos) return
+			let video = this.$refs.video
+			let segundos = Object.keys(this.segundos_pendientes).map(Number)
+			if ((!segundos.length && !terminado) || !video || !isFinite(video.duration)) return
+			// El final también viaja vacío: el servidor conserva lo visto en sesiones anteriores.
+			this.$emit('segundos', { segundos_vistos: segundos, duracion: video.duration, terminado: terminado })
+			this.segundos_pendientes = {}
 		},
 		/**
 		 * Vuelve a pedir el video. Una URL firmada vencida o un corte de red se arreglan solos

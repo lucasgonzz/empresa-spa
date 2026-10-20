@@ -20,6 +20,7 @@ import {
 
 // import mixin_vender from '@/mixins/vender'
 import model_functions from '@/mixins/model_functions'
+import { descuentos_en_precios_efectivos } from '@/utils/descuentos_en_precios'
 
 /**
  * Obtiene una copia segura en JSON para evitar referencias reactivas.
@@ -104,6 +105,7 @@ function get_event_key_es(event_key) {
 		sale_sub_total_changed: 'Se actualizó el subtotal de la venta',
 		sale_total_changed: 'Se actualizó el total de la venta',
 		apply_surchages_direct_to_items_changed: 'Se cambió la aplicación de recargos directos a ítems',
+		apply_discounts_direct_to_items_changed: 'Se cambió la aplicación de descuentos directos a ítems',
 		sale_submit_attempt: 'Se intentó guardar la venta',
 		sale_submit_success: 'La venta se guardó correctamente',
 		sale_submit_error: 'Ocurrió un error al guardar la venta',
@@ -496,6 +498,41 @@ export default {
 		*/
 		recargos_en_precios_sin_registro: false,
 
+		/*
+			La opcion "Aplicar los descuentos de esta venta directamente a los precios de los
+			articulos" (mision descuentos-aplicar-al-precio-del-articulo, 8/10/2026), gemela de
+			aplicar_recargos_directo_a_items. Es el flag CRUDO: lo que el vendedor prendio. Lo que
+			manda en el calculo y lo que viaja al guardar es el predicado EFECTIVO (getter
+			descuentos_en_precios_efectivos de este modulo, o el computed global del mismo nombre de
+			mixins/generals.js): no cuenta con un descuento del 100%, pero SI cuenta en un comprobante
+			legado de descuentos (descuentos_en_precios_sin_registro, mas abajo): ahi el descuento ya esta
+			adentro de los precios.
+
+			🔴 Lo resetea limpiar_vender(), por lo mismo que el de recargos: un valor que se restaura
+			al abrir un comprobante y no se limpia al salir se hereda a la venta SIGUIENTE (el defecto
+			A del 9/9/2026, con aplicar_recargos_directo_a_items).
+		*/
+		aplicar_descuentos_directo_a_items: 0,
+
+		/*
+			True mientras se edita un comprobante (venta o presupuesto) LEGADO DE DESCUENTOS: guardado con
+			aplicar_descuentos_directo_a_items en 1, con descuentos, y con algun renglon elegible sin su
+			precio sin descuentos (pivot.price_sin_descuentos_de_venta en NULL). Sus precios ya tienen el
+			descuento adentro y no se sabe cuanto valian sin el: getPriceVender() los usa tal cual (no
+			vuelve a descontar), el pie no resta los descuentos, el flag sigue viajando en 1 y
+			stage-3/Discounts.vue bloquea los descuentos y la opcion. Es el espejo de
+			recargos_en_precios_sin_registro (mision descuentos-aplicar-al-precio-del-articulo, 8/10/2026).
+
+			Lo calcula previus_sale/index.js::set_datos_para_actualizar_en_vender() al abrir el comprobante,
+			con la regla de utils/descuentos_en_precios.js, y es independiente del legado de recargos: un
+			comprobante puede ser uno, el otro, los dos o ninguno.
+
+			🔴 Lo resetea limpiar_vender(), por lo mismo que los otros dos: un flag que se restaura al abrir y
+			no se limpia al salir se filtra a la venta SIGUIENTE (defecto A del 9/9/2026), que arrancaria con
+			los descuentos bloqueados y sin restar al pie.
+		*/
+		descuentos_en_precios_sin_registro: false,
+
 		total_description: [],
 
 		sale_status_id: 0,
@@ -562,6 +599,17 @@ export default {
 		*/
 		en_modo_presupuesto: state => {
 			return !!state.guardar_como_presupuesto || !!state.budget
+		},
+		/*
+			Si los descuentos de venta van EFECTIVAMENTE adentro del precio de los renglones (el flag,
+			mas descuentos elegidos con factor positivo, o un comprobante legado de descuentos, cuyos
+			precios ya traen el descuento). Es la misma cuenta que el computed global
+			`descuentos_en_precios_efectivos` de mixins/generals.js
+			(los dos llaman a utils/descuentos_en_precios.js): el store no ve los computeds de los
+			componentes, y los payloads de la venta tienen que mandar este valor y no el flag crudo.
+		*/
+		descuentos_en_precios_efectivos: (state, getters, rootState) => {
+			return descuentos_en_precios_efectivos(state, rootState.discount.models)
 		},
 	},
 	mutations: {
@@ -671,6 +719,20 @@ export default {
 		},
 		set_recargos_en_precios_sin_registro(state, value) {
 			state.recargos_en_precios_sin_registro = Boolean(value)
+		},
+		set_descuentos_en_precios_sin_registro(state, value) {
+			state.descuentos_en_precios_sin_registro = Boolean(value)
+		},
+		set_aplicar_descuentos_directo_a_items(state, value) {
+			const previous_value = state.aplicar_descuentos_directo_a_items
+			state.aplicar_descuentos_directo_a_items = value
+			append_sale_log_entry(state, {
+				event_key: 'apply_discounts_direct_to_items_changed',
+				source_component: 'vender/set_aplicar_descuentos_directo_a_items',
+				before: { aplicar_descuentos_directo_a_items: previous_value },
+				after: { aplicar_descuentos_directo_a_items: value },
+				diff: { changed: previous_value !== value },
+			})
 		},
 		set_fecha_entrega(state, value) {
 			state.fecha_entrega = value
@@ -1302,7 +1364,7 @@ export default {
 				})
 		},
 
-		vender({ commit, state }, info) {
+		vender({ commit, state, getters }, info) {
 			// Log previo al envío para auditar el estado final con el que se intenta guardar.
 			commit('append_sale_log', {
 				event_key: 'sale_submit_attempt',
@@ -1383,6 +1445,14 @@ export default {
 				incoterms: state.incoterms,
 				observations_ocultas: state.observations_ocultas,
 				aplicar_recargos_directo_a_items: state.aplicar_recargos_directo_a_items,
+				/*
+					🔴 Viaja el flag EFECTIVO y no state.aplicar_descuentos_directo_a_items a secas: con un
+					descuento del 100% (o sin descuentos elegidos) el flag crudo sigue prendido pero los
+					precios NO llevan el descuento adentro, y mandarlo en 1 le diria a la API que se
+					saltee el descuento (SaleHelper::getTotalSale) -> el 100% no se cobraria. Siempre
+					viaja, 0 incluido: es lo que le dice al servidor que esta venta no lo lleva.
+				*/
+				aplicar_descuentos_directo_a_items: getters.descuentos_en_precios_efectivos ? 1 : 0,
 				sale_type_id: state.sale_type_id,
 				sale_status_id: state.sale_status_id,
 			// Indica si la venta debe descontar stock al crearse

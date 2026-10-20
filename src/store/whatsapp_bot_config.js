@@ -103,6 +103,7 @@ export default __base_store({
 
 			return axios.put('/api/' + state.route_string, {
 				agent_personality: payload.agent_personality,
+				agent_personality_template: payload.agent_personality_template || null,
 				agent_skills: payload.agent_skills,
 				ai_enabled_default: payload.ai_enabled_default,
 				auto_send_sale_pdf: payload.auto_send_sale_pdf,

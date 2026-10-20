@@ -1,6 +1,7 @@
 <template>
 	<div class="whatsapp-agent-config">
 		<b-form-group
+		v-show="section === 'personalidad'"
 		label="Personalidad del agente">
 			<agent-template-picker
 			:templates="personality_templates"
@@ -21,6 +22,7 @@
 		</b-form-group>
 
 		<b-form-group
+		v-show="section === 'conocimiento'"
 		label="Habilidades del agente">
 			<agent-template-picker
 			:templates="skill_templates"
@@ -44,6 +46,7 @@
 		arma empresa-api con los datos reales del negocio, que son los que muestra el recuadro de
 		abajo. -->
 		<b-form-group
+		v-show="section === 'objetivo'"
 		label="Objetivo de la conversación"
 		class="whatsapp-agent-config__objective">
 			<agent-template-picker
@@ -163,6 +166,7 @@
 			</div>
 		</b-form-group>
 
+		<div v-show="section === 'respuestas'" class="whatsapp-agent-config__respuestas">
 		<b-form-checkbox
 		v-model="form.ai_enabled_default"
 		switch
@@ -237,6 +241,7 @@
 			</small>
 		</b-form-group>
 
+		</div>
 		<div class="whatsapp-agent-config__actions">
 			<btn-loader
 			text="Guardar"
@@ -252,6 +257,9 @@ import { WHATSAPP_AGENT_OBJECTIVES } from '@/constants/whatsapp_agent_objectives
 import AgentTemplatePicker from '@/components/whatsapp/config/AgentTemplatePicker'
 
 export default {
+	props: {
+		section: { type: String, default: 'personalidad' },
+	},
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
 		AgentTemplatePicker,
@@ -269,6 +277,7 @@ export default {
 			// así, si el backend todavía no tiene la columna cargada, nada cambia de golpe.
 			form: {
 				agent_personality: '',
+				agent_personality_template: null,
 				// Es texto libre, igual que la personalidad: el rubro/vocabulario del negocio.
 				agent_skills: '',
 				ai_enabled_default: true,
@@ -300,19 +309,18 @@ export default {
 			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
 		/**
-		 * Clave de la plantilla de personalidad cuyo texto coincide EXACTO con lo que hay en el
-		 * textarea, o null si no coincide con ninguna (porque está vacío o el dueño lo editó a
-		 * mano). Alimenta el picker para que la marca de "seleccionada" se apague sola apenas se
-		 * toca una letra.
+		 * Conserva la tarjeta elegida aunque el dueño personalice su texto. La coincidencia
+		 * exacta permite reconocer configuraciones anteriores que todavía no guardan la clave.
 		 *
 		 * @returns {string|null}
 		 */
 		selected_personality_key() {
+			if (this.personality_templates.some(item => item.key === this.form.agent_personality_template)) return this.form.agent_personality_template
 			let found = this.personality_templates.find(item => item.text === this.form.agent_personality)
 			return found ? found.key : null
 		},
 		/**
-		 * Igual que `selected_personality_key`, pero contra las plantillas de habilidades.
+		 * Reconoce las habilidades que siguen usando el texto original de una plantilla.
 		 *
 		 * @returns {string|null}
 		 */
@@ -398,6 +406,7 @@ export default {
 					return
 				}
 				this.form.agent_personality = value.agent_personality || ''
+				this.form.agent_personality_template = value.agent_personality_template || null
 				this.form.agent_skills = value.agent_skills || ''
 				// Si todavía no está seteado en backend (registro viejo), se respeta el default true/false.
 				this.form.ai_enabled_default = value.ai_enabled_default === undefined || value.ai_enabled_default === null
@@ -433,8 +442,10 @@ export default {
 		 */
 		onPersonalitySelected(template) {
 			let self = this
-			if (!this.form.agent_personality.trim() || this.selected_personality_key) {
-				this.form.agent_personality = template.text
+			let anterior = this.personality_templates.find(item => item.key === this.selected_personality_key)
+			let texto_base = anterior && (this.form.agent_personality === anterior.text || this.form.agent_personality === this.texto_personalidad(anterior))
+			if (!this.form.agent_personality.trim() || texto_base) {
+				this.aplicar_personalidad(template)
 				return
 			}
 			this.$bvModal.msgBoxConfirm('Ya escribiste algo acá. ¿Lo reemplazo por la plantilla "' + template.name + '"?', {
@@ -442,9 +453,17 @@ export default {
 				cancelTitle: 'Cancelar',
 			}).then(function (confirmed) {
 				if (confirmed) {
-					self.form.agent_personality = template.text
+					self.aplicar_personalidad(template)
 				}
 			})
+		},
+		texto_personalidad(template) {
+			let user = this.$store.state.auth.user || {}
+			return template.text.replace(/\[nombre del agente\]/g, 'el asistente').replace(/\[nombre del negocio\]/g, user.company_name || 'nuestro negocio')
+		},
+		aplicar_personalidad(template) {
+			this.form.agent_personality_template = template.key
+			this.form.agent_personality = this.texto_personalidad(template)
 		},
 		/**
 		 * Igual que `onPersonalitySelected`, para el textarea de habilidades.

@@ -3,6 +3,16 @@ import { env } from '@/runtime_config'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
 import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/utils/criterio_de_oferta_por_cantidad'
 import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado, redondear_a_centavos } from '@/utils/recargos_en_precios'
+/*
+	Descuentos de venta adentro del precio de cada renglon, apilados DEBAJO de los recargos (mision
+	descuentos-aplicar-al-precio-del-articulo, 8/10/2026). El predicado "efectivo" vive ahi.
+*/
+import {
+    factor_de_descuentos_de_venta,
+    descuentos_en_precios_efectivos as calcular_descuentos_en_precios_efectivos,
+    renglon_lleva_descuentos_de_venta,
+    precio_base_guardado,
+} from '@/utils/descuentos_en_precios'
 /* Precio de un combo segun la lista de precios de la venta (mision combos-calculados). */
 import { precio_de_combo_para_lista } from '@/utils/precio_de_combo'
 /* Recargo o descuento propio de la sucursal, adentro del precio de cada renglon (mision sucursal-recargo-descuento). */
@@ -100,6 +110,26 @@ export default {
 
             }
             return sale_surchages
+        },
+        /**
+         * Si la opcion "Aplicar los descuentos de esta venta directamente a los precios de los
+         * articulos" esta EFECTIVAMENTE prendida: el flag, mas que haya algun descuento elegido con
+         * porcentaje usable y que el factor sea positivo, O que el comprobante abierto sea un LEGADO
+         * DE DESCUENTOS (vender.descuentos_en_precios_sin_registro: sus precios ya tienen el descuento
+         * adentro, asi que cuenta como efectivo aunque el factor no sirva). Un legado de RECARGOS no
+         * cambia el resultado (la regla y su porque estan en utils/descuentos_en_precios.js).
+         *
+         * 🔴 Es ESTE predicado, y no el flag crudo del store, el que decide si el pie se saltea
+         * aplicar_discounts() (vender_set_total.js) y que flag viaja al guardar; la tercera decision,
+         * si getPriceVender() mete el factor en el precio de un renglon, mira el factor
+         * (factor_descuentos_de_venta). Con un descuento del 100% el flag crudo sigue en 1 pero esto
+         * da false, y el descuento se sigue cobrando al pie: la opcion decide DONDE se ve el
+         * descuento, nunca SI se cobra.
+         *
+         * @returns {Boolean}
+         */
+        descuentos_en_precios_efectivos() {
+            return calcular_descuentos_en_precios_efectivos(this.$store.state.vender, this.$store.state.discount.models)
         },
     },
     methods: {
@@ -821,6 +851,55 @@ export default {
             }
 
             /*
+                🔴 DESCUENTOS DE VENTA ADENTRO DEL PRECIO (mision
+                descuentos-aplicar-al-precio-del-articulo, 8/10/2026). Es el gemelo de recargar() para el
+                panel Descuentos: con la opcion "Aplicar los descuentos de esta venta directamente a los
+                precios" EFECTIVA (descuentos_en_precios_efectivos), CADA rama de abajo mete los
+                descuentos llamando a descontar(), ANTES de recargar(). La unica excepcion es la
+                rama del pivot de un comprobante LEGADO (de recargos o de descuentos), que usa el precio
+                guardado tal cual porque ya tiene el descuento adentro: ahi NO se llama a descontar() a
+                proposito, y no es un olvido.
+
+                LA PILA DE CAPAS. Los descuentos son la capa de ABAJO y los recargos la de ARRIBA:
+
+                    precio base ──► descontar() ──► recargar() ──► cuotas · IVA · moneda · oferta
+
+                Todo es multiplicativo, asi que el orden no cambia el precio final, pero SI define lo que
+                se guarda (al final del metodo): price_vender_sin_recargos es el precio justo debajo de
+                los recargos (los descuentos, si los hay, quedan adentro) y price_vender_sin_descuentos es
+                el ORIGINAL, justo debajo de los descuentos. Por eso descontar() va primero en TODAS las
+                ramas, tambien en la del pivot: cambiar el orden en una sola daria un redondeo distinto
+                para el mismo renglon segun por que rama pase.
+
+                🔴 descontar() se llama en LAS CINCO RAMAS, no en una. Las ramas que no son el flujo
+                normal -precio a mano, pivot y precios en blanco- son justo las que se olvidaron del
+                recargo hasta el 28/9/2026 (el pie se saltea el ajuste con la opcion prendida y nadie lo
+                cobraba). Si una rama futura se olvida de descontar(), el descuento de esos renglones se
+                dejaria de cobrar EN SILENCIO con la opcion prendida: el pie ya no lo suma y el precio no
+                lo trae. La regla es la misma que con recargar().
+
+                factor_descuentos_aplicado lo escribe SOLO descontar(), por lo mismo que
+                factor_recargos_aplicado: la base sale de lo que efectivamente se multiplico.
+            */
+            let factor_descuentos_aplicado = null
+
+            let descontar = precio_sin_descuentos => {
+
+                let factor = this.factor_descuentos_de_venta(item)
+
+                if (factor === null) {
+                    return precio_sin_descuentos
+                }
+
+                factor_descuentos_aplicado = factor
+
+                let precio_con_descuentos = Number(precio_sin_descuentos) * factor
+                item_des.push('Descuentos de venta adentro del precio: ' + this.price(precio_sin_descuentos) + ' -> ' + this.price(precio_con_descuentos))
+
+                return precio_con_descuentos
+            }
+
+            /*
                 🔴 RECARGO O DESCUENTO DE LA SUCURSAL ADENTRO DEL PRECIO (mision
                 sucursal-recargo-descuento, 2/10/2026). La sucursal elegida en VENDER puede llevar un
                 porcentaje propio (utils/ajuste_de_sucursal.js) y se mete en el precio de CADA renglon,
@@ -888,7 +967,11 @@ export default {
 
                     Y NO lleva el ajuste de la sucursal: lo escrito a mano es el precio final (ver
                     ajustar_por_sucursal, mas arriba).
+
+                    El descuento de venta tampoco se saltea: con la opcion apagada se le resta al pie, asi
+                    que con la opcion prendida va adentro (la opcion decide DONDE, nunca SI).
                 */
+                price = descontar(price)
                 price = recargar(price)
 
                 // Ajuste IVA sobre el precio personalizado
@@ -954,32 +1037,73 @@ export default {
                     price = item.pivot.price
                     item_des.push('Precio del pivot (venta anterior, recargos ya adentro): ' + this.price(price))
 
+                    /*
+                        Y tampoco se DESCUENTA, aunque la opcion de descuentos este efectiva: si el flag
+                        de descuentos viene en 1 en este comprobante (los dos flags en 1 con las bases
+                        en NULL), el precio guardado YA tiene el descuento adentro. Aca simplemente no
+                        se llama a descontar(), y el pie tampoco resta los descuentos.
+                    */
+
+                } else if (this.$store.state.vender.descuentos_en_precios_sin_registro) {
+
+                    /*
+                        🔴 Comprobante LEGADO DE DESCUENTOS: se guardo con la opcion de descuentos en 1
+                        pero este renglon no tiene su precio sin descuentos (el espejo del bloque de
+                        arriba, ver comprobante_con_descuentos_en_precios_sin_registro en
+                        utils/descuentos_en_precios.js). El precio guardado tiene el descuento adentro de
+                        una base que no se conoce, asi que NO se descuenta de nuevo: 95 se queda en 95,
+                        no pasa a 85,50. NO LLAMAR A descontar() ACA "PARA QUE QUEDE IGUAL QUE LAS OTRAS
+                        RAMAS".
+
+                        Lo que si se hace es reconstruir los RECARGOS, que no estan bloqueados: la base es
+                        la columna de recargos si existe (es el precio justo debajo de los recargos, con
+                        los descuentos adentro) y, si no, el price tal cual, y se le meten los recargos de
+                        hoy. Sin recargos es el price sin tocar. El renglon no lleva base de descuentos
+                        (queda null): el comprobante sigue siendo legado al reabrirlo, que es el modo de
+                        falla seguro.
+                    */
+                    let precio_sin_recargos = precio_sin_recargos_guardado(item.pivot)
+
+                    price = precio_sin_recargos === null ? Number(item.pivot.price) : precio_sin_recargos
+                    item_des.push('Precio del pivot (venta anterior, descuentos ya adentro): ' + this.price(price))
+
+                    price = recargar(price)
+
                 } else {
 
                     /*
-                        🔴 El precio se reconstruye desde el precio SIN recargos y se le vuelven a
-                        meter los recargos de HOY (los que el vendedor tiene elegidos ahora, con el
-                        porcentaje historico que les restauro
-                        set_surchages_store_with_pivot_percetage()). Asi, apagar la opcion devuelve
-                        cada precio exacto a como estaba, cambiar un recargo re-precia el renglon,
-                        y prender la opcion sobre un comprobante guardado sin ella mete el recargo
+                        🔴 El precio se reconstruye desde el precio ORIGINAL -sin descuentos y sin
+                        recargos de venta- y se le vuelven a meter los descuentos y los recargos de HOY
+                        (los que el vendedor tiene elegidos ahora, con el porcentaje historico que les
+                        restauro set_discounts_store_with_pivot_percetage() y
+                        set_surchages_store_with_pivot_percetage()). Asi, apagar una opcion devuelve
+                        cada precio exacto a como estaba, cambiar un ajuste re-precia el renglon, y
+                        prender una opcion sobre un comprobante guardado sin ella mete el ajuste
                         adentro.
 
-                        Con base NULL el price del pivot NO tiene recargos adentro (ver la
-                        invariante en utils/recargos_en_precios.js), asi que el price ES la base.
+                        El original es, en este orden (precio_base_guardado):
+                          1. pivot.price_sin_descuentos_de_venta, si no es NULL (el price tiene
+                             descuentos adentro, y esta columna esta debajo de las dos capas);
+                          2. si no, pivot.price_sin_recargos_de_venta, si no es NULL (el price tiene
+                             recargos adentro y ningun descuento);
+                          3. si no, el price tal cual: con las dos columnas NULL el price del pivot NO
+                             tiene ningun ajuste de venta adentro (ver la pila de capas en
+                             utils/descuentos_en_precios.js).
+                        NO dividir el price por el factor de hoy: los porcentajes pudieron cambiar
+                        entre el guardado y la edicion, y un renglon con precio a mano o un combo no
+                        llevaba el ajuste adentro. Sin dividir es exacto.
+
+                        Con las dos opciones apagadas hoy, descontar() y recargar() no hacen nada y el
+                        precio es la base: el comprobante vuelve a como era sin ajustes adentro.
+
                         No se puede usar el price tal cual "cuando nada cambio": hasta el 9/9/2026
                         esta rama no recargaba y el toggle editando un presupuesto dejaba el
                         precio y el total desincronizados (242 en vez de 220, o 200 en vez de 220).
                     */
-                    let precio_sin_recargos = precio_sin_recargos_guardado(item.pivot)
+                    price = precio_base_guardado(item.pivot)
+                    item_des.push('Precio original del pivot, sin descuentos ni recargos de venta (venta anterior): ' + this.price(price))
 
-                    if (precio_sin_recargos === null) {
-                        precio_sin_recargos = Number(item.pivot.price)
-                    }
-
-                    price = precio_sin_recargos
-                    item_des.push('Precio del pivot sin recargos de venta (venta anterior): ' + this.price(price))
-
+                    price = descontar(price)
                     price = recargar(price)
                 }
 
@@ -1009,6 +1133,7 @@ export default {
                 // Recargo o descuento de la sucursal, adentro del precio (antes de los recargos de venta)
                 price = ajustar_por_sucursal(price)
 
+                price = descontar(price)
                 price = recargar(price)
 
                 // Ajuste IVA sobre el precio en blanco
@@ -1041,7 +1166,8 @@ export default {
                 // Recargo o descuento de la sucursal, adentro del precio (antes de los recargos de venta)
                 price = ajustar_por_sucursal(price)
 
-                // Recargos de venta aplicados directo al item
+                // Descuentos y recargos de venta aplicados directo al item (los descuentos van abajo)
+                price = descontar(price)
                 price = recargar(price)
 
                 // Cuotas
@@ -1104,25 +1230,36 @@ export default {
             }
 
             /*
-                El precio SIN los recargos de venta, que viaja en el payload de cada renglon
+                Las bases de los dos ajustes de venta, que viajan en el payload de cada renglon
                 (venta: el item entero; presupuesto: vender_presupuestos.js) y la API guarda en
-                pivot.price_sin_recargos_de_venta.
+                pivot.price_sin_recargos_de_venta y pivot.price_sin_descuentos_de_venta:
 
-                🔴 Se saca DIVIDIENDO el precio final por el factor, y no guardando el numero de
-                antes de recargar(). Despues del recargo todavia pasan las cuotas, el ajuste de IVA,
-                la moneda y la oferta por cantidad, y todos son MULTIPLICATIVOS: el cociente es
-                exactamente el precio que el renglon habria tenido con la opcion apagada, en el
-                mismo contexto de IVA y moneda que `price`. El numero de antes de recargar() no lo
-                es (le faltarian el IVA, la moneda y la oferta). Si algun dia se agrega un paso
-                ADITIVO despues de recargar() -un monto fijo-, esta division deja de ser exacta.
+                    item.price_vender_sin_recargos   = price / fr          (X·fd·m: los descuentos quedan)
+                    item.price_vender_sin_descuentos = price / (fd·fr)     (X·m: el ORIGINAL)
+                    item.price_vender_original       = lo mismo, redondeado a centavos, para la tabla
+
+                (fd y fr son los factores que de verdad se multiplicaron; el que no se multiplico vale
+                1 en la cuenta y su base viaja null.) La pila de capas completa esta en
+                utils/descuentos_en_precios.js.
+
+                🔴 Se sacan DIVIDIENDO el precio final por los factores, y no guardando el numero de
+                antes de descontar() o recargar(). Despues de los dos todavia pasan las cuotas, el
+                ajuste de IVA, la moneda y la oferta por cantidad, y todos son MULTIPLICATIVOS: el
+                cociente es exactamente el precio que el renglon habria tenido con la opcion apagada,
+                en el mismo contexto de IVA y moneda que `price`. El numero de antes de descontar() o
+                recargar() no lo es (le faltarian el IVA, la moneda y la oferta). Si algun dia se
+                agrega un paso ADITIVO despues de ellos -un monto fijo-, esta division deja de ser
+                exacta.
 
                 El ajuste de la sucursal va ANTES de recargar() y ya viene redondeado a centavos
                 (ajustar_por_sucursal), asi que la base INCLUYE el ajuste: es el precio que el
                 renglon tiene con los recargos de venta apagados en ESTA sucursal.
 
                 Sin recargos adentro (opcion apagada, servicio sin recargos en servicios, o
-                renglon de un comprobante legado) viaja null, que es lo que dice la invariante.
-                La base va SIN redondear a proposito, y se calcula ANTES de redondear el precio:
+                renglon de un comprobante legado) viaja null, que es lo que dice la invariante. Lo
+                mismo la base de los descuentos: sin descuentos adentro (opcion apagada, descuento del
+                100%, servicio sin descuentos en servicios, legado) viaja null.
+                Las bases van SIN redondear a proposito, y se calculan ANTES de redondear el precio:
                 la columna tiene 6 decimales para que "apagar" devuelva exactamente el precio que
                 el renglon habria tenido con la opcion apagada.
 
@@ -1142,20 +1279,45 @@ export default {
                 factura coinciden siempre; el costo aceptado es que prender o apagar la opcion
                 puede mover el total algun centavo por unidad.
 
-                Sin factor aplicado NO se redondea nada: redondear los precios con la opcion
+                El mismo redondeo vale cuando lo que va adentro del precio es un DESCUENTO (o los dos):
+                el motivo es el de arriba -la API suma renglones de 2 decimales-, no el signo del
+                ajuste. Hasta con un descuento solo, 0,35 × 0,9 = 0,315 se guarda 0,32 y el total tiene
+                que ser el de los renglones.
+
+                Sin ningun factor aplicado NO se redondea nada: redondear los precios con la opcion
                 apagada es otro tema, y esta comentado a proposito mas arriba
                 (`// price = this.redondear(price)`).
+
+                🔴 price_vender_original -el original redondeado a centavos- es lo que la tabla de
+                VENDER muestra como "(orig. $ 1.000,00)" (ArticlesTable.vue). Viaja null cuando el
+                precio no lleva ningun ajuste adentro, que es lo que le dice a la tabla que no
+                muestre nada. Lo dejan en null, sin hacer nada especial, el legado de recargos (la rama
+                del pivot ahi no llama a recargar()) y el servicio sin "en servicios". En un legado de
+                descuentos, en cambio, puede quedar con un valor (la base de recargos, que tiene el
+                descuento adentro): no es el original y la tabla no lo muestra, porque
+                precio_original_a_mostrar() corta por cualquiera de los dos legados.
             */
-            if (factor_recargos_aplicado !== null && factor_recargos_aplicado !== 0) {
-                item.price_vender_sin_recargos = price / factor_recargos_aplicado
+            let hubo_descuentos = factor_descuentos_aplicado !== null && factor_descuentos_aplicado !== 0
+            let hubo_recargos = factor_recargos_aplicado !== null && factor_recargos_aplicado !== 0
+
+            item.price_vender_sin_recargos = hubo_recargos ? price / factor_recargos_aplicado : null
+
+            if (hubo_descuentos || hubo_recargos) {
+
+                // Los dos factores juntos; el que no se aplico es 1. Con recargos solos: 1 × fr === fr.
+                let factor_total = (hubo_descuentos ? factor_descuentos_aplicado : 1) * (hubo_recargos ? factor_recargos_aplicado : 1)
+
+                item.price_vender_sin_descuentos = hubo_descuentos ? price / factor_total : null
+                item.price_vender_original = redondear_a_centavos(price / factor_total)
 
                 let price_sin_redondear = price
                 price = redondear_a_centavos(price)
                 if (price !== price_sin_redondear) {
-                    item_des.push('Redondeo a centavos (recargos adentro del precio): ' + price_sin_redondear + ' -> ' + this.price(price))
+                    item_des.push('Redondeo a centavos (descuentos o recargos adentro del precio): ' + price_sin_redondear + ' -> ' + this.price(price))
                 }
             } else {
-                item.price_vender_sin_recargos = null
+                item.price_vender_sin_descuentos = null
+                item.price_vender_original = null
             }
 
             // Precio final del item después de todas las transformaciones
@@ -1523,6 +1685,39 @@ export default {
                     .filter(surchage => surchage)
                     .map(surchage => surchage.percentage)
             )
+        },
+        /**
+         * Factor por el que los descuentos de venta elegidos multiplican el precio de ESTE renglon
+         * cuando la opcion "Aplicar los descuentos de esta venta directamente a los precios" esta
+         * EFECTIVA, o null si no le corresponde ninguno: opcion apagada, sin descuentos usables,
+         * descuento del 100% (factor no positivo), o renglon no elegible (un servicio sin "Aplicar
+         * descuentos en los servicios"). Un comprobante legado (de recargos o de descuentos) NO lo
+         * apaga: lo que hacen los legados es que los renglones GUARDADOS no se vuelvan a descontar
+         * (rama del pivot de getPriceVender y filas guardadas de varios precios), mientras los
+         * renglones nuevos si llevan el descuento adentro.
+         *
+         * Es el gemelo de factor_recargos_de_venta(). Lo usan getPriceVender() para meter el
+         * descuento en el precio y mixins/vender/set_items_prices.js para los `varios_precios`, que no
+         * pasan por getPriceVender(). Los porcentajes salen del store de descuentos, que al editar un
+         * comprobante tiene el porcentaje HISTORICO del pivot
+         * (previus_sale/index.js::set_discounts_store_with_pivot_percetage).
+         *
+         * @param {Object} item
+         * @returns {Number|null}
+         */
+        factor_descuentos_de_venta(item) {
+
+            let factor = factor_de_descuentos_de_venta(this.$store.state.vender, this.$store.state.discount.models)
+
+            if (factor === null) {
+                return null
+            }
+
+            if (!renglon_lleva_descuentos_de_venta(item, this.$store.state.vender.discounts_in_services)) {
+                return null
+            }
+
+            return factor
         },
         /**
          * El recargo o descuento propio de la sucursal elegida en VENDER, ya interpretado

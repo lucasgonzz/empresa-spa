@@ -4,6 +4,8 @@ import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import db from '@/offline/db'
 import { normalizar_telefono } from '@/utils/whatsapp_phone'
 import { es_perfil_de_ticket } from '@/constants/vender_print_shortcut_options'
+/* Formas de envío del pedido: Zipnova o forma propia, y el costo a convenir (misión formas-envio-direcciones-maps). */
+import { es_forma_propia_a_convenir, envio_va_por_zipnova, precio_de_forma_propia } from '@/utils/formas_de_envio'
 export default {
     mixins: [select_payment_methods],
     computed: {
@@ -786,14 +788,22 @@ export default {
         /**
          * Etiqueta legible de la modalidad de entrega del pedido online.
          *
+         * Desde la misión formas-envio-direcciones-maps (19/10/2026) distingue la forma de envío
+         * propia del comercio ("Envío propio: Acordar con el vendedor") del correo de Zipnova. "Es
+         * Zipnova" se decide como en la API (`envio_va_por_zipnova`, espejo de
+         * `Order::envio_va_por_zipnova()`), no solo por tener `envio_opcion`.
+         *
          * @param {object} order
          * @returns {string}
          */
         getOrderDeliverLabel(order) {
-            if (this.order_envio_opcion(order)) {
+            if (envio_va_por_zipnova(order)) {
                 return 'Envío a domicilio (Zipnova)'
             }
             if (Number(order.deliver) === 1) {
+                if (order.delivery_zone && order.delivery_zone.name) {
+                    return 'Envío propio: ' + order.delivery_zone.name
+                }
                 return 'Envio a domicilio'
             }
             return 'Retiro por local'
@@ -822,7 +832,11 @@ export default {
             return order.envio_opcion
         },
         /**
-         * Columna "Envío" del listado de pedidos: en qué está el envío por correo.
+         * Columna "Envío" del listado de pedidos: en qué está el envío por correo, o con qué forma
+         * propia del comercio sale ("Envío propio: Acordar con el vendedor").
+         *
+         * Un pedido con forma propia no muestra nunca "Sin generar": no hay nada que generar en
+         * Zipnova (misión formas-envio-direcciones-maps, 19/10/2026).
          *
          * @param {object} order
          * @returns {string}
@@ -837,23 +851,30 @@ export default {
                 }
                 return texto
             }
-            if (this.order_envio_opcion(order)) {
+            if (envio_va_por_zipnova(order)) {
                 return 'Sin generar'
             }
             if (Number(order.deliver) === 1) {
+                if (order.delivery_zone && order.delivery_zone.name) {
+                    return 'Envío propio: ' + order.delivery_zone.name
+                }
                 return 'Envío propio'
             }
             return 'Retiro'
         },
         /**
          * "Envío elegido" del formulario del pedido: "{correo} · {servicio} · $ {precio} · llega
-         * {dd/mm}" para una opción de Zipnova, o el nombre de la zona de reparto del negocio.
+         * {dd/mm}" para una opción de Zipnova, o la forma de envío propia del negocio con su costo
+         * ("Acordar con el vendedor · A convenir", "Reparto en la ciudad · $ 3.000").
+         *
+         * 🔴 Una forma propia con el costo a convenir dice "A convenir", nunca "Gratis" ni "$ 0": no
+         * es un envío sin cargo, es un costo que el vendedor arregla con el comprador.
          *
          * @param {object} order
          * @returns {string}
          */
         getOrderEnvioResumen(order) {
-            let opcion = this.order_envio_opcion(order)
+            let opcion = envio_va_por_zipnova(order) ? this.order_envio_opcion(order) : null
             if (opcion) {
                 let partes = []
                 if (opcion.carrier_name) {
@@ -874,7 +895,9 @@ export default {
             }
             if (order.delivery_zone && order.delivery_zone.name) {
                 let texto = order.delivery_zone.name
-                if (order.delivery_zone.price) {
+                if (es_forma_propia_a_convenir(order.delivery_zone)) {
+                    texto += ' · A convenir'
+                } else if (order.delivery_zone.price) {
                     texto += ' · ' + this.price(order.delivery_zone.price)
                 }
                 return texto
@@ -932,6 +955,91 @@ export default {
          */
         mostrar_order_envio_resumen(prop, model) {
             return !!model && Number(model.deliver) === 1
+        },
+        /**
+         * `v_if_function` del Precio de una forma de envío propia (src/models/delivery_zone.js,
+         * misión formas-envio-direcciones-maps, 19/10/2026): solo se carga cuando la forma cobra un
+         * precio fijo. Con "El costo se coordina con el comprador" tildado se esconde, porque la
+         * tienda no cobra nada y la API guarda el precio en 0.
+         *
+         * Va en este mixin GLOBAL por lo mismo que `pdf_column_profile_campo_de_hoja`: showProperty()
+         * también se evalúa en la tabla del ABM, y un v_if_function que no existe ahí rompe la fila.
+         *
+         * @param {object} prop
+         * @param {object} model La forma de envío.
+         * @returns {boolean}
+         */
+        delivery_zone_cobra_precio(prop, model) {
+            return !es_forma_propia_a_convenir(model)
+        },
+        /**
+         * `v_if_function` de "El costo se coordina con el comprador" (src/models/delivery_zone.js):
+         * la casilla se ofrece solo si la API tiene la columna `delivery_zones.costo_a_convenir`.
+         * Contra una API vieja se tildaría, no se guardaría, y la forma quedaría cobrando el precio
+         * (que además se esconde al tildarla).
+         *
+         * - Forma ya guardada: la API manda la clave si tiene la columna.
+         * - Forma nueva: el modelo se arma con las props de src/models/delivery_zone.js y trae la
+         *   clave siempre, así que no dice nada de la API. Se mira una forma ya cargada en el store
+         *   y, si no hay ninguna, la configuración de la tienda: `ofrecer_envio_zipnova` sale de la
+         *   MISMA migración que `costo_a_convenir` (2026_10_19_100200 de empresa-api). Sin ninguna
+         *   de las dos señales no se ofrece.
+         *
+         * @param {object} prop
+         * @param {object} model La forma de envío.
+         * @returns {boolean}
+         */
+        mostrar_costo_a_convenir(prop, model) {
+            if (model && model.id) {
+                return typeof model.costo_a_convenir != 'undefined'
+            }
+            let store_formas = this.$store.state.delivery_zone
+            let formas = store_formas && Array.isArray(store_formas.models) ? store_formas.models : []
+            if (formas.length) {
+                return typeof formas[0].costo_a_convenir != 'undefined'
+            }
+            let store_configuracion = this.$store.state.online_configuration
+            let configuraciones = store_configuracion && Array.isArray(store_configuracion.models) ? store_configuracion.models : []
+            if (configuraciones.length) {
+                return typeof configuraciones[0].ofrecer_envio_zipnova != 'undefined'
+            }
+            return false
+        },
+        /**
+         * Columna "Costo" de la tabla de Formas de envío propias: "A convenir" si el costo se
+         * coordina con el comprador, o el precio. Nunca "$ 0" para una forma a convenir: el precio
+         * guardado es 0 justamente porque no se cobra en la tienda.
+         *
+         * @param {object} model La forma de envío.
+         * @returns {string}
+         */
+        getDeliveryZoneCostoTexto(model) {
+            if (!model) {
+                return ''
+            }
+            if (es_forma_propia_a_convenir(model)) {
+                return 'A convenir'
+            }
+            return this.price(model.price)
+        },
+        /**
+         * `v_if_function` de "Ofrecer envío por correo con Zipnova" en la configuración de la
+         * tienda (src/models/online_configuration.js): solo con "Ofrecer opcion de envio en la
+         * Tienda" prendido, y solo si la API manda la columna `ofrecer_envio_zipnova`.
+         *
+         * 🔴 Lo segundo no es decorativo. Contra una API vieja (sin la columna) la clave no viene,
+         * el interruptor se dibujaría apagado (`Number(undefined) === 1` es falso) y la tienda
+         * seguiría ofreciendo Zipnova: el dueño leería lo contrario de lo que pasa.
+         *
+         * @param {object} prop
+         * @param {object} model La configuración de la tienda online.
+         * @returns {boolean}
+         */
+        mostrar_ofrecer_envio_zipnova(prop, model) {
+            if (!model || Number(model.has_delivery) !== 1) {
+                return false
+            }
+            return typeof model.ofrecer_envio_zipnova != 'undefined'
         },
         /**
          * "Descuentos y recargos del cliente" del formulario del pedido (misión
@@ -1305,13 +1413,13 @@ export default {
                     total -= model.cupon.amount
                 }
             }
-            if (model.delivery_zone && model.delivery_zone.price) {
-                total += Number(model.delivery_zone.price)
-            }
+            // La forma de envío propia suma su precio, salvo que el costo sea a convenir: esa no
+            // se cobró en la tienda y aporta 0 (misión formas-envio-direcciones-maps).
+            total += precio_de_forma_propia(model.delivery_zone)
             if (formated) {
                 return dates.methods.price(total)
-            } 
-            return total  
+            }
+            return total
         },
         /*
             Botón "WhatsApp" de la tabla de Compradores de la tienda online. El botón no vive en
@@ -1399,6 +1507,16 @@ export default {
 			let total = 0
             let total_item = 0
 
+            /*
+             * OJO, brecha conocida (hallazgo 10 del 28/9/2026, recargos-en-precios-editable): este
+             * fallback -solo corre si `sale.total` viene vacio o en 0- resta los descuentos y suma los
+             * recargos de la venta SOBRE los precios de los renglones sin mirar
+             * `aplicar_recargos_directo_a_items` ni `aplicar_descuentos_directo_a_items`. Con esas
+             * opciones prendidas los precios ya llevan el ajuste adentro y se contaria dos veces. No se
+             * toco porque `sale.total` lo guarda siempre el servidor (SaleHelper::getTotalSale): el caso
+             * practico seria una venta que quedo en 0 por canje de puntos o por total forzado y que
+             * ademas tiene la opcion prendida. Si se corrige, que sea para los dos flags a la vez.
+             */
             if (sale.total) {
                 total = sale.total 
             } else {

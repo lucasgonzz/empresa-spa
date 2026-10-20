@@ -5,58 +5,84 @@
 	size="lg"
 	hide-footer>
 		<div class="envio-modal">
-			<!-- Destinatario y dirección: lo que cargó el comprador en la tienda -->
+			<!--
+				Destinatario: nombre y teléfono del comprador (del destino de Zipnova si lo hay, si no
+				del comprador del pedido) y la dirección de entrega, que es un botón: abre el mapa.
+			-->
 			<div class="envio-modal__seccion">
 				<p class="envio-modal__titulo">Destinatario</p>
 				<div
-				v-if="destino"
+				v-if="hay_datos_del_destinatario"
 				class="envio-modal__grilla">
-					<div class="envio-modal__fila">
+					<div
+					v-if="nombre_destinatario"
+					class="envio-modal__fila">
 						<span class="envio-modal__etiqueta">Nombre</span>
 						<span class="envio-modal__valor">{{ nombre_destinatario }}</span>
 					</div>
 					<div
-					v-if="destino.documento"
+					v-if="destino && destino.documento"
 					class="envio-modal__fila">
 						<span class="envio-modal__etiqueta">DNI</span>
 						<span class="envio-modal__valor">{{ destino.documento }}</span>
 					</div>
 					<div
-					v-if="destino.telefono"
+					v-if="telefono_destinatario"
 					class="envio-modal__fila">
 						<span class="envio-modal__etiqueta">Teléfono</span>
-						<span class="envio-modal__valor">{{ destino.telefono }}</span>
+						<span class="envio-modal__valor">{{ telefono_destinatario }}</span>
 					</div>
 					<div
-					v-if="destino.email"
+					v-if="email_destinatario"
 					class="envio-modal__fila">
 						<span class="envio-modal__etiqueta">Email</span>
-						<span class="envio-modal__valor">{{ destino.email }}</span>
-					</div>
-					<div class="envio-modal__fila">
-						<span class="envio-modal__etiqueta">{{ es_punto_de_retiro ? 'Retiro' : 'Dirección' }}</span>
-						<span class="envio-modal__valor">{{ direccion_destinatario }}</span>
+						<span class="envio-modal__valor">{{ email_destinatario }}</span>
 					</div>
 					<div
-					v-if="destino.referencia"
+					v-if="es_punto_de_retiro"
+					class="envio-modal__fila">
+						<span class="envio-modal__etiqueta">Retiro</span>
+						<span class="envio-modal__valor">{{ texto_punto_de_retiro }}</span>
+					</div>
+					<div
+					v-if="direccion_de_entrega"
+					class="envio-modal__fila">
+						<span class="envio-modal__etiqueta">{{ es_punto_de_retiro ? 'Domicilio' : 'Dirección' }}</span>
+						<span class="envio-modal__valor">
+							<b-button
+							variant="link"
+							class="envio-modal__direccion"
+							title="Ver la dirección en el mapa"
+							:data-testid="'direccion-envio-mapa-' + order.id"
+							@click="abrir_mapa">
+								<i class="bi bi-geo-alt-fill"></i>
+								{{ direccion_de_entrega.texto }}
+							</b-button>
+						</span>
+					</div>
+					<div
+					v-if="referencia_de_entrega"
 					class="envio-modal__fila">
 						<span class="envio-modal__etiqueta">Referencia</span>
-						<span class="envio-modal__valor">{{ destino.referencia }}</span>
+						<span class="envio-modal__valor">{{ referencia_de_entrega }}</span>
 					</div>
 				</div>
 				<p
 				v-else
 				class="envio-modal__vacio">
-					El pedido no trae los datos del destinatario.
-					<span v-if="order.address">Dirección cargada: {{ order.address }}</span>
+					El pedido no trae los datos del destinatario ni la dirección de entrega.
 				</p>
 			</div>
 
-			<!-- Opción de envío elegida en la tienda -->
+			<!--
+				Forma de envío elegida en la tienda: el correo de Zipnova, una forma de envío propia del
+				comercio (con su costo, o "A convenir") o, si el comprador no eligió ninguna, el envío a
+				domicilio a secas.
+			-->
 			<div class="envio-modal__seccion">
 				<p class="envio-modal__titulo">Forma de envío elegida</p>
 				<div
-				v-if="opcion"
+				v-if="va_por_zipnova"
 				class="envio-modal__opcion">
 					<img
 					v-if="opcion.carrier_logo"
@@ -74,10 +100,38 @@
 						</div>
 					</div>
 				</div>
-				<p
+				<div
+				v-else-if="forma_propia"
+				class="envio-modal__opcion"
+				:data-testid="'forma-envio-propia-' + order.id">
+					<span class="envio-modal__opcion-icono">
+						<i class="bi bi-shop"></i>
+					</span>
+					<div class="envio-modal__opcion-texto">
+						<strong>{{ forma_propia.name }}</strong>
+						<span class="envio-modal__opcion-servicio"> · Forma de envío propia</span>
+						<div class="envio-modal__opcion-detalle">{{ texto_costo_forma_propia }}</div>
+						<div
+						v-if="forma_propia.description"
+						class="envio-modal__opcion-detalle">{{ forma_propia.description }}</div>
+					</div>
+				</div>
+				<div
 				v-else
-				class="envio-modal__vacio">
-					El comprador no eligió una forma de envío por correo.
+				class="envio-modal__opcion">
+					<span class="envio-modal__opcion-icono">
+						<i class="bi bi-house-door"></i>
+					</span>
+					<div class="envio-modal__opcion-texto">
+						<strong>Envío a domicilio (sin forma elegida)</strong>
+					</div>
+				</div>
+				<!-- Con el teléfono del comprador a mano, la ayuda lo nombra (sin botones nuevos) -->
+				<p
+				v-if="!va_por_zipnova"
+				class="envio-modal__ayuda"
+				:data-testid="'envio-ayuda-coordinar-' + order.id">
+					{{ texto_ayuda_coordinar }}
 				</p>
 			</div>
 
@@ -150,15 +204,28 @@
 				class="envio-modal__error m-t-10 m-b-0">
 					<strong>Último error:</strong> {{ envio.error_message }}
 				</b-alert>
+
+				<!-- Un intento que ya no cuenta, sobre un pedido que no se puede generar (sin confirmar o cancelado) -->
+				<p
+				v-if="puede_generar && texto_generacion_frenada"
+				class="envio-modal__vacio m-t-10">
+					{{ texto_generacion_frenada }}
+				</p>
 			</div>
 
+			<!--
+				Zipnova elegido y todavía sin generar. 🔴 El envío se crea en Zipnova (y se le cobra al
+				comercio) recién cuando el comercio confirma el pedido: con el pedido sin confirmar no se
+				ofrece generarlo (la API también lo rechaza con un 422, EnvioController@generar).
+			-->
 			<div
-			v-else-if="opcion"
+			v-else-if="va_por_zipnova"
 			class="envio-modal__seccion">
 				<p class="envio-modal__titulo">Envío en Zipnova</p>
-				<p class="envio-modal__vacio">
-					Todavía no se generó. Se genera solo al confirmar el pedido, o desde el botón de acá
-					abajo.
+				<p
+				class="envio-modal__vacio"
+				:data-testid="'envio-zipnova-sin-generar-' + order.id">
+					{{ texto_sin_generar }}
 				</p>
 			</div>
 
@@ -174,10 +241,12 @@
 				<strong>Actualizar</strong>.
 			</b-alert>
 
-			<!-- Acciones -->
-			<div class="envio-modal__acciones">
+			<!-- Acciones (solo las de Zipnova: una forma propia no tiene nada que operar acá) -->
+			<div
+			v-if="hay_acciones"
+			class="envio-modal__acciones">
 				<btn-loader
-				v-if="puede_generar"
+				v-if="mostrar_generar"
 				:block="false"
 				:loader="loading_generar"
 				:disabled="!opcion || !destino"
@@ -221,20 +290,51 @@
 				variant="outline-danger"
 				@clicked="cancelar"></btn-loader>
 			</div>
+
+			<!--
+				El mapa de la dirección de entrega. Va adentro del contenido del modal de envío: se
+				monta solo mientras este está abierto, y se apila arriba de él al abrirse.
+			-->
+			<mapa-direccion
+			:id="mapa_id"
+			:direccion="direccion_de_entrega"></mapa-direccion>
 		</div>
 	</b-modal>
 </template>
 <script>
 import moment from 'moment'
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import MapaDireccion from '@/components/online/components/orders/envio/MapaDireccion'
 import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
+import { envio_va_por_zipnova, es_forma_propia_a_convenir } from '@/utils/formas_de_envio'
+import { direccion_de_envio_del_pedido, direccion_desde_envio_direccion } from '@/utils/direccion_de_envio'
 
 /**
- * Modal "Envío" de un pedido de la tienda (misión zipnova-envios, 14/9/2026).
+ * Modal "Envío" de un pedido de la tienda (misión zipnova-envios, 14/9/2026; ampliado en la misión
+ * formas-envio-direcciones-maps, 19/10/2026).
  *
- * Muestra lo que cargó el comprador (destinatario y dirección, `orders.envio_destino`), la forma
- * de envío que eligió (`orders.envio_opcion`) y, si ya existe, el envío en Zipnova (`order.envio`:
- * estado, correo, número de seguimiento, fecha estimada, link de seguimiento, último error).
+ * Se abre para TODO pedido con envío a domicilio, salga por Zipnova o por una forma de envío propia
+ * del comercio (`order.delivery_zone`, p. ej. "Acordar con el vendedor"). Muestra:
+ *
+ * - El destinatario: nombre y teléfono (del destino de Zipnova, `orders.envio_destino`, o si no
+ *   del comprador del pedido) y la dirección de entrega, clickeable: abre `MapaDireccion` con un
+ *   marcador. La dirección sale de `orders.envio_direccion` (la que el comprador eligió con el
+ *   buscador de Google en la tienda nueva), si no de `envio_destino`, si no de `orders.address`
+ *   (ver utils/direccion_de_envio.js).
+ * - La forma de envío que eligió: el correo de Zipnova (`orders.envio_opcion`), la forma propia
+ *   con su costo o "A convenir", o "Envío a domicilio (sin forma elegida)". Para lo que no es
+ *   Zipnova, una ayuda: la entrega se coordina con el comprador.
+ * - Solo si el envío va por Zipnova: el envío en Zipnova (`order.envio`: estado, correo, número de
+ *   seguimiento, fecha estimada, link de seguimiento, último error) y sus acciones.
+ *
+ * 🔴 "Va por Zipnova" se decide igual que en la API (`envio_va_por_zipnova`, espejo de
+ * `Order::envio_va_por_zipnova()`): `envio_opcion` con algo y `envio_proveedor` vacío o 'zipnova'.
+ *
+ * 🔴 "Generar envío" aparece solo con el pedido en un estado confirmado conocido ("Confirmado",
+ * "Terminado" o "Entregado", comparado por NOMBRE como `OrderStatusHelper`): crear el envío en
+ * Zipnova es lo que le cobra el envío al comercio, y desde esta misión la API lo rechaza (422) sobre
+ * un pedido sin confirmar, cancelado o con un estado que no se puede resolver. En su lugar se
+ * explica por qué (`texto_generacion_frenada`).
  *
  * Acciones, todas contra `EnvioController` de empresa-api:
  * - Generar envío  → `POST envio/generar/{order_id}` responde `{model}` = el PEDIDO completo con
@@ -255,6 +355,7 @@ import { collect_laravel_validation_messages } from '@/utils/laravel_validation_
 export default {
 	components: {
 		BtnLoader,
+		MapaDireccion,
 	},
 	props: {
 		// El pedido, tal como viene del store (con `envio` por withAll)
@@ -289,6 +390,14 @@ export default {
 			// `not_found` es Zipnova respondiendo 404 al sincronizar (lo borraron desde el panel):
 			// el backend pide "generá uno nuevo desde acá", así que acá tiene que aparecer Generar.
 			estados_reemplazables: ['error', 'not_found', 'cancelled', 'expired'],
+			// Espejo de OrderStatusHelper::SIN_CONFIRMAR y ::CANCELADO: con el pedido en uno de estos
+			// estados el envío no se genera en Zipnova. Por NOMBRE, nunca por id: los ids de
+			// `order_statuses` cambian entre instalaciones.
+			estado_sin_confirmar: 'Sin confirmar',
+			estado_cancelado: 'Cancelado',
+			// Espejo de OrderStatusHelper::AVANCE sin "Sin confirmar": los únicos estados en los que
+			// se puede generar el envío. Uno desconocido (o que no se puede resolver) no habilita.
+			estados_confirmados: ['Confirmado', 'Terminado', 'Entregado'],
 		}
 	},
 	computed: {
@@ -310,64 +419,161 @@ export default {
 		envio() {
 			return this.order.envio ? this.order.envio : null
 		},
-		es_punto_de_retiro() {
-			return !!(this.opcion && this.opcion.es_punto_de_retiro)
+		// El envío sale por Zipnova (espejo de Order::envio_va_por_zipnova(), ver utils/formas_de_envio.js)
+		va_por_zipnova() {
+			return envio_va_por_zipnova(this.order)
 		},
-		nombre_destinatario() {
-			if (!this.destino) {
-				return '-'
-			}
-			let partes = []
-			if (this.destino.nombre) {
-				partes.push(this.destino.nombre)
-			}
-			if (this.destino.apellido) {
-				partes.push(this.destino.apellido)
-			}
-			return partes.length ? partes.join(' ') : '-'
+		// La forma de envío propia que eligió el comprador (una `delivery_zone`), o null
+		forma_propia() {
+			let zona = this.order.delivery_zone
+			return zona && zona.name ? zona : null
 		},
 		/**
-		 * Dirección en una línea, misma forma que EnvioDestinoHelper::como_texto() de la API:
-		 * "{calle} {numero} {piso_depto}, {localidad}, {provincia} (CP {codigo_postal})". Para un
-		 * punto de retiro, la sucursal elegida.
+		 * Costo de la forma propia, para el renglón de "Forma de envío elegida". 🔴 Una forma a
+		 * convenir dice "A convenir", nunca "Gratis" ni "$ 0": el costo lo arregla el vendedor.
+		 *
+		 * Sin afirmar nada sobre lo que se cobró: el pedido apunta a la forma VIVA
+		 * (`delivery_zone_id`), no a una foto. Si el comercio cambió la forma después de la compra,
+		 * lo que se ve acá es la forma de hoy, no necesariamente lo que vio el comprador.
 		 */
-		direccion_destinatario() {
-			let destino = this.destino
-			if (!destino) {
-				return '-'
+		texto_costo_forma_propia() {
+			if (!this.forma_propia) {
+				return ''
 			}
-			if (this.es_punto_de_retiro) {
-				let punto = this.punto_de_retiro_elegido
-				if (punto) {
-					let texto = punto.description ? punto.description : 'Sucursal del correo'
-					let calle = [punto.street, punto.street_number].filter(parte => !!parte).join(' ')
-					if (calle) {
-						texto += ' · ' + calle
-					}
-					if (punto.city) {
-						texto += ', ' + punto.city
-					}
-					return texto
-				}
-				return 'Sucursal del correo' + (destino.point_id ? ' N° ' + destino.point_id : '')
+			if (es_forma_propia_a_convenir(this.forma_propia)) {
+				return 'A convenir'
 			}
-
-			let calle = [destino.calle, destino.numero, destino.piso_depto].filter(parte => !!parte).join(' ')
+			if (Number(this.forma_propia.price) > 0) {
+				return this.price(this.forma_propia.price)
+			}
+			return 'Sin costo para el comprador'
+		},
+		es_punto_de_retiro() {
+			return !!(this.va_por_zipnova && this.opcion && this.opcion.es_punto_de_retiro)
+		},
+		// Nombre y apellido: del destino de Zipnova si lo hay, si no del comprador del pedido
+		nombre_destinatario() {
 			let partes = []
-			if (calle) {
-				partes.push(calle)
+			if (this.destino && (this.destino.nombre || this.destino.apellido)) {
+				partes = [this.destino.nombre, this.destino.apellido]
+			} else if (this.order.buyer) {
+				partes = [this.order.buyer.name, this.order.buyer.surname]
 			}
-			if (destino.localidad) {
-				partes.push(destino.localidad)
+			return partes.filter(parte => !!parte).join(' ')
+		},
+		telefono_destinatario() {
+			if (this.destino && this.destino.telefono) {
+				return this.destino.telefono
 			}
-			if (destino.provincia) {
-				partes.push(destino.provincia)
+			return this.order.buyer && this.order.buyer.phone ? this.order.buyer.phone : ''
+		},
+		email_destinatario() {
+			if (this.destino && this.destino.email) {
+				return this.destino.email
 			}
-			let texto = partes.join(', ')
-			if (destino.codigo_postal) {
-				texto += ' (CP ' + destino.codigo_postal + ')'
+			return this.order.buyer && this.order.buyer.email ? this.order.buyer.email : ''
+		},
+		/**
+		 * Ayuda de una forma propia o de un envío sin forma: la entrega (y el costo, si
+		 * corresponde) se coordina con el comprador. Si hay teléfono, lo nombra.
+		 */
+		texto_ayuda_coordinar() {
+			let texto = 'Coordiná la entrega (y el costo, si corresponde) con el comprador por WhatsApp o teléfono'
+			if (this.telefono_destinatario) {
+				return texto + ' al ' + this.telefono_destinatario + '.'
 			}
-			return texto ? texto : '-'
+			return texto + '.'
+		},
+		/**
+		 * Para un retiro en una sucursal del correo: la sucursal elegida ("{descripción} · {calle}
+		 * {altura}, {localidad}"), o al menos su número.
+		 */
+		texto_punto_de_retiro() {
+			let punto = this.punto_de_retiro_elegido
+			if (punto) {
+				let texto = punto.description ? punto.description : 'Sucursal del correo'
+				let calle = [punto.street, punto.street_number].filter(parte => !!parte).join(' ')
+				if (calle) {
+					texto += ' · ' + calle
+				}
+				if (punto.city) {
+					texto += ', ' + punto.city
+				}
+				return texto
+			}
+			return 'Sucursal del correo' + (this.destino && this.destino.point_id ? ' N° ' + this.destino.point_id : '')
+		},
+		/**
+		 * La dirección de entrega, lista para mostrar y para el mapa (utils/direccion_de_envio.js):
+		 * `envio_direccion` → `envio_destino` → `address`. En un retiro en una sucursal del correo el
+		 * paquete no va al domicilio: solo se muestra el domicilio que el comprador cargó con el
+		 * buscador (`envio_direccion`), si lo hay, y la sucursal va en su propia fila.
+		 */
+		direccion_de_entrega() {
+			if (this.es_punto_de_retiro) {
+				return direccion_desde_envio_direccion(this.order.envio_direccion)
+			}
+			return direccion_de_envio_del_pedido(this.order)
+		},
+		referencia_de_entrega() {
+			if (this.direccion_de_entrega && this.direccion_de_entrega.referencia) {
+				return this.direccion_de_entrega.referencia
+			}
+			return this.destino && this.destino.referencia ? this.destino.referencia : ''
+		},
+		hay_datos_del_destinatario() {
+			return !!(this.nombre_destinatario
+				|| this.telefono_destinatario
+				|| this.email_destinatario
+				|| this.direccion_de_entrega
+				|| this.es_punto_de_retiro
+				|| (this.destino && this.destino.documento))
+		},
+		// Id del modal del mapa: propio de este modal (el formulario del pedido monta otro)
+		mapa_id() {
+			return 'mapa-envio-pedido-' + this.order.id
+		},
+		/**
+		 * Nombre del estado del pedido. Se prefiere la relación embebida si es la del
+		 * `order_status_id` actual; si no, se busca el id en el store de estados (se descarga al
+		 * iniciar sesión). Null si no se puede resolver.
+		 */
+		nombre_estado() {
+			let estado_id = Number(this.order.order_status_id)
+			let embebido = this.order.order_status
+			if (embebido && embebido.name && (!estado_id || Number(embebido.id) === estado_id)) {
+				return embebido.name
+			}
+			let store = this.$store.state.order_status
+			let estados = store && Array.isArray(store.models) ? store.models : []
+			let estado = estados.find(item => Number(item.id) === estado_id)
+			return estado && estado.name ? estado.name : null
+		},
+		/**
+		 * Por qué no se puede generar el envío en Zipnova ahora, o '' si se puede.
+		 *
+		 * Solo se puede con el pedido en un estado confirmado que se conoce (`estados_confirmados`).
+		 * 🔴 Un estado que no se puede resolver (fila borrada, relación que no vino) o con un nombre
+		 * que no es ninguno de los conocidos TAMBIÉN frena: la API responde 422 en ese caso
+		 * (EnvioController@generar), y crear el envío en Zipnova es lo que le cobra al comercio.
+		 */
+		texto_generacion_frenada() {
+			if (this.nombre_estado == this.estado_sin_confirmar) {
+				return 'El envío se genera en Zipnova cuando confirmás el pedido. Hasta entonces no se te cobra nada.'
+			}
+			if (this.nombre_estado == this.estado_cancelado) {
+				return 'El pedido está cancelado: el envío no se genera en Zipnova.'
+			}
+			if (this.estados_confirmados.indexOf(this.nombre_estado) == -1) {
+				return 'Confirmá el pedido para poder generar el envío en Zipnova.'
+			}
+			return ''
+		},
+		texto_sin_generar() {
+			if (this.texto_generacion_frenada) {
+				return this.texto_generacion_frenada
+			}
+			return 'Todavía no se generó. Se genera solo al confirmar el pedido; si eso falló (por ejemplo, porque Zipnova no respondió), generalo desde el botón de acá abajo.'
 		},
 		// La sucursal elegida, buscada por point_id entre las que trajo la cotización
 		punto_de_retiro_elegido() {
@@ -490,8 +696,28 @@ export default {
 		puede_cancelar() {
 			return this.puede_operar && this.estados_finales.indexOf(this.envio.status) == -1
 		},
+		/**
+		 * "Generar envío" (o "Volver a generar"): el envío va por Zipnova, no hay uno vivo y el
+		 * pedido está confirmado. Sin confirmar o cancelado no se ofrece: en su lugar se lee
+		 * `texto_generacion_frenada`.
+		 */
+		mostrar_generar() {
+			return this.va_por_zipnova && this.puede_generar && !this.texto_generacion_frenada
+		},
+		// Si hay algún botón para dibujar: sin ninguno no se dibuja la franja de acciones vacía
+		hay_acciones() {
+			return this.mostrar_generar || this.generando_vigente || this.puede_operar || this.puede_cancelar
+		},
 	},
 	methods: {
+		/**
+		 * Abre el mapa con la dirección de entrega (se apila arriba de este modal).
+		 *
+		 * @returns {void}
+		 */
+		abrir_mapa() {
+			this.$bvModal.show(this.mapa_id)
+		},
 		/**
 		 * Devuelve el objeto de un json del pedido, venga como objeto (cast de la API) o como
 		 * string (API sin el cast). Null si no hay nada.
@@ -844,6 +1070,39 @@ export default {
 	.envio-modal__opcion-detalle
 		font-size: 0.875rem
 		color: var(--color-text-secondary)
+
+	// Ícono de una forma propia o del envío sin forma, en el lugar del logo del correo
+	.envio-modal__opcion-icono
+		display: flex
+		align-items: center
+		justify-content: center
+		width: 40px
+		height: 40px
+		flex-shrink: 0
+		border-radius: 6px
+		font-size: 20px
+		color: var(--color-text-secondary)
+		background: var(--bg-card)
+		border: 1px solid var(--color-border)
+
+	.envio-modal__ayuda
+		margin: 8px 0 0
+		font-size: 0.875rem
+		color: var(--color-text-secondary)
+
+	// La dirección es un botón (abre el mapa) que se lee como un link: hereda la alineación del
+	// valor (derecha en escritorio, izquierda en teléfono) y el texto largo baja de renglón.
+	.envio-modal__direccion
+		padding: 0
+		border: 0
+		font-weight: 600
+		text-align: inherit
+		white-space: normal
+		word-break: break-word
+		vertical-align: baseline
+
+		i
+			margin-right: 4px
 
 	.envio-modal__error
 		font-size: 0.875rem

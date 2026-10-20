@@ -4,6 +4,8 @@
 	addBuyerMessage, messagesNotRead, sendMessage, hasArticle): se sacaron porque el submodulo
 	nuevo de Mensajes tiene su propio store (store/tienda_mensajes.js) y el modulo viejo se borro.
 */
+import { precio_de_forma_propia } from '@/utils/formas_de_envio'
+
 export default {
 	methods: {
 		hasPaymentUpdated(order) {
@@ -42,9 +44,9 @@ export default {
 					total = this.discountCupon(order, total)
 				}
 				if (with_delivery_zone) {
-					if (order.delivery_zone) {
-						total += Number(order.delivery_zone.price)
-					}
+					// Una forma de envío propia con el costo a convenir aporta 0: no se cobró en
+					// la tienda (misión formas-envio-direcciones-maps, ver utils/formas_de_envio.js).
+					total += precio_de_forma_propia(order.delivery_zone)
 				}
 				return total 
 			}
