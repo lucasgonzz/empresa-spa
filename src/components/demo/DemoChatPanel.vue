@@ -1,5 +1,5 @@
 <template>
-	<div class="demo-ai" :class="{ 'demo-ai--cerrado': colapsado }">
+	<div class="demo-ai" :class="{ 'demo-ai--cerrado': colapsado }" :style="reserva_launcher">
 		<button v-if="colapsado" class="demo-ai__launcher" type="button" aria-label="Abrir asistente de la demo" @click="$emit('alternar')">
 			<span class="demo-ai__orb" aria-hidden="true">✦</span><span>Tu guía de demo <small>Seguí explorando</small></span><i class="bi bi-arrow-up-right"></i>
 		</button>
@@ -45,9 +45,20 @@ export default {
 	components: { TarjetaClip },
 	props: { colapsado: { type: Boolean, default: false } },
 	data() {
-		return { mensajes: [], conversacion: {}, texto: '', error: '', cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1 }
+		return { mensajes: [], conversacion: {}, texto: '', error: '', cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0 }
 	},
 	computed: {
+		reserva_launcher() {
+			// Comparte la reserva de Vender y deja lugar al asistente personal y al soporte.
+			let vender = this.$store.state.vender
+			let barra = Math.max(0, Number(vender && vender.actions_bar_height_px) || 0)
+			let soporte = this.hasExtencion('support_chat') ? 76 : 0
+			return { '--demo-launcher-base': Math.max(barra + soporte + 96, this.reserva_compositor) + 'px' }
+		},
+		estado_editores_whatsapp() {
+			let chat = this.$store.state.whatsapp_chat || {}
+			return [chat.sidebar_abierto, chat.selected_chat_id, chat.loading_messages, (chat.messages || []).length].join(':')
+		},
 		tienda_url() {
 			let usuario = this.$store.state.auth.user
 			let dueno = usuario && (usuario.owner || usuario)
@@ -61,11 +72,14 @@ export default {
 		pensando() { return ['esperando', 'pensando', 'listo'].indexOf(this.estado) !== -1 },
 	},
 	watch: {
-		colapsado() { this.actualizar_espacio() },
+		colapsado() { this.actualizar_espacio(); this.programar_ubicacion_launcher() },
+		estado_editores_whatsapp() { this.programar_ubicacion_launcher() },
+		'$route.fullPath'() { this.programar_ubicacion_launcher() },
 	},
 	mounted() {
 		this.actualizar_espacio()
 		this.iniciar()
+		this.observar_ubicacion_launcher()
 		let self = this
 		this.temporizador = setInterval(function () { self.refrescar() }, 3000)
 	},
@@ -73,15 +87,60 @@ export default {
 		document.body.classList.remove('demo-chat-abierto')
 		this.destruido = true
 		clearInterval(this.temporizador)
+		this.limpiar_ubicacion_launcher()
 		this.pausar()
 	},
 	methods: {
+		observar_ubicacion_launcher() {
+			let self = this
+			this._mover_launcher = function () { self.programar_ubicacion_launcher() }
+			this._editores_launcher = []
+			this._scroll_launcher = []
+			if (window.ResizeObserver) this._resize_launcher = new ResizeObserver(this._mover_launcher)
+			window.addEventListener('resize', this._mover_launcher)
+			if (window.visualViewport) window.visualViewport.addEventListener('resize', this._mover_launcher)
+			this.programar_ubicacion_launcher()
+		},
+		limpiar_ubicacion_launcher() {
+			window.removeEventListener('resize', this._mover_launcher)
+			if (window.visualViewport) window.visualViewport.removeEventListener('resize', this._mover_launcher)
+			if (this._resize_launcher) this._resize_launcher.disconnect()
+			;(this._scroll_launcher || []).forEach(e => e.removeEventListener('scroll', this._mover_launcher))
+			cancelAnimationFrame(this._frame_launcher)
+		},
+		programar_ubicacion_launcher() {
+			if (this.destruido || this._frame_launcher) return
+			let self = this
+			this.$nextTick(function () {
+				if (self.destruido || self._frame_launcher) return
+				self._frame_launcher = requestAnimationFrame(function () { self._frame_launcher = null; self.medir_compositores() })
+			})
+		},
+		medir_compositores() {
+			if (!this.colapsado) return
+			// Reserva explícita del editor real y del editor de simulación; no busca controles globales.
+			let editores = Array.from(document.querySelectorAll('.whatsapp-composer, .whatsapp-simulated-composer'))
+			if (editores.length !== this._editores_launcher.length || editores.some((e, i) => e !== this._editores_launcher[i])) {
+				if (this._resize_launcher) { this._resize_launcher.disconnect(); editores.forEach(e => this._resize_launcher.observe(e)) }
+				this._editores_launcher = editores
+				this._scroll_launcher.forEach(e => e.removeEventListener('scroll', this._mover_launcher))
+				this._scroll_launcher = Array.from(document.querySelectorAll('.whatsapp-messages-container'))
+				this._scroll_launcher.forEach(e => e.addEventListener('scroll', this._mover_launcher, { passive: true }))
+			}
+			let top = innerHeight
+			editores.forEach(function (e) {
+				let r = e.getBoundingClientRect()
+				if (r.width && r.height && r.bottom > 0 && r.top < innerHeight && getComputedStyle(e).visibility !== 'hidden') top = Math.min(top, r.top)
+			})
+			this.reserva_compositor = Math.max(0, innerHeight - top + 12)
+		},
 		actualizar_espacio() { document.body.classList.toggle('demo-chat-abierto', !this.colapsado) },
 		iniciar() {
 			let self = this
 			this.$axios.post('/api/demo/chat/iniciar').then(function (res) { self.aplicar(res.data); self.error = '' }).catch(function (e) { self.fallar(e) }).then(function () { self.cargando = false })
 		},
 		refrescar() {
+			this.programar_ubicacion_launcher()
 			if (this.consultando || this.destruido) return
 			let self = this
 			this.consultando = true
@@ -212,8 +271,8 @@ body.demo-chat-abierto .asistente-ia-fab
 	font-family: inherit
 	text-align: left
 	&--cerrado
-		top: 76px
-		bottom: auto
+		top: auto
+		bottom: min(var(--demo-launcher-base), calc(100vh - 144px))
 		width: auto
 	button, textarea
 		font: inherit
@@ -458,6 +517,7 @@ body.demo-chat-abierto .asistente-ia-fab
 			background: #93e0db
 .demo-ai__launcher
 	display: flex
+	max-width: 100%
 	align-items: center
 	gap: 12px
 	border: 1px solid #a8b1ff
@@ -495,13 +555,28 @@ body.demo-chat-abierto .asistente-ia-fab
 		width: calc(100vw - 16px)
 		max-width: none
 		&--cerrado
-			top: 64px
+			top: auto
+			bottom: min(var(--demo-launcher-base), calc(100vh - 144px))
 			width: auto
-			bottom: auto
 	.demo-ai__header
 		padding: 15px 12px
 	.demo-ai__hilo
 		padding: 16px 12px
+@media (max-height: 420px)
+	.demo-ai__launcher
+		width: 48px
+		height: 48px
+		padding: 8px
+		justify-content: center
+		> span:not(.demo-ai__orb), > i
+			display: none
+		.demo-ai__orb
+			width: 32px
+			height: 32px
+	.demo-ai.demo-ai--cerrado
+		// En horizontal la pila puede no entrar: deja libre la columna de los FAB.
+		right: 96px
+		max-width: calc(100vw - 112px)
 @media (prefers-reduced-motion: reduce)
 	.demo-ai__panel, .demo-ai__composer, .demo-ai__constelacion, .demo-ai__video-heading i
 		animation: none !important
