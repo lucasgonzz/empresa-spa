@@ -39,6 +39,14 @@
 		</div>
 
 		<div
+		v-if="sale && !sale.client_id"
+		class="plan-de-pago-modal__aviso plan-de-pago-modal__aviso--atencion"
+		data-testid="plan-aviso-sin-cliente">
+			<i class="bi bi-exclamation-triangle"></i>
+			<span>La venta no tiene cliente: el plan de pago se arma sobre la cuenta corriente de un cliente.</span>
+		</div>
+
+		<div
 		v-if="saldo && saldo.en_cuenta_corriente && saldo.saldo_pendiente <= 0"
 		class="plan-de-pago-modal__aviso plan-de-pago-modal__aviso--atencion"
 		data-testid="plan-aviso-saldada">
@@ -196,8 +204,10 @@ import {
 	FORMATO,
 	FRECUENCIAS,
 	MAXIMO_DE_CUOTAS,
+	MAXIMO_IMPORTE,
 	con_moneda,
 	cuotas_del_plan,
+	redondear_a_centavos,
 } from '@/components/common/payment-plan/cuotas_del_plan'
 
 export default {
@@ -253,7 +263,7 @@ export default {
 		},
 		/* Si el usuario cambió el importe propuesto: habilita el link para volver a él. */
 		importe_editado() {
-			return this.saldo && this.importe_propuesto > 0 && Number(this.importe) != this.importe_propuesto
+			return this.saldo && this.importe_propuesto > 0 && this.importe_a_mandar != this.importe_propuesto
 		},
 		/**
 		 * La explicación del importe propuesto, que Lucas pidió que se vea: de dónde sale.
@@ -279,8 +289,14 @@ export default {
 		 * @returns {String|null}
 		 */
 		problema() {
-			if (!(Number(this.importe) > 0)) {
+			if (this.sale && !this.sale.client_id) {
+				return 'La venta no tiene cliente: el plan de pago se arma sobre la cuenta de un cliente.'
+			}
+			if (!(this.importe_a_mandar > 0)) {
 				return 'Escribí un importe a financiar mayor a cero.'
+			}
+			if (this.importe_a_mandar > MAXIMO_IMPORTE) {
+				return 'El importe a financiar es demasiado grande.'
 			}
 			if (!Number.isInteger(this.cantidad_cuotas) || this.cantidad_cuotas < 1) {
 				return 'Indicá la cantidad de cuotas (un número entero desde 1).'
@@ -291,7 +307,14 @@ export default {
 			if (!this.fecha_inicio || !moment(this.fecha_inicio, FORMATO, true).isValid()) {
 				return 'Elegí la fecha de la primera cuota.'
 			}
+			if (Math.round(this.importe_a_mandar * 100) < this.cantidad_cuotas) {
+				return 'El importe a financiar no alcanza para ' + this.cantidad_cuotas + ' cuotas.'
+			}
 			return null
+		},
+		/* El importe del input redondeado a centavos: es el que calcula la vista previa y el que viaja. */
+		importe_a_mandar() {
+			return redondear_a_centavos(this.importe)
 		},
 		/**
 		 * Cuotas de la vista previa, con la nota que el usuario le haya puesto a cada una.
@@ -302,7 +325,7 @@ export default {
 			if (this.problema) {
 				return []
 			}
-			let cuotas = cuotas_del_plan(Number(this.importe), this.cantidad_cuotas, this.fecha_inicio, this.frequency)
+			let cuotas = cuotas_del_plan(this.importe_a_mandar, this.cantidad_cuotas, this.fecha_inicio, this.frequency)
 			cuotas.forEach(cuota => {
 				cuota.notes = this.notas_por_cuota[cuota.numero_cuota] || ''
 			})
@@ -423,7 +446,7 @@ export default {
 			this.guardando = true
 			this.$api.post('payment-plan', {
 				sale_id: this.sale.id,
-				total_amount: Number(this.importe),
+				total_amount: this.importe_a_mandar,
 				cantidad_cuotas: this.cantidad_cuotas,
 				frequency: this.frequency,
 				start_date: this.fecha_inicio,
@@ -524,11 +547,11 @@ export default {
 		border: 1px solid var(--color-border, #dee2e6)
 
 		&--info
-			background: rgba(0, 123, 255, 0.06)
+			background: var(--bg-info-soft, rgba(0, 123, 255, 0.06))
 			color: var(--color-text-info-strong, #0c5460)
 
 		&--atencion
-			background: rgba(255, 193, 7, 0.10)
+			background: var(--bg-warning-soft, rgba(255, 193, 7, 0.10))
 			color: var(--color-text-warning-strong, #856404)
 
 	&__footer

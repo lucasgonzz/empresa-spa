@@ -19,6 +19,32 @@ export const FORMATO = 'YYYY-MM-DD'
 /* Tope de cuotas: el mismo que PaymentPlanService::MAXIMO_DE_CUOTAS. */
 export const MAXIMO_DE_CUOTAS = 120
 
+/* Tope del importe: el mismo que PaymentPlanService::MAXIMO_IMPORTE (decimal 12,2). */
+export const MAXIMO_IMPORTE = 9999999999.99
+
+/**
+ * Redondea a centavos, como el round(x, 2) del back. Se aplica al importe ANTES de calcular y de
+ * mandar: con tres decimales tipeados (0,285) el back redondeaba primero y la vista previa no, y
+ * las cuotas diferían en un centavo.
+ *
+ * @param {Number|String} importe
+ * @returns {Number}
+ */
+export function redondear_a_centavos(importe) {
+	/*
+		Por exponente y no por `* 100`: 0.285 * 100 es 28,499999... en float y Math.round daba 28,
+		mientras que el round() de PHP da 29. Corriendo la coma en el texto ("0.285e2" = 28,5) los
+		dos redondean igual. Si el texto no sirve para eso (ya viene en notación exponencial), se
+		cae al cálculo directo.
+	*/
+	let numero = Number(importe)
+	let por_exponente = Number(Math.round(Number(String(numero) + 'e2')) + 'e-2')
+	if (isNaN(por_exponente)) {
+		return Math.round(numero * 100) / 100
+	}
+	return por_exponente
+}
+
 /* Frecuencias que ofrece el modal (valores del enum `payment_plans.frequency`). */
 export const FRECUENCIAS = [
 	{ value: 'monthly', text: 'Mensual' },
@@ -113,7 +139,7 @@ export function cuotas_del_plan(total, cantidad_cuotas, fecha_inicio, frequency)
 		return cuotas
 	}
 
-	let importes = importes_de_las_cuotas(total, cantidad_cuotas)
+	let importes = importes_de_las_cuotas(redondear_a_centavos(total), cantidad_cuotas)
 	importes.forEach((amount, indice) => {
 		cuotas.push({
 			numero_cuota: indice + 1,
@@ -134,10 +160,15 @@ export function cuotas_del_plan(total, cantidad_cuotas, fecha_inicio, frequency)
  * @returns {Boolean}
  */
 export function datos_validos(total, cantidad_cuotas, fecha_inicio) {
-	if (!(Number(total) > 0)) {
+	let importe = redondear_a_centavos(total)
+	if (!(importe > 0) || importe > MAXIMO_IMPORTE) {
 		return false
 	}
 	if (!Number.isInteger(cantidad_cuotas) || cantidad_cuotas < 1 || cantidad_cuotas > MAXIMO_DE_CUOTAS) {
+		return false
+	}
+	// Cada cuota lleva al menos un centavo: con menos, el reparto deja cuotas en $0 (el back da 422).
+	if (Math.round(importe * 100) < cantidad_cuotas) {
 		return false
 	}
 	return !!fecha_inicio && moment(fecha_inicio, FORMATO, true).isValid()

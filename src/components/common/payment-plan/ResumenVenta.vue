@@ -33,6 +33,20 @@
 				<span class="plan-resumen-venta__valor">{{ formatear(saldo ? saldo.total : sale.total) }}</span>
 			</div>
 
+			<!--
+				Una venta que no está en la cuenta corriente (cobrada en el momento, o con la cuenta
+				omitida) no tiene de dónde leer lo pagado: decir "Pagado $0 / Falta saldar = total"
+				sería falso. Se dice eso en vez de inventar las dos cifras.
+			-->
+			<div
+			v-if="fuera_de_la_cuenta"
+			class="plan-resumen-venta__cifra plan-resumen-venta__cifra--doble"
+			data-testid="plan-fuera-de-la-cuenta">
+				<span class="plan-resumen-venta__rotulo">Cuenta corriente</span>
+				<span class="plan-resumen-venta__texto">La venta no está en la cuenta corriente del cliente</span>
+			</div>
+
+			<template v-else>
 			<div class="plan-resumen-venta__cifra">
 				<span class="plan-resumen-venta__rotulo">Pagado</span>
 				<span class="plan-resumen-venta__valor">
@@ -54,6 +68,7 @@
 					<template v-else>{{ saldo ? formatear(saldo.saldo_pendiente) : '-' }}</template>
 				</span>
 			</div>
+			</template>
 		</div>
 	</div>
 </template>
@@ -69,6 +84,12 @@ export default {
 		cargando: Boolean,
 		/* 1 pesos, 2 dólares. */
 		moneda_id: Number,
+	},
+	computed: {
+		/* La API ya contestó y la venta no tiene débito en la cuenta corriente. */
+		fuera_de_la_cuenta() {
+			return !!this.saldo && !this.saldo.en_cuenta_corriente
+		},
 	},
 	methods: {
 		/**
@@ -149,6 +170,15 @@ export default {
 			align-items: baseline
 			justify-content: space-between
 
+		// Ocupa el lugar de "Pagado" y "Falta saldar" juntos.
+		&--doble
+			grid-column: span 2
+
+			@media screen and (max-width: 576px)
+				grid-column: auto
+				flex-direction: column
+				align-items: flex-start
+
 		&--destacada
 			border-color: var(--color-primary, #007bff)
 
@@ -158,6 +188,12 @@ export default {
 	&__rotulo
 		font-size: 0.75rem
 		color: var(--color-text-secondary, #6c757d)
+
+	&__texto
+		font-size: 0.9rem
+		font-weight: 500
+		color: var(--color-text-secondary, #6c757d)
+		margin-top: 2px
 
 	&__valor
 		font-size: 1.1rem
