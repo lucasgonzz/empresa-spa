@@ -54,6 +54,8 @@ export default {
 				}
 				if (estado && this.$store.state.payment_plan_cuota.route_prefix != estado) {
 					this.$store.commit('payment_plan_cuota/set_route_prefix', estado)
+					// Mismo criterio que NavComponent: los criterios de la otra solapa no se arrastran.
+					this.$store.commit('payment_plan_cuota/limpiar_criterios_de_columna')
 					this.$store.dispatch('payment_plan_cuota/getModels')
 				}
 			},

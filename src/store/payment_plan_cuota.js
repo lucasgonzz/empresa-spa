@@ -8,6 +8,23 @@ export default __base_store({
 		model_name: 'payment_plan_cuota',
 		from_dates: true,
 	},
+	actions: {
+		/**
+		 * Pisa el listado por defecto del factory: «Quitar todos los filtros» (BtnRestartFilter) lo
+		 * dispara, y el del factory pide TODAS las cuotas de la solapa sin fechas -- o sea un
+		 * historico entero con la barra Desde/Hasta todavia visible, que no lo respeta.
+		 *
+		 * Sin filtros, esta pantalla vuelve a lo que muestra al entrar: el listado por fechas
+		 * (`GET payment-plan-cuota/{estado}/from-date`). El historico es solo para cuando el usuario
+		 * filtra por una columna (21/10/2026). getModels resetea is_filtered y listado_por_defecto.
+		 *
+		 * @param {Object} context dispatch
+		 * @returns {Promise}
+		 */
+		runListadoPorDefecto({dispatch}) {
+			return dispatch('getModels')
+		},
+	},
 	getters: {
 		/**
 		 * Marca de pedido que `runGlobalSearch` (__base_store.js) suma al body del POST a
