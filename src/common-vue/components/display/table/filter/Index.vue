@@ -326,7 +326,7 @@ export default {
 
 	.header 
 
-		color: #000
+		color: var(--color-text-primary, #000)
 
 
 
@@ -382,9 +382,21 @@ export default {
 
 
 
-	.custom-control-label, legend
+	// Tokens de _dark_theme.sass y no `#000` (mision cuotas-filtros-historico, 21/10/2026): este
+	// bloque y el de `.filter-modal-body` de FilterModal.vue pintan los MISMOS elementos con la misma
+	// especificidad, y ganaba el que se inyectara ultimo -- este archivo y FilterModal bajan en chunks
+	// async distintos, asi que en produccion el orden variaba y el label (legend / checkbox) volvia a
+	// quedar negro sobre el fondo oscuro del modal aunque ya estuviera arreglado en FilterModal.vue
+	// (22/9/2026). Con el mismo token en los dos el orden deja de importar.
+	.custom-control-label
 
-		color: #000
+		color: var(--color-text-primary, #000)
+
+		font-weight: normal
+
+	legend
+
+		color: var(--color-text-secondary, #000)
 
 		font-weight: normal
 
