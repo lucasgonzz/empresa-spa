@@ -209,6 +209,12 @@ export default {
 						platform_connector: 'Sistema',
 						whatsapp_bot_config: 'WhatsApp',
 					},
+					// La configuracion del bot de WhatsApp es parte de "Agentes de IA": sin esa
+					// extension la solapa no se ofrece (ni en las pestañas, ni por URL, ni en el
+					// buscador del ABM). Las otras dos solapas de Integraciones no cambian.
+					models_if_has_extencion: {
+						whatsapp_bot_config: 'agentes_ia',
+					},
 					// Solapas que montan un componente propio en vez del ABM generico.
 					// 'integracion_tienda_online' no es un modelo: no tiene tabla, ni store, ni
 					// endpoint de ABM. Ver src/models/integracion_tienda_online.js.

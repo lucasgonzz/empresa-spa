@@ -1,5 +1,13 @@
 <template>
+	<!--
+		Gate por extension (mision agentes-ia-extension-unica, 22/10/2026): el modulo de WhatsApp es
+		parte de "Agentes de IA" (agentes_ia). El menu ya lo esconde, pero la ruta /whatsapp existe
+		siempre (el router no procesa extensiones), asi que quien la tipee sin la extension ve un
+		aviso en vez de una bandeja que responderia 403. Mientras auth/me no resolvio no se dibuja
+		ni el modulo ni el aviso (hasExtencion devuelve undefined): sin parpadeo.
+	-->
 	<b-row
+	v-if="tiene_agentes_ia"
 	class="whatsapp-module">
 		<b-col
 		class="whatsapp-module__chats"
@@ -14,6 +22,13 @@
 			<dashboard-tablero></dashboard-tablero>
 		</b-col>
 	</b-row>
+	<b-alert
+	v-else-if="extensiones_cargadas"
+	show
+	variant="warning"
+	class="m-t-15">
+		Este módulo requiere la extensión Agentes de IA. Comunicate con ComercioCity si querés activarla.
+	</b-alert>
 </template>
 <script>
 import ChatsList from '@/components/whatsapp/chats-list/Index'
@@ -45,29 +60,73 @@ export default {
 		ChatsList,
 		DashboardTablero,
 	},
-	created() {
-		/*
-			Carga inicial de la bandeja de chats y del catálogo de plantillas (lo usa el
-			composer para el modal de plantillas). Se cargan acá, una sola vez al entrar
-			al módulo, en vez de en cada sub-componente.
-		*/
-		this.$store.dispatch('whatsapp_chat/getChats')
-		this.$store.dispatch('whatsapp_template/getModels')
-
-		/*
-			Link directo a /whatsapp/{id} (ej: desde otra parte del sistema). Antes esto solo
-			commiteaba `setSelectedChatId` y nunca pedía los mensajes: la conversación se abría
-			vacía. Ahora abre el sidebar y la carga la dispara el watch de conversation/Index.vue,
-			que es el mismo camino que recorren los otros tres modos de abrir un chat.
-		*/
-		if (this.$route.params.chat_id) {
-			let chat_id = parseInt(this.$route.params.chat_id, 10)
-			// Con un id que no es un número no se intenta nada: sin esta guarda el payload
-			// saldría con chat_id NaN y el store creería que le pidieron abrir por teléfono.
-			if (!isNaN(chat_id)) {
-				this.abrir_chat_whatsapp({chat_id: chat_id})
-			}
+	data() {
+		return {
+			// true cuando ya se hizo la carga inicial (se hace una sola vez, apenas se sabe que hay extension).
+			cargado: false,
 		}
+	},
+	computed: {
+		/**
+		 * La cuenta tiene la extension "Agentes de IA". hasExtencion devuelve undefined mientras
+		 * auth/me no resolvio: se lee como "no" (y por eso hay que mirar tambien extensiones_cargadas).
+		 */
+		tiene_agentes_ia() {
+			return !!this.hasExtencion('agentes_ia')
+		},
+		/** true cuando el usuario y sus extensiones ya llegaron (para no mostrar el aviso antes de tiempo). */
+		extensiones_cargadas() {
+			return !!(this.authenticated && this.owner_extencions)
+		},
+	},
+	watch: {
+		// En una carga fria la extension llega despues de montar la vista: la carga inicial espera a eso.
+		tiene_agentes_ia(tiene) {
+			if (tiene) {
+				this.cargar_modulo()
+			}
+		},
+	},
+	created() {
+		if (this.tiene_agentes_ia) {
+			this.cargar_modulo()
+		}
+	},
+	methods: {
+		/**
+		 * Carga inicial de la bandeja de chats y del catálogo de plantillas (lo usa el
+		 * composer para el modal de plantillas), y abre el chat del link directo si lo hay.
+		 * Una sola vez: sin la extension no se llama a nada (la API contestaria 403).
+		 */
+		cargar_modulo() {
+			if (this.cargado) {
+				return
+			}
+			this.cargado = true
+
+			/*
+				Carga inicial de la bandeja de chats y del catálogo de plantillas (lo usa el
+				composer para el modal de plantillas). Se cargan acá, una sola vez al entrar
+				al módulo, en vez de en cada sub-componente.
+			*/
+			this.$store.dispatch('whatsapp_chat/getChats')
+			this.$store.dispatch('whatsapp_template/getModels')
+
+			/*
+				Link directo a /whatsapp/{id} (ej: desde otra parte del sistema). Antes esto solo
+				commiteaba `setSelectedChatId` y nunca pedía los mensajes: la conversación se abría
+				vacía. Ahora abre el sidebar y la carga la dispara el watch de conversation/Index.vue,
+				que es el mismo camino que recorren los otros tres modos de abrir un chat.
+			*/
+			if (this.$route.params.chat_id) {
+				let chat_id = parseInt(this.$route.params.chat_id, 10)
+				// Con un id que no es un número no se intenta nada: sin esta guarda el payload
+				// saldría con chat_id NaN y el store creería que le pidieron abrir por teléfono.
+				if (!isNaN(chat_id)) {
+					this.abrir_chat_whatsapp({chat_id: chat_id})
+				}
+			}
+		},
 	},
 }
 </script>

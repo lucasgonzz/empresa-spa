@@ -159,7 +159,7 @@ export default {
 				this.abm_views.forEach(view => {
 					if (this.view == this.routeString(view.view)) {
 						view.models.forEach(model => {
-							if (this.checkModel(model)) {
+							if (this.checkModel(model, view)) {
 								items.push(this.buildItem(model, view))
 							}
 						})
@@ -250,7 +250,29 @@ export default {
 			this.$router.push({params: {sub_view: (this.routeString(this.plural(model_name)))}})
 			this.selected_model = model_name
 		},
-		checkModel(model, items) {
+		/**
+		 * Dice si un modelo del ABM se muestra.
+		 *
+		 * Gate ADITIVO por extension de UN modelo dentro de una view (mision
+		 * agentes-ia-extension-unica, 22/10/2026): la view puede declarar
+		 * `models_if_has_extencion: { <model>: '<slug>' }` (ver la solapa de WhatsApp en
+		 * src/mixins/abm.js). Sin esa clave, o sin pasar la view, la funcion se comporta
+		 * exactamente como siempre. hasExtencion devuelve undefined mientras auth/me no
+		 * resolvio: se lee como "no" y la solapa no parpadea.
+		 *
+		 * @param {string} model Nombre interno del modelo.
+		 * @param {Object|null} [view] View del ABM que lo contiene (opcional).
+		 * @returns {boolean}
+		 */
+		checkModel(model, view) {
+			if (
+				view
+				&& view.models_if_has_extencion
+				&& view.models_if_has_extencion[model]
+				&& !this.hasExtencion(view.models_if_has_extencion[model])
+			) {
+				return false
+			}
 			return (!model.check_permissions || typeof model.check_permissions == 'undefined' || this.can(model.replaceAll(' ', '_')+'.index'))
 		},
 		/**
@@ -371,7 +393,7 @@ export default {
 				}
 				for (j = 0; j < v.models.length; j++) {
 					var model = v.models[j]
-					if (!self.checkModel(model)) {
+					if (!self.checkModel(model, v)) {
 						continue
 					}
 					if (self.routeString(self.plural(model)) === route_sub_view) {
@@ -406,7 +428,7 @@ export default {
 				}
 				for (j = 0; j < v.models.length; j++) {
 					var model = v.models[j]
-					if (self.checkModel(model)) {
+					if (self.checkModel(model, v)) {
 						return model
 					}
 				}
