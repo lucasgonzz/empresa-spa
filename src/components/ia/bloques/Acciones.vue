@@ -71,7 +71,7 @@ export default {
 		 * como "no".
 		 */
 		puede_mandar_recordatorio() {
-			return !!(this.hasExtencion('whatsapp') && this.can('alerts.recordatorio_cobro'))
+			return !!(this.hasExtencion('agentes_ia') && this.can('alerts.recordatorio_cobro'))
 		},
 	},
 	methods: {

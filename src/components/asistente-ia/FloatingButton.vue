@@ -123,7 +123,7 @@ export default {
 		 * Muestra el asistente sólo con sesión autenticada, la extensión habilitada (D28)
 		 * y a quien el servidor va a dejar entrar.
 		 *
-		 * 🔴 POR QUÉ NO ALCANZA CON `hasExtencion('asistente_ia')` (arreglo del 16/9/2026).
+		 * 🔴 POR QUÉ NO ALCANZA CON `hasExtencion('agentes_ia')` (arreglo del 16/9/2026).
 		 * `hasExtencion()` (src/mixins/generals.js:509) mira las extensiones del DUEÑO de
 		 * la cuenta, no las de la persona autenticada: a un empleado le daba `true` y veía el
 		 * botón. Al abrirlo se comía el 403 de `SoloElDuenoIa` ("Solo el dueño puede usar el
@@ -131,7 +131,7 @@ export default {
 		 * servidor va a rechazar.
 		 *
 		 * `puede_entrar_al_mostrador` (mixins/mostrador_acceso.js) ya es exactamente ese par
-		 * —extensión `asistente_ia` + dueño o `admin_access`— y es el mismo que resuelve
+		 * —extensión `agentes_ia` + dueño o `admin_access`— y es el mismo que resuelve
 		 * `MostradorHelper::puede_ver()` del lado del servidor. Se reusa en vez de escribir
 		 * otra regla, por el mismo motivo que lo hace el middleware: dos reglas separadas para
 		 * la misma pregunta se despegan sola la primera vez que una se corrige.

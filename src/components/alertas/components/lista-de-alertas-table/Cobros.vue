@@ -272,13 +272,13 @@ export default {
 		/**
 		 * Las dos capas del front para los botones de WhatsApp.
 		 *
-		 * `hasExtencion('whatsapp')` es lo que decide si la empresa tiene el módulo; el permiso
+		 * `hasExtencion('agentes_ia')` es lo que decide si la empresa tiene el módulo; el permiso
 		 * es aparte porque ver la alerta y dispararle un WhatsApp a todos los deudores no son la
 		 * misma capacidad. El backend chequea las dos por su cuenta: esto es comodidad, no
 		 * seguridad.
 		 */
 		puede_recordar() {
-			return this.hasExtencion('whatsapp') && this.can('alerts.recordatorio_cobro')
+			return this.hasExtencion('agentes_ia') && this.can('alerts.recordatorio_cobro')
 		},
 		/**
 		 * Cuántos CLIENTES hay en la lista, que no es lo mismo que cuántas filas.

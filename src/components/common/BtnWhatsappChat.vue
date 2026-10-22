@@ -7,7 +7,7 @@
 		Es la misma razón por la que lo lleva el botón vecino de cuenta corriente.
 	-->
 	<b-button
-	v-if="hasExtencion('whatsapp') && telefono_normalizado"
+	v-if="hasExtencion('agentes_ia') && telefono_normalizado"
 	class="m-l-15"
 	variant="success"
 	title="Abrir la conversación de WhatsApp"

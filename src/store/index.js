@@ -205,7 +205,7 @@ import whatsapp_bot_config from '@/store/whatsapp_bot_config'
 import whatsapp_chat from '@/store/whatsapp_chat'
 import whatsapp_template from '@/store/whatsapp_template'
 
-// Chat del asistente IA (botón flotante + panel, extensión asistente_ia).
+// Chat del asistente IA (botón flotante + panel, extensión agentes_ia).
 import ai_chat from '@/store/ai_chat'
 // El mostrador del módulo IA (escritorio de informes del dueño, misma extensión).
 import mostrador from '@/store/mostrador'

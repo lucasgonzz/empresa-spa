@@ -10,7 +10,7 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * No usa el factory `__base_store` porque no es un ABM: es una bandeja de conversaciones
  * con una conversación abierta y paginación propia de mensajes, calcada en espíritu de
  * `store/whatsapp_chat.js` pero contra los endpoints nuevos de `ai-conversations`
- * (ver `AiConversationController` en empresa-api, gateados por la extensión `asistente_ia`).
+ * (ver `AiConversationController` en empresa-api, gateados por la extensión `agentes_ia`).
  *
  * Contrato de API (fijado en el plan de la misión, D6-D9 y D17; las tarjetas de carga, en la
  * §2 del plan de la misión "asistente-ia-acciones", 15/9/2026):
@@ -536,7 +536,7 @@ export default {
 		// La conexión MCP del dueño (misión asistente-mcp, 22/9/2026): con una clave de conexión,
 		// Claude Desktop, Claude Code o cualquier cliente MCP usa el asistente con los datos del
 		// negocio. GET/POST/DELETE api/mcp/conexion (mismo gate que la config: dueño o admin, con la
-		// extensión asistente_ia). Acá vive la FICHA de la conexión:
+		// extensión agentes_ia). Acá vive la FICHA de la conexión:
 		// { activa: bool, nombre: 'mcp', creada_at: ISO|null, ultimo_uso_at: ISO|null,
 		//   url: 'https://…/api/mcp' }.
 		// null = todavía no se pidió.

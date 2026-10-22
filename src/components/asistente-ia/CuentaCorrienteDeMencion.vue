@@ -27,7 +27,7 @@ import { MODAL_CUENTA_CORRIENTE_DEL_CHAT } from '@/store/ai_chat'
  * `#current-acounts` en el documento y `$bvModal.show()` no le habla a nadie.
  *
  * Por eso el modal lo monta el chat, colgado del botón flotante (`FloatingButton.vue`), que
- * es el único componente que está montado siempre que la extensión `asistente_ia` esté
+ * es el único componente que está montado siempre que la extensión `agentes_ia` esté
  * prendida — y que cubre de una vez los DOS contenedores de la conversación: el panel
  * flotante y el sidebar del informe del mostrador, que dibujan el mismo `MessageBubble`.
  *

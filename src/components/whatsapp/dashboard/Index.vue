@@ -36,7 +36,7 @@
  *
  * Desde la misión embeddings-estado-whatsapp-dashboard (15/9/2026) se suman hasta tres tarjetas
  * más con el estado de los embeddings del catálogo (sin generar / desactualizados / generándose),
- * SOLO si el comercio tiene la extensión `whatsapp_ia` (la que habilita que se generen embeddings
+ * SOLO si el comercio tiene la extensión `agentes_ia` (la que habilita que se generen embeddings
  * en primer lugar: sin ella los tres números serían siempre 0/0/0, ruido y no información). A
  * diferencia de las tres primeras, estas SÍ salen de un endpoint propio
  * (GET api/article-embeddings/estado, store `article_embeddings_estado`), porque no hay ningún
@@ -104,7 +104,7 @@ export default {
 				])
 			}
 
-			if (this.hasExtencion('whatsapp_ia') && this.embeddings_estado_cargado) {
+			if (this.hasExtencion('agentes_ia') && this.embeddings_estado_cargado) {
 				tarjetas = tarjetas.concat([
 					{
 						key: 'embeddings_sin_generar',
@@ -145,7 +145,7 @@ export default {
 		},
 	},
 	created() {
-		if (this.hasExtencion('whatsapp_ia')) {
+		if (this.hasExtencion('agentes_ia')) {
 			this.pedir_estado_embeddings()
 		}
 	},

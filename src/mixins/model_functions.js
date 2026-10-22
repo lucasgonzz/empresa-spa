@@ -1433,7 +1433,7 @@ export default {
 
             WhatsApp es una extensión que se contrata aparte, y hay negocios que no la tienen
             pero usan este botón todos los días para saltar al WhatsApp Web del comprador. El
-            arreglo "obvio" —ponerle if_has_extencion: 'whatsapp' a la entrada de
+            arreglo "obvio" —ponerle if_has_extencion: 'agentes_ia' a la entrada de
             src/models/buyer.js, que es lo que el sistema de tablas ofrece para gatear un botón—
             le haría DESAPARECER el botón a todos ellos. Eso es una regresión, no una mejora, y
             es exactamente por eso que src/models/buyer.js quedó sin tocar y el botón se
@@ -1449,7 +1449,7 @@ export default {
             Y no se manda client_id a proposito: un Buyer de la tienda no es un Client del ERP.
         */
         sendWhatsApp(model) {
-            if (this.hasExtencion('whatsapp')) {
+            if (this.hasExtencion('agentes_ia')) {
                 this.abrir_chat_whatsapp({
                     phone: normalizar_telefono(model.phone),
                     display_name: model.name,

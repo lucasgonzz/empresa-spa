@@ -59,7 +59,7 @@ export default {
 		},
 		/**
 		 * Boton "Ver sugerencia" de la notificacion de sugerencia de stock lista
-		 * (extension sugerencias_inteligentes). El id viaja en el info_to_show del
+		 * (extension agentes_ia). El id viaja en el info_to_show del
 		 * payload: se acepta tanto una clave stock_suggestion_id explicita como un
 		 * value numerico. Hasta el 14/9/2026 abria el detalle propio de la sugerencia;
 		 * hoy lleva al mostrador (ver ir_al_mostrador). El nombre del metodo es el
@@ -96,9 +96,9 @@ export default {
 		 * NavigationDuplicated de apretar el boton estando ya en el mostrador.
 		 *
 		 * 🔴 Solo lleva a /ia a quien puede entrar (mixin mostrador_acceso: extension
-		 * asistente_ia + dueño o acceso maestro). Estas notificaciones las recibe
-		 * cualquiera con sugerencias_inteligentes / sugerencias_compras —un empleado,
-		 * o un dueño sin asistente_ia— y hasta el chequeo del 14/9/2026 el boton lo
+		 * agentes_ia + dueño o acceso maestro). Estas notificaciones las recibe
+		 * cualquiera con agentes_ia —un empleado,
+		 * o un dueño sin la extension— y hasta el chequeo del 14/9/2026 el boton lo
 		 * mandaba igual a /ia, donde se comia el cartel de "solo para el dueño" o el
 		 * de "requiere la extension". Para esa persona no hay destino: las
 		 * sugerencias viejas no tienen mas pantalla propia, asi que se le explica
@@ -154,7 +154,7 @@ export default {
 		},
 		/**
 		 * Boton "Ver sugerencia" de la notificacion de sugerencia de compra lista
-		 * (extension sugerencias_compras). Mismo patron que ir_a_sugerencias_de_stock():
+		 * (extension agentes_ia). Mismo patron que ir_a_sugerencias_de_stock():
 		 * el id viaja en el info_to_show del payload (clave purchase_suggestion_id o
 		 * value numerico) y el destino es el mostrador. El nombre del metodo es el
 		 * contrato con el backend (function_name del payload) y no se cambia.

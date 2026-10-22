@@ -43,7 +43,7 @@
 
 			<!-- Envío del comprobante por el agente de WhatsApp (grupo 137, Prompt 06). Convive con el botón wa.me de arriba: no depende del celular del operador. -->
 			<send-whatsapp-agent-btn
-			v-if="sale && show_whatsapp_btn && hasExtencion('whatsapp')"
+			v-if="sale && show_whatsapp_btn && hasExtencion('agentes_ia')"
 			class="m-l-10"
 			:sale="sale"></send-whatsapp-agent-btn>
 		</div>

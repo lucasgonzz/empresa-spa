@@ -63,7 +63,7 @@ export default {
 			key: 'es_deposito_origen',
 			type: 'checkbox',
 			value: 0,
-			if_has_extencion: 'sugerencias_inteligentes',
+			if_has_extencion: 'agentes_ia',
 			description: 'Si se marca, las sugerencias inteligentes de stock van a preferir esta sucursal como origen de los movimientos. Si ninguna sucursal está marcada, el origen se elige por stock como siempre. Si hay un depósito madre, esta marca se usa solo cuando el madre no alcanza o no tiene el artículo: entre las sucursales a las que les sobra stock, primero se saca de las marcadas acá.',
 		},
 		{
@@ -82,16 +82,16 @@ export default {
 			 * viejo de la sucursal que dejó de ser madre lo saca del store la
 			 * mutación add de src/store/address.js.
 			 *
-			 * Gateo con if_has_alguna_extencion (OR, el mismo mecanismo que usan
-			 * peso y medidas en article.js): lo ve quien tenga
-			 * sugerencias_inteligentes o asistente_ia, porque las sugerencias de
-			 * stock también salen en la carpeta Stock del mostrador.
+			 * Gateo con la extensión única «Agentes de IA» (agentes_ia). Hasta la misión
+			 * agentes-ia-extension-unica (22/10/2026) era un OR (if_has_alguna_extencion)
+			 * entre dos extensiones de IA sueltas: las sugerencias de stock también salen
+			 * en la carpeta Stock del mostrador.
 			 */
 			text: 'Depósito madre',
 			key: 'es_deposito_madre',
 			type: 'checkbox',
 			value: 0,
-			if_has_alguna_extencion: ['sugerencias_inteligentes', 'asistente_ia'],
+			if_has_extencion: 'agentes_ia',
 			descriptions: [
 				'Solo una sucursal puede ser el depósito madre: si marcás otra, esta deja de serlo.',
 				'Las sugerencias de stock salen primero desde acá hacia las demás sucursales. Si el depósito madre no alcanza o no tiene el artículo, se completa con las sucursales a las que les sobra.',

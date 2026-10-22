@@ -13,7 +13,7 @@ export default [
 			viejo (Sugerencias / Compras / Ofertas), que salió del menú; Promociones sigue
 			entrando por Tienda Online.
 
-			Gate doble, y los dos son deliberados: `if_has_extencion: 'asistente_ia'`
+			Gate doble, y los dos son deliberados: `if_has_extencion: 'agentes_ia'`
 			(la misma extensión que gatea el botón flotante del chat y las rutas
 			mostrador/* del backend; no se creó una extensión nueva) y
 			`check_is_owner: true` (solo el dueño y el acceso maestro ven el módulo,
@@ -34,7 +34,7 @@ export default [
 		name: 'ia',
 		component: '@/views/Ia',
 		icon: 'stars',
-		if_has_extencion: 'asistente_ia',
+		if_has_extencion: 'agentes_ia',
 		check_is_owner: true,
 		no_aterrizar: true,
 	},
@@ -414,8 +414,8 @@ export default [
 		name: 'whatsapp',
 		path: '/whatsapp',
 		component: '@/views/Whatsapp',
-		// Solo visible con la extensión 'whatsapp' activa (mismo gateo que usa el backend en check_extencion_empresa).
-		if_has_extencion: 'whatsapp',
+		// Solo visible con la extensión 'agentes_ia' (Agentes de IA) activa (mismo gateo que usa el backend en check_extencion_empresa).
+		if_has_extencion: 'agentes_ia',
 		icon: 'whatsapp',
 		/* Badge con lo que necesita a una persona: mensajes de la IA esperando aprobación (misión sugerencia-ia-como-borrador, 29/9/2026) + chats con un pedido o una consulta del agente sin atender (misión senal-pedidos-y-consultas-del-agente, 16/10/2026) */
 		budget_function: 'whatsapp_atencion_count',

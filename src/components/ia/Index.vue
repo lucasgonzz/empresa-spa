@@ -63,7 +63,7 @@ import mostrador_acceso from '@/mixins/mostrador_acceso'
  * abierto a pantalla completa. Los datos viven en store/mostrador.js; la
  * conversación de cada informe reusa el store ai_chat (ver SidebarConversacion).
  *
- * El gate (extensión asistente_ia + dueño o acceso maestro) viene del mixin
+ * El gate (extensión agentes_ia + dueño o acceso maestro) viene del mixin
  * mostrador_acceso: es el MISMO que usan DepositButtons y las notificaciones de
  * sugerencias para decidir si mandan a alguien acá, así ningún punto de entrada
  * trae a una persona que este componente después rechaza.

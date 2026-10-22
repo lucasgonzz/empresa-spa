@@ -21,7 +21,7 @@
             desde este refactor la conversación se abre también desde Clientes, Pedidos y
             Compradores: si el sidebar y la suscripción a Echo vivieran en views/Whatsapp.vue,
             fuera del módulo no habría ni conversación ni tiempo real. El componente se gatea
-            solo (sesión + extensión `whatsapp`), igual que el botón del asistente IA.
+            solo (sesión + extensión `agentes_ia`), igual que el botón del asistente IA.
         -->
         <whatsapp-sidebar-host></whatsapp-sidebar-host>
         <!--

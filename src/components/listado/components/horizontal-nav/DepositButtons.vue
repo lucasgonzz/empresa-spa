@@ -34,10 +34,11 @@ export default {
 			// Desde la mision "modulo-ia-mostrador" (14/9/2026) las sugerencias de stock
 			// viven en la carpeta Stock del mostrador (modulo IA) y la vista propia
 			// /sugerencias-de-stock ya no existe. Pero /ia no es para cualquiera: exige
-			// la extension asistente_ia Y ser el dueño (o el acceso maestro), y ese par
-			// lo decide el mixin mostrador_acceso, no la extension
-			// sugerencias_inteligentes como hasta el chequeo del 14/9. Quien no puede
-			// entrar (un empleado, o un dueño sin asistente_ia) abre los modales
+			// la extension agentes_ia Y ser el dueño (o el acceso maestro), y ese par
+			// lo decide el mixin mostrador_acceso, no solo la extension
+			// (hasta el chequeo del 14/9 alcanzaba con una extension de sugerencias suelta,
+			// que desde el 22/10/2026 es parte de agentes_ia). Quien no puede
+			// entrar (un empleado, o un dueño sin agentes_ia) abre los modales
 			// historicos, que stock-suggestion/Index.vue monta justo para esa persona.
 			if (this.puede_entrar_al_mostrador) {
 				if (this.$route.name != 'ia') {

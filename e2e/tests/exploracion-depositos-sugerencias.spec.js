@@ -28,7 +28,7 @@
 //        la sugerencia termina completa igual: resumen_ia_estado queda null y el bloque del
 //        resumen NO se dibuja (ni spinner ni error) — la IA solo redacta, nunca calcula.
 //
-// Requisitos: extension `sugerencias_inteligentes` activa para el usuario (si no esta, el test
+// Requisitos: extension `agentes_ia` activa para el usuario (si no esta, el test
 // se saltea con aviso), sucursal "Principal" del fixture, y la config de columnas del listado
 // guardada al menos una vez (sin eso el boton verde de stock no existe — hallazgo #1 de esta
 // exploracion). Los articulos son propios de la corrida (sufijo por timestamp); la sucursal
@@ -192,8 +192,8 @@ test.describe.serial('exploracion depositos: sugerencias de stock', () => {
 		// Sin la extension, la vista propia no existe: el resto del archivo no tiene que correr.
 		const yo = await api_get(page, 'user')
 		const extensiones = ((yo.user && yo.user.extencions) || []).map(e => e.slug)
-		test.skip(!extensiones.includes('sugerencias_inteligentes'),
-			'la cuenta no tiene la extension sugerencias_inteligentes: la vista de sugerencias no existe')
+		test.skip(!extensiones.includes('agentes_ia'),
+			'la cuenta no tiene la extension agentes_ia: la vista de sugerencias no existe')
 
 		// Sucursal EXP Norte: reusar o crear por interfaz.
 		let res = await api_get(page, 'address')

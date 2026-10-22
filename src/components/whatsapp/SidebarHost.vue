@@ -78,7 +78,7 @@ export default {
 		 * asistente IA).
 		 */
 		should_show() {
-			return this.authenticated && this.hasExtencion('whatsapp')
+			return this.authenticated && this.hasExtencion('agentes_ia')
 		},
 		sidebar_abierto() {
 			return this.$store.state.whatsapp_chat.sidebar_abierto

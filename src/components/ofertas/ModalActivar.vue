@@ -366,7 +366,7 @@ export default {
 		 * true cuando el aviso PUEDE llegar a salir por el agente. No promete que salga por
 		 * ahi: promete que vale la pena preguntarlo.
 		 *
-		 * El gate es `hasExtencion('whatsapp')` y no otra cosa: es el mismo criterio que ya usan
+		 * El gate es `hasExtencion('agentes_ia')` y no otra cosa: es el mismo criterio que ya usan
 		 * `BtnWhatsappChat`, `model_functions.sendWhatsApp` y `SidebarHost`, y sin esa extensión
 		 * el sidebar NI SIQUIERA SE MONTA EN EL DOM, así que abrirlo seria un click muerto.
 		 *
@@ -375,7 +375,7 @@ export default {
 		 * `whatsapp_chat/abrirChatOLinkExterno` despues del click, con el modelo en la mano.
 		 */
 		puede_abrir_el_agente(oferta) {
-			return !!this.hasExtencion('whatsapp') && !!telefono_de_chat_de_oferta(oferta)
+			return !!this.hasExtencion('agentes_ia') && !!telefono_de_chat_de_oferta(oferta)
 		},
 		/**
 		 * Manda el aviso de la oferta por donde de verdad pueda salir: el sidebar del agente si

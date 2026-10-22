@@ -170,7 +170,7 @@ export default {
 		 * @return {void}
 		 */
 		check_escaneo_factura_en_curso() {
-			if (!this.hasExtencion('escaneo_factura_compra')) {
+			if (!this.hasExtencion('agentes_ia')) {
 				return
 			}
 
