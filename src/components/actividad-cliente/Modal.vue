@@ -41,7 +41,8 @@
 				2. 🔴 LA LECTURA DE LA IA VA ARRIBA. Es el pedido textual: primero qué estuvo
 				haciendo este cliente en castellano, y recién después los números que lo prueban.
 			-->
-			<resumen-ia v-if="actividad.hay_datos"></resumen-ia>
+			<!-- Resumen en criollo: parte de «Agentes de IA» (agentes_ia). Sin la extensión no se dibuja ni pide nada. -->
+			<resumen-ia v-if="actividad.hay_datos && hasExtencion('agentes_ia')"></resumen-ia>
 
 			<!--
 				3. La leyenda del histórico. Solo con fuente 'agregado', que es lo que contesta

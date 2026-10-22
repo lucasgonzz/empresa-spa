@@ -43,7 +43,9 @@
 				pendiente en el backend; recargar aca re-arma el polling existente,
 				que es el que va a levantar el resumen nuevo cuando este.
 			-->
+			<!-- «Resumen con IA»: parte de «Agentes de IA» (agentes_ia). Sin la extensión no se dibuja ni pide nada. -->
 			<resumen-ia
+			v-if="hasExtencion('agentes_ia')"
 			:corrida="corrida"
 			@reintentado="cargar"></resumen-ia>
 
@@ -273,7 +275,9 @@ export default {
 			if (this.corrida.status == 'pendiente') {
 				return true
 			}
-			return this.corrida.resumen_ia_estado == 'pendiente'
+			// El resumen con IA solo cuenta si la cuenta tiene «Agentes de IA»: sin ella no se muestra y
+			// no hay que seguir recargando esperándolo.
+			return !!this.hasExtencion('agentes_ia') && this.corrida.resumen_ia_estado == 'pendiente'
 		},
 		/**
 		 * Programa la proxima recarga. 8 segundos: lo bastante seguido para que el
