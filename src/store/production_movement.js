@@ -27,6 +27,9 @@ export default __base_store({
 		from_dates: true,
 		is_selecteable: false,
 		use_per_page: false,
+		// "Por fecha" se pide paginado al servidor (22/10/2026): un rango largo no baja todos los
+		// movimientos de golpe. Ver `paginar_por_fecha` en __base_store.js.
+		paginar_por_fecha: true,
 		per_page: 25,
 	},
 	mutations: {
