@@ -47,6 +47,14 @@
 		</div>
 
 		<div
+		v-if="sale && sale.client_id && saldo && !saldo.en_cuenta_corriente"
+		class="plan-de-pago-modal__aviso plan-de-pago-modal__aviso--atencion"
+		data-testid="plan-aviso-fuera-de-la-cuenta">
+			<i class="bi bi-exclamation-triangle"></i>
+			<span>La venta no está en la cuenta corriente del cliente, así que no tiene deuda para financiar en cuotas. El plan de pago se arma sobre una venta que fue a la cuenta corriente.</span>
+		</div>
+
+		<div
 		v-if="saldo && saldo.en_cuenta_corriente && saldo.saldo_pendiente <= 0"
 		class="plan-de-pago-modal__aviso plan-de-pago-modal__aviso--atencion"
 		data-testid="plan-aviso-saldada">
@@ -77,7 +85,7 @@
 
 					<!-- De dónde sale el importe propuesto: lo que falta saldar de la venta. -->
 					<div
-					v-if="saldo"
+					v-if="saldo && leyenda_importe"
 					class="plan-de-pago-modal__leyenda"
 					data-testid="plan-leyenda-importe">
 						<i class="bi bi-lightbulb"></i>
@@ -274,8 +282,9 @@ export default {
 			if (!this.saldo) {
 				return ''
 			}
+			// Fuera de la cuenta corriente no hay importe que proponer: lo dice el aviso de arriba.
 			if (!this.saldo.en_cuenta_corriente) {
-				return 'La venta no está en la cuenta corriente del cliente, así que se propone su total.'
+				return ''
 			}
 			if (Number(this.saldo.pagado) > 0) {
 				return 'Es lo que falta saldar de la venta: ' + this.formatear(this.saldo.total)
@@ -291,6 +300,11 @@ export default {
 		problema() {
 			if (this.sale && !this.sale.client_id) {
 				return 'La venta no tiene cliente: el plan de pago se arma sobre la cuenta de un cliente.'
+			}
+			// Regla de Lucas (22/10/2026): solo sobre una venta que fue a la cuenta corriente. El back
+			// devuelve 422 con el mismo criterio (PaymentPlanService::crear_plan_y_cuotas).
+			if (this.saldo && !this.saldo.en_cuenta_corriente) {
+				return 'La venta no está en la cuenta corriente del cliente: el plan de pago se arma sobre una venta que fue a la cuenta corriente.'
 			}
 			if (!(this.importe_a_mandar > 0)) {
 				return 'Escribí un importe a financiar mayor a cero.'
@@ -391,7 +405,8 @@ export default {
 				}
 				self.cargando_saldo = false
 				self.saldo = res.data
-				self.importe = String(res.data.saldo_pendiente)
+				// Fuera de la cuenta corriente no se propone nada: esa venta no admite plan.
+				self.importe = res.data.en_cuenta_corriente ? String(res.data.saldo_pendiente) : ''
 			})
 			.catch(err => {
 				if (!self.sale || self.sale.id != sale_id) {
