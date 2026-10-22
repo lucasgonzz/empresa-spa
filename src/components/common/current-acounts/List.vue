@@ -26,6 +26,7 @@ class="cc-lista">
         :model_name="model_name"
         model_name_spanish="cuentas corrientes"
         id="table-current-acounts"
+        ref="tabla"
         :set_model_on_row_selected="false"
         :show_btn_edit="false"
         select_mode="multi"
@@ -106,6 +107,30 @@ export default {
         BtnPaymentMethodsInfo: () => import('@/components/common/current-acounts/BtnPaymentMethodsInfo'),
         CerrarVenta: () => import('@/components/ventas/components/table-buttons/CerrarVenta'),
     },
+    watch: {
+        /**
+         * La selección vive en DOS lugares: el store (`selected`) y la memoria de TableComponent
+         * (su `last_selection` y las filas resaltadas de la b-table). Con `select_mode="multi"` la
+         * tabla compara solo el LARGO de la selección nueva contra `last_selection`, y nadie la
+         * reinicia cuando el store se vacía por otro lado: después de pagar (o de cerrar el modal
+         * con la X) el primer clic en otra fila podía no registrarse, o sumarse a una fila que ya
+         * no estaba elegida. Ver `limpiar_seleccion_de_la_tabla()`.
+         */
+        selected_current_acounts(seleccion) {
+            if (!seleccion.length) {
+                this.limpiar_seleccion_de_la_tabla()
+            }
+        },
+        /**
+         * Al recargar los movimientos el v-if de TableComponent destruye la b-table, pero el
+         * componente sigue vivo con su `last_selection` anterior.
+         */
+        loading(cargando) {
+            if (cargando) {
+                this.olvidar_ultima_seleccion_de_la_tabla()
+            }
+        },
+    },
     computed: {
         model_name() {
             return 'current_acount'
@@ -133,6 +158,23 @@ export default {
         },
     },
     methods: {
+        olvidar_ultima_seleccion_de_la_tabla() {
+            if (this.$refs.tabla) {
+                this.$refs.tabla.last_selection = []
+            }
+        },
+        /**
+         * Deja la tabla sin filas resaltadas y sin memoria de la selección anterior, para que
+         * coincida con el store vacío. `clearSelected` de la b-table emite `row-selected` con [] y
+         * TableComponent vuelve a commitear [] al store: no es un bucle porque el store ya estaba
+         * vacío y esto solo corre cuando `selected` pasa a vacío.
+         */
+        limpiar_seleccion_de_la_tabla() {
+            this.olvidar_ultima_seleccion_de_la_tabla()
+            if (this.$refs.tabla && this.$refs.tabla.$refs.tableComponent) {
+                this.$refs.tabla.$refs.tableComponent.clearSelected()
+            }
+        },
         show_badge_facturado(current_acount) {
             if (
                 current_acount.sale 
