@@ -599,6 +599,14 @@ export default function __base_store(options = {}) {
 		},
 		setFromDates(state, value) {
 			state.from_dates = value
+			// Pasar a Historico apaga el modo "Por fecha" paginado (ver `paginado_por_fecha` en el state) e
+			// invalida el pedido "Por fecha" que siga en vuelo: sin esto la barra quedaba con los números del
+			// día debajo del Historico y una respuesta tardía del día podía pisarla. Solo para los stores
+			// que optaron por el modo: para el resto esta mutación sigue siendo la asignación de siempre.
+			if (state.paginar_por_fecha && !value) {
+				state.paginado_por_fecha = false
+				state.descarga_de_models_token++
+			}
 		},
 		incrementFilterPage(state) {
 			state.filter_page++
@@ -1064,6 +1072,10 @@ export default function __base_store(options = {}) {
 		 * @returns {Promise}
 		 */
 		cambiar_pagina_por_fecha({commit, state, dispatch}) {
+			// Fuera de "Por fecha" (Historico) no hay día que paginar: la página la maneja global-search.
+			if (!state.from_dates) {
+				return Promise.resolve()
+			}
 			commit('incrementar_descarga_de_models_token')
 			return dispatch('_getModelsPaginadoPorFecha', {page: state.filter_page, modo: 'pagina'})
 		},
