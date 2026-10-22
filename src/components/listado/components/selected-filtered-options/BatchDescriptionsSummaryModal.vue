@@ -220,7 +220,8 @@ export default {
 			this.visible_proxy = false
 			let destino = destino_de_descripciones({ solapa: 'a_revisar' })
 			let ya_esta_ahi = es_ruta_de_descripciones(this.$route)
-			if (ya_esta_ahi) {
+			// Sin «Agentes de IA» (agentes_ia) la API contesta 403: no se recarga la revisión.
+			if (ya_esta_ahi && this.hasExtencion('agentes_ia')) {
 				this.$store.dispatch('ai_description_review/recargar_revision', { solapa: 'a_revisar' })
 			}
 			let navegacion = ya_esta_ahi ? this.$router.replace(destino) : this.$router.push(destino)

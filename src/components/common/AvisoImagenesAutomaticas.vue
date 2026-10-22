@@ -181,7 +181,8 @@ export default {
 		procesos_de_imagenes_terminados(nuevos, anteriores) {
 			let antes = Array.isArray(anteriores) ? anteriores : []
 			let hay_uno_nuevo = nuevos.some(id => antes.indexOf(id) === -1)
-			if (hay_uno_nuevo && this.owner_id) {
+			// Sin «Agentes de IA» (agentes_ia) la API contesta 403: no se pide el resumen.
+			if (hay_uno_nuevo && this.owner_id && this.hasExtencion('agentes_ia')) {
 				this.$store.dispatch('image_assignment/get_resumen')
 			}
 		},

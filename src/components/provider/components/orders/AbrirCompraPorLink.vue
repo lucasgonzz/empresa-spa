@@ -180,6 +180,16 @@ export default {
 		abrir_desde_link(compra_id, uuid) {
 			let self = this
 
+			/*
+			 * El escaneo de facturas es parte de «Agentes de IA» (agentes_ia): sin la extensión
+			 * `provider-order-scan*` contesta 403 (y el interceptor global lo mostraría como un
+			 * toast espurio). El link se trata entonces como uno sin escaneo: solo abre la compra.
+			 */
+			let tiene_agentes_ia = !!this.hasExtencion('agentes_ia')
+			if (!tiene_agentes_ia) {
+				uuid = ''
+			}
+
 			this.$store.commit('auth/setMessage', 'Abriendo la compra')
 			this.$store.commit('auth/setLoading', true)
 
@@ -198,7 +208,9 @@ export default {
 			 * Sin escaneo en el link igual se refrescan los pendientes: son los que
 			 * encienden el botón rojo de la fila que va a quedar a la vista.
 			 */
-			let pedir_pendientes = this.$store.dispatch('provider_order_scan/get_pendientes')
+			let pedir_pendientes = tiene_agentes_ia
+				? this.$store.dispatch('provider_order_scan/get_pendientes')
+				: Promise.resolve([])
 
 			Promise.all([pedir_compra, pedir_pendientes])
 			.then(resultados => {

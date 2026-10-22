@@ -228,7 +228,10 @@ export default {
 			this.olvidar_lote_en_vuelo()
 			this.sincronizar_suscripcion()
 			this.open_summary(payload)
-			this.$store.dispatch('ai_description_review/recargar_revision')
+			// Sin «Agentes de IA» (agentes_ia) la API contesta 403: no se recarga la revisión.
+			if (this.hasExtencion('agentes_ia')) {
+				this.$store.dispatch('ai_description_review/recargar_revision')
+			}
 		},
 		/**
 		* Escribe la marca de "esta pestaña está esperando un lote", para que un F5 en el medio
