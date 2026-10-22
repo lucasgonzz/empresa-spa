@@ -7,6 +7,15 @@ class="cc-lista">
         alrededor de un cartel que dice "no hay nada" es justo lo contrario de lo que ese cartel
         tiene que comunicar.
     -->
+    <!--
+        select_mode="multi" (mision pago-cc-multiples-movimientos, 22/10/2026): cada clic prende o
+        apaga la fila, y TableComponent guarda en el store TODAS las seleccionadas
+        (current_acount/setSelected). Es lo que deja elegir varias ventas para "Registrar pago para
+        N movimientos". Antes la tabla era 'single' (un clic reemplazaba la fila) y onRowSelected de
+        abajo filtraba que se podia elegir; en 'multi' TableComponent no emite ese evento y el
+        filtro lo hace BtnPagoNotaCredito: si entre las elegidas hay algo que no es una deuda
+        pendiente, el boton vuelve a "Registrar pago" a secas.
+    -->
     <div
     data-tour="cuentas_corrientes.lista_movimientos"
     :class="['cc-tabla-wrapper', {'cc-tabla-wrapper--con-datos': models.length}]">
@@ -19,6 +28,7 @@ class="cc-lista">
         id="table-current-acounts"
         :set_model_on_row_selected="false"
         :show_btn_edit="false"
+        select_mode="multi"
         emit_selected_with_model_empty
         @showDetails="showDetails"
         @showPagadoPor="showPagadoPor"
