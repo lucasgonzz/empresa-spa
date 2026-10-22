@@ -3,6 +3,7 @@
 	title="Movimientos de Depositos"
 	hide-footer
 	size="lg"
+	@hidden="apagar_paginado_por_fecha"
 	id="deposit-movements">
 		<div>
 			<!--
@@ -185,6 +186,15 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Al cerrar el modal apaga el modo "Por fecha" paginado del store (22/10/2026). El store
+		 * `deposit_movement` lo comparte la tabla de Alertas > Movimientos de depositos, que muestra
+		 * filas propias y NO tiene que heredar la barra de paginacion con los numeros del dia que se
+		 * miraba aca. Al reabrir el modal, `getModels` lo vuelve a prender con la respuesta.
+		 */
+		apagar_paginado_por_fecha() {
+			this.$store.commit('deposit_movement/set_paginado_por_fecha', false)
+		},
 		/**
 		 * Abre el historial de modificaciones de articulos de un movimiento. La dispara el boton
 		 * "Modificaciones (N)" de la fila.
