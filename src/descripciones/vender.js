@@ -99,14 +99,14 @@ export default {
 
 	'pago-cc-total-a-repartir': {
 		titulo: 'Total a repartir',
-		que_hace: 'Lo que falta pagar de la deuda que elegiste (por ejemplo, una venta). Lo que cargues en las filas de métodos de pago se compara contra este importe.',
+		que_hace: 'Lo que falta pagar de la deuda que elegiste (por ejemplo, una venta) o, si elegiste varios movimientos, la suma de lo que falta pagar de todos. Lo que cargues en las filas de métodos de pago se compara contra este importe.',
 		repercute: [
 			'Con "Completar", cada fila se llena con lo que todavía no está repartido.',
-			'Si repartís menos, esa deuda queda "pagándose" por lo que falta.',
-			'Si repartís más, el resto se aplica a las demás deudas pendientes de la cuenta, de la más vieja a la más nueva. Si no hay otras deudas, queda como saldo a favor.',
+			'Si repartís menos, esa deuda queda "pagándose" por lo que falta. Con varios movimientos elegidos se van saldando del más viejo al más nuevo hasta donde alcance el pago.',
+			'Si repartís más, primero se saldan las deudas elegidas y el resto se aplica a las demás deudas pendientes de la cuenta, de la más vieja a la más nueva. Si no hay otras deudas, queda como saldo a favor.',
 		],
-		requiere: 'Solo aparece cuando abrís el pago con "Registrar pago para …", es decir, con una deuda elegida. Con "Registrar pago" a secas no hay un total contra el cual repartir.',
-		nota_interna: 'Reusa TotalRepartir.vue (el mismo de Vender) con otro testid A PROPOSITO: la entrada de Vender, multipago-total-a-repartir, habla del descuento del método que se quitó al abrir el reparto, y en un pago de cuenta corriente no hay ningún descuento. El sobrante acá es solo informativo y NO bloquea el pago, a diferencia de Vender, donde "Listo" exige cerrar el reparto: la API acepta pagar de menos (el débito queda en estado pagandose) y de más (sigue con los demás débitos pendientes, de la más vieja a la más nueva). Todo eso está LEÍDO en CurrentAcountPagoHelper (procesarPago y setSinPagar), NO medido por diferencia con un circuito e2e: ningún spec lo custodia. El total sale de to_pay (debe - pagandose), la misma cuenta que hace BtnPagoNotaCredito.setToPay() y la API.',
+		requiere: 'Solo aparece cuando abrís el pago con "Registrar pago para …", es decir, con una o varias deudas elegidas. Con "Registrar pago" a secas no hay un total contra el cual repartir.',
+		nota_interna: 'Reusa TotalRepartir.vue (el mismo de Vender) con otro testid A PROPOSITO: la entrada de Vender, multipago-total-a-repartir, habla del descuento del método que se quitó al abrir el reparto, y en un pago de cuenta corriente no hay ningún descuento. El sobrante acá es solo informativo y NO bloquea el pago, a diferencia de Vender, donde "Listo" exige cerrar el reparto: la API acepta pagar de menos (el débito queda en estado pagandose) y de más (sigue con los demás débitos pendientes, de la más vieja a la más nueva). Todo eso está LEÍDO en CurrentAcountPagoHelper (procesarPago y setSinPagar), NO medido por diferencia con un circuito e2e: ningún spec lo custodia. El total sale de to_pay (debe - pagandose) o, con 2 o más movimientos elegidos (to_pay_list), de la suma de esos saldos a centavos: la misma cuenta que hace BtnPagoNotaCredito.setToPay() y la API.',
 	},
 
 	'metodos-de-pago-sucursal': {
@@ -124,7 +124,7 @@ export default {
 		que_hace: 'Cuánto se cobra con este método de pago.',
 		repercute: [
 			'En Vender, la suma de todas las filas tiene que dar el total a repartir, o el reparto no se puede cerrar.',
-			'En el pago de una cuenta corriente la suma es lo que se cobra: si elegiste una venta, puede ser menos o más que su total a repartir.',
+			'En el pago de una cuenta corriente la suma es lo que se cobra: si elegiste una venta (o varios movimientos), puede ser menos o más que su total a repartir.',
 		],
 		requiere: 'Cargalo ANTES de elegir la caja: el selector de caja de una fila no se dibuja hasta que la fila tiene monto.',
 	},
@@ -241,11 +241,13 @@ export default {
 
 	'btn-registrar-pago': {
 		titulo: 'Registrar el pago',
-		que_hace: 'Cobra contra la cuenta corriente del cliente.',
+		que_hace: 'Cobra contra la cuenta corriente del cliente. Si elegiste uno o varios movimientos de la lista (por ejemplo, cuatro ventas), dice "Registrar pago para …" y el pago se imputa a esos.',
 		repercute: [
 			'Baja el saldo acumulado del cliente por el importe cobrado.',
 			'La plata entra a la caja elegida.',
+			'Con varios movimientos elegidos, el monto se precarga con la suma de lo que falta pagar de todos, y el pago los salda del más viejo al más nuevo.',
 		],
+		requiere: 'Para pagar varios movimientos a la vez, todos tienen que ser deudas pendientes (venta o nota de débito sin pagar, o a medio pagar). Si entre los elegidos hay un pago, una nota de crédito o algo ya pagado, el botón vuelve a "Registrar pago" a secas.',
 	},
 
 	'btn-eliminar-sale': {
