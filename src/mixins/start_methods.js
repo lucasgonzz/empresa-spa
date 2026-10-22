@@ -296,13 +296,17 @@ export default {
 		 * cuantas busquedas terminadas nadie abrio) para el numero rojo de Alertas -> Imagenes y
 		 * de la campana (mision imagenes-catalogo-completo, 27/9/2026).
 		 *
-		 * Sin extension ni permiso que lo condicione: la solapa es para todos. La accion del
+		 * Desde el 22/10/2026 exige la extension "Agentes de IA" (agentes_ia): sin ella la API
+		 * contesta 403, asi que ni se pide (y el numero rojo queda en cero). La accion del
 		 * store es silenciosa y resuelve siempre, asi que no le puede cortar el turno al eslabon
 		 * que sigue.
 		 *
 		 * @returns {Promise}
 		 */
 		get_resumen_de_imagenes() {
+			if (!this.hasExtencion('agentes_ia')) {
+				return Promise.resolve()
+			}
 			return this.$store.dispatch('image_assignment/get_resumen')
 		},
 		/**
@@ -310,14 +314,17 @@ export default {
 		 * elija y cuantos articulos dudosos quedan por revisar) para el numero rojo de Alertas ->
 		 * Catalogo y de la campana (mision categorizacion-tres-modelos, 5/10/2026).
 		 *
-		 * Sin extension ni permiso que lo condicione: para quien no es el dueño ni el acceso maestro
-		 * la API contesta todo en cero. La accion del store es silenciosa y resuelve siempre (un 404
+		 * Exige la extension "Agentes de IA" (agentes_ia): sin ella no se pide (la API contestaria 403).
+		 * Para quien no es el dueño ni el acceso maestro la API contesta todo en cero. La accion del store es silenciosa y resuelve siempre (un 404
 		 * de una API que todavia no tiene la ruta no muestra nada), asi que no le puede cortar el
 		 * turno al eslabon que sigue.
 		 *
 		 * @returns {Promise}
 		 */
 		get_resumen_de_categorias() {
+			if (!this.hasExtencion('agentes_ia')) {
+				return Promise.resolve()
+			}
 			return this.$store.dispatch('category_proposal/get_resumen')
 		},
 		/**
@@ -325,13 +332,16 @@ export default {
 		 * tienen una descripcion que la IA no pudo confirmar) para el numero rojo de Alertas ->
 		 * Catalogo -> Descripciones y de la campana (mision alertas-descripciones, 14/10/2026).
 		 *
-		 * Sin extension ni permiso que lo condicione, como el de imagenes. La accion del store es
+		 * Exige la extension "Agentes de IA" (agentes_ia), como el de imagenes. La accion del store es
 		 * silenciosa y resuelve siempre (un 404 de una API que todavia no tiene la ruta deja el numero
 		 * en cero sin mostrar nada), asi que no le puede cortar el turno al eslabon que sigue.
 		 *
 		 * @returns {Promise}
 		 */
 		get_resumen_de_descripciones() {
+			if (!this.hasExtencion('agentes_ia')) {
+				return Promise.resolve()
+			}
 			return this.$store.dispatch('ai_description_review/get_resumen')
 		},
 		get_ventas_sin_cobrar() {

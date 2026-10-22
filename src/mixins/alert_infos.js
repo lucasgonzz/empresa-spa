@@ -160,7 +160,7 @@ export default {
 		 * la extensión: un empleado sin permisos veía el stock y el catálogo. Ahora:
 		 *   - cobros                     → cualquier usuario cargado (sin permiso, ver abajo)
 		 *   - stock-minimo               → article.index
-		 *   - catalogo (y el alias viejo imagenes, /alertas/imagenes) → article.index
+		 *   - catalogo (y el alias viejo imagenes, /alertas/imagenes) → la extension agentes_ia Y article.index
 		 *   - pedidos-proveedor          → alerts.provider_orders
 		 *   - pedidos-online             → alerts.orders
 		 *   - mensajes                   → alerts.messages
@@ -199,8 +199,11 @@ export default {
 			if (solapa == 'stock-minimo') {
 				return this.can('article.index')
 			}
+			// Catalogo (imagenes, categorias y descripciones) es todo de IA: desde el 22/10/2026 exige
+			// la extension "Agentes de IA" (agentes_ia), igual que las rutas del backend (403 sin ella).
+			// Este es el unico punto que decide la pestaña, la seccion y el numero de la campana.
 			if (solapa == 'catalogo' || solapa == 'imagenes') {
-				return this.can('article.index')
+				return !!this.hasExtencion('agentes_ia') && this.can('article.index')
 			}
 			if (solapa == 'pedidos-proveedor') {
 				return this.can('alerts.provider_orders')
