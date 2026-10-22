@@ -16,7 +16,13 @@
 			<i class="bi bi-arrow-left-right m-r-5"></i>
 			Movimientos
 		</b-dropdown-item>
+		<!--
+			Sugerencias de stock: parte de "Agentes de IA" (agentes_ia) desde el 22/10/2026. Sin la
+			extension el item no se ofrece (el backend contestaria 403). hasExtencion devuelve
+			undefined mientras auth/me no resolvio: se lee como "no" y no parpadea.
+		-->
 		<b-dropdown-item
+		v-if="mostrador_tiene_extension"
 		data-testid="menu-depositos-sugerencias"
 		@click="show_modal_sugerencias">
 			<i class="bi bi-lightbulb m-r-5"></i>

@@ -25,6 +25,15 @@
  */
 export default {
 	computed: {
+		/**
+		 * true cuando auth/me ya resolvio y las extensiones de la cuenta estan cargadas. Antes de eso
+		 * hasExtencion devuelve undefined y "no tiene la extension" no es una respuesta: quien
+		 * dibuja un cartel de "falta la extension" tiene que esperar a esto, o el cartel parpadea
+		 * en cada carga fria (F5 sobre /ia) aunque la cuenta la tenga.
+		 */
+		mostrador_extensiones_cargadas() {
+			return !!(this.authenticated && this.owner_extencions)
+		},
 		mostrador_tiene_extension() {
 			return !!this.hasExtencion('agentes_ia')
 		},

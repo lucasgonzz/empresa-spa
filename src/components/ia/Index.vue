@@ -8,24 +8,29 @@
 			vez de mostrarle una pantalla rota. El gate real está en el backend (403 en
 			mostrador/*) y en el menú (routes.js).
 		-->
+		<!--
+			Mientras auth/me no resolvio (mostrador_extensiones_cargadas = false) no se dibuja
+			nada: ni el cartel ni el mostrador. hasExtencion devuelve undefined y mostrar el
+			cartel de "falta la extension" en ese instante lo hacia parpadear en cada F5.
+		-->
 		<b-alert
-		v-if="!mostrador_tiene_extension"
+		v-if="mostrador_extensiones_cargadas && !mostrador_tiene_extension"
 		show
 		variant="warning"
 		class="m-t-15">
-			Este módulo requiere la extensión del asistente IA. Comunicate con
+			Este módulo requiere la extensión Agentes de IA. Comunicate con
 			ComercioCity si querés activarla.
 		</b-alert>
 
 		<b-alert
-		v-else-if="!mostrador_es_el_dueno"
+		v-else-if="mostrador_extensiones_cargadas && !mostrador_es_el_dueno"
 		show
 		variant="warning"
 		class="m-t-15">
 			El mostrador es solo para el dueño del negocio.
 		</b-alert>
 
-		<template v-else>
+		<template v-else-if="mostrador_extensiones_cargadas">
 			<header class="mostrador__cabecera">
 				<div class="mostrador__cabecera-fila">
 					<h1 class="mostrador__titulo">Tu mostrador</h1>

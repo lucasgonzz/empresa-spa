@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="!puede_entrar_al_mostrador && addresses.length">
+	v-if="mostrador_tiene_extension && !puede_entrar_al_mostrador && addresses.length">
 
 		<stock-suggestion-modal></stock-suggestion-modal>
 		<stock-suggestion-article-modal></stock-suggestion-article-modal>
