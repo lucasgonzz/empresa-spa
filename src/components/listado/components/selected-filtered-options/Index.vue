@@ -4,9 +4,18 @@
 
 
 
-		<search-image-automatica></search-image-automatica>
+		<!--
+			Imágenes y descripciones inteligentes: las valida/genera un modelo de IA, así que
+			exigen la extensión «Agentes de IA» (agentes_ia), igual que el backend (403 sin ella).
+			El v-if va acá, en el contenedor, y no en cada disparador, para que no quede ni el
+			divisor ni el título de la sección (cada componente los trae en su raíz). hasExtencion
+			devuelve undefined mientras auth/me no resolvió: se lee como «no» y no parpadea.
+		-->
+		<search-image-automatica
+		v-if="hasExtencion('agentes_ia')"></search-image-automatica>
 
-		<search-description-automatica></search-description-automatica>
+		<search-description-automatica
+		v-if="hasExtencion('agentes_ia')"></search-description-automatica>
 
 
 		<!-- <articles-pdf-option-drop-down></articles-pdf-option-drop-down> -->

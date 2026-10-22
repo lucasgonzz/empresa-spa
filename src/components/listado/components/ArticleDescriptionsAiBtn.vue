@@ -225,10 +225,15 @@ export default {
 				this.$store.commit('auth/setMessage', '')
 				this.handle_preview_response(res.data)
 			})
-			.catch(() => {
+			.catch(error => {
 				this.loading = false
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
+				// 403 (ej: la sesion es vieja y la cuenta ya no tiene "Agentes de IA"): el interceptor
+				// global (main.js) ya mostro el mensaje del API, asi que no se lo pisa con uno generico.
+				if (error && error.response && error.response.status === 403) {
+					return
+				}
 				this.$toast.error('No se pudo generar la descripción')
 			})
 		},
@@ -305,10 +310,15 @@ export default {
 				this.$toast.success('Descripciones guardadas')
 				this.preview_visible = false
 			})
-			.catch(() => {
+			.catch(error => {
 				this.saving = false
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
+				// 403 (ej: la sesion es vieja y la cuenta ya no tiene "Agentes de IA"): el interceptor
+				// global (main.js) ya mostro el mensaje del API, asi que no se lo pisa con uno generico.
+				if (error && error.response && error.response.status === 403) {
+					return
+				}
 				this.$toast.error('No se pudieron guardar las descripciones')
 			})
 		},

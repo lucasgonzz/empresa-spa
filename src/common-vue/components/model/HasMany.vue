@@ -245,10 +245,23 @@ export default {
 		 * Si no esta declarado, devuelve null y no se renderiza nada: el HasMany se comporta
 		 * exactamente como siempre (cambio estrictamente aditivo, no afecta a ningun otro has_many).
 		 *
+		 * Gate opcional por extension: si el meta declara has_many.extra_action_if_has_extencion
+		 * (ej: 'agentes_ia'), el componente extra solo se monta cuando la cuenta tiene esa
+		 * extension. Sin la clave no cambia nada. hasExtencion devuelve undefined mientras
+		 * auth/me no resolvio: se lee como "no" y el boton no parpadea.
+		 *
 		 * @return {Function|null}
 		 */
 		extra_action_component() {
 			if (!this.prop.has_many || !this.prop.has_many.extra_action_component) {
+				return null
+			}
+
+			// Gate opcional por extension (ver docblock): oculta el componente sin dejar hueco.
+			if (
+				this.prop.has_many.extra_action_if_has_extencion
+				&& !this.hasExtencion(this.prop.has_many.extra_action_if_has_extencion)
+			) {
 				return null
 			}
 

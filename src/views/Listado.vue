@@ -61,7 +61,10 @@
 	model_name="article">
 
 		<template #model_modal_header="props">
-			<product-facts-proposal :model="props.model"></product-facts-proposal>
+			<!-- Ficha por codigo de barras: la busca un agente de IA, asi que exige "Agentes de IA" (agentes_ia). Sin la extension ni se monta (no dispara el POST article-enrichments). -->
+			<product-facts-proposal
+			v-if="hasExtencion('agentes_ia')"
+			:model="props.model"></product-facts-proposal>
 		</template>
 
 		<template #excel_drop_down_options>
