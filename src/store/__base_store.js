@@ -252,6 +252,21 @@ export default function __base_store(options = {}) {
 			// `article_pdf.js`) — nunca para el listado principal de un módulo: ahí, si el pedido
 			// se cae, el cartel tiene que seguir avisando.
 			omitir_cartel_de_conexion_en_listado: false,
+
+			// Opt-in del store concreto (22/10/2026): con `true`, el listado "Por fecha" (`from_dates`)
+			// se pide PAGINADO al servidor (`from-date/...?per_page=N&page=P`) en vez de bajar el día o
+			// el rango entero. Es el mecanismo de Ventas (`paginado_por_fecha` de `store/sale`), armado
+			// acá de forma genérica. Arranca en `false` y ningún módulo lo prende salvo el que lo
+			// necesita: para todos los demás stores de este factory no cambia nada.
+			paginar_por_fecha: false,
+
+			// `true` cuando el ÚLTIMO listado "Por fecha" que llegó vino paginado por la API (`models` como
+			// paginador de Laravel). Es lo que leen la barra de paginación (para mostrarse sin filtro
+			// activo) y la tabla (para mandar el cambio de página al endpoint del día y NO a
+			// global-search, que busca en todas las fechas): los dos son componentes comunes que solo
+			// conocen `state[model_name]`. Queda en `false` con una API vieja, que ignora `per_page` y
+			// devuelve el array entero: la respuesta se mira por su forma, no por lo que se pidió.
+			paginado_por_fecha: false,
 		}
 
 		/**
@@ -743,6 +758,15 @@ export default function __base_store(options = {}) {
 		setLoadingOptions(state, value) {
 			state.loading_options = value
 		},
+		/**
+		 * Marca si el último listado "Por fecha" vino paginado por la API (ver doc en el state).
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Boolean} value true cuando `models` es una página de un paginador de Laravel.
+		 */
+		set_paginado_por_fecha(state, value) {
+			state.paginado_por_fecha = !!value
+		},
 	}
 
 	/**
@@ -829,6 +853,12 @@ export default function __base_store(options = {}) {
 			return dispatch('_getModels')
 		},
 		_getModels({commit, state, dispatch}, payload = {}) {
+			// Listado "Por fecha" paginado por el servidor (opt-in del store, ver `state.paginar_por_fecha`):
+			// va por su propia acción. Con el flag apagado, o sin `from_dates` (Historico), este método
+			// sigue exactamente como estaba.
+			if (state.paginar_por_fecha && state.from_dates) {
+				return dispatch('_getModelsPaginadoPorFecha', payload)
+			}
 			/** Cuántas páginas ya se pidieron en esta corrida del encadenado (arranca en 1). */
 			let intentos = payload.intentos || 1
 			/**
@@ -918,6 +948,124 @@ export default function __base_store(options = {}) {
 				commit('setLoading', false)
 				console.log(err)
 			})
+		},
+		/**
+		 * Pide UNA página del listado "Por fecha" al servidor (`from-date/{desde}/{hasta?}?per_page=N&page=P`).
+		 * La llama `_getModels` cuando el store tiene `paginar_por_fecha` y `from_dates` en true.
+		 *
+		 * Dos modos, según `payload.modo`:
+		 * - 'nuevo' (default): carga nueva del día o rango (entrar a la pantalla, cambiar de día o de
+		 *   rango). Prende `loading` (skeleton) y vuelve a la página pedida (1).
+		 * - 'pagina': cambio de página desde la barra. Overlay global con mensaje; NO toca `loading`,
+		 *   así la barra de paginación no se desmonta ni parpadea.
+		 *
+		 * La respuesta se mira por su FORMA: un paginador de Laravel (`models.data`) prende
+		 * `paginado_por_fecha` y deja los números de la barra; un array (API vieja, que ignora
+		 * `per_page`) es el día entero y todo queda como antes, sin barra.
+		 *
+		 * @param {Object} context commit, state
+		 * @param {Object} payload
+		 * @param {Number} [payload.page] Página a pedir (default 1).
+		 * @param {String} [payload.modo] 'nuevo' | 'pagina'.
+		 * @returns {Promise}
+		 */
+		_getModelsPaginadoPorFecha({commit, state}, payload = {}) {
+			payload = payload || {}
+			/** Página pedida. */
+			let page = payload.page || 1
+			/** Qué indicador de carga se prende. */
+			let modo = payload.modo || 'nuevo'
+			/** Token de esta descarga: si al volver ya no es el vigente, la respuesta se descarta (gana la última pedida). */
+			let token = state.descarga_de_models_token
+
+			let url = '/api/' + generals.methods.routeString(state.model_name)
+			if (state.plural_model_name) {
+				if (state.selected_model) {
+					url += '/' + state.selected_model.id
+				} else {
+					url += '/0'
+				}
+			}
+			if (state.route_prefix != '' || state.route_prefix === 0) {
+				url += '/' + state.route_prefix
+			}
+			url += '/from-date/' + state.from_date
+			if (state.until_date != '') {
+				url += '/' + state.until_date
+			}
+			url += '?per_page=' + state.filter_per_page + '&page=' + page
+
+			if (modo == 'pagina') {
+				commit('auth/setMessage', 'Cargando ' + generals.methods.plural(state.model_name), {root: true})
+				commit('auth/setLoading', true, {root: true})
+			} else {
+				// 🔴 El orden importa: `setLoading(true)` PRIMERO y `setFilterPage` DESPUÉS. La barra de
+				// paginación está montada bajo `v-if="!loading"` y observa `filter_page` (emite `filtrar` con
+				// cada cambio); con `loading` ya en true se desmonta en el mismo tick y su watcher no llega a
+				// pedir una segunda página. Al revés, cambiar de día con la barra parada en la página 3 pedía
+				// el día dos veces (mismo hallazgo que en `sale/_getModels`).
+				commit('setLoading', true)
+				commit('setFilterPage', page)
+			}
+
+			/** Apaga los indicadores de ESTE pedido. El overlay se apaga siempre; `loading` solo si la respuesta es la vigente. */
+			let apagar_indicadores = () => {
+				if (modo == 'pagina') {
+					commit('auth/setLoading', false, {root: true})
+					commit('auth/setMessage', '', {root: true})
+				}
+				if (state.descarga_de_models_token === token) {
+					commit('setLoading', false)
+				}
+			}
+
+			return axios.get(url, {
+				skip_global_error_event: state.omitir_cartel_de_conexion_en_listado,
+			})
+			.then(res => {
+				apagar_indicadores()
+				// Respuesta de un pedido vencido (el usuario cambió de día o de página mientras viajaba): no escribe nada.
+				if (state.descarga_de_models_token !== token) {
+					return
+				}
+				let modelos = res.data.models
+				if (!modelos || Array.isArray(modelos)) {
+					// Camino viejo: array entero (API sin paginar).
+					commit('setModels', modelos)
+					commit('set_paginado_por_fecha', false)
+				} else {
+					// Paginador de Laravel.
+					commit('setModels', modelos.data)
+					commit('set_paginado_por_fecha', true)
+					// 🔴 Los números de la barra se escriben SOLO si la pantalla sigue en modo "Por fecha". Si
+					// mientras viajaba el pedido el usuario pasó al buscador o al Historico, la barra ya es de esa
+					// búsqueda: pisarla con los del día la dejaría diciendo "N resultados" del día sobre una
+					// tabla de otra cosa.
+					if (!state.is_filtered) {
+						commit('setTotalFilterPages', modelos.last_page)
+						commit('setTotalFilterResults', modelos.total)
+						commit('setFilterPage', modelos.current_page)
+					}
+				}
+			})
+			.catch(err => {
+				console.log(err)
+				apagar_indicadores()
+			})
+		},
+		/**
+		 * Cambio de página desde la barra de paginación en modo "Por fecha" paginado: pide la página que
+		 * la barra ya escribió en `filter_page`, con overlay y sin tocar `loading`. La tabla común
+		 * (`display/table/Index.vue::filtrar`) la despacha cuando `paginado_por_fecha` está prendido y no
+		 * hay filtro activo; sin ella la página se le pediría a global-search, que busca en TODAS las fechas.
+		 *
+		 * Incrementa el token de descarga antes de pedir: dos clics seguidos son dos pedidos y gana el último.
+		 *
+		 * @returns {Promise}
+		 */
+		cambiar_pagina_por_fecha({commit, state, dispatch}) {
+			commit('incrementar_descarga_de_models_token')
+			return dispatch('_getModelsPaginadoPorFecha', {page: state.filter_page, modo: 'pagina'})
 		},
 		/**
 		 * Trae la lista liviana (id + name, y lo que agregue cada endpoint) para selectores y
