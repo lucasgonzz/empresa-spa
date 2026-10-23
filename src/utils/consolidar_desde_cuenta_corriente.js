@@ -6,11 +6,11 @@
  * corriente: el footer (BtnPagoNotaCredito.vue, que ofrece el boton y valida al apretarlo), la
  * lista (List.vue, que dibuja el badge de la venta ya consolidada) y los tests.
  *
- * El endpoint que consolida es el de siempre (`POST api/sales/consolidar-facturacion`). OJO: hoy
- * NO valida la lista de ventas (`ConsolidarFacturacionHelper::validar()` esta comentada en
- * `consolidar()`), asi que la unica barrera contra consolidar dos veces una venta, o una venta que
- * ya tiene factura, es la de aca (`motivo_para_no_consolidar`). El menu "Seleccion" de Ventas
- * tiene esas mismas comprobaciones comentadas.
+ * El endpoint que consolida es el de siempre (`POST api/sales/consolidar-facturacion`) y es el que
+ * manda: desde el 23/10/2026 valida la lista (`ConsolidarFacturacionHelper::validar()`) y rechaza
+ * con 422 una venta ya consolidada, con factura autorizada, de otro cliente o inexistente. Lo de
+ * aca (`motivo_para_no_consolidar`) es la primera linea: avisa antes de abrir el modal, nombrando
+ * la venta, en vez de dejar que el usuario complete el formulario para recibir el rechazo.
  */
 
 /**
