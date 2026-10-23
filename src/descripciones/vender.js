@@ -16,7 +16,7 @@ export default {
 
 	'venta-sucursal': {
 		titulo: 'Sucursal',
-		que_hace: 'Elegís desde qué sucursal sale la mercadería de esta venta. Aparece cuando el negocio tiene dos o más sucursales, y viene elegida la tuya o, si no tenés una asignada, la sucursal principal.',
+		que_hace: 'Elegís desde qué sucursal sale la mercadería de esta venta. Aparece cuando el negocio tiene dos o más sucursales; viene elegida la de tu usuario o la última que se usó en este equipo. Con una sola sucursal no aparece: la venta sale de esa sucursal.',
 		repercute: [
 			'El stock se descuenta del depósito de esta sucursal, no del total del negocio.',
 		],

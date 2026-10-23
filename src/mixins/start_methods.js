@@ -420,26 +420,40 @@ export default {
 			this.usar_la_principal_si_vender_no_tiene_sucursal()
 		},
 		/**
-		 * Si Vender quedó sin sucursal (ni la del usuario ni la cookie sirvieron), le pone la PRINCIPAL.
+		 * Si el negocio tiene UNA sola sucursal y Vender quedó sin sucursal (ni la del usuario ni la
+		 * cookie sirvieron), le pone esa sucursal.
 		 *
-		 * Misión sucursal-siempre (23/10/2026, D6): con UNA sola sucursal Vender no muestra el selector
+		 * Misión sucursal-siempre (23/10/2026, D6): con una sola sucursal Vender no muestra el selector
 		 * (D1), así que nadie podría elegirla; antes, sin cookie ni `user.address_id`, frenaba con
-		 * "Indique la SUCURSAL" y un empleado sin `vender.cambiar_address_id` no tenía cómo salir. Con
-		 * una sola sucursal la principal ES esa, y queda elegida aunque el empleado no tenga el permiso
-		 * de cambiarla (no hay a qué cambiarla). Con dos o más se respeta lo de siempre (primero la del
-		 * usuario, después la cookie) y la principal reemplaza al 0 de antes: el selector se sigue
-		 * viendo y quien tenga el permiso la cambia.
+		 * "Indique la SUCURSAL" y un empleado sin `vender.cambiar_address_id` no tenía cómo salir. Queda
+		 * elegida aunque el empleado no tenga el permiso de cambiarla: no hay a qué cambiarla.
+		 *
+		 * 🔴 Con DOS o más no se hace nada, a propósito: Vender queda en 0 y "Indique la SUCURSAL" frena,
+		 * como siempre. Poner la principal haría que un empleado sin `user.address_id` ni permiso de
+		 * cambiar la sucursal vendiera contra la principal sin poder corregirlo aunque esté en otra, y
+		 * fijaría una cookie que cambia el filtro de clientes y las cajas del cobro.
+		 *
+		 * Tampoco se toca una venta guardada que se está editando (mismo criterio que deshabilita el
+		 * selector en Address.vue): su sucursal es la que tenía, aunque sea ninguna.
 		 *
 		 * La cookie se escribe igual que en `init_vender_address_id` porque la caja por defecto la lee
 		 * de la COOKIE (mixins/vender/cajas.js): Vender y cookie tienen que coincidir.
 		 *
-		 * Mientras las sucursales no cargaron no hay principal y no hace nada: lo vuelve a intentar
+		 * Mientras las sucursales no cargaron no hace nada: lo vuelve a intentar
 		 * `validar_address_id_de_vender` cuando llegan.
 		 *
 		 * @returns {void}
 		 */
 		usar_la_principal_si_vender_no_tiene_sucursal() {
 			if (this.$store.state.vender.address_id) {
+				return
+			}
+
+			if (this.$store.getters['vender/previus_sales/editando_venta_previa']) {
+				return
+			}
+
+			if (this.$store.getters['address/sucursales'].length !== 1) {
 				return
 			}
 
@@ -523,7 +537,8 @@ export default {
 			/*
 				Misión sucursal-siempre (D6): al arrancar, `init_vender_address_id` corre ANTES de que
 				lleguen las sucursales y, sin usuario ni cookie, deja Vender en 0. Esta es la primera
-				pasada con las sucursales cargadas: si Vender sigue sin sucursal, toma la principal.
+				pasada con las sucursales cargadas: si el negocio tiene UNA sola sucursal y Vender sigue
+				sin sucursal, toma esa (con dos o más no hace nada; ver el método).
 			*/
 			if (this.user) {
 				this.usar_la_principal_si_vender_no_tiene_sucursal()
