@@ -23,6 +23,11 @@ export default {
 
 			items.push({name: 'todas'})
 
+			// Una solapa por sucursal desde la segunda (misión sucursal-siempre, 23/10/2026, D1).
+			if (!this.muestra_sucursales) {
+				return items
+			}
+
 			this.addresses.forEach(address => {
 				items.push({
 					name: address.street

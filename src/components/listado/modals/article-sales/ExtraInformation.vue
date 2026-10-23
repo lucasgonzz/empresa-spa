@@ -145,6 +145,11 @@ export default {
 		 */
 		sucursales_con_ventas() {
 			let items = []
+			// El reparto por sucursal se muestra desde la segunda (misión sucursal-siempre,
+			// 23/10/2026, D1): con una sola repetiría el total.
+			if (!this.muestra_sucursales) {
+				return items
+			}
 			this.sucursales.forEach(sucursal => {
 				if (sucursal && sucursal.cantidad_ventas > 0) {
 					items.push(sucursal)

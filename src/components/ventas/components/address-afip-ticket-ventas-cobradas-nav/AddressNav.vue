@@ -23,9 +23,13 @@ export default {
 			if (this.can('sale.index.addresses.all')) {
 
 				items.push({street: 'todas'})
-				this.addresses.forEach(address => {
-					items.push(this.countSales(address))
-				})
+				// Una solapa por sucursal desde la segunda (misión sucursal-siempre, 23/10/2026, D1):
+				// con una sola queda "todas", igual que en un negocio sin sucursales.
+				if (this.muestra_sucursales) {
+					this.addresses.forEach(address => {
+						items.push(this.countSales(address))
+					})
+				}
 
 			} else if (this.can('sale.index.addresses.only_your')) {
 

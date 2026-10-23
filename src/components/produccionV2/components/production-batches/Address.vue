@@ -1,5 +1,11 @@
 <template>
-	<div>
+	<!--
+		Depósitos del lote: desde la segunda sucursal (misión sucursal-siempre, 23/10/2026, D1).
+		Con una sola no hay entre qué elegir: el movimiento sale sin depósito y la API usa la
+		principal (D3). Antes se veían también sin sucursales, como dos selects vacíos.
+	-->
+	<div
+	v-if="muestra_sucursales">
 		<b-form-group
 		:disabled="disabled"
 		label="Deposito insumos">

@@ -222,6 +222,12 @@ export default {
 		hay_deposito_configurado() {
 			let self = this
 
+			// Con una sola sucursal el stock de "un depósito" es el total: no hay nada que aclarar
+			// (misión sucursal-siempre, 23/10/2026, D1).
+			if (!this.muestra_sucursales) {
+				return false
+			}
+
 			return this.models.some(function(model) {
 				if (self.tiene_deposito(model.address_id)) {
 					return true
@@ -283,6 +289,12 @@ export default {
 		 */
 		texto_de_deposito(address_id) {
 			if (!this.tiene_deposito(address_id)) {
+				return ''
+			}
+
+			// Con una sola sucursal su stock es el total: no se nombra el depósito (misión
+			// sucursal-siempre, 23/10/2026, D1).
+			if (!this.muestra_sucursales) {
 				return ''
 			}
 
