@@ -392,7 +392,7 @@ const AVISO_YA_ELIMINADA = 'Esa sucursal ya estaba eliminada: la sacamos de la l
 
 /* Cómo se nombra cada marca que devuelve la API en `marcas` (los nombres de los campos de la sucursal). */
 const TEXTO_DE_MARCAS = {
-	default_address: 'Es el depósito por defecto.',
+	default_address: 'Es la sucursal principal.',
 	es_deposito_madre: 'Es el depósito madre.',
 	es_deposito_origen: 'Es el depósito de origen para sugerencias.',
 }
