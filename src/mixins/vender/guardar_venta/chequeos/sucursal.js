@@ -45,8 +45,15 @@ export default {
 		 */
 		check_sucursal(comprobante = 'de la venta') {
 
+			/*
+				Misión sucursal-siempre (23/10/2026, D1 y D6): se exige solo desde la SEGUNDA sucursal,
+				que es cuando el selector está a la vista. Con una sola, Vender ya la eligió sola; y si
+				justo no llegó a elegirla (las sucursales todavía no cargaron), la venta sale sin
+				sucursal y la API la manda a la principal (D3), que es la única. Frenar acá con un
+				selector escondido dejaría al vendedor sin salida.
+			*/
 			// if (this.address_id == 0 && this.articulos_con_depositos.length) {
-			if (this.address_id == 0 && this.addresses.length) {
+			if (this.address_id == 0 && this.muestra_sucursales) {
 				// this.$toast.error('Hay '+this.articulos_con_depositos.length+' articulos con stock en diferentes depositos')
 				this.$toast.error('Indique la SUCURSAL ' + comprobante + ' para restar el stock en los depositos que correspondan')
 				return false

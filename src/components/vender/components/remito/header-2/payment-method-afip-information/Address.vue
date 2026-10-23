@@ -1,6 +1,11 @@
 <template>
+	<!--
+		Misión sucursal-siempre (23/10/2026, D1 y D6): el selector aparece desde la SEGUNDA sucursal.
+		Con una sola, Vender la elige sola (start_methods::usar_la_principal_si_vender_no_tiene_sucursal)
+		y la venta igual viaja con su address_id: la pantalla queda como la de un negocio sin sucursales.
+	-->
 	<b-input-group
-	v-if="addresses.length >= 1"
+	v-if="muestra_sucursales"
 	class="vender-address"
 	:class="{'vender-address--con-ajuste': ajuste_vigente}"
 	prepend="Sucursal">

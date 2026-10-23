@@ -417,6 +417,40 @@ export default {
 				}
 			}
 
+			this.usar_la_principal_si_vender_no_tiene_sucursal()
+		},
+		/**
+		 * Si Vender quedó sin sucursal (ni la del usuario ni la cookie sirvieron), le pone la PRINCIPAL.
+		 *
+		 * Misión sucursal-siempre (23/10/2026, D6): con UNA sola sucursal Vender no muestra el selector
+		 * (D1), así que nadie podría elegirla; antes, sin cookie ni `user.address_id`, frenaba con
+		 * "Indique la SUCURSAL" y un empleado sin `vender.cambiar_address_id` no tenía cómo salir. Con
+		 * una sola sucursal la principal ES esa, y queda elegida aunque el empleado no tenga el permiso
+		 * de cambiarla (no hay a qué cambiarla). Con dos o más se respeta lo de siempre (primero la del
+		 * usuario, después la cookie) y la principal reemplaza al 0 de antes: el selector se sigue
+		 * viendo y quien tenga el permiso la cambia.
+		 *
+		 * La cookie se escribe igual que en `init_vender_address_id` porque la caja por defecto la lee
+		 * de la COOKIE (mixins/vender/cajas.js): Vender y cookie tienen que coincidir.
+		 *
+		 * Mientras las sucursales no cargaron no hay principal y no hace nada: lo vuelve a intentar
+		 * `validar_address_id_de_vender` cuando llegan.
+		 *
+		 * @returns {void}
+		 */
+		usar_la_principal_si_vender_no_tiene_sucursal() {
+			if (this.$store.state.vender.address_id) {
+				return
+			}
+
+			let principal = this.$store.getters['address/principal']
+			if (!principal) {
+				return
+			}
+
+			console.log('seteando VENDER address_id con la sucursal principal')
+			this.$store.commit('vender/setAddressId', principal.id)
+			this.$cookies.set('address_id', principal.id, -1)
 		},
 		/**
 		 * ¿Esta sucursal sigue existiendo? Mira `address.models`.
@@ -484,6 +518,15 @@ export default {
 
 			if (cookie && !this.address_id_es_vigente(cookie)) {
 				this.$cookies.remove('address_id')
+			}
+
+			/*
+				Misión sucursal-siempre (D6): al arrancar, `init_vender_address_id` corre ANTES de que
+				lleguen las sucursales y, sin usuario ni cookie, deja Vender en 0. Esta es la primera
+				pasada con las sucursales cargadas: si Vender sigue sin sucursal, toma la principal.
+			*/
+			if (this.user) {
+				this.usar_la_principal_si_vender_no_tiene_sucursal()
 			}
 
 			return true

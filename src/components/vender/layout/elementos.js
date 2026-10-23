@@ -201,8 +201,11 @@ export const ELEMENTOS = [
 		obligatorio: true,
 		motivo_obligatorio: MOTIVO_NO_SE_GUARDA,
 		entrada_de_articulos: false,
-		/* Address.vue: v-if="addresses.length >= 1" */
-		disponible: function (vm) { return cantidad_en_store(vm, 'address') >= 1 },
+		/*
+			Address.vue: v-if="muestra_sucursales". Misión sucursal-siempre (23/10/2026, D1): el
+			selector aparece desde la SEGUNDA sucursal; con una sola, Vender la elige sola.
+		*/
+		disponible: function (vm) { return !!(vm && vm.$store && vm.$store.getters['address/muestra_sucursales']) },
 		aparece_cuando: null,
 	},
 	{

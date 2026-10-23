@@ -205,7 +205,10 @@ export default {
 				  set_caja_por_defecto), asi que sucursal y cookie tienen que volver a coincidir:
 				  con la sucursal de otra venta en el store y la cookie en la original, el stock se
 				  descontaba de un deposito y la caja era la del otro. Primero 0, para que una
-				  cuenta sin sucursal configurada ni cookie no arrastre la anterior.
+				  cuenta sin sucursal configurada ni cookie no arrastre la anterior: desde la
+				  mision sucursal-siempre (23/10/2026, D6) esa cuenta cae en la sucursal
+				  principal (start_methods::usar_la_principal_si_vender_no_tiene_sucursal), que
+				  con una sola sucursal es la unica y no se puede elegir en pantalla.
 				- send_mail: tildado en la venta anterior (o restaurado por la edicion), quedaba
 				  tildado para la siguiente y el mail al cliente salia sin que nadie lo pidiera.
 			*/

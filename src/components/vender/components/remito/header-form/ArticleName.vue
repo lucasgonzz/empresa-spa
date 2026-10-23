@@ -166,7 +166,9 @@ export default {
 		        is_stock: true,
 			})
 
-			if (this.addresses.length) {
+			// Columnas de stock por sucursal: desde la segunda (misión sucursal-siempre, D1). Con una
+			// sola, su stock es la columna Stock de arriba.
+			if (this.muestra_sucursales) {
 
 				this.addresses.forEach(address => {
 					props.push({

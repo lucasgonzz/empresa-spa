@@ -349,8 +349,9 @@ address_store.actions.dar_por_eliminada = function ({ commit, dispatch }, payloa
  *    próximo login, así que la sesión actual y la siguiente coinciden.
  *  - `vender.address_id` y la cookie: si eran la borrada, toman la sucursal NUEVA del usuario
  *    (misma regla que `init_vender_address_id` al loguearse: primero la del usuario). Si el usuario
- *    no tiene ninguna, Vender vuelve a 0 y la cookie se borra: Vender pide "Indique la SUCURSAL"
- *    en vez de seguir usando el id viejo. Vender y cookie se mantienen siempre iguales porque
+ *    no tiene ninguna, Vender vuelve a 0 y la cookie se borra en vez de seguir usando el id viejo;
+ *    desde la misión sucursal-siempre (23/10/2026, D6) el watcher de `address.models` de
+ *    mixins/start_methods.js le pone después la sucursal principal. Vender y cookie se mantienen siempre iguales porque
  *    mixins/vender/cajas.js elige la caja por defecto leyendo la COOKIE, no el store.
  *  - Si Vender o la cookie apuntaban a OTRA sucursal (válida), no se tocan.
  *  - `employee`: se vuelve a pedir, porque la API les cambió el `address_id` a los empleados que
