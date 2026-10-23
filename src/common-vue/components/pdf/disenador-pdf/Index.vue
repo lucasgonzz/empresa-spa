@@ -1401,7 +1401,9 @@ export default {
 			}
 
 			let colocados = izquierda.concat(derecha)
-			this.emisor_paleta = emisor_chip_keys(this.es_fiscal).filter(function (key) {
+			/* Con un chip por sucursal del negocio (misión pdf-direccion-sucursales) */
+			let addresses = this.$store.state.address ? this.$store.state.address.models : []
+			this.emisor_paleta = emisor_chip_keys(this.es_fiscal, addresses).filter(function (key) {
 				return colocados.indexOf(key) === -1
 			})
 
