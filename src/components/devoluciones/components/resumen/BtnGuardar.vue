@@ -291,7 +291,9 @@ export default {
 			let ok = true
 			if (
 				this.regresar_stock
-				&& this.addresses.length
+				// Desde la segunda sucursal (misión sucursal-siempre, D1): con una sola no hay select y
+				// la API usa la principal.
+				&& this.muestra_sucursales
 				&& !this.address_id
 			) {
 				this.$toast.error('Indique el deposito destino')
@@ -359,7 +361,9 @@ export default {
 
 			if (
 				this.regresar_stock
-				&& this.addresses.length
+				// Desde la segunda sucursal (misión sucursal-siempre, D1): con una sola no hay select y
+				// la API usa la principal.
+				&& this.muestra_sucursales
 				&& !this.address_id
 			) {
 				this.$toast.error('Indicá el depósito del que sale la mercadería')

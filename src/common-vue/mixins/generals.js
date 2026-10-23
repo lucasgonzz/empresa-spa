@@ -1727,10 +1727,12 @@ export default {
 		 * @returns {Boolean} false corta el guardado y deja el aviso en el alert del modal.
 		 */
 		check_pedido_puede_avanzar_de_estado() {
-			/** Depositos cargados en el comercio. Sin ninguno, el campo no aplica. */
-			let hay_depositos = this.$store.state.address.models.length
-
-			if (!hay_depositos || this.model.address_id) {
+			/*
+				Misión sucursal-siempre (23/10/2026, D1): el depósito se exige desde la SEGUNDA
+				sucursal. Con una sola no hay nada que elegir: el pedido sin depósito crea la venta sin
+				sucursal y la API mueve el stock en la principal (D3), que es la única.
+			*/
+			if (!this.muestra_sucursales || this.model.address_id) {
 				return true
 			}
 

@@ -721,6 +721,22 @@ export default {
         pending_vencido(pending) {
             return moment(pending.fecha_realizacion).isBefore(moment().startOf('day'))
         },
+        /**
+         * v_if_function de los campos "Deposito" de los formularios (provider_order, promocion_vinoteca):
+         * se muestran desde la SEGUNDA sucursal del negocio.
+         *
+         * Misión sucursal-siempre (23/10/2026, D1): con una sola sucursal el campo no se ve ni se
+         * exige (common-vue/components/model/Index.vue no exige un campo que no se muestra), viaja en
+         * 0 como en un negocio sin sucursales y la API usa la principal (D3).
+         *
+         * Recibe (prop, model) como todo v_if_function, pero no los necesita: depende solo de cuántas
+         * sucursales tiene el negocio.
+         *
+         * @returns {Boolean}
+         */
+        mostrar_campo_de_sucursal() {
+            return this.muestra_sucursales
+        },
         show_btn_repartir_stock(prop, article) {
             if (article.id
                 && !article.addresses.length 

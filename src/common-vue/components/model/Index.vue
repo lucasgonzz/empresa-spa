@@ -904,9 +904,23 @@ export default {
 
 		        this.properties.forEach(prop => {
 		            if (prop.required) {
+		            	/*
+		            		Misión sucursal-siempre (23/10/2026): un campo que el formulario NO muestra (su
+		            		v_if_function da false) no se exige, porque no hay cómo completarlo. Es lo que
+		            		saca el "Deposito" de las compras y de las promociones con una sola sucursal
+		            		(mostrar_campo_de_sucursal en src/mixins/model_functions.js).
+		            	*/
+		            	let oculto_por_v_if = !!(
+		            		prop.v_if_function
+		            		&& typeof this[prop.v_if_function] == 'function'
+		            		&& !this[prop.v_if_function](prop, this.model)
+		            	)
 		            	if (
-		            		typeof prop.required_if_models_length != 'undefined'
-		            		&& !this.modelsStoreFromName(prop.required_if_models_length).length
+		            		oculto_por_v_if
+		            		|| (
+		            			typeof prop.required_if_models_length != 'undefined'
+		            			&& !this.modelsStoreFromName(prop.required_if_models_length).length
+		            		)
 		            	) {
 
 		            	} else {

@@ -122,6 +122,9 @@ export default {
 			type: 'select',
 			use_store_models: true,
 			select_prop_name: 'street',
+			// En el formulario, desde la segunda sucursal (misión sucursal-siempre, 23/10/2026, D1): con
+			// una sola, el pedido sin depósito crea la venta sin sucursal y la API usa la principal.
+			v_if_function: 'mostrar_campo_de_sucursal',
 		},
 		{
 			text: 'Fecha entrega',
