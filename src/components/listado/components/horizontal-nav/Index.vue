@@ -49,7 +49,7 @@
 
 		<!--
 			🔴 Estos dos NO son controles y por eso viven FUERA del grupo (mision 35, 12/8/2026).
-			Cada uno renderiza un `<div v-if="muestra_sucursales">` cuyo `<modal-button>` esta
+			Cada uno renderiza un `<div v-if="addresses.length">` cuyo `<modal-button>` esta
 			comentado desde que sus dos acciones pasaron a ser items del dropdown de
 			`DepositButtons`: adentro solo quedan modales. O sea que eran DOS items flex de ancho
 			cero en medio de la fila, y el `gap` se aplica a los dos lados de cada item.

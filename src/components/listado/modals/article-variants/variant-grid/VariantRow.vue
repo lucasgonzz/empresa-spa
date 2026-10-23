@@ -67,7 +67,7 @@
 		@change="updateVariant('Guardando precio')"></b-form-input>
 	</td>
 
-	<!-- Sin depositos (negocio sin sucursales o con una sola, ver addresses() de Index.vue): un unico stock global para la variante -->
+	<!-- Sin depositos (negocio sin sucursales): un unico stock global para la variante -->
 	<td
 	v-if="!addresses.length"
 	class="variant-row__stock-cell">
