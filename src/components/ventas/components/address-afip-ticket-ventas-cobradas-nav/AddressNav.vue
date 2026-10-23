@@ -35,7 +35,9 @@ export default {
 
 				let employee_address = this.addresses.find(address => address.id == this.user.address_id)
 
-				if (typeof employee_address != 'undefined') {
+				// Misma regla (D1): con menos de dos sucursales no hay solapa, como en un negocio sin
+				// sucursales, donde esta lista quedaba vacía.
+				if (this.muestra_sucursales && typeof employee_address != 'undefined') {
 					items.push(this.countSales(employee_address))
 				}
 			}
