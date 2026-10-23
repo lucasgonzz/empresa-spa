@@ -9,10 +9,99 @@ import __base_store from '@/store/__base_store'
  * - Usa el comportamiento estándar del base, salvo la mutación `add` (ver abajo).
  * - Cualquier ajuste futuro se puede hacer vía overrides en `state/mutations/actions`.
  */
+/**
+ * ¿Esta marca de la API está prendida? Un 1 / true real: el "0" en texto es truthy en JS y no cuenta.
+ *
+ * @param {*} valor Valor crudo de la columna (default_address, es_deposito_madre).
+ * @returns {Boolean}
+ */
+function marca_prendida(valor) {
+	return !!valor && valor != '0'
+}
+
+/**
+ * Las sucursales del negocio que hay en `models`.
+ *
+ * Misión sucursal-siempre (23/10/2026): la tabla `addresses` también guarda domicilios de
+ * compradores de la tienda vieja (`buyer_id`). La API de empresa ya filtra por dueño, pero el conteo
+ * de sucursales decide qué interfaz se ve, así que se descarta defensivamente cualquier fila que
+ * traiga un comprador: contar uno de más le mostraría a un negocio con UNA sucursal todo lo de dos.
+ *
+ * @param {Object} state Estado del módulo.
+ * @returns {Array}
+ */
+function sucursales_del_negocio(state) {
+	if (!Array.isArray(state.models)) {
+		return []
+	}
+	return state.models.filter(sucursal => sucursal && !sucursal.buyer_id)
+}
+
 let address_store = __base_store({
 	/** Estado propio del modelo `address`. */
 	state: {
 		model_name: 'address',
+	},
+	/**
+	 * Misión sucursal-siempre (23/10/2026, decisión D1 del plan): todo negocio trabaja con al menos
+	 * una sucursal, pero la INTERFAZ de sucursales (selector de Vender, columnas por depósito,
+	 * movimientos entre depósitos, filtros por sucursal…) aparece recién desde la SEGUNDA. Con una
+	 * sola, la pantalla se comporta exactamente como la de un negocio sin sucursales y la API dirige
+	 * a la principal todo lo que llega sin sucursal (D3 y D15 de empresa-api).
+	 *
+	 * Antes cada componente decidía con `address.models.length >= 1`; ahora todos le preguntan a
+	 * estos getters (y al computed global `muestra_sucursales` de mixins/generals.js, que los lee),
+	 * así el criterio vive en un solo lugar.
+	 */
+	getters: {
+		/**
+		 * Sucursales del negocio (sin domicilios de compradores).
+		 *
+		 * @param {Object} state
+		 * @returns {Array}
+		 */
+		sucursales(state) {
+			return sucursales_del_negocio(state)
+		},
+		/**
+		 * ¿Se muestra la interfaz de sucursales? Solo con dos o más.
+		 *
+		 * @param {Object} state
+		 * @param {Object} getters
+		 * @returns {Boolean}
+		 */
+		muestra_sucursales(state, getters) {
+			return getters.sucursales.length >= 2
+		},
+		/**
+		 * La sucursal principal (D2): la que tiene `default_address`, que empresa-api garantiza
+		 * única por dueño. Si por algún motivo no viene ninguna marcada (una API vieja, o el dato
+		 * todavía sin migrar), la madre; y si tampoco, la de menor id, que es el mismo orden de
+		 * respaldo que usa la migración de datos de la API. null si el negocio no tiene sucursales
+		 * (o todavía no cargaron).
+		 *
+		 * @param {Object} state
+		 * @param {Object} getters
+		 * @returns {Object|null}
+		 */
+		principal(state, getters) {
+			let sucursales = getters.sucursales
+			if (!sucursales.length) {
+				return null
+			}
+
+			let principal = sucursales.find(sucursal => marca_prendida(sucursal.default_address))
+			if (principal) {
+				return principal
+			}
+
+			principal = sucursales.find(sucursal => marca_prendida(sucursal.es_deposito_madre))
+			if (principal) {
+				return principal
+			}
+
+			return sucursales.reduce((menor, sucursal) => Number(sucursal.id) < Number(menor.id) ? sucursal : menor)
+		},
 	},
 })
 
@@ -50,11 +139,36 @@ let add_del_factory = address_store.mutations.add
 address_store.mutations.add = function (state, value) {
 	add_del_factory(state, value)
 
-	// Defensivo contra un "0" en texto (truthy en JS): solo cuenta como madre un 1 / true real.
-	if (!value || !value.es_deposito_madre || value.es_deposito_madre == '0') {
+	if (!value) {
 		return
 	}
 
+	// Defensivo contra un "0" en texto (truthy en JS): solo cuenta como madre un 1 / true real.
+	if (marca_prendida(value.es_deposito_madre)) {
+		apagar_marca_en_las_demas(state, value, 'es_deposito_madre')
+	}
+
+	/*
+		Misión sucursal-siempre (23/10/2026, D2): la sucursal principal (`default_address`) también es
+		UNA sola por dueño y la API desmarca las demás al guardar. Mismo problema que el madre: sin
+		esto el ABM seguía mostrando dos sucursales "principales" hasta recargar, y el getter
+		`principal` podía elegir la vieja.
+	*/
+	if (marca_prendida(value.default_address)) {
+		apagar_marca_en_las_demas(state, value, 'default_address')
+	}
+}
+
+/**
+ * Apaga una marca única (depósito madre, sucursal principal) en todas las copias en memoria de las
+ * sucursales que no son la que se acaba de guardar.
+ *
+ * @param {Object} state Estado del módulo.
+ * @param {Object} value Sucursal que se acaba de guardar y quedó con la marca.
+ * @param {String} columna 'es_deposito_madre' o 'default_address'.
+ * @returns {void}
+ */
+function apagar_marca_en_las_demas(state, value, columna) {
 	/** Copias de sucursales en memoria que pueden tener el tilde viejo. */
 	let sucursales = []
 	if (Array.isArray(state.models)) {
@@ -80,8 +194,8 @@ address_store.mutations.add = function (state, value) {
 		}
 		// Solo se apagan las que hoy tienen el tilde: la clave ya existe en el objeto y la
 		// asignación directa es reactiva (no hace falta Vue.set).
-		if (sucursal.id != value.id && sucursal.es_deposito_madre) {
-			sucursal.es_deposito_madre = 0
+		if (sucursal.id != value.id && marca_prendida(sucursal[columna])) {
+			sucursal[columna] = 0
 		}
 	})
 }

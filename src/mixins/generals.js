@@ -22,7 +22,33 @@ import { estado_de_iva, estado_de_partida_de_iva, precio_del_item_incluye_iva, a
 export default {
     computed: {
         has_online() {
-            return this.can('order.index') 
+            return this.can('order.index')
+        },
+        /**
+         * ¿Se muestra la interfaz de sucursales? Solo cuando el negocio tiene DOS o más.
+         *
+         * Misión sucursal-siempre (23/10/2026, D1): todo negocio pasa a tener al menos una sucursal,
+         * pero con una sola la pantalla se comporta como la de siempre "sin sucursales" (sin selector
+         * en Vender, sin columnas por depósito, sin movimientos entre depósitos) y la API dirige a la
+         * principal lo que llega sin sucursal. Es un computed global para que cada bifurcación de
+         * interfaz lea el mismo criterio (getter address/muestra_sucursales) en vez de repetir
+         * `addresses.length >= 1`.
+         *
+         * 🔴 Solo para decidir QUÉ SE VE. Lo que es dato (mandar el address_id de una venta, leer el
+         * pivot de un artículo) no se apaga con una sola sucursal.
+         *
+         * @returns {Boolean}
+         */
+        muestra_sucursales() {
+            return this.$store.getters['address/muestra_sucursales']
+        },
+        /**
+         * La sucursal principal del negocio (ver el getter address/principal), o null.
+         *
+         * @returns {Object|null}
+         */
+        sucursal_principal() {
+            return this.$store.getters['address/principal']
         },
         user_configuration() {
             if (this.is_owner) {
