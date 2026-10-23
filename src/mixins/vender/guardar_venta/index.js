@@ -496,6 +496,15 @@ export default {
 			.then(() => {
 				guardado_offline_en_curso = false
 				/*
+					"Imprimir" de Vender imprime la ultima venta confirmada por el servidor
+					(vender.sale y, si no, ultima_venta_sesion). Despues de una venta sin conexion esa
+					es la venta ANTERIOR: el vendedor le daba al cliente el comprobante de otra venta.
+					Una venta guardada en el equipo todavia no tiene comprobante, asi que se deja sin
+					venta para imprimir hasta la proxima que guarde el servidor.
+				*/
+				this.$store.commit('vender/setSale', null)
+				this.$store.commit('vender/set_ultima_venta_sesion', null)
+				/*
 					La venta YA esta en el equipo. Si limpiar Vender falla (un catalogo vacio sin
 					conexion, por ejemplo), eso no puede caer en el catch de abajo, que le diria al
 					vendedor que no se guardo y lo llevaria a cargarla de nuevo: dos ventas.
