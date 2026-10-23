@@ -17,6 +17,12 @@ export default {
 		 * este visible (mision procesos-en-segundo-plano, 18/9/2026).
 		 */
 		tarjeta_visible: false,
+		/**
+		 * true cuando los catalogos en memoria salieron de la copia del equipo (se entro sin
+		 * conexion). Lo lee y lo escribe download-resources/Index.vue: ver el computed del mismo
+		 * nombre alla (misión ingreso-sin-internet, 23/10/2026).
+		 */
+		catalogos_del_equipo: false,
 	},
 	mutations: {
 		setVisibility(state) {
@@ -53,6 +59,10 @@ export default {
 		 */
 		cerrar_panel(state) {
 			state.visibility = false
+		},
+		/* Ver el comentario de `catalogos_del_equipo` en el state. */
+		set_catalogos_del_equipo(state, value) {
+			state.catalogos_del_equipo = !!value
 		},
 		setStartDownload(state) {
 			state.start_download = !state.start_download
