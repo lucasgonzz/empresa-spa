@@ -1469,6 +1469,15 @@ export default {
 			dias_alerta_venta_no_cobrada_personalizado: state.dias_alerta_venta_no_cobrada_personalizado,
 			// Array de auditoría completo de acciones realizadas durante la venta.
 			log: state.sale_log,
+			/*
+				Identificador de este intento de guardado (misión ingreso-sin-internet,
+				23/10/2026). Si este POST se queda sin respuesta, guardar_venta_online() guarda la
+				venta en el equipo con el MISMO identificador, y SaleController::store() devuelve la
+				que ya existe en vez de crear otra si este POST sí había llegado. Sin `venta_offline`
+				en el cuerpo, la guarda anti doble clic de 5 segundos del backend sigue corriendo
+				igual que siempre.
+			*/
+			offline_uuid: info && info.offline_uuid ? info.offline_uuid : undefined,
 		}, {
 			/*
 				El aviso global del interceptor de main.js se apaga para este POST: el catch de

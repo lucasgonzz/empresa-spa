@@ -40,6 +40,11 @@
             y aparece sola.
         -->
         <descripcion-de-control></descripcion-de-control>
+        <!--
+            Aviso fijo de "Sin conexión" y de las ventas guardadas en el equipo que todavía no
+            subieron (misión ingreso-sin-internet, 23/10/2026). Se gatea solo con el store.
+        -->
+        <aviso-sin-conexion></aviso-sin-conexion>
         <offline-articles-progress
         :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
@@ -162,6 +167,8 @@ import start_methods from '@/mixins/start_methods'
 import broadcast from '@/mixins/broadcast'
 import check_version from '@/mixins/check_version'
 import offline from '@/offline/index'
+import db from '@/offline/db'
+import AvisoSinConexion from '@/components/common/AvisoSinConexion'
 import { apply_dark_mode_class, store_dark_mode } from '@/utils/dark_mode'
 
 /**
@@ -192,6 +199,8 @@ export default {
         TiendaMensajesSidebarHost,
         DescripcionDeControl,
         AppInstaladaVieja,
+        // Import estático: tiene que poder dibujarse sin conexión aunque su chunk no haya bajado.
+        AvisoSinConexion,
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
@@ -366,6 +375,149 @@ export default {
                 this.$router.replace({name: 'login'}).catch(() => {})
             }
         },
+        /**
+         * Arranque de una sesión confirmada por el servidor: la cadena de pedidos del inicio, la
+         * navegación a la pantalla que corresponde y los canales en vivo.
+         *
+         * Era el cuerpo del watch de `authenticated`; se sacó a un método (misión
+         * ingreso-sin-internet, 23/10/2026) porque ahora lo corren dos momentos: el inicio de
+         * sesión de siempre y la vuelta de la conexión cuando se había entrado sin internet con la
+         * sesión guardada en el equipo (`salir_del_modo_sin_conexion()` del mixin offline).
+         *
+         * @param {Object} opciones `{desde_sin_conexion: true}` cuando viene de la vuelta de la
+         *                          conexión: no se navega (el usuario sigue en la pantalla en la
+         *                          que estaba, quizá a mitad de una venta).
+         * @returns {void}
+         */
+        arrancar_sesion(opciones) {
+            /** ¿Es la vuelta de la conexión de una sesión restaurada desde el equipo? */
+            let desde_sin_conexion = Boolean(opciones && opciones.desde_sin_conexion)
+
+            /*
+                🔴 Encadenadas, una atras de otra, y no las ~15 juntas en paralelo contra la
+                API recien autenticada: esa rafaga es la causa raiz del toast
+                "Unauthenticated." apilado que reporto golonorte el 11/9/2026, al rebotar de
+                sesion entre dos frentes del VPS (mismo mecanismo que debe_cambiar_de_version
+                del watch de authenticated, pero para el caso en que NO hay que cambiar de
+                frente). Cada eslabon atrapa su propio error para que uno que falle no le tape
+                el turno al que sigue, y la promesa completa SIEMPRE resuelve -- nunca rechaza.
+
+                Se guarda en auth/arranque_en_curso ANTES de checkPermissionForCurrentRoute():
+                esa es la que puede navegar a /reportes en este mismo tick si esa pantalla es
+                el aterrizaje por defecto, y los widgets de Reportes -- en su propio created()
+                -- deciden si encadenan su fetch detras de esta señal o lo disparan ya mismo
+                mirando si esto esta seteado (store/reportes/index.js).
+            */
+            let arranque = this.callMethods()
+            .catch(err => console.log(err))
+            .then(() => this.startMethods())
+            .catch(err => console.log(err))
+            .then(() => this.sincronizar_offline())
+            .catch(err => console.log(err))
+            .then(() => this.$store.dispatch('cheque/getModels'))
+            .catch(err => console.log(err))
+            .then(() => {
+                // Uso normal del dia (fuera de un login): una navegacion posterior a
+                // Reportes no tiene que encontrarse con la señal de un arranque que ya
+                // termino hace rato. Se limpian las dos juntas: si solo se resetea
+                // arranque_en_curso y se deja cadena_widgets colgada, un segundo arranque
+                // en el mismo runtime (ej. checkUserAppUrl reautenticando antes del
+                // location.replace) encuentra la cola vieja ya resuelta y dispara el
+                // fetch de Reportes antes de tiempo -- la misma rafaga que esto vino a
+                // evitar, solo que del lado de Reportes.
+                if (this.$store.state.auth.arranque_en_curso === arranque) {
+                    this.$store.commit('auth/set_arranque_en_curso', null)
+                    this.$store.commit('reportes/setCadenaWidgets', null)
+                }
+            })
+            .catch(err => console.log(err))
+
+            this.$store.commit('auth/set_arranque_en_curso', arranque)
+
+            // La navegacion es inmediata: el usuario no tiene que mirar una pantalla en
+            // blanco mientras esperan las llamadas de arriba.
+            if (!desde_sin_conexion) {
+                this.checkPermissionForCurrentRoute()
+            }
+
+            // Setup de listeners, no son fetches: no bloquean ni forman parte de la cadena.
+            // Sin conexion no se habian puesto (ver arrancar_sesion_sin_conexion), asi que
+            // tambien corren a la vuelta.
+            this.listenChannels()
+            this.listenChannelsLocal()
+        },
+        /**
+         * Arranque de una sesión restaurada desde el equipo porque se abrió el sistema sin
+         * conexión (misión ingreso-sin-internet, 23/10/2026).
+         *
+         * No se pide nada al servidor: la cadena de `arrancar_sesion()` fallaría entera. Lo que
+         * Vender necesita y no pide nada a la red se arranca igual:
+         * - el empleado, el vendedor y la sucursal con los que arranca Vender (de `user` y de la
+         *   cookie, como siempre);
+         * - los catálogos los carga el panel de recursos desde la copia del equipo (ver
+         *   `restaurar_catalogos_del_equipo()` en download-resources/Index.vue);
+         * - los artículos ya están en IndexedDB y Vender los busca ahí porque `auth.online` quedó
+         *   en false.
+         *
+         * Se aterriza en Vender (salvo que se hubiera pedido otra pantalla): es lo único que se
+         * puede hacer de punta a punta sin servidor, y la pantalla de inicio de muchos usuarios
+         * (Reportes, IA) quedaría vacía. Cuando vuelve la conexión, el mixin offline revalida la
+         * sesión y corre `arrancar_sesion()`.
+         *
+         * @returns {void}
+         */
+        arrancar_sesion_sin_conexion() {
+            this.setEmployeeVender()
+            this.setSellerVender()
+            this.init_vender_address_id()
+            this.vigilar_la_sucursal_de_vender()
+
+            this.ir_a_la_pantalla_sin_conexion()
+            this.avisar_entrada_sin_conexion()
+        },
+        /**
+         * A qué pantalla se entra sin conexión: la que se había pedido (el `?redirect=` que arma la
+         * guarda del router), o Vender si el usuario puede vender, o la de siempre.
+         *
+         * @returns {void}
+         */
+        ir_a_la_pantalla_sin_conexion() {
+            if (this.$route.path != '/' && this.$route.path != '/login') {
+                this.checkPermissionForCurrentRoute()
+                return
+            }
+            if (this.redirectToIntendedRoute()) {
+                return
+            }
+            if (this.can('sale.store')) {
+                this.$router.replace({name: 'vender', params: {view: 'remito'}}).catch(() => {})
+                return
+            }
+            this.checkPermissionForCurrentRoute()
+        },
+        /**
+         * Aviso de que se entró sin conexión: con qué sesión y con qué artículos se trabaja.
+         *
+         * @returns {Promise<void>}
+         */
+        avisar_entrada_sin_conexion() {
+            return db.meta.get('last_articles_sync')
+            .then(meta => {
+                return db.articles.count()
+                .then(cantidad => {
+                    let mensaje = 'Entraste sin conexión con la sesión guardada en este equipo. Se usan los ' + cantidad + ' artículos descargados'
+                    if (meta && meta.value) {
+                        mensaje += ' el ' + this.date(meta.value) + ' a las ' + this.hour(meta.value)
+                    }
+                    mensaje += '. Las ventas quedan guardadas acá y se suben solas cuando vuelva internet.'
+                    this.$toast.warning(mensaje, {
+                        duration: 10000,
+                        position: 'top',
+                    })
+                })
+            })
+            .catch(err => console.log('avisar_entrada_sin_conexion', err))
+        },
     },
     watch: {
         /**
@@ -432,6 +584,17 @@ export default {
                 // Arrancó con sesión: la pregunta previa al login ya no aplica en esta carga.
                 this.version_previa_al_login_resuelta = true
 
+                /*
+                    🔴 Sesión restaurada desde el equipo porque se abrió el sistema sin conexión
+                    (misión ingreso-sin-internet, 23/10/2026). Va ANTES del cambio de versión y de
+                    la cadena de arranque: los dos necesitan servidor. Ver
+                    `arrancar_sesion_sin_conexion()`.
+                */
+                if (this.$store.state.auth.sesion_sin_conexion) {
+                    this.arrancar_sesion_sin_conexion()
+                    return
+                }
+
                 /**
                  * 🔴 Primero se corta, después se arranca. Si este frente no es el que le
                  * corresponde al usuario (`default_version` apunta a otro subdominio), lo
@@ -449,60 +612,32 @@ export default {
                  * `check_version()` decidía, las otras llamadas ya habían salido.
                  */
                 if (this.debe_cambiar_de_version()) {
-                    this.ir_a_la_version_correcta()
-                    return
+                    /*
+                        🔴 Salvo que este equipo tenga ventas hechas sin conexión esperando subir
+                        (misión ingreso-sin-internet). Las ventas viven en el IndexedDB de ESTE
+                        frente (es por origen) y el frente nuevo no las ve: si se cambia de
+                        versión antes de subirlas, quedan varadas acá para siempre. Se arranca
+                        esta vez en este frente -que sube las ventas y ofrece facturarlas, igual
+                        que siempre- y el cambio de versión queda para la próxima carga.
+
+                        `ventas_sin_subir` lo cuenta el mixin offline en su created(), contra
+                        IndexedDB local: resuelve en milisegundos, mucho antes que el ida y vuelta
+                        de `auth/me` que trajo hasta acá. Se lee sincrónico a propósito, por lo
+                        mismo que `debe_cambiar_de_version()`.
+                    */
+                    if (this.$store.state.auth.ventas_sin_subir > 0) {
+                        this.$toast.warning('Hay ventas guardadas en este equipo sin conexión: primero se suben. Cuando terminen, recargá la página para pasar a la versión nueva del sistema.', {
+                            duration: 15000,
+                            position: 'top',
+                        })
+                    } else {
+                        this.ir_a_la_version_correcta()
+                        return
+                    }
                 }
                 // this.check_online()
 
-                /*
-                    🔴 Encadenadas, una atras de otra, y no las ~15 juntas en paralelo contra la
-                    API recien autenticada: esa rafaga es la causa raiz del toast
-                    "Unauthenticated." apilado que reporto golonorte el 11/9/2026, al rebotar de
-                    sesion entre dos frentes del VPS (mismo mecanismo que debe_cambiar_de_version
-                    de aca arriba, pero para el caso en que NO hay que cambiar de frente). Cada
-                    eslabon atrapa su propio error para que uno que falle no le tape el turno al
-                    que sigue, y la promesa completa SIEMPRE resuelve -- nunca rechaza.
-
-                    Se guarda en auth/arranque_en_curso ANTES de checkPermissionForCurrentRoute():
-                    esa es la que puede navegar a /reportes en este mismo tick si esa pantalla es
-                    el aterrizaje por defecto, y los widgets de Reportes -- en su propio created()
-                    -- deciden si encadenan su fetch detras de esta señal o lo disparan ya mismo
-                    mirando si esto esta seteado (store/reportes/index.js).
-                */
-                let arranque = this.callMethods()
-                .catch(err => console.log(err))
-                .then(() => this.startMethods())
-                .catch(err => console.log(err))
-                .then(() => this.sincronizar_offline())
-                .catch(err => console.log(err))
-                .then(() => this.$store.dispatch('cheque/getModels'))
-                .catch(err => console.log(err))
-                .then(() => {
-                    // Uso normal del dia (fuera de un login): una navegacion posterior a
-                    // Reportes no tiene que encontrarse con la señal de un arranque que ya
-                    // termino hace rato. Se limpian las dos juntas: si solo se resetea
-                    // arranque_en_curso y se deja cadena_widgets colgada, un segundo arranque
-                    // en el mismo runtime (ej. checkUserAppUrl reautenticando antes del
-                    // location.replace) encuentra la cola vieja ya resuelta y dispara el
-                    // fetch de Reportes antes de tiempo -- la misma rafaga que esto vino a
-                    // evitar, solo que del lado de Reportes.
-                    if (this.$store.state.auth.arranque_en_curso === arranque) {
-                        this.$store.commit('auth/set_arranque_en_curso', null)
-                        this.$store.commit('reportes/setCadenaWidgets', null)
-                    }
-                })
-                .catch(err => console.log(err))
-
-                this.$store.commit('auth/set_arranque_en_curso', arranque)
-
-                // La navegacion es inmediata: el usuario no tiene que mirar una pantalla en
-                // blanco mientras esperan las llamadas de arriba.
-                this.checkPermissionForCurrentRoute()
-
-                // Setup de listeners, no son fetches: no bloquean ni forman parte de la cadena.
-                this.listenChannels()
-                this.listenChannelsLocal()
-
+                this.arrancar_sesion()
             }
         }
     },

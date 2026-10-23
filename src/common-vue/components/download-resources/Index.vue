@@ -101,6 +101,7 @@ import call_methods from '@/mixins/call_methods'
 import { mark_dynamic_dependency_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
 import { reconcile_article_dynamic_columns_if_needed } from '@/common-vue/helpers/column_preferences_helper'
 import { ejecutar_con_tope } from '@/common-vue/helpers/ejecutar_con_tope'
+import { guardar_catalogos, leer_catalogos, puede_guardar_sesion } from '@/offline/sesion_sin_conexion'
 
 /**
  * Modelos del arranque que NO entran en la llamada masiva.
@@ -169,6 +170,25 @@ export default {
 		},
 		start_download() {
 			return this.$store.state.download_resources.start_download
+		},
+		/**
+		 * true cuando los catalogos que hay en memoria salieron de la copia del equipo y no del
+		 * servidor (se entro sin conexion, o la llamada masiva se cayo por red). Misión
+		 * ingreso-sin-internet (23/10/2026). Mientras este prendido, la proxima descarga NO se
+		 * saltea los que "ya estan" (yaSeDescargaron): estan, pero pueden ser viejos.
+		 *
+		 * Vive en el store y no en el data de este componente porque el componente se desmonta y
+		 * se vuelve a montar con el nav (al ir al login y volver), y los catalogos del store no se
+		 * vacian con el: con la bandera en el data se perderia y lo viejo quedaria por toda la
+		 * sesion.
+		 */
+		catalogos_del_equipo: {
+			get() {
+				return this.$store.state.download_resources.catalogos_del_equipo
+			},
+			set(value) {
+				this.$store.commit('download_resources/set_catalogos_del_equipo', value)
+			},
 		},
 		// Cantidad de recursos que ya terminaron de descargar. La lista ya viene
 		// filtrada desde setModels(), asi que alcanza con contar.
@@ -337,13 +357,26 @@ export default {
 		downloadModels() {
 			console.log('downloadModels:')
 
+			/*
+				Se entro sin conexion con la sesion guardada en el equipo (misión
+				ingreso-sin-internet): los ~70 pedidos fallarian todos. Los catalogos salen de la
+				copia que se guardo la ultima vez que se bajaron con servidor.
+			*/
+			if (this.$store.state.auth.sesion_sin_conexion) {
+				return this.restaurar_catalogos_del_equipo()
+			}
+
+			/** Si lo que hay en memoria salio del equipo, ahora con servidor se pide todo de nuevo. */
+			let refrescar_todo = this.catalogos_del_equipo
+			this.catalogos_del_equipo = false
+
 			/** Modelos que van en la llamada masiva. */
 			let para_masivo = []
 			/** Modelos que hay que pedir por su endpoint individual. */
 			let sueltos = []
 
 			this.models_to_download.forEach(model => {
-				if (this.yaSeDescargaron(model.model_name)) {
+				if (!refrescar_todo && this.yaSeDescargaron(model.model_name)) {
 					// Ya estaba en el store: no se vuelve a pedir, pero la dependencia se marca
 					// igual (ver dynamic_column_dependencies_status.js).
 					model.downloaded = true
@@ -384,6 +417,85 @@ export default {
 				// guarda del prompt 460, o por staleness de una preferencia guardada antes de que
 				// exista una sucursal nueva). Ver reconcile_article_dynamic_columns_if_needed.
 				reconcile_article_dynamic_columns_if_needed(this.$store)
+
+				// Copia en el equipo para poder entrar sin conexion la proxima vez. Si lo que hay
+				// en memoria salio justamente de esa copia (la masiva se cayo por red), no se
+				// vuelve a escribir lo mismo.
+				if (!this.catalogos_del_equipo) {
+					this.guardar_catalogos_en_el_equipo()
+				}
+			})
+		},
+		/**
+		 * Guarda en el equipo los catalogos que acaba de bajar, para poder entrar sin conexion
+		 * (misión ingreso-sin-internet, 23/10/2026). Solo si el usuario puede tener la sesion
+		 * guardada (modo sin conexion prendido, sin acceso maestro): ver puede_guardar_sesion().
+		 *
+		 * Lee de los stores y no de las respuestas: asi entra igual lo que llego por la llamada
+		 * masiva, por el repliegue de a uno o por los que van sueltos.
+		 *
+		 * @returns {Promise<void>}
+		 */
+		guardar_catalogos_en_el_equipo() {
+			if (!puede_guardar_sesion(this.user)) {
+				return Promise.resolve()
+			}
+			/** Catalogos a guardar: uno por fila del panel, con lo que quedo en su store. */
+			let catalogos = []
+			this.models_to_download.forEach(fila => {
+				let modulo = this.$store.state[fila.model_name]
+				if (modulo && Array.isArray(modulo.models)) {
+					catalogos.push({
+						model_name: fila.model_name,
+						models: modulo.models,
+					})
+				}
+			})
+			return guardar_catalogos(catalogos)
+		},
+		/**
+		 * Carga los catalogos desde la copia del equipo en vez de pedirlos al servidor.
+		 *
+		 * Dos casos: se entro sin conexion con la sesion guardada (todos los de la lista), o la
+		 * llamada masiva se cayo por red (solo los que iban en ella). Cada fila se marca como lista
+		 * aunque no haya copia de ese catalogo, igual que hace el camino con servidor cuando uno
+		 * falla: el panel no puede quedarse girando.
+		 *
+		 * Con la lista entera, corre tambien el bootstrap de columnas y la reconciliacion que hace
+		 * downloadModels() al final, por el mismo motivo que alla: con todo ya commiteado.
+		 *
+		 * @param {Array|undefined} model_names Los que hay que cargar; sin esto, toda la lista.
+		 * @returns {Promise<void>}
+		 */
+		restaurar_catalogos_del_equipo(model_names) {
+			return leer_catalogos()
+			.then(catalogos => {
+				/** Diccionario model_name -> models de la copia del equipo. */
+				let por_nombre = {}
+				catalogos.forEach(catalogo => {
+					por_nombre[catalogo.model_name] = catalogo.models
+				})
+				this.models_to_download.forEach(fila => {
+					if (model_names && model_names.indexOf(fila.model_name) == -1) {
+						return
+					}
+					let models = por_nombre[fila.model_name]
+					if (models && this.$store._mutations[fila.model_name + '/setModels']) {
+						try {
+							this.$store.commit(fila.model_name + '/setModels', models)
+						} catch (err) {
+							console.log('No se pudo cargar el catalogo ' + fila.model_name + ' desde el equipo', err)
+						}
+					}
+					this.marcar_descargado(fila.model_name)
+				})
+				this.catalogos_del_equipo = true
+				console.log('Catalogos cargados desde el equipo: ' + catalogos.length)
+
+				if (!model_names) {
+					this.$store.dispatch('table_column_preference/bootstrap_module_preferences')
+					reconcile_article_dynamic_columns_if_needed(this.$store)
+				}
 			})
 		},
 		/**
@@ -448,6 +560,18 @@ export default {
 				// Por eso este repliegue sale de a tandas (ver pedir_sueltos_en_tandas): el camino
 				// feliz de la llamada masiva no se toco ni se volvio a encadenar.
 				console.log(err)
+
+				/*
+					Sin respuesta del servidor (red cortada, wifi sin salida a internet): los ~70
+					pedidos de a uno fallarian igual. Se cargan desde la copia del equipo (misión
+					ingreso-sin-internet). Un 500 NO entra aca: ese es justamente el servidor
+					saturado para el que existe el repliegue de a tandas, y ahi si conviene
+					reintentar contra el servidor.
+				*/
+				if (err && err.isAxiosError && !err.response) {
+					return this.restaurar_catalogos_del_equipo(model_names)
+				}
+
 				return this.pedir_sueltos_en_tandas(model_names)
 			})
 		},

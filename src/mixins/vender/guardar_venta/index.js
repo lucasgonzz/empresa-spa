@@ -8,8 +8,14 @@ import sonido_error from '@/mixins/sonido_error'
 import vender_set_total from '@/mixins/vender_set_total' 
 import axios from 'axios'
 
-import sync_sales from '@/offline/sync_sales' 
+import sync_sales, { generar_offline_uuid } from '@/offline/sync_sales'
 import { env } from '@/runtime_config'
+
+/**
+ * true mientras una venta sin conexion se esta escribiendo en el equipo. Ver el comentario en
+ * guardar_venta_offline().
+ */
+let guardado_offline_en_curso = false
 export default {
 	mixins: [
 		chequeos, 
@@ -47,10 +53,26 @@ export default {
 
 			if (this.checkear_vender()) {
 
-				if (navigator.onLine) {
-					this.guardar_venta_online()
+				/*
+					Se guarda con el servidor solo si el navegador dice que hay red Y el sistema no
+					esta trabajando sin conexion (`auth.online` en false). Lo segundo cubre la sesion
+					restaurada desde el equipo (mision ingreso-sin-internet, 23/10/2026): con wifi pero
+					sin servidor `navigator.onLine` dice true, y hasta que el servidor confirme la
+					sesion la venta tiene que quedar en el equipo, no fallar contra la API. Es el
+					mismo dato con el que Vender decide buscar los articulos en el equipo
+					(ArticleBarCode.vue).
+				*/
+				/*
+					Un identificador por intento de guardado, el mismo para el camino con servidor y
+					para el del equipo: si el POST se queda sin respuesta y la venta cae al equipo,
+					al subirla el backend reconoce que es la misma (ver guardar_venta_online()).
+				*/
+				let offline_uuid = generar_offline_uuid()
+
+				if (navigator.onLine && this.$store.state.auth.online) {
+					this.guardar_venta_online(offline_uuid)
 				} else {
-					this.guardar_venta_offline()
+					this.guardar_venta_offline(offline_uuid)
 				}
 			}
 		},
@@ -123,12 +145,21 @@ export default {
 
 		},
 
-		guardar_venta_online() {
+		/**
+		 * @param {string} offline_uuid Identificador de este intento (ver guardar_venta()). Si no
+		 *                              viene, se genera uno.
+		 */
+		guardar_venta_online(offline_uuid) {
 			const pending = [...this.$store.state.vender.pending_attachments]
+
+			if (!offline_uuid) {
+				offline_uuid = generar_offline_uuid()
+			}
 
 			this.$store.dispatch('vender/vender', {
 				discounts: this.get_models_by_id('discount', this.discounts_id),
 				surchages: this.get_models_by_id('surchage', this.surchages_id),
+				offline_uuid: offline_uuid,
 			})
 			.then(res => {
 				console.log('SE GUARDO VENTA')
@@ -205,22 +236,23 @@ export default {
 
 				} else if (es_error_de_red) {
 
-					let es_timeout = Boolean(
-						err
-						&& (
-							err.code === 'ECONNABORTED'
-							|| (err.message && String(err.message).indexOf('timeout') !== -1)
-						)
-					)
+					/*
+						🔴 Sin respuesta del servidor (misión ingreso-sin-internet, 23/10/2026): la
+						venta se guarda en el equipo, con el MISMO identificador que llevaba este
+						POST, y el sistema pasa a trabajar sin conexión (el mixin offline vuelve a
+						preguntar por el servidor cada 30 segundos y la sube sola).
 
-					this.$toast.error(
-						es_timeout
-							? 'El servidor tardó demasiado en responder. La venta puede haber quedado guardada: fijate en Ventas antes de volver a intentar.'
-							: 'No pudimos conectarnos con el servidor. Lo más probable es que la venta NO se haya guardado: revisá la conexión, fijate en Ventas y volvé a intentar.',
-						{
-							duration: 15000
-						}
-					)
+						Antes se pedía al vendedor que mirara Ventas y reintentara: el caso de todos
+						los días de "hay wifi pero se cayó internet" (el navegador sigue diciendo que
+						hay red) dejaba Vender sin poder cobrar, y un reintento después de un timeout
+						duplicaba la venta si el POST sí había llegado. Con el identificador, si había
+						llegado, al subirla el backend devuelve la que ya existe y no crea otra.
+					*/
+					this.$store.commit('auth/set_online', false)
+					this.$toast.warning('No hubo respuesta del servidor: la venta se guardó en este equipo y se sube sola cuando vuelva la conexión. Si el servidor ya la había recibido, no se duplica.', {
+						duration: 12000
+					})
+					this.guardar_venta_offline(offline_uuid)
 
 				} else {
 
@@ -229,6 +261,28 @@ export default {
 					})
 				}
 			})
+		},
+
+		/**
+		 * Los adjuntos pendientes de Vender, en la forma en que se guardan con una venta sin
+		 * conexión: `{article_id, file, observation}`.
+		 *
+		 * @returns {Array}
+		 */
+		adjuntos_para_guardar_en_el_equipo() {
+			/** Copia de los adjuntos con solo lo que usa upload_pending_attachments(). */
+			let adjuntos = []
+			let pendientes = this.$store.state.vender.pending_attachments || []
+			pendientes.forEach(att => {
+				if (att && att.file) {
+					adjuntos.push({
+						article_id: att.article_id,
+						file: att.file,
+						observation: att.observation || '',
+					})
+				}
+			})
+			return adjuntos
 		},
 
 		async upload_pending_attachments(sale_id, pending_attachments) {
@@ -266,7 +320,32 @@ export default {
 			}
 		},
 
-		async guardar_venta_offline() {
+		/**
+		 * Guarda la venta en el equipo (IndexedDB) para subirla cuando vuelva la conexión.
+		 *
+		 * @param {string} offline_uuid Identificador de este intento (ver guardar_venta()); si la
+		 *                              venta cae acá después de un POST sin respuesta, es el mismo
+		 *                              que llevaba ese POST. Si no viene, save_sale_offline()
+		 *                              genera uno.
+		 */
+		async guardar_venta_offline(offline_uuid) {
+
+			/*
+				Doble Enter o doble clic en "Guardar venta" sin conexion: el camino con servidor tiene
+				la guarda anti doble clic del backend, este no tiene ninguna, y la segunda pasada
+				escribia la MISMA venta otra vez en el equipo (con otro identificador, asi que al
+				volver internet subian dos). Se ignora la segunda mientras la primera se esta
+				escribiendo. Variable del modulo y no del componente: el boton y el atajo de
+				teclado pueden vivir en instancias distintas.
+
+				Se mira aca y se prende recien antes de escribir (mas abajo): armar `sale_data` es
+				sincronico, asi que entre las dos lineas no se cuela otra llamada, y si armarlo
+				tirara un error la bandera no queda prendida para siempre.
+			*/
+			if (guardado_offline_en_curso) {
+				console.log('Ya se esta guardando una venta sin conexion, se ignora la segunda')
+				return
+			}
 
 			let sale_data = {
 				save_afip_ticket: this.$store.state.vender.save_afip_ticket,
@@ -393,11 +472,39 @@ export default {
 				price_description: JSON.stringify(this.$store.state.vender.total_description),
 				send_mail: this.$store.state.vender.send_mail,
 				log: this.$store.state.vender.sale_log,
+				offline_uuid: offline_uuid,
+				/*
+					Adjuntos de los renglones (misión ingreso-sin-internet, 23/10/2026). El camino con
+					servidor los sube DESPUÉS de crear la venta, con el id que devuelve; acá ese id
+					todavía no existe, y limpiar Vender los borraba: se perdían sin aviso. Se guardan
+					los archivos con la venta (IndexedDB guarda File/Blob tal cual) y
+					sync_pending_sales() los sube apenas el servidor confirma la venta. Solo los
+					campos que usa la subida: el resto (vistas previas) no sirve después.
+				*/
+				adjuntos_pendientes: this.adjuntos_para_guardar_en_el_equipo(),
 			}
 
-			await this.save_sale_offline(sale_data)
-
-			this.resetear_vender(false)
+			/*
+				🔴 Limpiar Vender SOLO si la venta quedo escrita en el equipo. Antes, si IndexedDB
+				fallaba (cuota llena, ventana privada, la base cerrada por una pestaña con una version
+				nueva), el error se escapaba sin aviso: no salia el toast de "guardada" pero tampoco
+				uno de error, y el vendedor no tenia forma de saber que esa venta no existia en
+				ningun lado. Ahora se avisa y la venta queda en pantalla para no perderla.
+			*/
+			guardado_offline_en_curso = true
+			return this.save_sale_offline(sale_data)
+			.then(() => {
+				guardado_offline_en_curso = false
+				this.resetear_vender(false)
+			})
+			.catch(err => {
+				guardado_offline_en_curso = false
+				console.log('No se pudo guardar la venta sin conexion', err)
+				this.sonido_error()
+				this.$toast.error('No se pudo guardar la venta en este equipo. La venta sigue en pantalla: no la limpies y volvé a intentar; si sigue fallando, anotala a mano.', {
+					duration: 20000
+				})
+			})
 
 		}
 		

@@ -1,7 +1,23 @@
 import axios from 'axios'
 import { env } from '@/runtime_config'
 import { set_canales_en_vivo } from '@/utils/canales_en_vivo'
+import { leer_sesion, es_falta_de_conexion } from '@/offline/sesion_sin_conexion'
+import Vue from 'vue'
 axios.defaults.withCredentials = true
+
+/**
+ * Muestra un toast desde el store (que no tiene `this.$toast`), con el mismo plugin que registra
+ * main.js en `Vue.$toast`. Si el plugin todavía no está, no hace nada.
+ *
+ * @param {string} tipo 'success' | 'warning' | 'error' | 'info'
+ * @param {string} mensaje
+ * @returns {void}
+ */
+function mostrar_aviso(tipo, mensaje) {
+	if (Vue.$toast && typeof Vue.$toast.open === 'function') {
+		Vue.$toast.open({ message: mensaje, type: tipo, duration: 10000 })
+	}
+}
 axios.defaults.baseURL = env('VUE_APP_API_URL')
 // axios.defaults.baseURL = 'https://micovid.online'
 // axios.defaults.baseURL = 'http://localhost:8000'
@@ -48,6 +64,25 @@ export default {
 		 * `src/utils/version_de_direccion.js` y `src/mixins/check_version.js`.
 		 */
 		version_bloqueada: null,
+
+		/**
+		 * Sesión restaurada desde el equipo porque se abrió el sistema sin conexión con el servidor
+		 * (misión ingreso-sin-internet, 23/10/2026). `null` en una sesión normal; cuando la sesión
+		 * salió de la copia del equipo es la fecha ISO en que el servidor la confirmó por última vez.
+		 *
+		 * Mientras está prendida: no se pide la cadena de arranque, los catálogos salen del equipo,
+		 * Vender guarda las ventas sin conexión aunque `navigator.onLine` diga lo contrario, y el
+		 * sistema revalida la sesión contra el servidor apenas vuelve la red. Ver
+		 * `src/offline/sesion_sin_conexion.js` y el watch de `authenticated` en App.vue.
+		 */
+		sesion_sin_conexion: null,
+
+		/**
+		 * Cuántas ventas hechas sin conexión siguen guardadas en este equipo esperando subir al
+		 * servidor. La mantiene al día el mixin offline (src/offline/index.js) y la muestra el aviso
+		 * de conexión (components/common/AvisoSinConexion.vue).
+		 */
+		ventas_sin_subir: 0,
 	},
 	getters: {
 		authenticated(state) {
@@ -60,6 +95,14 @@ export default {
 	mutations: {
 		set_online(state, value) {
 			state.online = value
+		},
+		/* Ver el comentario de `sesion_sin_conexion` en el state. */
+		set_sesion_sin_conexion(state, value) {
+			state.sesion_sin_conexion = value
+		},
+		/* Ver el comentario de `ventas_sin_subir` en el state. */
+		set_ventas_sin_subir(state, value) {
+			state.ventas_sin_subir = Number(value) || 0
 		},
 		/* Promesa de arranque en curso (o null). Ver el comentario de arranque_en_curso en el state. */
 		set_arranque_en_curso(state, value) {
@@ -197,8 +240,17 @@ export default {
 		},
 	},
 	actions: {
-		me({commit}) {
+		me({commit, dispatch}) {
 			commit('setLoading', true)
+
+			/*
+				Sin red según el navegador: ni se intenta. Los dos pedidos fallarían igual, y
+				esperarlos solo demora la entrada con la sesión guardada en el equipo.
+			*/
+			if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+				return dispatch('restaurar_sesion_sin_conexion')
+			}
+
 			// Se retorna la cadena de promesas para que quien haga `dispatch('auth/me')`
 			// pueda encadenar `.then()` y saber cuándo terminó de resolverse (antes no
 			// se retornaba y el dispatch se resolvía antes de terminar las llamadas HTTP reales).
@@ -207,7 +259,7 @@ export default {
 				return axios.get('/api/user')
 				.then(res => {
 					commit('setLoading', false)
-					
+
 					console.log('auth/me::')
 					console.log(res)
 					console.log(typeof res.data.user)
@@ -240,10 +292,138 @@ export default {
 						return
 					}
 
+					/*
+						🔴 Sin conexión con el servidor NO es "no hay sesión" (misión
+						ingreso-sin-internet, 23/10/2026). Hasta acá este catch trataba igual un
+						corte de red que un 401, y abrir el sistema sin internet terminaba en el
+						login con `localStorage` vaciado, sin forma de entrar. Ahora: si el
+						servidor no contestó (o contestó 5xx), se entra con la sesión guardada en
+						el equipo, si la hay. Un 401/419 sigue siendo "no hay sesión".
+					*/
+					if (es_falta_de_conexion(err)) {
+						return dispatch('restaurar_sesion_sin_conexion')
+					}
+
 					console.log('NO ESTA AUTH')
 					commit('setAuthenticated', false)
 					commit('setUser', null)
 				})
+			})
+			.catch(err => {
+				/*
+					Lo que llega acá es la caída del `sanctum/csrf-cookie`, el primer pedido (el
+					catch de adentro atrapa todo lo de `api/user`). Antes no tenía catch: la promesa
+					rechazaba suelta, `authenticated` se quedaba en null para siempre y el usuario
+					veía el login sin que el arranque decidiera nada.
+				*/
+				commit('setLoading', false)
+				if (es_falta_de_conexion(err)) {
+					return dispatch('restaurar_sesion_sin_conexion')
+				}
+				console.log('auth/me: fallo sanctum/csrf-cookie', err)
+				commit('setAuthenticated', false)
+				commit('setUser', null)
+			})
+		},
+		/**
+		 * Entra con la sesión guardada en este equipo, porque el servidor no está al alcance.
+		 *
+		 * Con sesión guardada: deja la marca `sesion_sin_conexion` (con la fecha en que el servidor
+		 * la confirmó por última vez) y `online` en false ANTES de `setAuthenticated(true)`, porque
+		 * el watch de `authenticated` de App.vue decide con ellas qué arranque correr, y Vender busca
+		 * los artículos en el equipo cuando `online` es false.
+		 *
+		 * Sin sesión guardada: lo mismo que pasaba antes con un corte de red (no hay sesión, al
+		 * login), más un aviso que explica por qué no se puede entrar.
+		 *
+		 * @param {object} context Contexto Vuex del módulo auth.
+		 * @returns {Promise<void>}
+		 */
+		restaurar_sesion_sin_conexion({ commit }) {
+			return leer_sesion()
+			.then(sesion => {
+				commit('setLoading', false)
+				commit('setMessage', '')
+
+				if (!sesion) {
+					commit('setAuthenticated', false)
+					commit('setUser', null)
+					mostrar_aviso('warning', 'No hay conexión con el servidor. Para entrar sin internet, este equipo tiene que haber iniciado sesión antes con internet y con el modo sin conexión activado.')
+					return
+				}
+
+				commit('set_online', false)
+				commit('set_sesion_sin_conexion', sesion.guardada_at)
+				commit('setUser', sesion.user)
+				commit('setAuthenticated', true)
+			})
+		},
+		/**
+		 * Vuelve a preguntarle al servidor por la sesión que se restauró desde el equipo.
+		 *
+		 * La llama el mixin offline cuando vuelve la red (evento `online` y un reintento periódico,
+		 * por si el evento no llega nunca: un equipo con wifi pero sin salida a internet tiene
+		 * `navigator.onLine` en true todo el tiempo). Devuelve qué pasó, y el que llama decide:
+		 *
+		 * - 'valida': el servidor confirmó la sesión. Se apaga la marca, `online` vuelve a true y se
+		 *   commitea el usuario fresco (el plugin de sesión lo guarda de nuevo).
+		 * - 'vencida': el servidor dijo que no hay sesión (401/419, o 200 sin usuario). Se apaga la
+		 *   marca y se cierra la sesión en el front: el watch de App.vue manda al login. Las ventas
+		 *   sin subir siguen en el equipo y suben con el próximo inicio de sesión.
+		 * - 'sin_conexion': todavía no hay servidor. No cambia nada.
+		 * - 'otra_pestana': el servidor pide resolver el candado de sesión por pestaña; se muestra
+		 *   el mismo aviso de siempre y se sigue sin conexión hasta el próximo reintento.
+		 *
+		 * Los pedidos van sin los avisos globales del interceptor: este reintento corre solo, en
+		 * segundo plano, y no tiene que tirar un toast de "No pudimos conectarnos" cada 30 segundos.
+		 *
+		 * @param {object} context Contexto Vuex del módulo auth.
+		 * @returns {Promise<string>} 'valida' | 'vencida' | 'sin_conexion' | 'otra_pestana'
+		 */
+		revalidar_sesion({ commit }) {
+			/** Opciones de axios que apagan los avisos globales del interceptor (main.js). */
+			let sin_avisos = {
+				skip_global_error_event: true,
+				skip_global_validation_toast: true,
+			}
+			return axios.get('/sanctum/csrf-cookie', sin_avisos)
+			.then(() => axios.get('/api/user', sin_avisos))
+			.then(res => {
+				if (res && res.data && res.data.user) {
+					commit('set_sesion_sin_conexion', null)
+					commit('set_online', true)
+					commit('setUser', res.data.user)
+					commit('setAuthenticated', true)
+					return 'valida'
+				}
+				commit('set_sesion_sin_conexion', null)
+				commit('set_online', navigator.onLine !== false)
+				commit('setAuthenticated', false)
+				commit('setUser', null)
+				return 'vencida'
+			})
+			.catch(err => {
+				if (es_falta_de_conexion(err)) {
+					return 'sin_conexion'
+				}
+				if (err && err.response && err.response.status === 403
+					&& err.response.data && err.response.data.misma_sesion_otra_pestana) {
+					commit('setMismaSesionOtraPestana', true)
+					return 'otra_pestana'
+				}
+				if (err && err.response && (err.response.status === 401 || err.response.status === 419)) {
+					commit('set_sesion_sin_conexion', null)
+					commit('set_online', navigator.onLine !== false)
+					commit('setAuthenticated', false)
+					commit('setUser', null)
+					return 'vencida'
+				}
+				/*
+					Cualquier otra cosa (un 403 distinto, un error que no es de axios): no se decide
+					nada con eso. Se sigue sin conexión y se vuelve a preguntar en el próximo intento.
+				*/
+				console.log('revalidar_sesion: respuesta no esperada', err)
+				return 'sin_conexion'
 			})
 		},
 		/**
