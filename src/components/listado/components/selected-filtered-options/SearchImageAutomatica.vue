@@ -66,15 +66,22 @@ export default {
 				article_ids.push(article.id)
 			})
 
+			/*
+				`skip_global_validation_toast`: desde el 23/10/2026 la API responde 422 (con forma
+				de validación) cuando TODOS los elegidos ya tienen imagen y no se buscó nada. Ese
+				caso no es un error: se muestra acá como aviso, sin el toast global de validación.
+			*/
 			this.$api.post('google/batch-assign-images', {
 				article_ids: article_ids,
+			}, {
+				skip_global_validation_toast: true,
 			})
 			.then(res => {
 				// Dice dónde queda el resultado: el aviso de fin solo le llega a esta pestaña, pero
 				// la asignación (con lo que quedó para revisar) queda siempre en Alertas → Imágenes.
 				// "Asignando" y no "Buscando": es la palabra de la opción del menú y la de la fila
 				// que va a encontrar en Alertas (búsqueda es cada consulta al buscador).
-				this.$toast.success('Asignando imágenes en segundo plano. El resultado va a quedar en Alertas → Imágenes.', {
+				this.$toast.success(this.mensaje_de_inicio(res && res.data ? res.data : null), {
 					duration: 6000,
 				})
 				/*
@@ -99,8 +106,71 @@ export default {
 				if (error && error.response && error.response.status === 403) {
 					return
 				}
+				/*
+					422: todos los elegidos ya tenían imagen y la API no creó nada (o un rechazo de
+					validación del pedido). Se avisa con el mensaje de la API, sin el error genérico
+					y SIN emitir `imagenes-automaticas:lote-iniciado`: no hay ningún lote que esperar.
+
+					El aviso propio sale solo si el 422 trae `errors` (forma de validación): es el
+					único que `skip_global_validation_toast` calla. Un 422 con `{message}` solo ya lo
+					mostró el interceptor global por `errorEvent`; mostrarlo acá lo duplicaría.
+				*/
+				if (error && error.response && error.response.status === 422) {
+					if (error.response.data && error.response.data.errors) {
+						this.$toast.info(this.mensaje_de_validacion(error.response.data), {
+							duration: 6000,
+						})
+					}
+					return
+				}
 				this.$toast.error('No se pudo iniciar el procesamiento de imágenes')
 			})
+		},
+		/**
+		* El aviso de que arrancó la asignación. Desde el 23/10/2026 la API no busca los que ya
+		* tienen imagen y lo dice en `articulos` y `saltados_con_imagen`; contra una API vieja,
+		* que no los manda, queda el aviso de siempre.
+		*
+		* @param {Object|null} data La respuesta del POST.
+		* @return {String}
+		*/
+		mensaje_de_inicio(data) {
+			let cierre = 'El resultado va a quedar en Alertas → Imágenes.'
+
+			if (!data || typeof data.articulos !== 'number') {
+				return 'Asignando imágenes en segundo plano. ' + cierre
+			}
+
+			let articulos = data.articulos
+			let saltados = typeof data.saltados_con_imagen === 'number' ? data.saltados_con_imagen : 0
+
+			let mensaje = 'Asignando imágenes para ' + articulos + (articulos === 1 ? ' artículo' : ' artículos') + ' en segundo plano. '
+
+			if (saltados > 0) {
+				mensaje += saltados === 1
+					? '1 ya tenía imagen y se salteó. '
+					: saltados + ' ya tenían imagen y se saltearon. '
+			}
+
+			return mensaje + cierre
+		},
+		/**
+		* El texto del aviso de un 422: el mensaje del campo `article_ids` si viene, si no el
+		* `message` general de Laravel.
+		*
+		* @param {Object|undefined} data El cuerpo de la respuesta 422.
+		* @return {String}
+		*/
+		mensaje_de_validacion(data) {
+			if (data && data.errors && data.errors.article_ids && data.errors.article_ids.length) {
+				return data.errors.article_ids[0]
+			}
+
+			if (data && data.message) {
+				return data.message
+			}
+
+			return 'No se buscó ninguna imagen.'
 		},
 	},
 }
