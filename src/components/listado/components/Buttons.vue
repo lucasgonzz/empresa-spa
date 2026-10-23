@@ -69,10 +69,10 @@ class="buttons-listado">
 			<i class="bi bi-arrow-down-up"></i>
 		</b-button>
 
-		<!-- Ubicaciones -->
+		<!-- Ubicaciones: por sucursal, desde la segunda (misión sucursal-siempre, D1) -->
 		<b-button 
 		variant="outline-secondary"
-		v-if="model.addresses.length"
+		v-if="muestra_sucursales && model.addresses.length"
 		@click.stop="show_ubications()"
 		title="Ubicaciones">
 			<i class="bi bi-geo-alt"></i>
@@ -190,6 +190,11 @@ export default {
 			return false
 		},
         show_btn_mover_stock() {
+            // Mover stock entre depósitos necesita al menos dos (misión sucursal-siempre, D1): con
+            // una sola sucursal todo artículo migrado tiene su fila y el botón aparecería sin sentido.
+            if (!this.muestra_sucursales) {
+                return false
+            }
             if (this.model.addresses && this.model.addresses.length) {
                 return true 
             }

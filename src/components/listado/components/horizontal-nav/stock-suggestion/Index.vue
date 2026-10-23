@@ -1,6 +1,7 @@
 <template>
+	<!-- Sugerencias entre sucursales: desde la segunda (misión sucursal-siempre, D1). -->
 	<div
-	v-if="mostrador_tiene_extension && !puede_entrar_al_mostrador && addresses.length">
+	v-if="mostrador_tiene_extension && !puede_entrar_al_mostrador && muestra_sucursales">
 
 		<stock-suggestion-modal></stock-suggestion-modal>
 		<stock-suggestion-article-modal></stock-suggestion-article-modal>

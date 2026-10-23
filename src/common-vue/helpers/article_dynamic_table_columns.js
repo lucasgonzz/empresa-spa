@@ -178,8 +178,22 @@ export function add_article_dynamic_columns(props, context, collections) {
 		})
 	}
 
+	/*
+		Misión sucursal-siempre (23/10/2026, D1): las columnas de stock por sucursal aparecen desde la
+		SEGUNDA sucursal. Con una sola, su stock es la columna Stock de siempre y el listado queda
+		como el de un negocio sin sucursales. Se cuenta igual que el getter address/muestra_sucursales
+		(sin domicilios de compradores); acá no se lee el getter porque este helper recibe las
+		colecciones sueltas, sin el store.
+	*/
+	let sucursales_del_negocio = (collections.addresses || []).filter(function (address) {
+		return address && !address.buyer_id
+	})
+	if (sucursales_del_negocio.length < 2) {
+		return props
+	}
+
 	agregar_familia('sucursales', function () {
-		let address_props = (collections.addresses || [])
+		let address_props = sucursales_del_negocio
 			.filter(function (address) { return puede_ver_address(context, address) })
 			.map(function (address) {
 				return {

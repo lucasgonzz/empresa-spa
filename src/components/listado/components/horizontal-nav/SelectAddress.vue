@@ -13,9 +13,12 @@
 		Con el `v-if` en la raiz, la cuenta que no tiene sucursales cargadas no renderiza un div
 		vacio sino un nodo comentario, que no participa del layout flex. Mismo patron que usa
 		BtnInventoryPerformance.vue con su `v-if="is_admin"`.
+
+		Misión sucursal-siempre (23/10/2026, D1): el filtro aparece desde la SEGUNDA sucursal del
+		negocio. Con una sola no hay nada que filtrar.
 	-->
 	<b-form-select
-	v-if="addresses.length"
+	v-if="muestra_sucursales && addresses.length"
 	class="toolbar-select"
 	title="Filtrar el listado por sucursal"
 	aria-label="Filtrar el listado por sucursal"

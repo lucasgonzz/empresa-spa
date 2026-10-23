@@ -1,5 +1,13 @@
 <template>
+	<!--
+		Misión sucursal-siempre (23/10/2026, D1): el menú de depósitos aparece desde la SEGUNDA
+		sucursal. Hasta acá se veía siempre, también sin sucursales, y sus dos items abrían modales que
+		solo se montan con sucursales (deposit-movements/Index.vue y stock-suggestion/Index.vue): el
+		clic no hacía nada. El v-if va en la raíz para no dejar un item flex vacío en la barra (ver
+		horizontal-nav/Index.vue).
+	-->
 	<b-dropdown
+	v-if="muestra_sucursales"
 	right
 	data-testid="menu-depositos"
 	class="toolbar-btn--icono toolbar-btn--tinte-violeta"

@@ -2868,7 +2868,12 @@ export default {
 			 * Grupo dinámico de depósitos: una opción de stock/min/max por cada depósito del usuario.
 			 * El separador __group__ es una opción deshabilitada que actúa como encabezado visual.
 			 */
-			if (this.addresses.length > 0) {
+			/*
+			 * Misión sucursal-siempre (23/10/2026, D1 y D15): el grupo aparece desde la SEGUNDA
+			 * sucursal. Con una sola, la columna de stock del Excel se mapea a "Stock" como en un
+			 * negocio sin sucursales, y la API la escribe en la principal.
+			 */
+			if (this.muestra_sucursales) {
 				options.push({ value: '__group__', text: '— Stock por depósito —', disabled: true })
 				this.addresses.forEach(address => {
 					const id = address.id

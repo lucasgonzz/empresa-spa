@@ -72,7 +72,7 @@
 					<th>Código de barras</th>
 					<th>Disponible</th>
 					<th>Precio</th>
-					<!-- Sin depositos (negocio sin sucursales) el stock es uno solo por variante -->
+					<!-- Sin depositos (negocio sin sucursales o con una sola) el stock es uno solo por variante -->
 					<th v-if="!addresses.length">Stock</th>
 					<th
 					v-for="address in addresses"
@@ -132,8 +132,18 @@ export default {
 		article() {
 			return this.$store.state.article.model
 		},
-		/** Depositos (address) globales del negocio: definen las columnas de stock. */
+		/**
+		 * Depositos (address) globales del negocio: definen las columnas de stock.
+		 *
+		 * Misión sucursal-siempre (23/10/2026, D1 y D15): con UNA sola sucursal se devuelve una lista
+		 * vacía a propósito, y la grilla (y cada VariantRow, que la recibe por prop) se comporta como
+		 * la de un negocio sin sucursales: un único input "Stock" por variante que viaja como
+		 * `stock`, y la API lo escribe en la principal. Las columnas por depósito, desde la segunda.
+		 */
 		addresses() {
+			if (!this.muestra_sucursales) {
+				return []
+			}
 			return this.$store.state.address.models
 		},
 		/** Propiedades del articulo con sus valores: definen que combinaciones son validas hoy. */

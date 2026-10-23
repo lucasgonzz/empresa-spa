@@ -1,6 +1,10 @@
 <template>
+	<!--
+		Edición de stock por depósito: desde la segunda sucursal (misión sucursal-siempre, 23/10/2026,
+		D1). Con una sola, el stock se edita con el botón de siempre y la API lo lleva a la principal.
+	-->
 	<div
-	v-if="!article.article_variants.length && addresses.length">
+	v-if="!article.article_variants.length && muestra_sucursales">
 	
 		<!--
 			En edición: dos botones con texto, apilados para no ensanchar la columna Stock. Antes eran
