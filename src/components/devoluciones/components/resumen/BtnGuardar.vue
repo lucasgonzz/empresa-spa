@@ -108,6 +108,23 @@ export default {
 		address_id() {
 			return this.$store.state.devoluciones.address_id
 		},
+		/**
+		 * El depósito que viaja en el POST.
+		 *
+		 * Misión sucursal-siempre (23/10/2026, D1): con UNA sola sucursal el select no se ve, y en vez
+		 * de un 0 viaja el id de esa sucursal (la principal). Así anda también si esta SPA habla con una
+		 * API vieja durante un despliegue: la API vieja no tiene la red que lleva a la principal lo que
+		 * llega sin sucursal, y un 0 sobre un artículo que reparte se perdería en silencio. Con dos o
+		 * más sucursales viaja lo elegido, como siempre.
+		 *
+		 * @returns {Number|null}
+		 */
+		address_id_a_enviar() {
+			if (!this.address_id && !this.muestra_sucursales && this.sucursal_principal) {
+				return this.sucursal_principal.id
+			}
+			return this.address_id
+		},
 		facturar_nota_credito() {
 			return this.$store.state.devoluciones.facturar_nota_credito
 		},
@@ -243,7 +260,7 @@ export default {
 				update_unidades_devueltas: this.update_unidades_devueltas,
 				regresar_stock: this.regresar_stock,
 				generar_current_acount: this.generar_current_acount,
-				address_id: this.address_id,
+				address_id: this.address_id_a_enviar,
 				facturar_nota_credito: this.facturar_nota_credito,
 				descriptions: this.descriptions,
 				discounts: this.get_models_by_id('discount', this.discounts_id),
@@ -272,7 +289,7 @@ export default {
 				items: this.items,
 				regresar_stock: this.regresar_stock,
 				generar_current_acount: this.generar_current_acount,
-				address_id: this.address_id,
+				address_id: this.address_id_a_enviar,
 				descriptions: this.descriptions,
 				discounts: [],
 				surchages: [],
@@ -291,8 +308,8 @@ export default {
 			let ok = true
 			if (
 				this.regresar_stock
-				// Desde la segunda sucursal (misión sucursal-siempre, D1): con una sola no hay select y
-				// la API usa la principal.
+				// Desde la segunda sucursal (misión sucursal-siempre, D1): con una sola no hay select ni
+				// se exige: viaja la principal (address_id_a_enviar).
 				&& this.muestra_sucursales
 				&& !this.address_id
 			) {
@@ -361,8 +378,8 @@ export default {
 
 			if (
 				this.regresar_stock
-				// Desde la segunda sucursal (misión sucursal-siempre, D1): con una sola no hay select y
-				// la API usa la principal.
+				// Desde la segunda sucursal (misión sucursal-siempre, D1): con una sola no hay select ni
+				// se exige: viaja la principal (address_id_a_enviar).
 				&& this.muestra_sucursales
 				&& !this.address_id
 			) {

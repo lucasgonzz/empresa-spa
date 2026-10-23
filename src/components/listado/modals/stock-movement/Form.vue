@@ -64,8 +64,8 @@
 				el stock global…" y a la vez check() exigía el depósito: el modal no dejaba guardar (2R,
 				23/10/2026, 488 artículos). Ahora la API, antes de aplicar el movimiento, pasa el global
 				entero a la sucursal principal (D4 de empresa-api), así que elegir depósito ya no pierde nada.
-			- Con una sola sucursal no hay selector ni se exige: el movimiento sale con
-				`to_address_id: 0`, como en un negocio sin sucursales, y la API lo manda a la principal (D3).
+			- Con una sola sucursal no hay selector ni se exige: el movimiento sale con el id de esa
+				sucursal, la principal (ver setDefaultAddress), y no con un 0.
 		-->
 		<b-form-group
 		v-if="muestra_sucursales"
@@ -249,7 +249,7 @@ export default {
 		},
 		check() {
 			// El depósito se exige solo cuando el selector está a la vista (dos o más sucursales,
-			// misión sucursal-siempre D5). Con una sola, `to_address_id: 0` y la API usa la principal.
+			// misión sucursal-siempre D5). Con una sola, viaja la principal.
 			if (this.muestra_sucursales && this.to_address_id == 0) {
 				this.$toast.error('Indique el deposito')
 				return false
@@ -290,8 +290,9 @@ export default {
 		/**
 		 * Deja elegido el depósito destino (misión sucursal-siempre, 23/10/2026, D5):
 		 *
-		 * - Con una sola sucursal, nada: no hay selector y el movimiento va sin depósito (la API usa la
-		 *   principal).
+		 * - Con una sola sucursal no hay selector, pero el movimiento lleva el id de esa sucursal (la
+		 *   principal) en vez de un 0: así anda también si esta SPA habla con una API vieja durante un
+		 *   despliegue, que no tiene la red que lleva a la principal lo que llega sin sucursal.
 		 * - Si la persona solo puede cargar stock en su sucursal (`article.edit_stock_only_sucursal`),
 		 *   la suya, que es la única opción que le ofrece `addresses_options`.
 		 * - Si no, la sucursal principal.
@@ -299,7 +300,14 @@ export default {
 		 * @returns {void}
 		 */
 		setDefaultAddress() {
-			if (this.to_address_id != 0 || !this.muestra_sucursales) {
+			if (this.to_address_id != 0) {
+				return
+			}
+
+			if (!this.muestra_sucursales) {
+				if (this.sucursal_principal) {
+					this.to_address_id = this.sucursal_principal.id
+				}
 				return
 			}
 
