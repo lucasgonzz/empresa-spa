@@ -249,7 +249,7 @@ export default {
 						llegado, al subirla el backend devuelve la que ya existe y no crea otra.
 					*/
 					this.$store.commit('auth/set_online', false)
-					this.$toast.warning('No hubo respuesta del servidor: la venta se guardó en este equipo y se sube sola cuando vuelva la conexión. Si el servidor ya la había recibido, no se duplica.', {
+					this.$toast.warning('No hubo respuesta del servidor: la venta pasa a guardarse en este equipo y se sube sola cuando vuelva la conexión. Si el servidor ya la había recibido, no se duplica.', {
 						duration: 12000
 					})
 					this.guardar_venta_offline(offline_uuid)
@@ -495,7 +495,19 @@ export default {
 			return this.save_sale_offline(sale_data)
 			.then(() => {
 				guardado_offline_en_curso = false
-				this.resetear_vender(false)
+				/*
+					La venta YA esta en el equipo. Si limpiar Vender falla (un catalogo vacio sin
+					conexion, por ejemplo), eso no puede caer en el catch de abajo, que le diria al
+					vendedor que no se guardo y lo llevaria a cargarla de nuevo: dos ventas.
+				*/
+				try {
+					this.resetear_vender(false)
+				} catch (err) {
+					console.log('La venta quedo guardada en el equipo pero no se pudo limpiar Vender', err)
+					this.$toast.warning('La venta quedó guardada en este equipo, pero la pantalla no se pudo limpiar: tocá "Limpiar" antes de cargar la siguiente. No la vuelvas a guardar.', {
+						duration: 15000
+					})
+				}
 			})
 			.catch(err => {
 				guardado_offline_en_curso = false

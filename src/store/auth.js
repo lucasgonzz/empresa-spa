@@ -83,6 +83,12 @@ export default {
 		 * de conexión (components/common/AvisoSinConexion.vue).
 		 */
 		ventas_sin_subir: 0,
+
+		/**
+		 * De esas, cuántas ya rechazó el servidor (4xx). Ver `contar_ventas_del_equipo()` en
+		 * src/offline/sync_sales.js.
+		 */
+		ventas_rechazadas: 0,
 	},
 	getters: {
 		authenticated(state) {
@@ -103,6 +109,10 @@ export default {
 		/* Ver el comentario de `ventas_sin_subir` en el state. */
 		set_ventas_sin_subir(state, value) {
 			state.ventas_sin_subir = Number(value) || 0
+		},
+		/* Ver el comentario de `ventas_rechazadas` en el state. */
+		set_ventas_rechazadas(state, value) {
+			state.ventas_rechazadas = Number(value) || 0
 		},
 		/* Promesa de arranque en curso (o null). Ver el comentario de arranque_en_curso en el state. */
 		set_arranque_en_curso(state, value) {
@@ -163,6 +173,13 @@ export default {
 			}
 			if (!user) {
 				window.localStorage.clear()
+				/*
+					Sin usuario no hay sesión restaurada (misión ingreso-sin-internet): si se cerró
+					sesión estando sin conexión, la marca no puede sobrevivir al próximo login, que
+					correría el arranque sin conexión con un usuario recién confirmado por el servidor.
+				*/
+				state.sesion_sin_conexion = null
+				state.online = typeof navigator === 'undefined' || navigator.onLine !== false
 			}
 			state.user = user
 		},
@@ -339,7 +356,19 @@ export default {
 		 * @param {object} context Contexto Vuex del módulo auth.
 		 * @returns {Promise<void>}
 		 */
-		restaurar_sesion_sin_conexion({ commit }) {
+		restaurar_sesion_sin_conexion({ commit, state }) {
+			/*
+				`auth/me` también se despacha a mitad de una sesión ya abierta (al cambiar la
+				cotización del dólar, desde algún modelo). Si justo en ese momento no hay servidor, la
+				sesión que hay en memoria es la buena: no se la reemplaza por la copia del equipo ni se
+				la cierra (antes, ese corte la cerraba y mandaba al login). Solo se restaura en el
+				arranque, cuando todavía no se sabe si hay sesión.
+			*/
+			if (state.authenticated === true) {
+				commit('setLoading', false)
+				commit('setMessage', '')
+				return Promise.resolve()
+			}
 			return leer_sesion()
 			.then(sesion => {
 				commit('setLoading', false)
@@ -385,6 +414,8 @@ export default {
 			let sin_avisos = {
 				skip_global_error_event: true,
 				skip_global_validation_toast: true,
+				// Corre en segundo plano: un cambio de pantalla no lo tiene que cancelar (main.js).
+				skip_navigation_cancel: true,
 			}
 			return axios.get('/sanctum/csrf-cookie', sin_avisos)
 			.then(() => axios.get('/api/user', sin_avisos))
@@ -411,7 +442,14 @@ export default {
 					commit('setMismaSesionOtraPestana', true)
 					return 'otra_pestana'
 				}
-				if (err && err.response && (err.response.status === 401 || err.response.status === 419)) {
+				/*
+					Cualquier otro 4xx (401/419 de sesión vencida, un 403 de cuenta bloqueada): el
+					servidor contestó y dijo que no. Si se lo tomara como "sin conexión", la sesión
+					restaurada no saldría nunca de ese modo: las ventas no subirían y el aviso diría
+					"Sin conexión" con internet andando. Se cierra la sesión y el login cuenta lo que
+					pase; las ventas del equipo suben con el próximo inicio de sesión.
+				*/
+				if (err && err.response && err.response.status >= 400 && err.response.status < 500) {
 					commit('set_sesion_sin_conexion', null)
 					commit('set_online', navigator.onLine !== false)
 					commit('setAuthenticated', false)
@@ -419,8 +457,9 @@ export default {
 					return 'vencida'
 				}
 				/*
-					Cualquier otra cosa (un 403 distinto, un error que no es de axios): no se decide
-					nada con eso. Se sigue sin conexión y se vuelve a preguntar en el próximo intento.
+					Un error que no es de axios: no se decide nada con eso. Se sigue sin conexión y se
+					vuelve a preguntar en el próximo intento. (Un 5xx ya salió arriba como "sin
+					conexión": con el servidor caído, trabajar sin conexión es justamente lo correcto.)
 				*/
 				console.log('revalidar_sesion: respuesta no esperada', err)
 				return 'sin_conexion'

@@ -252,14 +252,22 @@ export function es_falta_de_conexion(err) {
  */
 export function plugin_de_sesion_sin_conexion(store) {
 	store.subscribe((mutation, state) => {
-		if (mutation.type === 'auth/setAuthenticated' && mutation.payload === true) {
-			if (!state.auth.sesion_sin_conexion && state.auth.user) {
-				guardar_sesion(state.auth.user)
+		/*
+			Envuelto: una excepción acá (por ejemplo al copiar un usuario raro) no puede romper el
+			commit que la disparó, que es el del inicio de sesión.
+		*/
+		try {
+			if (mutation.type === 'auth/setAuthenticated' && mutation.payload === true) {
+				if (!state.auth.sesion_sin_conexion && state.auth.user) {
+					guardar_sesion(state.auth.user)
+				}
+				return
 			}
-			return
-		}
-		if (mutation.type === 'auth/setUser' && !mutation.payload) {
-			borrar_sesion()
+			if (mutation.type === 'auth/setUser' && !mutation.payload) {
+				borrar_sesion()
+			}
+		} catch (err) {
+			console.log('plugin_de_sesion_sin_conexion', err)
 		}
 	})
 }

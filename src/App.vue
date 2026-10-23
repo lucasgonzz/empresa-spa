@@ -625,7 +625,12 @@ export default {
                         de `auth/me` que trajo hasta acá. Se lee sincrónico a propósito, por lo
                         mismo que `debe_cambiar_de_version()`.
                     */
-                    if (this.$store.state.auth.ventas_sin_subir > 0) {
+                    /*
+                        Las que el servidor ya rechazó no cuentan: no van a subir solas y no hay
+                        pantalla para resolverlas desde acá, así que frenarían el cambio de versión
+                        para siempre. Quedan en el equipo (no se borran nunca).
+                    */
+                    if (this.$store.state.auth.ventas_sin_subir - this.$store.state.auth.ventas_rechazadas > 0) {
                         this.$toast.warning('Hay ventas guardadas en este equipo sin conexión: primero se suben. Cuando terminen, recargá la página para pasar a la versión nueva del sistema.', {
                             duration: 15000,
                             position: 'top',

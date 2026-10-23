@@ -2,6 +2,7 @@ import syncArticlesMixin from '@/offline/sync_articles'
 import syncSalesMixin from '@/offline/sync_sales'
 import db from './db'
 import { borrar_sesion } from './sesion_sin_conexion'
+import { contar_ventas_del_equipo } from './sync_sales'
 
 /**
  * Cada cuánto se vuelve a preguntar por el servidor mientras se trabaja con la sesión restaurada
@@ -61,6 +62,11 @@ export default {
              * `sospechar_falta_de_conexion()`).
              */
             sondeando_servidor: false,
+            /**
+             * true si se pidió una sincronización completa mientras otra tenía el candado: se
+             * corre apenas se libera (ver `correr_sincronizacion_pendiente()`).
+             */
+            sincronizacion_offline_pendiente: false,
         }
     },
     methods: {
@@ -226,6 +232,14 @@ export default {
             */
             if (this.sincronizacion_offline_en_curso) {
                 console.log('Ya hay una sincronizacion offline en curso, no se lanza otra')
+                /*
+                    Pero se deja anotada para cuando termine la que corre (misión
+                    ingreso-sin-internet): la que tiene el candado puede ser la subida periodica de
+                    ventas de vigilar_conexion(), que NO baja articulos. Sin la anotacion, una
+                    sincronizacion completa pedida justo en ese momento (un login, la vuelta de la
+                    red) se perdia y los articulos no se actualizaban en toda la sesion.
+                */
+                this.sincronizacion_offline_pendiente = true
                 return
             }
 
@@ -282,6 +296,19 @@ export default {
                     a cerrar.
                 */
                 this.sincronizacion_offline_en_curso = false
+                this.correr_sincronizacion_pendiente()
+            }
+        },
+        /**
+         * Si mientras había una sincronización en curso se pidió otra completa, la corre ahora.
+         * Ver el comentario de `sincronizacion_offline_pendiente` en sincronizar_offline().
+         *
+         * @returns {void}
+         */
+        correr_sincronizacion_pendiente() {
+            if (this.sincronizacion_offline_pendiente) {
+                this.sincronizacion_offline_pendiente = false
+                this.sincronizar_offline()
             }
         },
         /**
@@ -337,13 +364,7 @@ export default {
          * @returns {Promise<void>}
          */
         actualizar_ventas_sin_subir() {
-            return db.sales.count()
-            .then(cantidad => {
-                this.$store.commit('auth/set_ventas_sin_subir', cantidad)
-            })
-            .catch(err => {
-                console.log('No se pudieron contar las ventas sin subir', err)
-            })
+            return contar_ventas_del_equipo(this.$store)
         },
         /**
          * Corre cada INTERVALO_DE_VIGILANCIA_MS.
@@ -389,6 +410,10 @@ export default {
             if (this.sincronizacion_offline_en_curso) {
                 return
             }
+            // Login maestro básico: las ventas del equipo no se tocan (ver sincronizar_offline()).
+            if (this.user && this.user.skip_offline_articles_sync) {
+                return
+            }
             db.sales.toArray()
             .then(ventas => {
                 /** Las que todavía no fueron rechazadas por el servidor. */
@@ -401,6 +426,7 @@ export default {
                 .catch(err => console.log(err))
                 .then(() => {
                     this.sincronizacion_offline_en_curso = false
+                    this.correr_sincronizacion_pendiente()
                 })
             })
             .catch(err => console.log('vigilar_conexion', err))
@@ -417,6 +443,8 @@ export default {
                 timeout: 8000,
                 skip_global_error_event: true,
                 skip_global_validation_toast: true,
+                // Un cambio de pantalla no lo cancela: un sondeo cancelado se leería como "hay servidor".
+                skip_navigation_cancel: true,
             })
             .then(() => true)
             .catch(err => !(err && err.isAxiosError && !err.response))
@@ -526,6 +554,13 @@ export default {
                 return
             }
             this.$store.commit('auth/set_online', true)
+            /*
+                Si en este corte los catalogos se tuvieron que cargar desde el equipo (la llamada
+                masiva del arranque se cayo por red), se vuelven a pedir ahora que hay servidor.
+            */
+            if (this.$store.state.download_resources.catalogos_del_equipo) {
+                this.$store.commit('download_resources/setStartDownload')
+            }
             this.sincronizar_offline()
         },
         async offline() {

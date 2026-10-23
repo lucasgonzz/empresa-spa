@@ -36,7 +36,27 @@ export function generar_offline_uuid() {
  * Campos que existen solo en la tabla `sales` de IndexedDB y no viajan nunca en el POST /sale.
  * `offline_uuid` NO está: ese sí viaja.
  */
-const CAMPOS_LOCALES = ['id', 'created_at', 'created_at_elegido', 'rechazada_at', 'rechazo_mensaje', 'adjuntos_pendientes']
+const CAMPOS_LOCALES = ['id', 'created_at', 'created_at_elegido', 'rechazada_at', 'rechazo_mensaje', 'adjuntos_pendientes', 'owner_id_local']
+
+/**
+ * Cuenta las ventas guardadas en el equipo y lo deja en el store: `auth.ventas_sin_subir` (todas)
+ * y `auth.ventas_rechazadas` (las que el servidor ya rechazó con un 4xx). Las muestra el aviso de
+ * conexión; App.vue usa la diferencia para no frenar el cambio de versión por una venta rechazada
+ * que nadie puede resolver desde ahí.
+ *
+ * @param {Object} store El store de Vuex.
+ * @returns {Promise<void>} Nunca rechaza.
+ */
+export function contar_ventas_del_equipo(store) {
+    return db.sales.toArray()
+    .then(ventas => {
+        store.commit('auth/set_ventas_sin_subir', ventas.length)
+        store.commit('auth/set_ventas_rechazadas', ventas.filter(venta => venta.rechazada_at).length)
+    })
+    .catch(err => {
+        console.log('No se pudieron contar las ventas del equipo', err)
+    })
+}
 
 export default {
     methods: {
@@ -86,25 +106,33 @@ export default {
                 */
                 capturada_at: ahora,
                 cargada_por_duenio: (!sale_data.employee_id && this.is_owner) ? 1 : 0,
+                /*
+                    De que comercio es (campo LOCAL, no viaja): una venta se sube solo con una
+                    sesion del mismo dueño (ver sync_pending_sales). Hoy cada origen es de un solo
+                    comercio, pero es lo que evita que una venta termine en la cuenta de otro si
+                    alguna vez dos comparten el mismo frente.
+                */
+                owner_id_local: this.owner_id,
                 created_at: ahora
             })
 
-            const ventas = await db.sales.toArray()
+            /*
+                🔴 De aca para abajo la venta YA esta escrita. Nada de lo que sigue puede volver a
+                quien llama como error: guardar_venta_offline() lo leeria como "no se guardo", el
+                vendedor reintentaria y quedarian dos ventas. Por eso va en su propio try.
+            */
+            try {
+                await contar_ventas_del_equipo(this.$store)
 
-            console.log('ventas guardadas:')
-            console.log(ventas)
+                let toast = '🛒 Venta guardada en modo offline'
 
-            // El aviso de conexion muestra cuantas ventas quedaron guardadas en el equipo.
-            this.$store.commit('auth/set_ventas_sin_subir', ventas.length)
-
-            // alert('🛒 Venta guardada en modo offline')
-
-            let toast = '🛒 Venta guardada en modo offline'
-
-            this.$toast.success(toast, {
-                duration: 5000,
-                position: 'top-right'
-            })
+                this.$toast.success(toast, {
+                    duration: 5000,
+                    position: 'top-right'
+                })
+            } catch (err) {
+                console.log('La venta quedo guardada en el equipo, pero fallo lo de despues', err)
+            }
         },
 
         /**
@@ -126,7 +154,30 @@ export default {
          *                         intentan todas, como siempre.
          * @returns {Promise<Array>}
          */
-        async sync_pending_sales(opciones) {
+        sync_pending_sales(opciones) {
+            /*
+                🔴 Una sola pestaña por vez (misión ingreso-sin-internet, 23/10/2026). El candado
+                `sincronizacion_offline_en_curso` es de cada pestaña, y el evento `online` les llega
+                a todas a la vez: dos pestañas subían la misma venta en paralelo y cada una la
+                ofrecía en su modal de facturación. Con Web Locks (mismo origen = mismo IndexedDB) la
+                segunda espera a que termine la primera y, cuando entra, esas ventas ya no están en el
+                equipo. El backend además devuelve la misma venta por `offline_uuid`. En un navegador
+                sin Web Locks se sigue como antes.
+            */
+            if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
+                return navigator.locks.request('cc-subir-ventas-offline', () => this.subir_ventas_del_equipo(opciones))
+            }
+            return this.subir_ventas_del_equipo(opciones)
+        },
+
+        /**
+         * El cuerpo de sync_pending_sales(), ya con el candado entre pestañas tomado. Ver el
+         * docblock de sync_pending_sales() para lo que devuelve.
+         *
+         * @param {Object} opciones
+         * @returns {Promise<Array>}
+         */
+        async subir_ventas_del_equipo(opciones) {
             try {
 
                 console.log('sync_pending_sales')
@@ -135,6 +186,13 @@ export default {
                 if (opciones && opciones.omitir_rechazadas) {
                     pending_sales = pending_sales.filter(sale => !sale.rechazada_at)
                 }
+
+                /*
+                    Solo las de este comercio (ver `owner_id_local` en save_sale_offline). Las de
+                    otro dueño se quedan en el equipo, sin tocarlas, hasta que entre una sesión suya.
+                    Las guardadas antes de esta version no traen la marca y se suben como siempre.
+                */
+                pending_sales = pending_sales.filter(sale => !sale.owner_id_local || !this.owner_id || sale.owner_id_local == this.owner_id)
 
                 console.log('ventas para guardar:')
                 console.log(pending_sales)
@@ -147,6 +205,23 @@ export default {
 
                     for (const sale of pending_sales) {
                         try {
+                            /*
+                                Venta guardada ANTES de esta version: no tiene `offline_uuid`. Se le
+                                da uno AHORA y se lo guarda en el equipo antes del POST, para que
+                                tambien a ella la cubran la idempotencia (si la respuesta se pierde,
+                                el reintento no la duplica) y `venta_offline` (la guarda anti doble
+                                clic ya no descarta la segunda de dos ventas iguales). Su momento de
+                                captura es su `created_at` local.
+                            */
+                            if (!sale.offline_uuid) {
+                                sale.offline_uuid = generar_offline_uuid()
+                                sale.capturada_at = sale.capturada_at || sale.created_at
+                                await db.sales.update(sale.id, {
+                                    offline_uuid: sale.offline_uuid,
+                                    capturada_at: sale.capturada_at,
+                                })
+                            }
+
                             /** Evita enviar campos locales de IndexedDB al backend. */
                             const sale_to_sync = {
                                 ...sale
@@ -197,6 +272,8 @@ export default {
                             const response = await this.$api.post('/sale', sale_to_sync, {
                                 skip_global_error_event: true,
                                 skip_global_validation_toast: true,
+                                // Corre en segundo plano: cambiar de pantalla no la tiene que cortar.
+                                skip_navigation_cancel: true,
                             })
 
                             /** ¿El servidor devolvio la venta (recien creada, o la que ya existia con este uuid)? */
@@ -348,7 +425,7 @@ export default {
                 }
 
                 // Cuantas siguen en el equipo (las rechazadas y las que no pudieron subir).
-                this.$store.commit('auth/set_ventas_sin_subir', await db.sales.count())
+                await contar_ventas_del_equipo(this.$store)
 
                 return ventas_sincronizadas
 
@@ -394,6 +471,7 @@ export default {
                         headers: { 'Content-Type': 'multipart/form-data' },
                         skip_global_error_event: true,
                         skip_global_validation_toast: true,
+                        skip_navigation_cancel: true,
                     })
                 } catch (err) {
                     console.log('No se pudo subir un adjunto de la venta offline', err)

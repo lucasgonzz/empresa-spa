@@ -475,27 +475,44 @@ export default {
 				catalogos.forEach(catalogo => {
 					por_nombre[catalogo.model_name] = catalogo.models
 				})
+				/** Los pedidos que no tienen copia en el equipo (o que no se pudieron cargar). */
+				let faltan = []
+				/** ¿Se cargó al menos uno desde la copia? */
+				let alguno = false
 				this.models_to_download.forEach(fila => {
 					if (model_names && model_names.indexOf(fila.model_name) == -1) {
 						return
 					}
 					let models = por_nombre[fila.model_name]
+					let cargado = false
 					if (models && this.$store._mutations[fila.model_name + '/setModels']) {
 						try {
 							this.$store.commit(fila.model_name + '/setModels', models)
+							cargado = true
 						} catch (err) {
 							console.log('No se pudo cargar el catalogo ' + fila.model_name + ' desde el equipo', err)
 						}
 					}
-					this.marcar_descargado(fila.model_name)
+					if (cargado) {
+						alguno = true
+						this.marcar_descargado(fila.model_name)
+					} else {
+						faltan.push(fila.model_name)
+					}
 				})
-				this.catalogos_del_equipo = true
-				console.log('Catalogos cargados desde el equipo: ' + catalogos.length)
+				if (alguno) {
+					this.catalogos_del_equipo = true
+				}
+				console.log('Catalogos cargados desde el equipo: ' + catalogos.length + '; sin copia: ' + faltan.length)
 
 				if (!model_names) {
+					// Sesion restaurada: no hay a quien pedirle los que faltan. Se marcan igual para
+					// que el panel no se quede girando (ver marcar_descargado).
+					faltan.forEach(model_name => this.marcar_descargado(model_name))
 					this.$store.dispatch('table_column_preference/bootstrap_module_preferences')
 					reconcile_article_dynamic_columns_if_needed(this.$store)
 				}
+				return faltan
 			})
 		},
 		/**
@@ -569,7 +586,17 @@ export default {
 					reintentar contra el servidor.
 				*/
 				if (err && err.isAxiosError && !err.response) {
+					/*
+						Los que no tengan copia en el equipo (un usuario sin modo sin conexion no
+						tiene ninguna) van igual por el repliegue de siempre: sin esto quedaban
+						"listos" y vacios toda la sesion.
+					*/
 					return this.restaurar_catalogos_del_equipo(model_names)
+					.then(faltan => {
+						if (faltan.length) {
+							return this.pedir_sueltos_en_tandas(faltan)
+						}
+					})
 				}
 
 				return this.pedir_sueltos_en_tandas(model_names)
