@@ -254,9 +254,9 @@ export default {
                                 ahora. Con el `offline_uuid`, le dice al backend que la guarda anti
                                 doble clic de 5 segundos NO aplica (dos ventas sin conexion iguales,
                                 subidas seguidas, son dos ventas: la guarda descartaba la segunda) y
-                                que use `capturada_at` y `cargada_por_duenio`. Solo para las que
-                                tienen uuid: las guardadas antes de esta version siguen el camino
-                                de siempre.
+                                que use `capturada_at` y `cargada_por_duenio`. Las guardadas antes
+                                de esta version tambien llegan aca con uuid: se lo asigna el bloque
+                                de arriba antes del POST.
                             */
                             if (sale.offline_uuid) {
                                 sale_to_sync.venta_offline = 1
