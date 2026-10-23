@@ -1,7 +1,7 @@
 <template>
 <div>
     <b-modal
-    id="modal-consolidar-facturacion"
+    :id="modal_id"
     title="Consolidar ventas para facturar"
     size="lg"
     hide-footer
@@ -214,6 +214,14 @@
 import generals from '@/common-vue/mixins/generals'
 export default {
     mixins: [generals],
+    props: {
+        // Id del b-modal. El de siempre en Ventas; la cuenta corriente monta otra instancia con un
+        // id propio para no abrirse junto con la de Ventas (ver common/current-acounts/Index.vue).
+        modal_id: {
+            type: String,
+            default: 'modal-consolidar-facturacion',
+        },
+    },
     data() {
         return {
             /** Indica si ya se hizo al menos una búsqueda (para mostrar el mensaje vacío). */
@@ -417,7 +425,9 @@ export default {
         async consolidar() {
             const ok = await this.$store.dispatch('sale/consolidar_facturacion/consolidar')
             if (ok) {
-                this.$bvModal.hide('modal-consolidar-facturacion')
+                this.$bvModal.hide(this.modal_id)
+                // Quien monta el modal decide que recargar (la cuenta corriente, por ejemplo).
+                this.$emit('consolidada')
                 this.$bvToast.toast(
                     'Se generó la factura consolidada correctamente.',
                     { title: 'Factura consolidada', variant: 'success', solid: true }

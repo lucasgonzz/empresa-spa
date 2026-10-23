@@ -66,6 +66,20 @@ class="cc-lista">
                 v-if="show_badge_facturado_error(slotProps.model)"
                 variant="danger">Factura sin cae</b-badge>
 
+                <!--
+                    Mision cc-consolidar-desde-cuenta-corriente (23/10/2026): la venta que se
+                    facturo junto con otras dice en que factura quedo. La factura es de la venta
+                    contenedora, no de esta (ver consolidada_en en utils/consolidar_desde_cuenta_corriente.js).
+                -->
+                <b-badge
+                v-if="consolidada_en(slotProps.model)"
+                data-testid="badge-consolidada"
+                variant="info"
+                :title="consolidada_en(slotProps.model).titulo">
+                    <i class="bi bi-layers"></i>
+                    {{ consolidada_en(slotProps.model).texto }}
+                </b-badge>
+
                 <b-badge
                 v-for="ticket in facturas_arca_de(slotProps.model)"
                 :key="ticket.id"
@@ -100,6 +114,7 @@ import TableComponent from '@/common-vue/components/display/TableComponent'
 
 import current_acounts from '@/mixins/current_acounts' 
 import print from '@/mixins/current_acounts/print' 
+import { consolidada_en } from '@/utils/consolidar_desde_cuenta_corriente'
 export default {
     mixins: [current_acounts, print],
     components: {
@@ -158,6 +173,7 @@ export default {
         },
     },
     methods: {
+        consolidada_en,
         olvidar_ultima_seleccion_de_la_tabla() {
             if (this.$refs.tabla) {
                 this.$refs.tabla.last_selection = []

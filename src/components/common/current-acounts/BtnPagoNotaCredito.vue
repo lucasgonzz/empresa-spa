@@ -45,6 +45,24 @@
             cambia es el texto ("Registrar pago para 4 movimientos") y que el monto precargado es la
             suma de los saldos.
         -->
+        <!--
+            Mision cc-consolidar-desde-cuenta-corriente (23/10/2026): a la derecha van las acciones
+            que se hacen sobre lo seleccionado. "Consolidar" es neutro y "Registrar pago" sigue
+            siendo la unica con acento: el pago es la accion principal del modal.
+        -->
+        <div
+        class="cc-footer__grupo cc-footer__grupo--acciones">
+        <b-button
+        v-if="puede_consolidar"
+        class="cc-footer__btn"
+        variant="light"
+        data-testid="btn-consolidar-ventas"
+        @click="consolidar">
+            <i class="bi bi-layers"></i>
+            <span class="cc-footer__btn-texto">
+                {{ texto_de_consolidar }}
+            </span>
+        </b-button>
         <b-button
         v-if="movimientos_a_pagar"
         class="cc-footer__btn cc-footer__btn--acento"
@@ -71,6 +89,7 @@
                 Registrar pago
             </span>
         </b-button>
+        </div>
     </div>
 </template>
 <script>
@@ -79,9 +98,49 @@ import {
     movimientos_a_pagar,
     suma_de_saldos,
 } from '@/utils/pago_a_varios_movimientos'
+import {
+    movimientos_de_venta,
+    motivo_para_no_consolidar,
+    ventas_sin_repetir,
+} from '@/utils/consolidar_desde_cuenta_corriente'
 export default {
     mixins: [current_acounts],
+    props: {
+        // Id del modal de consolidacion que monta el Index de esta cuenta corriente (ver Index.vue).
+        // Sin id no hay a donde mandar la seleccion, y el boton de consolidar no se ofrece.
+        consolidar_modal_id: {
+            type: String,
+            default: null,
+        },
+    },
     computed: {
+        /**
+         * Las ventas seleccionadas, o null si la seleccion no es solo de ventas.
+         *
+         * @returns {Array|null}
+         */
+        ventas_a_consolidar() {
+            return movimientos_de_venta(this.selected_current_acounts)
+        },
+        /**
+         * El boton de consolidar se ofrece con la extension prendida, en la cuenta corriente de un
+         * CLIENTE (la de un proveedor no tiene ventas) y con una seleccion de ventas. Si alguna no
+         * se puede consolidar, el clic lo explica (como en Ventas) en vez de esconder el boton.
+         *
+         * @returns {boolean}
+         */
+        puede_consolidar() {
+            return !!this.consolidar_modal_id
+                && this.hasExtencion('consolidar_ventas_en_factura')
+                && this.from_model_name == 'client'
+                && !!this.ventas_a_consolidar
+        },
+        texto_de_consolidar() {
+            let cantidad = ventas_sin_repetir(this.ventas_a_consolidar).length
+            return cantidad == 1
+                ? 'Consolidar venta en una factura'
+                : 'Consolidar ' + cantidad + ' ventas en una factura'
+        },
         /**
          * Los movimientos contra los que se puede registrar el pago, del mas viejo al mas nuevo, o
          * null si la seleccion no sirve.
@@ -111,6 +170,32 @@ export default {
         },
     },
     methods: {
+        /**
+         * Valida la seleccion y abre el modal de consolidacion precargado con esas ventas: el
+         * mismo modal y el mismo store que usa Ventas ("Seleccion > Consolidar para facturar").
+         */
+        consolidar() {
+            let movimientos = this.ventas_a_consolidar
+            let motivo = motivo_para_no_consolidar(movimientos, this.from_model.id)
+
+            if (motivo) {
+                this.$bvToast.toast(motivo, {
+                    title: 'Consolidar ventas',
+                    variant: 'warning',
+                    solid: true,
+                })
+                return
+            }
+
+            let ventas = ventas_sin_repetir(movimientos)
+
+            this.$store.commit('sale/consolidar_facturacion/prepararDesdeVentasSeleccionadas', {
+                client_id: this.from_model.id,
+                ventas: ventas,
+                sale_ids: ventas.map(venta => venta.id),
+            })
+            this.$bvModal.show(this.consolidar_modal_id)
+        },
         setToPay() {
             // Se congela la seleccion al apretar: dentro del setTimeout de abajo la lista ya podria
             // haber cambiado, y el monto precargado tiene que ser el de lo que se mando a pagar.
@@ -281,4 +366,12 @@ export default {
 
 		.cc-footer__btn--acento
 			width: 100%
+
+		// Las acciones de la derecha (consolidar + pagar) no entran en una linea de telefono: cada
+		// una ocupa todo el ancho, con el pago al final.
+		.cc-footer__grupo--acciones
+			flex-wrap: wrap
+
+			.cc-footer__btn
+				flex: 1 1 100%
 </style>

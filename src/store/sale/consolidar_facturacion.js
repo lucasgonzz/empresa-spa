@@ -229,8 +229,17 @@ export default {
                 /** Agrega la venta consolidada al store de ventas para reflejarla en la UI. */
                 commit('sale/add', res.data.model, { root: true })
 
-                /** Recarga las ventas originales para actualizar su estado (consolidacion_facturacion_id). */
-                await dispatch('sale/getModels', null, { root: true })
+                /**
+                 * Recarga las ventas originales para actualizar su estado (consolidacion_facturacion_id).
+                 * Es de mejor esfuerzo: la factura ya se emitio, y si esta recarga falla (el modal se
+                 * puede abrir desde la cuenta corriente, en pantallas que no son Ventas) el error no
+                 * puede presentarse como una consolidacion fallida.
+                 */
+                try {
+                    await dispatch('sale/getModels', null, { root: true })
+                } catch (err_recarga) {
+                    console.error('consolidar_facturacion/consolidar: no se pudo recargar el listado de ventas', err_recarga)
+                }
 
                 /** Limpia la selección múltiple en la grilla de ventas. */
                 commit('sale/setSelected', [], { root: true })
