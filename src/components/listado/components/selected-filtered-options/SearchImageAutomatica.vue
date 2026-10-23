@@ -99,6 +99,10 @@ export default {
 	 */
 	mounted() {
 		this.actualizar_tope_demo()
+		this.$root.$on('bv::dropdown::show', this.al_abrir_un_menu)
+	},
+	beforeDestroy() {
+		this.$root.$off('bv::dropdown::show', this.al_abrir_un_menu)
 	},
 	methods: {
 		/**
@@ -106,6 +110,18 @@ export default {
 		 *
 		 * @return {Promise<Object>} El tope normalizado.
 		 */
+		/**
+		 * El menú puede haberse montado con búsquedas y quedarse sin ellas después (la corrida de
+		 * otro menú las gastó): en una demo se vuelve a preguntar cada vez que se abre un menú, así
+		 * la opción no aparece activa con un estado viejo. Fuera de una demo no pide nada.
+		 *
+		 * @return {void}
+		 */
+		al_abrir_un_menu() {
+			if (this.tope_demo.aplica) {
+				this.actualizar_tope_demo()
+			}
+		},
 		actualizar_tope_demo() {
 			return this.$store.dispatch('image_assignment/get_tope_demo')
 			.then(tope => {
@@ -138,7 +154,9 @@ export default {
 					this.$toast.error(mensaje_de_tope_demo_agotado(tope), { duration: 6000 })
 					return
 				}
-				this.$bvModal.msgBoxConfirm(aviso_de_tope_demo(tope), {
+				// Desde $root: si el menú se desmonta mientras el aviso está abierto, el aviso no se
+				// cierra solo (BootstrapVue lo destruye junto con el componente que lo abrió).
+				this.$root.$bvModal.msgBoxConfirm(aviso_de_tope_demo(tope), {
 					title: 'Búsquedas de la demo',
 					okTitle: 'Asignar imágenes',
 					cancelTitle: 'Cancelar',
@@ -217,4 +235,8 @@ export default {
 	line-height: 1.35
 	white-space: normal
 	color: var(--color-text-secondary, #6c757d)
+
+// La opción apagada se tiene que VER apagada: dropdown-option-item no trae ese estado.
+.article-dropdown-option .dropdown-item.disabled .article-dropdown-option__content
+	opacity: 0.5
 </style>
