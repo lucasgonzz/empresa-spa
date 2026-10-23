@@ -27,7 +27,7 @@
 							<b-form-input
 							placeholder="Personalizado"
 							@keyup.enter="add_varios_precios(items[data.index], true)"
-							@keyup="callSetTotal(false)" 
+							@input="callSetTotal(false)"
 							@change="personalizado_confirmado(items[data.index])"
 							type="number"
 							:data-testid="'venta-item-precio-'+id_de_renglon(items[data.index])"
@@ -133,12 +133,13 @@
 
 				
 				<template #cell(amount)="data">
+					<!-- input sigue a v-model también al pegar o usar teclado móvil; keyup dejaba
+					     la cantidad nueva con el total anterior hasta volver a tocar una tecla. -->
 					<b-input-group
 					class="input-discount">
 						<b-form-input
 						:disabled="previus_sale != null && previus_sale.to_check == 1"
-						@keyup="callSetTotal(true, items[data.index])"
-						@click="callSetTotal(true, items[data.index])"
+						@input="callSetTotal(true, items[data.index])"
 						type="number"
 						min="0"
 						:data-testid="'venta-item-cantidad-'+id_de_renglon(items[data.index])"
@@ -171,8 +172,7 @@
 					class="input-discount"
 					prepend="%">
 						<b-form-input
-						@keyup="callSetTotal(false)"
-						@click="callSetTotal(false)"
+						@input="callSetTotal(false)"
 						type="number"
 						:placeholder="get_max_discount(items[data.index])"
 						min="0"
