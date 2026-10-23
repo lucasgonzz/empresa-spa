@@ -342,8 +342,26 @@ function global_api_error_interceptor(error) {
         /* Un request cancelado a propósito no es un error que el usuario tenga que ver. */
         const fue_cancelado = typeof axios.isCancel === 'function' && axios.isCancel(error)
 
+        /*
+         * Aviso al mixin offline (src/offline/index.js) de que un pedido se quedó sin respuesta
+         * (misión ingreso-sin-internet, 23/10/2026). Con wifi pero sin salida a internet
+         * `navigator.onLine` sigue en true y el evento `offline` del navegador no llega nunca: este
+         * es el único indicio. El mixin confirma con un pedido de prueba antes de pasar a trabajar
+         * sin conexión, para que un error aislado no lo dispare.
+         */
+        if (!fue_cancelado && typeof window !== 'undefined' && typeof window.CustomEvent === 'function') {
+            window.dispatchEvent(new window.CustomEvent('cc-sin-respuesta-del-servidor'))
+        }
+
+        /*
+         * Con la sesión restaurada desde el equipo (se entró sin conexión, misión
+         * ingreso-sin-internet) todo pedido falla por red y eso ya lo dice el aviso fijo de
+         * "Sin conexión" (components/common/AvisoSinConexion.vue): un toast por cada pantalla que
+         * intenta cargar algo sería ruido. El loading se apaga igual, arriba.
+         */
         const silenciar = Boolean(
-            error.config && error.config.skip_global_error_event
+            (error.config && error.config.skip_global_error_event)
+            || (store.state.auth && store.state.auth.sesion_sin_conexion)
         )
 
         if (!fue_cancelado && !silenciar) {
