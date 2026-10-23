@@ -110,11 +110,17 @@ export default {
 					422: todos los elegidos ya tenían imagen y la API no creó nada (o un rechazo de
 					validación del pedido). Se avisa con el mensaje de la API, sin el error genérico
 					y SIN emitir `imagenes-automaticas:lote-iniciado`: no hay ningún lote que esperar.
+
+					El aviso propio sale solo si el 422 trae `errors` (forma de validación): es el
+					único que `skip_global_validation_toast` calla. Un 422 con `{message}` solo ya lo
+					mostró el interceptor global por `errorEvent`; mostrarlo acá lo duplicaría.
 				*/
 				if (error && error.response && error.response.status === 422) {
-					this.$toast.info(this.mensaje_de_validacion(error.response.data), {
-						duration: 6000,
-					})
+					if (error.response.data && error.response.data.errors) {
+						this.$toast.info(this.mensaje_de_validacion(error.response.data), {
+							duration: 6000,
+						})
+					}
 					return
 				}
 				this.$toast.error('No se pudo iniciar el procesamiento de imágenes')
