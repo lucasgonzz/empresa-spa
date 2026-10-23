@@ -131,13 +131,14 @@ export default {
 			}
 		},
 		/**
-		 * Label legible de un chip según el catálogo compartido.
+		 * Label legible de un chip según el catálogo compartido. Las sucursales del store dan el
+		 * nombre de un chip 'sucursal_<id>' (misión pdf-direccion-sucursales).
 		 *
 		 * @param {string} key Clave del chip.
 		 * @return {string}
 		 */
 		chip_label(key) {
-			return chip_label(key)
+			return chip_label(key, this.$store.state.address ? this.$store.state.address.models : [])
 		},
 		/**
 		 * Indica si el chip es obligatorio (no se puede quitar) en este cuadrante.

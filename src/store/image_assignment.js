@@ -135,6 +135,47 @@ function esta_activa(asignacion) {
 	return !!asignacion && (asignacion.status === 'pendiente' || asignacion.status === 'en_proceso')
 }
 
+/**
+ * Tope de búsquedas de las demos (misión tope-serper-demos, 23/10/2026): en una demo cada dueño
+ * tiene 25 búsquedas de Serper; fuera de una demo no hay tope. Normaliza el objeto que manda la API
+ * (`GET image-assignment-runs/tope-demo` o el campo `tope_demo` de la previa del catálogo) y, si no
+ * vino o vino roto (API vieja), devuelve "sin tope": nada cambia respecto de antes.
+ *
+ * @param {Object|null} valor {aplica, tope, usadas, restantes} tal como llegó.
+ * @returns {Object} {aplica: Boolean, tope: Number|null, usadas: Number|null, restantes: Number|null}
+ */
+export function normalizar_tope_demo(valor) {
+	if (!valor || typeof valor !== 'object' || valor.aplica !== true) {
+		return { aplica: false, tope: null, usadas: null, restantes: null }
+	}
+	return {
+		aplica: true,
+		tope: Number(valor.tope) || 0,
+		usadas: Number(valor.usadas) || 0,
+		restantes: Math.max(0, Number(valor.restantes) || 0),
+	}
+}
+
+/**
+ * Texto del aviso antes de lanzar una asignación en una demo con búsquedas disponibles.
+ *
+ * @param {Object} tope El de `normalizar_tope_demo`, con `aplica` true.
+ * @returns {String}
+ */
+export function aviso_de_tope_demo(tope) {
+	return 'Te quedan ' + tope.restantes + ' de ' + tope.tope + ' búsquedas de la demo. Cada artículo usa al menos una: los que no alcancen quedan para cargar a mano.'
+}
+
+/**
+ * Texto de la demo sin búsquedas (el mismo que manda la API en el 422).
+ *
+ * @param {Object} tope El de `normalizar_tope_demo`, con `aplica` true.
+ * @returns {String}
+ */
+export function mensaje_de_tope_demo_agotado(tope) {
+	return 'Llegaste al límite de búsquedas de la demo (' + tope.tope + '). Podés seguir cargando a mano.'
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -501,6 +542,19 @@ export default {
 			return axios.get('/api/image-assignment-runs/catalogo/previa', opciones())
 				.then(res => res.data || {})
 				.catch(relanzar_marcando_la_cancelacion)
+		},
+		/**
+		 * Cuántas búsquedas de la demo le quedan al comercio (misión tope-serper-demos). Silencioso y
+		 * NUNCA rechaza: un 404 (API de antes de este endpoint), un 403 (sin "Agentes de IA"), una
+		 * cancelación o cualquier error devuelven "sin tope", y el botón sigue como siempre. La API
+		 * igual rechaza con 422 si el tope está agotado.
+		 *
+		 * @returns {Promise<Object>} {aplica, tope, usadas, restantes} (ver normalizar_tope_demo).
+		 */
+		get_tope_demo() {
+			return axios.get('/api/image-assignment-runs/tope-demo', opciones({ skip_global_error_event: true }))
+				.then(res => normalizar_tope_demo(res.data))
+				.catch(() => normalizar_tope_demo(null))
 		},
 		/**
 		 * Lanza la asignación de todo el catálogo (solo acceso maestro). 422 con `message` si no
