@@ -755,6 +755,9 @@ export default {
 			}
 		},
 		updateSale() {
+			// v-model puede cambiar sin keyup (pegar, teclado móvil). El PUT debe llevar el
+			// total y los renglones calculados juntos, igual que el alta de una venta.
+			this.setTotal()
 			const sale_id = this.previus_sale ? this.previus_sale.id : null
 			const pending = [...this.$store.state.vender.pending_attachments]
 			/*

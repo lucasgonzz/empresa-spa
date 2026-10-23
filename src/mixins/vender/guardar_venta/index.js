@@ -26,6 +26,7 @@ export default {
 		sonido_error,
 		facturar,
 		sync_sales,
+		vender_set_total,
 	],
 	computed: {
 		to_check() {
@@ -50,6 +51,9 @@ export default {
 	},
 	methods: {
 		guardar_venta() {
+			// Pegar o editar desde el celular cambia v-model sin keyup. El cobro debe validar
+			// la cuenta de los renglones actuales, nunca un total guardado por el evento anterior.
+			this.setTotal()
 
 			if (this.checkear_vender()) {
 
@@ -150,6 +154,8 @@ export default {
 		 *                              viene, se genera uno.
 		 */
 		guardar_venta_online(offline_uuid) {
+			// También cubre llamados directos y artículos agregados por los chequeos previos.
+			this.setTotal()
 			const pending = [...this.$store.state.vender.pending_attachments]
 
 			if (!offline_uuid) {
@@ -346,6 +352,10 @@ export default {
 				console.log('Ya se esta guardando una venta sin conexion, se ignora la segunda')
 				return
 			}
+
+			// La venta sin conexión se sube después con esta foto; el total debe corresponder
+			// a sus renglones antes de escribirla en el equipo.
+			this.setTotal()
 
 			let sale_data = {
 				save_afip_ticket: this.$store.state.vender.save_afip_ticket,
