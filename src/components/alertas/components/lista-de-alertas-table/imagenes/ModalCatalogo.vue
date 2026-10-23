@@ -82,6 +82,19 @@ title="Asignar imágenes a todo el catálogo"
 			</div>
 
 			<!--
+				Demo con tope de busquedas (mision tope-serper-demos, 23/10/2026): antes de lanzar se
+				dice cuantas quedan; con 0 el boton se apaga (la API contesta 422) y se dice por que.
+				Con una API que no manda `tope_demo` no se muestra nada.
+			-->
+			<div
+			v-if="!previa.corrida_activa && tope_demo.aplica"
+			class="img-cat__aviso"
+			:class="tope_demo.restantes > 0 ? 'img-cat__aviso--info' : 'img-cat__aviso--mal'"
+			data-testid="imagenes-catalogo-tope-demo">
+				{{ texto_tope_demo }}
+			</div>
+
+			<!--
 				Nada para buscar: se dice por que no se puede lanzar (todos tienen imagen, o los que
 				no tienen quedaron afuera por las exclusiones) en vez de dejar el boton apagado
 				sin explicacion.
@@ -210,7 +223,7 @@ title="Asignar imágenes a todo el catálogo"
 <script>
 import { esta_activa, entero_es, porcentaje_de, texto_de_proveedor } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
 import { numero_es as numero_con_decimales } from '@/common-vue/helpers/formato_numero'
-import { es_cancelacion } from '@/store/image_assignment'
+import { es_cancelacion, normalizar_tope_demo, aviso_de_tope_demo, mensaje_de_tope_demo_agotado } from '@/store/image_assignment'
 
 /**
  * Confirmación de "Asignar imágenes a todo el catálogo" (solo acceso maestro; la solapa ni
@@ -219,8 +232,9 @@ import { es_cancelacion } from '@/store/image_assignment'
  * Al abrirse pide la previa (contrato §5.4): cuántos artículos hay sin imagen, cuántos se buscan
  * ahora, qué se excluye y por qué, el tope, el proveedor y la estimación de búsquedas, tiempo y
  * dólares. Con eso Lucas decide antes de gastar. No deja lanzar sin proveedor configurado, sin la
- * validación con IA configurada (plan §13), sin artículos para buscar o con otra de catálogo en
- * curso: la API contesta 422 en los cuatro casos, pero es mejor que el botón ya lo diga.
+ * validación con IA configurada (plan §13), sin artículos para buscar, con otra de catálogo en
+ * curso o, en una demo, sin búsquedas de la demo (misión tope-serper-demos): la API contesta 422 en
+ * los cinco casos, pero es mejor que el botón ya lo diga.
  *
  * Eventos: `lanzada(asignacion)` y `ver_asignacion(asignacion)` (la que estaba en curso).
  */
@@ -261,7 +275,27 @@ export default {
 			if (this.ia_no_configurada) {
 				return false
 			}
+			if (this.tope_demo.aplica && this.tope_demo.restantes <= 0) {
+				return false
+			}
 			return Number(this.previa.a_buscar) > 0
+		},
+		/**
+		 * El tope de búsquedas de la demo que vino en la previa (`tope_demo`, misión
+		 * tope-serper-demos). Sin el campo (fuera de una demo o API vieja), "sin tope".
+		 *
+		 * @returns {Object} {aplica, tope, usadas, restantes}
+		 */
+		tope_demo() {
+			return normalizar_tope_demo(this.previa ? this.previa.tope_demo : null)
+		},
+		/**
+		 * Cuántas búsquedas de la demo quedan, o por qué no se puede lanzar si no queda ninguna.
+		 *
+		 * @returns {String}
+		 */
+		texto_tope_demo() {
+			return this.tope_demo.restantes > 0 ? aviso_de_tope_demo(this.tope_demo) : mensaje_de_tope_demo_agotado(this.tope_demo)
 		},
 		/**
 		 * true solo si la previa dice EXPLÍCITAMENTE que la validación con IA no está configurada

@@ -10,7 +10,33 @@
 			Literal, sin condicional por modelo: este componente vive solo en el dropdown de
 			opciones del LISTADO, o sea que ya es exclusivo de articulos.
 		-->
+		<!--
+			Demo sin búsquedas (misión tope-serper-demos): la opción queda apagada y se dice por qué.
+			Es un b-dropdown-item `disabled` con las mismas clases que dropdown-option-item (que no
+			tiene estado apagado), así se ve igual pero no se puede tocar.
+		-->
+		<template v-if="tope_demo_agotado">
+			<b-dropdown-item
+			disabled
+			class="article-dropdown-option"
+			data-testid="imagenes-automaticas-tope-demo-agotado">
+				<span class="article-dropdown-option__content">
+					<span class="article-dropdown-option__icon-wrap">
+						<i class="bi bi-images"></i>
+					</span>
+					<span class="article-dropdown-option__label">
+						Asignar imágenes automáticamente
+					</span>
+				</span>
+			</b-dropdown-item>
+			<b-dropdown-text
+			class="search-image-automatica__tope">
+				{{ mensaje_tope_demo_agotado }}
+			</b-dropdown-text>
+		</template>
+
 		<dropdown-option-item
+		v-else
 		icon="bi bi-images"
 		data_tour="listado.opcion_imagenes_automaticas"
 		@click="start_batch_flow()">
@@ -21,6 +47,7 @@
 </template>
 <script>
 import listado_articles_source from '@/mixins/listado/listado_articles_source'
+import { normalizar_tope_demo, aviso_de_tope_demo, mensaje_de_tope_demo_agotado } from '@/store/image_assignment'
 
 /**
  * Disparador de la asignación automática de imágenes, y NADA MÁS que el disparador.
@@ -46,13 +73,53 @@ export default {
 		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
 		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
 	},
+	data() {
+		return {
+			/**
+			 * Tope de búsquedas de la demo (misión tope-serper-demos, 23/10/2026): {aplica, tope,
+			 * usadas, restantes}. Fuera de una demo, o con una API vieja (404), `aplica` es false y
+			 * nada cambia.
+			 */
+			tope_demo: normalizar_tope_demo(null),
+		}
+	},
+	computed: {
+		/** true en una demo que ya usó todas sus búsquedas: la opción queda apagada. */
+		tope_demo_agotado() {
+			return this.tope_demo.aplica && this.tope_demo.restantes <= 0
+		},
+		mensaje_tope_demo_agotado() {
+			return mensaje_de_tope_demo_agotado(this.tope_demo)
+		},
+	},
+	/**
+	 * El dropdown se monta cuando hay algo seleccionado: es el momento de preguntar cuántas búsquedas
+	 * quedan, así la opción ya aparece apagada si no queda ninguna. El pedido nunca falla (ver
+	 * `get_tope_demo` en el store).
+	 */
+	mounted() {
+		this.actualizar_tope_demo()
+	},
 	methods: {
 		/**
-		* Determina la fuente según el dropdown activo, encola el batch y avisa por el bus de
-		* `$root` para que el anfitrión se ponga a escuchar el fin del lote.
-		*
-		* @return {void}
-		*/
+		 * Pide el tope de la demo y lo guarda.
+		 *
+		 * @return {Promise<Object>} El tope normalizado.
+		 */
+		actualizar_tope_demo() {
+			return this.$store.dispatch('image_assignment/get_tope_demo')
+			.then(tope => {
+				this.tope_demo = tope
+				return tope
+			})
+		},
+		/**
+		 * Antes de lanzar: en una demo se vuelve a preguntar cuántas búsquedas quedan (pudieron
+		 * gastarse desde que se abrió el menú) y se avisa cuántas son; con 0, no se lanza. Fuera de
+		 * una demo sigue directo, como siempre.
+		 *
+		 * @return {void}
+		 */
 		start_batch_flow() {
 			let articles_source = this.resolve_articles()
 
@@ -61,6 +128,37 @@ export default {
 				return
 			}
 
+			this.actualizar_tope_demo()
+			.then(tope => {
+				if (!tope.aplica) {
+					this.lanzar_lote(articles_source)
+					return
+				}
+				if (tope.restantes <= 0) {
+					this.$toast.error(mensaje_de_tope_demo_agotado(tope), { duration: 6000 })
+					return
+				}
+				this.$bvModal.msgBoxConfirm(aviso_de_tope_demo(tope), {
+					title: 'Búsquedas de la demo',
+					okTitle: 'Asignar imágenes',
+					cancelTitle: 'Cancelar',
+					centered: true,
+				})
+				.then(confirmado => {
+					if (confirmado) {
+						this.lanzar_lote(articles_source)
+					}
+				})
+			})
+		},
+		/**
+		* Encola el batch y avisa por el bus de `$root` para que el anfitrión se ponga a escuchar el
+		* fin del lote.
+		*
+		* @param {Array} articles_source Los artículos a procesar.
+		* @return {void}
+		*/
+		lanzar_lote(articles_source) {
 			let article_ids = []
 			articles_source.forEach(function (article) {
 				article_ids.push(article.id)
@@ -99,9 +197,24 @@ export default {
 				if (error && error.response && error.response.status === 403) {
 					return
 				}
+				// 422 {message} (por ejemplo, la demo llegó a su límite de búsquedas): el interceptor
+				// global ya mostró el motivo de la API; el genérico de abajo lo taparía.
+				if (error && error.response && error.response.status === 422) {
+					this.actualizar_tope_demo()
+					return
+				}
 				this.$toast.error('No se pudo iniciar el procesamiento de imágenes')
 			})
 		},
 	},
 }
 </script>
+<style lang="sass">
+// Sin scope: el menú del dropdown se dibuja fuera del componente.
+.search-image-automatica__tope
+	max-width: 280px
+	font-size: 0.8rem
+	line-height: 1.35
+	white-space: normal
+	color: var(--color-text-secondary, #6c757d)
+</style>
