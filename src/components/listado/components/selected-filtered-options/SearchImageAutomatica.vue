@@ -106,11 +106,6 @@ export default {
 	},
 	methods: {
 		/**
-		 * Pide el tope de la demo y lo guarda.
-		 *
-		 * @return {Promise<Object>} El tope normalizado.
-		 */
-		/**
 		 * El menú puede haberse montado con búsquedas y quedarse sin ellas después (la corrida de
 		 * otro menú las gastó): en una demo se vuelve a preguntar cada vez que se abre un menú, así
 		 * la opción no aparece activa con un estado viejo. Fuera de una demo no pide nada.
@@ -122,6 +117,11 @@ export default {
 				this.actualizar_tope_demo()
 			}
 		},
+		/**
+		 * Pide el tope de la demo y lo guarda.
+		 *
+		 * @return {Promise<Object>} El tope normalizado.
+		 */
 		actualizar_tope_demo() {
 			return this.$store.dispatch('image_assignment/get_tope_demo')
 			.then(tope => {
