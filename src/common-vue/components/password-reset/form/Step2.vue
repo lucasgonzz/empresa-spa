@@ -32,6 +32,7 @@ v-if="view == 'codigo-de-verificacion'">
 	</b-button>
 	<b-button
 	@click="backToEmail"
+	:disabled="resending"
 	block
 	variant="link"
 	data-testid="regresar-al-correo">
