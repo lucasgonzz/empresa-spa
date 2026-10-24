@@ -21,6 +21,22 @@ v-if="view == 'codigo-de-verificacion'">
 	@clicked="checkVerificationCode"
 	text="Verificar"
 	:loader="loading"></btn-loader>
+	<!-- Salidas del paso: con los 5 intentos agotados la persona necesita otro código o volver atrás -->
+	<b-button
+	@click="resendVerificationCode"
+	:disabled="resending"
+	block
+	variant="outline-primary"
+	data-testid="pedir-otro-codigo">
+		Pedir otro código
+	</b-button>
+	<b-button
+	@click="backToEmail"
+	block
+	variant="link"
+	data-testid="regresar-al-correo">
+		Regresar
+	</b-button>
 </div>
 </template>
 <script>
@@ -48,10 +64,56 @@ export default {
 	},
 	data() {
 		return {
-			loading: false
+			loading: false,
+			// Evita doble click mientras se pide un código nuevo
+			resending: false,
 		}
 	},
 	methods: {
+		/**
+		 * Pide un código nuevo al mismo correo (mismo pedido que el paso 1). El código anterior
+		 * deja de servir en la API; se limpia lo tipeado. Si la página se recargó en este paso y
+		 * el correo se perdió, manda de vuelta al paso del correo.
+		 */
+		resendVerificationCode() {
+			if (this.resending) {
+				return
+			}
+			if (!this.register_user.email || this.register_user.email.trim() == '') {
+				this.backToEmail()
+				return
+			}
+			this.resending = true
+			this.$axios.post('password-reset/send-verification-code', {
+				email                : this.register_user.email.trim(),
+				longitud_del_codigo  : 4,
+			})
+			.then(res => {
+				this.resending = false
+				if (res.data.email_send) {
+					this.register_user.verification_code = ''
+					this.$toast.success('Te mandamos un código nuevo. Revisá también la carpeta de spam.')
+				} else if (res.data.es_empleado) {
+					this.$toast.error(res.data.message, {
+						duration: 10000,
+					})
+				} else {
+					this.$toast.error('No pudimos mandar un código nuevo. Probá de nuevo en unos minutos.')
+				}
+			})
+			.catch(err => {
+				console.log(err)
+				this.resending = false
+				this.showTooManyAttempts(err)
+			})
+		},
+		/**
+		 * Vuelve al paso del correo para cambiarlo o empezar de nuevo.
+		 */
+		backToEmail() {
+			this.register_user.verification_code = ''
+			this.$router.push({name: null, params: {view: 'email'}})
+		},
 		/**
 		 * Deja solo los dígitos de lo que se tipea o se pega. El código se maneja siempre como
 		 * texto (no `type="number"`), así un código que empezara con 0 no perdería el cero.
