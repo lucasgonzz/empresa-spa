@@ -105,7 +105,7 @@ export default {
 		/**
 		 * Click en el chip de deuda: reusa el bridge que YA existe y está montado
 		 * siempre que el mostrador puede verse (FloatingButton.vue en App.vue, gateado
-		 * por la misma extensión asistente_ia que gatea al mostrador) — el mismo
+		 * por la misma extensión agentes_ia que gatea al mostrador) — el mismo
 		 * mecanismo que ya usa la mención de cliente del chat IA
 		 * (asistente-ia/MessageBubble.vue → ai_chat/pedirCuentaCorrienteDeCliente →
 		 * asistente-ia/CuentaCorrienteDeMencion.vue). No hace falta un bridge propio acá.

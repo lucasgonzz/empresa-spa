@@ -890,7 +890,7 @@ export default {
 		 * descartado. El link externo que este botón reemplazó abría el WhatsApp propio del
 		 * comerciante y NO tiene esa restricción: el mensaje salía.
 		 *
-		 * Por eso el repliegue cubre DOS condiciones y no una: sin la extensión `whatsapp` (eso
+		 * Por eso el repliegue cubre DOS condiciones y no una: sin la extensión `agentes_ia` (eso
 		 * lo decide el componente, que es el que tiene `hasExtencion`) O con la ventana de 24 h
 		 * cerrada (eso se decide acá). El sidebar queda para cuando el mensaje va a salir.
 		 *

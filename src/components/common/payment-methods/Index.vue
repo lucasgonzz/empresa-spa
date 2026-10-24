@@ -242,13 +242,14 @@ export default {
             return this.$store.state.address.models
         },
         /**
-         * El select de sucursal solo tiene sentido si hay sucursales cargadas. Mismo criterio que
-         * el selector de sucursal de Vender (vender/.../payment-method-afip-information/Address.vue).
+         * El select de sucursal solo tiene sentido si hay entre qué elegir. Mismo criterio que
+         * el selector de sucursal de Vender (vender/.../payment-method-afip-information/Address.vue):
+         * desde la segunda sucursal (misión sucursal-siempre, 23/10/2026, D1).
          *
          * @returns {boolean}
          */
         show_sucursal_select() {
-            return this.addresses.length >= 1
+            return this.muestra_sucursales
         },
         address_options() {
             let options = [{

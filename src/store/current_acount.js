@@ -109,6 +109,11 @@ export default {
 		selected: [],
 		to_show_payment_methods: {},
 		to_pay: null,
+		// Los movimientos elegidos cuando el pago es a VARIOS (>= 2), del mas viejo al mas nuevo.
+		// Con uno solo o sin seleccion queda vacia: ahi manda `to_pay`, como siempre. `to_pay` es
+		// el primero de esta lista, y es el que sigue viajando a la API para que una API vieja
+		// degrade a "pago al primer movimiento + FIFO".
+		to_pay_list: [],
 
 		delete: null,
 		delete_image: null,
@@ -219,6 +224,13 @@ export default {
 		},
 		setToPay(state, value) {
 			state.to_pay = value 
+			// Cambiar el movimiento a pagar invalida la lista de varios: quien abre el pago a varios
+			// la fija DESPUES con setToPayList. Asi un pago a uno solo (o a secas) nunca arrastra
+			// los ids de una seleccion anterior.
+			state.to_pay_list = []
+		},
+		setToPayList(state, value) {
+			state.to_pay_list = value ? value : []
 		},
 		add(state, value) {
 			let index = state.models.findIndex(item => {

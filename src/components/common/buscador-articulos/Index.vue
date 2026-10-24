@@ -160,7 +160,8 @@ export default {
 				})
 			}
 
-			if (this.addresses.length) {
+			// Columnas de stock por sucursal: desde la segunda (misión sucursal-siempre, D1).
+			if (this.muestra_sucursales) {
 				this.addresses.forEach(address => {
 					if (!this.search_modal_can_show_address_column(address)) {
 						return

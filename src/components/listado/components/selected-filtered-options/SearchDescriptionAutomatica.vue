@@ -101,7 +101,12 @@ export default {
 				this.$root.$emit('descripciones-automaticas:lote-iniciado',
 					res && res.data ? res.data.batch_uuid : null)
 			})
-			.catch(() => {
+			.catch(error => {
+				// 403 (ej: la sesion es vieja y la cuenta ya no tiene "Agentes de IA"): el interceptor
+				// global (main.js) ya mostro el mensaje del API, asi que no se lo pisa con uno generico.
+				if (error && error.response && error.response.status === 403) {
+					return
+				}
 				this.$toast.error('No se pudo iniciar la generación de descripciones')
 			})
 		},

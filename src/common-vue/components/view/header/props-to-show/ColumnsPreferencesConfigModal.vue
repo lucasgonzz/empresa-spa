@@ -114,6 +114,13 @@
 							Alineación
 						</th>
 
+						<!-- Misión pdf-negrita-perfil: interruptor "Negrita" por columna (solo si el padre lo pide con show_bold_column) -->
+						<th
+						v-if="show_bold_column"
+						class="columns-preferences-config__th-bold text-center">
+							Negrita
+						</th>
+
 						<th class="columns-preferences-config__th-width text-right">Ancho (px)</th>
 
 					</tr>
@@ -266,6 +273,28 @@
 							size="sm"
 							v-model="row.text_align"
 							:options="text_align_options"></b-form-select>
+
+							<span
+							v-else
+							class="text-muted">—</span>
+
+						</td>
+
+						<!--
+							Misión pdf-negrita-perfil: el VALOR de esta columna sale en negrita en el PDF. Escribe
+							`row.bold` (el editor lo vuelca a `bold_columns` del perfil). En la columna de imagen no
+							tiene sentido (no hay texto), igual que la letra y la alineación.
+						-->
+						<td
+						v-if="show_bold_column"
+						class="text-center columns-preferences-config__td-bold">
+
+							<b-form-checkbox
+							v-if="!is_image_column_row(row)"
+							class="columns-preferences-config__checkbox-only"
+							:data-testid="'negrita-columna-' + get_row_unique_id(row)"
+							:aria-label="'Negrita en ' + (row.name || row.label)"
+							v-model="row.bold"></b-form-checkbox>
 
 							<span
 							v-else
@@ -649,6 +678,20 @@ export default {
 
 		},
 
+		/**
+		 * Misión pdf-negrita-perfil (20/10/2026): muestra la columna "Negrita" (solo en la vista de
+		 * tabla, `layout_table`): un interruptor por fila que escribe `row.bold`. Opcional, apagada por
+		 * defecto: los demás usos de este componente (props a mostrar de los listados, buscador, etc.)
+		 * no la piden y se ven igual que siempre.
+		 */
+		show_bold_column: {
+
+			type: Boolean,
+
+			default: false,
+
+		},
+
 	},
 
 	data() {
@@ -874,7 +917,9 @@ export default {
 		 */
 
 		table_empty_colspan() {
-			return this.show_typography_columns ? 7 : 5
+			let columnas = this.show_typography_columns ? 7 : 5
+			/* La columna "Negrita" suma una más */
+			return this.show_bold_column ? columnas + 1 : columnas
 		},
 
 	},
@@ -1552,6 +1597,8 @@ export default {
 		max-height: 420px
 
 		overflow-y: auto
+		/* Si la tabla no entra a lo ancho (tablet), scrollea sola en vez de cortar la última columna */
+		overflow-x: auto
 
 		border: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.08))
 
@@ -1604,6 +1651,8 @@ export default {
 
 
 	.columns-preferences-config__th-visible,
+
+	.columns-preferences-config__th-bold,
 
 	.columns-preferences-config__th-wrap
 
@@ -1659,6 +1708,8 @@ export default {
 	/* Evita que el label del checkbox invada la celda de ancho (clic fantasma) */
 
 	.columns-preferences-config__td-visible,
+
+	.columns-preferences-config__td-bold,
 
 	.columns-preferences-config__td-wrap
 

@@ -56,13 +56,19 @@
 
 
 
-		<!-- Direcciones -->
-		<p
-		v-if="addresses.length && (!article.addresses.length && (article.stock || article.stock > 0))"
-		>Para indicar el deposito, primero divida el stock global del articulo hacia el o los depositos correspondientes</p>
+		<!--
+			Depósito destino. Misión sucursal-siempre (23/10/2026, D5, aprobada por Lucas):
 
+			- Con dos o más sucursales se muestra SIEMPRE, también para un artículo con stock global sin
+				repartir. Hasta acá, para ese artículo se escondía el selector, se mostraba "primero divida
+				el stock global…" y a la vez check() exigía el depósito: el modal no dejaba guardar (2R,
+				23/10/2026, 488 artículos). Ahora la API, antes de aplicar el movimiento, pasa el global
+				entero a la sucursal principal (D4 de empresa-api), así que elegir depósito ya no pierde nada.
+			- Con una sola sucursal no hay selector ni se exige: el movimiento sale con el id de esa
+				sucursal, la principal (ver setDefaultAddress), y no con un 0.
+		-->
 		<b-form-group
-		v-if="addresses.length && (article.addresses.length || article.article_variants.length || (!article.stock || article.stock == 0))"
+		v-if="muestra_sucursales"
 		label="Deposito DESTINO">
 			<b-form-select
 			v-model="to_address_id"
@@ -175,46 +181,22 @@ export default {
 			loading: false,
 		}
 	},
+	/**
+	 * Preselecciona el depósito destino en cada apertura del modal.
+	 *
+	 * Hasta el 23/10/2026 esto colgaba de `bv::modal::show` por el bus de $root, y ese handler no
+	 * corría nunca: el <b-modal> del padre no lleva `static`, así que bootstrap-vue crea este
+	 * componente DESPUÉS de emitir el evento de su propia apertura (medido el 16/9/2026: tres
+	 * aperturas, cero preselecciones). En ese momento se decidió no arreglarlo para no cambiar lo que
+	 * el usuario ve. Lucas lo aprobó el 23/10/2026 (misión sucursal-siempre, D5): este componente se
+	 * crea una vez por apertura, así que su created() es el evento que se buscaba.
+	 *
+	 * @returns {void}
+	 */
 	created() {
-		// El modal 'stock-movement' lo declara el padre (stock-movement/Index.vue), asi que se
-		// escucha por el bus de $root y hay que desuscribirse a mano.
-		this.$root.$on('bv::modal::show', this.on_modal_show)
-	},
-	beforeDestroy() {
-		// El bus de $root vive toda la sesion: sin el $off, cada montaje deja otra escucha viva.
-		this.$root.$off('bv::modal::show', this.on_modal_show)
+		this.setDefaultAddress()
 	},
 	methods: {
-		/**
-		 * 🔴 OJO: hoy este handler NO llega a correr nunca, y no es por el $off.
-		 *
-		 * El <b-modal> del padre no lleva `static`, asi que bootstrap-vue no crea el contenido
-		 * del modal hasta que lo muestra — y emite `bv::modal::show` ANTES de crearlo. O sea que
-		 * este componente (que ES el contenido, y ademas entra por un import async) todavia no
-		 * existe cuando se emite el evento de su propia apertura: se suscribe tarde, siempre.
-		 *
-		 * Antes del 16/9/2026 parecia funcionar porque el listener de la apertura anterior seguia
-		 * vivo — pero escribia `to_address_id`, que es data() local, sobre una instancia ya
-		 * destruida. O sea que el deposito por defecto NUNCA se preselecciono en el formulario que
-		 * el usuario ve. Medido con el navegador el 16/9/2026: tres aperturas seguidas, cero
-		 * llamadas a setDefaultAddress() y `to_address_id` en 0 en las tres.
-		 *
-		 * Se deja como esta a proposito (decision de Lucas, 16/9/2026): arreglarlo haria que el
-		 * deposito venga precargado, que es un cambio de lo que el usuario ve y no corresponde
-		 * meterlo de garron en un arreglo de otra cosa. El arreglo, cuando se decida, es llamar
-		 * a setDefaultAddress() desde el created()/mounted() de ESTE componente: se crea una vez
-		 * por apertura, asi que su ciclo de vida ya es el evento que se estaba buscando.
-		 *
-		 * @param {Object} bvEvent Evento de bootstrap-vue.
-		 * @param {string} modal_id Id del modal que se esta por mostrar.
-		 * @returns {void}
-		 */
-		on_modal_show(bvEvent, modal_id) {
-			if (modal_id != 'stock-movement') {
-				return
-			}
-			this.setDefaultAddress()
-		},
 		setSelectedProvider(result) {
 			this.$set(this.article, 'provider', result.model)
 			this.article.provider_id = result.model.id
@@ -266,10 +248,11 @@ export default {
 			}
 		},
 		check() {
-			if (this.addresses.length && this.to_address_id == 0) {
-			// if (this.article.addresses.length && this.to_address_id == 0) {
+			// El depósito se exige solo cuando el selector está a la vista (dos o más sucursales,
+			// misión sucursal-siempre D5). Con una sola, viaja la principal.
+			if (this.muestra_sucursales && this.to_address_id == 0) {
 				this.$toast.error('Indique el deposito')
-				return false 
+				return false
 			}
 
 			if (this.article.article_variants.length 
@@ -279,8 +262,9 @@ export default {
 				return false 
 			}
 
-			if (this.article.article_variants.length 
+			if (this.article.article_variants.length
 				&& this.article.article_variants[0].addresses.length
+				&& this.muestra_sucursales
 				&& this.to_address_id == 0
 				) {
 
@@ -303,18 +287,46 @@ export default {
 				console.log(this.article.childrens)
 			}
 		},
+		/**
+		 * Deja elegido el depósito destino (misión sucursal-siempre, 23/10/2026, D5):
+		 *
+		 * - Con una sola sucursal no hay selector, pero el movimiento lleva el id de esa sucursal (la
+		 *   principal) en vez de un 0: así anda también si esta SPA habla con una API vieja durante un
+		 *   despliegue, que no tiene la red que lleva a la principal lo que llega sin sucursal.
+		 * - Si la persona solo puede cargar stock en su sucursal (`article.edit_stock_only_sucursal`),
+		 *   la suya, que es la única opción que le ofrece `addresses_options`.
+		 * - Si no, la sucursal principal.
+		 *
+		 * @returns {void}
+		 */
 		setDefaultAddress() {
-			console.log('setDefaultAddress')
-			if (this.to_address_id == 0) {
-				let default_address = this.$store.state.address.models.find(model => {
-					return model.default_address
-				})
-				if (typeof default_address != 'undefined') {
-					this.to_address_id = null 
-					this.to_address_id = default_address.id 
-					console.log('to_address_id')
-					console.log(this.to_address_id)
+			if (this.to_address_id != 0) {
+				return
+			}
+
+			if (!this.muestra_sucursales) {
+				if (this.sucursal_principal) {
+					this.to_address_id = this.sucursal_principal.id
 				}
+				return
+			}
+
+			if (
+				!this.is_admin
+				&& this.can('article.edit_stock_only_sucursal')
+				&& this.user.address_id
+			) {
+				// La sucursal del usuario pudo haberse eliminado: solo se preselecciona si existe.
+				let user_address = this.addresses.find(a => a.id == this.user.address_id)
+				if (user_address) {
+					this.to_address_id = user_address.id
+				}
+				return
+			}
+
+			let principal = this.sucursal_principal
+			if (principal) {
+				this.to_address_id = principal.id
 			}
 		},
 	}

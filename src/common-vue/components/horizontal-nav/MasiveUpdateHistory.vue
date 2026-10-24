@@ -259,7 +259,7 @@ export default {
 		 * {from_filter, used_filters: [{key, operator, value, type}], update_form: [{label, key,
 		 * type, value, options?, store?, round?, cost_incluye_iva?}], models_id,
 		 * resolved_models_id, filter_form}. Una reversión trae solo {revert_of_masive_update_id}.
-		 * Las masivas que crea el asistente (asistente_ia/PropuestaActualizacionMasivaIaHelper)
+		 * Las masivas que crea el asistente (PropuestaActualizacionMasivaIaHelper de empresa-api)
 		 * traen el update_form SIN label y pueden traer el filtro de imagen
 		 * {key: 'imagen', operator: 'en_blanco'|'no_en_blanco', type: 'imagen'}.
 		 *

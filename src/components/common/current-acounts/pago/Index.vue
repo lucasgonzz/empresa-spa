@@ -187,6 +187,20 @@ export default {
         to_pay() {
             return this.$store.state.current_acount.to_pay
         },
+        /**
+         * Ids de los movimientos elegidos cuando el pago es a VARIOS, del mas viejo al mas nuevo.
+         * Vacio con uno solo o sin seleccion: ahi no viaja `to_pay_ids` y la API se comporta
+         * exactamente como siempre, con `to_pay`.
+         *
+         * @returns {Array}
+         */
+        to_pay_ids() {
+            let lista = this.$store.state.current_acount.to_pay_list
+            if (lista.length >= 2) {
+                return lista.map(movimiento => movimiento.id)
+            }
+            return []
+        },
         maked_sale() {
             return this.$store.state.vender.sale 
         },
@@ -256,6 +270,9 @@ export default {
         			model_id: this.from_model.id,
         			...this.pago,
                     to_pay: this.to_pay,
+                    // Solo con 2 o mas movimientos. `to_pay` (el primero de la lista) viaja siempre,
+                    // asi una API que no conoce `to_pay_ids` degrada a "al primero + FIFO".
+                    ...(this.to_pay_ids.length >= 2 ? { to_pay_ids: this.to_pay_ids } : {}),
                     payment_plan_cuota: this.payment_plan_cuota,
         		}, {
                     skip_global_error_event: true,
@@ -454,6 +471,9 @@ export default {
                 current_acount_payment_methods: [],
             }
             this.$store.commit('current_acount/setToPay', null)
+            // setToPay ya la vacia; se deja explicito para que no dependa de ese detalle: una lista
+            // vieja mandaria `to_pay_ids` en el pago siguiente.
+            this.$store.commit('current_acount/setToPayList', [])
             this.$store.commit('current_acount/setSelected', [])
         }
     }

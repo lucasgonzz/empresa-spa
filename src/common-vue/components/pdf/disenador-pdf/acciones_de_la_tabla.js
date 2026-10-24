@@ -53,7 +53,9 @@ export default {
 				opciones_del_catalogo || [],
 				this.model.pdf_column_options,
 				this.ancho_util_de_la_tabla_mm,
-				this.total_de_la_tabla
+				this.total_de_la_tabla,
+				/* Misión pdf-negrita-perfil: las columnas con el valor en negrita (bold_columns del perfil) */
+				this.model.bold_columns
 			)
 			this.tabla = {
 				columnas: armada.columnas,
@@ -226,6 +228,20 @@ export default {
 				return
 			}
 			columna.salto = !columna.salto
+		},
+		/**
+		 * Misión pdf-negrita-perfil: prende o apaga la negrita del VALOR de una columna (el rótulo del
+		 * encabezado ya es negrita). Se cambia en el lugar; viaja al guardar como `bold_columns`
+		 * (datos_para_guardar) y la hoja lo ve al instante. No aplica en un ticket de comandera.
+		 *
+		 * @param {Object} columna
+		 * @returns {void}
+		 */
+		alternar_negrita_de_columna(columna) {
+			if (this.es_ticket) {
+				return
+			}
+			columna.negrita = !columna.negrita
 		},
 		/**
 		 * "En la tabla" de la bandeja: selecciona esa columna en la hoja y la lleva a la vista.

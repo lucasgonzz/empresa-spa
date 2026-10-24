@@ -721,6 +721,22 @@ export default {
         pending_vencido(pending) {
             return moment(pending.fecha_realizacion).isBefore(moment().startOf('day'))
         },
+        /**
+         * v_if_function de los campos "Deposito" de los formularios (provider_order, promocion_vinoteca):
+         * se muestran desde la SEGUNDA sucursal del negocio.
+         *
+         * Misión sucursal-siempre (23/10/2026, D1): con una sola sucursal el campo no se ve ni se
+         * exige (common-vue/components/model/Index.vue no exige un campo que no se muestra), viaja en
+         * 0 como en un negocio sin sucursales y la API usa la principal (D3).
+         *
+         * Recibe (prop, model) como todo v_if_function, pero no los necesita: depende solo de cuántas
+         * sucursales tiene el negocio.
+         *
+         * @returns {Boolean}
+         */
+        mostrar_campo_de_sucursal() {
+            return this.muestra_sucursales
+        },
         show_btn_repartir_stock(prop, article) {
             if (article.id
                 && !article.addresses.length 
@@ -1433,7 +1449,7 @@ export default {
 
             WhatsApp es una extensión que se contrata aparte, y hay negocios que no la tienen
             pero usan este botón todos los días para saltar al WhatsApp Web del comprador. El
-            arreglo "obvio" —ponerle if_has_extencion: 'whatsapp' a la entrada de
+            arreglo "obvio" —ponerle if_has_extencion: 'agentes_ia' a la entrada de
             src/models/buyer.js, que es lo que el sistema de tablas ofrece para gatear un botón—
             le haría DESAPARECER el botón a todos ellos. Eso es una regresión, no una mejora, y
             es exactamente por eso que src/models/buyer.js quedó sin tocar y el botón se
@@ -1449,7 +1465,7 @@ export default {
             Y no se manda client_id a proposito: un Buyer de la tienda no es un Client del ERP.
         */
         sendWhatsApp(model) {
-            if (this.hasExtencion('whatsapp')) {
+            if (this.hasExtencion('agentes_ia')) {
                 this.abrir_chat_whatsapp({
                     phone: normalizar_telefono(model.phone),
                     display_name: model.name,

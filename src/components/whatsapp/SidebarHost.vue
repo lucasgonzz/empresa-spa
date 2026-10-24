@@ -78,7 +78,7 @@ export default {
 		 * asistente IA).
 		 */
 		should_show() {
-			return this.authenticated && this.hasExtencion('whatsapp')
+			return this.authenticated && this.hasExtencion('agentes_ia')
 		},
 		sidebar_abierto() {
 			return this.$store.state.whatsapp_chat.sidebar_abierto
@@ -94,9 +94,13 @@ export default {
 			config == null fuera del modulo, aunque el toggle estuviera prendido en la
 			base, porque nada disparaba la carga. Guard igual al de sidebar/Index.vue con
 			whatsapp_template: no pedirla de nuevo si ya esta.
+
+			Desde el 22/10/2026 solo con la extension "Agentes de IA" (should_show): la config del
+			bot es parte de ella y sin la extension la API contesta 403. Si la extension resuelve
+			despues del arranque, la carga la dispara el watch de should_show.
 		*/
-		if (!this.$store.state.whatsapp_bot_config.models.length) {
-			this.$store.dispatch('whatsapp_bot_config/getModels')
+		if (this.should_show) {
+			this.cargar_config_del_bot()
 		}
 		// Badge del menú + tarjeta del tablero (misión sugerencia-ia-como-borrador, 29/9/2026):
 		// se pide apenas el módulo está habilitado, sin esperar a que se abra el sidebar. Ver
@@ -132,10 +136,21 @@ export default {
 			this.suscribir_canal_de_whatsapp()
 			if (value) {
 				this.$store.dispatch('whatsapp_chat/getResumen')
+				this.cargar_config_del_bot()
 			}
 		},
 	},
 	methods: {
+		/**
+		 * Pide la config del bot si todavia no esta cargada (no se repite el pedido).
+		 *
+		 * @return {void}
+		 */
+		cargar_config_del_bot() {
+			if (!this.$store.state.whatsapp_bot_config.models.length) {
+				this.$store.dispatch('whatsapp_bot_config/getModels')
+			}
+		},
 		/**
 		 * Se suscribe al canal privado `whatsapp.{owner_id}` (evento `WhatsappChatUpdated`).
 		 *

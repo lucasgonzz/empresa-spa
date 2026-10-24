@@ -66,15 +66,26 @@
 				class="bi bi-text-wrap dpdf-columna__salto"
 				title="Con salto de línea: un texto largo sigue abajo"
 				aria-hidden="true"></i>
+				<!-- Misión pdf-negrita-perfil: el valor de esta columna sale en negrita -->
+				<i
+				v-if="columna.negrita && !en_el_rollo"
+				class="bi bi-type-bold dpdf-columna__negrita"
+				title="Los valores de esta columna salen en negrita"
+				data-testid="indicador-negrita-columna-disenador-pdf"
+				aria-hidden="true"></i>
 			</div>
 
-			<!-- Dos renglones de muestra: lo que importa es el ancho -->
+			<!-- Dos renglones de muestra: lo que importa es el ancho. En negrita, rayas más gruesas y oscuras -->
 			<div
 			v-if="!en_el_rollo"
 			class="dpdf-columna__renglones"
 			aria-hidden="true">
-				<span class="dpdf-columna__raya"></span>
-				<span class="dpdf-columna__raya dpdf-columna__raya--corta"></span>
+				<span
+				class="dpdf-columna__raya"
+				:class="{ 'dpdf-columna__raya--negrita': columna.negrita }"></span>
+				<span
+				class="dpdf-columna__raya dpdf-columna__raya--corta"
+				:class="{ 'dpdf-columna__raya--negrita': columna.negrita }"></span>
 			</div>
 
 			<!--
@@ -275,6 +286,7 @@ export default {
 		etiqueta_accesible() {
 			return 'Columna ' + this.columna.nombre + ' de la tabla, ' + this.columna.cols + ' de '
 				+ this.total_de_columnas + ' medias columnas' + (this.columna.salto ? ', con salto de línea' : '')
+				+ (this.columna.negrita && !this.en_el_rollo ? ', valor en negrita' : '')
 				+ (this.seleccionada ? ', seleccionada' : '. Enter para editarla')
 		},
 		/**
@@ -387,6 +399,16 @@ export default {
 		width: 78%
 		border-radius: 3px
 		background: var(--bg-section)
+
+	// Misión pdf-negrita-perfil: la muestra del valor en negrita (más gruesa y oscura, como la letra)
+	.dpdf-columna__raya--negrita
+		height: 7px
+		background: var(--color-text-secondary)
+
+	.dpdf-columna__negrita
+		flex: 0 0 auto
+		color: var(--color-text-primary)
+		font-size: 0.8rem
 
 	.dpdf-columna__raya--corta
 		width: 52%

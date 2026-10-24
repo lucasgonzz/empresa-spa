@@ -5,7 +5,7 @@
 		un botón ahí.
 	-->
 	<div
-	v-if="hasExtencion('escaneo_factura_compra')"
+	v-if="hasExtencion('agentes_ia')"
 	class="btn-scan-invoice">
 
 		<!-- Escanear: abre el modal de subida/cámara para esta compra. -->

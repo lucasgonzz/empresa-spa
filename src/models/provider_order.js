@@ -85,6 +85,9 @@ export default {
 			not_show: true,
 			required: true,
 			required_if_models_length: 'address',
+			// Desde la segunda sucursal; con una sola ni se ve ni se exige y la API usa la principal
+			// (misión sucursal-siempre, 23/10/2026, D1).
+			v_if_function: 'mostrar_campo_de_sucursal',
 			disabled_if_not_0: true,
 			descriptions: [
 				'Deposito hacia el cual va a ir el stock comprado de los articulos una vez activada la opcion de "Generar movimientos de Stock".',

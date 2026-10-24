@@ -380,6 +380,8 @@ function encabezado_vacio() {
 		receptor: {
 			izquierda: [],
 		},
+		/* Misión pdf-negrita-perfil: claves de los datos cuyo valor sale en negrita (header_layout.bold) */
+		bold: [],
 	}
 }
 
@@ -968,7 +970,28 @@ export default {
 		 * @returns {string}
 		 */
 		huella_del_emisor_actual() {
-			return JSON.stringify(this.encabezado.emisor)
+			/* La negrita de los datos también cuenta (misión pdf-negrita-perfil) */
+			return JSON.stringify({
+				emisor: this.encabezado.emisor,
+				bold: this.negritas_del_encabezado,
+			})
+		},
+		/**
+		 * Misión pdf-negrita-perfil: las claves de los datos del encabezado que están en negrita Y
+		 * colocadas (en la paleta de sin colocar no se imprimen), sin repetir y en orden alfabético
+		 * para que la huella sea estable. Es lo que viaja en `header_layout.bold`.
+		 *
+		 * @returns {Array<string>}
+		 */
+		negritas_del_encabezado() {
+			let colocados = this.encabezado.emisor.izquierda.concat(this.encabezado.emisor.derecha, this.encabezado.receptor.izquierda)
+			let claves = []
+			;(this.encabezado.bold || []).forEach(function (clave) {
+				if (colocados.indexOf(clave) !== -1 && claves.indexOf(clave) === -1) {
+					claves.push(clave)
+				}
+			})
+			return claves.sort()
 		},
 		/**
 		 * Si el lienzo o la hoja cambiaron respecto de su base (la del momento de abrir, la del
@@ -1358,6 +1381,14 @@ export default {
 				})
 			}
 
+			/* La negrita guardada (header_layout.bold): solo claves de texto; sin la clave, ninguna */
+			let negritas = []
+			;(Array.isArray(base.bold) ? base.bold : []).forEach(function (clave) {
+				if (typeof clave == 'string' && clave !== '' && negritas.indexOf(clave) === -1) {
+					negritas.push(clave)
+				}
+			})
+
 			this.encabezado = {
 				emisor: {
 					izquierda: izquierda,
@@ -1366,10 +1397,13 @@ export default {
 				receptor: {
 					izquierda: Array.isArray(receptor.izquierda) ? receptor.izquierda.slice() : [],
 				},
+				bold: negritas,
 			}
 
 			let colocados = izquierda.concat(derecha)
-			this.emisor_paleta = emisor_chip_keys(this.es_fiscal).filter(function (key) {
+			/* Con un chip por sucursal del negocio (misión pdf-direccion-sucursales) */
+			let addresses = this.$store.state.address ? this.$store.state.address.models : []
+			this.emisor_paleta = emisor_chip_keys(this.es_fiscal, addresses).filter(function (key) {
 				return colocados.indexOf(key) === -1
 			})
 

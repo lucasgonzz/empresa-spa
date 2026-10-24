@@ -95,6 +95,15 @@ export default {
 					if (!this.check_model(model_name)) {
 						return
 					}
+					// Gate ADITIVO por extension de un modelo de la view (mismo que Abm.vue):
+					// sin la clave `models_if_has_extencion` no hace nada.
+					if (
+						view.models_if_has_extencion
+						&& view.models_if_has_extencion[model_name]
+						&& !this.hasExtencion(view.models_if_has_extencion[model_name])
+					) {
+						return
+					}
 					let definicion = this.get_definicion_modelo(model_name)
 					if (!definicion) {
 						return

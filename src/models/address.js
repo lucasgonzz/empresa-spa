@@ -39,11 +39,26 @@ export default {
 			value: '',
 		},
 		{
-			text: 'Deposito por defecto',
+			/**
+			 * La sucursal PRINCIPAL del negocio (columna addresses.default_address).
+			 *
+			 * Misión sucursal-siempre (23/10/2026, D2): empresa-api garantiza UNA sola por dueño
+			 * (marcar otra desmarca la anterior, y la mutación add de src/store/address.js hace lo
+			 * mismo en memoria). Es adonde va el stock de toda operación que no dice de qué sucursal es
+			 * (un pedido de Tienda Nube o de Mercado Libre, una venta o una compra sin sucursal), la que
+			 * Vender elige sola si el usuario no tiene otra, y la que viene elegida al agregar stock.
+			 * Antes se llamaba "Deposito por defecto" y solo preseleccionaba el destino en algunos
+			 * formularios.
+			 */
+			text: 'Sucursal principal',
 			key: 'default_address',
 			type: 'checkbox',
 			value: 0,
-			description: 'Si se marca, este deeposito se ofrecera como opcion por defecto a la hora de indicar el deposito para cualquier articulo',
+			descriptions: [
+				'La sucursal principal es adonde va el stock cuando una operación no dice de qué sucursal es: por ejemplo, un pedido de Tienda Nube o de Mercado Libre. También es la que viene elegida en Vender y al agregar stock.',
+				'Solo puede haber una: si marcás otra, esta deja de serlo.',
+				'Mientras el negocio tenga una sola sucursal, el sistema se ve como siempre: las opciones para elegir sucursal (en Vender, en el listado, en las compras) aparecen cuando creás la segunda.',
+			],
 		},
 		{
 			/**
@@ -63,7 +78,7 @@ export default {
 			key: 'es_deposito_origen',
 			type: 'checkbox',
 			value: 0,
-			if_has_extencion: 'sugerencias_inteligentes',
+			if_has_extencion: 'agentes_ia',
 			description: 'Si se marca, las sugerencias inteligentes de stock van a preferir esta sucursal como origen de los movimientos. Si ninguna sucursal está marcada, el origen se elige por stock como siempre. Si hay un depósito madre, esta marca se usa solo cuando el madre no alcanza o no tiene el artículo: entre las sucursales a las que les sobra stock, primero se saca de las marcadas acá.',
 		},
 		{
@@ -82,16 +97,16 @@ export default {
 			 * viejo de la sucursal que dejó de ser madre lo saca del store la
 			 * mutación add de src/store/address.js.
 			 *
-			 * Gateo con if_has_alguna_extencion (OR, el mismo mecanismo que usan
-			 * peso y medidas en article.js): lo ve quien tenga
-			 * sugerencias_inteligentes o asistente_ia, porque las sugerencias de
-			 * stock también salen en la carpeta Stock del mostrador.
+			 * Gateo con la extensión única «Agentes de IA» (agentes_ia). Hasta la misión
+			 * agentes-ia-extension-unica (22/10/2026) era un OR (if_has_alguna_extencion)
+			 * entre dos extensiones de IA sueltas: las sugerencias de stock también salen
+			 * en la carpeta Stock del mostrador.
 			 */
 			text: 'Depósito madre',
 			key: 'es_deposito_madre',
 			type: 'checkbox',
 			value: 0,
-			if_has_alguna_extencion: ['sugerencias_inteligentes', 'asistente_ia'],
+			if_has_extencion: 'agentes_ia',
 			descriptions: [
 				'Solo una sucursal puede ser el depósito madre: si marcás otra, esta deja de serlo.',
 				'Las sugerencias de stock salen primero desde acá hacia las demás sucursales. Si el depósito madre no alcanza o no tiene el artículo, se completa con las sucursales a las que les sobra.',
@@ -204,9 +219,9 @@ export default {
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Registra las sucursales y depósitos del negocio con sus datos de contacto.',
-		implicancias: 'Las sucursales estructuran gran parte del sistema: el stock se maneja por sucursal, las ubicaciones de artículos pertenecen a una sucursal, las cajas por defecto pueden diferenciarse por sucursal y cada una puede tener su facturación ARCA por defecto. Además, una sucursal puede llevar un recargo o un descuento en porcentaje: cuando se elige en Vender, los precios de los artículos, combos y promociones ya lo llevan adentro (no se aplica al total). El depósito por defecto es el que se ofrece al cargar artículos. Una sola sucursal puede ser el depósito madre: las sugerencias de stock salen primero desde ahí y se reparten primero a las sucursales que más venden. Al eliminar una sucursal el sistema pregunta qué hacer con su stock (pasarlo a otra sucursal, o descartarlo: en ese caso el stock total de cada artículo baja en lo que tenía), con los empleados que la tienen elegida (pasarlos a otra sucursal o dejarlos sin sucursal) y con lo que tenía configurado (si era el depósito por defecto, madre o de origen, y sus cajas, puntos de venta y clientes, pasan a una sucursal de reemplazo). Las ventas, presupuestos y compras que ya la nombraban se conservan tal cual, pero van a figurar sin sucursal. Si tiene traslados de stock pendientes hay que resolverlos antes, y si tiene muchos artículos la eliminación se procesa en segundo plano.',
-		como_se_utiliza: 'Creá cada sucursal con nombre, domicilio y contacto. Marcá una como depósito por defecto y, si corresponde, asignale su punto de venta ARCA por defecto. Si en esa sucursal se vende más caro o más barato, elegí Recargo o Descuento en "Ajuste de precios" y cargá el porcentaje. Si tenés un depósito central que abastece a las demás, marcalo como "Depósito madre". Para eliminar una sucursal, abrila y apretá "Eliminar": el sistema te muestra qué tiene cargado y te deja elegir qué hacer con cada cosa antes de confirmar.',
-		palabras_clave: ['deposito', 'locales', 'domicilio', 'puntos de venta', 'recargo', 'descuento', 'ajuste de precios', 'depósito madre', 'deposito madre', 'depósito central', 'eliminar sucursal', 'borrar sucursal', 'pasar stock a otra sucursal'],
+		implicancias: 'Las sucursales estructuran gran parte del sistema: el stock se maneja por sucursal, las ubicaciones de artículos pertenecen a una sucursal, las cajas por defecto pueden diferenciarse por sucursal y cada una puede tener su facturación ARCA por defecto. Además, una sucursal puede llevar un recargo o un descuento en porcentaje: cuando se elige en Vender, los precios de los artículos, combos y promociones ya lo llevan adentro (no se aplica al total). Todo negocio trabaja con al menos una sucursal, y una de ellas es la principal: adonde va el stock cuando una operación no dice de qué sucursal es (un pedido de Tienda Nube o de Mercado Libre, por ejemplo), la que viene elegida en Vender y al agregar stock. Mientras haya una sola sucursal el sistema se ve como siempre; las opciones para elegir sucursal aparecen en Vender, en el listado y en las compras cuando el negocio tiene dos o más. La última sucursal no se puede eliminar: hay que crear otra antes. Una sola sucursal puede ser el depósito madre: las sugerencias de stock salen primero desde ahí y se reparten primero a las sucursales que más venden. Al eliminar una sucursal el sistema pregunta qué hacer con su stock (pasarlo a otra sucursal, o descartarlo: en ese caso el stock total de cada artículo baja en lo que tenía), con los empleados que la tienen elegida (pasarlos a otra sucursal o dejarlos sin sucursal) y con lo que tenía configurado (si era la sucursal principal, el depósito madre o el de origen, y sus cajas, puntos de venta y clientes, pasan a una sucursal de reemplazo). Las ventas, presupuestos y compras que ya la nombraban se conservan tal cual, pero van a figurar sin sucursal. Si tiene traslados de stock pendientes hay que resolverlos antes, y si tiene muchos artículos la eliminación se procesa en segundo plano.',
+		como_se_utiliza: 'Creá cada sucursal con nombre, domicilio y contacto. Marcá una como sucursal principal y, si corresponde, asignale su punto de venta ARCA por defecto. Si en esa sucursal se vende más caro o más barato, elegí Recargo o Descuento en "Ajuste de precios" y cargá el porcentaje. Si tenés un depósito central que abastece a las demás, marcalo como "Depósito madre". Para eliminar una sucursal, abrila y apretá "Eliminar": el sistema te muestra qué tiene cargado y te deja elegir qué hacer con cada cosa antes de confirmar.',
+		palabras_clave: ['deposito', 'sucursal principal', 'deposito por defecto', 'locales', 'domicilio', 'puntos de venta', 'recargo', 'descuento', 'ajuste de precios', 'depósito madre', 'deposito madre', 'depósito central', 'eliminar sucursal', 'borrar sucursal', 'pasar stock a otra sucursal'],
 	},
 	singular_model_name_spanish: 'Sucursal',
 	plural_model_name_spanish: 'Sucursales',

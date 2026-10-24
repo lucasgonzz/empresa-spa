@@ -39,9 +39,32 @@
             saldo de ESE movimiento; sin seleccion, arranca vacio --, y eso se distingue por el
             data-precargado, no por el nombre del boton (que ademas incluye el detalle del
             movimiento, texto variable).
+
+            Con VARIOS movimientos seleccionados (mision pago-cc-multiples-movimientos, 22/10/2026)
+            el boton es el mismo, con el mismo testid y el mismo data-precargado: lo unico que
+            cambia es el texto ("Registrar pago para 4 movimientos") y que el monto precargado es la
+            suma de los saldos.
         -->
+        <!--
+            Mision cc-consolidar-desde-cuenta-corriente (23/10/2026): a la derecha van las acciones
+            que se hacen sobre lo seleccionado. "Consolidar" es neutro y "Registrar pago" sigue
+            siendo la unica con acento: el pago es la accion principal del modal.
+        -->
+        <div
+        class="cc-footer__grupo cc-footer__grupo--acciones">
         <b-button
-        v-if="pago_para_esta"
+        v-if="puede_consolidar"
+        class="cc-footer__btn"
+        variant="light"
+        data-testid="btn-consolidar-ventas"
+        @click="consolidar">
+            <i class="bi bi-layers"></i>
+            <span class="cc-footer__btn-texto">
+                {{ texto_de_consolidar }}
+            </span>
+        </b-button>
+        <b-button
+        v-if="movimientos_a_pagar"
         class="cc-footer__btn cc-footer__btn--acento"
         data-testid="btn-registrar-pago"
         data-tour="cuentas_corrientes.boton_registrar_pago"
@@ -50,7 +73,7 @@
         variant="primary">
             <i class="bi bi-cash-coin"></i>
             <span class="cc-footer__btn-texto">
-                Registrar pago para {{ pago_para_esta.detalle }}
+                Registrar pago para {{ texto_del_pago }}
             </span>
         </b-button>
         <b-button
@@ -66,36 +89,141 @@
                 Registrar pago
             </span>
         </b-button>
+        </div>
     </div>
 </template>
 <script>
 import current_acounts from '@/mixins/current_acounts' 
+import {
+    movimientos_a_pagar,
+    suma_de_saldos,
+} from '@/utils/pago_a_varios_movimientos'
+import {
+    movimientos_de_venta,
+    motivo_para_no_consolidar,
+    ventas_sin_repetir,
+} from '@/utils/consolidar_desde_cuenta_corriente'
 export default {
     mixins: [current_acounts],
+    props: {
+        // Id del modal de consolidacion que monta el Index de esta cuenta corriente (ver Index.vue).
+        // Sin id no hay a donde mandar la seleccion, y el boton de consolidar no se ofrece.
+        consolidar_modal_id: {
+            type: String,
+            default: null,
+        },
+    },
     computed: {
-        pago_para_esta() {
-            let status = ''
-            if (this.selected_current_acounts.length) {
-                status = this.selected_current_acounts[this.selected_current_acounts.length - 1].status
+        /**
+         * Las ventas seleccionadas, o null si la seleccion no es solo de ventas.
+         *
+         * @returns {Array|null}
+         */
+        ventas_a_consolidar() {
+            return movimientos_de_venta(this.selected_current_acounts)
+        },
+        /**
+         * El boton de consolidar se ofrece con la extension prendida, en la cuenta corriente de un
+         * CLIENTE (la de un proveedor no tiene ventas) y con una seleccion de ventas. Si alguna no
+         * se puede consolidar, el clic lo explica (como en Ventas) en vez de esconder el boton.
+         *
+         * @returns {boolean}
+         */
+        puede_consolidar() {
+            return !!this.consolidar_modal_id
+                && this.hasExtencion('consolidar_ventas_en_factura')
+                && this.from_model_name == 'client'
+                && !!this.ventas_a_consolidar
+        },
+        texto_de_consolidar() {
+            let cantidad = ventas_sin_repetir(this.ventas_a_consolidar).length
+            return cantidad == 1
+                ? 'Consolidar venta en una factura'
+                : 'Consolidar ' + cantidad + ' ventas en una factura'
+        },
+        /**
+         * Los movimientos contra los que se puede registrar el pago, del mas viejo al mas nuevo, o
+         * null si la seleccion no sirve.
+         *
+         * Antes era "exactamente UN movimiento seleccionado". Ahora sirve cualquier seleccion de
+         * uno o mas movimientos donde TODOS sean debitos pendientes (saldo inicial, sin pagar o
+         * pagandose): una mezcla --una venta con una nota de credito, o con algo ya pagado-- no se
+         * puede imputar, y el boton vuelve a "Registrar pago" a secas, como siempre con una
+         * seleccion invalida. Con uno solo se comporta exactamente como antes.
+         *
+         * @returns {Array|null}
+         */
+        movimientos_a_pagar() {
+            return movimientos_a_pagar(this.selected_current_acounts)
+        },
+        /**
+         * Lo que sigue a "Registrar pago para": el detalle del movimiento si es uno solo, o la
+         * cantidad si son varios (el detalle de cuatro ventas no entra en el boton).
+         *
+         * @returns {string}
+         */
+        texto_del_pago() {
+            if (this.movimientos_a_pagar.length == 1) {
+                return this.movimientos_a_pagar[0].detalle
             }
-            if (this.selected_current_acounts.length == 1 && (status == 'saldo_inicial' || status == 'sin_pagar' || status == 'pagandose')) {
-                return this.selected_current_acounts[0]
-            }
-            return null
+            return this.movimientos_a_pagar.length + ' movimientos'
         },
     },
     methods: {
+        /**
+         * Valida la seleccion y abre el modal de consolidacion precargado con esas ventas: el
+         * mismo modal y el mismo store que usa Ventas ("Seleccion > Consolidar para facturar").
+         */
+        consolidar() {
+            let movimientos = this.ventas_a_consolidar
+            let motivo = motivo_para_no_consolidar(movimientos, this.from_model.id)
+
+            if (motivo) {
+                this.$bvToast.toast(motivo, {
+                    title: 'Consolidar ventas',
+                    variant: 'warning',
+                    solid: true,
+                })
+                return
+            }
+
+            let ventas = ventas_sin_repetir(movimientos)
+
+            this.$store.commit('sale/consolidar_facturacion/prepararDesdeVentasSeleccionadas', {
+                client_id: this.from_model.id,
+                ventas: ventas,
+                sale_ids: ventas.map(venta => venta.id),
+            })
+            this.$bvModal.show(this.consolidar_modal_id)
+        },
         setToPay() {
-            this.$store.commit('current_acount/setToPay', this.selected_current_acounts[0])
+            // Se congela la seleccion al apretar: dentro del setTimeout de abajo la lista ya podria
+            // haber cambiado, y el monto precargado tiene que ser el de lo que se mando a pagar.
+            let movimientos = this.movimientos_a_pagar
+
+            // El primero (el mas viejo) sigue viajando como `to_pay` en cualquier caso. setToPay
+            // vacia la lista, asi que la lista de varios se fija DESPUES.
+            this.$store.commit('current_acount/setToPay', movimientos[0])
+            if (movimientos.length >= 2) {
+                this.$store.commit('current_acount/setToPayList', movimientos)
+            }
             this.$bvModal.show('current-acounts-pago')
             setTimeout(() => {
 
-                let current_acount_debito = this.selected_current_acounts[0]
+                let saldo
 
-                let saldo = current_acount_debito.debe
-                
-                if (current_acount_debito.pagandose) {
-                    saldo -= Number(current_acount_debito.pagandose)
+                if (movimientos.length >= 2) {
+                    // La suma de los saldos, a centavos: PaymentMethods.vue (total_a_repartir) hace
+                    // la misma cuenta, y si difieren el modal abre con un sobrante distinto de cero.
+                    saldo = suma_de_saldos(movimientos)
+                } else {
+                    let current_acount_debito = movimientos[0]
+
+                    saldo = current_acount_debito.debe
+                    
+                    if (current_acount_debito.pagandose) {
+                        saldo -= Number(current_acount_debito.pagandose)
+                    }
                 }
                 
                 let input = document.getElementById('monto-pago')
@@ -238,4 +366,12 @@ export default {
 
 		.cc-footer__btn--acento
 			width: 100%
+
+		// Las acciones de la derecha (consolidar + pagar) no entran en una linea de telefono: cada
+		// una ocupa todo el ancho, con el pago al final.
+		.cc-footer__grupo--acciones
+			flex-wrap: wrap
+
+			.cc-footer__btn
+				flex: 1 1 100%
 </style>

@@ -12,7 +12,7 @@ export default {
 
 		/*
 			Lo que sigue es de la vista propia de sugerencias (extension
-			'sugerencias_inteligentes'): paginacion server-side contra
+			'agentes_ia'): paginacion server-side contra
 			GET stock-suggestion/{id}/articles. El array de arriba y su mutation
 			son del modal viejo (NavComponent) y quedan intactos a proposito.
 		*/

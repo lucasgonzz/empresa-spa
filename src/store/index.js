@@ -205,7 +205,7 @@ import whatsapp_bot_config from '@/store/whatsapp_bot_config'
 import whatsapp_chat from '@/store/whatsapp_chat'
 import whatsapp_template from '@/store/whatsapp_template'
 
-// Chat del asistente IA (botón flotante + panel, extensión asistente_ia).
+// Chat del asistente IA (botón flotante + panel, extensión agentes_ia).
 import ai_chat from '@/store/ai_chat'
 // El mostrador del módulo IA (escritorio de informes del dueño, misma extensión).
 import mostrador from '@/store/mostrador'
@@ -304,10 +304,19 @@ import vender_layout from '@/store/vender_layout'
 // Diseños de etiquetas de gondola (mision disenos-etiquetas-gondola, 29/9/2026).
 import article_ticket_design from '@/store/article_ticket_design'
 
+// Sesión guardada en el equipo para entrar sin internet (misión ingreso-sin-internet, 23/10/2026).
+import { plugin_de_sesion_sin_conexion } from '@/offline/sesion_sin_conexion'
+
 
 Vue.use(Vuex)
 
 export default new Vuex.Store({
+    /*
+        Guarda la sesión en el equipo cada vez que el servidor la confirma y la borra con cada
+        `auth/setUser(null)`. El porqué de mirar las mutaciones en vez de cada pantalla de login
+        está en el docblock del plugin.
+    */
+    plugins: [plugin_de_sesion_sin_conexion],
     state: {
     },
     mutations: {

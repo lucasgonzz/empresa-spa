@@ -170,7 +170,7 @@ export default {
 		 * @return {void}
 		 */
 		check_escaneo_factura_en_curso() {
-			if (!this.hasExtencion('escaneo_factura_compra')) {
+			if (!this.hasExtencion('agentes_ia')) {
 				return
 			}
 
@@ -296,13 +296,17 @@ export default {
 		 * cuantas busquedas terminadas nadie abrio) para el numero rojo de Alertas -> Imagenes y
 		 * de la campana (mision imagenes-catalogo-completo, 27/9/2026).
 		 *
-		 * Sin extension ni permiso que lo condicione: la solapa es para todos. La accion del
+		 * Desde el 22/10/2026 exige la extension "Agentes de IA" (agentes_ia): sin ella la API
+		 * contesta 403, asi que ni se pide (y el numero rojo queda en cero). La accion del
 		 * store es silenciosa y resuelve siempre, asi que no le puede cortar el turno al eslabon
 		 * que sigue.
 		 *
 		 * @returns {Promise}
 		 */
 		get_resumen_de_imagenes() {
+			if (!this.hasExtencion('agentes_ia')) {
+				return Promise.resolve()
+			}
 			return this.$store.dispatch('image_assignment/get_resumen')
 		},
 		/**
@@ -310,14 +314,17 @@ export default {
 		 * elija y cuantos articulos dudosos quedan por revisar) para el numero rojo de Alertas ->
 		 * Catalogo y de la campana (mision categorizacion-tres-modelos, 5/10/2026).
 		 *
-		 * Sin extension ni permiso que lo condicione: para quien no es el dueño ni el acceso maestro
-		 * la API contesta todo en cero. La accion del store es silenciosa y resuelve siempre (un 404
+		 * Exige la extension "Agentes de IA" (agentes_ia): sin ella no se pide (la API contestaria 403).
+		 * Para quien no es el dueño ni el acceso maestro la API contesta todo en cero. La accion del store es silenciosa y resuelve siempre (un 404
 		 * de una API que todavia no tiene la ruta no muestra nada), asi que no le puede cortar el
 		 * turno al eslabon que sigue.
 		 *
 		 * @returns {Promise}
 		 */
 		get_resumen_de_categorias() {
+			if (!this.hasExtencion('agentes_ia')) {
+				return Promise.resolve()
+			}
 			return this.$store.dispatch('category_proposal/get_resumen')
 		},
 		/**
@@ -325,13 +332,16 @@ export default {
 		 * tienen una descripcion que la IA no pudo confirmar) para el numero rojo de Alertas ->
 		 * Catalogo -> Descripciones y de la campana (mision alertas-descripciones, 14/10/2026).
 		 *
-		 * Sin extension ni permiso que lo condicione, como el de imagenes. La accion del store es
+		 * Exige la extension "Agentes de IA" (agentes_ia), como el de imagenes. La accion del store es
 		 * silenciosa y resuelve siempre (un 404 de una API que todavia no tiene la ruta deja el numero
 		 * en cero sin mostrar nada), asi que no le puede cortar el turno al eslabon que sigue.
 		 *
 		 * @returns {Promise}
 		 */
 		get_resumen_de_descripciones() {
+			if (!this.hasExtencion('agentes_ia')) {
+				return Promise.resolve()
+			}
 			return this.$store.dispatch('ai_description_review/get_resumen')
 		},
 		get_ventas_sin_cobrar() {
@@ -407,6 +417,54 @@ export default {
 				}
 			}
 
+			this.usar_la_principal_si_vender_no_tiene_sucursal()
+		},
+		/**
+		 * Si el negocio tiene UNA sola sucursal y Vender quedó sin sucursal (ni la del usuario ni la
+		 * cookie sirvieron), le pone esa sucursal.
+		 *
+		 * Misión sucursal-siempre (23/10/2026, D6): con una sola sucursal Vender no muestra el selector
+		 * (D1), así que nadie podría elegirla; antes, sin cookie ni `user.address_id`, frenaba con
+		 * "Indique la SUCURSAL" y un empleado sin `vender.cambiar_address_id` no tenía cómo salir. Queda
+		 * elegida aunque el empleado no tenga el permiso de cambiarla: no hay a qué cambiarla.
+		 *
+		 * 🔴 Con DOS o más no se hace nada, a propósito: Vender queda en 0 y "Indique la SUCURSAL" frena,
+		 * como siempre. Poner la principal haría que un empleado sin `user.address_id` ni permiso de
+		 * cambiar la sucursal vendiera contra la principal sin poder corregirlo aunque esté en otra, y
+		 * fijaría una cookie que cambia el filtro de clientes y las cajas del cobro.
+		 *
+		 * Tampoco se toca una venta guardada que se está editando (mismo criterio que deshabilita el
+		 * selector en Address.vue): su sucursal es la que tenía, aunque sea ninguna.
+		 *
+		 * La cookie se escribe igual que en `init_vender_address_id` porque la caja por defecto la lee
+		 * de la COOKIE (mixins/vender/cajas.js): Vender y cookie tienen que coincidir.
+		 *
+		 * Mientras las sucursales no cargaron no hace nada: lo vuelve a intentar
+		 * `validar_address_id_de_vender` cuando llegan.
+		 *
+		 * @returns {void}
+		 */
+		usar_la_principal_si_vender_no_tiene_sucursal() {
+			if (this.$store.state.vender.address_id) {
+				return
+			}
+
+			if (this.$store.getters['vender/previus_sales/editando_venta_previa']) {
+				return
+			}
+
+			if (this.$store.getters['address/sucursales'].length !== 1) {
+				return
+			}
+
+			let principal = this.$store.getters['address/principal']
+			if (!principal) {
+				return
+			}
+
+			console.log('seteando VENDER address_id con la sucursal principal')
+			this.$store.commit('vender/setAddressId', principal.id)
+			this.$cookies.set('address_id', principal.id, -1)
 		},
 		/**
 		 * ¿Esta sucursal sigue existiendo? Mira `address.models`.
@@ -474,6 +532,16 @@ export default {
 
 			if (cookie && !this.address_id_es_vigente(cookie)) {
 				this.$cookies.remove('address_id')
+			}
+
+			/*
+				Misión sucursal-siempre (D6): al arrancar, `init_vender_address_id` corre ANTES de que
+				lleguen las sucursales y, sin usuario ni cookie, deja Vender en 0. Esta es la primera
+				pasada con las sucursales cargadas: si el negocio tiene UNA sola sucursal y Vender sigue
+				sin sucursal, toma esa (con dos o más no hace nada; ver el método).
+			*/
+			if (this.user) {
+				this.usar_la_principal_si_vender_no_tiene_sucursal()
 			}
 
 			return true

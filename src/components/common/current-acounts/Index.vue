@@ -64,6 +64,18 @@
 
     <sale-modal></sale-modal>
 
+    <!--
+        Mision cc-consolidar-desde-cuenta-corriente (23/10/2026): el modal de consolidar ventas en
+        una factura, el mismo que usa Ventas. Lleva un id PROPIO, derivado del de este modal:
+        Ventas.vue monta su instancia con el id de siempre y tambien monta esta cuenta corriente, y
+        dos b-modal con el mismo id se abren a la vez. El store es el mismo y no hay problema:
+        solo se muestra una instancia por vez.
+    -->
+    <consolidar-facturacion
+    v-if="hasExtencion('consolidar_ventas_en_factura')"
+    :modal_id="consolidar_modal_id"
+    @consolidada="venta_consolidada"></consolidar-facturacion>
+
     <b-modal
     :id="modal_id"
     data-tour="cuentas_corrientes.modal_cuenta"
@@ -86,7 +98,8 @@
             de cualquier otro modal del sistema.
         -->
         <template #modal-footer>
-            <btn-pago-nota-credito></btn-pago-nota-credito>
+            <btn-pago-nota-credito
+            :consolidar_modal_id="consolidar_modal_id"></btn-pago-nota-credito>
         </template>
     </b-modal>
 </div>
@@ -166,12 +179,21 @@ export default {
         BudgetModalButtons: () => import('@/components/budget/components/ModalButtons'),
         OrderProductionModalButtons: () => import('@/components/produccion/components/order-productions/ModalButtons'),
         SaleModal: () => import('@/components/common/SaleModal'),
+        ConsolidarFacturacion: () => import('@/components/ventas/modals/consolidar-facturacion/Index'),
         SendAfipTickets: () => import('@/components/ventas/modals/afip-ticket/SendAfipTickets'),
         UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
         UnidadesEntregadas: () => import('@/components/ventas/modals/unidades-entregadas/Index'),
         AcopioArticleDeliveries: () => import('@/components/ventas/modals/unidades-entregadas/AcopioArticleDeliveries'),
     },
     computed: {
+        /**
+         * Id del modal de consolidacion de ESTA cuenta corriente. Sale del `modal_id` para que dos
+         * cuentas corrientes montadas a la vez (el header de WhatsApp sobre Ventas, por ejemplo) no
+         * compartan id.
+         */
+        consolidar_modal_id() {
+            return 'consolidar-facturacion-' + this.modal_id
+        },
         title() {
             if (this.from_model) {
                 let moneda = this.get_store_model('moneda', this.from_credit_account.moneda_id)
@@ -218,6 +240,15 @@ export default {
         },
     },
     methods: {
+        /**
+         * Se emitio la factura consolidada: la seleccion ya no existe (las ventas quedaron marcadas)
+         * y la lista tiene que traer el badge nuevo. No se recarga el cliente: consolidar no mueve
+         * el saldo de la cuenta.
+         */
+        venta_consolidada() {
+            this.$store.commit('current_acount/setSelected', [])
+            this.$store.dispatch('current_acount/getModels')
+        },
         model_deleted() {
             this.loadModel(this.from_model_name, this.from_model.id)
         }

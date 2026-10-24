@@ -2,11 +2,11 @@
  * Gate de entrada al mostrador (módulo IA, misión "modulo-ia-mostrador", 14/9/2026).
  *
  * Es UN solo lugar a propósito. La ruta /ia exige dos cosas a la vez —la extensión
- * `asistente_ia` (la misma que gatea el botón flotante del chat y las rutas
+ * `agentes_ia` (la misma que gatea el botón flotante del chat y las rutas
  * mostrador/* del backend) y ser el dueño o el acceso maestro (decisión 8 del plan;
  * el backend devuelve 403 a un empleado)— y antes cada punto de entrada miraba una
- * cosa distinta: DepositButtons mandaba a /ia a cualquiera con
- * `sugerencias_inteligentes`, las notificaciones de sugerencias a cualquiera que
+ * cosa distinta: DepositButtons mandaba a /ia a cualquiera con la extensión de
+ * sugerencias (hoy unificada en `agentes_ia`), las notificaciones de sugerencias a cualquiera que
  * las recibiera, y los dos terminaban en el cartel de "solo para el dueño" o en el
  * de "requiere la extensión". Lo detectó el chequeo independiente del 14/9/2026.
  *
@@ -25,8 +25,17 @@
  */
 export default {
 	computed: {
+		/**
+		 * true cuando auth/me ya resolvio y las extensiones de la cuenta estan cargadas. Antes de eso
+		 * hasExtencion devuelve undefined y "no tiene la extension" no es una respuesta: quien
+		 * dibuja un cartel de "falta la extension" tiene que esperar a esto, o el cartel parpadea
+		 * en cada carga fria (F5 sobre /ia) aunque la cuenta la tenga.
+		 */
+		mostrador_extensiones_cargadas() {
+			return !!(this.authenticated && this.owner_extencions)
+		},
 		mostrador_tiene_extension() {
-			return !!this.hasExtencion('asistente_ia')
+			return !!this.hasExtencion('agentes_ia')
 		},
 		/**
 		 * Solo el dueño y el acceso maestro. Es el mismo par que mira check_is_owner

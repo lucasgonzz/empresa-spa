@@ -23,15 +23,21 @@ export default {
 			if (this.can('sale.index.addresses.all')) {
 
 				items.push({street: 'todas'})
-				this.addresses.forEach(address => {
-					items.push(this.countSales(address))
-				})
+				// Una solapa por sucursal desde la segunda (misión sucursal-siempre, 23/10/2026, D1):
+				// con una sola queda "todas", igual que en un negocio sin sucursales.
+				if (this.muestra_sucursales) {
+					this.addresses.forEach(address => {
+						items.push(this.countSales(address))
+					})
+				}
 
 			} else if (this.can('sale.index.addresses.only_your')) {
 
 				let employee_address = this.addresses.find(address => address.id == this.user.address_id)
 
-				if (typeof employee_address != 'undefined') {
+				// Misma regla (D1): con menos de dos sucursales no hay solapa, como en un negocio sin
+				// sucursales, donde esta lista quedaba vacía.
+				if (this.muestra_sucursales && typeof employee_address != 'undefined') {
 					items.push(this.countSales(employee_address))
 				}
 			}

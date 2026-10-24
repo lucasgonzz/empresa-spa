@@ -917,6 +917,9 @@ export default {
 				// Hook aditivo del HasMany generico: renderiza el boton "Generar con IA" con preview editable
 				// al lado de "Agregar Descripcion". Solo este prop declara la clave; ningun otro has_many la usa.
 				extra_action_component: 'listado/components/ArticleDescriptionsAiBtn',
+				// "Generar con IA" lo hace un modelo de IA: exige la extension "Agentes de IA" (el
+				// backend devuelve 403 sin ella). Sin la extension el boton ni se monta.
+				extra_action_if_has_extencion: 'agentes_ia',
 			},
 			mid_full_cols: true,
 			not_show: true,

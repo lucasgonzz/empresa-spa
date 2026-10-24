@@ -37,6 +37,7 @@
 				<quadrant-list
 				title="Emisor · Izquierda"
 				:items="layout.emisor.izquierda"
+				:bold_keys="layout.bold"
 				group="emisor"
 				:locked_keys="locked_emisor_keys"></quadrant-list>
 			</div>
@@ -56,6 +57,7 @@
 			class="header-designer-preview__col header-designer-preview__col--side"
 			title="Emisor · Derecha"
 			:items="layout.emisor.derecha"
+			:bold_keys="layout.bold"
 			group="emisor"
 			:locked_keys="locked_emisor_keys"></quadrant-list>
 		</div>
@@ -68,6 +70,7 @@
 			class="header-designer-preview__col header-designer-preview__col--side"
 			title="Receptor · Izquierda"
 			:items="layout.receptor.izquierda"
+			:bold_keys="layout.bold"
 			group="receptor"
 			empty_text="Arrastrá campos del cliente acá"></quadrant-list>
 
@@ -127,8 +130,10 @@ export default {
 	},
 	props: {
 		/**
-		 * Estado editable del layout: { emisor: { izquierda, derecha }, receptor: { izquierda } }.
-		 * Los arrays internos se mutan directamente por los QuadrantList (drag & drop).
+		 * Estado editable del layout: { emisor: { izquierda, derecha }, receptor: { izquierda }, bold }.
+		 * Los arrays internos se mutan directamente por los QuadrantList (drag & drop). `bold` es
+		 * opcional (misión pdf-negrita-perfil): la lista de claves de chips con el valor en negrita;
+		 * sin ella los chips no llevan el botón B.
 		 */
 		layout: {
 			type: Object,

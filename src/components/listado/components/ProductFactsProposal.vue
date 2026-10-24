@@ -117,7 +117,8 @@ export default {
 			this.applied = false
 			// Una propuesta de otro código nunca se persiste en el artículo nuevo.
 			if (this.model.product_facts_apply) { this.$delete(this.model, 'product_facts_apply') }
-			if (!this.open || this.model.id || !this.can('article.store') || !this.validCode(this.code)) { return }
+			// Sin la extension "Agentes de IA" no se busca nada (el backend responderia 403).
+			if (!this.hasExtencion('agentes_ia') || !this.open || this.model.id || !this.can('article.store') || !this.validCode(this.code)) { return }
 			let self = this
 			this.debounce = setTimeout(function () { self.start() }, 650)
 		},

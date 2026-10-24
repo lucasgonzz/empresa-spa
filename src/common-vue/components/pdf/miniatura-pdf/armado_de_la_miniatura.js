@@ -249,6 +249,8 @@ export function bloques_de_la_zona(items, definiciones, estilos, rollo) {
  * @param {Object} entrada
  * @param {*} entrada.page_layout el del perfil
  * @param {Array} entrada.pdf_column_options las del perfil (con pivot)
+ * @param {Array|string|null} [entrada.bold_columns] `bold_columns` del perfil (misión pdf-negrita-perfil):
+ *        ids de las columnas con el valor en negrita; opcional
  * @param {Object|null} entrada.catalogo respuesta de page-layout-catalog (null si no llegó)
  * @param {number} entrada.util_mm ancho útil contra el que se convierten las columnas
  * @param {number} entrada.total medias columnas de la grilla de la tabla
@@ -263,7 +265,7 @@ export function armar_miniatura(entrada) {
 	let resultado = {
 		superior: [],
 		pie: [],
-		columnas: columnas_para_dibujar(entrada.pdf_column_options, entrada.util_mm, entrada.total),
+		columnas: columnas_para_dibujar(entrada.pdf_column_options, entrada.util_mm, entrada.total, entrada.bold_columns),
 		con_diseno: !!diseno,
 	}
 

@@ -123,9 +123,14 @@ export default {
 		 * Sucursal (address) actualmente seleccionada en la venta.
 		 * Se obtiene del store cruzando el address_id con los modelos de address.
 		 *
+		 * Misión sucursal-siempre (23/10/2026, D1): con UNA sola sucursal no hay chip. Vender la elige
+		 * sola y no muestra el selector, así que el chip nombraría algo que el usuario no eligió ni
+		 * puede cambiar (y el lápiz llevaría a un campo que no está). El dato sigue en la venta.
+		 *
 		 * @returns {Object|null}
 		 */
 		selected_address() {
+			if (!this.muestra_sucursales) return null
 			const address_id = this.$store.state.vender.address_id
 			if (!address_id) return null
 			const addresses = this.$store.state.address.models

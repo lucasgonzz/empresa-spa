@@ -68,6 +68,7 @@
 				:margin_mm="local_margin_mm"
 				:show_size_controls="false"
 				:show_typography_columns="model.model_name === 'article'"
+				:show_bold_column="true"
 				:layout_table="true"></pdf-columns-preferences-config-modal>
 
 				<b-alert
@@ -112,6 +113,7 @@ import {
 	poner_sugeridas,
 	mm_a_columnas,
 	mm_de_las_columnas,
+	ids_en_negrita,
 } from '@/common-vue/components/pdf/disenador-pdf/tabla_del_disenador'
 import { hoja_del_perfil, ancho_util, tiene_diseno } from '@/common-vue/components/pdf/disenador-pdf/estado_del_disenador'
 
@@ -131,6 +133,12 @@ import CatalogHeaderDesigner from '@/common-vue/components/pdf/catalog-header-de
  * tabla de siempre); para venta, presupuesto y pedido online muestra la tarjeta del diseño y las
  * columnas se arman en el diseñador (misión diseno-ticket-comandera), pero las filas se siguen
  * armando y sincronizando a `model.pdf_column_options`, que es lo que lleva el POST/PUT del ABM.
+ *
+ * 🔴 Negrita (misión pdf-negrita-perfil, 20/10/2026): cada fila trae un `bold` local que dice si el
+ * VALOR de esa columna sale en negrita en el PDF. NO es un campo del pivot: la API lo guarda como lista
+ * de ids de opción en `model.bold_columns` (columna JSON del perfil). Al armar las filas, `bold` sale de
+ * `bold_columns.includes(option.id)`; al sincronizar, `bold_columns` se reconstruye desde las filas
+ * (lista vacía → null). Un perfil sin la clave (API vieja o nunca tocado) = nada en negrita.
  *
  * 🔴 Ida y vuelta con el diseñador, sin ciclos: cuando el diseñador cambia
  * `model.pdf_column_options` (perfil nuevo, o después de guardar), este editor rearma sus filas
@@ -283,6 +291,26 @@ export default {
 			},
 		},
 		/**
+		 * Misión pdf-negrita-perfil: el diseñador de PDF cambió `bold_columns` del modelo (perfil nuevo
+		 * o después de guardar). Las filas lo siguen, así el guardado del ABM no pisa la negrita con la
+		 * que tenían. Si ya dicen lo mismo (lo escribió este mismo editor), no se hace nada.
+		 *
+		 * @param {Array|string|null} valor
+		 */
+		'model.bold_columns'(valor) {
+			/* Sin filas todavía, build_rows las arma leyendo el modelo */
+			if (!this.pdf_config_rows.length) {
+				return
+			}
+			const ids = ids_en_negrita(valor)
+			if (JSON.stringify(ids) === JSON.stringify(this.negritas_de_las_filas())) {
+				return
+			}
+			this.pdf_config_rows.forEach((row) => {
+				this.$set(row, 'bold', ids.indexOf(Number(row.key)) !== -1)
+			})
+		},
+		/**
 		 * El diseñador de PDF cambió las columnas del modelo (perfil nuevo: las deja con $set; perfil
 		 * guardado: copia las que devolvió la API): las filas se rearman desde el modelo, así el
 		 * guardado del ABM no las pisa con las viejas. Si el cambio lo hizo este mismo editor (misma
@@ -401,6 +429,8 @@ export default {
 		 */
 		build_rows() {
 			const catalog = this.pdf_column_options_catalog
+			/* Ids de las columnas con el valor en negrita según el modelo (misión pdf-negrita-perfil) */
+			const bold_ids = ids_en_negrita(this.model ? this.model.bold_columns : null)
 			if (!catalog.length) {
 				this._syncing = true
 				this.pdf_config_rows = []
@@ -445,6 +475,8 @@ export default {
 					wrap_content: saved ? saved.wrap_content : false,
 					font_size: saved ? saved.font_size : 8,
 					text_align: saved ? saved.text_align : '',
+					/* Negrita en el valor: sale de bold_columns del perfil, no del pivot */
+					bold: bold_ids.indexOf(Number(option.id)) !== -1,
 				}
 			})
 
@@ -620,6 +652,38 @@ export default {
 			return null
 		},
 		/**
+		 * Ids de las columnas cuyo valor está en negrita, ordenados (misión pdf-negrita-perfil). Cuentan
+		 * todas las filas, visibles o no: una columna oculta no imprime, pero si se la vuelve a mostrar
+		 * recupera su negrita. No depender de `visible` evita además una carrera con el diseñador (que
+		 * cambia pivots y negrita a la vez y los watchers corren en cualquier orden).
+		 *
+		 * @return {Array<number>}
+		 */
+		negritas_de_las_filas() {
+			const ids = []
+			this.pdf_config_rows.forEach((row) => {
+				if (row && row.bold && row.key != null) {
+					ids.push(Number(row.key))
+				}
+			})
+			return ids.sort((a, b) => a - b)
+		},
+		/**
+		 * Vuelca la negrita de las filas a `model.bold_columns` (lista de ids; vacía → null, que es
+		 * "ninguna" para la API). No escribe si el modelo ya dice lo mismo, para no ensuciar el
+		 * formulario ni disparar watchers de más.
+		 *
+		 * @return {void}
+		 */
+		sync_bold_to_model() {
+			const ids = this.negritas_de_las_filas()
+			const actuales = ids_en_negrita(this.model.bold_columns)
+			if (JSON.stringify(ids) === JSON.stringify(actuales)) {
+				return
+			}
+			this.$set(this.model, 'bold_columns', ids.length ? ids : null)
+		},
+		/**
 		 * Copia el estado actual de pdf_config_rows a model.pdf_column_options
 		 * con la estructura de pivots que espera el backend.
 		 *
@@ -637,6 +701,9 @@ export default {
 			this.pdf_column_options_catalog.forEach((opt) => {
 				catalog_by_id[opt.id] = opt
 			})
+
+			/* La negrita viaja aparte de los pivots: lista de ids en model.bold_columns */
+			this.sync_bold_to_model()
 
 			const payload = []
 			this.pdf_config_rows.forEach((row, index) => {

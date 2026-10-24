@@ -50,6 +50,7 @@ import CheckInfo from '@/components/common/current-acounts/pago/CheckInfo'
 import CreditCard from '@/components/common/current-acounts/pago/CreditCard'
 import TotalRepartir from '@/components/vender/modals/payment-methods/TotalRepartir'
 import cajas from '@/mixins/vender/cajas'
+import { suma_de_saldos } from '@/utils/pago_a_varios_movimientos'
 
 export default {
     name: 'CurrentAcountPagoPaymentMethods',
@@ -149,12 +150,25 @@ export default {
             return this.$store.state.current_acount.to_pay
         },
         /**
+         * Los movimientos elegidos cuando el pago se abrió con VARIOS (2 o más), del más viejo al más
+         * nuevo. Vacía con un solo movimiento o sin selección: ahí manda `to_pay`.
+         *
+         * @returns {Array}
+         */
+        to_pay_list() {
+            return this.$store.state.current_acount.to_pay_list
+        },
+        /**
          * Lo que falta pagar de la venta elegida: el importe contra el que se reparte el pago.
          *
          * Es la misma cuenta con la que BtnPagoNotaCredito.setToPay() precarga el monto de la primera
          * fila, y la que hace la API para saber cuánto le falta al débito (`debe - pagandose`, en
          * CurrentAcountPagoHelper::procesarPago()). Si cambia una de las tres, tienen que cambiar las
          * otras: si no, el modal abre con un sobrante distinto de cero.
+         *
+         * Con VARIOS movimientos elegidos (to_pay_list) es la suma de los saldos de todos.
+         * Si repartís más que esa suma, el sobrante sigue a las demás deudas de la cuenta y no
+         * bloquea nada, igual que con uno solo.
          *
          * Con null (sin venta elegida, o sin saldo por pagar) no se dibuja el bloque de totales ni el
          * botón "Completar": PaymentMethodsStep lo esconde con un v-if sobre esta misma prop.
@@ -164,6 +178,15 @@ export default {
         total_a_repartir() {
             if (!this.to_pay) {
                 return null
+            }
+
+            // Con varios movimientos elegidos el total es la suma de lo que le falta a cada uno. Es la
+            // misma cuenta que BtnPagoNotaCredito.setToPay() usa para precargar el monto. La rama de
+            // un solo movimiento de abajo no se toca.
+            if (this.to_pay_list.length >= 2) {
+                let suma = suma_de_saldos(this.to_pay_list)
+
+                return suma > 0 ? suma : null
             }
 
             // Lo que le falta a la venta elegida: lo que debe menos lo que ya se le pagó

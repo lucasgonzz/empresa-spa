@@ -20,8 +20,9 @@
 			</span>
 		</vender-toggle>
 
+		<!-- Depósito: desde la segunda sucursal (misión sucursal-siempre, 23/10/2026, D1). Con una sola no hay select y viaja la principal (address_id_a_enviar de BtnGuardar.vue). -->
 		<div
-		v-if="regresar_stock && addresses.length"
+		v-if="regresar_stock && muestra_sucursales"
 		class="dev-opciones__sub">
 			<label
 			class="dev-label"

@@ -379,28 +379,11 @@ export default {
 			key: 'clave_eliminar_article',
 			type: 'text',
 		},
-		{
-			text: 'Direccion comercial para mostrar en los comprobantes de venta',
-			key: 'address_company',
-			// Ayuda corregida en la mision destrabar-videos-centro (16/10/2026): ningun PDF de venta lee
-			// hoy este dato (el encabezado toma el domicilio comercial de los datos de ARCA), asi que la
-			// ayuda vieja ("se mostrara siempre en todos los comprobantes") prometia algo que no pasa.
-			descriptions: [
-				'Este dato queda guardado en tu perfil, pero por ahora NO se imprime en los comprobantes de venta.',
-				'El domicilio que sale en el encabezado de facturas y remitos es el domicilio comercial de tus datos de facturacion (ARCA).',
-			],
-			type: 'text',
-		},
-
-		{
-			text: 'Mostrar la direccion de todas las sucursales en los comprobantes de venta',
-			key: 'all_addresses_in_sale_pdf',
-			// Misma correccion que la de address_company: hoy ningun PDF de venta lee esta opcion.
-			descriptions: [
-				'Por ahora esta opcion no cambia lo que se imprime en los comprobantes de venta.',
-			],
-			type: 'checkbox',
-		},
+		// Misión pdf-direccion-sucursales (23/10/2026): se sacaron de esta pantalla 'address_company'
+		// (direccion comercial) y 'all_addresses_in_sale_pdf' (todas las sucursales en el PDF). La
+		// direccion de los comprobantes ahora sale de las sucursales y se elige en el diseño del
+		// encabezado de cada PDF (chips "Sucursal del comprobante", "Todas las sucursales" o una
+		// sucursal puntual). Las columnas siguen en la base y la API las sigue aceptando.
 		{
 			text: 'Mostrar el nombre del empleado que realizo la venta en los PDF de las ventas',
 			key: 'mostrar_vendedor_en_venta_pdf',
@@ -601,12 +584,13 @@ export default {
 			group_title: 'Sugerencias inteligentes de stock',
 		},
 		/*
-		 * Configuracion de la extension 'sugerencias_inteligentes': los valores por
+		 * Configuracion de la extension 'agentes_ia' (antes una extension de sugerencias): los valores por
 		 * defecto con los que se calculan los movimientos de stock sugeridos. Persisten
 		 * en columnas sugerencias_* de users via UserController@update, el mismo camino
 		 * que usar_condicion_fiscal_en_costeo. Sin la extension, el grupo entero
-		 * desaparece de Configuracion general (salvo con asistente_ia: ver
-		 * sugerencias_prioridad_destino, que se gatea con un OR de las dos).
+		 * desaparece de Configuracion general (desde el 22/10/2026 todos los campos
+		 * del grupo, incluido sugerencias_prioridad_destino, se gatean con la misma
+		 * extension unica agentes_ia).
 		 *
 		 * Desde la mision "modulo-ia-mostrador" (14/9/2026) estos tres defaults
 		 * (modo, origen, limite del origen) los lee TAMBIEN la carpeta Stock del
@@ -632,7 +616,7 @@ export default {
 		// 		{text: 'Cada quince dias', value: 'quincenal'},
 		// 		{text: 'Una vez por mes', value: 'mensual'},
 		// 	],
-		// 	if_has_extencion: 'sugerencias_inteligentes',
+		// 	if_has_extencion: 'agentes_ia',
 		// 	descriptions: [
 		// 		'El sistema genera solo una sugerencia de movimientos de stock con la frecuencia que elijas, a la madrugada, usando los valores por defecto de abajo.',
 		// 		'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',
@@ -648,7 +632,7 @@ export default {
 				{text: 'Ideal', value: 'ideal'},
 				{text: 'Maximo', value: 'maximo'},
 			],
-			if_has_extencion: 'sugerencias_inteligentes',
+			if_has_extencion: 'agentes_ia',
 			descriptions: [
 				'Hasta donde completar el stock de cada deposito en los movimientos que sugiere la carpeta Stock del mostrador (y como valor inicial al crear una sugerencia a mano desde el Listado).',
 				'MINIMO: sugiere stock solo para los depositos que estan por debajo de su stock minimo.',
@@ -664,7 +648,7 @@ export default {
 				{text: 'Absoluto', value: 'absoluto'},
 				{text: 'Relativo', value: 'relativo'},
 			],
-			if_has_extencion: 'sugerencias_inteligentes',
+			if_has_extencion: 'agentes_ia',
 			descriptions: [
 				'Como elegir el deposito desde el cual mover stock cuando no hay depositos de origen designados (o para desempatar entre ellos).',
 				'ABSOLUTO: el deposito con mayor cantidad de stock en total.',
@@ -680,7 +664,7 @@ export default {
 				{text: 'Ideal', value: 'ideal'},
 				{text: 'Sin limite', value: 'sin_limite'},
 			],
-			if_has_extencion: 'sugerencias_inteligentes',
+			if_has_extencion: 'agentes_ia',
 			descriptions: [
 				'Hasta donde permitir vaciar el deposito origen al sugerir movimientos.',
 				'MINIMO: no se mueve stock si eso deja al origen por debajo de su stock minimo.',
@@ -700,8 +684,8 @@ export default {
 			 * (es_deposito_madre en src/models/address.js); sin madre, las
 			 * sugerencias se ordenan por urgencia como siempre.
 			 *
-			 * Mismo gateo OR que el checkbox del madre (if_has_alguna_extencion):
-			 * con asistente_ia solo, este campo aparece y los tres de arriba no.
+			 * Mismo gateo que el checkbox del madre: la extension unica agentes_ia
+			 * (antes era un OR entre dos extensiones de IA sueltas).
 			 */
 			text: 'Prioridad al repartir desde el depósito madre',
 			key: 'sugerencias_prioridad_destino',
@@ -710,7 +694,7 @@ export default {
 				{text: 'La sucursal que más vende', value: 'ventas_sucursal'},
 				{text: 'La sucursal que más vende ese artículo', value: 'ventas_articulo'},
 			],
-			if_has_alguna_extencion: ['sugerencias_inteligentes', 'asistente_ia'],
+			if_has_extencion: 'agentes_ia',
 			descriptions: [
 				'Decide quién se lleva el stock del depósito madre cuando no alcanza para todas las sucursales, y en qué orden aparecen los movimientos en el informe de stock.',
 				'LA SUCURSAL QUE MÁS VENDE: primero la sucursal que más plata facturó en los últimos 90 días, contando las ventas en pesos ya terminadas (las ventas en dólares no suman).',
@@ -746,7 +730,7 @@ export default {
 		// 		{text: 'Cada quince dias', value: 'quincenal'},
 		// 		{text: 'Una vez por mes', value: 'mensual'},
 		// 	],
-		// 	if_has_extencion: 'sugerencias_compras',
+		// 	if_has_extencion: 'agentes_ia',
 		// 	descriptions: [
 		// 		'El sistema genera una sugerencia de compra a proveedores con la frecuencia que elijas, a la madrugada, usando los defaults del motor.',
 		// 		'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',

@@ -79,6 +79,13 @@ export default {
 
 				if (item.is_article) {
 
+					/*
+						Misión sucursal-siempre (23/10/2026): esto es DATO y sigue igual con una sola
+						sucursal. El stock se valida contra el pivot de la sucursal de Vender, que con
+						una sola sucursal (autoseleccionada, D6) es todo el stock del artículo: da lo
+						mismo que validar el global. Lo único que cambia es el aviso: con una sola
+						sucursal no se la nombra, porque el vendedor no la ve en ningún lado (D1).
+					*/
 					if (item.addresses.length) {
 
 						let address = item.addresses.find(ad => ad.id == this.$store.state.vender.address_id)
@@ -86,15 +93,16 @@ export default {
 						if (typeof address != 'undefined') {
 
 							let stock = address.pivot.amount
+							let donde = this.muestra_sucursales ? 'en ' + address.street : 'en stock'
 
 							if (stock <= 0) {
 
-								stock_disponible = false 
-								this.$toast.error('No hay stock en '+address.street)
+								stock_disponible = false
+								this.$toast.error('No hay stock ' + donde)
 							} else if (stock < cantidad_para_vender) {
-								
-								stock_disponible = false 
-								this.$toast.error('Solo hay '+this.numero_es(stock)+' en '+address.street)
+
+								stock_disponible = false
+								this.$toast.error('Solo hay '+this.numero_es(stock)+' '+donde)
 
 							}
 						}

@@ -7,6 +7,15 @@ class="cc-lista">
         alrededor de un cartel que dice "no hay nada" es justo lo contrario de lo que ese cartel
         tiene que comunicar.
     -->
+    <!--
+        select_mode="multi" (mision pago-cc-multiples-movimientos, 22/10/2026): cada clic prende o
+        apaga la fila, y TableComponent guarda en el store TODAS las seleccionadas
+        (current_acount/setSelected). Es lo que deja elegir varias ventas para "Registrar pago para
+        N movimientos". Antes la tabla era 'single' (un clic reemplazaba la fila) y onRowSelected de
+        abajo filtraba que se podia elegir; en 'multi' TableComponent no emite ese evento y el
+        filtro lo hace BtnPagoNotaCredito: si entre las elegidas hay algo que no es una deuda
+        pendiente, el boton vuelve a "Registrar pago" a secas.
+    -->
     <div
     data-tour="cuentas_corrientes.lista_movimientos"
     :class="['cc-tabla-wrapper', {'cc-tabla-wrapper--con-datos': models.length}]">
@@ -17,8 +26,10 @@ class="cc-lista">
         :model_name="model_name"
         model_name_spanish="cuentas corrientes"
         id="table-current-acounts"
+        ref="tabla"
         :set_model_on_row_selected="false"
         :show_btn_edit="false"
+        select_mode="multi"
         emit_selected_with_model_empty
         @showDetails="showDetails"
         @showPagadoPor="showPagadoPor"
@@ -55,6 +66,20 @@ class="cc-lista">
                 v-if="show_badge_facturado_error(slotProps.model)"
                 variant="danger">Factura sin cae</b-badge>
 
+                <!--
+                    Mision cc-consolidar-desde-cuenta-corriente (23/10/2026): la venta que se
+                    facturo junto con otras dice en que factura quedo. La factura es de la venta
+                    contenedora, no de esta (ver consolidada_en en utils/consolidar_desde_cuenta_corriente.js).
+                -->
+                <b-badge
+                v-if="consolidada_en(slotProps.model)"
+                data-testid="badge-consolidada"
+                variant="info"
+                :title="consolidada_en(slotProps.model).titulo">
+                    <i class="bi bi-layers"></i>
+                    {{ consolidada_en(slotProps.model).texto }}
+                </b-badge>
+
                 <b-badge
                 v-for="ticket in facturas_arca_de(slotProps.model)"
                 :key="ticket.id"
@@ -89,12 +114,37 @@ import TableComponent from '@/common-vue/components/display/TableComponent'
 
 import current_acounts from '@/mixins/current_acounts' 
 import print from '@/mixins/current_acounts/print' 
+import { consolidada_en } from '@/utils/consolidar_desde_cuenta_corriente'
 export default {
     mixins: [current_acounts, print],
     components: {
         TableComponent,
         BtnPaymentMethodsInfo: () => import('@/components/common/current-acounts/BtnPaymentMethodsInfo'),
         CerrarVenta: () => import('@/components/ventas/components/table-buttons/CerrarVenta'),
+    },
+    watch: {
+        /**
+         * La selección vive en DOS lugares: el store (`selected`) y la memoria de TableComponent
+         * (su `last_selection` y las filas resaltadas de la b-table). Con `select_mode="multi"` la
+         * tabla compara solo el LARGO de la selección nueva contra `last_selection`, y nadie la
+         * reinicia cuando el store se vacía por otro lado: después de pagar (o de cerrar el modal
+         * con la X) el primer clic en otra fila podía no registrarse, o sumarse a una fila que ya
+         * no estaba elegida. Ver `limpiar_seleccion_de_la_tabla()`.
+         */
+        selected_current_acounts(seleccion) {
+            if (!seleccion.length) {
+                this.limpiar_seleccion_de_la_tabla()
+            }
+        },
+        /**
+         * Al recargar los movimientos el v-if de TableComponent destruye la b-table, pero el
+         * componente sigue vivo con su `last_selection` anterior.
+         */
+        loading(cargando) {
+            if (cargando) {
+                this.olvidar_ultima_seleccion_de_la_tabla()
+            }
+        },
     },
     computed: {
         model_name() {
@@ -123,6 +173,24 @@ export default {
         },
     },
     methods: {
+        consolidada_en,
+        olvidar_ultima_seleccion_de_la_tabla() {
+            if (this.$refs.tabla) {
+                this.$refs.tabla.last_selection = []
+            }
+        },
+        /**
+         * Deja la tabla sin filas resaltadas y sin memoria de la selección anterior, para que
+         * coincida con el store vacío. `clearSelected` de la b-table emite `row-selected` con [] y
+         * TableComponent vuelve a commitear [] al store: no es un bucle porque el store ya estaba
+         * vacío y esto solo corre cuando `selected` pasa a vacío.
+         */
+        limpiar_seleccion_de_la_tabla() {
+            this.olvidar_ultima_seleccion_de_la_tabla()
+            if (this.$refs.tabla && this.$refs.tabla.$refs.tableComponent) {
+                this.$refs.tabla.$refs.tableComponent.clearSelected()
+            }
+        },
         show_badge_facturado(current_acount) {
             if (
                 current_acount.sale 

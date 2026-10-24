@@ -544,10 +544,29 @@ export default {
 				Se vacia la lista del store al cerrar y no al abrir: es lo que evita que el modal
 				se vuelva a abrir solo con las mismas ventas si el usuario dijo "Ahora no".
 			*/
-			this.$store.commit('afip_ticket/set_ventas_offline_para_facturar', [])
+			/*
+				🔴 Pero solo las que este modal MOSTRO (misión ingreso-sin-internet, 23/10/2026).
+				Desde esa misión las ventas guardadas en el equipo también suben solas cada 30
+				segundos, y una tanda nueva puede llegar mientras el modal ya está abierto con la
+				anterior: no entra en las filas (abrir_si_hay_ventas no rearma lo que el usuario
+				está eligiendo) y, si se vaciara todo al cerrar, esas ventas ya subidas nunca se
+				ofrecerían para facturar. Las que quedan vuelven a abrir el modal solas, por el
+				watch, después de dejarlo en el paso inicial.
+			*/
+			let mostradas = []
+			this.filas.forEach(fila => {
+				if (fila.sale && fila.sale.id) {
+					mostradas.push(fila.sale.id)
+				}
+			})
+			let pendientes = this.ventas_offline_para_facturar.filter(venta => {
+				return !venta.sale || mostradas.indexOf(venta.sale.id) === -1
+			})
 
 			this.paso = 'seleccion'
 			this.filas = []
+
+			this.$store.commit('afip_ticket/set_ventas_offline_para_facturar', pendientes)
 		},
 	}
 }

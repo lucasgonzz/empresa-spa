@@ -35,6 +35,8 @@
 		salto,            // wrap_content del pivot
 		font_size,        // del pivot, se conserva tal cual (solo lo usa el PDF de artículos)
 		text_align,       // ídem
+		negrita,          // misión pdf-negrita-perfil: si el VALOR de la columna sale en negrita. NO es del
+		                  // pivot: viene de `bold_columns` del perfil (lista de ids) y vuelve en el guardado
 		ancho_mm,         // el ancho guardado (o el por defecto): lo que se manda para una oculta
 		orden_del_catalogo, // posición en el catálogo de opciones (la bandeja las lista así)
 	}
@@ -369,6 +371,39 @@ export function pivot_es_visible(pivot) {
 }
 
 /**
+ * Misión pdf-negrita-perfil (20/10/2026): la lista de ids de opciones de columna cuyo VALOR va en
+ * negrita (`bold_columns` del perfil), normalizada: enteros positivos, sin repetir y ordenados. Acepta
+ * el array que devuelve la API, un string JSON (por las dudas) o null/undefined (= ninguna: un perfil
+ * que nunca se tocó, o una API vieja que no manda la clave).
+ *
+ * @param {Array|string|null|undefined} lista
+ * @returns {Array<number>}
+ */
+export function ids_en_negrita(lista) {
+	let valor = lista
+	if (typeof valor == 'string') {
+		try {
+			valor = JSON.parse(valor)
+		} catch (e) {
+			valor = []
+		}
+	}
+	let ids = []
+	if (!Array.isArray(valor)) {
+		return ids
+	}
+	valor.forEach(function (id) {
+		let numero = parseInt(id, 10)
+		if (numero > 0 && ids.indexOf(numero) === -1) {
+			ids.push(numero)
+		}
+	})
+	return ids.sort(function (a, b) {
+		return a - b
+	})
+}
+
+/**
  * Booleano de un pivot o de la API (true/1/'1').
  *
  * @param {*} valor
@@ -386,9 +421,10 @@ function verdadero(valor) {
  * @param {number} orden_del_catalogo
  * @param {number} util_mm
  * @param {number} total
+ * @param {Array<number>} ids_en_negrita_del_perfil ids de las columnas con el valor en negrita (bold_columns)
  * @returns {Object}
  */
-function columna_de_trabajo(opcion, pivot, orden_del_catalogo, util_mm, total) {
+function columna_de_trabajo(opcion, pivot, orden_del_catalogo, util_mm, total, ids_en_negrita_del_perfil) {
 	let default_width = parseInt(opcion.default_width, 10) || 0
 	let ancho_guardado = pivot ? parseInt(pivot.width, 10) : NaN
 	/* Como el editor de siempre: sin ancho en el pivot, el por defecto de la opción */
@@ -406,6 +442,7 @@ function columna_de_trabajo(opcion, pivot, orden_del_catalogo, util_mm, total) {
 		salto: pivot ? verdadero(pivot.wrap_content) : false,
 		font_size: pivot && typeof pivot.font_size != 'undefined' ? pivot.font_size : null,
 		text_align: pivot && typeof pivot.text_align != 'undefined' ? pivot.text_align : null,
+		negrita: (ids_en_negrita_del_perfil || []).indexOf(Number(opcion.id)) !== -1,
 		ancho_mm: ancho_mm,
 		orden_del_catalogo: orden_del_catalogo,
 	}
@@ -424,11 +461,14 @@ function columna_de_trabajo(opcion, pivot, orden_del_catalogo, util_mm, total) {
  * @param {Array} opciones_del_perfil model.pdf_column_options (cada una con su `pivot`)
  * @param {number} util_mm
  * @param {number} total
+ * @param {Array|string|null} [bold_columns] `bold_columns` del perfil (misión pdf-negrita-perfil): ids de
+ *        las columnas con el valor en negrita. Opcional: sin él (perfil nunca tocado, API vieja) ninguna.
  * @returns {{columnas: Array, visibles: Array, suma_mm_visible: number}}
  *          columnas: todas, en el orden del catálogo; visibles: las de la tabla, en su orden;
  *          suma_mm_visible: lo que suman hoy en milímetros las visibles (lo que tiene guardado).
  */
-export function armar_tabla(catalogo_de_columnas, opciones_del_perfil, util_mm, total) {
+export function armar_tabla(catalogo_de_columnas, opciones_del_perfil, util_mm, total, bold_columns) {
+	let en_negrita = ids_en_negrita(bold_columns)
 	let del_perfil = {}
 	let opciones_del_perfil_validas = []
 
@@ -466,7 +506,7 @@ export function armar_tabla(catalogo_de_columnas, opciones_del_perfil, util_mm, 
 		let guardada = del_perfil[opcion.id]
 		let pivot = guardada && guardada.pivot ? guardada.pivot : null
 		/* Las propiedades de la opción salen del catálogo; si no está, de la que trae el perfil */
-		let columna = columna_de_trabajo(opcion, pivot, indice, util_mm, total)
+		let columna = columna_de_trabajo(opcion, pivot, indice, util_mm, total, en_negrita)
 		columnas.push(columna)
 
 		if (pivot_es_visible(pivot)) {
@@ -622,7 +662,7 @@ export function poner_sugeridas(columnas, visibles, resolvers, total, medias_fij
 }
 
 /**
- * Huella de la tabla: qué columnas están, en qué orden, con cuántas medias columnas y salto, y
+ * Huella de la tabla: qué columnas están, en qué orden, con cuántas medias columnas, salto y negrita, y
  * contra qué ancho útil. Si cambia respecto de la base, la tabla se guarda (plan §7.2: "si la tabla
  * o la hoja cambiaron"); con el mismo ancho útil y nada tocado, sus milímetros no cambian (D9).
  *
@@ -634,7 +674,8 @@ export function poner_sugeridas(columnas, visibles, resolvers, total, medias_fij
 export function huella_de_la_tabla(visibles, util_mm, total) {
 	let columnas = []
 	;(visibles || []).forEach(function (columna) {
-		columnas.push([columna.id, Number(columna.cols), !!columna.salto])
+		/* La negrita también cuenta: tocarla es un cambio de la tabla y se guarda (misión pdf-negrita-perfil) */
+		columnas.push([columna.id, Number(columna.cols), !!columna.salto, !!columna.negrita])
 	})
 	return JSON.stringify({
 		util: Number(util_mm),
@@ -724,6 +765,25 @@ export function opciones_para_guardar(columnas, visibles, util_mm, total) {
 }
 
 /**
+ * Misión pdf-negrita-perfil: el `bold_columns` que se manda al guardar, o null si ninguna columna va
+ * en negrita (la API guarda null como "ninguna": una lista vacía no se manda). Cuentan solo las
+ * columnas VISIBLES de la tabla -- una columna que se sacó no imprime --, en orden de id.
+ *
+ * @param {Array} visibles columnas de trabajo de la tabla ({id, negrita})
+ * @returns {Array<number>|null}
+ */
+export function bold_columns_para_guardar(visibles) {
+	let ids = []
+	;(visibles || []).forEach(function (columna) {
+		if (columna.negrita) {
+			ids.push(columna.id)
+		}
+	})
+	let normalizadas = ids_en_negrita(ids)
+	return normalizadas.length ? normalizadas : null
+}
+
+/**
  * 🔌 Para la vista previa del modo ticket: cuántos caracteres le tocan a cada columna en un renglón
  * de N caracteres, con la MISMA regla que el motor ESC/POS de la API (plan §4):
  *
@@ -804,10 +864,11 @@ export function suma_mm_visible(opciones) {
  * @param {Array} opciones model.pdf_column_options
  * @param {number} util_mm
  * @param {number} total
- * @returns {Array<{id: *, rotulo: string, cols: number, salto: boolean, value_resolver: string}>}
+ * @param {Array|string|null} [bold_columns] `bold_columns` del perfil: las columnas con el valor en negrita
+ * @returns {Array<{id: *, rotulo: string, cols: number, salto: boolean, negrita: boolean, value_resolver: string}>}
  */
-export function columnas_para_dibujar(opciones, util_mm, total) {
-	let tabla = armar_tabla([], opciones, util_mm, total)
+export function columnas_para_dibujar(opciones, util_mm, total, bold_columns) {
+	let tabla = armar_tabla([], opciones, util_mm, total, bold_columns)
 	let resultado = []
 	tabla.visibles.forEach(function (columna) {
 		resultado.push({
@@ -815,6 +876,7 @@ export function columnas_para_dibujar(opciones, util_mm, total) {
 			rotulo: columna.rotulo,
 			cols: columna.cols,
 			salto: columna.salto,
+			negrita: columna.negrita,
 			value_resolver: columna.value_resolver,
 		})
 	})

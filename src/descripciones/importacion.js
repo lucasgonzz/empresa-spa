@@ -51,7 +51,7 @@ export default {
 		titulo: 'Propiedad del sistema para esta columna',
 		que_hace: 'Dice qué dato del artículo se carga con esta columna del Excel. "Ignorar columna" la deja afuera.',
 		repercute: [
-			'Con sucursales creadas aparece el grupo "Stock por depósito": el número de esa columna pasa a ser el stock final de ESA sucursal.',
+			'Con dos o más sucursales aparece el grupo "Stock por depósito": el número de esa columna pasa a ser el stock final de ESA sucursal. Con una sola sucursal se usa "Stock actual", que queda en esa sucursal.',
 			'Con listas de precios aparece el grupo "Listas de precio": $ final, % de margen y "setear precio final" de cada lista.',
 			'Con la tienda online, cada lista que muestra en la tienda solo los artículos habilitados suma "Visible en tienda: <lista>": un Sí habilita el artículo para los clientes de esa lista y un No lo deja sin habilitar. Una celda vacía, o con algo que no sea un Sí o un No, no cambia lo que el artículo ya tenía.',
 		],

@@ -524,7 +524,7 @@ export default {
 	/**
 	 * CLIP 2.10 — El agente de WhatsApp.
 	 *
-	 * 🔴 **Cuatro gates encadenados, y ninguno se resuelve desde acá:** extensión `whatsapp`;
+	 * 🔴 **Cuatro gates encadenados, y ninguno se resuelve desde acá:** extensión `agentes_ia`;
 	 * un `WhatsappBotConfig` creado (el `DemoSetupHelper` NO lo crea); `chat_simulation_enabled`
 	 * en true (viene en false); y estar logueado como dueño. Sin los cuatro, el motor saltea los
 	 * pasos de a uno y el tour queda en la bandeja.

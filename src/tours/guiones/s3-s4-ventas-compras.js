@@ -10,7 +10,7 @@
  *    configuración: `ventas.boton_editar_venta` tiene cinco frenos que lo pueden esconder,
  *    `compras.boton_dif` solo existe si se cargó cantidad recibida, `ventas.grilla_alicuotas`
  *    solo si antes se escribió un importe, y los dos botones del 4.6 solo existen con la
- *    extensión `escaneo_factura_compra` prendida. Los pasos se escriben completos y el que no
+ *    extensión `agentes_ia` prendida. Los pasos se escriben completos y el que no
  *    tenga destino se cae solo.
  *
  * 2. **`ruta` se hereda del guion pero NO se puede desheredar.** `iniciar_tour` resuelve
@@ -472,7 +472,7 @@ export default {
 	/* ================================================================================
 	 * CLIP 4.6 — Escanear la factura del proveedor
 	 *
-	 * 🔴🔴 Este tour SOLO corre con la extensión `escaneo_factura_compra` prendida en la cuenta de
+	 * 🔴🔴 Este tour SOLO corre con la extensión `agentes_ia` prendida en la cuenta de
 	 * la demo. Viene apagada, y sin ella `BtnScanInvoice.vue` no renderiza NINGUNO de los dos
 	 * botones: no se deshabilitan ni se esconden con CSS, no existen. El tour se cae en el paso 2.
 	 * El estado ON/OFF no vive en el repo (`hasExtencion` lee `owner_extencions`, que llega del

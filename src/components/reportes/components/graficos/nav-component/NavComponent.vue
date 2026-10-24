@@ -24,7 +24,9 @@ export default {
 				})
 			}
 
-			if (this.can('reportes.sucursales.index')) {
+			// "Vendido por sucursal" compara sucursales: desde la segunda (misión sucursal-siempre,
+			// 23/10/2026, D1). Antes la solapa se veía también sin sucursales, con el gráfico vacío.
+			if (this.can('reportes.sucursales.index') && this.muestra_sucursales) {
 
 				items.push({
 					name: 'sucursales',

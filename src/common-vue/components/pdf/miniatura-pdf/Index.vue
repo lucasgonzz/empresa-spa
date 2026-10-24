@@ -83,6 +83,7 @@
 						:style="estilo_de_columna(columna)">
 							<span
 							class="miniatura-pdf__raya miniatura-pdf__raya--tabla"
+							:class="{ 'miniatura-pdf__raya--valor-negrita': columna.negrita && !rollo }"
 							:style="{ width: largo_en_la_tabla(columna, renglon) + '%' }"></span>
 						</span>
 					</div>
@@ -136,6 +137,13 @@ export default {
 				return []
 			},
 		},
+		/*
+			Misión pdf-negrita-perfil: `bold_columns` del perfil (lista de ids de las columnas con el valor
+			en negrita) o null. Opcional: sin él la miniatura se ve como siempre. En un rollo no aplica.
+		*/
+		bold_columns: {
+			default: null,
+		},
 		/* Respuesta de page-layout-catalog, o null si no llegó (se dibuja lo que se pueda) */
 		catalogo: {
 			type: Object,
@@ -174,6 +182,7 @@ export default {
 			return armar_miniatura({
 				page_layout: this.page_layout,
 				pdf_column_options: this.pdf_column_options,
+				bold_columns: this.bold_columns,
 				catalogo: this.catalogo,
 				util_mm: util,
 				total: this.total,
@@ -296,6 +305,11 @@ export default {
 
 .miniatura-pdf__raya--grande
 	height: 3px
+
+// El valor de una columna de la tabla en negrita (misión pdf-negrita-perfil): más gruesa y más marcada
+.miniatura-pdf__raya.miniatura-pdf__raya--valor-negrita
+	height: 3px
+	opacity: .7
 
 .miniatura-pdf__raya--corta
 	width: 55%

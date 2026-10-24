@@ -42,8 +42,9 @@
 			<i class="icon-box amount-stock__icon"></i>
 			Stock: <strong>{{ numero_es(global_stock) }}</strong>
 		</span>
+		<!-- Con una sola sucursal (misión sucursal-siempre, D1) su stock es el global: no se repite. -->
 		<span
-		v-if="local_stock !== null"
+		v-if="local_stock !== null && muestra_sucursales"
 		class="amount-stock__local">
 			Sucursal: <strong>{{ numero_es(local_stock) }}</strong>
 		</span>

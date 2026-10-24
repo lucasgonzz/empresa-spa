@@ -1,6 +1,7 @@
 <template>
+	<!-- Movimientos entre depósitos: desde la segunda sucursal (misión sucursal-siempre, D1). -->
 	<div
-	v-if="addresses.length">
+	v-if="muestra_sucursales">
 		
 		<deposit-movements-modal></deposit-movements-modal>
 

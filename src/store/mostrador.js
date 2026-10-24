@@ -10,7 +10,7 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * No usa el factory `__base_store` porque no es un ABM: es una lista fija de informes
  * partida en "últimos" y "anteriores" más un informe abierto, igual que `ai_chat`.
  *
- * Contrato de API (plan §1.5, todo bajo Sanctum + check_extencion_empresa:asistente_ia,
+ * Contrato de API (plan §1.5, todo bajo Sanctum + check_extencion_empresa:agentes_ia,
  * y SOLO para el dueño: un empleado sin admin_access recibe 403):
  * - GET  mostrador/reportes                       -> { ultimos: [reporte...], anteriores: [reporte...] }
  *        reporte = { id, tipo, fecha, titulo, resumen, generado_at, leido_at, conversation_id }

@@ -11,7 +11,8 @@
 	tiene la sucursal y esta ventana deja decidir cada cosa:
 
 	1. STOCK: pasarlo a otra sucursal (el stock total no cambia) o descartarlo (el stock total baja).
-		Si es la única sucursal no hay a dónde pasarlo: los artículos conservan su stock total.
+		Desde la misión sucursal-siempre (23/10/2026, D7) la única sucursal del negocio no se elimina:
+		la ventana solo explica que hay que crear otra antes.
 	2. EMPLEADOS que la tienen elegida: pasarlos a otra sucursal o dejarlos sin sucursal.
 	3. CONFIGURACIÓN: si es el depósito por defecto / madre / de origen, o tiene cajas, puntos de
 		venta o clientes asignados, hereda todo una sucursal de reemplazo.
@@ -57,8 +58,25 @@ data-testid="modal-eliminar-sucursal"
 		MODO CLÁSICO: no se pudo consultar el detalle (API vieja o sin conexión). Es el aviso de
 		siempre y el DELETE de siempre.
 	-->
+	<!--
+		Misión sucursal-siempre (23/10/2026, D7): la ÚLTIMA sucursal del negocio no se puede eliminar.
+		Todo negocio trabaja con al menos una (el stock vive en ella); antes, borrarla devolvía el
+		negocio a stock global. No se ofrece nada que decidir ni el botón: se explica qué hacer. La API
+		nueva igual responde 422 si le llega el borrado (su `message` se muestra en el pie).
+	-->
 	<div
-	v-if="modo_clasico"
+	v-if="es_ultima_sucursal_del_negocio"
+	data-testid="eliminar-sucursal-es-la-ultima">
+		<b-alert
+		show
+		variant="warning"
+		class="m-b-0">
+			Tu negocio necesita al menos una sucursal: creá otra antes de eliminar <strong>{{ nombre_sucursal }}</strong>.
+		</b-alert>
+	</div>
+
+	<div
+	v-else-if="modo_clasico"
 	data-testid="eliminar-sucursal-modo-clasico">
 		<p class="eliminar-sucursal__texto">
 			Se eliminará la sucursal <strong>{{ nombre_sucursal }}</strong> y su stock se dará de baja.
@@ -162,17 +180,11 @@ data-testid="modal-eliminar-sucursal"
 			</p>
 
 			<!--
-				Es la única sucursal: no hay a dónde pasar el stock ni qué sumar. La API deja el stock
-				total de los artículos como está y borra solo el detalle por sucursal.
+				Sin otra sucursal no hay a dónde pasar el stock. Desde la misión sucursal-siempre la
+				última sucursal del negocio no llega acá (ver `es_ultima_sucursal_del_negocio`): solo un
+				domicilio de comprador, que no tiene stock.
 			-->
-			<p
-			v-if="es_la_ultima"
-			class="eliminar-sucursal__aviso"
-			data-testid="eliminar-sucursal-es-la-ultima">
-				Es tu única sucursal: no hay a dónde pasar el stock. Los artículos conservan su stock total y vuelven a manejarse sin depósitos.
-			</p>
-
-			<div v-else class="eliminar-sucursal__opciones">
+			<div v-if="!es_la_ultima" class="eliminar-sucursal__opciones">
 				<b-form-radio
 				v-model="stock_accion"
 				name="eliminar-sucursal-stock-accion"
@@ -341,8 +353,9 @@ data-testid="modal-eliminar-sucursal"
 				@click="reintentar_consulta">
 					Reintentar
 				</b-button>
+				<!-- Con la última sucursal no hay botón de eliminar: solo Cancelar (misión sucursal-siempre, D7). -->
 				<b-button
-				v-else
+				v-else-if="!es_ultima_sucursal_del_negocio"
 				variant="danger"
 				:disabled="!puede_confirmar"
 				data-testid="btn-confirmar-eliminar-sucursal"
@@ -379,7 +392,7 @@ const AVISO_YA_ELIMINADA = 'Esa sucursal ya estaba eliminada: la sacamos de la l
 
 /* Cómo se nombra cada marca que devuelve la API en `marcas` (los nombres de los campos de la sucursal). */
 const TEXTO_DE_MARCAS = {
-	default_address: 'Es el depósito por defecto.',
+	default_address: 'Es la sucursal principal.',
 	es_deposito_madre: 'Es el depósito madre.',
 	es_deposito_origen: 'Es el depósito de origen para sugerencias.',
 }
@@ -443,6 +456,23 @@ export default {
 		/* No hay otra sucursal: nada se puede transferir ni heredar. La API lo manda, y se confirma contra la lista. */
 		es_la_ultima() {
 			return !!(this.resumen && this.resumen.es_la_ultima) || !this.otras_sucursales.length
+		},
+		/*
+			Misión sucursal-siempre (23/10/2026, D7): es la única sucursal del negocio y no se puede
+			eliminar. Con el resumen, lo dice la API (`es_la_ultima`, o sin `otras_sucursales`), salvo que
+			sea un domicilio de comprador de la tienda, que no es una sucursal. En modo clásico (API vieja,
+			sin resumen) se mira la lista del store: si no queda otra sucursal, tampoco se ofrece el
+			borrado de siempre, que en una API vieja devolvía el negocio a stock global.
+		*/
+		es_ultima_sucursal_del_negocio() {
+			if (this.resumen) {
+				return !this.resumen.es_domicilio_de_comprador && this.es_la_ultima
+			}
+			if (this.modo_clasico) {
+				let otras = this.$store.getters['address/sucursales'].filter(sucursal => sucursal.id != this.address_id)
+				return !otras.length
+			}
+			return false
 		},
 		/*
 			El stock de la sucursal, con ceros por defecto para que el template no pregunte por cada clave.
@@ -585,7 +615,9 @@ export default {
 		},
 		/* Hay algo que impide eliminarla ahora (traslados pendientes, o ya se está eliminando) */
 		esta_bloqueada() {
-			return this.bloqueos.length > 0 || !!(this.resumen && this.resumen.ya_en_proceso)
+			return this.es_ultima_sucursal_del_negocio
+				|| this.bloqueos.length > 0
+				|| !!(this.resumen && this.resumen.ya_en_proceso)
 		},
 		/*
 			El botón "Eliminar sucursal". En modo clásico no hay nada que elegir; con el resumen, hace
@@ -596,7 +628,7 @@ export default {
 				return false
 			}
 			if (this.modo_clasico) {
-				return true
+				return !this.es_ultima_sucursal_del_negocio
 			}
 			// Con el resumen sin poder consultarse no hay nada que confirmar: solo "Reintentar"
 			return !!this.resumen

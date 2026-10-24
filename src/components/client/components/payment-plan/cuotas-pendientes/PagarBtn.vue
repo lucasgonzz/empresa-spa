@@ -13,6 +13,18 @@ export default {
 	methods: {
 		pagar() {
 
+			/*
+				Cuotas de planes armados antes del 22/10/2026 sobre una venta que no estaba en la cuenta
+				corriente: no hay débito ni cuenta contra la cual imputar el pago, y leer
+				`sale.current_acount.credit_account` reventaba con un TypeError sin aviso. Desde esa
+				fecha esos planes no se pueden crear (regla de Lucas).
+			*/
+			let sale = this.payment_plan_cuota.sale
+			if (!sale || !sale.current_acount || !sale.current_acount.credit_account) {
+				this.$toast.error('La venta de esta cuota no está en la cuenta corriente del cliente: registrá el cobro desde la cuenta corriente.')
+				return
+			}
+
 			this.setModel(this.payment_plan_cuota, 'payment_plan_cuota', [], false)
 
 			this.$store.commit('current_acount/setFromModelName', 'client')

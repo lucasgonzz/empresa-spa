@@ -41,9 +41,27 @@
 				placeholder="Valor"
 				maxlength="200"
 				class="catalog-row__input catalog-row__value"
+				:class="{ 'catalog-row__value--negrita': row.bold }"
 				:disabled="disabled || !!row.source"
 				:title="row.source ? 'Se toma de los datos del negocio' : ''"></b-form-input>
 
+				<!--
+					Misión pdf-negrita-perfil: el VALOR del renglón sale en negrita en el PDF (el título ya es
+					negrita), sea texto libre o dato del negocio. Mismo botón B que el diseñador de cajas
+					(bi-type-bold, aria-pressed). Escribe row.bold, que viaja en catalog_header_layout.
+				-->
+				<button
+				type="button"
+				class="catalog-row__bold"
+				:class="{ 'catalog-row__bold--activo': row.bold }"
+				:aria-pressed="row.bold ? 'true' : 'false'"
+				:title="row.bold ? 'Valor en negrita: tocá para volver a letra normal' : 'Poner el valor en negrita'"
+				:aria-label="'Negrita en el valor de ' + (row.title || 'este renglón')"
+				:data-testid="'negrita-renglon-catalogo-' + align + '-' + index"
+				:disabled="disabled"
+				@click="toggle_bold(row)">
+					<i class="bi bi-type-bold"></i>
+				</button>
 				<button
 				type="button"
 				class="catalog-row__remove"
@@ -115,6 +133,18 @@ export default {
 	},
 	methods: {
 		/**
+		 * Prende o apaga la negrita del valor de un renglón (mutando la fila por referencia).
+		 *
+		 * @param {Object} row Renglón de esta columna.
+		 * @return {void}
+		 */
+		toggle_bold(row) {
+			if (this.disabled) {
+				return
+			}
+			row.bold = !row.bold
+		},
+		/**
 		 * Quita el renglón de la columna, mutando el array por referencia.
 		 *
 		 * @param {number} index Posición del renglón.
@@ -180,6 +210,28 @@ export default {
 .catalog-row__value
 	flex: 1 1 0
 
+// Valor en negrita: el input lo muestra en negrita (es la vista previa del renglón)
+.catalog-row .catalog-row__input.catalog-row__value--negrita
+	font-weight: 700
+
+// Botón B: layout solamente; sus colores son los del papel y los declara CatalogHeaderPreview.vue
+.catalog-row__bold
+	flex: 0 0 auto
+	display: flex
+	align-items: center
+	justify-content: center
+	width: 20px
+	height: 26px
+	padding: 0
+	border: 1px solid transparent
+	border-radius: 4px
+	background: transparent
+	font-size: 12px
+	line-height: 1
+	cursor: pointer
+	&:disabled
+		cursor: default
+		opacity: .4
 .catalog-row__remove
 	flex: 0 0 auto
 	width: 20px
@@ -205,6 +257,9 @@ export default {
 	.catalog-row__handle
 		cursor: default
 		opacity: .4
+	// En la hoja 2 (solo para mirar) el B muestra el estado pero no se toca
+	.catalog-row__bold--activo
+		opacity: .7
 
 .catalog-row-list__empty
 	font-style: italic

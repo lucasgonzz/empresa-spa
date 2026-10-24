@@ -36,6 +36,7 @@
 				<miniatura-pdf
 				:page_layout="model.page_layout"
 				:pdf_column_options="opciones_del_perfil"
+				:bold_columns="model.bold_columns"
 				:catalogo="catalogo"
 				:hoja="hoja"
 				:rollo="es_rollo"></miniatura-pdf>
