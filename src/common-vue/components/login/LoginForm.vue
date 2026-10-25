@@ -104,12 +104,11 @@
 			:loader="loading"
 			variant="primary"
 		/>
-		<div
-			v-if="!split_layout"
-			class="login-form__forgot-wrap"
-		>
+		<!-- Recuperar contraseña: visible en los dos layouts (en el partido llevaba v-if y nunca se dibujaba) -->
+		<div class="login-form__forgot-wrap">
 			<b-link
 				class="login-form__forgot-link"
+				data-testid="login-olvide-mi-contrasena"
 				:to="{ name: 'passwordReset', params: { view: 'email' } }"
 			>
 				Olvidé mi contraseña
@@ -162,7 +161,8 @@ export default {
 	},
 	props: {
 		/**
-		 * Activa el layout split-screen (mockup): sin recordarme ni recuperar contraseña.
+		 * Activa el layout split-screen (mockup): sin recordarme. El enlace de recuperar contraseña
+		 * se muestra en ambos layouts.
 		 */
 		split_layout: {
 			type: Boolean,
@@ -524,6 +524,20 @@ export default {
 .login-form--split .login-form__submit.btn:focus
 	background: #0069d9 !important
 	border-color: #0062cc !important
+
+// Enlace «Olvidé mi contraseña» del layout partido: en el color de acento y con área de toque cómoda
+.login-form--split .login-form__forgot-wrap
+	margin-top: 1.25rem
+
+.login-form--split .login-form__forgot-link
+	display: inline-block
+	padding: 0.25rem 0.5rem
+	font-size: 0.9375rem
+	font-weight: 500
+	color: var(--color-primary, #007bff)
+
+.login-form--split .login-form__forgot-link:hover
+	color: #0062cc
 
 // ─── Ajustes mobile (layout apilado del mockup) ───
 @media screen and (max-width: 900px)
