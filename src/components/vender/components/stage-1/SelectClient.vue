@@ -30,18 +30,25 @@
 		<div
 		v-if="puede_cambiar_cliente"
 		class="vender-stage__client-search">
+			<!--
+				Sin conexión (misión clientes-sin-internet, 26/10/2026): busca en los clientes
+				guardados en el equipo (search_clients_offline, src/mixins/model_functions.js) y no
+				ofrece "+ Cliente" ni la consulta a ARCA del segundo Enter, que necesitan servidor. Ver
+				el computed `sin_conexion`.
+			-->
 			<search-component
 			:key="buscador_cliente_key"
 			id="select_client_vender"
 			@setSelected="setSelected"
-			:prop="{text: 'Cliente', key: 'client_id'}"
+			:prop="prop_buscador_cliente"
 			:model="_vender.client"
 			model_name="client"
 			:props_to_filter="['num', 'name', 'phone', 'dni', 'cuit']"
-			show_btn_create
+			:show_btn_create="!sin_conexion"
 			elegir_al_crear
-			search_from_api
-			:tax_id_afip_lookup_on_second_enter="true"
+			:search_from_api="!sin_conexion"
+			:search_function="sin_conexion ? 'search_clients_offline' : null"
+			:tax_id_afip_lookup_on_second_enter="!sin_conexion"
 			placeholder="Buscar cliente, CUIT o DNI"
 			input_icon="icon-user-o"
 			:props_to_send_to_api="props_to_send_to_api"
@@ -111,6 +118,33 @@ export default {
 	computed: {
 		price_types() {
 			return this.$store.state.price_type.models
+		},
+		/**
+		 * ¿Vender está trabajando sin conexión? Es el mismo dato con el que busca los artículos en el
+		 * equipo (ArticleBarCode.vue) y guarda las ventas en el equipo (guardar_venta): lo apagan los
+		 * eventos del navegador, la sesión restaurada sin servidor y el sondeo cuando el servidor deja
+		 * de contestar (src/offline/index.js).
+		 *
+		 * @returns {Boolean}
+		 */
+		sin_conexion() {
+			return this.$store.state.auth.online === false
+		},
+		/**
+		 * La `prop` del buscador. `search_from_api_function` es por el celular: sin conexión el modal
+		 * común igual iría a la API si el store `client` está vacío y marcado para no bajarse en el
+		 * teléfono (search/Modal.vue::searchFromApi). Esa función se consulta ANTES de esa regla, así
+		 * que con ella manda `auth.online` también en el celular. Ver
+		 * src/mixins/model_functions.js::clientes_desde_la_api().
+		 *
+		 * @returns {Object}
+		 */
+		prop_buscador_cliente() {
+			return {
+				text: 'Cliente',
+				key: 'client_id',
+				search_from_api_function: 'clientes_desde_la_api',
+			}
 		},
 		_vender: {
 			get() {
@@ -285,7 +319,14 @@ export default {
 			}
 
 			// Cliente elegido en el buscador
-			let client = result.model
+			/*
+				Un cliente que salió del equipo (sin conexión) viene congelado: ver
+				search_clients_offline() en src/mixins/model_functions.js. Se guarda una copia plana,
+				para que el store lo tenga como cualquier otro cliente (reactivo y modificable).
+			*/
+			let client = result.model && Object.isFrozen(result.model)
+				? JSON.parse(JSON.stringify(result.model))
+				: result.model
 
 			/*
 				Si el comprobante en edicion tiene un canje de puntos, vender/setClient lo va a anular

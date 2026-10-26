@@ -249,6 +249,72 @@ export default {
                 return articles
             }
         },
+        /**
+         * Busca clientes en el equipo, para elegir cliente en Vender sin conexión (misión
+         * clientes-sin-internet, 26/10/2026). La usa stage-1/SelectClient.vue como `search_function`
+         * del buscador común cuando `auth.online` está en false.
+         *
+         * Cada palabra tiene que aparecer en alguno de: número, nombre, teléfono, DNI o CUIT (los
+         * mismos `props_to_filter` del buscador con internet). Para el CUIT y el DNI se compara también
+         * solo con los dígitos, así "20-12345678-3" encuentra "20123456783".
+         *
+         * 🔴 Los clientes vuelven CONGELADOS (Object.freeze): son objetos grandes (traen sus
+         * relaciones) y el modal los guarda en su data; congelados, Vue 2 no los recorre para volverlos
+         * reactivos. Quien elige uno tiene que copiarlo antes de guardarlo en el store (lo hace
+         * SelectClient.vue::setSelected).
+         *
+         * Sin `query` (el buscador la llama así al abrirse, para la precarga) devuelve undefined, igual
+         * que search_articles_offline(): no se precarga nada.
+         *
+         * @param {String} query Lo que escribió el vendedor.
+         * @returns {Promise<Array>|undefined}
+         */
+        search_clients_offline(query) {
+            if (typeof query == 'undefined' || query === null) {
+                return
+            }
+            /** Palabras buscadas, en minúscula. */
+            const palabras = String(query).trim().toLowerCase().split(/\s+/).filter(palabra => palabra.length)
+            if (!palabras.length) {
+                return Promise.resolve([])
+            }
+            /** Tope de resultados: el modal no necesita más, y un nombre de una letra matchea a casi todos. */
+            const tope = 100
+            return db.clients
+            .filter(client => {
+                /** Texto donde buscar: los campos de props_to_filter, más los dígitos de DNI y CUIT. */
+                let texto = [
+                    client.num,
+                    client.name,
+                    client.phone,
+                    client.dni,
+                    client.cuit,
+                    String(client.dni || '').replace(/\D/g, ''),
+                    String(client.cuit || '').replace(/\D/g, ''),
+                ].join(' ').toLowerCase()
+                return palabras.every(palabra => texto.indexOf(palabra) !== -1)
+            })
+            .limit(tope)
+            .toArray()
+            .then(clients => {
+                clients.forEach(client => Object.freeze(client))
+                return clients
+            })
+            .catch(err => {
+                console.log('No se pudieron buscar clientes en el equipo', err)
+                return []
+            })
+        },
+        /**
+         * ¿El buscador de cliente de Vender busca en la API? Sí, salvo sin conexión. Se usa como
+         * `prop.search_from_api_function` (search/Modal.vue::searchFromApi la llama en el contexto del
+         * modal, y por eso vive en este mixin global): ver stage-1/SelectClient.vue::prop_buscador_cliente.
+         *
+         * @returns {Boolean}
+         */
+        clientes_desde_la_api() {
+            return this.$store.state.auth.online !== false
+        },
         async get_articles_offline() {
             return await db.articles.toArray()
         },

@@ -29,4 +29,22 @@ db.version(6).stores({
     meta: '&key'
 })
 
+/*
+    Clientes para elegir en Vender sin conexión (misión clientes-sin-internet, 26/10/2026). Se
+    guardan completos (`Client::withAll()`, lo mismo que trae el buscador con internet) y se buscan
+    con src/mixins/model_functions.js::search_clients_offline(). Los índices son los campos por los
+    que se busca.
+
+    ⚠️ Subir la versión dispara `versionchange` en las pestañas que todavía tienen el bundle anterior
+    abierto: Dexie les cierra la base y, hasta que se recarguen, no pueden escribir ventas sin
+    conexión. Desde 4.3.18 eso no pierde la venta: guardar_venta_offline() avisa y la deja en
+    pantalla. Las tablas que ya existían quedan igual, con sus datos.
+*/
+db.version(7).stores({
+    articles: 'id, name, provider_code, bar_code, plu',
+    sales: '++id, created_at',
+    meta: '&key',
+    clients: 'id, name, num, cuit, dni'
+})
+
 export default db
