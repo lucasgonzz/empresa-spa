@@ -6,6 +6,7 @@ import app_generals from '@/mixins/generals'
 import generals from '@/common-vue/mixins/generals'
 import { add_article_dynamic_columns } from '@/common-vue/helpers/article_dynamic_table_columns'
 import { article_dynamic_dependencies_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
+import { left_options_property } from '@/common-vue/helpers/table_left_options'
 
 /** Relaciones mal declaradas ya avisadas por consola, por `<modelo>.<key>` (ver get_relation_column_groups). */
 let relaciones_avisadas = {}
@@ -556,6 +557,13 @@ export function get_default_rows_for_model(store_context, model_name, preference
 		rows.push(relation_group_row_from_group(context, group, rows.length))
 	})
 
+	// La columna de botones sólo pertenece al listado, nunca a búsquedas ni relaciones.
+	let actions = left_options_property(model_name)
+	if (actions && (preference_type === 'table' || ambito_from_preference_type(preference_type))) {
+		rows.unshift({ key: actions.key, label: actions.text, visible: true, order: 0, width: null, wrap_content: false, locked: true })
+		rows = rows.map((row, index) => ({ ...row, order: index }))
+	}
+
 	return rows
 }
 
@@ -779,13 +787,18 @@ export function normalize_column_preference_rows(rows, default_rows) {
 			normalized.push(bloque_por_defecto(default_item, normalized.length))
 			return
 		}
+		// Las preferencias anteriores no conocían esta columna: debe seguir a la izquierda.
+		if (default_item.key === 'table_left_options') {
+			normalized.unshift({ ...default_item })
+			return
+		}
 		normalized.push({
 			...default_item,
 			order: normalized.length,
 		})
 	})
 
-	return normalized
+	return normalized.map((item, index) => ({ ...item, order: index }))
 }
 
 /**
@@ -853,6 +866,10 @@ export function build_props_to_show_from_rows(store_context, model_name, rows) {
 	all_properties.forEach(prop => {
 		properties_by_key[prop.key] = prop
 	})
+	let actions = left_options_property(model_name)
+	if (actions) {
+		properties_by_key[actions.key] = actions
+	}
 
 	let groups_by_relation = {}
 	let default_groups_by_relation = {}

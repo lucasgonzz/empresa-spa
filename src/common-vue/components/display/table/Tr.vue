@@ -43,6 +43,7 @@
 		:style="column_style(prop)">
 			<div 
 			:class="get_cell_classes(prop, index)"
+			:style="left_options_content_style(prop)"
 			class="cont-tr">
 				<!--
 					El slot personalizado también queda dentro de `cont-tr` para
@@ -214,6 +215,7 @@
 	</tr>
 </template>
 <script>
+import { left_options_content_style, left_options_width } from '@/common-vue/helpers/table_left_options'
 export default {
 	props: {
 		model: Object,
@@ -255,6 +257,7 @@ export default {
 		window.removeEventListener('keydown', this.handlePreviewKeydown)
 	},
 	methods: {
+		left_options_content_style,
 		openImagePreview(image_url) {
 			if (!image_url) {
 				return
@@ -372,7 +375,7 @@ export default {
 		},
 		column_style(prop) {
 			// Las columnas de opciones laterales se ajustan al contenido sin recortes.
-			if (this.is_options_column(prop)) {
+			if (this.is_options_column(prop) && !prop.table_width) {
 				return {
 					width: '1%',
 					minWidth: 'auto',
@@ -381,10 +384,13 @@ export default {
 				}
 			}
 			if (prop.table_width && Number(prop.table_width) > 0) {
+				let width = prop.key === 'table_left_options'
+					? left_options_width(prop.table_width, prop.table_wrap_content)
+					: Number(prop.table_width)
 				return {
-					width: Number(prop.table_width) + 'px',
-					minWidth: Number(prop.table_width) + 'px',
-					maxWidth: Number(prop.table_width) + 'px',
+					width: width + 'px',
+					minWidth: width + 'px',
+					maxWidth: prop.key === 'table_left_options' && !prop.table_wrap_content ? 'none' : width + 'px',
 				}
 			}
 			return {}
@@ -399,6 +405,12 @@ export default {
 			}
 			if (this.is_options_column(prop)) {
 				classes.push('cell-options')
+				if (prop.table_width) {
+					classes.push('cell-options-configured')
+				}
+				if (prop.table_wrap_content) {
+					classes.push('cell-options-wrap')
+				}
 				return classes
 			}
 			if (prop.table_wrap_content) {
@@ -429,6 +441,7 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom'
+@import '@/common-vue/sass/_table_left_options'
 
 .cont-tr
 	width: 100%
@@ -462,13 +475,6 @@ export default {
 .cell-no-fade
 	-webkit-mask-image: none !important
 	mask-image: none !important
-
-.cell-options
-	white-space: nowrap
-	overflow: visible
-	text-overflow: initial
-	-webkit-mask-image: none
-	mask-image: none
 
 .selected-row
 	font-weight: bold 

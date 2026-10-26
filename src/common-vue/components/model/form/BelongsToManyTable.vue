@@ -189,6 +189,15 @@ export default {
 		show_own_columns_config_btn() {
 			return this.show_btn_columns_config && this.show_columns_config_btn
 		},
+		/** Columna existente por declaración o por un slot real del consumidor. */
+		left_options_column() {
+			const declared = (this.prop.belongs_to_many.props_to_show || [])
+				.find(prop => prop.key === 'table_left_options')
+			if (!declared && !this.$scopedSlots.table_left_options) {
+				return null
+			}
+			return { key: 'table_left_options', ...declared, no_usar_en_filtros: true }
+		},
 		/*
 		 * Todas las propiedades válidas del modelo relacionado (ej: todas las props de article).
 		 * Excluye props no mostrables como group_title, no_mostrar_nunca, botones y sub-relaciones.
@@ -338,6 +347,22 @@ export default {
 			}
 			/* Indica si hay una lista explícita de props a mostrar */
 			const has_explicit_props_to_show = Object.keys(explicit_props_to_show_keys).length > 0
+			// Algunas relaciones declaran su propio slot de acciones (ej. ventas de una hoja
+			// de ruta). No es una propiedad del modelo relacionado: ofrecer sólo la existente.
+			const actions = this.left_options_column
+			if (actions) {
+				rows.push({
+					key: actions.key,
+					row_id: this.build_row_id('model_prop', actions.key),
+					label: 'Acciones',
+					visible: true,
+					locked: true,
+					order: order_index++,
+					width: default_column_width_for_property(actions),
+					wrap_content: !!actions.table_wrap_content,
+					source: 'model_prop',
+				})
+			}
 
 			/* Keys del modelo relacionado: sirve para marcar labels pivot cuando hay colisión */
 			const related_model_keys = {}
@@ -452,7 +477,8 @@ export default {
 						key: item.key,
 						row_id: item.row_id,
 						label: default_item.label,
-						visible: !!item.visible,
+						visible: default_item.locked ? true : !!item.visible,
+						locked: !!default_item.locked,
 						order: index,
 						width: item.width || default_item.width || fallback_column_width_px(item.key),
 						wrap_content: !!item.wrap_content,
@@ -464,6 +490,10 @@ export default {
 			default_rows.forEach(default_item => {
 				const already_exists = normalized.find(item => item.row_id == default_item.row_id)
 				if (!already_exists) {
+					if (default_item.key === 'table_left_options') {
+						normalized.unshift({ ...default_item })
+						return
+					}
 					normalized.push({
 						...default_item,
 						order: normalized.length,
@@ -471,7 +501,7 @@ export default {
 				}
 			})
 
-			return normalized
+			return normalized.map((row, index) => ({ ...row, order: index }))
 		},
 		/*
 		 * Aplica las filas de configuración actuales reconstruyendo active_belongs_to_many.
@@ -528,12 +558,17 @@ export default {
 				if (row.source === 'model_prop') {
 					/* Reconstruir usando la definición completa del modelo más los ajustes de ancho/wrap */
 					const model_prop = model_props_by_key[row.key]
+						|| (row.key === 'table_left_options' ? this.left_options_column : null)
 					if (model_prop) {
 						const explicit_prop = explicit_props_to_show_by_key[row.key]
 						const merged_prop = {
 							...model_prop,
 							table_width: row.width,
 							table_wrap_content: row.wrap_content,
+							table_preference_order: Number(row.order),
+						}
+						if (row.key === 'table_left_options') {
+							merged_prop.no_usar_en_filtros = true
 						}
 						/*
 						 * Conservar la funcion de display definida en props_to_show del
@@ -552,6 +587,7 @@ export default {
 						new_pivot_props_to_show.push({
 							...pivot_prop,
 							table_width: row.width,
+							table_preference_order: Number(row.order),
 						})
 					}
 				} else if (row.source === 'pivot_set') {
@@ -561,6 +597,7 @@ export default {
 						new_properties_to_set.push({
 							...prop_to_set,
 							table_width: row.width,
+							table_preference_order: Number(row.order),
 						})
 					}
 				}
