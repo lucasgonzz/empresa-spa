@@ -34,7 +34,10 @@
 				Sin conexión (misión clientes-sin-internet, 26/10/2026): busca en los clientes
 				guardados en el equipo (search_clients_offline, src/mixins/model_functions.js) y no
 				ofrece "+ Cliente" ni la consulta a ARCA del segundo Enter, que necesitan servidor. Ver
-				el computed `sin_conexion`.
+				el computed `sin_conexion`. `save_if_not_exist` también se apaga: sin la consulta a ARCA,
+				el segundo Enter sin resultados caía en "crear el cliente con lo escrito" (POST
+				search/save-if-not-exist), que sin red falla y con un servidor lento podía crear un
+				cliente llamado como el CUIT a medio escribir.
 			-->
 			<search-component
 			:key="buscador_cliente_key"
@@ -45,6 +48,7 @@
 			model_name="client"
 			:props_to_filter="['num', 'name', 'phone', 'dni', 'cuit']"
 			:show_btn_create="!sin_conexion"
+			:save_if_not_exist="!sin_conexion"
 			elegir_al_crear
 			:search_from_api="!sin_conexion"
 			:search_function="sin_conexion ? 'search_clients_offline' : null"

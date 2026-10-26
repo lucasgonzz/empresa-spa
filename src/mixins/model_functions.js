@@ -256,7 +256,9 @@ export default {
          *
          * Cada palabra tiene que aparecer en alguno de: número, nombre, teléfono, DNI o CUIT (los
          * mismos `props_to_filter` del buscador con internet). Para el CUIT y el DNI se compara también
-         * solo con los dígitos, así "20-12345678-3" encuentra "20123456783".
+         * solo con los dígitos, de los dos lados, así "20-12345678-3" encuentra "20123456783". Con la
+         * extensión `filtrar_clientes_por_sucursal_en_vender`, solo los de la sucursal de Vender y los
+         * que no tienen ninguna, igual que la API. Los primeros 100 que coinciden, por id.
          *
          * 🔴 Los clientes vuelven CONGELADOS (Object.freeze): son objetos grandes (traen sus
          * relaciones) y el modal los guarda en su data; congelados, Vue 2 no los recorre para volverlos
@@ -278,10 +280,31 @@ export default {
             if (!palabras.length) {
                 return Promise.resolve([])
             }
+            /*
+                Cada palabra en sus dos formas: tal cual, y solo sus dígitos si tiene al menos 6 (un
+                CUIT o un DNI escrito con guiones o puntos: "20-12345678-3" tiene que encontrar
+                "20123456783").
+            */
+            const palabras_digitos = palabras.map(palabra => {
+                let digitos = palabra.replace(/\D/g, '')
+                return digitos.length >= 6 ? digitos : null
+            })
+            /*
+                El filtro por sucursal de la extensión `filtrar_clientes_por_sucursal_en_vender`: con
+                internet lo aplica la API (`address_id_con_nulos`, ver SelectClient.vue::
+                props_to_send_to_api); acá se replica igual: los de la sucursal de Vender y los que no
+                tienen ninguna.
+            */
+            const address_id = this.hasExtencion('filtrar_clientes_por_sucursal_en_vender')
+                ? this.$store.state.vender.address_id
+                : null
             /** Tope de resultados: el modal no necesita más, y un nombre de una letra matchea a casi todos. */
             const tope = 100
             return db.clients
             .filter(client => {
+                if (address_id && client.address_id && client.address_id != address_id) {
+                    return false
+                }
                 /** Texto donde buscar: los campos de props_to_filter, más los dígitos de DNI y CUIT. */
                 let texto = [
                     client.num,
@@ -292,7 +315,10 @@ export default {
                     String(client.dni || '').replace(/\D/g, ''),
                     String(client.cuit || '').replace(/\D/g, ''),
                 ].join(' ').toLowerCase()
-                return palabras.every(palabra => texto.indexOf(palabra) !== -1)
+                return palabras.every((palabra, i) => {
+                    return texto.indexOf(palabra) !== -1
+                        || (palabras_digitos[i] !== null && texto.indexOf(palabras_digitos[i]) !== -1)
+                })
             })
             .limit(tope)
             .toArray()

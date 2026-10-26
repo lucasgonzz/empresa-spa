@@ -36,9 +36,11 @@ db.version(6).stores({
     que se busca.
 
     ⚠️ Subir la versión dispara `versionchange` en las pestañas que todavía tienen el bundle anterior
-    abierto: Dexie les cierra la base y, hasta que se recarguen, no pueden escribir ventas sin
-    conexión. Desde 4.3.18 eso no pierde la venta: guardar_venta_offline() avisa y la deja en
-    pantalla. Las tablas que ya existían quedan igual, con sus datos.
+    abierto. Dexie 4 les cierra la base y la vuelve a abrir sola en el próximo uso (sin versión, ve la
+    7): medido leyendo node_modules/dexie (revisión de la misión). Si igual fallara una escritura, desde
+    4.3.18 guardar_venta_offline() avisa y deja la venta en pantalla. Las tablas que ya existían quedan
+    igual, con sus datos. (La misión ingreso-sin-internet había evitado subir la versión; esta la sube
+    porque los clientes necesitan su propia tabla para la descarga incremental.)
 */
 db.version(7).stores({
     articles: 'id, name, provider_code, bar_code, plu',

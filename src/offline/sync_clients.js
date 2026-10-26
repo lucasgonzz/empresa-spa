@@ -19,6 +19,15 @@
 */
 import db from './db'
 
+/**
+ * true mientras corre una sincronización de clientes en esta pestaña. La sincronización completa
+ * (`sincronizar_offline` de offline/index.js) no la espera para soltar su candado, así que una
+ * reconexión rápida podía lanzar una segunda mientras corre la primera: dos descargas completas con la
+ * lista entera en memoria, y ganaba la que terminaba última aunque fuera la foto más vieja. Variable
+ * del módulo: hay una sola instancia que mezcla este mixin (App.vue).
+ */
+let sincronizando_clientes = false
+
 /** Clave de la marca de la última sincronización de clientes en la tabla `meta`. */
 const MARCA_CLIENTES = 'last_clients_sync'
 
@@ -47,6 +56,12 @@ export default {
 		 * @returns {Promise<void>} Nunca rechaza.
 		 */
 		sync_all_clients() {
+			if (sincronizando_clientes) {
+				console.log('Ya hay una sincronizacion de clientes en curso, no se lanza otra')
+				return Promise.resolve()
+			}
+			sincronizando_clientes = true
+
 			/** Momento (reloj del equipo) en que arranca la corrida: ver marca_de_sincronizacion(). */
 			let inicio_ms = Date.now()
 
@@ -70,6 +85,9 @@ export default {
 			})
 			.catch(err => {
 				console.log('No se pudieron sincronizar los clientes para usar sin conexion', err)
+			})
+			.then(() => {
+				sincronizando_clientes = false
 			})
 		},
 		/**
