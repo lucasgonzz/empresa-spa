@@ -48,6 +48,29 @@ const MARCA_COMPLETA = 'last_clients_full_sync'
  */
 const INTERVALO_COMPLETA_MS = 12 * 60 * 60 * 1000
 
+/**
+ * Copia de los clientes lista para guardar en el equipo, sin las claves del comprador de la tienda.
+ *
+ * 🔴 `Client::withAll()` trae `buyer` (el comprador vinculado de la tienda online) y `Buyer` no oculta
+ * `password` ni `visible_password` (la clave en claro). El buscador con internet ya las recibe; acá se
+ * sacan porque esto queda ESCRITO en el disco del equipo, y Vender no las usa para nada. Encontrado por
+ * el revisor de merge de la misión.
+ *
+ * @param {Array} models Clientes como los devuelve la API.
+ * @returns {Array} Copia plana sin esas claves.
+ */
+function clientes_para_guardar(models) {
+	let copia = JSON.parse(JSON.stringify(models))
+	copia.forEach(client => {
+		if (client && client.buyer) {
+			delete client.buyer.password
+			delete client.buyer.visible_password
+			delete client.buyer.remember_token
+		}
+	})
+	return copia
+}
+
 export default {
 	methods: {
 		/**
@@ -121,11 +144,8 @@ export default {
 				if (page === 1) {
 					sincronizado_hasta = data.sincronizado_hasta
 				}
-				/*
-					Copia plana: lo que llega de axios ya es JSON, pero se guarda sin nada que IndexedDB
-					no sepa clonar.
-				*/
-				return models.length ? db.clients.bulkPut(JSON.parse(JSON.stringify(models))) : Promise.resolve()
+				// Copia plana y sin las claves del comprador: ver clientes_para_guardar().
+				return models.length ? db.clients.bulkPut(clientes_para_guardar(models)) : Promise.resolve()
 			})
 			.then(() => this.marca_de_sincronizacion(sincronizado_hasta, inicio_ms))
 		},
@@ -150,7 +170,7 @@ export default {
 				return Promise.resolve()
 			})
 			.then(() => {
-				let copia = JSON.parse(JSON.stringify(todos))
+				let copia = clientes_para_guardar(todos)
 				return db.transaction('rw', db.clients, () => {
 					return db.clients.clear().then(() => db.clients.bulkPut(copia))
 				})
