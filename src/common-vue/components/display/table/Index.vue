@@ -142,7 +142,7 @@
 									</template>
 									
 									<template
-									v-for="prop in properties"
+									v-for="prop in properties_with_cell_slots"
 									v-slot:[prop.key]>
 										<slot :model="model" :name="'table-prop-'+prop.key"></slot>
 									</template>
@@ -172,7 +172,7 @@
 									<slot name="table_right_options" :model="model"></slot>
 								</template>
 								<template
-								v-for="prop in properties"
+								v-for="prop in properties_with_cell_slots"
 								v-slot:[prop.key]>
 									<slot :model="model" :name="'table-prop-'+prop.key"></slot>
 								</template>
@@ -258,6 +258,7 @@
 	</div>
 </template>
 <script>
+import { left_options_width } from '@/common-vue/helpers/table_left_options'
 import infiniteScroll from 'vue-infinite-scroll'
 import filters from '@/common-vue/mixins/filters'
 import { ANCLA_TABLA, ancla_de } from '@/common-vue/tours/anclas-por-modelo'
@@ -473,6 +474,11 @@ export default {
 		filter_modal_id() {
 			return 'filter-modal-' + this.model_name
 		},
+		properties_with_cell_slots() {
+			// Los slots laterales ya se declaran arriba: recrearlos como una celda de datos
+			// vacía pisa el slot de acciones cuando ésta entra a props_to_show.
+			return this.properties.filter(prop => !this.is_options_column(prop))
+		},
 		props() {
 			// console.log('calculando props')
 			let props = []
@@ -551,6 +557,7 @@ export default {
 									relation: prop_to_show.relation,
 									pivot_value_prop: prop_to_show.pivot_value_prop,
 									related_model_id: related_item.id,
+									table_preference_order: prop_to_show.table_preference_order,
 								})
 							})
 
@@ -605,11 +612,26 @@ export default {
 			// console.log(props)
 
 			
-			props.splice(0, 0, {
-				key: 'table_left_options',
-				text: '',
-				no_usar_en_filtros: true,
-			})
+			// BTM reconstruye modelo y pivots en arrays separados. El orden elegido es
+			// global (también para Acciones entre/después de pivots), por eso se aplica
+			// después de ensamblarlos. Sin preferencia explícita no hay marcadores.
+			if (this.pivot && props.some(prop => typeof prop.table_preference_order !== 'undefined')) {
+				props = props.slice().sort((a, b) => {
+					let a_order = typeof a.table_preference_order === 'undefined' ? Infinity : a.table_preference_order
+					let b_order = typeof b.table_preference_order === 'undefined' ? Infinity : b.table_preference_order
+					return a_order - b_order
+				})
+			}
+
+			// Una preferencia explícita ya trae las acciones en su posición elegida.
+			// BTM también puede declararlas: sólo conservar el agregado histórico si faltan.
+			if (!props.some(prop => prop.key === 'table_left_options')) {
+				props.unshift({
+					key: 'table_left_options',
+					text: '',
+					no_usar_en_filtros: true,
+				})
+			}
 
 			props.push({
 				key: 'table_right_options',
@@ -1141,7 +1163,10 @@ export default {
 						label: this.propText(prop, true, true),
 						sortable: prop.sortable,
 						type: prop.type_to_update ? prop.type_to_update : prop.type,
-						width: prop.table_width ? Number(prop.table_width) : null,
+						width: prop.key === 'table_left_options'
+							? left_options_width(prop.table_width, prop.table_wrap_content)
+							: (prop.table_width ? Number(prop.table_width) : null),
+						wrap_content: !!prop.table_wrap_content,
 						// Si true, el filtro date no muestra hora (solo día calendario).
 						filter_date_only: prop.filter_date_only === true,
 						// Calculado desde la prop original (no desde field.type, que puede venir
@@ -1301,7 +1326,7 @@ export default {
 		},
 		column_style(field) {
 			// Las columnas de acciones laterales no deben forzar ancho mínimo.
-			if (this.is_options_column(field)) {
+			if (this.is_options_column(field) && !field.width) {
 				return {
 					width: '1%',
 					minWidth: 'auto',
@@ -1309,6 +1334,13 @@ export default {
 				}
 			}
 			if (field.width && Number(field.width) > 0) {
+				if (field.key === 'table_left_options') {
+					return {
+						width: Number(field.width) + 'px',
+						minWidth: Number(field.width) + 'px',
+						maxWidth: field.wrap_content ? Number(field.width) + 'px' : 'none',
+					}
+				}
 				return {
 					minWidth: Number(field.width) + 'px',
 				}

@@ -23,10 +23,6 @@
 				:tbody-tr-class="rowClass"
 				:tbody-tr-attr="rowAttrs"
 				@row-selected="onRowSelected">
-					<template v-slot:table_left_options>
-						<slot name="table_left_options" :model="model"></slot>
-					</template>
-
 					<template
 					v-for="(prop, prop_index) in visible_properties_for_table"
 					v-slot:[toCellName(prop.key)]="data">
@@ -34,9 +30,14 @@
 						:key="prop.key + '-' + prop_index"
 						:class="get_cell_classes(prop, prop_index)"
 						:title="cell_inner_title(prop, models[data.index])"
+						:style="left_options_content_style(prop, 10)"
 						class="cont-tr table-component-cell-inner">
+							<slot
+							v-if="prop.key === 'table_left_options'"
+							name="table_left_options"
+							:model="models[data.index]"></slot>
 							<table-thumbnail-images
-							v-if="isImageProp(prop) && hasTableImages(models[data.index], prop)"
+							v-else-if="isImageProp(prop) && hasTableImages(models[data.index], prop)"
 							:key="'thumb-' + models[data.index].id + '-' + prop.key"
 							:model="models[data.index]"
 							:prop="prop"
@@ -288,6 +289,7 @@
 <script>
 import BtnAddToShow from '@/common-vue/components/BtnAddToShow'
 import { fallback_column_width_px } from '@/common-vue/config/column_preference_defaults'
+import { left_options_content_style, left_options_width } from '@/common-vue/helpers/table_left_options'
 import { bind_edge_auto_scroll, unbind_edge_auto_scroll } from '@/common-vue/helpers/edge_auto_scroll'
 
 export default {
@@ -591,6 +593,7 @@ export default {
 		},
 	},
 	methods: {
+		left_options_content_style,
 		/**
 		 * Recalcula la altura disponible del contenedor de tabla según su posición en viewport.
 		 * Resta un margen inferior para evitar scroll residual en la página.
@@ -738,7 +741,9 @@ export default {
 		column_style(prop) {
 			let width_px = null
 			if (prop.table_width && Number(prop.table_width) > 0) {
-				width_px = Number(prop.table_width)
+				width_px = prop.key === 'table_left_options'
+					? left_options_width(prop.table_width, prop.table_wrap_content, 10)
+					: Number(prop.table_width)
 			} else if (prop.table_width === 'lg') {
 				width_px = 300
 			} else if (this.is_from_search_modal) {
@@ -750,7 +755,7 @@ export default {
 			return {
 				width: width_px + 'px',
 				minWidth: width_px + 'px',
-				maxWidth: width_px + 'px',
+				maxWidth: prop.key === 'table_left_options' && !prop.table_wrap_content ? 'none' : width_px + 'px',
 			}
 		},
 		/**
@@ -790,6 +795,16 @@ export default {
 		},
 		get_cell_classes(prop, index) {
 			const classes = []
+			if (prop.key === 'table_left_options') {
+				classes.push('cell-options')
+				if (prop.table_width) {
+					classes.push('cell-options-configured')
+				}
+				if (prop.table_wrap_content) {
+					classes.push('cell-options-wrap')
+				}
+				return classes
+			}
 			const props_visible = this.visible_properties_for_table
 			if (index == props_visible.length - 1) {
 				classes.push('cont-tr-full-width')
@@ -925,6 +940,7 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/common-vue/sass/_table_left_options'
 @import '@/sass/_custom.scss'
 
 .table-component-scroll

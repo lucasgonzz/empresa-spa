@@ -307,6 +307,7 @@
 							<b-form-input
 
 							class="columns-preferences-config__width-input"
+							:title="column_width_help(row)"
 
 							type="number"
 
@@ -592,7 +593,7 @@
 
 								<b-form-input
 
-								title="Ancho de la columna, en pixeles"
+								:title="column_width_help(row)"
 
 								type="number"
 
@@ -925,6 +926,13 @@ export default {
 	},
 
 	methods: {
+		/** Explica el ancho mínimo de acciones sin cambiar la ayuda de las otras columnas. */
+		column_width_help(row) {
+			if (row.key === 'table_left_options') {
+				return 'Sin salto de línea, el ancho es mínimo para mantener todos los botones accesibles. Activá el salto para compactarlos.'
+			}
+			return 'Ancho de la columna, en pixeles'
+		},
 
 		/**
 
