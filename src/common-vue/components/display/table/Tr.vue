@@ -64,29 +64,7 @@
 					:key="'thumb-' + model.id + '-' + prop.key"
 					:model="model"
 					:prop="prop"
-					@preview="openImagePreview"></table-thumbnail-images>
-					<div
-					v-if="show_image_preview && preview_image_url"
-					class="image-preview-overlay"
-					@click.self.stop.prevent="closeImagePreview"
-					@mousedown.stop.prevent>
-						<div
-						class="image-preview-modal"
-						@click.stop
-						@mousedown.stop>
-							<button
-							type="button"
-							class="image-preview-close"
-							@click.stop.prevent="closeImagePreview"
-							@mousedown.stop.prevent>
-								×
-							</button>
-							<img
-							class="image-preview-large"
-							:src="preview_image_url"
-							alt="Vista previa de articulo">
-						</div>
-					</div>
+					:preview_enabled="true"></table-thumbnail-images>
 
 
 					<!--
@@ -244,36 +222,8 @@ export default {
 		PivotProp: () => import('@/common-vue/components/display/table/PivotProp'),
 		TableThumbnailImages: () => import('@/common-vue/components/display/table/TableThumbnailImages'),
 	},
-	data() {
-		return {
-			show_image_preview: false,
-			preview_image_url: '',
-		}
-	},
-	mounted() {
-		window.addEventListener('keydown', this.handlePreviewKeydown)
-	},
-	beforeDestroy() {
-		window.removeEventListener('keydown', this.handlePreviewKeydown)
-	},
 	methods: {
 		left_options_content_style,
-		openImagePreview(image_url) {
-			if (!image_url) {
-				return
-			}
-			this.preview_image_url = image_url
-			this.show_image_preview = true
-		},
-		closeImagePreview() {
-			this.show_image_preview = false
-			this.preview_image_url = ''
-		},
-		handlePreviewKeydown(event) {
-			if (event.key == 'Escape' && this.show_image_preview) {
-				this.closeImagePreview()
-			}
-		},
 		rowClass(model) {
 			let color = ''
 			if (this.model_name && this.hasColor(this.model_name)) {
@@ -508,43 +458,4 @@ export default {
 	// Sombra sutil, consistente con el resto de las miniaturas de la tabla.
 	box-shadow: rgba(99, 99, 99, 0.25) 0px 1px 4px 0px
 
-.image-preview-overlay
-	position: fixed
-	inset: 0
-	background: rgba(0,0,0,.65)
-	display: flex
-	align-items: center
-	justify-content: center
-	z-index: 2000
-	padding: 1rem
-
-.image-preview-modal
-	position: relative
-	background: var(--bg-card, #fff)
-	padding: .75rem
-	border-radius: .5rem
-	max-width: 100%
-	box-shadow: 0 10px 25px rgba(0,0,0,.35)
-
-.image-preview-large
-	width: 500px !important
-	max-width: 100%
-	height: auto
-	display: block
-	// Esquinas redondeadas suaves para la imagen en el modal de vista previa.
-	border-radius: 6px
-
-.image-preview-close
-	position: absolute
-	top: .25rem
-	right: .25rem
-	width: 2rem
-	height: 2rem
-	border: 0
-	border-radius: 999px
-	background: rgba(0,0,0,.75)
-	color: #fff
-	font-size: 1.4rem
-	line-height: 1
-	cursor: pointer
 </style>

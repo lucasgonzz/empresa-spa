@@ -41,7 +41,7 @@
 							:key="'thumb-' + models[data.index].id + '-' + prop.key"
 							:model="models[data.index]"
 							:prop="prop"
-							@preview="openImagePreview"></table-thumbnail-images>
+							:preview_enabled="true"></table-thumbnail-images>
 							<div
 							v-else-if="showInput(prop, models[data.index])">
 								<b-form-textarea
@@ -208,28 +208,6 @@
 						</div>
 					</template>
 				</b-table>
-				<div
-				v-if="show_image_preview && preview_image_url"
-				class="image-preview-overlay"
-				@click.self.stop.prevent="closeImagePreview"
-				@mousedown.stop.prevent>
-					<div
-					class="image-preview-modal"
-					@click.stop
-					@mousedown.stop>
-						<button
-						type="button"
-						class="image-preview-close"
-						@click.stop.prevent="closeImagePreview"
-						@mousedown.stop.prevent>
-							×
-						</button>
-						<img
-						class="image-preview-large"
-						:src="preview_image_url"
-						alt="Vista previa de articulo">
-					</div>
-				</div>
 				<!-- <btn-add-to-show
 				:model_name="model_name"></btn-add-to-show> -->
 			</div>
@@ -386,8 +364,6 @@ export default {
 		return {
 			last_selection: [],
 			is_from_keydown: false,
-			show_image_preview: false,
-			preview_image_url: '',
 			// Altura disponible calculada dinámicamente desde el top del contenedor hasta el borde inferior de la ventana
 			available_height: null,
 			// Handle de los listeners de auto-scroll por bordes. Se guarda para poder desengancharlos
@@ -396,13 +372,11 @@ export default {
 		}
 	},
 	mounted() {
-		window.addEventListener('keydown', this.handlePreviewKeydown)
 		this.recalcular_altura()
 		window.addEventListener('resize', this.recalcular_altura)
 		this.enganchar_scroll_margenes()
 	},
 	beforeDestroy() {
-		window.removeEventListener('keydown', this.handlePreviewKeydown)
 		window.removeEventListener('resize', this.recalcular_altura)
 		this.desenganchar_scroll_margenes()
 	},
@@ -612,22 +586,6 @@ export default {
 					self.available_height = height
 				}
 			})
-		},
-		openImagePreview(image_url) {
-			if (!image_url) {
-				return
-			}
-			this.preview_image_url = image_url
-			this.show_image_preview = true
-		},
-		closeImagePreview() {
-			this.show_image_preview = false
-			this.preview_image_url = ''
-		},
-		handlePreviewKeydown(event) {
-			if (event.key == 'Escape' && this.show_image_preview) {
-				this.closeImagePreview()
-			}
 		},
 		/**
 		 * Engancha el auto-scroll horizontal de margenes sobre el contenedor de la tabla.
@@ -1121,44 +1079,4 @@ export default {
 	.input-lg
 		width: 300px !important
 
-.image-preview-overlay
-	position: fixed
-	inset: 0
-	background: rgba(0,0,0,.65)
-	display: flex
-	align-items: center
-	justify-content: center
-	z-index: 2000
-	padding: 1rem
-
-.image-preview-modal
-	position: relative
-	// Token con el literal de hoy de fallback: la caja de la vista ampliada es una superficie del
-	// sistema, no un color propio. Con el #fff suelto, ampliar la foto de un articulo en modo oscuro
-	// abria un rectangulo blanco arriba del scrim negro.
-	background: var(--bg-card, #fff)
-	padding: .75rem
-	border-radius: .5rem
-	max-width: 100%
-	box-shadow: 0 10px 25px rgba(0,0,0,.35)
-
-.image-preview-large
-	width: 3000px !important
-	max-width: 100%
-	height: auto
-	display: block
-
-.image-preview-close
-	position: absolute
-	top: .25rem
-	right: .25rem
-	width: 2rem
-	height: 2rem
-	border: 0
-	border-radius: 999px
-	background: rgba(0,0,0,.75)
-	color: #fff
-	font-size: 1.4rem
-	line-height: 1
-	cursor: pointer
 </style>
