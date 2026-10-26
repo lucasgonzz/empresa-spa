@@ -98,6 +98,7 @@ export default {
             */
             await db.clients.clear()
             await db.meta.delete('last_clients_sync')
+            await db.meta.delete('last_clients_full_sync')
             await borrar_sesion()
         },
         /**

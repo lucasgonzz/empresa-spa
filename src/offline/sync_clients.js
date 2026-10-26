@@ -25,6 +25,20 @@ const MARCA_CLIENTES = 'last_clients_sync'
 /** Clientes por página: el techo del endpoint es 1000; con `withAll()` 500 es un pedido razonable. */
 const CLIENTES_POR_PAGINA = 500
 
+/** Clave del momento (reloj del equipo, ms) de la última descarga COMPLETA de clientes. */
+const MARCA_COMPLETA = 'last_clients_full_sync'
+
+/**
+ * Cada cuánto se baja la lista entera en vez de solo lo modificado.
+ *
+ * Hace falta porque el `updated_at` del cliente NO se mueve cuando cambia el saldo de su cuenta
+ * corriente (vive en `credit_accounts`) ni cuando se le vinculan descuentos o recargos (pivot): la
+ * descarga incremental no trae esos cambios. Sin conexión, Vender muestra el saldo y aplica los
+ * ajustes del cliente con lo guardado; una vez cada 12 horas (en el primer inicio de sesión del día,
+ * en la práctica) se rehace entera.
+ */
+const INTERVALO_COMPLETA_MS = 12 * 60 * 60 * 1000
+
 export default {
 	methods: {
 		/**
@@ -36,9 +50,14 @@ export default {
 			/** Momento (reloj del equipo) en que arranca la corrida: ver marca_de_sincronizacion(). */
 			let inicio_ms = Date.now()
 
-			return db.meta.get(MARCA_CLIENTES)
-			.then(meta => {
-				let updated_after = meta ? meta.value : null
+			return Promise.all([db.meta.get(MARCA_CLIENTES), db.meta.get(MARCA_COMPLETA)])
+			.then(([meta, meta_completa]) => {
+				/** ¿Toca la descarga completa? Ver INTERVALO_COMPLETA_MS. */
+				let completa = !meta || !meta_completa || (inicio_ms - Number(meta_completa.value)) > INTERVALO_COMPLETA_MS
+				if (completa) {
+					return this.clientes_completos_offline(inicio_ms)
+				}
+				let updated_after = meta.value
 				return this.clientes_eliminados_offline(updated_after)
 				.then(() => this.clientes_actualizados_offline(updated_after, inicio_ms))
 			})
@@ -90,6 +109,35 @@ export default {
 				*/
 				return models.length ? db.clients.bulkPut(JSON.parse(JSON.stringify(models))) : Promise.resolve()
 			})
+			.then(() => this.marca_de_sincronizacion(sincronizado_hasta, inicio_ms))
+		},
+		/**
+		 * Descarga COMPLETA: baja todos los clientes y recién al final reemplaza la tabla entera, en
+		 * una sola transacción (si se corta a la mitad, en el equipo queda la lista anterior, completa).
+		 * Así salen también los borrados y lo que la incremental no ve (saldo, ajustes por pivot).
+		 *
+		 * @param {Number} inicio_ms
+		 * @returns {Promise<String>} La marca a guardar. Rechaza si falla una página.
+		 */
+		clientes_completos_offline(inicio_ms) {
+			/** Todos los clientes, juntados en memoria hasta tener la lista entera. */
+			let todos = []
+			/** La hora del servidor de la primera respuesta. */
+			let sincronizado_hasta = null
+			return this.recorrer_paginas_de_clientes('client/index/offline', null, (models, data, page) => {
+				if (page === 1) {
+					sincronizado_hasta = data.sincronizado_hasta
+				}
+				todos = todos.concat(models)
+				return Promise.resolve()
+			})
+			.then(() => {
+				let copia = JSON.parse(JSON.stringify(todos))
+				return db.transaction('rw', db.clients, () => {
+					return db.clients.clear().then(() => db.clients.bulkPut(copia))
+				})
+			})
+			.then(() => db.meta.put({ key: MARCA_COMPLETA, value: inicio_ms }))
 			.then(() => this.marca_de_sincronizacion(sincronizado_hasta, inicio_ms))
 		},
 		/**
