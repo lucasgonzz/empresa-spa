@@ -96,6 +96,10 @@
 			</b-button>
 		</empty-state>
 
+		<div v-else-if="inventario_restringido" class="inventario-aclaracion" data-testid="inventario-restringido">
+			El reporte general de inventario reúne todas las sucursales. Tu permiso permite consultar únicamente el stock mínimo de tu sucursal en Alertas.
+		</div>
+
 		<template v-else>
 
 			<!-- Los tres totales, arriba y grandes -->
@@ -121,6 +125,11 @@
 import inventory_performance from '@/mixins/inventory_performance'
 export default {
 	mixins: [inventory_performance],
+	computed: {
+		inventario_restringido() {
+			return !this.is_admin && this.can('article.stock_only_sucursal')
+		},
+	},
 	components: {
 		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 		InventarioStockeado: () => import('@/components/listado/modals/inventory-performance/InventarioStockeado'),
