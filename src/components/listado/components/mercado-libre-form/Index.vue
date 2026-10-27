@@ -96,8 +96,9 @@ export default {
 		fuentes_automaticas() {
 			return {
 				brand: this.nombre_de_la_marca(),
-				bar_code: this.model.bar_code || null,
-				sku: this.model.sku || this.model.provider_code || null,
+				bar_code: this.codigo_de_barras_para_gtin(),
+				// Como la API: el SKU sin espacios o, si está vacío, el código de proveedor
+				sku: String(this.model.sku || '').trim() || String(this.model.provider_code || '').trim() || null,
 			}
 		},
 	},
@@ -385,6 +386,25 @@ export default {
 				}
 			})
 			this.$set(this.model, 'meli_attributes', lista)
+		},
+
+		/**
+		 * Código de barras que la API usaría como GTIN, o null.
+		 *
+		 * Misma regla que la API (`MercadoLibreArticuloService::valor_automatico`): solo un código
+		 * de 8 a 14 dígitos (`/^\d{8,14}$/`) es un código de producto. Un código interno ("ABC123", "123")
+		 * no se manda, así que el formulario no puede decir que el dato "se completa solo" ni
+		 * dejar de contarlo como faltante.
+		 *
+		 * @returns {String|null}
+		 */
+		codigo_de_barras_para_gtin() {
+			let codigo = this.model.bar_code
+			if (codigo === null || typeof codigo == 'undefined') {
+				return null
+			}
+			codigo = String(codigo).trim()
+			return /^\d{8,14}$/.test(codigo) ? codigo : null
 		},
 
 		/**

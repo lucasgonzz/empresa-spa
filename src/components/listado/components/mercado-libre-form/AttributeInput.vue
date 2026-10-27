@@ -143,6 +143,13 @@ export default {
 			if (this.fuente) {
 				return texto + ': ' + this.fuente + '.'
 			}
+			/*
+				El código de barras solo sirve si es un código de producto de 8 a 14 números (misma
+				regla que la API): un código interno no se manda, así que el aviso lo dice.
+			*/
+			if (this.atributo.auto == 'bar_code') {
+				return texto + ', pero solo si es un código de producto de 8 a 14 números, y el artículo no tiene uno así.'
+			}
 			return texto + ', pero el artículo todavía no lo tiene cargado.'
 		},
 		// El valor automático que se va a usar, o una pista del formato
