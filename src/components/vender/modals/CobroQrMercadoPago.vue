@@ -58,6 +58,19 @@ hide-footer
 				<span>Esperando el pago…</span>
 			</div>
 
+			<!--
+				Aviso de la API mientras el cobro sigue pendiente (por ejemplo "Mercado Pago no
+				respondió, reintentando…" cuando todavía no tiene la orden). Desaparece solo cuando una
+				consulta lo trae en null.
+			-->
+			<b-alert
+			:show="!!qr_cobro.error_message"
+			variant="warning"
+			class="cobro-qr__alerta"
+			data-testid="vender-cobro-qr-aviso-pendiente">
+				{{ qr_cobro.error_message }}
+			</b-alert>
+
 			<b-alert
 			:show="!!qr_aviso_pagando"
 			variant="info"
@@ -70,7 +83,7 @@ hide-footer
 			variant="warning"
 			class="cobro-qr__alerta"
 			data-testid="vender-cobro-qr-aviso-cerrar-sin-cancelar">
-				{{ qr_cancelar_fallo ? 'No se pudo cancelar el cobro.' : 'No se puede consultar el cobro: revisá la conexión.' }}
+				{{ motivo_cerrar_sin_cancelar }}
 				Podés cerrar sin cancelarlo. Si el cliente paga igual, el pago va a aparecer en Vender como
 				pago QR sin venta para que lo uses.
 			</b-alert>
@@ -209,7 +222,7 @@ import vender_presupuestos from '@/mixins/vender_presupuestos'
 
 /*
 	Cada cuántos milisegundos se consulta el estado del cobro; cuánto tiene que llevar fallando la
-	consulta para ofrecer "Cerrar sin cancelar"; y cuánto se espera, como mínimo, a que el guardado
+	consulta (o seguir el aviso de la API de un cobro pendiente) para ofrecer "Cerrar sin cancelar"; y cuánto se espera, como mínimo, a que el guardado
 	termine antes de decir que falló (ver vigilar_guardado()).
 */
 const MS_ENTRE_CONSULTAS = 3000
@@ -251,6 +264,10 @@ export default {
 			qr_fallando_desde: 0,
 			// true si la consulta lleva más de MS_CONSULTA_CAIDA fallando
 			qr_consulta_caida: false,
+			// Momento (ms) desde el que el cobro pendiente viene con aviso de la API (0 = sin aviso)
+			qr_aviso_api_desde: 0,
+			// true si ese aviso lleva más de MS_CONSULTA_CAIDA (Mercado Pago no termina de responder)
+			qr_aviso_api_trabado: false,
 			// true mientras se está cancelando el cobro
 			qr_cancelando: false,
 			// true si el último intento de cancelar falló (sin red, Mercado Pago lo rechazó, etc.)
@@ -280,7 +297,21 @@ export default {
 		 * @returns {Boolean}
 		 */
 		puede_cerrar_sin_cancelar() {
-			return this.qr_fase == 'esperando' && (this.qr_cancelar_fallo || this.qr_consulta_caida)
+			return this.qr_fase == 'esperando' && (this.qr_cancelar_fallo || this.qr_consulta_caida || this.qr_aviso_api_trabado)
+		},
+		/**
+		 * Por qué se ofrece "Cerrar sin cancelar".
+		 *
+		 * @returns {String}
+		 */
+		motivo_cerrar_sin_cancelar() {
+			if (this.qr_cancelar_fallo) {
+				return 'No se pudo cancelar el cobro.'
+			}
+			if (this.qr_consulta_caida) {
+				return 'No se puede consultar el cobro: revisá la conexión.'
+			}
+			return 'Mercado Pago no está respondiendo.'
 		},
 		/**
 		 * Título del modal según la fase.
@@ -410,6 +441,30 @@ export default {
 			this.qr_cancelar_fallo = false
 			this.qr_consulta_caida = false
 			this.qr_fallando_desde = 0
+			this.qr_aviso_api_desde = 0
+			this.qr_aviso_api_trabado = false
+		},
+
+		/**
+		 * Sigue el aviso que la API manda con un cobro pendiente (`error_message`, por ejemplo cuando
+		 * Mercado Pago todavía no devolvió la orden). Si dura más de MS_CONSULTA_CAIDA, se ofrece
+		 * cerrar sin cancelar sin esperar a que el cajero toque Cancelar. Cuando una consulta lo trae
+		 * en null, todo vuelve a cero.
+		 *
+		 * @param {Object} cobro Cobro pendiente recién leído.
+		 * @returns {void}
+		 */
+		seguir_aviso_de_la_api(cobro) {
+			if (!cobro.error_message) {
+				this.qr_aviso_api_desde = 0
+				this.qr_aviso_api_trabado = false
+				return
+			}
+			if (!this.qr_aviso_api_desde) {
+				this.qr_aviso_api_desde = Date.now()
+			} else if (Date.now() - this.qr_aviso_api_desde >= MS_CONSULTA_CAIDA) {
+				this.qr_aviso_api_trabado = true
+			}
 		},
 
 		/**
@@ -495,7 +550,8 @@ export default {
 				return
 			}
 
-			/* Pendiente: se sigue consultando (y se arranca si todavía no corría) */
+			/* Pendiente: se sigue el aviso de la API y se sigue consultando (se arranca si no corría) */
+			this.seguir_aviso_de_la_api(cobro)
 			if (!this.qr_intervalo) {
 				this.iniciar_consulta()
 			}
