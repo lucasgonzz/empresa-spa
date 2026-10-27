@@ -444,8 +444,10 @@ export default [
 		name: 'mercado_libre',
 		path: '/mercado-libre',
 		component: '@/views/MercadoLibre',
+		// Abre en la solapa "Cuenta" (misión mercado-libre-integracion, 27/10/2026): es donde se
+		// conecta la cuenta y se ve si Mercado Libre deja publicar. Antes abría en "Pedidos".
 		params: {
-			view: 'pedidos',
+			view: 'cuenta',
 		},
 		if_has_extencion: 'usa_mercado_libre',
 		can: [
