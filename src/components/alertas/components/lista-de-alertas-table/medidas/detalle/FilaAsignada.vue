@@ -56,6 +56,11 @@ class="med-fila med-fila--asignada"
 		</div>
 
 		<p
+		v-if="item.motivo_detalle"
+		class="med-fila__detalle">
+			{{ item.motivo_detalle }}
+		</p>
+		<p
 		v-if="item.nota_ia"
 		class="med-fila__detalle med-fila__detalle--ia"
 		:data-testid="'medidas-nota-ia-' + item.id">

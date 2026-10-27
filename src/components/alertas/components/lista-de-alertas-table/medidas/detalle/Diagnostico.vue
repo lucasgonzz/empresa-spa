@@ -32,7 +32,8 @@ class="med-diag"
 		-->
 		<p
 		v-if="!plan.usado"
-		class="med-diag__texto">
+		class="med-diag__texto"
+		:data-testid="'medidas-plan-no-usado-' + item_id + '-' + indice">
 			{{ plan.motivo_no_usado || 'No se buscó.' }}
 		</p>
 
@@ -50,6 +51,56 @@ class="med-diag"
 			class="med-diag__texto">
 				{{ plan.resumen }}
 			</p>
+			<p
+			v-if="plan.resultado"
+			class="med-diag__texto"
+			:data-testid="'medidas-plan-resultado-' + item_id + '-' + indice">
+				{{ resultado_del_plan(plan.resultado) }}
+			</p>
+
+			<!--
+				Lo que dijo la IA al leer las páginas: de qué producto le parecían y, por cada medida, si
+				pasó la validación o por qué no. Un plan que no llegó a llamar a la IA no tiene este bloque.
+			-->
+			<div
+			v-if="plan.ia"
+			class="med-diag__ia"
+			:data-testid="'medidas-plan-ia-' + item_id + '-' + indice">
+				<p
+				v-if="!plan.ia.respondio"
+				class="med-diag__error">
+					La IA no respondió{{ plan.ia.error ? ': ' + plan.ia.error : '.' }}
+				</p>
+				<p
+				v-else-if="plan.ia.match"
+				class="med-diag__texto">
+					La IA vio {{ coincidencia_de_la_ia(plan.ia.match) }}.
+				</p>
+				<p
+				v-if="plan.ia.nota"
+				class="med-diag__texto med-diag__texto--ia">
+					{{ plan.ia.nota }}
+				</p>
+				<ul
+				v-if="plan.ia.campos.length"
+				class="med-diag__campos">
+					<li
+					v-for="campo in plan.ia.campos"
+					:key="campo.clave"
+					class="med-diag__campo">
+						<span
+						class="med-etiqueta"
+						:class="'med-etiqueta--' + (campo.ok ? 'ok' : 'neutro')">
+							{{ campo.etiqueta }}: {{ campo.ok ? 'válida' : 'sin valor' }}
+						</span>
+						<span
+						v-if="!campo.ok && campo.motivo"
+						class="med-diag__motivo-pagina">
+							{{ campo.motivo }}
+						</span>
+					</li>
+				</ul>
+			</div>
 
 			<!--
 				Cada página con lo que pasó con ella. El link abre la página en otra pestaña (solo si es
@@ -98,7 +149,7 @@ class="med-diag"
 </div>
 </template>
 <script>
-import { CRITERIOS, MOTIVOS_DE_DESCARTE, texto_de, entero_es } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { CRITERIOS, MOTIVOS_DE_DESCARTE, RESULTADOS_DE_PLAN, COINCIDENCIAS_DE_LA_IA, texto_de, entero_es } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 
 /**
  * Qué se probó con un artículo que quedó sin datos: un bloque por plan de búsqueda (código de
@@ -145,6 +196,24 @@ export default {
 		},
 		resultados(plan) {
 			return plan.resultados === 1 ? '1 resultado' : entero_es(plan.resultados) + ' resultados'
+		},
+		/**
+		 * Cómo terminó un plan, en texto ("La IA dijo que las páginas eran de otro producto.").
+		 *
+		 * @param {String} codigo `resultado` del plan.
+		 * @returns {String}
+		 */
+		resultado_del_plan(codigo) {
+			return texto_de(RESULTADOS_DE_PLAN, codigo)
+		},
+		/**
+		 * Qué tan seguro estaba la IA, en texto ("el mismo producto").
+		 *
+		 * @param {String} codigo `match` de la IA.
+		 * @returns {String}
+		 */
+		coincidencia_de_la_ia(codigo) {
+			return texto_de(COINCIDENCIAS_DE_LA_IA, codigo).toLowerCase()
 		},
 		/**
 		 * Por qué se descartó una página, en texto.
@@ -213,6 +282,30 @@ export default {
 	font-size: 0.8125rem
 	line-height: 1.4
 	color: var(--color-text-primary, #212529)
+
+.med-diag__texto--ia
+	color: var(--color-text-secondary, #6c757d)
+
+.med-diag__ia
+	display: flex
+	flex-direction: column
+	gap: 3px
+	margin-top: 2px
+	min-width: 0
+
+.med-diag__campos
+	display: flex
+	flex-direction: column
+	gap: 3px
+	margin: 0
+	padding: 0
+	list-style: none
+
+.med-diag__campo
+	display: flex
+	flex-wrap: wrap
+	align-items: center
+	gap: 2px 8px
 
 .med-diag__error
 	margin: 0

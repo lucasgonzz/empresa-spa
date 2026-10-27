@@ -294,6 +294,36 @@ test('normalizar_diagnostico: un bloque por plan, con las páginas y por qué se
 	assert.deepEqual(medidas.normalizar_diagnostico(null), [])
 })
 
+test('normalizar_diagnostico: la forma real de la API (plan usado con ia y resultado, plan no usado con `motivo`)', () => {
+	const planes = medidas.normalizar_diagnostico([
+		{ criterio: 'codigo_de_barras', usado: false, motivo: 'El código de barras cargado no es un GTIN válido (puede ser un código interno).' },
+		{
+			criterio: 'codigo_proveedor', usado: true, consulta: '"ESP-1" espada', ok: true, error: null, resultados: 8, duracion_ms: 900,
+			paginas: [
+				{ url: 'https://a.com/x', titulo: 'A', dominio: 'a.com', leida: false, motivo: 'La página no contiene el código buscado.' },
+				{ url: 'https://b.com/y', titulo: 'B', dominio: 'b.com', leida: true },
+			],
+			ia: { llamada: true, respondio: true, match: 'otro_producto', nota: 'Es otro modelo.', campos: { peso: 'ok', alto: 'La cita no contiene el número.', ancho: 'ok' } },
+			resultado: 'otro_producto',
+		},
+		{ criterio: 'nombre', usado: true, consulta: 'espada ficha técnica peso medidas', resultados: 0, paginas: [], ia: null, resultado: 'tope_demo' },
+	])
+	assert.equal(planes[0].usado, false)
+	assert.equal(planes[0].motivo_no_usado, 'El código de barras cargado no es un GTIN válido (puede ser un código interno).')
+	assert.equal(planes[0].busquedas, 0)
+	assert.equal(planes[1].busquedas, 1)
+	assert.equal(planes[1].resultados, 8)
+	assert.equal(planes[1].resultado, 'otro_producto')
+	assert.equal(planes[1].paginas[0].motivo, 'La página no contiene el código buscado.')
+	assert.equal(planes[1].paginas[1].leida, true)
+	assert.equal(planes[1].ia.match, 'otro_producto')
+	assert.deepEqual(planes[1].ia.campos.map(c => [c.clave, c.etiqueta, c.ok]), [['peso', 'Peso', true], ['alto', 'Alto', false], ['ancho', 'Ancho', true]])
+	assert.equal(planes[1].ia.campos[1].motivo, 'La cita no contiene el número.')
+	// El corte por el tope de la demo no gastó ninguna consulta, y sin llamada a la IA no hay bloque de IA.
+	assert.equal(planes[2].busquedas, 0)
+	assert.equal(planes[2].ia, null)
+})
+
 test('normalizar_diagnostico: `resultados` como lista cuenta como páginas', () => {
 	const plan = medidas.normalizar_diagnostico([{ criterio: 'nombre', resultados: [{ url: 'https://a.com' }, { url: 'https://b.com' }] }])
 	assert.equal(plan[0].resultados, 2)

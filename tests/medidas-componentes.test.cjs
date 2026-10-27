@@ -263,12 +263,14 @@ test('A revisar: no se puede guardar mientras hay una acción en vuelo', () => {
 // --- Fila «Asignadas» y «Sin datos» ------------------------------------------------------------
 
 test('Asignadas: chips, quién aprobó, fuente y Quitar', () => {
-	const it = item({ status: 'aprobada', motivo: '', motivo_detalle: '', revisado_por: 'Juan', nota_ia: '' })
+	const it = item({ status: 'aprobada', motivo: 'codigo_exacto', motivo_detalle: 'Peso y medidas completos de una página que tiene el código de barras del artículo.', revisado_por: 'Juan', nota_ia: '' })
 	const vm = instanciar(FilaAsignada, { item: it })
 	const emitidos = []
 	vm.$on('quitar', () => emitidos.push('quitar'))
 	const arbol = vm._render()
 	assert.match(texto_de(por_testid(arbol, 'medidas-aprobada-por-11')), /Aprobada por Juan/)
+	assert.match(texto_de(arbol), /Código exacto/)
+	assert.match(texto_de(arbol), /Peso y medidas completos de una página que tiene el código de barras del artículo\./)
 	// Los chips y la fuente son componentes hijos: acá se ve que la fila se los pasa, con los campos.
 	const hijos = buscar_todos(arbol, nodo => !!nodo.componentOptions)
 	assert.equal(hijos.length, 2)
@@ -322,6 +324,28 @@ test('Diagnóstico: cada plan con su consulta, resultados y el porqué de cada p
 	assert.match(texto, /a\.com Se leyó No traía medidas/)
 	assert.match(texto, /b\.com No se leyó No traía el código del artículo/)
 	assert.match(texto, /Por nombre espada ficha técnica peso medidas Se llegó al tope de consultas\./)
+})
+
+test('Diagnóstico con la forma real de la API: resultado del plan, lo que vio la IA y qué medida falló', () => {
+	const sin = item({ status: 'sin_datos', diagnostico: [
+		{ criterio: 'codigo_de_barras', usado: false, motivo: 'El artículo no tiene código de barras.' },
+		{
+			criterio: 'nombre', usado: true, consulta: 'espada ficha técnica peso medidas', resultados: 8,
+			paginas: [{ url: 'https://a.com/x', dominio: 'a.com', leida: false, motivo: 'Es un PDF: no se leen.' }],
+			ia: { llamada: true, respondio: true, match: 'variante_distinta', nota: 'Es el pack por 6.', campos: { peso: 'ok', alto: 'La cita no contiene el número.' } },
+			resultado: 'sin_medidas',
+		},
+	] })
+	const arbol = instanciar(Diagnostico, { diagnostico: sin.diagnostico, item_id: sin.id })._render()
+	const texto = texto_de(arbol)
+	assert.match(texto, /Por código de barras El artículo no tiene código de barras\./)
+	assert.match(texto, /1 consulta · 8 resultados/)
+	assert.match(texto, /Las páginas no traían medidas que se pudieran validar\./)
+	assert.match(texto, /a\.com No se leyó Es un PDF: no se leen\./)
+	assert.match(texto, /La IA vio una variante o presentación distinta\./)
+	assert.match(texto, /Es el pack por 6\./)
+	assert.match(texto, /Peso: válida/)
+	assert.match(texto, /Alto: sin valor La cita no contiene el número\./)
 })
 
 test('Diagnóstico vacío dice que no quedó registrado', () => {

@@ -62,8 +62,12 @@ export const MOTIVOS = {
 	medidas_parciales: 'Medidas parciales',
 	coincidencia_por_nombre: 'Coincidencia por nombre',
 	coincidencia_probable: 'Coincidencia probable',
+	// Asignada sola (D1): el código del artículo está en la página y trae las cuatro medidas.
+	codigo_exacto: 'Código exacto',
 	// Sin datos (D3)
 	sin_resultados: 'Sin resultados',
+	sin_datos_del_articulo: 'Faltan datos del artículo',
+	ia_sin_respuesta: 'La IA no respondió',
 	no_coincide: 'No era el producto',
 	sin_medidas_en_la_pagina: 'La página no trae medidas',
 	sin_cupo: 'Sin búsquedas disponibles',
@@ -89,6 +93,7 @@ export const MOTIVOS_DE_AVISO = [
 	'coincidencia_probable',
 	'sin_cupo',
 	'error_de_busqueda',
+	'ia_sin_respuesta',
 	'error_interno',
 ]
 
@@ -106,6 +111,26 @@ export const MOTIVOS_DE_DESCARTE = {
 	valores_invalidos: 'Los valores no coincidían con la cita',
 	repetida: 'Repetida',
 	no_evaluada: 'No se llegó a leer',
+}
+
+/** Cómo terminó cada plan de búsqueda (`resultado` del diagnóstico). */
+export const RESULTADOS_DE_PLAN = {
+	sin_resultados: 'El buscador no devolvió resultados.',
+	tope_demo: 'No se buscó: se llegó al tope de consultas de la demo.',
+	error_de_busqueda: 'El buscador falló.',
+	sin_paginas: 'Ninguna de las páginas servía para leer las medidas.',
+	ia_sin_respuesta: 'La IA no respondió.',
+	otro_producto: 'La IA dijo que las páginas eran de otro producto.',
+	sin_medidas: 'Las páginas no traían medidas que se pudieran validar.',
+	datos: 'Se encontraron medidas.',
+}
+
+/** Qué tan seguro estaba la IA de que la página era el mismo producto (`match`). */
+export const COINCIDENCIAS_DE_LA_IA = {
+	exacto: 'el mismo producto',
+	probable: 'probablemente el mismo producto',
+	variante_distinta: 'una variante o presentación distinta',
+	otro_producto: 'otro producto',
 }
 
 /** Textos de las pantallas (títulos, ayudas, estados vacíos). */

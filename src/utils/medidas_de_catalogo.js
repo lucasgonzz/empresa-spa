@@ -481,12 +481,54 @@ function armar_fuentes(item, campos) {
 }
 
 /**
- * El diagnóstico de un artículo sin datos ("Ver qué se probó", plan §2.3): un bloque por plan de
- * búsqueda, con su consulta, cuántas búsquedas y resultados dio, las páginas que se leyeron y por
- * qué se descartó cada una.
+ * Lo que dijo la IA al leer las páginas de un plan (`ia` del diagnóstico): si respondió, qué tan
+ * seguro estaba de que era el mismo producto (`match`), su nota y, por campo, si la medida pasó la
+ * validación (`'ok'`) o por qué no (una frase).
  *
- * La forma exacta la define la API; acá se aceptan los nombres razonables (`paginas`, `candidatas`
- * o `resultados` como lista) y lo que no se entiende se ignora.
+ * @param {*} crudo `ia` de un plan del diagnóstico.
+ * @returns {{llamada: Boolean, respondio: Boolean, match: String, nota: String, error: String, campos: Array}|null}
+ *   null si el plan no llegó a llamar a la IA.
+ */
+function normalizar_ia_del_diagnostico(crudo) {
+	if (!crudo || typeof crudo !== 'object' || crudo.llamada === false) {
+		return null
+	}
+	let campos = []
+	if (crudo.campos && typeof crudo.campos === 'object' && !Array.isArray(crudo.campos)) {
+		CAMPOS_DE_MEDIDA.forEach(function (definicion) {
+			if (!Object.prototype.hasOwnProperty.call(crudo.campos, definicion.clave)) {
+				return
+			}
+			let resultado = a_texto(crudo.campos[definicion.clave])
+			campos.push({
+				clave: definicion.clave,
+				etiqueta: definicion.etiqueta,
+				ok: resultado === 'ok',
+				motivo: resultado === 'ok' ? '' : resultado,
+			})
+		})
+	}
+	return {
+		llamada: true,
+		respondio: crudo.respondio !== false,
+		match: a_texto(crudo.match),
+		nota: a_texto(crudo.nota),
+		error: a_texto(crudo.error),
+		campos: campos,
+	}
+}
+
+/**
+ * El diagnóstico de un artículo sin datos ("Ver qué se probó", plan §2.3): un bloque por plan de
+ * búsqueda (código de barras, código de proveedor y nombre), con su consulta, cuántas consultas y
+ * resultados dio, las páginas que se leyeron, por qué se descartó cada una y qué dijo la IA.
+ *
+ * Forma que manda la API (DimensionSearchRunHelper::payload_de_item): un plan que no se usó viene
+ * `{criterio, usado: false, motivo: 'frase'}`; uno usado, `{criterio, usado: true, consulta, ok,
+ * error, resultados (cantidad), paginas: [{url, titulo, dominio, leida, motivo}], ia, resultado
+ * (código)}`. No trae `busquedas` por plan: un plan usado es una consulta al buscador, salvo que se
+ * haya cortado por el tope de la demo (`resultado: 'tope_demo'`, cero consultas). Además se aceptan
+ * otros nombres razonables (`paginas`/`candidatas`/`resultados` como lista, `motivo_no_usado`).
  *
  * @param {*} crudo `diagnostico` del ItemPayload.
  * @returns {Array<Object>}
@@ -518,17 +560,21 @@ export function normalizar_diagnostico(crudo) {
 				motivo: a_texto(pagina.motivo_descarte || pagina.motivo || pagina.descarte || pagina.resultado),
 			})
 		})
-		let resultados = Array.isArray(plan.resultados) ? plan.resultados.length : a_numero(plan.resultados)
+		let usado = plan.usado !== false
+		let resultado = a_texto(plan.resultado)
+		let busquedas = typeof plan.busquedas === 'undefined' ? (usado && resultado !== 'tope_demo' ? 1 : 0) : a_numero(plan.busquedas)
 		planes.push({
 			criterio: a_texto(plan.criterio || plan.plan),
 			consulta: a_texto(plan.consulta),
-			usado: plan.usado !== false,
-			motivo_no_usado: a_texto(plan.motivo_no_usado),
-			busquedas: a_numero(plan.busquedas),
-			resultados: resultados,
+			usado: usado,
+			motivo_no_usado: a_texto(plan.motivo_no_usado) || (usado ? '' : a_texto(plan.motivo)),
+			busquedas: busquedas,
+			resultados: Array.isArray(plan.resultados) ? plan.resultados.length : a_numero(plan.resultados),
+			resultado: resultado,
 			resumen: a_texto(plan.resumen),
 			error: a_texto(plan.error),
 			paginas: paginas,
+			ia: normalizar_ia_del_diagnostico(plan.ia),
 		})
 	})
 	return planes
