@@ -20,7 +20,8 @@
 		<!-- Estado de la publicación (solo artículo ya guardado): al final, como resumen de lo que falta -->
 		<estado-publicacion
 		v-if="model.id"
-		:article_id="model.id"></estado-publicacion>
+		:article_id="model.id"
+		:disponible_en_ml="disponible_en_ml"></estado-publicacion>
 	</div>
 </template>
 <script>
@@ -80,6 +81,11 @@ export default {
 		// El artículo del formulario (mismo objeto que se manda al guardar)
 		model() {
 			return this.$store.state.article.model
+		},
+		// true si en el formulario está tildado "Disponible en Mercado Libre" (el checkbox guarda 1/0 o true/false)
+		disponible_en_ml() {
+			let valor = this.model.mercado_libre
+			return valor === true || valor == 1
 		},
 		// Atributos de la categoría elegida
 		atributos() {

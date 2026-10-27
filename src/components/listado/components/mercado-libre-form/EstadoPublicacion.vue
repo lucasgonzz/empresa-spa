@@ -66,8 +66,9 @@
 				size="sm"
 				variant="primary"
 				data-testid="meli-sincronizar-ahora"
+				:disabled="sincronizar_deshabilitado"
 				@click="sincronizar">
-					Sincronizar ahora
+					{{ finalizada ? 'Publicar de nuevo' : 'Sincronizar ahora' }}
 				</b-button>
 				<b-button
 				size="sm"
@@ -78,6 +79,20 @@
 					Actualizar estado
 				</b-button>
 			</div>
+
+			<!-- Por qué el botón está deshabilitado (un botón deshabilitado no muestra su title) -->
+			<p
+			v-if="sincronizar_deshabilitado"
+			class="meli-form__texto m-t-10 m-b-0"
+			data-testid="meli-sincronizar-ayuda">
+				Para publicarlo, tildá «Disponible en Mercado Libre» y guardá el artículo.
+			</p>
+			<p
+			v-else-if="finalizada"
+			class="meli-form__texto m-t-10 m-b-0"
+			data-testid="meli-publicar-de-nuevo-ayuda">
+				Mercado Libre no deja reactivar una publicación finalizada: «Publicar de nuevo» la vuelve a publicar.
+			</p>
 
 			<p class="meli-form__texto m-t-10 m-b-0">
 				Esto muestra lo que está guardado. Cada vez que guardás el artículo, el sistema lo actualiza solo en Mercado Libre.
@@ -93,7 +108,9 @@
  * - `GET mercado-libre/articulo/{id}` → {estado: {me_li_id, permalink, meli_status, ultima_sync:
  *   {status, error_message, synced_at, attempted_at} | null, faltantes: [texto]}}.
  * - "Sincronizar ahora": `POST mercado-libre/articulo/{id}/sincronizar` → encola el artículo y
- *   devuelve el mismo `estado`.
+ *   devuelve el mismo `estado`. Deshabilitado si el formulario no tiene tildado "Disponible en
+ *   Mercado Libre" y el artículo no está publicado. Con la publicación finalizada
+ *   (`meli_status` closed) dice "Publicar de nuevo": la API la vuelve a publicar.
  *
  * `meli_status` es el estado de la publicación en Mercado Libre (active, paused, closed,
  * under_review, inactive...) y `ultima_sync.status` el de la cola del sistema (pendiente,
@@ -105,6 +122,11 @@ export default {
 		article_id: {
 			type: [Number, String],
 			required: true,
+		},
+		// true si en el formulario está tildado "Disponible en Mercado Libre"
+		disponible_en_ml: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	data() {
@@ -119,6 +141,18 @@ export default {
 		},
 		faltantes() {
 			return this.estado && Array.isArray(this.estado.faltantes) ? this.estado.faltantes : []
+		},
+		// La publicación está finalizada en Mercado Libre: "Sincronizar ahora" la vuelve a publicar
+		finalizada() {
+			return !!(this.estado && this.estado.meli_status === 'closed')
+		},
+		/*
+			Sin el tilde de "Disponible en Mercado Libre" y sin publicación, sincronizar no haría
+			nada: se deshabilita y se explica abajo. Si ya está publicado y lo destildaron, queda
+			habilitado: la API pausa la publicación.
+		*/
+		sincronizar_deshabilitado() {
+			return !this.disponible_en_ml && !(this.estado && this.estado.me_li_id)
 		},
 		// Texto y color del estado de la publicación en Mercado Libre
 		estado_de_la_publicacion() {
@@ -205,6 +239,10 @@ export default {
 		 * @returns {void}
 		 */
 		sincronizar() {
+			if (this.sincronizar_deshabilitado) {
+				return
+			}
+			let era_finalizada = this.finalizada
 			this.$store.commit('auth/setMessage', 'Mandando el artículo a Mercado Libre')
 			this.$store.commit('auth/setLoading', true)
 
@@ -218,7 +256,11 @@ export default {
 				if (res.data.estado) {
 					this.estado = res.data.estado
 				}
-				this.$toast.success('Listo: el artículo quedó en cola para mandarse a Mercado Libre. En un rato tocá «Actualizar estado».')
+				if (era_finalizada) {
+					this.$toast.success('Listo: el artículo quedó en cola para publicarse de nuevo en Mercado Libre. En un rato tocá «Actualizar estado».')
+				} else {
+					this.$toast.success('Listo: el artículo quedó en cola para mandarse a Mercado Libre. En un rato tocá «Actualizar estado».')
+				}
 			})
 			.catch(err => {
 				this.$store.commit('auth/setLoading', false)
