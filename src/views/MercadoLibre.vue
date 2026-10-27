@@ -34,6 +34,18 @@ export default {
 	},
 	created() {
 		/*
+			`/mercado-libre` a secas (sin solapa en la URL) no mostraba ninguna solapa, solo el
+			aviso de conexión: se lleva a "Cuenta", que es la solapa por defecto del módulo. Con
+			`replace` para que "atrás" no vuelva a la URL vacía. La solapa "Cuenta" consulta la cuenta
+			sola al mostrarse, así que acá no hace falta la consulta de fondo.
+		*/
+		if (!this.view) {
+			this.$router.replace({ name: 'mercado_libre', params: { view: 'cuenta' } })
+			.catch(() => {})
+			return
+		}
+
+		/*
 			Consulta de fondo (sin indicador global) para saber si la cuenta está conectada y
 			decidir el aviso de las otras solapas. La solapa "Cuenta" hace su propia consulta, con
 			indicador, cuando se abre: si se entra directo a ella no se consulta dos veces.
