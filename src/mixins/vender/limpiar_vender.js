@@ -239,6 +239,16 @@ export default {
 			this.$store.commit('vender/set_limite_credito_excedido', null)
 
 			/*
+				El cobro por QR de Mercado Pago es de ESTA venta (misión cobro-qr-mercado-pago,
+				26/10/2026). Se apaga acá, y solo acá: si el guardado falla, el id tiene que seguir en el
+				store para que "Guardar venta" lo vuelva a mandar (el pago ya se cobró). Que vuelva a
+				null es además la señal con la que el modal "Esperando el pago" sabe que la venta quedó
+				guardada (CobroQrMercadoPago.vue).
+			*/
+			this.$store.commit('vender/setMercadoPagoQrCobroId', null)
+			this.$store.commit('vender/set_mercado_pago_qr_cobro_en_curso', null)
+
+			/*
 				Remito nuevo, deteccion de combos en cero: se descarta la espera pendiente y se
 				olvidan los combos que el vendedor rechazo en la venta anterior.
 			*/

@@ -484,6 +484,13 @@ export default {
 				log: this.$store.state.vender.sale_log,
 				offline_uuid: offline_uuid,
 				/*
+					Cobro con el QR de Mercado Pago ya pagado (misión cobro-qr-mercado-pago, 26/10/2026),
+					la misma clave que el POST online (store/vender/vender.js). El caso real: Mercado
+					Pago confirmó el pago, el POST de la venta se quedó sin respuesta y la venta cayó acá.
+					Sin esta clave, al subirla el cobro quedaría pagado y suelto, sin su venta.
+				*/
+				mercado_pago_qr_cobro_id: this.$store.state.vender.mercado_pago_qr_cobro_id,
+				/*
 					Adjuntos de los renglones (misión ingreso-sin-internet, 23/10/2026). El camino con
 					servidor los sube DESPUÉS de crear la venta, con el id que devuelve; acá ese id
 					todavía no existe, y limpiar Vender los borraba: se perdían sin aviso. Se guardan

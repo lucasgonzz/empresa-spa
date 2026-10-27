@@ -333,6 +333,26 @@ export default {
 		limite_credito_excedido: null,
 
 		/*
+			Cobro con el QR de Mercado Pago del mostrador (misión cobro-qr-mercado-pago, 26/10/2026).
+
+			- `mercado_pago_qr_cobro_id`: id del cobro YA PAGADO que se guarda con esta venta. Viaja en
+			  el POST /api/sale (online y offline) y SaleController::store() lo valida y lo vincula a la
+			  venta. Se prende recién cuando Mercado Pago confirma el pago, y lo apaga limpiar_vender():
+			  si guardar falla, sigue acá para el reintento con "Guardar venta" (el pago ya se cobró).
+			- `mercado_pago_qr_config`: lo que respondió GET /api/mercado-pago/qr al entrar a Vender
+			  (`{conectado, current_acount_payment_method_id, qrs}`), o null si la API no lo tiene (404 de
+			  una API vieja) o falló. De acá sale si se muestra el botón "Cobrar con QR" y con qué método
+			  de pago se cobra.
+			- `mercado_pago_qr_cobro_en_curso`: el cobro que muestra el modal "Esperando el pago"; lo
+			  escribe el botón al crearlo y el modal al consultarlo o volver a generarlo.
+
+			Viven solo en memoria: no se persisten.
+		*/
+		mercado_pago_qr_cobro_id: null,
+		mercado_pago_qr_config: null,
+		mercado_pago_qr_cobro_en_curso: null,
+
+		/*
 			Alto en px de la franja de abajo que ocupa la barra fija de acciones de Vender
 			(VenderActionsBar.vue). La publica la barra al montarse y la vuelve a 0 al
 			desmontarse (salir de Vender). La leen los botones flotantes —el del asistente IA y
@@ -1080,6 +1100,33 @@ export default {
 			state.limite_credito_excedido = value
 		},
 		/**
+		 * Id del cobro por QR de Mercado Pago ya pagado que se guarda con esta venta (null = sin cobro QR).
+		 *
+		 * @param {Object} state
+		 * @param {Number|null} value
+		 */
+		setMercadoPagoQrCobroId(state, value) {
+			state.mercado_pago_qr_cobro_id = value ? value : null
+		},
+		/**
+		 * Configuración del cobro con QR que respondió GET /api/mercado-pago/qr (null si no está disponible).
+		 *
+		 * @param {Object} state
+		 * @param {Object|null} value `{conectado, current_acount_payment_method_id, qrs}`
+		 */
+		set_mercado_pago_qr_config(state, value) {
+			state.mercado_pago_qr_config = value
+		},
+		/**
+		 * Cobro por QR que muestra el modal "Esperando el pago" (null = ninguno).
+		 *
+		 * @param {Object} state
+		 * @param {Object|null} value Cobro con la forma del contrato de la API.
+		 */
+		set_mercado_pago_qr_cobro_en_curso(state, value) {
+			state.mercado_pago_qr_cobro_en_curso = value
+		},
+		/**
 		 * Alto de la barra fija de acciones de Vender (0 cuando no está en pantalla).
 		 *
 		 * @param {Object} state
@@ -1478,6 +1525,14 @@ export default {
 				igual que siempre.
 			*/
 			offline_uuid: info && info.offline_uuid ? info.offline_uuid : undefined,
+			/*
+				Cobro con el QR de Mercado Pago ya pagado (misión cobro-qr-mercado-pago, 26/10/2026).
+				Con un id, SaleController::store() exige que el cobro sea del comercio, esté pagado, no
+				tenga venta y sea por este mismo total, y lo vincula a la venta; si no cumple, responde
+				422 sin crear nada. En null, la venta se guarda como siempre. Va también en el payload
+				offline (mixins/vender/guardar_venta/index.js).
+			*/
+			mercado_pago_qr_cobro_id: state.mercado_pago_qr_cobro_id,
 		}, {
 			/*
 				El aviso global del interceptor de main.js se apaga para este POST: el catch de
