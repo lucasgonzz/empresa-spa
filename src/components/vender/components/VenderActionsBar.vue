@@ -503,4 +503,26 @@ export default {
 	color: var(--color-text-secondary, #6c757d)
 	white-space: nowrap
 	flex-shrink: 0
+
+/* Teléfono (misión cobro-qr-mercado-pago): con el botón "Cobrar con QR" la barra no entraba en 360–390px */
+/* y "Limpiar" quedaba cortado afuera de la pantalla por la izquierda (la barra es nowrap y va a la derecha). */
+/* Se gana el lugar sin sacar botones: menos relleno, sin la tecla de atajo (en un celular no hay teclado) */
+/* y sin el ancho mínimo del botón principal. */
+@media (max-width: 575.98px)
+	.vender-actions-bar
+		padding: 0 8px
+		gap: 6px
+
+	.vender-actions-bar__kbd
+		display: none
+
+	.vender-actions-bar__item--primary
+		margin-left: 0
+		padding-left: 6px
+
+	.vender-actions-bar__guardar-wrap
+		::v-deep button.venta-total-box,
+		::v-deep button.venta-total-box.btn-block
+			min-width: 0
+			padding: 0 14px
 </style>
