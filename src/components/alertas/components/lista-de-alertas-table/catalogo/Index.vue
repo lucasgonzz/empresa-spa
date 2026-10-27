@@ -5,7 +5,7 @@ data-testid="alertas-catalogo"
 :data-subsolapa="sub_activa">
 
 	<!--
-		La segunda fila de solapas (Imagenes | Categorias | Descripciones), atada a la ruta:
+		La segunda fila de solapas (Imagenes | Categorias | Descripciones | Medidas), atada a la ruta:
 		/alertas/catalogo/<sub>. Solo se dibuja si la persona puede ver MAS DE UNA: con una sola solapa
 		la barra no aporta nada. Desde la mision alertas-descripciones (14/10/2026) un empleado ve dos
 		(Imagenes y Descripciones; Categorias sigue siendo solo del dueño), asi que tambien le aparece.
@@ -34,6 +34,7 @@ data-testid="alertas-catalogo"
 	<imagenes v-if="sub_activa === 'imagenes'"></imagenes>
 	<categorias v-else-if="sub_activa === 'categorias'"></categorias>
 	<descripciones v-else-if="sub_activa === 'descripciones'"></descripciones>
+	<medidas v-else-if="sub_activa === 'medidas'"></medidas>
 
 </div>
 </template>
@@ -53,7 +54,8 @@ import { SUBSOLAPAS_DEL_CATALOGO, ruta_normalizada, subsolapas_permitidas } from
  * La lista de sub-solapas sale de un helper (`SUBSOLAPAS_DEL_CATALOGO`) para que las que vienen se
  * sumen agregando un renglón allá y su sección acá, sin rehacer nada. Así se sumó Descripciones
  * (misión alertas-descripciones, 14/10/2026): la revisión de las descripciones que la IA no pudo
- * confirmar, para todo el que ve Catálogo.
+ * confirmar, para todo el que ve Catálogo. Y la misión medidas-masivas-catalogo (27/10/2026) sumó
+ * Medidas: la búsqueda masiva de peso y medidas de los artículos, también para todo el que ve Catálogo.
  *
  * Los números rojos de cada sub-solapa salen de los getters de sus stores (el mismo número que la
  * solapa de arriba suma y que la campana del menú).
@@ -64,6 +66,7 @@ export default {
 		Imagenes: () => import('@/components/alertas/components/lista-de-alertas-table/imagenes/Index'),
 		Categorias: () => import('@/components/alertas/components/lista-de-alertas-table/catalogo/categorias/Index'),
 		Descripciones: () => import('@/components/alertas/components/lista-de-alertas-table/catalogo/descripciones/Index'),
+		Medidas: () => import('@/components/alertas/components/lista-de-alertas-table/medidas/Index'),
 	},
 	computed: {
 		/**
@@ -101,6 +104,7 @@ export default {
 				imagenes: this.$store.getters['image_assignment/badge'],
 				categorias: this.$store.getters['category_proposal/badge'],
 				descripciones: this.$store.getters['ai_description_review/badge'],
+				medidas: this.$store.getters['dimension_search/badge'],
 			}
 		},
 		/**
@@ -156,6 +160,12 @@ export default {
 			}
 			if (valor === 'descripciones') {
 				this.$store.dispatch('ai_description_review/recargar_revision')
+				return
+			}
+			if (valor === 'medidas') {
+				// Mismos pedidos que hace la sección al entrar: la tabla de búsquedas y el número rojo.
+				this.$store.dispatch('dimension_search/get_corridas')
+				this.$store.dispatch('dimension_search/get_resumen')
 			}
 		},
 	},
