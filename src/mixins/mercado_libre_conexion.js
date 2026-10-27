@@ -92,6 +92,10 @@ export default {
 		 */
 		conectar_mercado_libre() {
 			let ventana = window.open('', '_blank')
+			if (ventana) {
+				// La pestaña nueva no tiene por qué poder tocar esta (equivale a rel="noopener")
+				ventana.opener = null
+			}
 
 			this.$store.commit('auth/setMessage', 'Conectando con Mercado Libre')
 			this.$store.commit('auth/setLoading', true)
