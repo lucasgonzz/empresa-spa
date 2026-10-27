@@ -36,16 +36,14 @@
 					<span
 					v-if="cobro.qr && cobro.qr.name"
 					class="mercado-pago-qr-cobros__dato">{{ cobro.qr.name }}</span>
+					<!-- El motivo que da la API cuando no se cobró (vencido, reemplazado por otro cobro, error) -->
 					<span
-					v-if="cobro.sale_num || cobro.sale_id"
-					class="mercado-pago-qr-cobros__dato">Venta N° {{ cobro.sale_num || cobro.sale_id }}</span>
-					<span
-					v-if="cobro.error_message && cobro.estado == 'error'"
+					v-if="cobro.error_message && cobro.estado != 'pagado'"
 					class="mercado-pago-qr-cobros__dato">{{ cobro.error_message }}</span>
 				</div>
 				<div class="mercado-pago-qr-cobros__derecha">
 					<strong class="mercado-pago-qr-cobros__total">{{ price(cobro.total) }}</strong>
-					<b-badge :variant="qr_variante_estado(cobro.estado)">{{ qr_texto_estado(cobro.estado) }}</b-badge>
+					<b-badge :variant="variante(cobro)">{{ texto_estado(cobro) }}</b-badge>
 				</div>
 			</li>
 		</ul>
@@ -74,6 +72,36 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Texto del estado. Un pagado se distingue por si quedó en una venta o no: el que no tiene
+		 * venta es plata cobrada que Vender ofrece como "Pago QR sin venta" para usar.
+		 *
+		 * @param {Object} cobro
+		 * @returns {String}
+		 */
+		texto_estado(cobro) {
+			if (cobro.estado == 'pagado') {
+				if (cobro.sale_num || cobro.sale_id) {
+					return 'Pagado — venta N° ' + (cobro.sale_num || cobro.sale_id)
+				}
+				return 'Pagado — sin venta'
+			}
+			return this.qr_texto_estado(cobro.estado)
+		},
+
+		/**
+		 * Color del estado: el pagado sin venta va en ámbar, para que se vea que falta usarlo.
+		 *
+		 * @param {Object} cobro
+		 * @returns {String}
+		 */
+		variante(cobro) {
+			if (cobro.estado == 'pagado' && !cobro.sale_num && !cobro.sale_id) {
+				return 'warning'
+			}
+			return this.qr_variante_estado(cobro.estado)
+		},
+
 		/**
 		 * Fecha del cobro: la del pago si se pagó, si no la de cuando se cargó.
 		 *
