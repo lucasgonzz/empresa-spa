@@ -8,6 +8,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const vm = require('node:vm')
 const babel = require('@babel/core')
+const compiler = require('vue-template-compiler')
 
 const raiz = path.resolve(__dirname, '..', '..')
 const cache = new Map()
@@ -21,7 +22,15 @@ function cargar(ruta) {
 		return cache.get(ruta)
 	}
 	const archivo = path.join(raiz, 'src', ruta)
-	const codigo = babel.transformSync(fs.readFileSync(archivo, 'utf8'), {
+	let fuente = fs.readFileSync(archivo, 'utf8')
+	let plantilla = null
+	if (ruta.endsWith('.vue')) {
+		// Un componente de un solo archivo: se toma el <script> y se compila el <template>.
+		const sfc = compiler.parseComponent(fuente)
+		fuente = sfc.script ? sfc.script.content : 'export default {}'
+		plantilla = sfc.template ? sfc.template.content : null
+	}
+	const codigo = babel.transformSync(fuente, {
 		babelrc: false,
 		configFile: false,
 		plugins: ['@babel/plugin-transform-modules-commonjs'],
@@ -40,11 +49,29 @@ function cargar(ruta) {
 		}
 		throw new Error('El test no resuelve el import "' + nombre + '" (' + ruta + ')')
 	})
+	if (plantilla !== null && exports.default) {
+		// Mismo criterio de espacios que vue-cli (whitespace: 'condense').
+		const compilado = compiler.compile(plantilla, { whitespace: 'condense' })
+		if (compilado.errors.length) {
+			throw new Error('El template de ' + ruta + ' no compila: ' + compilado.errors.join(' | '))
+		}
+		exports.default.render = new Function(compilado.render)
+		exports.default.staticRenderFns = compilado.staticRenderFns.map(codigo_estatico => new Function(codigo_estatico))
+	}
 	return exports
 }
 
+/**
+ * Agrega la extensión que webpack resolvería: .js, o .vue si no hay un .js con ese nombre.
+ *
+ * @param {string} ruta Ruta relativa a src/, con o sin extensión.
+ * @returns {string}
+ */
 function agregar_extension(ruta) {
-	return /\.(js|vue)$/.test(ruta) ? ruta : ruta + '.js'
+	if (/\.(js|vue)$/.test(ruta)) {
+		return ruta
+	}
+	return fs.existsSync(path.join(raiz, 'src', ruta + '.js')) ? ruta + '.js' : ruta + '.vue'
 }
 
 module.exports = { cargar }
