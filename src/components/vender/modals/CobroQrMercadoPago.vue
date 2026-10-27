@@ -5,8 +5,9 @@
 	cargar el total en el QR del mostrador.
 
 	Mientras el cobro está pendiente (o la venta se está guardando) no se cierra con un clic afuera ni
-	con Esc: la única salida es "Cancelar cobro", que también lo cancela en Mercado Pago. Si se pudiera
-	cerrar a ciegas, el cliente podría pagar un cobro que nadie está mirando y la venta no se guardaría.
+	con Esc: la salida es "Cancelar cobro", que también lo cancela en Mercado Pago, o "Cerrar sin
+	cancelar" cuando cancelar no se puede (sin red, Mercado Pago lo rechaza) o la consulta lleva rato
+	fallando. Si se pudiera cerrar a ciegas, el cliente podría pagar un cobro que nadie está mirando.
 -->
 <b-modal
 id="cobro-qr-mercado-pago"
@@ -64,6 +65,16 @@ hide-footer
 				{{ qr_aviso_pagando }}
 			</b-alert>
 
+			<b-alert
+			:show="puede_cerrar_sin_cancelar"
+			variant="warning"
+			class="cobro-qr__alerta"
+			data-testid="vender-cobro-qr-aviso-cerrar-sin-cancelar">
+				{{ qr_cancelar_fallo ? 'No se pudo cancelar el cobro.' : 'No se puede consultar el cobro: revisá la conexión.' }}
+				Podés cerrar sin cancelarlo. Si el cliente paga igual, el pago va a aparecer en Vender como
+				pago QR sin venta para que lo uses.
+			</b-alert>
+
 			<div class="cobro-qr__acciones">
 				<b-button
 				variant="outline-danger"
@@ -75,6 +86,14 @@ hide-footer
 					small></b-spinner>
 					Cancelar cobro
 				</b-button>
+				<b-button
+				v-if="puede_cerrar_sin_cancelar"
+				variant="outline-secondary"
+				:disabled="qr_cancelando"
+				data-testid="vender-cobro-qr-cerrar-sin-cancelar"
+				@click="cerrar_sin_cancelar">
+					Cerrar sin cancelar
+				</b-button>
 			</div>
 		</template>
 
@@ -83,8 +102,10 @@ hide-footer
 			<b-alert
 			show
 			:variant="qr_cobro.estado == 'error' ? 'danger' : 'warning'"
-			class="cobro-qr__alerta">
+			class="cobro-qr__alerta"
+			data-testid="vender-cobro-qr-terminado">
 				<strong>{{ texto_del_final }}</strong>
+				<!-- El motivo que da la API (por ejemplo: "Otro cobro usó este mismo QR y reemplazó a este.") -->
 				<span v-if="qr_cobro.error_message"><br>{{ qr_cobro.error_message }}</span>
 			</b-alert>
 
@@ -138,7 +159,28 @@ hide-footer
 			<div class="cobro-qr__acciones">
 				<b-button
 				variant="primary"
-				@click="cerrar_despues_del_fallo">
+				@click="cerrar_aviso">
+					Entendido
+				</b-button>
+			</div>
+		</template>
+
+		<!-- ============================== PAGADO, PERO YA NO HAY VENTA EN PANTALLA ============================== -->
+		<template v-else-if="qr_fase == 'sin_venta'">
+			<b-alert
+			show
+			variant="warning"
+			class="cobro-qr__alerta"
+			data-testid="vender-cobro-qr-sin-venta">
+				<strong>El pago se recibió por Mercado Pago</strong>, pero la venta ya no está en pantalla.
+				<br>
+				Va a aparecer en Vender como <strong>Pago QR sin venta</strong> para que lo uses al cargarla
+				de nuevo. <strong>No lo vuelvas a cobrar.</strong>
+			</b-alert>
+			<div class="cobro-qr__acciones">
+				<b-button
+				variant="primary"
+				@click="cerrar_aviso">
 					Entendido
 				</b-button>
 			</div>
@@ -147,13 +189,17 @@ hide-footer
 </b-modal>
 </template>
 <script>
-import mercado_pago_qr from '@/mixins/mercado_pago_qr'
+/*
+	Foto y restauración del cobro de la venta y pagos QR sin venta (trae adentro los pedidos de
+	mixins/mercado_pago_qr.js).
+*/
+import cobro_qr from '@/mixins/vender/cobro_qr'
 /*
 	El mismo camino que "Guardar venta" para una venta nueva: BtnGuardar.vue::saveSale() termina en
 	guardar_venta(false) cuando no es presupuesto ni edición (su check() para ese caso es el del
 	artículo pendiente de agregar, que checkear_vender() ya corre adentro).
 */
-import guardar_venta from '@/mixins/vender/guardar_venta/index'
+import guardar_venta, { hay_guardado_offline_en_curso } from '@/mixins/vender/guardar_venta/index'
 /*
 	🔴 Los chequeos que corre guardar_venta() leen `this.address_id`, `this.sale_type_id`, el cliente y
 	el total, que BtnGuardar.vue recibe de este mixin (y del de mixins/vender.js que trae adentro). Sin
@@ -162,11 +208,13 @@ import guardar_venta from '@/mixins/vender/guardar_venta/index'
 import vender_presupuestos from '@/mixins/vender_presupuestos'
 
 /*
-	Cada cuántos milisegundos se consulta el estado del cobro, y cuánto se espera, como mínimo, a que
-	el guardado termine antes de decir que falló (ver vigilar_guardado()).
+	Cada cuántos milisegundos se consulta el estado del cobro; cuánto tiene que llevar fallando la
+	consulta para ofrecer "Cerrar sin cancelar"; y cuánto se espera, como mínimo, a que el guardado
+	termine antes de decir que falló (ver vigilar_guardado()).
 */
 const MS_ENTRE_CONSULTAS = 3000
-const MS_MINIMO_PARA_DAR_POR_FALLIDO = 2500
+const MS_CONSULTA_CAIDA = 20000
+const MS_MINIMO_PARA_DAR_POR_FALLIDO = 5000
 
 /**
  * Modal "Esperando el pago" del cobro por QR de Mercado Pago.
@@ -176,26 +224,37 @@ const MS_MINIMO_PARA_DAR_POR_FALLIDO = 2500
  * - `pagado`: deja el id del cobro en el store (`vender/setMercadoPagoQrCobroId`) y guarda la venta
  *   por el camino normal. Si se guarda, limpiar_vender() vuelve el id a null y el modal se cierra; si
  *   no, avisa que el pago YA se cobró y que reintente con "Guardar venta" (el id sigue en el store).
- * - `vencido` / `cancelado` / `error`: lo muestra y ofrece volver a generar el cobro o cerrar.
+ *   Si mientras tanto la venta se vació, no se le ata el cobro a nada: queda como pago QR sin venta.
+ * - `vencido` / `cancelado` / `error`: lo muestra (con el motivo de la API) y ofrece volver a
+ *   generar el cobro o cerrar.
+ *
+ * Al cerrar sin pago (cancelar, cerrar, cerrar sin cancelar) la venta vuelve al cobro que tenía
+ * antes del QR (la foto de mixins/vender/cobro_qr.js).
  *
  * 🔴 El intervalo se limpia SIEMPRE: al terminar, al cerrar el modal y en beforeDestroy. Y no se
  * dispara una consulta si la anterior todavía no volvió.
  */
 export default {
 	name: 'CobroQrMercadoPago',
-	mixins: [mercado_pago_qr, guardar_venta, vender_presupuestos],
+	mixins: [cobro_qr, guardar_venta, vender_presupuestos],
 	data() {
 		return {
 			// Copia local del cobro que se muestra (forma del contrato `Cobro`)
 			qr_cobro: null,
-			// 'esperando' | 'terminado' | 'guardando' | 'guardado_fallido' (null con el modal cerrado)
+			// 'esperando' | 'terminado' | 'guardando' | 'guardado_fallido' | 'sin_venta' (null con el modal cerrado)
 			qr_fase: null,
 			// Id del setInterval de la consulta del estado
 			qr_intervalo: null,
 			// true mientras hay una consulta en vuelo (evita apilar pedidos si la red está lenta)
 			qr_consultando: false,
+			// Momento (ms) de la primera consulta fallida de la racha actual (0 = la última anduvo)
+			qr_fallando_desde: 0,
+			// true si la consulta lleva más de MS_CONSULTA_CAIDA fallando
+			qr_consulta_caida: false,
 			// true mientras se está cancelando el cobro
 			qr_cancelando: false,
+			// true si el último intento de cancelar falló (sin red, Mercado Pago lo rechazó, etc.)
+			qr_cancelar_fallo: false,
 			// true mientras se está volviendo a generar el cobro
 			qr_regenerando: false,
 			// Aviso de "el cliente está pagando" que devuelve la API al intentar cancelar
@@ -216,12 +275,20 @@ export default {
 			return this.qr_fase == 'esperando' || this.qr_fase == 'guardando'
 		},
 		/**
+		 * Si se ofrece "Cerrar sin cancelar": cancelar falló, o la consulta lleva rato fallando.
+		 *
+		 * @returns {Boolean}
+		 */
+		puede_cerrar_sin_cancelar() {
+			return this.qr_fase == 'esperando' && (this.qr_cancelar_fallo || this.qr_consulta_caida)
+		},
+		/**
 		 * Título del modal según la fase.
 		 *
 		 * @returns {String}
 		 */
 		titulo() {
-			if (this.qr_fase == 'guardando' || this.qr_fase == 'guardado_fallido') {
+			if (this.qr_fase == 'guardando' || this.qr_fase == 'guardado_fallido' || this.qr_fase == 'sin_venta') {
 				return 'Pago recibido'
 			}
 			if (this.qr_fase == 'terminado') {
@@ -266,19 +333,33 @@ export default {
 	watch: {
 		/**
 		 * limpiar_vender() vuelve el id a null recién cuando la venta quedó guardada (con el servidor
-		 * o en el equipo): es la señal de que todo salió bien.
+		 * o en el equipo): con la venta guardándose (o con el aviso de que falló a la vista), que el id
+		 * esté en null es la señal de que todo salió bien. No se mira el valor anterior: lo único que
+		 * importa es que en esas dos fases el id ya no está.
 		 *
 		 * @param {Number|null} nuevo
-		 * @param {Number|null} anterior
 		 */
-		'$store.state.vender.mercado_pago_qr_cobro_id'(nuevo, anterior) {
-			if (anterior && !nuevo && (this.qr_fase == 'guardando' || this.qr_fase == 'guardado_fallido')) {
+		'$store.state.vender.mercado_pago_qr_cobro_id'(nuevo) {
+			if (!nuevo && (this.qr_fase == 'guardando' || this.qr_fase == 'guardado_fallido')) {
 				this.detener_vigilancia_del_guardado()
 				this.qr_fase = null
 				this.qr_cobro = null
 				this.$bvModal.hide('cobro-qr-mercado-pago')
 			}
 		},
+	},
+	mounted() {
+		/*
+			Si se salió de Vender con un cobro pendiente (el botón Atrás del navegador, que el modal no
+			frena) el cobro sigue en el store y guardar está frenado. Al volver se reabre el modal para
+			seguir esperándolo o cancelarlo.
+		*/
+		let en_curso = this.$store.state.vender.mercado_pago_qr_cobro_en_curso
+		if (en_curso && en_curso.id && en_curso.estado !== 'pagado') {
+			this.$nextTick(() => {
+				this.$bvModal.show('cobro-qr-mercado-pago')
+			})
+		}
 	},
 	beforeDestroy() {
 		this.detener_consulta()
@@ -297,22 +378,38 @@ export default {
 				return
 			}
 			this.qr_cobro = cobro
-			this.qr_aviso_pagando = ''
+			this.reiniciar_avisos()
 			this.qr_fase = 'esperando'
 			this.aplicar_estado(cobro)
 		},
 
 		/**
-		 * Al cerrarse (por cualquier camino): corta la consulta. Si el cobro ya se pagó y la venta
-		 * sigue sin guardar, el id queda en el store para el reintento.
+		 * Al cerrarse (por cualquier camino): corta la consulta. Si se cerró con Esc o con la cruz en
+		 * un cobro terminado (vencido, cancelado, error), es lo mismo que "Cerrar": la venta vuelve a
+		 * como estaba y el cobro deja de estar en curso (si no, guardar quedaría frenado).
 		 *
 		 * @returns {void}
 		 */
 		al_ocultar() {
 			this.detener_consulta()
+			if (this.qr_fase == 'terminado') {
+				this.soltar_cobro_sin_pago()
+			}
 			if (this.qr_fase != 'guardando') {
 				this.qr_fase = null
 			}
+		},
+
+		/**
+		 * Apaga los avisos de la espera (cliente pagando, cancelar falló, consulta caída).
+		 *
+		 * @returns {void}
+		 */
+		reiniciar_avisos() {
+			this.qr_aviso_pagando = ''
+			this.qr_cancelar_fallo = false
+			this.qr_consulta_caida = false
+			this.qr_fallando_desde = 0
 		},
 
 		/**
@@ -341,7 +438,8 @@ export default {
 
 		/**
 		 * Una consulta del estado del cobro. Un error (de red o del servidor) no se avisa: se sigue
-		 * intentando en la próxima vuelta.
+		 * intentando en la próxima vuelta. Si la racha de errores pasa de 20 segundos, se ofrece
+		 * cerrar sin cancelar.
 		 *
 		 * @returns {void}
 		 */
@@ -357,6 +455,8 @@ export default {
 			this.qr_consultar_cobro(cobro_id)
 			.then(res => {
 				self.qr_consultando = false
+				self.qr_fallando_desde = 0
+				self.qr_consulta_caida = false
 				let cobro = res && res.data ? res.data.cobro : null
 				/* Si mientras tanto se volvió a generar, esta respuesta es del cobro viejo */
 				if (cobro && self.qr_cobro && cobro.id == self.qr_cobro.id && self.qr_fase == 'esperando') {
@@ -366,6 +466,11 @@ export default {
 			.catch(err => {
 				self.qr_consultando = false
 				console.log('No se pudo consultar el cobro por QR, se reintenta', err)
+				if (!self.qr_fallando_desde) {
+					self.qr_fallando_desde = Date.now()
+				} else if (Date.now() - self.qr_fallando_desde >= MS_CONSULTA_CAIDA) {
+					self.qr_consulta_caida = true
+				}
 			})
 		},
 
@@ -399,20 +504,32 @@ export default {
 		/**
 		 * El cliente pagó: se deja el cobro en el store y se guarda la venta por el camino normal.
 		 *
+		 * 🔴 Si la venta ya no tiene renglones (se limpió mientras se esperaba), el cobro NO se le ata:
+		 * el id quedaría colgado y viajaría con la venta SIGUIENTE. Queda como pago QR sin venta.
+		 *
 		 * @returns {void}
 		 */
 		procesar_pagado() {
 			this.detener_consulta()
-			this.qr_aviso_pagando = ''
-			this.qr_fase = 'guardando'
+			this.reiniciar_avisos()
 
 			this.$toast.success('Pago recibido por Mercado Pago')
+
+			if (!this.$store.state.vender.items.length) {
+				this.$store.commit('vender/set_mercado_pago_qr_cobro_en_curso', null)
+				this.qr_fase = 'sin_venta'
+				this.qr_refrescar_pagados_sin_venta()
+				return
+			}
+
+			this.qr_fase = 'guardando'
 
 			this.$store.commit('vender/setMercadoPagoQrCobroId', this.qr_cobro.id)
 
 			/*
 				Mismo guard que el botón Guardar (BtnGuardar.vue deshabilita el click con `vendiendo`):
-				si ya hay un guardado en vuelo, no se dispara otro.
+				si ya hay un guardado en vuelo, no se dispara otro. guardar_venta() deja pasar porque el
+				cobro en curso ya está `pagado` (aplicar_estado() lo commiteó).
 			*/
 			if (!this.$store.state.vender.vendiendo) {
 				this.guardar_venta(false)
@@ -423,14 +540,14 @@ export default {
 
 		/**
 		 * Mira si el guardado terminó. El éxito lo detecta el watcher del id (limpiar_vender lo vuelve
-		 * a null); acá se detecta el fallo: el POST ya no está en vuelo (`vendiendo` en false) y el id
-		 * sigue puesto.
+		 * a null); acá se detecta el fallo: no hay POST en vuelo (`vendiendo` en false), no hay una
+		 * venta escribiéndose en el equipo, pasó el mínimo y el id sigue puesto.
 		 *
-		 * 🔴 Se espera un mínimo antes de dar por fallido porque no siempre hay POST para mirar: un
-		 * chequeo que frena no prende `vendiendo`, y la venta sin conexión se escribe en el equipo sin
-		 * prenderlo. Y la limpieza de una venta guardada corre un instante DESPUÉS de que `vendiendo`
-		 * vuelve a false. Si el guardado en el equipo termina después del mínimo, el watcher del id
-		 * cierra el modal igual.
+		 * 🔴 El mínimo existe porque no siempre hay algo que mirar: un chequeo que frena no prende
+		 * nada, y la limpieza de una venta guardada corre un instante DESPUÉS de que `vendiendo` vuelve
+		 * a false. La venta sin conexión sí se mira (hay_guardado_offline_en_curso): con IndexedDB
+		 * lento, el aviso de "no se guardó" saltaba en falso. Si igual termina después, el watcher del
+		 * id cierra el modal.
 		 *
 		 * @returns {void}
 		 */
@@ -454,8 +571,9 @@ export default {
 				}
 
 				let paso_el_minimo = Date.now() - this.qr_inicio_guardado >= MS_MINIMO_PARA_DAR_POR_FALLIDO
+				let sigue_guardando = this.$store.state.vender.vendiendo || hay_guardado_offline_en_curso()
 
-				if (!this.$store.state.vender.vendiendo && paso_el_minimo) {
+				if (!sigue_guardando && paso_el_minimo) {
 					this.qr_fase = 'guardado_fallido'
 					return
 				}
@@ -478,7 +596,8 @@ export default {
 
 		/**
 		 * "Cancelar cobro": lo cancela en Mercado Pago y cierra. Si el cliente está pagando en este
-		 * momento (409 con `pagando`), lo avisa y se sigue esperando.
+		 * momento (409 con `pagando`), lo avisa y se sigue esperando. Si falla por otra cosa, se
+		 * ofrece cerrar sin cancelar.
 		 *
 		 * @returns {void}
 		 */
@@ -504,8 +623,7 @@ export default {
 
 				/* Pagó justo antes de que se cancelara: la venta se guarda igual */
 				if (cobro && cobro.estado == 'pagado') {
-					self.qr_cobro = cobro
-					self.procesar_pagado()
+					self.aplicar_estado(cobro)
 					return
 				}
 
@@ -521,12 +639,14 @@ export default {
 				}
 
 				console.log(err)
-				self.$toast.error(self.qr_mensaje_de_error(err, 'No se pudo cancelar el cobro. Probá de nuevo.'))
+				self.qr_cancelar_fallo = true
+				self.$toast.error(self.qr_mensaje_de_error(err, 'No se pudo cancelar el cobro.'))
 			})
 		},
 
 		/**
-		 * "Volver a generar": carga otra vez el total actual de la venta en el QR.
+		 * "Volver a generar": carga otra vez el total actual de la venta en el QR. La foto del cobro
+		 * de antes del QR se conserva (es la primera, ver qr_sacar_foto_del_pago()).
 		 *
 		 * @returns {void}
 		 */
@@ -538,7 +658,7 @@ export default {
 			let self = this
 			let vender = this.$store.state.vender
 
-			/* El total del renglón actual, por si algo cambió desde el cobro anterior */
+			/* El total de los renglones actuales, por si algo cambió desde el cobro anterior */
 			this.setTotal()
 
 			self.qr_regenerando = true
@@ -562,7 +682,7 @@ export default {
 					return
 				}
 
-				self.qr_aviso_pagando = ''
+				self.reiniciar_avisos()
 				self.qr_fase = 'esperando'
 				self.detener_consulta()
 				self.aplicar_estado(cobro)
@@ -579,25 +699,55 @@ export default {
 		},
 
 		/**
-		 * Cierra el modal sin cobro en curso.
+		 * El cobro deja de ser de esta venta sin haberse pagado: sale del store y la venta vuelve al
+		 * cobro que tenía antes del QR.
+		 *
+		 * @returns {void}
+		 */
+		soltar_cobro_sin_pago() {
+			this.$store.commit('vender/set_mercado_pago_qr_cobro_en_curso', null)
+			this.qr_restaurar_foto_del_pago()
+		},
+
+		/**
+		 * Cierra el modal sin pago (cobro cancelado o terminado).
 		 *
 		 * @returns {void}
 		 */
 		cerrar() {
 			this.detener_consulta()
+			this.soltar_cobro_sin_pago()
 			this.qr_fase = null
 			this.qr_cobro = null
-			this.$store.commit('vender/set_mercado_pago_qr_cobro_en_curso', null)
 			this.$bvModal.hide('cobro-qr-mercado-pago')
 		},
 
 		/**
-		 * Cierra el aviso de "el pago ya se cobró pero la venta no se guardó". El id del cobro queda
-		 * en el store: el próximo "Guardar venta" lo manda.
+		 * "Cerrar sin cancelar": cierra el modal SIN tocar el cobro en el servidor (no se pudo
+		 * cancelar, o no hay forma de consultarlo). Si el cliente paga igual, la API lo deja como pago
+		 * QR sin venta y Vender lo ofrece para usarlo.
 		 *
 		 * @returns {void}
 		 */
-		cerrar_despues_del_fallo() {
+		cerrar_sin_cancelar() {
+			this.detener_consulta()
+			this.soltar_cobro_sin_pago()
+			this.qr_fase = null
+			this.qr_cobro = null
+			this.$bvModal.hide('cobro-qr-mercado-pago')
+			this.$toast.info('Se cerró sin cancelar el cobro. Si el cliente paga, el pago aparece en Vender como "Pago QR sin venta".', {
+				duration: 10000,
+			})
+			this.qr_refrescar_pagados_sin_venta()
+		},
+
+		/**
+		 * Cierra los avisos de después del pago ("no se guardó" y "ya no hay venta"). En el primero el
+		 * id del cobro queda en el store: el próximo "Guardar venta" lo manda.
+		 *
+		 * @returns {void}
+		 */
+		cerrar_aviso() {
 			this.detener_vigilancia_del_guardado()
 			this.qr_fase = null
 			this.$bvModal.hide('cobro-qr-mercado-pago')

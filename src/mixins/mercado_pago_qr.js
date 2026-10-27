@@ -128,6 +128,16 @@ export default {
 		},
 
 		/**
+		 * Cobros por QR que el cliente pagó y no quedaron en ninguna venta (últimos 7 días). Vender los
+		 * ofrece con "Usar en esta venta".
+		 *
+		 * @returns {Promise} Promesa de axios; `res.data.cobros` trae la lista.
+		 */
+		qr_pedir_pagados_sin_venta() {
+			return this.$api.get('mercado-pago/qr/cobros?pagados_sin_venta=1', CONFIG_SIN_AVISO_GLOBAL)
+		},
+
+		/**
 		 * Texto en español de comerciante para el estado de un cobro.
 		 *
 		 * @param {String} estado `pendiente|pagado|vencido|cancelado|error`.
