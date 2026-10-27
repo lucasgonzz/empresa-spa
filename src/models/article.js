@@ -761,6 +761,40 @@ export default {
 			if_has_extencion: 'usa_mercado_libre',
 			keep_after_create: true,
 		},
+		/*
+			Categoría de Mercado Libre y lo que esa categoría pide (misión mercado-libre-integracion,
+			27/10/2026).
+
+			No tiene input propio: Listado.vue la reemplaza con `<template #meli_category_id>` (el
+			mismo mecanismo que `#name` y `#stock`) por el componente
+			components/listado/components/mercado-libre-form/Index.vue, que trae el predictor de
+			categorías, los atributos de la categoría y el estado de la publicación.
+
+			El valor es el id LOCAL de la categoría (tabla meli_categories), el que devuelve
+			`POST meli-category/resolve`. Junto con él viaja `meli_attributes`
+			([{meli_attribute_id, value_id, value_name}]), que NO es una prop del modelo: el
+			componente la agrega al artículo recién cuando el usuario toca algo, y así un guardado
+			que no pasó por esta solapa no la manda y la API no pisa los atributos guardados (la API
+			solo los toca si el pedido trae la clave).
+
+			Va inmediatamente después de "Disponible en Mercado Libre": la categoría es lo primero
+			que hay que resolver para publicar. Sigue adentro del grupo "Mercado Libre" porque el
+			formulario asigna cada prop al último `group_title` visible que la precede, y el de
+			arriba es ese. `full_cols` la deja en un renglón propio, así que los selects de abajo
+			(tipo, modo, condición, descripción) arrancan un renglón nuevo.
+			`not_show_on_table` y `no_usar_en_filtros` porque el id local no le dice nada a nadie en
+			una columna ni en un filtro.
+		*/
+		{
+			text: 'Categoría de Mercado Libre',
+			key: 'meli_category_id',
+			not_show: true,
+			not_show_on_table: true,
+			no_usar_en_filtros: true,
+			full_cols: true,
+			if_has_extencion: 'usa_mercado_libre',
+			description: 'La categoría define en qué parte de Mercado Libre aparece el artículo y qué datos te pide (marca, modelo, código de barras, etc.). El sistema te sugiere la categoría según el nombre del artículo.',
+		},
 		{
 			text: 'Tipo publicacion',
 			key: 'meli_listing_type_id',
@@ -791,37 +825,6 @@ export default {
 			type: 'textarea',
 			not_show: true,
 			if_has_extencion: 'usa_mercado_libre',
-		},
-		/*
-			Categoría de Mercado Libre y lo que esa categoría pide (misión mercado-libre-integracion,
-			27/10/2026).
-
-			No tiene input propio: Listado.vue la reemplaza con `<template #meli_category_id>` (el
-			mismo mecanismo que `#name` y `#stock`) por el componente
-			components/listado/components/mercado-libre-form/Index.vue, que trae el predictor de
-			categorías, los atributos de la categoría y el estado de la publicación.
-
-			El valor es el id LOCAL de la categoría (tabla meli_categories), el que devuelve
-			`POST meli-category/resolve`. Junto con él viaja `meli_attributes`
-			([{meli_attribute_id, value_id, value_name}]), que NO es una prop del modelo: el
-			componente la agrega al artículo recién cuando el usuario toca algo, y así un guardado
-			que no pasó por esta solapa no la manda y la API no pisa los atributos guardados (la API
-			solo los toca si el pedido trae la clave).
-
-			Va al final del grupo a propósito: es el bloque más largo (una categoría puede pedir
-			decenas de datos) y los selects cortos de arriba quedan a la vista sin bajar.
-			`not_show_on_table` y `no_usar_en_filtros` porque el id local no le dice nada a nadie en
-			una columna ni en un filtro.
-		*/
-		{
-			text: 'Categoría de Mercado Libre',
-			key: 'meli_category_id',
-			not_show: true,
-			not_show_on_table: true,
-			no_usar_en_filtros: true,
-			full_cols: true,
-			if_has_extencion: 'usa_mercado_libre',
-			description: 'La categoría define en qué parte de Mercado Libre aparece el artículo y qué datos te pide (marca, modelo, código de barras, etc.). El sistema te sugiere la categoría según el nombre del artículo.',
 		},
 
 		// Propiedades de distribuidora
