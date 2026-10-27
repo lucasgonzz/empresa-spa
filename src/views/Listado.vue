@@ -98,7 +98,12 @@
 		</template>
 
 		<template #stock>
-			<stock-input></stock-input> 
+			<stock-input></stock-input>
+		</template>
+
+		<!-- Mercado Libre (misión mercado-libre-integracion, 27/10/2026): categoría con el predictor, los datos que pide la categoría y el estado de la publicación. La prop solo existe con la extensión usa_mercado_libre. -->
+		<template #meli_category_id>
+			<mercado-libre-form></mercado-libre-form>
 		</template>
 
 
@@ -225,6 +230,7 @@ export default {
 
 		MercadoLibre: () => import('@/components/listado/modals/mercado-libre/Index'),
 		MercadoLibreCategoryPredictor: () => import('@/components/listado/modals/mercado-libre/category-predictor/Index'),
+		MercadoLibreForm: () => import('@/components/listado/components/mercado-libre-form/Index'),
 		ArticleUbications: () => import('@/components/listado/modals/article-ubications/Index'),
 
 
@@ -300,9 +306,38 @@ export default {
 		addressMovement() {
 			console.log('addressMovement')
 		},
+		/**
+		 * Al cerrarse el formulario del artículo, saca los atributos de Mercado Libre que el
+		 * componente de Mercado Libre le había agregado al modelo (misión mercado-libre-integracion,
+		 * 27/10/2026).
+		 *
+		 * `meli_attributes` no es una prop del modelo: el componente la agrega cuando el usuario
+		 * toca un atributo, y viaja con el resto del artículo al guardar. El modelo del formulario
+		 * es el MISMO objeto que la fila del listado (el artículo tiene full_reactivity), así que
+		 * si el usuario editaba atributos y cerraba sin guardar, la clave quedaba colgada de la
+		 * fila y el próximo guardado de ese artículo la mandaba aunque nadie hubiera abierto la
+		 * solapa de Mercado Libre. Sin la clave, la API no toca los atributos guardados.
+		 *
+		 * @param {Object} evento Evento de bootstrap-vue.
+		 * @param {String} modal_id Id del modal que se cerró.
+		 * @returns {void}
+		 */
+		limpiar_atributos_de_mercado_libre(evento, modal_id) {
+			if (modal_id != 'article') {
+				return
+			}
+			let model = this.$store.state.article.model
+			if (model && Object.prototype.hasOwnProperty.call(model, 'meli_attributes')) {
+				this.$delete(model, 'meli_attributes')
+			}
+		},
 	},
 	created() {
 		this.get_ultimos_articulos_actualizados()
-	}
+		this.$root.$on('bv::modal::hidden', this.limpiar_atributos_de_mercado_libre)
+	},
+	beforeDestroy() {
+		this.$root.$off('bv::modal::hidden', this.limpiar_atributos_de_mercado_libre)
+	},
 }
 </script>
