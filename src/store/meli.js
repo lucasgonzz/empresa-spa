@@ -29,8 +29,19 @@ export default {
 			este cache, cada vuelta a la solapa volvía a pedir la categoría con todos sus atributos.
 		*/
 		categorias_resueltas: {},
+
+		/*
+			Último texto tecleado en el campo del nombre del artículo (o en el modal de búsqueda que
+			ese campo abre), mientras el formulario del artículo está abierto. Lo escribe Listado.vue
+			(`recordar_nombre_para_mercado_libre`) y lo lee mercado-libre-form/CategorySelector.vue
+			para sugerir la categoría. Ver el comentario de ese método en Listado.vue.
+		*/
+		nombre_escrito: '',
 	},
 	mutations: {
+		set_nombre_escrito(state, value) {
+			state.nombre_escrito = value
+		},
 		set_categories_predictor(state, value) {
 			state.categories_predictor = value
 		},

@@ -396,6 +396,12 @@ export default {
 			if (nombre) {
 				return nombre
 			}
+			// Lo último que se tecleó en el campo del nombre (lo guarda Listado.vue, ver su
+			// `recordar_nombre_para_mercado_libre`: este componente no existe mientras se escribe)
+			let tecleado = (this.$store.state.meli.nombre_escrito || '').trim()
+			if (tecleado) {
+				return tecleado
+			}
 			let campos = ['article-name', 'article-name-search-modal-input']
 			let escrito = ''
 			campos.forEach(id => {
