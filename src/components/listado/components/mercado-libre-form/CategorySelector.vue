@@ -212,8 +212,10 @@
  * Tres maneras de llegar a la categoría:
  * - Sugeridas: el predictor de Mercado Libre según el nombre del artículo
  *   (`GET meli-category-predictor?q=<nombre>` → {categories: [{category_id, category_name,
- *   domain_name, path}]}). Se piden al abrir y con "Sugerir de nuevo"; si cambia el nombre
- *   mientras el componente está a la vista, se vuelven a pedir con una espera (debounce).
+ *   domain_name, path}]}). Se piden cuando el bloque pasa a verse (IntersectionObserver: al
+ *   abrir la solapa o el modal) si no hay sugerencias para el nombre actual, y con "Sugerir de
+ *   nuevo"; si cambia el nombre mientras se ve, se vuelven a pedir con una espera (debounce). El
+ *   nombre es `model.name` o lo escrito en el campo del nombre (ver `nombre_para_sugerir`).
  * - Buscar: el mismo endpoint con el texto que escribe el usuario.
  * - Ver todas: el árbol de categorías (`GET meli-category-children/{id?}` → {categories: [{id,
  *   name}], path: [{id, name}], hoja}); sin id trae las de primer nivel.
@@ -266,6 +268,10 @@ export default {
 			arbol_cargado: false,
 			// Espera para volver a sugerir cuando cambia el nombre
 			timer_nombre: null,
+			// IntersectionObserver que avisa cuando el bloque se ve en pantalla (null si el navegador no lo tiene)
+			observador: null,
+			// true mientras el bloque está a la vista
+			visible: false,
 		}
 	},
 	computed: {
@@ -284,7 +290,7 @@ export default {
 	watch: {
 		// Si el nombre cambia mientras se eligen sugeridas, se vuelven a pedir después de una pausa
 		nombre_articulo() {
-			if (!this.eligiendo || this.modo != 'sugeridas') {
+			if (!this.eligiendo || this.modo != 'sugeridas' || !this.se_ve()) {
 				return
 			}
 			clearTimeout(this.timer_nombre)
@@ -292,10 +298,10 @@ export default {
 				this.pedir_sugerencias()
 			}, 800)
 		},
-		// Cuando el selector se abre (terminó de cargar sin categoría), se piden las sugerencias
+		// Cuando el selector se abre (terminó de cargar sin categoría), se piden las sugerencias si ya se ve
 		eligiendo(valor) {
-			if (valor && this.modo == 'sugeridas' && !this.sugerencias_pedidas) {
-				this.pedir_sugerencias()
+			if (valor && this.se_ve()) {
+				this.sugerir_si_hace_falta()
 			}
 		},
 		// Con una categoría nueva elegida, el selector se cierra
@@ -306,14 +312,104 @@ export default {
 		},
 	},
 	mounted() {
-		if (this.eligiendo) {
-			this.pedir_sugerencias()
+		/*
+			Las sugerencias se piden cuando el bloque SE VE, no cuando se monta. El componente puede
+			montarse con el formulario todavía sin nombre (por ejemplo, si el modal abre directo en la
+			solapa "Mercado Libre") y el usuario recién escribe el nombre después, en "Datos
+			generales". El IntersectionObserver avisa cada vez que el bloque pasa a verse (también al
+			volver a esta solapa o al abrirse el modal) y ahí se pide con el nombre de ese momento.
+			Sin IntersectionObserver (navegador muy viejo) se pide al montar, como antes.
+		*/
+		if (typeof window !== 'undefined' && typeof window.IntersectionObserver === 'function') {
+			this.observador = new window.IntersectionObserver(this.al_cambiar_visibilidad, { threshold: 0 })
+			this.observador.observe(this.$el)
+		} else if (this.eligiendo) {
+			this.sugerir_si_hace_falta()
 		}
 	},
 	beforeDestroy() {
 		clearTimeout(this.timer_nombre)
+		if (this.observador) {
+			this.observador.disconnect()
+			this.observador = null
+		}
 	},
 	methods: {
+		/**
+		 * El IntersectionObserver avisó un cambio: si el bloque pasó a verse, se piden las
+		 * sugerencias que falten.
+		 *
+		 * @param {Array} entradas IntersectionObserverEntry del bloque.
+		 * @returns {void}
+		 */
+		al_cambiar_visibilidad(entradas) {
+			let visible = entradas.filter(entrada => entrada.isIntersecting).length > 0
+			let recien_visible = visible && !this.visible
+			this.visible = visible
+			if (recien_visible && this.eligiendo) {
+				this.sugerir_si_hace_falta()
+			}
+		},
+
+		/**
+		 * true si el bloque está a la vista (o si no hay cómo saberlo).
+		 *
+		 * @returns {Boolean}
+		 */
+		se_ve() {
+			return !this.observador || this.visible
+		},
+
+		/**
+		 * Pide las sugerencias si se está eligiendo en "Sugeridas" y todavía no hay sugerencias para
+		 * el nombre actual (o nunca se pidieron, para mostrar el aviso de que falta el nombre).
+		 *
+		 * @returns {void}
+		 */
+		sugerir_si_hace_falta() {
+			if (!this.eligiendo || this.modo != 'sugeridas') {
+				return
+			}
+			let nombre = this.nombre_para_sugerir()
+			if (!this.sugerencias_pedidas || (nombre && nombre != this.consulta_sugerida)) {
+				this.pedir_sugerencias()
+			}
+		},
+
+		/**
+		 * Nombre con el que se piden las sugerencias: `model.name` o, si está vacío, lo que está
+		 * escrito en el campo del nombre.
+		 *
+		 * 🔴 Por qué se lee el campo: en un artículo NUEVO sin código de barras, el nombre se escribe
+		 * en el buscador de NameInput.vue (common-vue/components/search) y vive en la `query` de ese
+		 * buscador, no en el modelo. Pasa a `model.name` recién con Enter o al guardar (rama
+		 * `set_model_on_click_or_prop_with_query_if_null` de ModelForm.vue). Sin leer el campo,
+		 * "Sugeridas" decía "Escribí el nombre…" con el nombre escrito (medido en la verificación
+		 * del 27/10/2026). El campo es `#article-name` (el input del buscador) y, si el usuario
+		 * escribió en el modal de búsqueda, `#article-name-search-modal-input`. Solo se lee: no se
+		 * escribe nada en el modelo, el nombre sigue pasando al artículo como siempre.
+		 *
+		 * @returns {String}
+		 */
+		nombre_para_sugerir() {
+			let nombre = (this.nombre_articulo || '').trim()
+			if (nombre) {
+				return nombre
+			}
+			let campos = ['article-name', 'article-name-search-modal-input']
+			let escrito = ''
+			campos.forEach(id => {
+				if (escrito) {
+					return
+				}
+				let campo = document.getElementById(id)
+				if (campo && typeof campo.value == 'string' && campo.value.trim()) {
+					escrito = campo.value.trim()
+				}
+			})
+			return escrito
+		},
+
 		/**
 		 * Abre el selector sobre una categoría ya elegida.
 		 *
@@ -321,9 +417,7 @@ export default {
 		 */
 		empezar_a_cambiar() {
 			this.cambiando = true
-			if (this.modo == 'sugeridas' && !this.sugerencias_pedidas) {
-				this.pedir_sugerencias()
-			}
+			this.sugerir_si_hace_falta()
 		},
 
 		/**
@@ -337,8 +431,8 @@ export default {
 			if (modo == 'explorar' && !this.arbol_cargado) {
 				this.explorar(null)
 			}
-			if (modo == 'sugeridas' && !this.sugerencias_pedidas) {
-				this.pedir_sugerencias()
+			if (modo == 'sugeridas') {
+				this.sugerir_si_hace_falta()
 			}
 		},
 
@@ -348,7 +442,7 @@ export default {
 		 * @returns {void}
 		 */
 		pedir_sugerencias() {
-			let nombre = (this.nombre_articulo || '').trim()
+			let nombre = this.nombre_para_sugerir()
 			this.sugerencias_pedidas = true
 			if (!nombre) {
 				this.sugerencias = []
