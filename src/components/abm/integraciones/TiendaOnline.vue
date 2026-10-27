@@ -30,23 +30,37 @@
 			paso y la prueba de cotización, y en media columna (384px en una tablet de 768) queda
 			ilegible. Mercado Pago sigue a la mitad, como antes.
 		-->
+		<!--
+			La tarjeta "Cobro con QR en el mostrador" (misión cobro-qr-mercado-pago) va pegada a la de
+			Mercado Pago, en la otra mitad de la fila, y solo con Mercado Pago conectado. Si la API no
+			tiene el cobro con QR (404), la tarjeta no se dibuja sola.
+		-->
 		<b-row v-else>
-			<b-col
-			v-for="integracion in integraciones_tienda_online"
-			:key="integracion.slug"
-			:md="integracion.slug == 'zipnova' ? 12 : 6"
-			class="m-b-15">
-				<mercado-pago-card
-				v-if="integracion.slug == 'mercado_pago'"
-				:integracion="integracion"
-				@actualizar="cargarIntegraciones"></mercado-pago-card>
+			<template v-for="integracion in integraciones_tienda_online">
+				<b-col
+				:key="integracion.slug"
+				:md="integracion.slug == 'zipnova' ? 12 : 6"
+				class="m-b-15">
+					<mercado-pago-card
+					v-if="integracion.slug == 'mercado_pago'"
+					:integracion="integracion"
+					@actualizar="cargarIntegraciones"></mercado-pago-card>
 
-				<zipnova-card
-				v-else-if="integracion.slug == 'zipnova'"
-				:integracion="integracion"
-				@actualizar="cargarIntegraciones"
-				@actualizado="reemplazarIntegracion"></zipnova-card>
-			</b-col>
+					<zipnova-card
+					v-else-if="integracion.slug == 'zipnova'"
+					:integracion="integracion"
+					@actualizar="cargarIntegraciones"
+					@actualizado="reemplazarIntegracion"></zipnova-card>
+				</b-col>
+
+				<b-col
+				v-if="integracion.slug == 'mercado_pago' && integracion.connected"
+				:key="integracion.slug + '_qr'"
+				md="6"
+				class="m-b-15">
+					<mercado-pago-qr-card></mercado-pago-qr-card>
+				</b-col>
+			</template>
 		</b-row>
 	</div>
 </template>
@@ -75,6 +89,8 @@ export default {
 	components: {
 		MercadoPagoCard: () => import('@/components/abm/integraciones/MercadoPagoCard'),
 		ZipnovaCard: () => import('@/components/abm/integraciones/ZipnovaCard'),
+		/* Cobro con el QR de Mercado Pago en el mostrador (misión cobro-qr-mercado-pago) */
+		MercadoPagoQrCard: () => import('@/components/abm/integraciones/mercado-pago-qr/Index'),
 	},
 	data() {
 		return {
