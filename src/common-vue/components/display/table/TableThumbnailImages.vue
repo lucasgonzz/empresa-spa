@@ -29,6 +29,10 @@
 				Imagen no encontrada
 			</div>
 		</div>
+		<table-image-preview
+		v-if="preview_image_url"
+		:image_url="preview_image_url"
+		@close="preview_image_url = ''"></table-image-preview>
 	</div>
 </template>
 <script>
@@ -39,6 +43,9 @@
  * debe salir y volver a entrar para avanzar de nuevo).
  */
 export default {
+	components: {
+		TableImagePreview: () => import('@/common-vue/components/display/table/TableImagePreview'),
+	},
 	props: {
 		model: {
 			type: Object,
@@ -48,6 +55,11 @@ export default {
 			type: Object,
 			required: true,
 		},
+		// Solo los listados que ya ampliaban fotos lo habilitan; Vender y Alertas conservan su uso.
+		preview_enabled: {
+			type: Boolean,
+			default: false,
+		},
 		/** Intervalo en ms entre cambios automáticos de imagen. */
 		auto_interval_ms: {
 			type: Number,
@@ -56,6 +68,7 @@ export default {
 	},
 	data() {
 		return {
+			preview_image_url: '',
 			/** Índice de la URL visible en `image_urls`. */
 			current_index: 0,
 			/** ID del `setInterval` del ciclo automático. */
@@ -298,6 +311,10 @@ export default {
 		on_thumbnail_click() {
 			if (!this.current_image_url || this.is_loading || this.show_load_error) {
 				return
+			}
+			if (this.preview_enabled) {
+				// Capturamos la URL clickeada: la rotación de miniaturas no debe cambiar la foto abierta.
+				this.preview_image_url = this.current_image_url
 			}
 			this.$emit('preview', this.current_image_url)
 		},

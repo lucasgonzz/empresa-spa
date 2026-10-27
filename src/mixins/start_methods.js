@@ -81,6 +81,8 @@ export default {
 			.catch(err => console.log(err))
 			.then(() => this.get_resumen_de_descripciones())
 			.catch(err => console.log(err))
+			.then(() => this.get_resumen_de_medidas())
+			.catch(err => console.log(err))
 			.then(() => this.check_synced_version_notifications())
 			.catch(err => console.log(err))
 			.then(() => this.check_excel_analysis_en_curso())
@@ -343,6 +345,22 @@ export default {
 				return Promise.resolve()
 			}
 			return this.$store.dispatch('ai_description_review/get_resumen')
+		},
+		/**
+		 * Trae el resumen de la busqueda masiva de peso y medidas (cuantas propuestas esperan revision
+		 * y cuantas busquedas terminadas nadie abrio) para el numero rojo de Alertas -> Catalogo ->
+		 * Medidas y de la campana (mision medidas-masivas-catalogo, 27/10/2026).
+		 *
+		 * NO exige la extension "Agentes de IA" (a diferencia del de imagenes): la API de medidas dejo
+		 * de pedirla (Masquito no la tiene ni se le va a activar). Se pide siempre. La accion del store
+		 * es silenciosa y resuelve siempre (un 404 de una API que todavia no tiene la ruta, o un 403,
+		 * dejan el numero en cero sin mostrar nada), asi que no le puede cortar el turno al eslabon
+		 * que sigue.
+		 *
+		 * @returns {Promise}
+		 */
+		get_resumen_de_medidas() {
+			return this.$store.dispatch('dimension_search/get_resumen')
 		},
 		get_ventas_sin_cobrar() {
 			if (this.owner.dias_alertar_empleados_ventas_no_cobradas) {

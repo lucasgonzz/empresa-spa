@@ -5,10 +5,11 @@
  * "Imágenes" (/alertas/imagenes). Ahora esa solapa se llama "Catálogo" y adentro lleva sub-solapas:
  *
  *   Fila 1 (view):       Cobros | Stock mínimo | Catálogo | Pedidos Proveedor | ...
- *   Fila 2 (sub_view):   Imágenes | Categorías | Descripciones     (solo dentro de Catálogo)
+ *   Fila 2 (sub_view):   Imágenes | Categorías | Descripciones | Medidas   (solo dentro de Catálogo)
  *
  * La URL canónica es /alertas/catalogo/imagenes, /alertas/catalogo/categorias y (desde la misión
- * alertas-descripciones, 14/10/2026) /alertas/catalogo/descripciones. Pero la URL vieja
+ * alertas-descripciones, 14/10/2026) /alertas/catalogo/descripciones y (desde la misión
+ * medidas-masivas-catalogo, 27/10/2026) /alertas/catalogo/medidas. Pero la URL vieja
  * /alertas/imagenes (con o sin `?asignacion=7&solapa=a_revisar`) sigue siendo la que usan los links
  * de "Revisar en Alertas", el historial del listado, la píldora de procesos y cualquier favorito:
  * tiene que seguir andando. Este archivo es la ÚNICA definición de "qué sub-solapa corresponde a la
@@ -22,6 +23,9 @@
  *   - procesos-en-segundo-plano/Fila.vue y BatchDescriptionsSummaryModal.vue
  *                                            -> lo mismo para "Revisar en Alertas" de las descripciones
  *                                               (`destino_de_descripciones`, `es_ruta_de_descripciones`).
+ *   - quien quiera mandar a una corrida de Medidas (aviso de fin, píldora de procesos, a futuro)
+ *                                            -> `destino_de_medidas` y `es_ruta_de_medidas`; la
+ *                                               sección lee `?corrida=<id>&solapa=<solapa>`.
  * Si la regla estuviera repetida en cada uno, bastaría que uno se olvide del alias viejo para que la
  * pestaña muestre una cosa y la URL otra.
  *
@@ -34,7 +38,7 @@
  * NUNCA tiran excepción: en el render de Vue una excepción es una pantalla en blanco.
  */
 
-/** `view` de la solapa de primer nivel que agrupa imágenes, categorías y descripciones. */
+/** `view` de la solapa de primer nivel que agrupa imágenes, categorías, descripciones y medidas. */
 export const VISTA_DEL_CATALOGO = 'catalogo'
 
 /**
@@ -56,7 +60,8 @@ export const VISTA_VIEJA_DE_IMAGENES = 'imagenes'
  *
  * Para sumar una sub-solapa alcanza con agregar un renglón acá, decir quién la ve en
  * `subsolapas_permitidas` y montar su sección en catalogo/Index.vue. Así se sumó Descripciones (misión
- * alertas-descripciones, 14/10/2026); Resumen y Marcas siguen pendientes.
+ * alertas-descripciones, 14/10/2026) y Medidas (misión medidas-masivas-catalogo, 27/10/2026); Resumen
+ * y Marcas siguen pendientes.
  *
  * @type {Array<{valor: String, nombre: String, testid: String}>}
  */
@@ -64,6 +69,7 @@ export const SUBSOLAPAS_DEL_CATALOGO = Object.freeze([
 	Object.freeze({valor: 'imagenes', nombre: 'Imágenes', testid: 'imagenes'}),
 	Object.freeze({valor: 'categorias', nombre: 'Categorías', testid: 'categorias'}),
 	Object.freeze({valor: 'descripciones', nombre: 'Descripciones', testid: 'descripciones'}),
+	Object.freeze({valor: 'medidas', nombre: 'Medidas', testid: 'medidas'}),
 ])
 
 /** Sub-solapa a la que se cae cuando la ruta no trae una válida y permitida (la de siempre). */
@@ -103,18 +109,32 @@ export function es_subsolapa_del_catalogo(sub_view) {
  * es el contenido de cada artículo, no un cambio de todo el catálogo. La API la acota al negocio de la
  * sesión, igual que Imágenes.
  *
+ * Medidas es para todos, como Imágenes y Descripciones (misión medidas-masivas-catalogo, 27/10/2026):
+ * son datos de cada artículo (peso y medidas), no un cambio de todo el catálogo. Lanzar la búsqueda de
+ * todo el catálogo es otra cosa: eso lo limita el acceso maestro dentro de la sección y la API.
+ *
  * Esto es SOLO "qué pestaña se dibuja": la autoridad sobre quién puede elegir o revisar es de la API.
+ *
+ * Sin la extensión «Agentes de IA» (`agentes_ia`), Imágenes, Categorías y Descripciones no se ofrecen
+ * (sus rutas de la API la exigen, 403 sin ella) y queda SOLO Medidas, cuyas rutas no la piden: hay
+ * clientes (Masquito) que no la tienen y a los que no se les va a activar. Es el tercer parámetro, y
+ * solo un `false` explícito la quita: sin pasarlo (o con `undefined`) todo queda como antes.
  *
  * @param {*} es_dueno true si el usuario no tiene `owner_id` (computed global `is_owner`).
  * @param {*} es_acceso_maestro true si la sesión entró con la clave maestra (`auth.user.es_acceso_maestro`).
+ * @param {*} [con_agentes_ia] false si el negocio no tiene la extensión `agentes_ia`.
  * @returns {Array<String>} Los `valor` permitidos, en el orden de `SUBSOLAPAS_DEL_CATALOGO`.
  */
-export function subsolapas_permitidas(es_dueno, es_acceso_maestro) {
+export function subsolapas_permitidas(es_dueno, es_acceso_maestro, con_agentes_ia) {
+	if (con_agentes_ia === false) {
+		return ['medidas']
+	}
 	let permitidas = ['imagenes']
 	if (es_dueno === true || es_acceso_maestro === true) {
 		permitidas.push('categorias')
 	}
 	permitidas.push('descripciones')
+	permitidas.push('medidas')
 	return permitidas
 }
 
@@ -141,9 +161,15 @@ export function subsolapas_permitidas(es_dueno, es_acceso_maestro) {
  * @returns {{view: *, sub_view: String|null}} `view` vuelve tal como llegó, salvo con el alias viejo.
  */
 export function ruta_normalizada(view, sub_view, permitidas) {
-	// El alias viejo: la solapa de primer nivel "Imágenes" es ahora catalogo/imagenes.
+	// El alias viejo: la solapa de primer nivel "Imágenes" es ahora catalogo/imagenes. Salvo que esta
+	// persona no pueda ver Imágenes (un negocio sin la extensión «Agentes de IA» solo ve Medidas): ahí
+	// sigue de largo como un catalogo/imagenes pedido a mano, que cae en la primera sub-solapa permitida.
 	if (view === VISTA_VIEJA_DE_IMAGENES) {
-		return {view: VISTA_DEL_CATALOGO, sub_view: 'imagenes'}
+		if (!Array.isArray(permitidas) || permitidas.indexOf('imagenes') !== -1) {
+			return {view: VISTA_DEL_CATALOGO, sub_view: 'imagenes'}
+		}
+		view = VISTA_DEL_CATALOGO
+		sub_view = 'imagenes'
 	}
 
 	// Cualquier otra solapa de primer nivel no lleva segundo nivel.
@@ -207,6 +233,17 @@ export function es_ruta_de_descripciones(route) {
 }
 
 /**
+ * Lo mismo que `es_ruta_de_imagenes`, para Alertas → Catálogo → Medidas (misión
+ * medidas-masivas-catalogo, 27/10/2026).
+ *
+ * @param {*} route Un objeto de ruta de vue-router (`this.$route`): `{name, params}`.
+ * @returns {Boolean}
+ */
+export function es_ruta_de_medidas(route) {
+	return es_ruta_de_la_subsolapa(route, 'medidas')
+}
+
+/**
  * Dice si una ruta, ya normalizada, es Alertas → Catálogo → <la sub-solapa pedida>.
  *
  * @param {*} route Un objeto de ruta de vue-router.
@@ -256,6 +293,22 @@ export function destino_de_descripciones(query) {
 	return {
 		name: 'alertas',
 		params: {view: VISTA_DEL_CATALOGO, sub_view: 'descripciones'},
+		query: query && typeof query == 'object' ? query : {},
+	}
+}
+
+/**
+ * La ubicación de Alertas → Catálogo → Medidas (misión medidas-masivas-catalogo, 27/10/2026), con la
+ * query que se le pida (`corrida`: id de la corrida a abrir; `solapa`: asignadas | a_revisar |
+ * sin_datos). Mismo criterio que `destino_de_imagenes`: `name` y `params` exactos.
+ *
+ * @param {Object} [query] Por ejemplo `{corrida: '7', solapa: 'a_revisar'}`.
+ * @returns {{name: String, params: Object, query: Object}}
+ */
+export function destino_de_medidas(query) {
+	return {
+		name: 'alertas',
+		params: {view: VISTA_DEL_CATALOGO, sub_view: 'medidas'},
 		query: query && typeof query == 'object' ? query : {},
 	}
 }

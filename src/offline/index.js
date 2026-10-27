@@ -1,5 +1,6 @@
 import syncArticlesMixin from '@/offline/sync_articles'
 import syncSalesMixin from '@/offline/sync_sales'
+import syncClientsMixin from '@/offline/sync_clients'
 import db from './db'
 import { borrar_sesion } from './sesion_sin_conexion'
 import { contar_ventas_del_equipo } from './sync_sales'
@@ -16,7 +17,7 @@ import { contar_ventas_del_equipo } from './sync_sales'
 const INTERVALO_DE_VIGILANCIA_MS = 30000
 
 export default {
-    mixins: [syncArticlesMixin, syncSalesMixin],
+    mixins: [syncArticlesMixin, syncSalesMixin, syncClientsMixin],
     data() {
         return {
             /**
@@ -91,6 +92,13 @@ export default {
             */
             await db.articles.clear()
             await db.meta.delete('last_articles_sync')
+            /*
+                Los clientes guardados para elegir en Vender sin conexion (mision
+                clientes-sin-internet) van con los articulos: mismo interruptor.
+            */
+            await db.clients.clear()
+            await db.meta.delete('last_clients_sync')
+            await db.meta.delete('last_clients_full_sync')
             await borrar_sesion()
         },
         /**
@@ -279,7 +287,14 @@ export default {
                 const offline_disabled = await this.clear_offline_memory_if_mode_disabled()
 
                 if (!offline_disabled && this.owner.sync_offline_articles) {
+                    /*
+                        Los clientes, DETRAS de los articulos y no en paralelo (mision
+                        clientes-sin-internet): son las dos descargas mas pesadas del arranque y no
+                        tienen por que pelearse el servidor. Ninguna de las dos rechaza.
+                    */
                     this.sync_all_articles()
+                    .catch(err => console.log(err))
+                    .then(() => this.sync_all_clients())
                 } else {
                     console.log('No se descargaron articulos offline')
                 }

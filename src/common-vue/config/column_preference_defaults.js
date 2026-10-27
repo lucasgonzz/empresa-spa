@@ -16,6 +16,9 @@ export const column_preference_defaults = {
  * @param {Object} prop property del modelo (key, table_width, …)
  */
 export function default_column_width_for_property(prop) {
+	if (prop && prop.key === 'table_left_options' && !prop.table_width) {
+		return null
+	}
 	if (!prop) {
 		return column_preference_defaults.default_property_width_px
 	}
@@ -45,6 +48,10 @@ export function default_column_width_for_property(prop) {
  * @param {string} key
  */
 export function fallback_column_width_px(key) {
+	// Sin una elección explícita, las acciones conservan su ancho automático histórico.
+	if (key === 'table_left_options') {
+		return null
+	}
 	if (key && column_preference_defaults.narrow_property_keys.includes(key)) {
 		return column_preference_defaults.narrow_property_width_px
 	}

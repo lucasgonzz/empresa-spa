@@ -23,10 +23,6 @@
 				:tbody-tr-class="rowClass"
 				:tbody-tr-attr="rowAttrs"
 				@row-selected="onRowSelected">
-					<template v-slot:table_left_options>
-						<slot name="table_left_options" :model="model"></slot>
-					</template>
-
 					<template
 					v-for="(prop, prop_index) in visible_properties_for_table"
 					v-slot:[toCellName(prop.key)]="data">
@@ -34,13 +30,18 @@
 						:key="prop.key + '-' + prop_index"
 						:class="get_cell_classes(prop, prop_index)"
 						:title="cell_inner_title(prop, models[data.index])"
+						:style="left_options_content_style(prop, 10)"
 						class="cont-tr table-component-cell-inner">
+							<slot
+							v-if="prop.key === 'table_left_options'"
+							name="table_left_options"
+							:model="models[data.index]"></slot>
 							<table-thumbnail-images
-							v-if="isImageProp(prop) && hasTableImages(models[data.index], prop)"
+							v-else-if="isImageProp(prop) && hasTableImages(models[data.index], prop)"
 							:key="'thumb-' + models[data.index].id + '-' + prop.key"
 							:model="models[data.index]"
 							:prop="prop"
-							@preview="openImagePreview"></table-thumbnail-images>
+							:preview_enabled="true"></table-thumbnail-images>
 							<div
 							v-else-if="showInput(prop, models[data.index])">
 								<b-form-textarea
@@ -207,28 +208,6 @@
 						</div>
 					</template>
 				</b-table>
-				<div
-				v-if="show_image_preview && preview_image_url"
-				class="image-preview-overlay"
-				@click.self.stop.prevent="closeImagePreview"
-				@mousedown.stop.prevent>
-					<div
-					class="image-preview-modal"
-					@click.stop
-					@mousedown.stop>
-						<button
-						type="button"
-						class="image-preview-close"
-						@click.stop.prevent="closeImagePreview"
-						@mousedown.stop.prevent>
-							×
-						</button>
-						<img
-						class="image-preview-large"
-						:src="preview_image_url"
-						alt="Vista previa de articulo">
-					</div>
-				</div>
 				<!-- <btn-add-to-show
 				:model_name="model_name"></btn-add-to-show> -->
 			</div>
@@ -288,6 +267,7 @@
 <script>
 import BtnAddToShow from '@/common-vue/components/BtnAddToShow'
 import { fallback_column_width_px } from '@/common-vue/config/column_preference_defaults'
+import { left_options_content_style, left_options_width } from '@/common-vue/helpers/table_left_options'
 import { bind_edge_auto_scroll, unbind_edge_auto_scroll } from '@/common-vue/helpers/edge_auto_scroll'
 
 export default {
@@ -384,8 +364,6 @@ export default {
 		return {
 			last_selection: [],
 			is_from_keydown: false,
-			show_image_preview: false,
-			preview_image_url: '',
 			// Altura disponible calculada dinámicamente desde el top del contenedor hasta el borde inferior de la ventana
 			available_height: null,
 			// Handle de los listeners de auto-scroll por bordes. Se guarda para poder desengancharlos
@@ -394,13 +372,11 @@ export default {
 		}
 	},
 	mounted() {
-		window.addEventListener('keydown', this.handlePreviewKeydown)
 		this.recalcular_altura()
 		window.addEventListener('resize', this.recalcular_altura)
 		this.enganchar_scroll_margenes()
 	},
 	beforeDestroy() {
-		window.removeEventListener('keydown', this.handlePreviewKeydown)
 		window.removeEventListener('resize', this.recalcular_altura)
 		this.desenganchar_scroll_margenes()
 	},
@@ -591,6 +567,7 @@ export default {
 		},
 	},
 	methods: {
+		left_options_content_style,
 		/**
 		 * Recalcula la altura disponible del contenedor de tabla según su posición en viewport.
 		 * Resta un margen inferior para evitar scroll residual en la página.
@@ -609,22 +586,6 @@ export default {
 					self.available_height = height
 				}
 			})
-		},
-		openImagePreview(image_url) {
-			if (!image_url) {
-				return
-			}
-			this.preview_image_url = image_url
-			this.show_image_preview = true
-		},
-		closeImagePreview() {
-			this.show_image_preview = false
-			this.preview_image_url = ''
-		},
-		handlePreviewKeydown(event) {
-			if (event.key == 'Escape' && this.show_image_preview) {
-				this.closeImagePreview()
-			}
 		},
 		/**
 		 * Engancha el auto-scroll horizontal de margenes sobre el contenedor de la tabla.
@@ -738,7 +699,9 @@ export default {
 		column_style(prop) {
 			let width_px = null
 			if (prop.table_width && Number(prop.table_width) > 0) {
-				width_px = Number(prop.table_width)
+				width_px = prop.key === 'table_left_options'
+					? left_options_width(prop.table_width, prop.table_wrap_content, 10)
+					: Number(prop.table_width)
 			} else if (prop.table_width === 'lg') {
 				width_px = 300
 			} else if (this.is_from_search_modal) {
@@ -750,7 +713,7 @@ export default {
 			return {
 				width: width_px + 'px',
 				minWidth: width_px + 'px',
-				maxWidth: width_px + 'px',
+				maxWidth: prop.key === 'table_left_options' && !prop.table_wrap_content ? 'none' : width_px + 'px',
 			}
 		},
 		/**
@@ -790,6 +753,16 @@ export default {
 		},
 		get_cell_classes(prop, index) {
 			const classes = []
+			if (prop.key === 'table_left_options') {
+				classes.push('cell-options')
+				if (prop.table_width) {
+					classes.push('cell-options-configured')
+				}
+				if (prop.table_wrap_content) {
+					classes.push('cell-options-wrap')
+				}
+				return classes
+			}
 			const props_visible = this.visible_properties_for_table
 			if (index == props_visible.length - 1) {
 				classes.push('cont-tr-full-width')
@@ -925,6 +898,7 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/common-vue/sass/_table_left_options'
 @import '@/sass/_custom.scss'
 
 .table-component-scroll
@@ -1105,44 +1079,4 @@ export default {
 	.input-lg
 		width: 300px !important
 
-.image-preview-overlay
-	position: fixed
-	inset: 0
-	background: rgba(0,0,0,.65)
-	display: flex
-	align-items: center
-	justify-content: center
-	z-index: 2000
-	padding: 1rem
-
-.image-preview-modal
-	position: relative
-	// Token con el literal de hoy de fallback: la caja de la vista ampliada es una superficie del
-	// sistema, no un color propio. Con el #fff suelto, ampliar la foto de un articulo en modo oscuro
-	// abria un rectangulo blanco arriba del scrim negro.
-	background: var(--bg-card, #fff)
-	padding: .75rem
-	border-radius: .5rem
-	max-width: 100%
-	box-shadow: 0 10px 25px rgba(0,0,0,.35)
-
-.image-preview-large
-	width: 3000px !important
-	max-width: 100%
-	height: auto
-	display: block
-
-.image-preview-close
-	position: absolute
-	top: .25rem
-	right: .25rem
-	width: 2rem
-	height: 2rem
-	border: 0
-	border-radius: 999px
-	background: rgba(0,0,0,.75)
-	color: #fff
-	font-size: 1.4rem
-	line-height: 1
-	cursor: pointer
 </style>

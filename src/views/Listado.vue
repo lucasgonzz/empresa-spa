@@ -98,7 +98,12 @@
 		</template>
 
 		<template #stock>
-			<stock-input></stock-input> 
+			<stock-input></stock-input>
+		</template>
+
+		<!-- Mercado Libre (misión mercado-libre-integracion, 27/10/2026): categoría con el predictor, los datos que pide la categoría y el estado de la publicación. La prop solo existe con la extensión usa_mercado_libre. -->
+		<template #meli_category_id>
+			<mercado-libre-form></mercado-libre-form>
 		</template>
 
 
@@ -225,6 +230,7 @@ export default {
 
 		MercadoLibre: () => import('@/components/listado/modals/mercado-libre/Index'),
 		MercadoLibreCategoryPredictor: () => import('@/components/listado/modals/mercado-libre/category-predictor/Index'),
+		MercadoLibreForm: () => import('@/components/listado/components/mercado-libre-form/Index'),
 		ArticleUbications: () => import('@/components/listado/modals/article-ubications/Index'),
 
 
@@ -300,9 +306,71 @@ export default {
 		addressMovement() {
 			console.log('addressMovement')
 		},
+		/**
+		 * Al cerrarse el formulario del artículo, saca los atributos de Mercado Libre que el
+		 * componente de Mercado Libre le había agregado al modelo (misión mercado-libre-integracion,
+		 * 27/10/2026).
+		 *
+		 * `meli_attributes` no es una prop del modelo: el componente la agrega cuando el usuario
+		 * toca un atributo, y viaja con el resto del artículo al guardar. El modelo del formulario
+		 * es el MISMO objeto que la fila del listado (el artículo tiene full_reactivity), así que
+		 * si el usuario editaba atributos y cerraba sin guardar, la clave quedaba colgada de la
+		 * fila y el próximo guardado de ese artículo la mandaba aunque nadie hubiera abierto la
+		 * solapa de Mercado Libre. Sin la clave, la API no toca los atributos guardados.
+		 *
+		 * @param {Object} evento Evento de bootstrap-vue.
+		 * @param {String} modal_id Id del modal que se cerró.
+		 * @returns {void}
+		 */
+		limpiar_atributos_de_mercado_libre(evento, modal_id) {
+			if (modal_id != 'article') {
+				return
+			}
+			let model = this.$store.state.article.model
+			if (model && Object.prototype.hasOwnProperty.call(model, 'meli_attributes')) {
+				this.$delete(model, 'meli_attributes')
+			}
+			this.$store.commit('meli/set_nombre_escrito', '')
+		},
+		/**
+		 * Recuerda lo que se teclea en el campo del nombre del artículo, para que la solapa de
+		 * Mercado Libre pueda sugerir la categoría (misión mercado-libre-integracion, 27/10/2026).
+		 *
+		 * 🔴 Por qué acá y no en el componente de Mercado Libre: en un artículo NUEVO sin código de
+		 * barras, el nombre se escribe en el buscador de NameInput.vue (y en el modal de búsqueda que
+		 * abre) y vive en la `query` de ese buscador; pasa a `model.name` recién al guardar. Las
+		 * solapas del formulario se dibujan con v-if: mientras el usuario escribe en "Datos generales"
+		 * el componente de Mercado Libre no existe, y cuando pasa a esa solapa el campo del nombre ya
+		 * no existe. Medido en la verificación del 27/10/2026: con el nombre tecleado, "Sugeridas"
+		 * decía "Escribí el nombre…". Listado está montado todo el tiempo, así que escucha él (fase de
+		 * captura sobre `document`, solo los dos campos del nombre) y lo deja en el store de meli.
+		 * Solo se lee: el nombre sigue pasando al artículo como siempre.
+		 *
+		 * @param {Event} evento Evento `input` de cualquier campo de la página.
+		 * @returns {void}
+		 */
+		recordar_nombre_para_mercado_libre(evento) {
+			let campo = evento && evento.target
+			if (!campo || (campo.id != 'article-name' && campo.id != 'article-name-search-modal-input')) {
+				return
+			}
+			if (typeof campo.value == 'string') {
+				this.$store.commit('meli/set_nombre_escrito', campo.value.trim())
+			}
+		},
 	},
 	created() {
 		this.get_ultimos_articulos_actualizados()
-	}
+		this.$root.$on('bv::modal::hidden', this.limpiar_atributos_de_mercado_libre)
+	},
+	mounted() {
+		if (this.hasExtencion('usa_mercado_libre')) {
+			document.addEventListener('input', this.recordar_nombre_para_mercado_libre, true)
+		}
+	},
+	beforeDestroy() {
+		this.$root.$off('bv::modal::hidden', this.limpiar_atributos_de_mercado_libre)
+		document.removeEventListener('input', this.recordar_nombre_para_mercado_libre, true)
+	},
 }
 </script>

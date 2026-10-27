@@ -16,6 +16,18 @@ import { env } from '@/runtime_config'
  * guardar_venta_offline().
  */
 let guardado_offline_en_curso = false
+
+/**
+ * Si hay una venta sin conexión escribiéndose en el equipo en este momento. La usa el modal del
+ * cobro por QR (components/vender/modals/CobroQrMercadoPago.vue) para no decir "la venta no se
+ * guardó" mientras IndexedDB todavía está escribiendo.
+ *
+ * @returns {Boolean}
+ */
+export function hay_guardado_offline_en_curso() {
+	return guardado_offline_en_curso
+}
+
 export default {
 	mixins: [
 		chequeos, 
@@ -51,6 +63,22 @@ export default {
 	},
 	methods: {
 		guardar_venta() {
+			/*
+				🔴 Con un cobro por QR de Mercado Pago en curso que todavía no se pagó, la venta NO se
+				guarda (misión cobro-qr-mercado-pago, 26/10/2026). El atajo de teclado de Guardar
+				(keyboard_shortcuts.js hace click en el botón) llegaba igual con el modal "Esperando el
+				pago" abierto: guardaba la venta con el método de Mercado Pago como si estuviera cobrada,
+				sin que nadie hubiera pagado, y después el modal quedaba desordenado. El freno va acá y no
+				en el atajo porque por acá pasan TODOS los caminos que guardan una venta nueva. El único
+				que guarda con el cobro en curso es el modal, cuando Mercado Pago confirma el pago (en ese
+				momento el cobro ya está `pagado`).
+			*/
+			let cobro_qr_en_curso = this.$store.state.vender.mercado_pago_qr_cobro_en_curso
+			if (cobro_qr_en_curso && cobro_qr_en_curso.estado !== 'pagado') {
+				this.$toast.warning('Esperá a que el cliente pague o cancelá el cobro por QR.')
+				return
+			}
+
 			// Pegar o editar desde el celular cambia v-model sin keyup. El cobro debe validar
 			// la cuenta de los renglones actuales, nunca un total guardado por el evento anterior.
 			this.setTotal()
@@ -194,6 +222,26 @@ export default {
 					this.$store.commit('vender/set_limite_credito_excedido', err.response.data.limite_credito)
 					this.sonido_error()
 					this.$bvModal.show('limite-credito-excedido')
+					return
+				}
+
+				/*
+					422 del cobro por QR de Mercado Pago (misión cobro-qr-mercado-pago): el cobro que viaja
+					con la venta no sirve (no está pagado, ya tiene otra venta o es por otro total). La API
+					no creó nada y su `message` ya dice qué hacer. El id del cobro queda en el store a
+					propósito: el botón "Pago QR recibido" ofrece quitarlo de esta venta
+					(CobrarConQr.vue). Se corta acá para no sumar el toast genérico.
+				*/
+				if (err
+					&& err.response
+					&& err.response.status == 422
+					&& err.response.data
+					&& err.response.data.cobro_qr_invalido) {
+
+					this.sonido_error()
+					this.$toast.error(err.response.data.message || 'El cobro por QR no corresponde a esta venta. Quitalo desde el botón "Pago QR recibido" y volvé a guardar.', {
+						duration: 15000
+					})
 					return
 				}
 
@@ -483,6 +531,13 @@ export default {
 				send_mail: this.$store.state.vender.send_mail,
 				log: this.$store.state.vender.sale_log,
 				offline_uuid: offline_uuid,
+				/*
+					Cobro con el QR de Mercado Pago ya pagado (misión cobro-qr-mercado-pago, 26/10/2026),
+					la misma clave que el POST online (store/vender/vender.js). El caso real: Mercado
+					Pago confirmó el pago, el POST de la venta se quedó sin respuesta y la venta cayó acá.
+					Sin esta clave, al subirla el cobro quedaría pagado y suelto, sin su venta.
+				*/
+				mercado_pago_qr_cobro_id: this.$store.state.vender.mercado_pago_qr_cobro_id,
 				/*
 					Adjuntos de los renglones (misión ingreso-sin-internet, 23/10/2026). El camino con
 					servidor los sube DESPUÉS de crear la venta, con el id que devuelve; acá ese id

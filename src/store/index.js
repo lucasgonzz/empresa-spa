@@ -272,6 +272,10 @@ import category_proposal from '@/store/category_proposal'
 // Catálogo -> Descripciones y su número rojo (misión alertas-descripciones, 14/10/2026). Mismo
 // criterio que los dos de arriba: no es un ABM, no sale del factory común.
 import ai_description_review from '@/store/ai_description_review'
+// Búsqueda masiva de peso y medidas de los artículos: la sub-solapa Alertas -> Catálogo -> Medidas y su
+// número rojo (misión medidas-masivas-catalogo, 27/10/2026). Mismo criterio que los tres de arriba: no es
+// un ABM, no sale del factory común.
+import dimension_search from '@/store/dimension_search'
 
 import provider_order_afip_ticket_iva from '@/store/provider_order_afip_ticket_iva'
 import provider_order_discount from '@/store/provider_order_discount'
@@ -569,6 +573,7 @@ export default new Vuex.Store({
         image_assignment,
         category_proposal,
         ai_description_review,
+        dimension_search,
 
         provider_order_afip_ticket_iva,
         provider_order_discount,

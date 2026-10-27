@@ -1,5 +1,16 @@
 <template>
 	<div>
+		<div v-if="stock_minimo_scope" class="stock-minimo-sucursal m-b-10">
+			<label for="stock-minimo-sucursal-select">Sucursal para reponer</label>
+			<b-form-select
+			v-if="stock_minimo_scope.can_select"
+			id="stock-minimo-sucursal-select"
+			data-testid="stock-minimo-sucursal"
+			v-model="selected_address"
+			:options="sucursal_options"></b-form-select>
+			<strong v-else data-testid="stock-minimo-sucursal-fija">{{ sucursal_actual }}</strong>
+			<small>{{ stock_minimo_scope.can_select ? 'La visión general incluye las alertas sin depósito. Elegir un local solo filtra esta consulta; no mueve stock.' : (stock_minimo_scope.address_id ? 'Ves únicamente las alertas de tu sucursal.' : 'No tenés una sucursal asignada. Pedile al dueño que la configure para ver sus alertas.') }}</small>
+		</div>
 
 		<!--
 			Cuando se calculo el reporte y el boton para pedir uno nuevo (4.0.24). Desde esta version
@@ -45,33 +56,33 @@
 			asi que en telefono se acomodan sin desbordar.
 		-->
 		<div
-		v-if="inventory_performance"
+		v-if="inventory_performance && (!stock_minimo_scope || $store.state.inventory_performance.stock_minimo_summary)"
 		class="stock-minimo-resumen m-b-15">
 
 			<!-- data-valor / data-monto: el numero crudo, el texto visible va es-AR. -->
 			<div
 			class="totales-chip totales-chip--principal"
 			data-testid="stock-minimo-chip-bajo-minimo"
-			:data-valor="inventory_performance.stock_minimo">
+			:data-valor="resumen_stock_minimo.stock_minimo">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-box-seam" aria-hidden="true"></i>
 				</div>
 				<div class="totales-chip__body">
 					<span class="totales-chip__label">Bajo el mínimo</span>
-					<span class="totales-chip__value">{{ numero_es(inventory_performance.stock_minimo) }}</span>
+					<span class="totales-chip__value">{{ numero_es(resumen_stock_minimo.stock_minimo) }}</span>
 				</div>
 			</div>
 
 			<div
 			class="totales-chip"
 			data-testid="stock-minimo-chip-sin-stock"
-			:data-valor="inventory_performance.sin_stock">
+			:data-valor="resumen_stock_minimo.sin_stock">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-dash-circle" aria-hidden="true"></i>
 				</div>
 				<div class="totales-chip__body">
-					<span class="totales-chip__label">Sin stock</span>
-					<span class="totales-chip__value">{{ numero_es(inventory_performance.sin_stock) }}</span>
+					<span class="totales-chip__label">Alertas sin stock</span>
+					<span class="totales-chip__value">{{ numero_es(resumen_stock_minimo.sin_stock) }}</span>
 				</div>
 			</div>
 
@@ -83,16 +94,16 @@
 			<div
 			class="totales-chip"
 			data-testid="stock-minimo-chip-negativo"
-			:data-valor="inventory_performance.stock_negativo"
-			:class="{ 'totales-chip--negativo': inventory_performance.stock_negativo > 0 }">
+			:data-valor="resumen_stock_minimo.stock_negativo"
+			:class="{ 'totales-chip--negativo': resumen_stock_minimo.stock_negativo > 0 }">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
 				</div>
 				<div class="totales-chip__body">
-					<span class="totales-chip__label">Con stock negativo</span>
-					<span class="totales-chip__value">{{ numero_es(inventory_performance.stock_negativo) }}</span>
+					<span class="totales-chip__label">Alertas con stock negativo</span>
+					<span class="totales-chip__value">{{ numero_es(resumen_stock_minimo.stock_negativo) }}</span>
 					<span
-					v-if="inventory_performance.stock_negativo > 0"
+					v-if="resumen_stock_minimo.stock_negativo > 0"
 					class="totales-chip__meta">
 						Suele ser una venta sin ingreso registrado, o un error de carga
 					</span>
@@ -102,13 +113,13 @@
 			<div
 			class="totales-chip"
 			data-testid="stock-minimo-chip-reposicion"
-			:data-monto="inventory_performance.costo_reposicion_stock_minimo">
+			:data-monto="resumen_stock_minimo.costo_reposicion_stock_minimo">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-cash-stack" aria-hidden="true"></i>
 				</div>
 				<div class="totales-chip__body">
 					<span class="totales-chip__label">Costo de reposición</span>
-					<span class="totales-chip__value">{{ price(inventory_performance.costo_reposicion_stock_minimo) }}</span>
+					<span class="totales-chip__value">{{ price(resumen_stock_minimo.costo_reposicion_stock_minimo) }}</span>
 					<!-- La aclaracion vive en el chip al que se refiere, no suelta al pie de la tarjeta. -->
 					<span class="totales-chip__meta">
 						Lo que costaría comprar lo que falta para llegar al mínimo, sin los artículos sin costo cargado
@@ -152,8 +163,14 @@
 				placeholder="Buscar por nombre, codigo de barras o codigo de proveedor"></b-form-input>
 			</div>
 
+			<b-button size="sm" :disabled="loading_articles" @click="excel_stock_minimo">Excel</b-button>
 			<props-to-show
 			model_name="inventory_performance"></props-to-show>
+		</div>
+
+		<div v-if="$store.state.inventory_performance.articles_error" role="alert" class="m-b-10">
+			No pudimos cargar las alertas de esta consulta.
+			<b-button size="sm" @click="fetch_articles">Reintentar</b-button>
 		</div>
 
 		<!-- Caso 1: todavia no hay ningun reporte generado (ni siquiera uno viejo) y se esta calculando el primero -->
@@ -242,6 +259,7 @@
 </template>
 <script>
 import inventory_performance from '@/mixins/inventory_performance'
+import { env } from '@/runtime_config'
 export default {
 	mixins: [inventory_performance],
 	components: {
@@ -264,6 +282,30 @@ export default {
 		this.fetch_articles()
 	},
 	computed: {
+		stock_minimo_scope() {
+			return this.$store.state.inventory_performance.stock_minimo_scope
+		},
+		resumen_stock_minimo() {
+			return this.$store.state.inventory_performance.stock_minimo_summary || this.inventory_performance || {}
+		},
+		sucursal_options() {
+			let addresses = this.stock_minimo_scope ? this.stock_minimo_scope.addresses : []
+			return [{ value: null, text: 'Visión general (todos los depósitos y alertas globales)' }].concat(addresses.map(function (address) {
+				return { value: address.id, text: address.street }
+			}))
+		},
+		sucursal_actual() {
+			let scope = this.stock_minimo_scope
+			let address = scope && scope.addresses.find(function (item) { return item.id == scope.address_id })
+			return address ? address.street : 'Sin sucursal asignada'
+		},
+		selected_address: {
+			get() { return this.$store.state.inventory_performance.address_id },
+			set(value) {
+				this.$store.commit('inventory_performance/set_address_id', value)
+				this.fetch_articles()
+			},
+		},
 		/**
 		 * Pagina actual de articulos con stock minimo (ya no la lista completa: viene paginada
 		 * desde el backend a partir del prompt 393/394).
@@ -344,7 +386,7 @@ export default {
 		 * @returns {Boolean}
 		 */
 		sin_resultados() {
-			return !!this.inventory_performance && !this.loading_articles && !this.articles_stock_minimo.length
+			return !!this.inventory_performance && !this.loading_articles && !this.$store.state.inventory_performance.articles_error && !this.articles_stock_minimo.length
 		},
 		/**
 		 * Columnas configurables (props_to_show del store), ya resueltas por el usuario
@@ -426,6 +468,13 @@ export default {
 		},
 	},
 	methods: {
+		excel_stock_minimo() {
+			let state = this.$store.state.inventory_performance
+			let params = new URLSearchParams()
+			if (state.address_id) { params.set('address_id', state.address_id) }
+			if (state.search) { params.set('search', state.search) }
+			window.open(env('VUE_APP_API_URL') + '/articles-stock-minimo/excel?' + params.toString())
+		},
 		/**
 		 * Pide al backend la pagina actual de articulos bajo el minimo (page/per_page/search
 		 * salen del store del modulo).
@@ -471,6 +520,9 @@ export default {
 			return 'cell(' + key + ')'
 		},
 	},
+	beforeDestroy() {
+		clearTimeout(this.search_debounce_timer)
+	},
 	watch: {
 		/**
 		 * Cuando llega un reporte nuevo (broadcast del job en background, escuchado por quien
@@ -491,6 +543,25 @@ export default {
 // Todos los valores salen de tokens (--toolbar-control-h, --toolbar-btn-radius, --color-border,
 // --bg-card, --bg-section, --color-text-secondary): un hexadecimal fijo deja la seccion blanca en
 // modo oscuro, que es justo lo que le pasaba al cartel azul que esta mision viene a sacar.
+
+.stock-minimo-sucursal
+	display: flex
+	flex-direction: column
+	align-items: flex-start
+	gap: 6px
+	text-align: left
+	min-width: 0
+
+	label
+		margin: 0
+		font-weight: 600
+
+	select
+		max-width: 100%
+		width: 480px
+
+	small
+		color: var(--color-text-secondary)
 
 // --- Fecha de actualizacion + boton Actualizar (4.0.24) ---------------------------------------
 // Texto a la izquierda y boton a la derecha, en una fila que envuelve: en telefono el boton baja

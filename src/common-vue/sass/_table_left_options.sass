@@ -1,0 +1,52 @@
+.cont-tr.cell-options,
+.table .table-component-cell-inner.cont-tr.cell-options
+	white-space: nowrap
+	overflow: visible
+	text-overflow: initial
+	-webkit-mask-image: none
+	mask-image: none
+
+// Acotar también el contenedor interno evita que el ancho mínimo de un btn-group
+// expanda la celda. Los handlers y permisos siguen en los componentes originales.
+.cell-options-configured
+	max-width: 100%
+	> *
+		min-width: 0
+		max-width: 100%
+	.btn-group
+		flex-shrink: 0
+	&:not(.cell-options-wrap)
+		> *, .btn-group, .table-buttons-ventas, .table-buttons-ventas__grupo
+			flex-wrap: nowrap !important
+
+.cont-tr.cell-options.cell-options-wrap,
+.table .table-component-cell-inner.cont-tr.cell-options-wrap
+	white-space: normal
+	flex-wrap: wrap
+	> *, .btn-group, .buttons-listado
+		flex-wrap: wrap !important
+		white-space: normal
+	.btn-group
+		max-width: 100%
+		flex-shrink: 1
+	// Ventas agrupa acciones con divs propios, además de los btn-group de Bootstrap.
+	// Permitir el salto también allí evita que Log empuje la celda siguiente. Se
+	// enumeran esos contenedores para no alterar los menús ni el contenido de modales.
+	.table-buttons-ventas, .table-buttons-ventas__grupo, .table-buttons-ventas__grupo > div
+		min-width: 0
+		max-width: 100%
+		flex-wrap: wrap !important
+	.btn, .btn-group > .btn
+		flex: 0 0 auto
+		min-width: 0
+		max-width: 100%
+		white-space: normal
+		overflow-wrap: anywhere
+	.badge
+		white-space: normal
+		overflow-wrap: anywhere
+	.buttons-listado
+		margin-left: 0
+		.btn-group
+			margin-left: 0 !important
+

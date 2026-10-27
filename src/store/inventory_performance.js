@@ -24,15 +24,40 @@ export default __base_store({
 		per_page: 25,
 		// Texto de búsqueda para filtrar artículos con stock mínimo.
 		search: '',
+		address_id: null,
+		stock_minimo_scope: null,
+		stock_minimo_summary: null,
+		articles_request: 0,
 		// Flag de carga específico del listado paginado (independiente del `loading` genérico del store).
 		loading_articles: false,
+		articles_error: false,
 	},
 	mutations: {
+		set_stock_minimo_scope(state, value) {
+			state.stock_minimo_scope = value
+		},
+		set_stock_minimo_summary(state, value) {
+			state.stock_minimo_summary = value
+		},
+		set_address_id(state, value) {
+			state.articles_request++
+			state.loading_articles = false
+			state.address_id = value || null
+			state.page = 1
+			state.articles_stock_minimo = []
+			state.stock_minimo_summary = null
+		},
+		next_articles_request(state) {
+			state.articles_request++
+		},
 		/**
 		 * Marca si hay un job generando el reporte de inventario en este momento.
 		 * @param {Object} state
 		 * @param {Boolean} value
 		 */
+		set_articles_error(state, value) {
+			state.articles_error = value
+		},
 		set_generating(state, value) {
 			state.generating = value
 		},
@@ -105,6 +130,7 @@ export default __base_store({
 				let models = (res.data.models || []).filter(model => model)
 				commit('setModels', models)
 				commit('set_generating', !!res.data.generating)
+				commit('set_stock_minimo_scope', res.data.stock_minimo_scope || null)
 			})
 			.catch(err => {
 				console.log(err)
@@ -151,15 +177,22 @@ export default __base_store({
 		 * @returns {Promise}
 		 */
 		get_articles_stock_minimo({commit, state}) {
+			commit('next_articles_request')
+			let request_id = state.articles_request
 			commit('set_loading_articles', true)
+			commit('set_articles_error', false)
 			return axios.get('/api/inventory-performance/articles-stock-minimo', {
 				params: {
 					page: state.page,
 					per_page: state.per_page,
 					search: state.search,
+					address_id: state.address_id,
 				},
 			})
 			.then(res => {
+				if (request_id !== state.articles_request) { return }
+				commit('set_stock_minimo_scope', res.data.scope || null)
+				commit('set_stock_minimo_summary', res.data.summary || null)
 				// Si todavía no hay reporte generado, el backend devuelve `models: []`: dejo lista vacía y total 0.
 				let models = res.data.models
 				if (models && models.data) {
@@ -171,10 +204,18 @@ export default __base_store({
 				}
 			})
 			.catch(err => {
+				if (request_id === state.articles_request) {
+					commit('set_articles_stock_minimo', [])
+					commit('set_total_stock_minimo', 0)
+					commit('set_stock_minimo_summary', null)
+					commit('set_articles_error', true)
+				}
 				console.log(err)
 			})
 			.finally(() => {
-				commit('set_loading_articles', false)
+				if (request_id === state.articles_request) {
+					commit('set_loading_articles', false)
+				}
 			})
 		},
 	},

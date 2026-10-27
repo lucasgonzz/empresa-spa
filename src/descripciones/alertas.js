@@ -685,4 +685,196 @@ export default {
 		],
 		nota_interna: 'Vive en la fila del modal de procesos en segundo plano (Fila.vue): solo en un proceso descripciones_ia completado con resultado.a_revisar > 0. Se documenta acá, como proceso-ver-en-alertas, porque lleva a esta pestaña.',
 	},
+
+	/* ---------------------------------------------------------------- catálogo: medidas */
+
+	/*
+	 * Alertas → Catálogo → Medidas (misión medidas-masivas-catalogo, 27/10/2026). Los `repercute` salen
+	 * de las decisiones del plan de la misión (D1: se carga sola solo si el sistema está seguro y trae
+	 * las cuatro medidas; D2: lo parcial o dudoso queda a revisar; D5: nunca se pisa una medida ya
+	 * cargada; D6: quitar devuelve el campo a vacío) y del contrato del plan §2.6. No hay spec de
+	 * exploración que los mida todavía (la suite la corre Lucas).
+	 *
+	 * Vocabulario: la búsqueda entera es una "búsqueda de medidas"; "consulta" es cada pedido al
+	 * buscador de internet. Las medidas se guardan en kg y cm, que son las unidades del sistema.
+	 */
+
+	'medidas-catalogo-abrir': {
+		titulo: 'Buscar peso y medidas de todo el catálogo',
+		que_hace: 'Abre la previa de una búsqueda de peso, alto, ancho y largo en internet para los artículos del negocio.',
+		repercute: [
+			'No busca nada todavía: primero muestra cuántos artículos entrarían, cuánto tardaría y cuánto costaría.',
+		],
+		nota_interna: 'Solo se dibuja con el acceso maestro (es_acceso_maestro). La API contesta 403 a cualquier otra sesión.',
+	},
+
+	'medidas-catalogo-solo-stock': {
+		titulo: 'Solo artículos con stock',
+		que_hace: 'Limita la búsqueda a los artículos que hoy tienen stock.',
+		repercute: [
+			'Al cambiarlo se vuelve a calcular la previa: cambian la cantidad de artículos, el tiempo y el costo.',
+			'Viene tildado: los artículos sin stock quedan para otra búsqueda.',
+		],
+	},
+
+	'medidas-catalogo-lanzar': {
+		titulo: 'Lanzar la búsqueda',
+		que_hace: 'Pone a buscar en segundo plano el peso y las medidas de los artículos de la previa.',
+		repercute: [
+			'Usa el buscador y la IA, que se pagan por uso: el costo estimado está en la previa.',
+			'Corre por tramos y se puede seguir usando el sistema; el avance se ve en esta pestaña.',
+			'Las medidas de los artículos que el sistema reconoce con seguridad se cargan solas; el resto queda para revisar o sin datos.',
+			'Nunca se pisa una medida que el artículo ya tenga cargada.',
+		],
+		requiere: 'El buscador (Serper) y la IA tienen que estar configurados en el servidor de este cliente; si falta alguno, el botón queda apagado.',
+	},
+
+	'medidas-detener': {
+		titulo: 'Detener la búsqueda',
+		que_hace: 'Frena la búsqueda de medidas, después de confirmar.',
+		repercute: [
+			'Lo que ya se procesó queda como está; los artículos que faltan no se buscan.',
+			'Se puede reanudar después: sigue desde el primer artículo pendiente.',
+		],
+	},
+
+	'medidas-reanudar': {
+		titulo: 'Reanudar la búsqueda',
+		que_hace: 'Vuelve a poner a buscar los artículos que habían quedado pendientes.',
+		repercute: [
+			'Sigue desde el primer artículo pendiente; lo ya procesado no se repite.',
+		],
+	},
+
+	'medidas-buscador': {
+		titulo: 'Buscar en los artículos',
+		que_hace: 'Filtra los artículos de la solapa abierta por nombre o código.',
+		repercute: [
+			'Busca solo entre los artículos de esta búsqueda y de esta solapa (Asignadas, A revisar o Sin datos).',
+		],
+	},
+
+	'medidas-por-pagina': {
+		titulo: 'Artículos por página',
+		que_hace: 'Cambia cuántos artículos se ven por página en la solapa: 25, 50 o 100.',
+	},
+
+	'medidas-items-reintentar': {
+		titulo: 'Reintentar',
+		que_hace: 'Vuelve a pedir los artículos de la solapa después de un error de conexión.',
+	},
+
+	'medidas-aprobar-*': {
+		titulo: 'Aprobar las medidas',
+		que_hace: 'Carga en el artículo las medidas que encontró la búsqueda, tal como se ven en la fila.',
+		repercute: [
+			'Solo se completan los campos que el artículo tiene vacíos: una medida que ya estaba cargada no se cambia.',
+			'La tienda online usa el peso y las medidas para cotizar los envíos.',
+			'Sale de A revisar y pasa a Asignadas, desde donde se pueden quitar.',
+			'Si el artículo ya tenía cargados esos campos, no se aprueba y se avisa cuáles.',
+		],
+		requiere: 'La propuesta tiene que traer al menos una medida. Si no trae ninguna, cargá alguna con Editar.',
+		nota_interna: 'POST dimension-search-items/{id}/aprobar sin cuerpo: la API escribe la propuesta (decisión D5, solo campos vacíos). 409 si ya estaban cargados.',
+	},
+
+	'medidas-rechazar-*': {
+		titulo: 'Rechazar las medidas',
+		que_hace: 'Descarta la propuesta de la búsqueda para este artículo.',
+		repercute: [
+			'No se carga ninguna medida en el artículo.',
+			'Sale de A revisar.',
+		],
+		nota_interna: 'POST dimension-search-items/{id}/rechazar. El destino exacto del item rechazado (solapa Sin datos) lo define la API; la SPA mueve el conteo y lo reconcilia a los pocos segundos.',
+	},
+
+	'medidas-editar-*': {
+		titulo: 'Editar las medidas',
+		que_hace: 'Abre en el lugar el peso, el alto, el ancho y el largo para corregirlos antes de aprobar.',
+		repercute: [
+			'No cambia nada hasta que apretés Guardar y aprobar.',
+			'Los valores van en kilos (peso) y centímetros (alto, ancho y largo).',
+			'Un campo que vacíes no se carga en el artículo; los que no toques se cargan como los propuso la búsqueda.',
+			'Mientras escribís, debajo de cada campo se lee cómo se va a guardar.',
+		],
+	},
+
+	'medidas-guardar-aprobar-*': {
+		titulo: 'Guardar y aprobar',
+		que_hace: 'Aprueba el artículo con los valores que escribiste en lugar de los que propuso la búsqueda.',
+		repercute: [
+			'Se cargan solo en los campos que el artículo tiene vacíos; una medida ya cargada no se cambia, y se avisa cuál.',
+			'Un campo que dejaste vacío no se carga. Si no queda ninguno con valor, no se aprueba: lo que corresponde es rechazar la propuesta.',
+			'Cada valor tiene que ser mayor que cero: hasta 2.000 kg el peso y hasta 1.000 cm cada medida.',
+			'Con algún valor mal escrito, no se aprueba y se marca cuál corregir.',
+		],
+		nota_interna: 'POST dimension-search-items/{id}/aprobar con {valores}: clave ausente = usar lo propuesto, número = escribir ese, null = NO escribir ese campo. La SPA manda solo los que cambiaron y null para los vaciados. 422 si la API rechaza un valor; 409 si el artículo ya tenía todos esos campos.',
+	},
+
+	'medidas-cancelar-*': {
+		titulo: 'Cancelar la edición',
+		que_hace: 'Cierra la edición sin guardar: la propuesta queda como estaba.',
+	},
+
+	'medidas-quitar-*': {
+		titulo: 'Quitar las medidas',
+		que_hace: 'Le saca al artículo las medidas que le cargó la búsqueda, después de confirmar.',
+		repercute: [
+			'Los campos vuelven a quedar vacíos, siempre que sigan teniendo el valor que puso la búsqueda.',
+			'Si alguien cambió una medida a mano después, esa no se toca y el aviso dice cuál se conservó.',
+			'La tienda online deja de contar con esas medidas para cotizar envíos.',
+		],
+		nota_interna: 'POST dimension-search-items/{id}/quitar (decisión D6 del plan): solo items asignada o aprobada.',
+	},
+
+	'medidas-seleccionar-pagina': {
+		titulo: 'Seleccionar la página',
+		que_hace: 'Tilda todos los artículos para revisar de la página que se ve, para aprobarlos o rechazarlos juntos.',
+		repercute: [
+			'Solo toma los de esta página: los de las páginas siguientes no se tildan.',
+		],
+	},
+
+	'medidas-tilde-*': {
+		titulo: 'Seleccionar este artículo',
+		que_hace: 'Lo suma a los que se van a aprobar o rechazar juntos.',
+	},
+
+	'medidas-lote-aprobar': {
+		titulo: 'Aprobar los seleccionados',
+		que_hace: 'Aprueba de una vez todos los artículos tildados, después de confirmar.',
+		repercute: [
+			'A cada uno se le cargan las medidas que encontró la búsqueda, igual que al aprobarlos de a uno (solo en los campos vacíos).',
+			'Si alguno ya no estaba para revisar o ya tenía esos campos cargados, se avisa cuántos; los demás se aprueban igual.',
+		],
+	},
+
+	'medidas-lote-rechazar': {
+		titulo: 'Rechazar los seleccionados',
+		que_hace: 'Descarta de una vez la propuesta de todos los artículos tildados, después de confirmar.',
+		repercute: [
+			'No se carga ninguna medida en esos artículos.',
+		],
+	},
+
+	'medidas-diagnostico-*': {
+		titulo: 'Ver qué se probó',
+		que_hace: 'Despliega las consultas que se hicieron para este artículo y las páginas que se leyeron.',
+		repercute: [
+			'Muestra, por cada intento (código de barras, código de proveedor y nombre), qué se buscó y por qué se descartó cada página.',
+			'Solo muestra información: no cambia nada.',
+		],
+	},
+
+	'medidas-citas-boton-*': {
+		titulo: 'Ver lo que decía la página',
+		que_hace: 'Despliega la frase exacta de la página de donde salió cada medida.',
+		repercute: [
+			'Sirve para comparar: si la frase habla de otra versión o de un pack, conviene corregir o rechazar la propuesta.',
+		],
+	},
+
+	'medidas-fuente-link-*': {
+		titulo: 'Abrir la página de origen',
+		que_hace: 'Abre en otra pestaña la página donde la búsqueda encontró las medidas de este producto.',
+	},
 }
