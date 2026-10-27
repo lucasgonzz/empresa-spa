@@ -102,6 +102,9 @@ export default {
 // colores de la reputación de Mercado Libre y valen igual en claro y en oscuro.
 .meli-cuenta
 	width: 100%
+	// La vista del módulo hereda `text-align: center` de más arriba: sin esto, la lista de "Lo
+	// que tenés que saber" y los textos de las tarjetas salían centrados
+	text-align: left
 
 	.meli-cuenta__encabezado
 		display: flex

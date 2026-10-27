@@ -52,6 +52,8 @@ export default {
 	border-radius: 12px
 	border: 1px solid var(--color-border)
 	background: var(--bg-warning-soft)
+	// La vista del módulo hereda `text-align: center`: el aviso se lee alineado a la izquierda
+	text-align: left
 
 	.meli-aviso-sin-conexion__texto
 		flex: 1

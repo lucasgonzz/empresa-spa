@@ -414,6 +414,8 @@ export default {
 // Colores solo con los tokens del tema (_dark_theme.sass): queda bien en claro y en oscuro.
 .meli-form
 	width: 100%
+	// Por si el contenedor del formulario centra el texto: listas y avisos van a la izquierda
+	text-align: left
 
 	.meli-form__seccion
 		margin-bottom: 16px
