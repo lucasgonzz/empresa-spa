@@ -70,6 +70,20 @@ export default {
         descripciones_alert_count() {
             return this.$store.getters['ai_description_review/badge']
         },
+        /**
+         * Numero rojo de la sub-solapa "Medidas" de Alertas → Catalogo (y lo que suma a la solapa
+         * Catalogo y a la campana del menu): propuestas de peso y medidas que esperan que alguien las
+         * apruebe o las rechace, mas busquedas de medidas terminadas que nadie abrio todavia (mision
+         * medidas-masivas-catalogo, 27/10/2026).
+         *
+         * Sale del getter del store, que devuelve el `badge` que manda la API: no se recalcula aca.
+         * Contra una API que todavia no tiene la ruta vale 0. Lo ve todo el que ve Catalogo.
+         *
+         * @returns {Number}
+         */
+        medidas_alert_count() {
+            return this.$store.getters['dimension_search/badge']
+        },
         deposit_movements_en_curso() {
             return this.$store.state.deposit_movement.en_curso.models 
         },

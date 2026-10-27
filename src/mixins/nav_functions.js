@@ -110,6 +110,11 @@ export default {
 				// 14/10/2026). Se ve en la misma solapa (Catalogo → Descripciones) y la ve todo el que
 				// ve Catalogo, asi que va adentro del mismo `if`.
 				total += Number(this.descripciones_alert_count)
+
+				// Propuestas de peso y medidas por revisar + busquedas de medidas terminadas sin abrir
+				// (mision medidas-masivas-catalogo, 27/10/2026). Se ve en la misma solapa (Catalogo →
+				// Medidas) y la ve todo el que ve Catalogo, asi que va adentro del mismo `if`.
+				total += Number(this.medidas_alert_count)
 			}
 
 			return  total
