@@ -110,3 +110,21 @@ test('destino_de_medidas arma name y params exactos, con la query pedida', () =>
 	assert.deepEqual(solapas.destino_de_imagenes({ asignacion: '7' }).params, { view: 'catalogo', sub_view: 'imagenes' })
 	assert.deepEqual(solapas.destino_de_descripciones().params, { view: 'catalogo', sub_view: 'descripciones' })
 })
+
+test('sin la extensión agentes_ia solo se ofrece Medidas (y con true o sin el parámetro, todo como antes)', () => {
+	assert.deepEqual(solapas.subsolapas_permitidas(true, false, false), ['medidas'])
+	assert.deepEqual(solapas.subsolapas_permitidas(false, true, false), ['medidas'])
+	assert.deepEqual(solapas.subsolapas_permitidas(false, false, false), ['medidas'])
+	assert.deepEqual(solapas.subsolapas_permitidas(true, false, true), ['imagenes', 'categorias', 'descripciones', 'medidas'])
+	assert.deepEqual(solapas.subsolapas_permitidas(true, false, undefined), ['imagenes', 'categorias', 'descripciones', 'medidas'])
+})
+
+test('sin agentes_ia, cualquier ruta del Catálogo cae en Medidas, incluido el alias viejo /alertas/imagenes', () => {
+	const solo_medidas = solapas.subsolapas_permitidas(true, false, false)
+	assert.deepEqual(solapas.ruta_normalizada('catalogo', 'medidas', solo_medidas), { view: 'catalogo', sub_view: 'medidas' })
+	assert.deepEqual(solapas.ruta_normalizada('catalogo', 'imagenes', solo_medidas), { view: 'catalogo', sub_view: 'medidas' })
+	assert.deepEqual(solapas.ruta_normalizada('catalogo', undefined, solo_medidas), { view: 'catalogo', sub_view: 'medidas' })
+	assert.deepEqual(solapas.ruta_normalizada('imagenes', undefined, solo_medidas), { view: 'catalogo', sub_view: 'medidas' })
+	// Con Imágenes permitida el alias sigue yendo a Imágenes.
+	assert.deepEqual(solapas.ruta_normalizada('imagenes', undefined, solapas.subsolapas_permitidas(true, false, true)), { view: 'catalogo', sub_view: 'imagenes' })
+})

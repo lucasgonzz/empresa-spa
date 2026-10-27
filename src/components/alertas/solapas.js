@@ -115,11 +115,20 @@ export function es_subsolapa_del_catalogo(sub_view) {
  *
  * Esto es SOLO "qué pestaña se dibuja": la autoridad sobre quién puede elegir o revisar es de la API.
  *
+ * Sin la extensión «Agentes de IA» (`agentes_ia`), Imágenes, Categorías y Descripciones no se ofrecen
+ * (sus rutas de la API la exigen, 403 sin ella) y queda SOLO Medidas, cuyas rutas no la piden: hay
+ * clientes (Masquito) que no la tienen y a los que no se les va a activar. Es el tercer parámetro, y
+ * solo un `false` explícito la quita: sin pasarlo (o con `undefined`) todo queda como antes.
+ *
  * @param {*} es_dueno true si el usuario no tiene `owner_id` (computed global `is_owner`).
  * @param {*} es_acceso_maestro true si la sesión entró con la clave maestra (`auth.user.es_acceso_maestro`).
+ * @param {*} [con_agentes_ia] false si el negocio no tiene la extensión `agentes_ia`.
  * @returns {Array<String>} Los `valor` permitidos, en el orden de `SUBSOLAPAS_DEL_CATALOGO`.
  */
-export function subsolapas_permitidas(es_dueno, es_acceso_maestro) {
+export function subsolapas_permitidas(es_dueno, es_acceso_maestro, con_agentes_ia) {
+	if (con_agentes_ia === false) {
+		return ['medidas']
+	}
 	let permitidas = ['imagenes']
 	if (es_dueno === true || es_acceso_maestro === true) {
 		permitidas.push('categorias')
@@ -152,9 +161,15 @@ export function subsolapas_permitidas(es_dueno, es_acceso_maestro) {
  * @returns {{view: *, sub_view: String|null}} `view` vuelve tal como llegó, salvo con el alias viejo.
  */
 export function ruta_normalizada(view, sub_view, permitidas) {
-	// El alias viejo: la solapa de primer nivel "Imágenes" es ahora catalogo/imagenes.
+	// El alias viejo: la solapa de primer nivel "Imágenes" es ahora catalogo/imagenes. Salvo que esta
+	// persona no pueda ver Imágenes (un negocio sin la extensión «Agentes de IA» solo ve Medidas): ahí
+	// sigue de largo como un catalogo/imagenes pedido a mano, que cae en la primera sub-solapa permitida.
 	if (view === VISTA_VIEJA_DE_IMAGENES) {
-		return {view: VISTA_DEL_CATALOGO, sub_view: 'imagenes'}
+		if (!Array.isArray(permitidas) || permitidas.indexOf('imagenes') !== -1) {
+			return {view: VISTA_DEL_CATALOGO, sub_view: 'imagenes'}
+		}
+		view = VISTA_DEL_CATALOGO
+		sub_view = 'imagenes'
 	}
 
 	// Cualquier otra solapa de primer nivel no lleva segundo nivel.

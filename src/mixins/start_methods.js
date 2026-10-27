@@ -351,17 +351,15 @@ export default {
 		 * y cuantas busquedas terminadas nadie abrio) para el numero rojo de Alertas -> Catalogo ->
 		 * Medidas y de la campana (mision medidas-masivas-catalogo, 27/10/2026).
 		 *
-		 * Exige la extension "Agentes de IA" (agentes_ia), igual que el de imagenes: la busqueda usa
-		 * el buscador y la IA, y sin la extension ni se pide. La accion del store es silenciosa y
-		 * resuelve siempre (un 404 de una API que todavia no tiene la ruta deja el numero en cero sin
-		 * mostrar nada), asi que no le puede cortar el turno al eslabon que sigue.
+		 * NO exige la extension "Agentes de IA" (a diferencia del de imagenes): la API de medidas dejo
+		 * de pedirla (Masquito no la tiene ni se le va a activar). Se pide siempre. La accion del store
+		 * es silenciosa y resuelve siempre (un 404 de una API que todavia no tiene la ruta, o un 403,
+		 * dejan el numero en cero sin mostrar nada), asi que no le puede cortar el turno al eslabon
+		 * que sigue.
 		 *
 		 * @returns {Promise}
 		 */
 		get_resumen_de_medidas() {
-			if (!this.hasExtencion('agentes_ia')) {
-				return Promise.resolve()
-			}
 			return this.$store.dispatch('dimension_search/get_resumen')
 		},
 		get_ventas_sin_cobrar() {

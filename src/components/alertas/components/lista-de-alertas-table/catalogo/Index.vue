@@ -84,7 +84,7 @@ export default {
 		 * @returns {Array<String>}
 		 */
 		permitidas() {
-			return subsolapas_permitidas(!!this.is_owner, this.es_acceso_maestro)
+			return subsolapas_permitidas(!!this.is_owner, this.es_acceso_maestro, !!this.hasExtencion('agentes_ia'))
 		},
 		/**
 		 * La sub-solapa que corresponde a la ruta, ya normalizada: la que se monta.

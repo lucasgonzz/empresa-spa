@@ -131,7 +131,7 @@ export default {
 		 */
 		sub_solapas_permitidas() {
 			let usuario = this.$store.state.auth.user
-			return subsolapas_permitidas(!!this.is_owner, !!(usuario && usuario.es_acceso_maestro))
+			return subsolapas_permitidas(!!this.is_owner, !!(usuario && usuario.es_acceso_maestro), !!this.hasExtencion('agentes_ia'))
 		},
 		/*
 			Cada pestaña se agrega solo si `puede_ver_solapa_de_alertas` (mixins/alert_infos.js) dice
