@@ -33,8 +33,8 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  *    y el componente que las llamó decide qué mostrar. Solo si la corrida que vuelve está en la página
  *    visible se reemplaza la fila, para que la tabla no quede con números viejos.
  *
- * Compatibilidad hacia atrás (plan §4): contra una API que todavía no tiene estas rutas (404), ni el
- * resumen ni el listado de corridas muestran NINGÚN error. Los dos van silenciosos (sin el toast del
+ * Compatibilidad hacia atrás (plan §4): contra una API que todavía no tiene estas rutas (404), o a la que
+ * le falta la extensión `agentes_ia` (403), ni el resumen ni el listado de corridas muestran NINGÚN error. Los dos van silenciosos (sin el toast del
  * interceptor global): el número queda en cero y la sección dice "todavía no disponible"
  * (`state.no_disponible`). Es lo mismo que hace la revisión de Descripciones. Las acciones que dispara
  * una persona (abrir un detalle, aprobar, lanzar...) pasan por el interceptor global de main.js, que
@@ -87,14 +87,16 @@ export function es_cancelacion(err) {
 }
 
 /**
- * True si el error es un 404 de la API: para el resumen y el listado, una API que todavía no tiene
- * estas rutas.
+ * True si el error dice que la API no ofrece esta pantalla: un 404 (una API que todavía no tiene las
+ * rutas) o un 403 (las rutas existen pero el negocio no tiene la extensión `agentes_ia`, de la que
+ * dependen: la API contesta 403 «Extensión requerida»). Para el resumen y el listado, los dos son lo
+ * mismo: «todavía no disponible», sin errores ni toasts.
  *
  * @param {*} err
  * @returns {Boolean}
  */
-export function es_404(err) {
-	return !!err && !!err.response && err.response.status === 404
+export function es_ruta_no_disponible(err) {
+	return !!err && !!err.response && (err.response.status === 404 || err.response.status === 403)
 }
 
 /**
@@ -294,8 +296,8 @@ export default {
 					if (es_cancelacion(err) || este_resumen !== ultimo_pedido_de_resumen) {
 						return
 					}
-					// Un 404 es una API que todavía no tiene estas rutas: el número vale cero y no se anuncia.
-					if (es_404(err)) {
+					// 404/403: la API no ofrece esta pantalla (sin rutas o sin la extensión): el número vale cero y no se anuncia.
+					if (es_ruta_no_disponible(err)) {
 						commit('set_resumen', resumen_vacio())
 						return
 					}
@@ -376,8 +378,8 @@ export default {
 						}
 						return
 					}
-					// 404: la API todavía no tiene la búsqueda de medidas. Estado neutro, sin error.
-					if (es_404(err)) {
+					// 404/403: la API no ofrece la búsqueda de medidas (todavía no, o sin la extensión). Estado neutro, sin error.
+					if (es_ruta_no_disponible(err)) {
 						commit('set_pagina', null)
 						commit('set_no_disponible', true)
 						commit('set_error', false)

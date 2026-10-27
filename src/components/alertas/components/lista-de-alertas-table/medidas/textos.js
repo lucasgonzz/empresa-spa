@@ -139,7 +139,7 @@ export const TEXTOS = {
 	boton_catalogo: 'Buscar peso y medidas de todo el catálogo',
 	no_disponible: {
 		titulo: 'Esta pantalla todavía no está disponible',
-		pista: 'Tu sistema todavía no tiene la búsqueda de peso y medidas. Aparece sola cuando reciba la próxima actualización.',
+		pista: 'Tu sistema todavía no tiene la búsqueda de peso y medidas, o todavía no está activada para tu negocio. Aparece sola cuando esté lista.',
 	},
 	sin_corridas: {
 		titulo: 'Todavía no hay búsquedas de medidas',

@@ -15,10 +15,13 @@ const cache = new Map()
 
 /**
  * @param {string} ruta Ruta relativa a src/ con la extensión ('utils/medidas_de_catalogo.js').
+ * @param {object} [mocks] Módulos de reemplazo por nombre de import ({'axios': falso}). Con mocks el
+ *        módulo se carga SIEMPRE de nuevo (sin cache) y solo ese módulo los ve; los que importa
+ *        siguen siendo los reales. Sirve para probar un store sin red.
  * @returns {object} Los exports del módulo.
  */
-function cargar(ruta) {
-	if (cache.has(ruta)) {
+function cargar(ruta, mocks) {
+	if (!mocks && cache.has(ruta)) {
 		return cache.get(ruta)
 	}
 	const archivo = path.join(raiz, 'src', ruta)
@@ -36,11 +39,16 @@ function cargar(ruta) {
 		plugins: ['@babel/plugin-transform-modules-commonjs'],
 	}).code
 	const exports = {}
-	cache.set(ruta, exports)
+	if (!mocks) {
+		cache.set(ruta, exports)
+	}
 	// Se ejecuta en el contexto principal (no en uno nuevo): los objetos y arreglos que crea el módulo
 	// tienen que compartir prototipos con los del test, o deepStrictEqual los da por distintos.
 	const envoltura = vm.runInThisContext('(function (exports, require) {' + codigo + '\n})', { filename: archivo })
 	envoltura(exports, nombre => {
+		if (mocks && Object.prototype.hasOwnProperty.call(mocks, nombre)) {
+			return mocks[nombre]
+		}
 		if (nombre.startsWith('@/')) {
 			return cargar(agregar_extension(nombre.slice(2)))
 		}
