@@ -433,3 +433,120 @@ test('duración y dólares en texto', () => {
 	assert.equal(textos.duracion_en_texto(667), '11 h 7 min')
 	assert.equal(textos.dolares_en_texto(7.5), '7,50')
 })
+
+// --- Aprobar con valores editados (contrato: ausente = propuesto, número = ese, null = no escribir) ---
+
+/** La propuesta de los dos casos reales: peso y alto y ancho, sin largo. */
+const PROPUESTA = { peso: 0.82, alto: 100, ancho: 7, profundidad: null }
+
+test('armar_valores_a_aprobar: lo que no se tocó se omite', () => {
+	const r = medidas.armar_valores_a_aprobar({ peso: '0,82', alto: '100', ancho: '7', profundidad: '' }, PROPUESTA)
+	assert.deepEqual(r.valores, {})
+	assert.deepEqual(r.excluidos, [])
+	assert.equal(r.a_escribir, 3)
+	assert.equal(r.hay_errores, false)
+})
+
+test('armar_valores_a_aprobar: lo que cambió va con el número nuevo, también un campo que la propuesta no traía', () => {
+	const r = medidas.armar_valores_a_aprobar({ peso: '0,82', alto: '35,5', ancho: '7', profundidad: '11' }, PROPUESTA)
+	assert.deepEqual(r.valores, { alto: 35.5, profundidad: 11 })
+	assert.equal(r.a_escribir, 4)
+})
+
+test('armar_valores_a_aprobar: lo que se vació, habiendo propuesta, va en null explícito (no se escribe)', () => {
+	const r = medidas.armar_valores_a_aprobar({ peso: '', alto: '100', ancho: '', profundidad: '' }, PROPUESTA)
+	// Peso y ancho se vaciaron: null. Largo no tenía propuesta: no hay qué excluir, se omite.
+	assert.deepEqual(r.valores, { peso: null, ancho: null })
+	assert.deepEqual(r.excluidos, ['peso', 'ancho'])
+	assert.equal(r.a_escribir, 1)
+})
+
+test('armar_valores_a_aprobar: vaciar todo no deja nada para escribir (a_escribir 0)', () => {
+	const r = medidas.armar_valores_a_aprobar({ peso: '', alto: '', ancho: '', profundidad: '' }, PROPUESTA)
+	assert.equal(r.a_escribir, 0)
+	assert.deepEqual(r.valores, { peso: null, alto: null, ancho: null })
+})
+
+test('armar_valores_a_aprobar: comparar con la propuesta redondea a 4 decimales (0,12349 es lo propuesto 0.1235)', () => {
+	const r = medidas.armar_valores_a_aprobar({ peso: '0,12349' }, { peso: 0.1235 })
+	assert.deepEqual(r.valores, {})
+	assert.equal(r.a_escribir, 1)
+})
+
+test('armar_valores_a_aprobar: un valor mal escrito es un error y no arma nada', () => {
+	const r = medidas.armar_valores_a_aprobar({ peso: 'x', alto: '', ancho: '7', profundidad: '' }, PROPUESTA)
+	assert.equal(r.hay_errores, true)
+	assert.equal(r.errores.peso, 'Escribí un número, por ejemplo 7,5.')
+	assert.deepEqual(r.valores, {})
+})
+
+test('armar_valores_a_aprobar: tolera una propuesta ausente', () => {
+	assert.deepEqual(medidas.armar_valores_a_aprobar({ alto: '3' }, null).valores, { alto: 3 })
+	assert.equal(medidas.armar_valores_a_aprobar(null, undefined).a_escribir, 0)
+})
+
+test('lectura_de_valor: muestra cómo se va a guardar, incluida la ambigüedad de «1.250»', () => {
+	assert.equal(medidas.lectura_de_valor('1.250', 'kg'), 'Se guarda 1,25 kg')
+	assert.equal(medidas.lectura_de_valor('1.250,5', 'kg'), 'Se guarda 1.250,5 kg')
+	assert.equal(medidas.lectura_de_valor('7,5', 'cm'), 'Se guarda 7,5 cm')
+	assert.equal(medidas.lectura_de_valor('7.5', 'cm'), 'Se guarda 7,5 cm')
+	assert.equal(medidas.lectura_de_valor('0,123456', 'kg'), 'Se guarda 0,1235 kg')
+	assert.equal(medidas.lectura_de_valor('', 'cm'), '')
+	assert.equal(medidas.lectura_de_valor('abc', 'cm'), '')
+	assert.equal(medidas.lectura_de_valor('0', 'cm'), '')
+	assert.equal(medidas.lectura_de_valor(null, 'cm'), '')
+})
+
+test('normalizar_resultado_de_accion: lee los campos del cuerpo y de `model`, solo claves válidas, sin repetir', () => {
+	const r = medidas.normalizar_resultado_de_accion({ llenados: ['peso', 'alto'], salteados: ['ancho', 'ancho', 'inventado'], model: { excluidos: ['profundidad'], revertidos: ['peso'], conservados: ['alto'] } })
+	assert.deepEqual(r, { llenados: ['peso', 'alto'], salteados: ['ancho'], excluidos: ['profundidad'], revertidos: ['peso'], conservados: ['alto'] })
+	assert.deepEqual(medidas.normalizar_resultado_de_accion(null), { llenados: [], salteados: [], excluidos: [], revertidos: [], conservados: [] })
+	assert.deepEqual(medidas.normalizar_resultado_de_accion({ llenados: 'peso' }).llenados, [])
+})
+
+test('normalizar_item: `aplicado` por campo (true / false / null si la API no lo informa)', () => {
+	const it = medidas.normalizar_item({ id: 1, propuesta: { peso: 1, alto: 2, ancho: 3 }, campos: [
+		{ clave: 'peso', valor: 1, aplicado: true },
+		{ clave: 'alto', valor: 2, aplicado: false },
+		{ clave: 'ancho', valor: 3 },
+	] })
+	assert.deepEqual(it.campos.map(c => c.aplicado), [true, false, null, null])
+})
+
+test('texto_de_campos: nombres con «y», «Largo» para profundidad, en el orden de los chips', () => {
+	assert.equal(textos.texto_de_campos(['profundidad', 'peso']), 'Peso y Largo')
+	assert.equal(textos.texto_de_campos(['alto', 'ancho', 'peso']), 'Peso, Alto y Ancho')
+	assert.equal(textos.texto_de_campos(['ancho']), 'Ancho')
+	assert.equal(textos.texto_de_campos([]), '')
+	assert.equal(textos.texto_de_campos(null), '')
+	assert.equal(textos.texto_de_campos(['otro']), '')
+})
+
+test('aviso_de_aprobacion: sin salteados ni excluidos no hay aviso; con ellos dice qué campos', () => {
+	assert.equal(textos.aviso_de_aprobacion(null), null)
+	assert.equal(textos.aviso_de_aprobacion({ llenados: ['peso', 'alto'], salteados: [], excluidos: [] }), null)
+	const salteados = textos.aviso_de_aprobacion({ llenados: ['peso'], salteados: ['alto', 'ancho'], excluidos: [] })
+	assert.equal(salteados.tipo, 'warning')
+	assert.equal(salteados.texto, 'Se cargó Peso. No se pisó Alto y Ancho: el artículo ya tenía un valor cargado.')
+	const excluidos = textos.aviso_de_aprobacion({ llenados: ['alto'], salteados: [], excluidos: ['peso'] })
+	assert.equal(excluidos.tipo, 'info')
+	assert.equal(excluidos.texto, 'Se cargó Alto. No se cargó Peso, como pediste.')
+	const ambos = textos.aviso_de_aprobacion({ llenados: [], salteados: ['peso'], excluidos: ['alto'] })
+	assert.equal(ambos.tipo, 'warning')
+	assert.equal(ambos.texto, 'No se pisó Peso: el artículo ya tenía un valor cargado. No se cargó Alto, como pediste.')
+})
+
+test('aviso_de_quitar: «Listo» de siempre, o qué se conservó porque se modificó después', () => {
+	assert.deepEqual(textos.aviso_de_quitar({ revertidos: ['peso'], conservados: [] }), { tipo: 'success', texto: 'Listo: le quitamos las medidas al artículo' })
+	assert.deepEqual(textos.aviso_de_quitar(null), { tipo: 'success', texto: 'Listo: le quitamos las medidas al artículo' })
+	const con_conservados = textos.aviso_de_quitar({ revertidos: ['peso', 'alto'], conservados: ['ancho'] })
+	assert.equal(con_conservados.tipo, 'warning')
+	assert.equal(con_conservados.texto, 'Se quitó Peso y Alto. Se conservó Ancho porque se modificó después de la búsqueda.')
+	assert.equal(textos.aviso_de_quitar({ revertidos: [], conservados: ['peso'] }).texto, 'No se quitó nada. Se conservó Peso porque se modificó después de la búsqueda.')
+})
+
+test('el texto de «no disponible» ya no habla de activar nada para el negocio', () => {
+	assert.equal(textos.TEXTOS.no_disponible.titulo, 'Todavía no está disponible')
+	assert.equal(textos.TEXTOS.no_disponible.pista, 'La búsqueda de peso y medidas se habilita con la próxima actualización de tu sistema.')
+	assert.doesNotMatch(JSON.stringify(textos.TEXTOS.no_disponible), /activada|negocio|extensi/i)
+})

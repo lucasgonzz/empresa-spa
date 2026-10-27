@@ -112,6 +112,18 @@ class="med-fila med-fila--revisar"
 					:data-testid="'medidas-campo-' + item.id + '-' + campo.clave"
 					:disabled="procesando"
 					@input="limpiar_error(campo.clave)"></b-form-input>
+					<!--
+						La lectura de lo escrito, mientras se escribe: así se ve cómo se va a guardar. La regla
+						(sin coma, un punto es decimal) hace que «1.250» se guarde como 1,25 y no como 1250, y
+						esta línea deja que la persona lo note. Si se vació un campo que sí tenía propuesta, avisa
+						que ese campo no se carga.
+					-->
+					<span
+					v-if="lectura_de(campo)"
+					class="med-edicion__lectura"
+					:data-testid="'medidas-lectura-' + item.id + '-' + campo.clave">
+						{{ lectura_de(campo) }}
+					</span>
 					<span
 					v-if="errores[campo.clave]"
 					class="med-edicion__error"
@@ -194,7 +206,7 @@ class="med-fila med-fila--revisar"
 // nueva parpadearía vacía hasta que llegara el componente.
 import ChipsDeMedidas from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/ChipsDeMedidas'
 import FuenteDeMedidas from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/FuenteDeMedidas'
-import { CAMPOS_DE_MEDIDA, texto_para_input, validar_valores_editados } from '@/utils/medidas_de_catalogo'
+import { CAMPOS_DE_MEDIDA, texto_para_input, armar_valores_a_aprobar, lectura_de_valor, a_medida_o_null } from '@/utils/medidas_de_catalogo'
 import { CRITERIOS, MOTIVOS, MOTIVOS_DE_AVISO, texto_de, consultas_del_articulo } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 
 /**
@@ -203,9 +215,15 @@ import { CRITERIOS, MOTIVOS, MOTIVOS_DE_AVISO, texto_de, consultas_del_articulo 
  * chips con lo propuesto (los que faltan marcados), la fuente y la cita, y tres acciones:
  * Rechazar, Editar y Aprobar.
  *
- * «Editar» abre en el lugar los cuatro valores. «Guardar y aprobar» valida (números mayores que cero,
- * dentro del tope de cordura) y emite `aprobar` con `{peso, alto, ancho, profundidad}` solo con los
- * campos escritos; la API vuelve a validar y escribe solo los que el artículo tiene vacíos (D5).
+ * «Editar» abre en el lugar los cuatro valores, ya cargados con lo propuesto. «Guardar y aprobar» valida
+ * (números mayores que cero, dentro del tope de cordura) y emite `aprobar` con el `valores` que entiende
+ * la API (POST dimension-search-items/{id}/aprobar):
+ *   - un campo que la persona NO tocó se omite (la API usa lo propuesto);
+ *   - uno que CAMBIÓ va con el número nuevo (se escribe ese);
+ *   - uno que VACIÓ, habiendo propuesta, va con `null` explícito (NO se escribe ese campo).
+ * Si no queda ningún campo con número, no se manda nada y se avisa en el lugar (si no sirve ningún valor,
+ * la salida es rechazar). Si no cambió nada, se emite `null` y se aprueba lo propuesto. En todos los casos
+ * la API sigue sin pisar un campo que el artículo ya tenga cargado (D5).
  *
  * Eventos: `seleccionar(Boolean)`, `aprobar(valores|null)`, `rechazar`.
  */
@@ -315,24 +333,40 @@ export default {
 			this.error_general = ''
 		},
 		/**
-		 * «Guardar y aprobar»: valida lo escrito y, si está bien, pide aprobar con esos valores. Con
-		 * algún campo mal escrito, o con los cuatro vacíos, no sale nada y se dice qué corregir.
+		 * Lo que se va a guardar de un campo, mientras se escribe ("Se guarda 1,25 kg"). Con el campo
+		 * vacío y una propuesta que sí tenía ese valor, avisa que no se carga.
+		 *
+		 * @param {Object} campo Una definición de `CAMPOS_DE_MEDIDA`.
+		 * @returns {String}
+		 */
+		lectura_de(campo) {
+			let escrito = String(this.entradas[campo.clave] === null || typeof this.entradas[campo.clave] === 'undefined' ? '' : this.entradas[campo.clave]).trim()
+			if (escrito === '') {
+				return a_medida_o_null(this.item.propuesta[campo.clave]) !== null ? 'No se carga este campo' : ''
+			}
+			return lectura_de_valor(escrito, campo.unidad)
+		},
+		/**
+		 * «Guardar y aprobar»: valida lo escrito y, si está bien, pide aprobar con el `valores` que
+		 * entiende la API (ver el comentario del componente). Con algún campo mal escrito, o sin ningún
+		 * campo con número, no sale nada y se dice qué corregir.
 		 */
 		guardar_y_aprobar() {
 			if (this.procesando) {
 				return
 			}
-			let resultado = validar_valores_editados(this.entradas)
+			let resultado = armar_valores_a_aprobar(this.entradas, this.item.propuesta)
 			this.errores = resultado.errores
 			this.error_general = ''
 			if (resultado.hay_errores) {
 				return
 			}
-			if (resultado.cantidad === 0) {
-				this.error_general = 'Escribí al menos una medida para aprobar.'
+			if (resultado.a_escribir === 0) {
+				this.error_general = 'No queda ninguna medida para cargar. Si no sirve ningún valor, rechazá la propuesta.'
 				return
 			}
-			this.$emit('aprobar', resultado.valores)
+			// Sin cambios (ni valores nuevos ni campos sacados) se aprueba lo propuesto, sin `valores`.
+			this.$emit('aprobar', Object.keys(resultado.valores).length ? resultado.valores : null)
 		},
 	},
 }

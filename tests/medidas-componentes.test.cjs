@@ -196,7 +196,10 @@ test('A revisar: Editar abre los cuatro inputs con lo propuesto, los que faltan 
 	assert.equal(por_testid(arbol, 'medidas-editar-11'), undefined)
 })
 
-test('A revisar: Guardar y aprobar emite `aprobar` con los valores editados (solo los escritos)', () => {
+// Cambio de contrato INTENCIONAL (revisión del 27/10/2026): antes «Guardar y aprobar» mandaba todos los
+// campos con número; ahora manda SOLO lo que cambió (número distinto de la propuesta) y `null` explícito
+// para lo que la persona vació (= no escribir ese campo). Lo que no tocó se omite (la API usa lo propuesto).
+test('A revisar: Guardar y aprobar emite solo lo que cambió y null para lo que se vació', () => {
 	const vm = instanciar(FilaARevisar, { item: item() })
 	const emitidos = []
 	vm.$on('aprobar', valores => emitidos.push(valores))
@@ -206,7 +209,47 @@ test('A revisar: Guardar y aprobar emite `aprobar` con los valores editados (sol
 	vm.entradas.peso = ''
 	vm.guardar_y_aprobar()
 	assert.equal(emitidos.length, 1)
-	assert.deepEqual(emitidos[0], { alto: 35.5, ancho: 7, profundidad: 11 })
+	// Peso vaciado: null. Alto cambió y Largo se agregó: el número. Ancho no se tocó: ausente.
+	assert.deepEqual(emitidos[0], { peso: null, alto: 35.5, profundidad: 11 })
+	assert.equal('ancho' in emitidos[0], false)
+})
+
+test('A revisar: sin cambios, Guardar y aprobar emite null (se aprueba lo propuesto)', () => {
+	const vm = instanciar(FilaARevisar, { item: item() })
+	const emitidos = []
+	vm.$on('aprobar', valores => emitidos.push(valores))
+	vm.abrir_edicion()
+	vm.guardar_y_aprobar()
+	assert.deepEqual(emitidos, [null])
+})
+
+test('A revisar: si se vacían todos los campos no se manda el pedido y se avisa en el lugar', () => {
+	const vm = instanciar(FilaARevisar, { item: item() })
+	const emitidos = []
+	vm.$on('aprobar', valores => emitidos.push(valores))
+	vm.abrir_edicion()
+	vm.entradas = { peso: '', alto: '', ancho: '', profundidad: '' }
+	vm.guardar_y_aprobar()
+	assert.equal(emitidos.length, 0)
+	assert.equal(vm.error_general, 'No queda ninguna medida para cargar. Si no sirve ningún valor, rechazá la propuesta.')
+	assert.match(texto_de(por_testid(vm._render(), 'medidas-edicion-error-11')), /rechazá la propuesta/)
+})
+
+test('A revisar: bajo cada input se lee cómo se va a guardar («1.250» es 1,25) o que el campo no se carga', () => {
+	const vm = instanciar(FilaARevisar, { item: item() })
+	vm.abrir_edicion()
+	vm.entradas.peso = '1.250'
+	vm.entradas.alto = ''
+	let arbol = vm._render()
+	assert.equal(texto_de(por_testid(arbol, 'medidas-lectura-11-peso')), 'Se guarda 1,25 kg')
+	// Alto tenía propuesta y se vació: se avisa que no se carga.
+	assert.equal(texto_de(por_testid(arbol, 'medidas-lectura-11-alto')), 'No se carga este campo')
+	assert.equal(texto_de(por_testid(arbol, 'medidas-lectura-11-ancho')), 'Se guarda 7 cm')
+	// Largo no tenía propuesta y está vacío: no hay nada que decir.
+	assert.equal(por_testid(arbol, 'medidas-lectura-11-profundidad'), undefined)
+	vm.entradas.peso = 'abc'
+	arbol = vm._render()
+	assert.equal(por_testid(arbol, 'medidas-lectura-11-peso'), undefined)
 })
 
 test('A revisar: Guardar y aprobar con un valor mal escrito no emite y marca el campo', () => {
@@ -225,17 +268,6 @@ test('A revisar: Guardar y aprobar con un valor mal escrito no emite y marca el 
 	// Al volver a escribir en el campo, su error desaparece.
 	vm.limpiar_error('peso')
 	assert.equal(vm.errores.peso, undefined)
-})
-
-test('A revisar: con los cuatro vacíos se pide escribir al menos una medida', () => {
-	const vm = instanciar(FilaARevisar, { item: item() })
-	const emitidos = []
-	vm.$on('aprobar', valores => emitidos.push(valores))
-	vm.abrir_edicion()
-	vm.entradas = { peso: '', alto: '', ancho: '', profundidad: '' }
-	vm.guardar_y_aprobar()
-	assert.equal(emitidos.length, 0)
-	assert.equal(vm.error_general, 'Escribí al menos una medida para aprobar.')
 })
 
 test('A revisar: Cancelar cierra la edición sin emitir nada', () => {
@@ -470,4 +502,180 @@ test('Tabla de corridas: cargando, error con Reintentar y vacío', () => {
 	con_store({ models: [], cargado: true, loading: false, error: false, total: 0, per_page: 25, page: 1 }, () => {
 		assert.ok(por_testid(instanciar(TablaCorridas)._render(), 'medidas-corridas-vacio'))
 	})
+})
+
+// --- Campos que no se pisaron (campos[].aplicado) ----------------------------------------------
+
+test('Asignadas: un campo que la API dice que no se aplicó se marca «ya tenía valor, no se pisó»', () => {
+	const it = item({ status: 'asignada', motivo: '', propuesta: { peso: 0.82, alto: 100, ancho: 7 }, campos: [
+		{ clave: 'peso', valor: 0.82, aplicado: true },
+		{ clave: 'alto', valor: 100, aplicado: false },
+		{ clave: 'ancho', valor: 7 },
+	] })
+	const hijos = buscar_todos(instanciar(FilaAsignada, { item: it })._render(), nodo => !!nodo.componentOptions)
+	// Atributo booleano sin valor: Vue lo convierte en true al instanciar el hijo.
+	assert.notEqual(hijos[0].componentOptions.propsData.marcar_no_aplicados, undefined)
+
+	const arbol = instanciar(Chips, { campos: it.campos, item_id: it.id, marcar_no_aplicados: true })._render()
+	assert.equal(por_testid(arbol, 'medidas-chip-11-alto').data.attrs['data-no-aplicado'], 1)
+	assert.match(texto_de(por_testid(arbol, 'medidas-no-aplicado-11-alto')), /ya tenía valor, no se pisó/)
+	// Los aplicados, y los que la API no informa, no se marcan.
+	assert.equal(por_testid(arbol, 'medidas-chip-11-peso').data.attrs['data-no-aplicado'], 0)
+	assert.equal(por_testid(arbol, 'medidas-no-aplicado-11-peso'), undefined)
+	assert.equal(por_testid(arbol, 'medidas-no-aplicado-11-ancho'), undefined)
+	// Un campo que falta no se marca aunque `aplicado` sea false.
+	assert.equal(por_testid(arbol, 'medidas-no-aplicado-11-profundidad'), undefined)
+})
+
+test('A revisar no marca nada como «no se pisó»: todavía no se aplicó ningún campo', () => {
+	const it = item({ propuesta: { peso: 0.82 }, campos: [{ clave: 'peso', valor: 0.82, aplicado: false }] })
+	const arbol = instanciar(Chips, { campos: it.campos, item_id: it.id })._render()
+	assert.equal(por_testid(arbol, 'medidas-no-aplicado-11-peso'), undefined)
+	const hijos = buscar_todos(instanciar(FilaARevisar, { item: it })._render(), nodo => !!nodo.componentOptions)
+	assert.ok(!hijos[0].componentOptions.propsData.marcar_no_aplicados)
+})
+
+// --- Detalle de una corrida: un solo pedido de artículos al abrir ------------------------------
+
+test('Detalle: al abrir, el horizontal-nav que avisa la solapa ya elegida NO repite el pedido de artículos', async () => {
+	const Detalle = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/Index.vue', {
+		'@/common-vue/components/horizontal-nav/Index': {},
+		'@/store/dimension_search': { es_cancelacion: () => false },
+	}).default
+	const pedidos = []
+	const anterior = Vue.prototype.$store
+	Vue.prototype.$store = {
+		state: {},
+		commit() {},
+		dispatch(accion, datos) {
+			pedidos.push(accion)
+			if (accion === 'dimension_search/get_corrida') {
+				return Promise.resolve(corrida({ status: 'terminada', conteos: { asignadas: 0, a_revisar: 5, sin_datos: 0 } }))
+			}
+			if (accion === 'dimension_search/get_items') {
+				// La respuesta no llega todavía: el pedido sigue en vuelo, como en un arranque real.
+				return new Promise(() => {})
+			}
+			return Promise.resolve()
+		},
+	}
+	const vm = new Vue(Object.assign({}, Detalle, { propsData: { corrida_id: 7 } }))
+	try {
+		// Dejar que llegue la corrida: ahí se elige la solapa y se pide la primera página.
+		await new Promise(resolver => setTimeout(resolver, 0))
+		assert.equal(vm.solapa, 'a_revisar')
+		assert.equal(pedidos.filter(accion => accion === 'dimension_search/get_items').length, 1)
+
+		// Lo que hace el nav al montarse (emitir_setSelected_al_inicio): avisar la solapa que ya está elegida.
+		vm.al_elegir_solapa({ route_value: 'a_revisar' })
+		assert.equal(pedidos.filter(accion => accion === 'dimension_search/get_items').length, 1, 'se repitió el pedido')
+
+		// Elegir OTRA solapa sí pide la suya.
+		vm.al_elegir_solapa({ route_value: 'sin_datos' })
+		assert.equal(vm.solapa, 'sin_datos')
+		assert.equal(pedidos.filter(accion => accion === 'dimension_search/get_items').length, 2)
+
+		// Y volver a tocar la activa cuando ya no está cargando recarga (la forma de ver lo último).
+		vm.cargando_items = false
+		vm.al_elegir_solapa({ route_value: 'sin_datos' })
+		assert.equal(pedidos.filter(accion => accion === 'dimension_search/get_items').length, 3)
+	} finally {
+		vm.$destroy()
+		await new Promise(resolver => setTimeout(resolver, 20))
+		Vue.prototype.$store = anterior
+	}
+})
+
+// --- Avisos de lo que contó la API al aprobar o quitar -----------------------------------------
+
+test('Detalle: aprobar avisa los campos que no se pisaron; quitar avisa lo que se conservó', async () => {
+	const Detalle = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/Index.vue', {
+		'@/common-vue/components/horizontal-nav/Index': {},
+		'@/store/dimension_search': { es_cancelacion: () => false },
+	}).default
+	const anterior_store = Vue.prototype.$store
+	const anterior_toast = Vue.prototype.$toast
+	const toasts = []
+	Vue.prototype.$toast = {
+		success: (texto) => toasts.push(['success', texto]),
+		warning: (texto) => toasts.push(['warning', texto]),
+		info: (texto) => toasts.push(['info', texto]),
+		error: (texto) => toasts.push(['error', texto]),
+	}
+	let respuesta = null
+	Vue.prototype.$store = {
+		state: {},
+		commit() {},
+		dispatch(accion) {
+			if (accion === 'dimension_search/get_corrida') {
+				return Promise.resolve(corrida({ status: 'terminada' }))
+			}
+			if (accion === 'dimension_search/get_items') {
+				return new Promise(() => {})
+			}
+			if (accion === 'dimension_search/aprobar' || accion === 'dimension_search/quitar') {
+				return Promise.resolve(respuesta)
+			}
+			return Promise.resolve()
+		},
+	}
+	const vm = new Vue(Object.assign({}, Detalle, { propsData: { corrida_id: 7 } }))
+	try {
+		await new Promise(resolver => setTimeout(resolver, 0))
+		const it = item()
+
+		// Aprobar sin nada raro: no hay aviso (la fila que se va es la confirmación).
+		respuesta = Object.assign({}, it, { resultado_de_la_accion: medidas.normalizar_resultado_de_accion({ llenados: ['peso', 'alto', 'ancho'] }) })
+		await vm.resolver_uno(it, 'aprobar', 'a_revisar', 'asignadas')
+		assert.deepEqual(toasts, [])
+
+		// Aprobar con un campo que el artículo ya tenía y otro que la persona sacó.
+		respuesta = Object.assign({}, it, { resultado_de_la_accion: medidas.normalizar_resultado_de_accion({ llenados: ['peso'], salteados: ['alto'], excluidos: ['ancho'] }) })
+		await vm.resolver_uno(it, 'aprobar', 'a_revisar', 'asignadas')
+		assert.deepEqual(toasts[0], ['warning', 'Se cargó Peso. No se pisó Alto: el artículo ya tenía un valor cargado. No se cargó Ancho, como pediste.'])
+
+		// Quitar sin conservados: el «Listo» de siempre, una sola vez.
+		toasts.length = 0
+		respuesta = Object.assign({}, it, { resultado_de_la_accion: medidas.normalizar_resultado_de_accion({ revertidos: ['peso', 'alto'] }) })
+		await vm.resolver_uno(it, 'quitar', 'asignadas', 'sin_datos')
+		assert.deepEqual(toasts, [['success', 'Listo: le quitamos las medidas al artículo']])
+
+		// Quitar con un campo modificado después: se conserva y se dice cuál.
+		toasts.length = 0
+		respuesta = Object.assign({}, it, { resultado_de_la_accion: medidas.normalizar_resultado_de_accion({ revertidos: ['peso'], conservados: ['alto'] }) })
+		await vm.resolver_uno(it, 'quitar', 'asignadas', 'sin_datos')
+		assert.deepEqual(toasts, [['warning', 'Se quitó Peso. Se conservó Alto porque se modificó después de la búsqueda.']])
+
+		// Rechazar nunca avisa.
+		toasts.length = 0
+		respuesta = Object.assign({}, it, { resultado_de_la_accion: medidas.normalizar_resultado_de_accion({}) })
+		await vm.resolver_uno(it, 'rechazar', 'a_revisar', 'sin_datos')
+		assert.deepEqual(toasts, [])
+	} finally {
+		vm.$destroy()
+		// Las promesas que dispara el cierre (refrescar el resumen) todavía usan el $store falso.
+		await new Promise(resolver => setTimeout(resolver, 20))
+		Vue.prototype.$store = anterior_store
+		Vue.prototype.$toast = anterior_toast
+	}
+})
+
+// --- Arranque: el resumen del badge no depende de la extensión agentes_ia ----------------------
+
+test('start_methods: get_resumen_de_medidas pide el resumen SIN mirar la extensión agentes_ia', async () => {
+	const mixin = cargar('mixins/start_methods.js', {
+		'@/mixins/set_employee_vender': { __esModule: true, default: {} },
+		'@/mixins/cotizacion_dolar': { __esModule: true, default: {} },
+	}).default
+	const despachos = []
+	const contexto = {
+		// Un negocio SIN la extensión (Masquito): si el método la consultara, no pediría nada.
+		hasExtencion: () => false,
+		$store: { dispatch: accion => { despachos.push(accion); return Promise.resolve() } },
+	}
+	await mixin.methods.get_resumen_de_medidas.call(contexto)
+	assert.deepEqual(despachos, ['dimension_search/get_resumen'])
+	// El de imágenes, en cambio, sigue exigiéndola.
+	await mixin.methods.get_resumen_de_imagenes.call(contexto)
+	assert.deepEqual(despachos, ['dimension_search/get_resumen'])
 })

@@ -17,7 +17,7 @@
  */
 
 import { numero_es as numero_con_decimales } from '@/common-vue/helpers/formato_numero'
-import { entero_es, a_numero } from '@/utils/medidas_de_catalogo'
+import { entero_es, a_numero, CAMPOS_DE_MEDIDA } from '@/utils/medidas_de_catalogo'
 
 export { entero_es }
 
@@ -138,8 +138,8 @@ export const TEXTOS = {
 	intro: 'Cada búsqueda de medidas queda acá. Abrí una para ver qué peso y medidas se encontraron en internet, qué quedó para revisar y de qué artículos no se pudo sacar nada. Las consultas son las que se le hicieron al buscador.',
 	boton_catalogo: 'Buscar peso y medidas de todo el catálogo',
 	no_disponible: {
-		titulo: 'Esta pantalla todavía no está disponible',
-		pista: 'Tu sistema todavía no tiene la búsqueda de peso y medidas, o todavía no está activada para tu negocio. Aparece sola cuando esté lista.',
+		titulo: 'Todavía no está disponible',
+		pista: 'La búsqueda de peso y medidas se habilita con la próxima actualización de tu sistema.',
 	},
 	sin_corridas: {
 		titulo: 'Todavía no hay búsquedas de medidas',
@@ -310,4 +310,73 @@ export function duracion_en_texto(minutos) {
  */
 export function dolares_en_texto(valor) {
 	return numero_con_decimales(a_numero(valor), 2)
+}
+
+/**
+ * Nombres de campos en una frase: ['peso', 'alto', 'profundidad'] -> "Peso, Alto y Largo". Las claves
+ * que no son un campo de medida se ignoran.
+ *
+ * @param {Array<String>} claves
+ * @returns {String} '' si no hay ninguna.
+ */
+export function texto_de_campos(claves) {
+	let nombres = []
+	CAMPOS_DE_MEDIDA.forEach(function (campo) {
+		if (Array.isArray(claves) && claves.indexOf(campo.clave) !== -1) {
+			nombres.push(campo.etiqueta)
+		}
+	})
+	if (nombres.length <= 1) {
+		return nombres.join('')
+	}
+	return nombres.slice(0, -1).join(', ') + ' y ' + nombres[nombres.length - 1]
+}
+
+/**
+ * El aviso después de aprobar un artículo, cuando pasó algo que la persona tiene que saber: la API no
+ * pisó un campo que el artículo ya tenía (`salteados`) o dejó sin cargar uno que la persona sacó
+ * (`excluidos`). Si se cargó todo lo propuesto, no hay aviso: la fila que se va es la confirmación.
+ *
+ * @param {Object|null} resultado `resultado_de_la_accion` del item (ver normalizar_resultado_de_accion).
+ * @returns {{tipo: String, texto: String}|null} `tipo` es 'warning' (hubo campos que no se pisaron) o
+ *   'info' (solo lo que la persona sacó).
+ */
+export function aviso_de_aprobacion(resultado) {
+	if (!resultado) {
+		return null
+	}
+	let salteados = texto_de_campos(resultado.salteados)
+	let excluidos = texto_de_campos(resultado.excluidos)
+	if (!salteados && !excluidos) {
+		return null
+	}
+	let partes = []
+	let llenados = texto_de_campos(resultado.llenados)
+	if (llenados) {
+		partes.push('Se cargó ' + llenados + '.')
+	}
+	if (salteados) {
+		partes.push('No se pisó ' + salteados + ': el artículo ya tenía un valor cargado.')
+	}
+	if (excluidos) {
+		partes.push('No se cargó ' + excluidos + ', como pediste.')
+	}
+	return { tipo: salteados ? 'warning' : 'info', texto: partes.join(' ') }
+}
+
+/**
+ * El aviso después de quitar las medidas de un artículo: qué volvió a quedar vacío y qué se conservó
+ * porque alguien lo cambió después. Sin campos conservados es el aviso de siempre.
+ *
+ * @param {Object|null} resultado `resultado_de_la_accion` del item.
+ * @returns {{tipo: String, texto: String}}
+ */
+export function aviso_de_quitar(resultado) {
+	let revertidos = resultado ? texto_de_campos(resultado.revertidos) : ''
+	let conservados = resultado ? texto_de_campos(resultado.conservados) : ''
+	if (!conservados) {
+		return { tipo: 'success', texto: 'Listo: le quitamos las medidas al artículo' }
+	}
+	let texto = revertidos ? 'Se quitó ' + revertidos + '. ' : 'No se quitó nada. '
+	return { tipo: 'warning', texto: texto + 'Se conservó ' + conservados + ' porque se modificó después de la búsqueda.' }
 }

@@ -1,5 +1,5 @@
 // Store dimension_search (src/store/dimension_search.js) de la misión medidas-masivas-catalogo
-// (27/10/2026): tolerancia a una API sin las rutas (404) o sin la extensión (403), forma de las
+// (27/10/2026): tolerancia a una API sin las rutas (404) o que no deja ver la pantalla (403), forma de las
 // respuestas y de los pedidos. Sin red: `axios` es un falso que registra lo que se le pide.
 //
 // Ejecutar con: node --test tests/medidas-store.test.cjs
@@ -72,7 +72,7 @@ test('el resumen se pide en silencio y el badge sale del `badge` de la API', asy
 	assert.equal(store.getters.badge(estado), 4)
 })
 
-test('resumen: un 404 o un 403 (API sin rutas o sin la extensión) deja el badge en cero, sin ruido', async () => {
+test('resumen: un 404 o un 403 (API sin rutas o sin permiso) deja el badge en cero, sin ruido', async () => {
 	for (const status of [404, 403]) {
 		const { store } = store_con(() => Promise.reject(error_http(status, 'x')))
 		const estado = nuevo_estado(store)
@@ -133,7 +133,7 @@ test('corridas: acepta el contrato literal {data, total} sin `models`', async ()
 
 test('corridas: un 404 es «no disponible», sin error, sin tabla y sin toast (el pedido es silencioso)', async () => {
 	for (const status of [404, 403]) {
-		const { store, pedidos } = store_con(() => Promise.reject(error_http(status, 'Extensión requerida: agentes_ia')))
+		const { store, pedidos } = store_con(() => Promise.reject(error_http(status, 'No autorizado')))
 		const estado = nuevo_estado(store)
 		estado.models = [{ id: 1 }]
 		await store.actions.get_corridas(contexto(store, estado).ctx)
@@ -213,9 +213,33 @@ test('aprobar: sin valores no manda cuerpo; con valores manda {valores}', async 
 	await store.actions.aprobar({}, { id: 6, valores: { alto: 35.5, ancho: 7 } })
 	assert.equal(pedidos[1].url, '/api/dimension-search-items/6/aprobar')
 	assert.deepEqual(pedidos[1].cuerpo, { valores: { alto: 35.5, ancho: 7 } })
-	// Un {id} sin valores tampoco manda cuerpo.
+	// Un {id} sin valores tampoco manda cuerpo, ni un objeto de valores vacío.
 	await store.actions.aprobar({}, { id: 7 })
 	assert.deepEqual(pedidos[2].cuerpo, {})
+	await store.actions.aprobar({}, { id: 8, valores: {} })
+	assert.deepEqual(pedidos[3].cuerpo, {})
+})
+
+test('aprobar: un null explícito viaja (= no escribir ese campo) y se distingue de la clave ausente', async () => {
+	const { store, pedidos } = store_con(() => Promise.resolve({ data: { model: { id: 5, status: 'aprobada' } } }))
+	await store.actions.aprobar({}, { id: 5, valores: { peso: null, alto: 35.5 } })
+	assert.deepEqual(pedidos[0].cuerpo, { valores: { peso: null, alto: 35.5 } })
+	assert.equal('ancho' in pedidos[0].cuerpo.valores, false)
+	assert.equal(JSON.stringify(pedidos[0].cuerpo), '{"valores":{"peso":null,"alto":35.5}}')
+})
+
+test('aprobar y quitar devuelven el item con lo que contó la API (llenados, salteados, excluidos, revertidos, conservados)', async () => {
+	// La API manda los extras sueltos en el cuerpo y también adentro de `model`.
+	const item = { id: 5, status: 'aprobada', propuesta: { peso: 1 } }
+	const aprobada = store_con(() => Promise.resolve({ data: Object.assign({}, item, { llenados: ['peso'], salteados: ['alto'], excluidos: ['ancho'], model: item }) }))
+	const r1 = await aprobada.store.actions.aprobar({}, 5)
+	assert.deepEqual(r1.resultado_de_la_accion, { llenados: ['peso'], salteados: ['alto'], excluidos: ['ancho'], revertidos: [], conservados: [] })
+	const quitada = store_con(() => Promise.resolve({ data: { model: Object.assign({}, item, { status: 'quitada', revertidos: ['peso'], conservados: ['alto'] }) } }))
+	const r2 = await quitada.store.actions.quitar({}, 5)
+	assert.deepEqual(r2.resultado_de_la_accion, { llenados: [], salteados: [], excluidos: [], revertidos: ['peso'], conservados: ['alto'] })
+	// Sin extras, todo vacío (nunca undefined).
+	const simple = store_con(() => Promise.resolve({ data: { model: item } }))
+	assert.deepEqual((await simple.store.actions.rechazar({}, 5)).resultado_de_la_accion.salteados, [])
 })
 
 test('rechazar, quitar y los lotes pegan en las rutas del contrato', async () => {

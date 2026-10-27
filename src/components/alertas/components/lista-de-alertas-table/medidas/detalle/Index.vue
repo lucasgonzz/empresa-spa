@@ -205,7 +205,7 @@ import FilaARevisar from '@/components/alertas/components/lista-de-alertas-table
 import FilaSinDatos from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/FilaSinDatos'
 import PaginacionItems from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/PaginacionItems'
 import { SOLAPAS_DE_MEDIDAS, VALORES_DE_SOLAPA } from '@/utils/medidas_de_catalogo'
-import { TEXTOS, esta_activa, conteo, entero_es } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { TEXTOS, esta_activa, conteo, entero_es, aviso_de_aprobacion, aviso_de_quitar } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 import { es_cancelacion } from '@/store/dimension_search'
 
 /** Cada cuánto se refresca el encabezado mientras la corrida sigue avanzando. */
@@ -687,6 +687,13 @@ export default {
 			if (VALORES_DE_SOLAPA.indexOf(valor) === -1) {
 				return
 			}
+			// Al abrir el detalle, `traer_corrida` ya pidió la primera página de la solapa inicial, y el
+			// horizontal-nav (con `emitir_setSelected_al_inicio`) avisa al montarse que esa solapa está
+			// elegida. Volver a tocar la que ya se está cargando no tiene que repetir el pedido; la que ya
+			// cargó (o falló) sí se recarga, que es la forma de ver lo último mientras la corrida avanza.
+			if (valor === this.solapa && this.cargando_items) {
+				return
+			}
 			this.solapa = valor
 			this.pagina = 1
 			this.seleccionados = []
@@ -872,8 +879,11 @@ export default {
 			let datos = accion === 'aprobar' && valores ? { id: item.id, valores: valores } : item.id
 
 			return self.$store.dispatch('dimension_search/' + accion, datos)
-			.then(() => {
+			.then(item_resuelto => {
 				self.marcar_procesando(item.id, false)
+				// Lo que la API cuenta de la acción (campos salteados, excluidos, conservados) se avisa
+				// siempre, se siga mirando la misma pantalla o no: la acción ya pasó.
+				self.avisar_resultado_de_la_accion(accion, item_resuelto)
 				if (self.sigue_siendo(id_de_la_corrida, solapa_de_la_accion)) {
 					self.sacar_item(item.id, desde, hacia)
 				} else {
@@ -893,6 +903,28 @@ export default {
 				}
 				return false
 			})
+		},
+		/**
+		 * Avisa lo que la API contó de una acción sobre un artículo, con los campos por nombre:
+		 *   - aprobar: qué no se pisó porque el artículo ya tenía un valor, y qué se dejó sin cargar
+		 *     porque la persona lo sacó (sin nada de eso, no hay aviso: la fila que se va es la confirmación);
+		 *   - quitar: «Listo», o qué campos se conservaron porque se modificaron después.
+		 * Rechazar no tiene aviso.
+		 *
+		 * @param {String} accion aprobar | rechazar | quitar
+		 * @param {Object|null} item_resuelto El item que devolvió la API, con `resultado_de_la_accion`.
+		 */
+		avisar_resultado_de_la_accion(accion, item_resuelto) {
+			let resultado = item_resuelto ? item_resuelto.resultado_de_la_accion : null
+			let aviso = null
+			if (accion === 'aprobar') {
+				aviso = aviso_de_aprobacion(resultado)
+			} else if (accion === 'quitar') {
+				aviso = aviso_de_quitar(resultado)
+			}
+			if (aviso) {
+				this.$toast[aviso.tipo](aviso.texto, { duration: aviso.tipo === 'success' ? 5000 : 9000 })
+			}
 		},
 		/**
 		 * Una acción volvió cuando ya se estaba mirando otra cosa. Si es la misma corrida en otra
@@ -991,12 +1023,8 @@ export default {
 				if (!confirmado || self.esta_procesando(item.id)) {
 					return
 				}
+				// El aviso («Listo», o qué se conservó) lo da resolver_uno con lo que contó la API.
 				return self.resolver_uno(item, 'quitar', 'asignadas', 'sin_datos')
-				.then(salio_bien => {
-					if (salio_bien) {
-						self.$toast.success('Listo: le quitamos las medidas al artículo')
-					}
-				})
 			})
 		},
 		/**
@@ -1507,6 +1535,12 @@ export default {
 	font-size: 0.75rem
 	font-weight: 500
 	color: var(--color-text-secondary, #6c757d)
+
+.med-edicion__lectura
+	font-size: 0.75rem
+	line-height: 1.3
+	color: var(--color-text-secondary, #6c757d)
+	font-variant-numeric: tabular-nums
 
 .med-edicion__error
 	margin: 0

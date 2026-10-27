@@ -36,7 +36,8 @@ class="med-fila med-fila--asignada"
 
 		<chips-de-medidas
 		:campos="item.campos"
-		:item_id="item.id"></chips-de-medidas>
+		:item_id="item.id"
+		marcar_no_aplicados></chips-de-medidas>
 
 		<div
 		v-if="aprobada || motivo"

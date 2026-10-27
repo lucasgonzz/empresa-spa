@@ -13,11 +13,12 @@ class="med-chips"
 	v-for="campo in campos"
 	:key="campo.clave"
 	class="med-chip"
-	:class="{ 'med-chip--falta': campo.falta }"
+	:class="{ 'med-chip--falta': campo.falta, 'med-chip--no-aplicado': no_se_aplico(campo) }"
 	:data-testid="'medidas-chip-' + item_id + '-' + campo.clave"
 	:data-clave="campo.clave"
 	:data-falta="campo.falta ? 1 : 0"
 	:data-convertido="campo.convertido ? 1 : 0"
+	:data-no-aplicado="no_se_aplico(campo) ? 1 : 0"
 	:title="campo.cita ? 'Dice: «' + campo.cita + '»' : null">
 
 		<span class="med-chip__etiqueta">{{ campo.etiqueta }}</span>
@@ -37,6 +38,17 @@ class="med-chips"
 			La nota de conversión («70 mm → 7 cm»): la medida se guardó en cm/kg, que son las unidades
 			del sistema, y acá se ve qué decía la página. Solo si la API tuvo que convertirla.
 		-->
+		<!--
+			Solo en «Asignadas»: la API dice que este campo NO se escribió porque el artículo ya tenía un
+			valor (nunca se pisa lo que ya estaba cargado). El valor del chip es el que encontró la búsqueda.
+		-->
+		<span
+		v-if="no_se_aplico(campo)"
+		class="med-chip__nota med-chip__nota--aviso"
+		:data-testid="'medidas-no-aplicado-' + item_id + '-' + campo.clave">
+			ya tenía valor, no se pisó
+		</span>
+
 		<span
 		v-if="nota_de(campo)"
 		class="med-chip__nota"
@@ -70,6 +82,14 @@ export default {
 			type: Number,
 			default: null,
 		},
+		/**
+		 * true en «Asignadas»: ahí `campo.aplicado === false` quiere decir que el campo no se escribió
+		 * porque el artículo ya tenía un valor. En «A revisar» todavía no se aplicó nada, así que no se marca.
+		 */
+		marcar_no_aplicados: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	computed: {
 		/**
@@ -96,6 +116,15 @@ export default {
 		 */
 		valor_en_texto(campo) {
 			return formatear_medida(campo.valor, campo.unidad)
+		},
+		/**
+		 * true si hay que marcar el campo como «ya tenía valor, no se pisó».
+		 *
+		 * @param {Object} campo
+		 * @returns {Boolean}
+		 */
+		no_se_aplico(campo) {
+			return this.marcar_no_aplicados && !campo.falta && campo.aplicado === false
 		},
 		/**
 		 * "70 mm → 7 cm", o '' si el campo no se convirtió.
@@ -157,6 +186,14 @@ export default {
 	color: var(--color-text-secondary, #6c757d)
 	font-variant-numeric: tabular-nums
 	white-space: nowrap
+
+.med-chip__nota--aviso
+	white-space: normal
+	color: var(--color-text-warning-strong, #856404)
+
+// Un campo que no se pisó: borde de aviso, sin relleno, para distinguirlo de «falta».
+.med-chip--no-aplicado
+	box-shadow: inset 0 0 0 1px var(--color-text-warning-strong, #856404)
 
 // Lo que falta, en el ámbar de «hay que mirarlo». Los tokens existen solo en html.dark-mode; en
 // claro manda el literal del fallback.

@@ -792,7 +792,9 @@ export default {
 		que_hace: 'Abre en el lugar el peso, el alto, el ancho y el largo para corregirlos antes de aprobar.',
 		repercute: [
 			'No cambia nada hasta que apretés Guardar y aprobar.',
-			'Los valores van en kilos (peso) y centímetros (alto, ancho y largo). Los que dejes vacíos no se tocan.',
+			'Los valores van en kilos (peso) y centímetros (alto, ancho y largo).',
+			'Un campo que vacíes no se carga en el artículo; los que no toques se cargan como los propuso la búsqueda.',
+			'Mientras escribís, debajo de cada campo se lee cómo se va a guardar.',
 		],
 	},
 
@@ -800,11 +802,12 @@ export default {
 		titulo: 'Guardar y aprobar',
 		que_hace: 'Aprueba el artículo con los valores que escribiste en lugar de los que propuso la búsqueda.',
 		repercute: [
-			'Se cargan solo en los campos que el artículo tiene vacíos; una medida ya cargada no se cambia.',
+			'Se cargan solo en los campos que el artículo tiene vacíos; una medida ya cargada no se cambia, y se avisa cuál.',
+			'Un campo que dejaste vacío no se carga. Si no queda ninguno con valor, no se aprueba: lo que corresponde es rechazar la propuesta.',
 			'Cada valor tiene que ser mayor que cero: hasta 2.000 kg el peso y hasta 1.000 cm cada medida.',
 			'Con algún valor mal escrito, no se aprueba y se marca cuál corregir.',
 		],
-		nota_interna: 'POST dimension-search-items/{id}/aprobar con {valores: {peso, alto, ancho, profundidad}} solo con los campos escritos. 422 si la API rechaza un valor.',
+		nota_interna: 'POST dimension-search-items/{id}/aprobar con {valores}: clave ausente = usar lo propuesto, número = escribir ese, null = NO escribir ese campo. La SPA manda solo los que cambiaron y null para los vaciados. 422 si la API rechaza un valor; 409 si el artículo ya tenía todos esos campos.',
 	},
 
 	'medidas-cancelar-*': {
@@ -817,7 +820,7 @@ export default {
 		que_hace: 'Le saca al artículo las medidas que le cargó la búsqueda, después de confirmar.',
 		repercute: [
 			'Los campos vuelven a quedar vacíos, siempre que sigan teniendo el valor que puso la búsqueda.',
-			'Si alguien cambió una medida a mano después, esa no se toca.',
+			'Si alguien cambió una medida a mano después, esa no se toca y el aviso dice cuál se conservó.',
 			'La tienda online deja de contar con esas medidas para cotizar envíos.',
 		],
 		nota_interna: 'POST dimension-search-items/{id}/quitar (decisión D6 del plan): solo items asignada o aprobada.',

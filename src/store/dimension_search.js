@@ -6,6 +6,7 @@ import {
 	normalizar_corrida,
 	normalizar_items,
 	normalizar_conteos,
+	normalizar_resultado_de_accion,
 	normalizar_previa,
 	extraer_paginador,
 	extraer_modelo,
@@ -33,9 +34,9 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  *    y el componente que las llamó decide qué mostrar. Solo si la corrida que vuelve está en la página
  *    visible se reemplaza la fila, para que la tabla no quede con números viejos.
  *
- * Compatibilidad hacia atrás (plan §4): contra una API que todavía no tiene estas rutas (404), o a la que
- * le falta la extensión `agentes_ia` (403), ni el resumen ni el listado de corridas muestran NINGÚN error. Los dos van silenciosos (sin el toast del
- * interceptor global): el número queda en cero y la sección dice "todavía no disponible"
+ * Compatibilidad hacia atrás (plan §4): contra una API que todavía no tiene estas rutas (404), o que no
+ * deja ver la pantalla (403), ni el resumen ni el listado de corridas muestran NINGÚN error. Los dos van
+ * silenciosos (sin el toast del interceptor global): el número queda en cero y la sección dice "todavía no disponible"
  * (`state.no_disponible`). Es lo mismo que hace la revisión de Descripciones. Las acciones que dispara
  * una persona (abrir un detalle, aprobar, lanzar...) pasan por el interceptor global de main.js, que
  * muestra el `message` de la API (un 4xx con `message` sale como aviso): quien las llama NO repite el
@@ -88,9 +89,8 @@ export function es_cancelacion(err) {
 
 /**
  * True si el error dice que la API no ofrece esta pantalla: un 404 (una API que todavía no tiene las
- * rutas) o un 403 (las rutas existen pero el negocio no tiene la extensión `agentes_ia`, de la que
- * dependen: la API contesta 403 «Extensión requerida»). Para el resumen y el listado, los dos son lo
- * mismo: «todavía no disponible», sin errores ni toasts.
+ * rutas) o un 403 (la API no deja ver la pantalla a esta sesión). Para el resumen y el listado, los dos
+ * son lo mismo: «todavía no disponible», sin errores ni toasts.
  *
  * @param {*} err
  * @returns {Boolean}
@@ -149,15 +149,21 @@ function esta_activa(corrida) {
 }
 
 /**
- * Lo que devuelve una acción sobre un item: el item normalizado (o null si la respuesta no trajo
- * ninguno reconocible).
+ * Lo que devuelve una acción sobre un item: el item normalizado, con `resultado_de_la_accion` (o null
+ * si la respuesta no trajo ninguno reconocible).
  *
  * @param {*} cuerpo `res.data`.
  * @returns {Object|null}
  */
 function item_de_la_respuesta(cuerpo) {
 	let items = normalizar_items([extraer_modelo(cuerpo)])
-	return items.length ? items[0] : null
+	if (!items.length) {
+		return null
+	}
+	// Lo que la API cuenta además del item (campos llenados, salteados, excluidos, revertidos,
+	// conservados): el detalle lo usa para avisar en vez de dar un mensaje fijo.
+	items[0].resultado_de_la_accion = normalizar_resultado_de_accion(cuerpo)
+	return items[0]
 }
 
 export default {
@@ -296,7 +302,7 @@ export default {
 					if (es_cancelacion(err) || este_resumen !== ultimo_pedido_de_resumen) {
 						return
 					}
-					// 404/403: la API no ofrece esta pantalla (sin rutas o sin la extensión): el número vale cero y no se anuncia.
+					// 404/403: la API no ofrece esta pantalla (sin rutas o sin permiso): el número vale cero y no se anuncia.
 					if (es_ruta_no_disponible(err)) {
 						commit('set_resumen', resumen_vacio())
 						return
@@ -378,7 +384,7 @@ export default {
 						}
 						return
 					}
-					// 404/403: la API no ofrece la búsqueda de medidas (todavía no, o sin la extensión). Estado neutro, sin error.
+					// 404/403: la API no ofrece la búsqueda de medidas (todavía no, o sin permiso). Estado neutro, sin error.
 					if (es_ruta_no_disponible(err)) {
 						commit('set_pagina', null)
 						commit('set_no_disponible', true)
@@ -468,10 +474,12 @@ export default {
 		 * Aprueba la propuesta de un artículo "a revisar": la API escribe las medidas en el artículo
 		 * (solo en los campos que sigan vacíos, decisión D5) y el item queda `aprobada`.
 		 *
-		 * Sin `valores`, se aprueba lo que propuso el sistema. Con `valores` ({peso, alto, ancho,
-		 * profundidad}, en kg y cm; solo los campos con número) se escriben los editados. 422 con
-		 * `message` si un valor es inválido; 409 si el artículo ya tiene esos campos cargados; el
-		 * interceptor global muestra el motivo.
+		 * Sin `valores` (o con un objeto vacío), se aprueba lo que propuso el sistema. Con `valores`
+		 * ({peso, alto, ancho, profundidad}, en kg y cm) la API distingue tres casos por campo: clave
+		 * ausente = usar lo propuesto; número = escribir ese número; `null` = NO escribir ese campo.
+		 * 422 con `message` si un valor es inválido; 409 si el artículo ya tiene esos campos cargados; el
+		 * interceptor global muestra el motivo. El item que vuelve trae `resultado_de_la_accion`
+		 * (llenados / salteados / excluidos).
 		 *
 		 * @param {Object} context
 		 * @param {Number|Object} datos El id del item, o {id, valores}.
@@ -480,7 +488,8 @@ export default {
 		aprobar(context, datos) {
 			let con_cuerpo = datos !== null && typeof datos === 'object'
 			let item_id = con_cuerpo ? datos.id : datos
-			let cuerpo = con_cuerpo && datos.valores && typeof datos.valores === 'object' ? { valores: datos.valores } : {}
+			let con_valores = con_cuerpo && datos.valores && typeof datos.valores === 'object' && Object.keys(datos.valores).length > 0
+			let cuerpo = con_valores ? { valores: datos.valores } : {}
 			return axios.post(RUTA_DE_ITEMS + '/' + item_id + '/aprobar', cuerpo, opciones())
 				.then(res => item_de_la_respuesta(res.data))
 				.catch(relanzar_marcando_la_cancelacion)

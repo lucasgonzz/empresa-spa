@@ -300,6 +300,115 @@ export function validar_valores_editados(entradas) {
 	}
 }
 
+/**
+ * Lo que se ve mientras se escribe un valor: la lectura que se va a guardar ("Se guarda 1,25 kg"). Existe
+ * porque la regla de `parsear_numero_es` tiene una ambigüedad a propósito: sin coma, un punto es decimal,
+ * así que "1.250" se guarda como 1,25 (y no como 1250). Verlo escrito deja que la persona lo note.
+ *
+ * @param {*} texto Lo escrito en el input.
+ * @param {String} unidad 'kg' o 'cm'.
+ * @returns {String} '' si el campo está vacío o no es un número (el error se dice al guardar).
+ */
+export function lectura_de_valor(texto, unidad) {
+	let leido = parsear_numero_es(texto)
+	if (leido.vacio || !leido.valido || leido.numero <= 0) {
+		return ''
+	}
+	return 'Se guarda ' + formatear_medida(Math.round(leido.numero * 10000) / 10000, unidad)
+}
+
+/**
+ * Arma el `valores` de "Guardar y aprobar" (POST dimension-search-items/{id}/aprobar), con el contrato
+ * de la API:
+ *
+ *   - clave AUSENTE  -> se usa lo propuesto por la búsqueda;
+ *   - clave con NÚMERO -> se escribe ese número;
+ *   - clave con `null` -> NO se escribe ese campo.
+ *
+ * La edición abre con los cuatro campos precargados con lo propuesto. Entonces: lo que la persona no
+ * tocó (el mismo número que la propuesta) se omite; lo que cambió va con el número nuevo; y lo que
+ * vació, habiendo una propuesta, va en `null` explícito (si la propuesta no traía nada para ese campo,
+ * no hay qué excluir y se omite).
+ *
+ * @param {Object} entradas Texto de cada input, por clave.
+ * @param {Object} propuesta `propuesta` del item normalizado (kg / cm, null si falta).
+ * @returns {{valores: Object, errores: Object, hay_errores: Boolean, a_escribir: Number, excluidos: Array<String>}}
+ *   `a_escribir` es cuántos campos van a quedar escritos (los que tienen número); con 0 no hay nada
+ *   para aprobar y el pedido NO se manda. `excluidos` son las claves que van en `null`.
+ */
+export function armar_valores_a_aprobar(entradas, propuesta) {
+	let validacion = validar_valores_editados(entradas)
+	let original = propuesta && typeof propuesta === 'object' ? propuesta : {}
+	let valores = {}
+	let excluidos = []
+
+	if (!validacion.hay_errores) {
+		CAMPOS_DE_MEDIDA.forEach(function (campo) {
+			let propuesto = a_medida_o_null(original[campo.clave])
+			if (!Object.prototype.hasOwnProperty.call(validacion.valores, campo.clave)) {
+				if (propuesto !== null) {
+					valores[campo.clave] = null
+					excluidos.push(campo.clave)
+				}
+				return
+			}
+			let escrito = validacion.valores[campo.clave]
+			if (propuesto === null || Math.round(propuesto * 10000) / 10000 !== escrito) {
+				valores[campo.clave] = escrito
+			}
+		})
+	}
+
+	return {
+		valores: valores,
+		errores: validacion.errores,
+		hay_errores: validacion.hay_errores,
+		a_escribir: validacion.cantidad,
+		excluidos: excluidos,
+	}
+}
+
+/**
+ * Lo que la API cuenta de una acción sobre un item además del item mismo:
+ *   - aprobar: `llenados` (se escribieron), `salteados` (el artículo ya tenía un valor y no se pisó) y
+ *     `excluidos` (la persona los sacó);
+ *   - quitar: `revertidos` (volvieron a vacío) y `conservados` (se modificaron después y no se tocaron).
+ * Cada uno es una lista de claves de campo (`peso`, `alto`, `ancho`, `profundidad`).
+ *
+ * La API los manda sueltos en el cuerpo y también adentro de `model`: se leen de los dos lados.
+ *
+ * @param {*} cuerpo `res.data`.
+ * @returns {{llenados: Array<String>, salteados: Array<String>, excluidos: Array<String>, revertidos: Array<String>, conservados: Array<String>}}
+ */
+export function normalizar_resultado_de_accion(cuerpo) {
+	let raiz = cuerpo && typeof cuerpo === 'object' ? cuerpo : {}
+	let modelo = raiz.model && typeof raiz.model === 'object' ? raiz.model : {}
+	let validas = []
+	CAMPOS_DE_MEDIDA.forEach(function (campo) {
+		validas.push(campo.clave)
+	})
+
+	function lista_de(nombre) {
+		let origen = a_lista(raiz[nombre]).length ? a_lista(raiz[nombre]) : a_lista(modelo[nombre])
+		let claves = []
+		origen.forEach(function (clave) {
+			let texto = a_texto(clave)
+			if (validas.indexOf(texto) !== -1 && claves.indexOf(texto) === -1) {
+				claves.push(texto)
+			}
+		})
+		return claves
+	}
+
+	return {
+		llenados: lista_de('llenados'),
+		salteados: lista_de('salteados'),
+		excluidos: lista_de('excluidos'),
+		revertidos: lista_de('revertidos'),
+		conservados: lista_de('conservados'),
+	}
+}
+
 // --- Normalización de lo que manda la API ------------------------------------------------------
 
 /**
@@ -433,6 +542,9 @@ function armar_campos(item) {
 			cita: a_texto_o_null(datos.cita),
 			url: url_segura(datos.url),
 			alcance: a_texto_o_null(datos.alcance),
+			// true = este campo se escribió de verdad en el artículo; false = la API dice que no (el
+			// artículo ya tenía un valor y no se pisó); null = la API no lo informa.
+			aplicado: typeof datos.aplicado === 'boolean' ? datos.aplicado : null,
 			falta: valor === null,
 		})
 	})
