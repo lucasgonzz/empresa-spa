@@ -247,6 +247,8 @@ export default {
 			*/
 			this.$store.commit('vender/setMercadoPagoQrCobroId', null)
 			this.$store.commit('vender/set_mercado_pago_qr_cobro_en_curso', null)
+			/* La foto del cobro anterior al QR es de esta venta: la siguiente arranca con sus defaults */
+			this.$store.commit('vender/set_mercado_pago_qr_foto_del_pago', null)
 
 			/*
 				Remito nuevo, deteccion de combos en cero: se descarta la espera pendiente y se

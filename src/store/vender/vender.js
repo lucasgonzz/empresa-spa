@@ -343,14 +343,25 @@ export default {
 			  (`{conectado, current_acount_payment_method_id, qrs}`), o null si la API no lo tiene (404 de
 			  una API vieja) o falló. De acá sale si se muestra el botón "Cobrar con QR" y con qué método
 			  de pago se cobra.
-			- `mercado_pago_qr_cobro_en_curso`: el cobro que muestra el modal "Esperando el pago"; lo
-			  escribe el botón al crearlo y el modal al consultarlo o volver a generarlo.
+			- `mercado_pago_qr_cobro_en_curso`: el cobro por QR de ESTA venta, pendiente o ya pagado. Lo
+			  escribe el botón al crearlo (o al usar un pago QR sin venta) y el modal al consultarlo o
+			  volver a generarlo. 🔴 Mientras haya uno que todavía no esté `pagado`, guardar_venta() no
+			  corre (mixins/vender/guardar_venta/index.js): el atajo de Guardar llegaba igual con el modal
+			  abierto y guardaba la venta como cobrada sin que nadie hubiera pagado.
+			- `mercado_pago_qr_foto_del_pago`: cómo estaba el cobro de la venta (método único, reparto,
+			  cuotas y caja) antes de que el QR pusiera su método. Si el cobro no se crea, se cancela o se
+			  quita, se vuelve a esto (mixins/vender/cobro_qr.js).
+			- `mercado_pago_qr_pagados_sin_venta`: cobros por QR que el cliente pagó y no quedaron en
+			  ninguna venta (se cerró el modal sin cancelar, se limpió la venta, falló el guardado), para
+			  ofrecerlos en "Usar en esta venta".
 
 			Viven solo en memoria: no se persisten.
 		*/
 		mercado_pago_qr_cobro_id: null,
 		mercado_pago_qr_config: null,
 		mercado_pago_qr_cobro_en_curso: null,
+		mercado_pago_qr_foto_del_pago: null,
+		mercado_pago_qr_pagados_sin_venta: [],
 
 		/*
 			Alto en px de la franja de abajo que ocupa la barra fija de acciones de Vender
@@ -1125,6 +1136,24 @@ export default {
 		 */
 		set_mercado_pago_qr_cobro_en_curso(state, value) {
 			state.mercado_pago_qr_cobro_en_curso = value
+		},
+		/**
+		 * Foto del cobro de la venta antes de poner el método del QR (null = no hay foto).
+		 *
+		 * @param {Object} state
+		 * @param {Object|null} value Ver mixins/vender/cobro_qr.js::qr_sacar_foto_del_pago().
+		 */
+		set_mercado_pago_qr_foto_del_pago(state, value) {
+			state.mercado_pago_qr_foto_del_pago = value
+		},
+		/**
+		 * Cobros por QR pagados que no quedaron en ninguna venta.
+		 *
+		 * @param {Object} state
+		 * @param {Array} value Cobros con la forma del contrato de la API.
+		 */
+		set_mercado_pago_qr_pagados_sin_venta(state, value) {
+			state.mercado_pago_qr_pagados_sin_venta = Array.isArray(value) ? value : []
 		},
 		/**
 		 * Alto de la barra fija de acciones de Vender (0 cuando no está en pantalla).
