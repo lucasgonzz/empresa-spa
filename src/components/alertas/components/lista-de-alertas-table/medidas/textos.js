@@ -62,6 +62,11 @@ export const MOTIVOS = {
 	medidas_parciales: 'Medidas parciales',
 	coincidencia_por_nombre: 'Coincidencia por nombre',
 	coincidencia_probable: 'Coincidencia probable',
+	// Valores que la página no deja claros (la frase larga viene en `motivo_detalle`).
+	valor_ambiguo: 'Valor ambiguo',
+	valor_en_rango: 'Rango en la página',
+	cita_sin_etiqueta: 'Cita sin etiqueta',
+	difiere_de_lo_cargado: 'Difiere de lo cargado',
 	// Asignada sola (D1): el código del artículo está en la página y trae las cuatro medidas.
 	codigo_exacto: 'Código exacto',
 	// Sin datos (D3)
@@ -76,6 +81,9 @@ export const MOTIVOS = {
 	articulo_borrado: 'Artículo borrado',
 	// Resueltos a mano
 	rechazada: 'Propuesta rechazada',
+	// Alguien completó las medidas a mano mientras la propuesta esperaba revisión (status `rechazada`,
+	// solapa Sin datos): no es un aviso ni hay medidas para mostrar.
+	completado_a_mano: 'Completado a mano',
 	quitada: 'Medidas quitadas',
 	// No es una falla: cuando le tocó el turno, el artículo ya tenía todas las medidas.
 	ya_tenia_medidas: 'Ya tenía medidas',
@@ -91,6 +99,10 @@ export const MOTIVOS_DE_AVISO = [
 	'medidas_parciales',
 	'coincidencia_por_nombre',
 	'coincidencia_probable',
+	'valor_ambiguo',
+	'valor_en_rango',
+	'cita_sin_etiqueta',
+	'difiere_de_lo_cargado',
 	'sin_cupo',
 	'error_de_busqueda',
 	'ia_sin_respuesta',

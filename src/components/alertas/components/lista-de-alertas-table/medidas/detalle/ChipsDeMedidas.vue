@@ -49,6 +49,14 @@ class="med-chips"
 			ya tenía valor, no se pisó
 		</span>
 
+		<!-- El aviso de la API sobre este valor (por ejemplo, que la página daba un rango): frase lista para leer. -->
+		<span
+		v-if="campo.aviso && !campo.falta"
+		class="med-chip__nota med-chip__nota--aviso"
+		:data-testid="'medidas-aviso-' + item_id + '-' + campo.clave">
+			{{ campo.aviso }}
+		</span>
+
 		<span
 		v-if="nota_de(campo)"
 		class="med-chip__nota"
@@ -189,6 +197,7 @@ export default {
 
 .med-chip__nota--aviso
 	white-space: normal
+	max-width: 220px
 	color: var(--color-text-warning-strong, #856404)
 
 // Un campo que no se pisó: borde de aviso, sin relleno, para distinguirlo de «falta».

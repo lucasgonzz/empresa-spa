@@ -679,3 +679,55 @@ test('start_methods: get_resumen_de_medidas pide el resumen SIN mirar la extensi
 	await mixin.methods.get_resumen_de_imagenes.call(contexto)
 	assert.deepEqual(despachos, ['dimension_search/get_resumen'])
 })
+
+// --- Motivos nuevos en las filas y aviso por campo ----------------------------------------------
+
+test('Chips: el aviso de un campo sale como nota chica bajo ese chip, y solo si viene', () => {
+	const it = item({ propuesta: { peso: 0.82, alto: 100 }, campos: [
+		{ clave: 'peso', valor: 0.82, aviso: 'La página da un rango de peso: se tomó el menor.', rango: true },
+		{ clave: 'alto', valor: 100 },
+	] })
+	const arbol = instanciar(Chips, { campos: it.campos, item_id: it.id })._render()
+	assert.match(texto_de(por_testid(arbol, 'medidas-aviso-11-peso')), /La página da un rango de peso: se tomó el menor\./)
+	assert.equal(por_testid(arbol, 'medidas-aviso-11-alto'), undefined)
+	// Un campo que falta no muestra aviso aunque venga uno.
+	const falta = item({ propuesta: {}, campos: [{ clave: 'peso', valor: null, aviso: 'x' }] })
+	assert.equal(por_testid(instanciar(Chips, { campos: falta.campos, item_id: 11 })._render(), 'medidas-aviso-11-peso'), undefined)
+})
+
+test('A revisar: los motivos nuevos salen como etiqueta de aviso, con su frase larga y la nota de la IA', () => {
+	const casos = [
+		['valor_ambiguo', 'Valor ambiguo'],
+		['valor_en_rango', 'Rango en la página'],
+		['cita_sin_etiqueta', 'Cita sin etiqueta'],
+		['difiere_de_lo_cargado', 'Difiere de lo cargado'],
+	]
+	casos.forEach(([motivo, etiqueta]) => {
+		const it = item({ motivo: motivo, motivo_detalle: 'Frase larga de ' + motivo + '.', nota_ia: 'Nota de la IA de ' + motivo + '.' })
+		const vm = instanciar(FilaARevisar, { item: it })
+		assert.equal(vm.tono_del_motivo, 'aviso', motivo)
+		const arbol = vm._render()
+		assert.equal(texto_de(por_testid(arbol, 'medidas-motivo-11')), etiqueta)
+		assert.match(texto_de(arbol), new RegExp('Frase larga de ' + motivo))
+		assert.match(texto_de(por_testid(arbol, 'medidas-nota-ia-11')), new RegExp('Nota de la IA de ' + motivo))
+	})
+})
+
+test('Sin datos: «Completado a mano» es neutro, muestra su frase y no dibuja medidas', () => {
+	const it = item({ status: 'rechazada', motivo: 'completado_a_mano', motivo_detalle: 'Alguien cargó las medidas a mano mientras esperaba revisión.', propuesta: {}, campos: [], fuentes: [], nota_ia: '' })
+	const vm = instanciar(FilaSinDatos, { item: it })
+	assert.equal(vm.tono_del_motivo, 'neutro')
+	const arbol = vm._render()
+	assert.equal(texto_de(por_testid(arbol, 'medidas-motivo-11')), 'Completado a mano')
+	assert.match(texto_de(arbol), /Alguien cargó las medidas a mano/)
+	assert.equal(por_testid(arbol, 'medidas-chips-11'), undefined)
+	assert.equal(buscar_todos(arbol, nodo => !!nodo.componentOptions && /chips/i.test(String(nodo.tag))).length, 0)
+})
+
+test('Asignadas: el motivo nuevo y su frase también se ven', () => {
+	const it = item({ status: 'asignada', motivo: 'valor_ambiguo', motivo_detalle: 'Frase larga.', nota_ia: 'Nota IA.' })
+	const arbol = instanciar(FilaAsignada, { item: it })._render()
+	assert.match(texto_de(arbol), /Valor ambiguo/)
+	assert.match(texto_de(arbol), /Frase larga\./)
+	assert.match(texto_de(por_testid(arbol, 'medidas-nota-ia-11')), /Nota IA\./)
+})

@@ -550,3 +550,35 @@ test('el texto de «no disponible» ya no habla de activar nada para el negocio'
 	assert.equal(textos.TEXTOS.no_disponible.pista, 'La búsqueda de peso y medidas se habilita con la próxima actualización de tu sistema.')
 	assert.doesNotMatch(JSON.stringify(textos.TEXTOS.no_disponible), /activada|negocio|extensi/i)
 })
+
+// --- Motivos nuevos de la API y avisos por campo ------------------------------------------------
+
+test('los cinco motivos nuevos tienen su etiqueta; los cuatro primeros son de aviso y completado_a_mano es neutro', () => {
+	const esperados = {
+		valor_ambiguo: 'Valor ambiguo',
+		valor_en_rango: 'Rango en la página',
+		cita_sin_etiqueta: 'Cita sin etiqueta',
+		difiere_de_lo_cargado: 'Difiere de lo cargado',
+		completado_a_mano: 'Completado a mano',
+	}
+	Object.keys(esperados).forEach(codigo => {
+		assert.equal(textos.texto_de(textos.MOTIVOS, codigo), esperados[codigo])
+	})
+	;['valor_ambiguo', 'valor_en_rango', 'cita_sin_etiqueta', 'difiere_de_lo_cargado'].forEach(codigo => {
+		assert.ok(textos.MOTIVOS_DE_AVISO.indexOf(codigo) !== -1, codigo + ' tiene que ser de aviso')
+	})
+	assert.equal(textos.MOTIVOS_DE_AVISO.indexOf('completado_a_mano'), -1)
+})
+
+test('normalizar_item: aviso, ambiguo, rango y etiquetada por campo', () => {
+	const it = medidas.normalizar_item({ id: 1, propuesta: { peso: 1, alto: 2 }, campos: [
+		{ clave: 'peso', valor: 1, aviso: 'La página da un rango: 1 a 2 kg.', ambiguo: true, rango: true, etiquetada: false },
+		{ clave: 'alto', valor: 2, aviso: '', etiquetada: true },
+	] })
+	assert.equal(it.campos[0].aviso, 'La página da un rango: 1 a 2 kg.')
+	assert.deepEqual([it.campos[0].ambiguo, it.campos[0].rango, it.campos[0].etiquetada], [true, true, false])
+	// Aviso vacío es null; sin los campos nuevos (API vieja) todo queda en falso.
+	assert.equal(it.campos[1].aviso, null)
+	assert.equal(it.campos[1].etiquetada, true)
+	assert.deepEqual([it.campos[2].aviso, it.campos[2].ambiguo, it.campos[2].rango, it.campos[2].etiquetada], [null, false, false, false])
+})

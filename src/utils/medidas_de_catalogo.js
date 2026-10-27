@@ -545,6 +545,12 @@ function armar_campos(item) {
 			// true = este campo se escribió de verdad en el artículo; false = la API dice que no (el
 			// artículo ya tenía un valor y no se pisó); null = la API no lo informa.
 			aplicado: typeof datos.aplicado === 'boolean' ? datos.aplicado : null,
+			// Aviso de la API sobre ESTE valor (frase lista para mostrar bajo el chip) y las marcas que lo
+			// explican: la página lo dejaba ambiguo, daba un rango, o la cita no traía la etiqueta del campo.
+			aviso: a_texto_o_null(datos.aviso),
+			ambiguo: datos.ambiguo === true,
+			rango: datos.rango === true,
+			etiquetada: datos.etiquetada === true,
 			falta: valor === null,
 		})
 	})
