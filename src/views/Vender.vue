@@ -13,6 +13,8 @@
 	<budget-cobro></budget-cobro>
 	<!-- Selector de variantes al escanear un articulo con variantes disponibles (Prompt 525) -->
 	<select-variant></select-variant>
+	<!-- "Esperando el pago" del cobro con el QR de Mercado Pago del mostrador (misión cobro-qr-mercado-pago) -->
+	<cobro-qr-mercado-pago></cobro-qr-mercado-pago>
 
 	<!-- Barra de atajos de teclado activos -->
 	<vender-topbar></vender-topbar>
@@ -63,6 +65,12 @@ import afip_information_recovery from '@/mixins/vender/afip_information_recovery
 */
 import PaymentMethods from '@/components/vender/modals/payment-methods/Index'
 import BudgetCobro from '@/components/vender/modals/budget-cobro/Index'
+/*
+	Estatico por lo mismo que los dos de arriba: el boton "Cobrar con QR" carga el total en Mercado
+	Pago y RECIEN DESPUES abre este modal. Si el chunk async no hubiera llegado, `$bvModal.show` no
+	abriria nada y el cliente podria pagar un cobro que nadie esta mirando: la venta no se guardaria.
+*/
+import CobroQrMercadoPago from '@/components/vender/modals/CobroQrMercadoPago'
 
 export default {
 	mixins: [
@@ -80,6 +88,7 @@ export default {
 		/* Modales globales del módulo vender */
 		PaymentMethods,
 		BudgetCobro,
+		CobroQrMercadoPago,
 		NewArticle: () => import('@/components/vender/modals/NewArticle'),
 		LoadingAfipTicket: () => import('@/components/vender/modals/LoadingAfipTicket'),
 		SelectVariant: () => import('@/components/vender/modals/SelectVariant'),

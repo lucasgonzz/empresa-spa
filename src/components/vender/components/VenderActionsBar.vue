@@ -44,6 +44,14 @@
 			</whatsapp-btn>
 		</div>
 
+		<!--
+			Cobrar con el QR de Mercado Pago del mostrador (misión cobro-qr-mercado-pago). El
+			componente decide solo si se dibuja (Mercado Pago conectado, un QR activo, conexión y
+			renglones en la venta): con una API vieja no aparece. Lleva las clases de los botones
+			secundarios para tomar el mismo alto, radio y tipografía.
+		-->
+		<cobrar-con-qr class="vender-actions-bar__item vender-actions-bar__item--secondary"></cobrar-con-qr>
+
 		<!-- Botón principal guardar / actualizar con atajo configurable -->
 		<!--
 			🔴 El ancla del tour va sobre ESTE wrapper y no sobre <btn-guardar>: el componente de
@@ -91,6 +99,11 @@ export default {
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),
 		/* Botón de envío por WhatsApp */
 		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
+		/*
+			Botón de cobro con QR de Mercado Pago. Asíncrono como los demás: solo sirve con internet,
+			así que no hay riesgo de que su chunk falte sin conexión como con el de guardar.
+		*/
+		CobrarConQr: () => import('@/components/vender/components/CobrarConQr'),
 		/* Botón guardar / actualizar (lógica en mixin guardar_venta). Estático: ver arriba */
 		BtnGuardar,
 	},
