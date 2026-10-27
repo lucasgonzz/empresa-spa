@@ -85,7 +85,7 @@
 			v-if="sincronizar_deshabilitado"
 			class="meli-form__texto m-t-10 m-b-0"
 			data-testid="meli-sincronizar-ayuda">
-				Para publicarlo, tildá «Disponible en Mercado Libre» y guardá el artículo.
+				Para {{ finalizada ? 'publicarlo de nuevo' : 'publicarlo' }}, tildá «Disponible en Mercado Libre» y guardá el artículo.
 			</p>
 			<p
 			v-else-if="finalizada"
@@ -149,10 +149,15 @@ export default {
 		/*
 			Sin el tilde de "Disponible en Mercado Libre" y sin publicación, sincronizar no haría
 			nada: se deshabilita y se explica abajo. Si ya está publicado y lo destildaron, queda
-			habilitado: la API pausa la publicación.
+			habilitado: la API pausa la publicación. Con la publicación finalizada y sin el tilde también
+			se deshabilita: "Publicar de nuevo" crea una publicación nueva, y sin el tilde la API lo
+			rechaza (revisión de merge del 27/10/2026).
 		*/
 		sincronizar_deshabilitado() {
-			return !this.disponible_en_ml && !(this.estado && this.estado.me_li_id)
+			if (this.disponible_en_ml) {
+				return false
+			}
+			return this.finalizada || !(this.estado && this.estado.me_li_id)
 		},
 		// Texto y color del estado de la publicación en Mercado Libre
 		estado_de_la_publicacion() {
