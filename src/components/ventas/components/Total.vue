@@ -8,14 +8,14 @@
 		grande abajo— porque ese problema ya estaba resuelto en este sistema y no hacía falta un
 		quinto estilo de tarjeta.
 
-		Permisos (misión ventas-total-visible-al-empleado, 16/10/2026): TODO usuario ve el chip
-		Total (y Total USD si la cuenta vende en dólares), tenga o no `sale.index.total`. Antes ese
-		permiso gobernaba el bloque entero y un empleado sin él no veía ningún número. Ahora
+		Permisos (ticket #28, 28/10/2026): Total y Total USD se muestran por defecto;
+		`sale.index.hide_total` los oculta solo al empleado que lo tenga tildado.
+		Dueño y administradores conservan sus tarjetas. El permiso positivo
 		`can('sale.index.total')` gobierna solo lo demás que no es el Total: Cuenta corriente (pesos
 		y USD) y el contador de Ventas. `is_admin` sigue gobernando costos, ganancia y los dos
 		Excel, igual que antes.
 
-		Lo que el empleado ve en el Total NO depende de este archivo: la API le acota las ventas a
+		El importe del Total NO depende de este archivo: la API le acota las ventas a
 		las que tiene permitido ver (sale.index.addresses.* / sale.index.employees.*, ver
 		ListadoVentasHelper::alcance_permitido) y calcula la suma de todas las páginas.
 	-->
@@ -28,6 +28,7 @@
 			<!-- ============ Pesos ============ -->
 			<explicacion-de-numero
 			class="totales-chip totales-chip--principal"
+			v-if="mostrar_total_ventas"
 			:explicacion="explicaciones.total">
 				<div class="totales-chip__icon-wrap">
 					<i
@@ -149,6 +150,7 @@
 			<template v-if="hasExtencion('ventas_en_dolares')">
 				<explicacion-de-numero
 				class="totales-chip totales-chip--usd"
+				v-if="mostrar_total_ventas"
 				:explicacion="explicaciones.total_usd">
 					<div class="totales-chip__icon-wrap">
 						<i
@@ -264,6 +266,11 @@ export default {
 		ExplicacionDeNumero,
 	},
 	computed: {
+		mostrar_total_ventas() {
+			// can() concede todos los permisos al dueño/admin: invertirlo sin
+			// esta excepción les escondería el total aunque no tengan el tilde.
+			return this.is_admin || !this.can('sale.index.hide_total')
+		},
 		loading() {
 			return this.$store.state.sale.loading
 		},
