@@ -8,6 +8,9 @@ import { get_tab_id } from '@/utils/tab_id'
 import { registrar_llegada_por_redireccion } from '@/utils/version_de_direccion'
 import { env } from '@/runtime_config'
 import { envolver_echo } from '@/utils/canales_en_vivo'
+import { iniciar_diagnostico_conexion } from '@/utils/diagnostico_conexion'
+
+let diagnostico_de_conexion = null
 
 // Vue Scrool
 Vue.prototype.$scrollToTop = (() => {
@@ -376,6 +379,7 @@ function global_api_error_interceptor(error) {
                 || (error.message && String(error.message).indexOf('timeout') !== -1)
             )
 
+            if (diagnostico_de_conexion) diagnostico_de_conexion.registrar_aviso(error)
             mostrar_toast_global(
                 'error',
                 es_timeout
@@ -451,6 +455,7 @@ function global_api_cancel_token_interceptor(config) {
     if (!config.cancelToken && !config.skip_navigation_cancel) {
         config.cancelToken = cancel_token_source.token
     }
+    if (diagnostico_de_conexion) diagnostico_de_conexion.observar_cancelacion(config)
     return config
 }
 
@@ -511,6 +516,14 @@ axios.interceptors.response.use(
 )
 axios.interceptors.request.use(global_api_cancel_token_interceptor)
 axios.interceptors.request.use(global_api_tab_id_interceptor)
+
+diagnostico_de_conexion = iniciar_diagnostico_conexion({
+    axios,
+    instancias: [apiInstance, axiosInstance, axios],
+    store,
+    router,
+    api_url: env('VUE_APP_API_URL'),
+})
 
 Vue.use({
   install(Vue) {
