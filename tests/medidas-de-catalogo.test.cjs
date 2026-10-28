@@ -582,3 +582,117 @@ test('normalizar_item: aviso, ambiguo, rango y etiquetada por campo', () => {
 	assert.equal(it.campos[1].etiquetada, true)
 	assert.deepEqual([it.campos[2].aviso, it.campos[2].ambiguo, it.campos[2].rango, it.campos[2].etiquetada], [null, false, false, false])
 })
+
+// --- Misión medidas-sin-datos (28/10/2026) -----------------------------------------------------
+
+test('motivos nuevos: sin respaldo, páginas bloqueadas y PDF sin leer tienen su texto; sin respaldo va en ámbar', () => {
+	assert.equal(textos.texto_de(textos.MOTIVOS, 'valor_sin_respaldo'), 'Sin respaldo en la página')
+	assert.equal(textos.texto_de(textos.MOTIVOS, 'paginas_bloqueadas'), 'Páginas bloqueadas')
+	assert.equal(textos.texto_de(textos.MOTIVOS, 'pdf_no_leido'), 'PDF sin leer')
+	assert.ok(textos.MOTIVOS_DE_AVISO.indexOf('valor_sin_respaldo') !== -1)
+	// Los de «sin datos» por no poder leer la página no son una alarma: quedan en gris.
+	assert.ok(textos.MOTIVOS_DE_AVISO.indexOf('paginas_bloqueadas') === -1)
+	assert.ok(textos.MOTIVOS_DE_AVISO.indexOf('pdf_no_leido') === -1)
+})
+
+test('un motivo desconocido de una API más nueva se humaniza y no rompe (ni con nombres de Object)', () => {
+	assert.equal(textos.texto_de(textos.MOTIVOS, 'motivo_de_la_semana_que_viene'), 'Motivo de la semana que viene')
+	assert.equal(textos.texto_de(textos.MOTIVOS, '__proto__'), 'Proto')
+	assert.equal(textos.texto_de(textos.MOTIVOS, 'toString'), 'ToString')
+})
+
+test('texto_del_rechazo traduce los cuatro motivos del validador a lenguaje de comerciante', () => {
+	assert.equal(textos.texto_del_rechazo('cita_no_esta_en_la_pagina'), 'la cita no aparece en la página')
+	assert.equal(textos.texto_del_rechazo('cita_no_coincide_con_el_valor'), 'la cita dice otro número')
+	assert.equal(textos.texto_del_rechazo('fuente_desconocida'), 'la página citada no es una de las leídas')
+	assert.equal(textos.texto_del_rechazo('sin_cita'), 'no trajo cita')
+	// Un código nuevo se humaniza en minúscula; sin código, vacío.
+	assert.equal(textos.texto_del_rechazo('algo_raro'), 'algo raro')
+	assert.equal(textos.texto_del_rechazo(''), '')
+	assert.equal(textos.texto_del_rechazo(null), '')
+	assert.equal(textos.texto_del_rechazo('constructor'), 'constructor')
+})
+
+test('aviso_de_campo_sin_respaldo: frase con inicial en mayúscula y punto; vacío sin motivo', () => {
+	assert.equal(textos.aviso_de_campo_sin_respaldo({ motivo_rechazo: 'cita_no_coincide_con_el_valor' }), 'La cita dice otro número.')
+	assert.equal(textos.aviso_de_campo_sin_respaldo({ motivo_rechazo: '' }), '')
+	assert.equal(textos.aviso_de_campo_sin_respaldo(null), '')
+})
+
+test('motivo_de_campo_de_la_ia: traduce el código del validador y deja pasar una frase que ya viene lista', () => {
+	assert.equal(textos.motivo_de_campo_de_la_ia('cita_no_esta_en_la_pagina'), 'La cita no aparece en la página')
+	assert.equal(textos.motivo_de_campo_de_la_ia('La cita no contiene el número.'), 'La cita no contiene el número.')
+	assert.equal(textos.motivo_de_campo_de_la_ia(''), '')
+})
+
+test('texto_de_lectura_con_respaldo: solo para páginas leídas con el scrape, con los créditos si hubo', () => {
+	assert.equal(textos.texto_de_lectura_con_respaldo({ leida: true, via_scrape: true, creditos: 4 }), 'Leída con el respaldo · 4 créditos')
+	assert.equal(textos.texto_de_lectura_con_respaldo({ leida: true, via_scrape: true, creditos: 1 }), 'Leída con el respaldo · 1 crédito')
+	assert.equal(textos.texto_de_lectura_con_respaldo({ leida: true, via_scrape: true, creditos: 0 }), 'Leída con el respaldo')
+	assert.equal(textos.texto_de_lectura_con_respaldo({ leida: true, via_scrape: false, creditos: 0 }), '')
+	// Se intentó con el respaldo pero no se pudo leer: no se dice que se leyó.
+	assert.equal(textos.texto_de_lectura_con_respaldo({ leida: false, via_scrape: true, creditos: 2 }), '')
+	assert.equal(textos.texto_de_lectura_con_respaldo(null), '')
+})
+
+test('texto_de_reintento: dice cuántos suma la casilla; cero o ausente no dice nada', () => {
+	assert.equal(textos.texto_de_reintento(1), 'Esta opción suma 1 artículo que ya se había buscado sin datos.')
+	assert.equal(textos.texto_de_reintento(1234), 'Esta opción suma 1.234 artículos que ya se habían buscado sin datos.')
+	assert.equal(textos.texto_de_reintento(0), '')
+	assert.equal(textos.texto_de_reintento(undefined), '')
+})
+
+test('normalizar_item: un campo sin respaldo trae la marca, el motivo y cuenta en el ítem', () => {
+	const it = medidas.normalizar_item({
+		id: 30, status: 'a_revisar', motivo: 'valor_sin_respaldo', propuesta: { peso: 1.2, alto: null, ancho: null, profundidad: null },
+		campos: [{ clave: 'peso', valor: 1.2, unidad: 'kg', cita: 'Peso 1,2 kg', url: 'https://a.com/x', sin_respaldo: true, motivo_rechazo: 'cita_no_esta_en_la_pagina' }],
+	})
+	const peso = it.campos[0]
+	assert.equal(peso.sin_respaldo, true)
+	assert.equal(peso.motivo_rechazo, 'cita_no_esta_en_la_pagina')
+	assert.equal(it.cantidad_sin_respaldo, 1)
+	// Los demás campos (sin valor) no están «sin respaldo».
+	assert.equal(it.campos[1].sin_respaldo, false)
+})
+
+test('normalizar_item: una API vieja (sin los campos nuevos) nunca marca sin respaldo; la evidencia cruda también sirve', () => {
+	const viejo = medidas.normalizar_item({ id: 31, status: 'a_revisar', propuesta: { peso: 2 }, campos: [{ clave: 'peso', valor: 2, unidad: 'kg' }] })
+	assert.equal(viejo.campos[0].sin_respaldo, false)
+	assert.equal(viejo.campos[0].motivo_rechazo, '')
+	assert.equal(viejo.cantidad_sin_respaldo, 0)
+	const con_evidencia = medidas.normalizar_item({
+		id: 32, status: 'a_revisar', propuesta: { peso: 2 }, campos: [{ clave: 'peso', valor: 2, unidad: 'kg' }],
+		evidencia: { peso: { sin_respaldo: true, motivo_rechazo: 'sin_cita' } },
+	})
+	assert.equal(con_evidencia.campos[0].sin_respaldo, true)
+	assert.equal(con_evidencia.campos[0].motivo_rechazo, 'sin_cita')
+})
+
+test('contar_sin_respaldo cuenta los ítems elegidos que tienen valores sin comprobar', () => {
+	const con = medidas.normalizar_item({ id: 1, status: 'a_revisar', propuesta: { peso: 2 }, campos: [{ clave: 'peso', valor: 2, sin_respaldo: true, motivo_rechazo: 'sin_cita' }] })
+	const sin = medidas.normalizar_item({ id: 2, status: 'a_revisar', propuesta: { peso: 2 }, campos: [{ clave: 'peso', valor: 2 }] })
+	const otro = medidas.normalizar_item({ id: 3, status: 'a_revisar', propuesta: { peso: 2 }, campos: [{ clave: 'peso', valor: 2, sin_respaldo: true }] })
+	assert.equal(medidas.contar_sin_respaldo([con, sin, otro], [1, 2]), 1)
+	assert.equal(medidas.contar_sin_respaldo([con, sin, otro], [1, 2, 3]), 2)
+	assert.equal(medidas.contar_sin_respaldo([con, sin, otro], [2]), 0)
+	assert.equal(medidas.contar_sin_respaldo(null, [1]), 0)
+})
+
+test('normalizar_diagnostico: las páginas traen via_scrape y créditos (false y 0 en una API vieja)', () => {
+	const plan = medidas.normalizar_diagnostico([{
+		criterio: 'codigo_de_barras', usado: true, paginas: [
+			{ url: 'https://a.com/x', leida: true, via_scrape: true, creditos: 4, motivo: 'PDF leído con el respaldo.' },
+			{ url: 'https://b.com/y', leida: false, motivo: 'El sitio bloquea la descarga (403)' },
+		],
+	}])[0]
+	assert.equal(plan.paginas[0].via_scrape, true)
+	assert.equal(plan.paginas[0].creditos, 4)
+	assert.equal(plan.paginas[1].via_scrape, false)
+	assert.equal(plan.paginas[1].creditos, 0)
+})
+
+test('normalizar_previa: reintento_sin_datos, y 0 si la API no lo manda', () => {
+	assert.equal(medidas.normalizar_previa({ a_buscar: 10, reintento_sin_datos: 140 }).reintento_sin_datos, 140)
+	assert.equal(medidas.normalizar_previa({ a_buscar: 10 }).reintento_sin_datos, 0)
+	assert.equal(medidas.normalizar_previa(null).reintento_sin_datos, 0)
+})

@@ -516,6 +516,9 @@ export function normalizar_corrida(crudo) {
 function armar_campos(item) {
 	let propuesta = item.propuesta && typeof item.propuesta === 'object' ? item.propuesta : {}
 	let crudos = a_lista(item.campos)
+	// `evidencia` por campo: la API normalmente ya copia lo que hace falta dentro de `campos[]`, pero si
+	// mandara la evidencia cruda se lee de ahí lo de «sin respaldo» (misión medidas-sin-datos).
+	let evidencia = item.evidencia && typeof item.evidencia === 'object' && !Array.isArray(item.evidencia) ? item.evidencia : {}
 	let campos = []
 
 	CAMPOS_DE_MEDIDA.forEach(function (definicion) {
@@ -526,6 +529,7 @@ function armar_campos(item) {
 			}
 		})
 		let datos = crudo || {}
+		let de_evidencia = evidencia[definicion.clave] && typeof evidencia[definicion.clave] === 'object' ? evidencia[definicion.clave] : {}
 		let valor = a_medida_o_null(datos.valor)
 		if (valor === null) {
 			valor = a_medida_o_null(propuesta[definicion.clave])
@@ -551,6 +555,11 @@ function armar_campos(item) {
 			ambiguo: datos.ambiguo === true,
 			rango: datos.rango === true,
 			etiquetada: datos.etiquetada === true,
+			// true = la IA propuso este valor pero el sistema no pudo comprobarlo en la página (la cita no
+			// aparece, dice otro número...). `motivo_rechazo` es el código del validador. Sin el dato (API
+			// vieja), nunca está «sin respaldo».
+			sin_respaldo: valor !== null && (datos.sin_respaldo === true || (typeof datos.sin_respaldo === 'undefined' && de_evidencia.sin_respaldo === true)),
+			motivo_rechazo: a_texto(typeof datos.motivo_rechazo === 'undefined' ? de_evidencia.motivo_rechazo : datos.motivo_rechazo),
 			falta: valor === null,
 		})
 	})
@@ -643,7 +652,7 @@ function normalizar_ia_del_diagnostico(crudo) {
  *
  * Forma que manda la API (DimensionSearchRunHelper::payload_de_item): un plan que no se usó viene
  * `{criterio, usado: false, motivo: 'frase'}`; uno usado, `{criterio, usado: true, consulta, ok,
- * error, resultados (cantidad), paginas: [{url, titulo, dominio, leida, motivo}], ia, resultado
+ * error, resultados (cantidad), paginas: [{url, titulo, dominio, leida, motivo, via_scrape?, creditos?}], ia, resultado
  * (código)}`. No trae `busquedas` por plan: un plan usado es una consulta al buscador, salvo que se
  * haya cortado por el tope de la demo (`resultado: 'tope_demo'`, cero consultas). Además se aceptan
  * otros nombres razonables (`paginas`/`candidatas`/`resultados` como lista, `motivo_no_usado`).
@@ -676,6 +685,10 @@ export function normalizar_diagnostico(crudo) {
 				dominio: a_texto(pagina.dominio) || dominio_de(url),
 				leida: pagina.leida === true,
 				motivo: a_texto(pagina.motivo_descarte || pagina.motivo || pagina.descarte || pagina.resultado),
+				// Misión medidas-sin-datos: la página se bajó con el respaldo (scrape de Serper) y cuántos
+				// créditos costó. Una API vieja no manda ninguno de los dos: false y 0.
+				via_scrape: pagina.via_scrape === true,
+				creditos: a_numero(pagina.creditos),
 			})
 		})
 		let usado = plan.usado !== false
@@ -713,12 +726,16 @@ export function normalizar_item(crudo) {
 	let propuesta = {}
 	let faltan = []
 	let con_valor = 0
+	let sin_respaldo = 0
 	campos.forEach(function (campo) {
 		propuesta[campo.clave] = campo.valor
 		if (campo.falta) {
 			faltan.push(campo.clave)
 		} else {
 			con_valor++
+		}
+		if (campo.sin_respaldo) {
+			sin_respaldo++
 		}
 	})
 	return {
@@ -734,6 +751,8 @@ export function normalizar_item(crudo) {
 		propuesta: propuesta,
 		faltan: faltan,
 		cantidad_con_valor: con_valor,
+		// Cuántos de los valores propuestos el sistema no pudo comprobar en la página (0 en una API vieja).
+		cantidad_sin_respaldo: sin_respaldo,
 		campos: campos,
 		fuentes: armar_fuentes(crudo, campos),
 		nota_ia: a_texto(crudo.nota_ia),
@@ -742,6 +761,24 @@ export function normalizar_item(crudo) {
 		revisado_at: a_texto_o_null(crudo.revisado_at),
 		revisado_por: a_texto_o_null(crudo.revisado_por),
 	}
+}
+
+/**
+ * Cuántos de los ítems indicados (por id) tienen valores que el sistema no pudo comprobar en la
+ * página. Sirve para avisar antes de aprobar un lote en el que hay propuestas sin respaldo.
+ *
+ * @param {Array<Object>} items Ítems normalizados.
+ * @param {Array<Number>} ids Ids de los ítems elegidos.
+ * @returns {Number}
+ */
+export function contar_sin_respaldo(items, ids) {
+	let cantidad = 0
+	a_lista(items).forEach(function (item) {
+		if (item && a_lista(ids).indexOf(item.id) !== -1 && item.cantidad_sin_respaldo > 0) {
+			cantidad++
+		}
+	})
+	return cantidad
 }
 
 /**
@@ -806,6 +843,9 @@ export function normalizar_previa(crudo) {
 		excluidos_pendientes_de_revision: a_numero(previa.excluidos_pendientes_de_revision),
 		excluidos_ya_buscados: a_numero(previa.excluidos_ya_buscados),
 		excluidos_en_otra_corrida: a_numero(primero_definido([previa.excluidos_en_otra_corrida, previa.excluidos_en_otra_asignacion])),
+		// Artículos que suma la opción «Volver a buscar también los que quedaron sin datos» (0 si la API
+		// no la conoce o la opción no está pedida).
+		reintento_sin_datos: a_numero(previa.reintento_sin_datos),
 		// Lista libre de exclusiones que la API quiera sumar ({motivo, texto, cantidad}).
 		excluidos: excluidos,
 		quedan_para_otra_corrida: a_numero(previa.quedan_para_otra_corrida),
