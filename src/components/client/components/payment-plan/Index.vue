@@ -33,16 +33,7 @@ export default {
 		CuotasPagas: () => import('@/components/client/components/payment-plan/cuotas-pagas/Index'),
 	},
 	watch: {
-		/**
-		 * Deja el store alineado con la solapa de la URL (cuotas pendientes / cuotas pagas).
-		 *
-		 * El `route_prefix` ('pendiente' | 'pagado') lo escribe NavComponent solo al CLICKEAR una
-		 * solapa: si se llega directo por la URL (o desde otra seccion de Clientes) queda vacio, el
-		 * listado pide `payment-plan-cuota/from-date/...` sin estado y viene vacio, y el filtro de
-		 * columna (global-search, que restringe por `route_prefix`, ver store/payment_plan_cuota.js)
-		 * no sabria en que solapa esta parado. Si ya coincide no hace nada, asi que el camino del
-		 * click no pide dos veces.
-		 */
+		/** Conserva y reaplica el criterio también al entrar por URL o volver con Atrás. */
 		sub_view: {
 			immediate: true,
 			handler(sub_view) {
@@ -52,11 +43,8 @@ export default {
 				} else if (sub_view == 'cuotas-pagas') {
 					estado = 'pagado'
 				}
-				if (estado && this.$store.state.payment_plan_cuota.route_prefix != estado) {
-					this.$store.commit('payment_plan_cuota/set_route_prefix', estado)
-					// Mismo criterio que NavComponent: los criterios de la otra solapa no se arrastran.
-					this.$store.commit('payment_plan_cuota/limpiar_criterios_de_columna')
-					this.$store.dispatch('payment_plan_cuota/getModels')
+				if (estado) {
+					this.$store.dispatch('payment_plan_cuota/cambiarSolapa', estado)
 				}
 			},
 		},
