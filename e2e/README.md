@@ -81,6 +81,7 @@ el input de login".
 | `circuito-presupuesto.spec.js` | **El presupuesto**: alta con cliente, actualizacion, confirmacion (ahi nace la venta), cuenta corriente, edicion de la venta, descuento y cobro. |
 | `circuito-multipago.spec.js` | **La venta cobrada con varios metodos de pago**, cada uno con SU caja. Verifica que la plata caiga partida y en las cajas correctas, y que borrarla las compense a las dos. |
 | `circuito-devolucion-afip.spec.js` | **Facturacion con ARCA y devolucion con nota de credito**, las dos en homologacion. Incluye el IVA debito en Posicion Fiscal. |
+| `mercado-libre-predictor.spec.js` | **La categoria de Mercado Libre del articulo** (27/10/2026): las sugeridas salen del nombre escrito aunque no se haya confirmado, elegir una trae los datos que pide la categoria, viajan en el mismo POST del articulo, vuelven al reabrir, el buscador cambia la categoria y el arbol llega a la ultima de una rama. Le pega al catalogo publico **real** de Mercado Libre con el token de la aplicacion: la API necesita `MERCADO_LIBRE_CLIENT_ID`/`_SECRET` y salida a internet, pero ninguna cuenta conectada (no publica nada). Necesita la extension `usa_mercado_libre` del fixture. |
 | `buscador-filtros-invalidan-busqueda.spec.js` · `estado-vacio-centrado.spec.js` · `limpiar-filtros-desde-columna.spec.js` · `menu-crear-submenu-importacion.spec.js` | Comportamientos puntuales de la interfaz. |
 
 ### Una prueba grande se parte en archivos seriales, no en un test gigante ni en tests sueltos
