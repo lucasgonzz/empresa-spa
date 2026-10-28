@@ -49,6 +49,14 @@ class="med-chips"
 			ya tenía valor, no se pisó
 		</span>
 
+		<!-- Misión medidas-sin-datos: la IA lo propuso pero el sistema no lo pudo comprobar en la página. -->
+		<span
+		v-if="campo.sin_respaldo && !campo.falta"
+		class="med-chip__nota med-chip__nota--aviso"
+		:data-testid="'medidas-sin-respaldo-chip-' + item_id + '-' + campo.clave">
+			sin comprobar en la página
+		</span>
+
 		<!-- El aviso de la API sobre este valor (por ejemplo, que la página daba un rango): frase lista para leer. -->
 		<span
 		v-if="campo.aviso && !campo.falta"
