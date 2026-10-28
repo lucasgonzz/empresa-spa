@@ -30,6 +30,7 @@ Vue.mixin({
 })
 
 const medidas = cargar('utils/medidas_de_catalogo.js')
+const textos_de_la_ronda = cargar('components/alertas/components/lista-de-alertas-table/medidas/textos.js')
 const Chips = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/ChipsDeMedidas.vue').default
 const Fuente = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/FuenteDeMedidas.vue').default
 const FilaARevisar = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/FilaARevisar.vue').default
@@ -838,13 +839,15 @@ test('Diagnóstico: una página leída con el respaldo lo dice con los créditos
 	const arbol = instanciar(Diagnostico, { diagnostico: sin.diagnostico, item_id: sin.id })._render()
 	const texto = texto_de(arbol)
 	assert.match(texto, /toolnation\.com Se leyó Leída con el respaldo · 4 créditos/)
-	assert.match(texto, /b\.com Se leyó Leída con el respaldo · 2 créditos PDF leído con el respaldo\./)
+	// El motivo «PDF leído con el respaldo.» no se repite: la etiqueta ya lo dijo.
+	assert.match(texto, /b\.com Se leyó Leída con el respaldo · 2 créditos/)
+	assert.doesNotMatch(texto, /PDF leído con el respaldo/)
 	assert.match(texto, /c\.com No se leyó El sitio bloquea la descarga \(403\)/)
-	assert.match(texto, /d\.com No se leyó No se pudo leer ni con el respaldo\./)
+	assert.match(texto, /d\.com No se leyó Respaldo sin resultado · 2 créditos No se pudo leer ni con el respaldo\./)
 	// La página leída de la forma normal no lleva la etiqueta del respaldo; tampoco la que falló.
 	assert.ok(por_testid(arbol, 'medidas-pagina-respaldo-11-0-0'))
 	assert.equal(por_testid(arbol, 'medidas-pagina-respaldo-11-0-2'), undefined)
-	assert.equal(por_testid(arbol, 'medidas-pagina-respaldo-11-0-3'), undefined)
+	assert.ok(por_testid(arbol, 'medidas-pagina-respaldo-11-0-3'))
 	assert.equal(por_testid(arbol, 'medidas-pagina-respaldo-11-0-4'), undefined)
 	// El motivo por el que la IA no pasó la validación sale traducido.
 	assert.match(texto, /Peso: sin valor La cita no aparece en la página/)
@@ -961,4 +964,148 @@ test('A revisar sin respaldo: con diagnóstico ofrece «Ver qué se probó» y l
 	assert.match(texto_de(por_testid(arbol, 'medidas-diagnostico-11')), /Ocultar qué se probó/)
 	const sin = instanciar(FilaARevisar, { item: item_sin_respaldo() })
 	assert.equal(por_testid(sin._render(), 'medidas-diagnostico-11'), undefined)
+})
+
+// --- Ronda de arreglos (28/10/2026): lote sin respaldo, URLs seguras, menores del revisor -------
+
+/** Todos los atributos href de un árbol de VNodes. */
+function hrefs_de(arbol) {
+	return buscar_todos(arbol, nodo => !!(nodo.data && nodo.data.attrs && Object.prototype.hasOwnProperty.call(nodo.data.attrs, 'href')))
+		.map(nodo => nodo.data.attrs.href)
+}
+
+test('Lote: el aviso de la confirmación dice que las sin respaldo NO se aprueban en lote', () => {
+	assert.equal(textos_de_la_ronda.aviso_de_lote_con_sin_respaldo(0), '')
+	assert.match(textos_de_la_ronda.aviso_de_lote_con_sin_respaldo(1), /1 tiene valores que el sistema no pudo comprobar en la página y no se aprueba en lote: se aprueba de a una\./)
+	assert.match(textos_de_la_ronda.aviso_de_lote_con_sin_respaldo(3), /3 tienen valores que el sistema no pudo comprobar en la página y no se aprueban en lote: se aprueban de a una\./)
+})
+
+test('Lote: el mensaje del resultado cuenta las aprobadas y las que se aprueban de a una', () => {
+	const t = textos_de_la_ronda.texto_de_omitidos_sin_respaldo
+	assert.equal(t(3, 2), '3 aprobadas; 2 tienen valores sin comprobar y se aprueban de a una, mirando la cita y la fuente.')
+	assert.equal(t(1, 1), '1 aprobada; 1 tiene valores sin comprobar y se aprueba de a una, mirando la cita y la fuente.')
+	assert.equal(t(0, 4), '4 tienen valores sin comprobar y se aprueban de a una, mirando la cita y la fuente.')
+	assert.equal(t(5, 0), '')
+})
+
+test('Lote: avisar_resultado_del_lote muestra un solo aviso con las omitidas, y el de siempre sin ellas', () => {
+	const Detalle = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/Index.vue', {
+		'@/common-vue/components/horizontal-nav/Index': {},
+		'@/store/dimension_search': { es_cancelacion: () => false },
+	}).default
+	const avisos = []
+	const falso = { avisar_resultado_del_lote: Detalle.methods.avisar_resultado_del_lote, $toast: { success: t => avisos.push(['success', t]), warning: t => avisos.push(['warning', t]) } }
+	falso.avisar_resultado_del_lote('aprobar', { aprobados: 3, fallidos: [], omitidos_sin_respaldo: 2 })
+	assert.deepEqual(avisos, [['warning', '3 aprobadas; 2 tienen valores sin comprobar y se aprueban de a una, mirando la cita y la fuente.']])
+	avisos.length = 0
+	falso.avisar_resultado_del_lote('aprobar', { aprobados: 3, fallidos: [] })
+	assert.deepEqual(avisos, [['success', '3 propuestas aprobadas']])
+})
+
+test('URLs: ningún href de la fuente, las citas, el aviso sin respaldo ni el diagnóstico acepta javascript: o data:', () => {
+	const malas = ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'data:text/html;base64,PHNjcmlwdD4=', 'vbscript:x', '//evil.com/x', ' javascript:alert(1)']
+	malas.forEach(mala => {
+		// Directo al componente, sin pasar por el normalizador: es el último filtro antes del DOM.
+		const campos = [
+			{ clave: 'peso', etiqueta: 'Peso', valor: 1, unidad: 'kg', falta: false, cita: 'Peso 1 kg', url: mala, alcance: null },
+			{ clave: 'alto', etiqueta: 'Alto', valor: 2, unidad: 'cm', falta: false, cita: 'Alto 2 cm', url: mala, alcance: null, sin_respaldo: true, motivo_rechazo: 'sin_cita' },
+		]
+		const fuente = instanciar(Fuente, { fuentes: [{ url: mala, titulo: 't', dominio: 'x.com' }], campos: campos, item_id: 5 })
+		fuente.abierto = true
+		hrefs_de(fuente._render()).forEach(h => assert.ok(h === null || typeof h === 'undefined', 'href inseguro en la fuente: ' + mala))
+		const diag = instanciar(Diagnostico, { item_id: 5, diagnostico: [{ criterio: 'nombre', usado: true, paginas: [{ url: mala, titulo: 't', dominio: 'x.com', leida: true }], ia: null }] })
+		hrefs_de(diag._render()).forEach(h => assert.ok(h === null || typeof h === 'undefined', 'href inseguro en el diagnóstico: ' + mala))
+	})
+	// Pasando por el normalizador, la URL ni siquiera llega al componente.
+	const it = medidas.normalizar_item({
+		id: 7, status: 'a_revisar', propuesta: { peso: 1 }, fuentes: [{ url: 'javascript:alert(1)' }],
+		campos: [{ clave: 'peso', valor: 1, unidad: 'kg', cita: 'Peso 1 kg', url: 'data:text/html,x', sin_respaldo: true, motivo_rechazo: 'sin_cita' }],
+		diagnostico: [{ criterio: 'nombre', usado: true, paginas: [{ url: 'javascript:alert(1)', leida: false }] }],
+	})
+	assert.equal(it.campos[0].url, null)
+	assert.equal(it.fuentes.length, 0)
+	assert.equal(it.diagnostico[0].paginas[0].url, null)
+})
+
+test('URLs: un link http(s) legítimo sí llega al href en la fuente, el aviso sin respaldo y el diagnóstico', () => {
+	const it = item_sin_respaldo({ diagnostico: [{ criterio: 'nombre', usado: true, paginas: [{ url: 'https://ok.com/p', leida: true }] }] })
+	const fuente = instanciar(Fuente, { fuentes: it.fuentes, campos: it.campos, item_id: it.id })
+	assert.ok(hrefs_de(fuente._render()).indexOf('https://www.ficha.com.ar/espada') !== -1)
+	const diag = instanciar(Diagnostico, { item_id: it.id, diagnostico: it.diagnostico })
+	assert.deepEqual(hrefs_de(diag._render()), ['https://ok.com/p'])
+})
+
+test('Sin respaldo: el aviso ámbar trae la ayuda corta, y el desplegable de citas no repite lo del aviso', () => {
+	const it = item_sin_respaldo({
+		campos: [
+			{ clave: 'peso', valor: 1.2, unidad: 'kg', cita: 'Peso bruto 1,2 kg', url: 'https://www.ficha.com.ar/espada', sin_respaldo: true, motivo_rechazo: 'cita_no_esta_en_la_pagina' },
+			{ clave: 'alto', valor: 30, unidad: 'cm', cita: 'Alto 30 cm', url: 'https://www.ficha.com.ar/espada' },
+		],
+	})
+	const fuente = instanciar(Fuente, { fuentes: it.fuentes, campos: it.campos, item_id: it.id })
+	assert.match(texto_de(por_testid(fuente._render(), 'medidas-sin-respaldo-ayuda-11')), /revisalos antes de aprobar/)
+	// Solo el campo que sí está respaldado queda en las citas.
+	assert.deepEqual(fuente.citas.map(c => c.clave), ['alto'])
+	fuente.abierto = true
+	const citas = por_testid(fuente._render(), 'medidas-citas-11')
+	assert.doesNotMatch(texto_de(citas), /Peso bruto/)
+	assert.match(texto_de(citas), /Alto 30 cm/)
+})
+
+test('Sin respaldo: si todos los campos con cita están sin respaldo, no hay desplegable de citas pero el bloque sigue', () => {
+	const it = item_sin_respaldo({ fuentes: [] })
+	const fuente = instanciar(Fuente, { fuentes: it.fuentes, campos: it.campos, item_id: it.id })
+	const arbol = fuente._render()
+	assert.equal(fuente.citas.length, 0)
+	assert.equal(por_testid(arbol, 'medidas-citas-boton-11'), undefined)
+	assert.ok(por_testid(arbol, 'medidas-sin-respaldo-11'))
+})
+
+test('Diagnóstico: la página leída con el respaldo no repite el motivo; la que falló con el respaldo muestra sus créditos', () => {
+	const sin = item({ status: 'sin_datos', diagnostico: [{
+		criterio: 'nombre', usado: true, consulta: 'x', resultados: 4,
+		paginas: [
+			{ url: 'https://a.com/x', dominio: 'a.com', leida: true, via_scrape: true, creditos: 4, motivo: 'Página leída con el respaldo.' },
+			{ url: 'https://b.com/f.pdf', dominio: 'b.com', leida: true, via_scrape: true, creditos: 2, motivo: 'PDF leído con el respaldo.' },
+			{ url: 'https://c.com/y', dominio: 'c.com', leida: false, via_scrape: true, creditos: 2, motivo: 'No se pudo leer ni con el respaldo.' },
+			{ url: 'https://d.com/z', dominio: 'd.com', leida: false, via_scrape: true, creditos: 0, motivo: 'No se pudo leer ni con el respaldo.' },
+			{ url: 'https://e.com/z', dominio: 'e.com', leida: true, motivo: 'Es un PDF raro' },
+		],
+	}] })
+	const texto = texto_de(instanciar(Diagnostico, { diagnostico: sin.diagnostico, item_id: sin.id })._render())
+	assert.match(texto, /a\.com Se leyó Leída con el respaldo · 4 créditos b\.com/)
+	assert.doesNotMatch(texto, /Página leída con el respaldo/)
+	assert.doesNotMatch(texto, /PDF leído con el respaldo/)
+	assert.match(texto, /c\.com No se leyó Respaldo sin resultado · 2 créditos No se pudo leer ni con el respaldo\./)
+	// Sin créditos gastados no hay etiqueta de respaldo, pero el motivo sí.
+	assert.match(texto, /d\.com No se leyó No se pudo leer ni con el respaldo\./)
+	// Un motivo que no repite la etiqueta se sigue mostrando.
+	assert.match(texto, /e\.com Se leyó Es un PDF raro/)
+})
+
+test('texto_de_respaldo_sin_resultado: solo si se usó el respaldo, no se leyó y costó créditos', () => {
+	assert.equal(textos_de_la_ronda.texto_de_respaldo_sin_resultado({ via_scrape: true, leida: false, creditos: 2 }), 'Respaldo sin resultado · 2 créditos')
+	assert.equal(textos_de_la_ronda.texto_de_respaldo_sin_resultado({ via_scrape: true, leida: false, creditos: 1 }), 'Respaldo sin resultado · 1 crédito')
+	assert.equal(textos_de_la_ronda.texto_de_respaldo_sin_resultado({ via_scrape: true, leida: false, creditos: 0 }), '')
+	assert.equal(textos_de_la_ronda.texto_de_respaldo_sin_resultado({ via_scrape: true, leida: true, creditos: 2 }), '')
+	assert.equal(textos_de_la_ronda.texto_de_respaldo_sin_resultado({ via_scrape: false, leida: false, creditos: 2 }), '')
+	assert.equal(textos_de_la_ronda.texto_de_respaldo_sin_resultado(null), '')
+})
+
+test('Asignadas: un campo con sin_respaldo:false (la API lo baja al aprobar) no muestra ningún aviso', () => {
+	const it = item({
+		status: 'aprobada', motivo: 'valor_sin_respaldo', revisado_por: 'Juan',
+		campos: [
+			{ clave: 'peso', valor: 1.2, unidad: 'kg', cita: 'Peso 1,2 kg', url: 'https://www.ficha.com.ar/espada', sin_respaldo: false, motivo_rechazo: null },
+		],
+		propuesta: { peso: 1.2 },
+	})
+	assert.equal(it.campos[0].sin_respaldo, false)
+	assert.equal(it.cantidad_sin_respaldo, 0)
+	const fuente = instanciar(Fuente, { fuentes: it.fuentes, campos: it.campos, item_id: it.id })._render()
+	assert.equal(por_testid(fuente, 'medidas-sin-respaldo-11'), undefined)
+	const chips = instanciar(Chips, { campos: it.campos, item_id: it.id })._render()
+	assert.equal(por_testid(chips, 'medidas-sin-respaldo-chip-11-peso'), undefined)
+	const fila = texto_de(instanciar(FilaAsignada, { item: it })._render())
+	assert.doesNotMatch(fila, /No se pudo comprobar en la página|sin comprobar/)
 })

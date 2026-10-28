@@ -115,9 +115,9 @@ class="med-diag"
 				class="med-diag__pagina"
 				:data-leida="pagina.leida ? 1 : 0">
 					<a
-					v-if="pagina.url"
+					v-if="enlace(pagina.url)"
 					class="med-diag__link"
-					:href="pagina.url"
+					:href="enlace(pagina.url)"
 					:title="pagina.titulo || pagina.url"
 					target="_blank"
 					rel="noopener noreferrer">
@@ -144,7 +144,7 @@ class="med-diag"
 						{{ lectura_con_respaldo(pagina) }}
 					</span>
 					<span
-					v-if="pagina.motivo"
+					v-if="motivo_visible(pagina)"
 					class="med-diag__motivo-pagina">
 						{{ motivo_de_descarte(pagina.motivo) }}
 					</span>
@@ -156,7 +156,8 @@ class="med-diag"
 </div>
 </template>
 <script>
-import { CRITERIOS, MOTIVOS_DE_DESCARTE, RESULTADOS_DE_PLAN, COINCIDENCIAS_DE_LA_IA, texto_de, entero_es, texto_de_lectura_con_respaldo, motivo_de_campo_de_la_ia } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { url_segura } from '@/utils/medidas_de_catalogo'
+import { CRITERIOS, MOTIVOS_DE_DESCARTE, RESULTADOS_DE_PLAN, COINCIDENCIAS_DE_LA_IA, texto_de, entero_es, texto_de_lectura_con_respaldo, texto_de_respaldo_sin_resultado, motivo_de_campo_de_la_ia } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 
 /**
  * Qué se probó con un artículo que quedó sin datos: un bloque por plan de búsqueda (código de
@@ -232,13 +233,37 @@ export default {
 			return texto_de(MOTIVOS_DE_DESCARTE, codigo)
 		},
 		/**
-		 * «Leída con el respaldo · 4 créditos» si la página se bajó con el scrape del buscador; '' si no.
+		 * «Leída con el respaldo · 4 créditos» si la página se bajó con el scrape del buscador, o «Respaldo
+		 * sin resultado · 2 créditos» si se intentó y gastó créditos sin poder leerla; '' si no.
 		 *
 		 * @param {Object} pagina
 		 * @returns {String}
 		 */
 		lectura_con_respaldo(pagina) {
-			return texto_de_lectura_con_respaldo(pagina)
+			return texto_de_lectura_con_respaldo(pagina) || texto_de_respaldo_sin_resultado(pagina)
+		},
+		/**
+		 * La URL que va a un `href`: solo http(s). Viene de internet y se vuelve a filtrar antes del DOM.
+		 *
+		 * @param {*} url
+		 * @returns {String|null}
+		 */
+		enlace(url) {
+			return url_segura(url)
+		},
+		/**
+		 * Si se muestra el motivo de una página: sí si tiene uno, salvo que sea solo una repetición de la
+		 * etiqueta «Leída con el respaldo» («Página leída con el respaldo.», «PDF leído con el respaldo.»).
+		 *
+		 * @param {Object} pagina
+		 * @returns {Boolean}
+		 */
+		motivo_visible(pagina) {
+			if (!pagina.motivo) {
+				return false
+			}
+			let repite_la_etiqueta = !!texto_de_lectura_con_respaldo(pagina) && /le[ií]d[ao] con el respaldo/i.test(pagina.motivo)
+			return !repite_la_etiqueta
 		},
 		/**
 		 * Por qué no pasó la validación un campo que dio la IA ("La cita no aparece en la página").

@@ -16,7 +16,7 @@ class="med-fuente"
 		v-for="(fuente, indice) in fuentes"
 		:key="'fuente-' + indice"
 		class="med-fuente__link"
-		:href="fuente.url"
+		:href="enlace(fuente.url)"
 		:title="fuente.titulo || fuente.url"
 		:data-testid="'medidas-fuente-link-' + item_id + '-' + indice"
 		target="_blank"
@@ -44,6 +44,11 @@ class="med-fuente"
 			aria-hidden="true"></i>
 			{{ textos.sin_respaldo_titulo }}
 		</p>
+		<p
+		class="med-fuente__sin-respaldo-ayuda"
+		:data-testid="'medidas-sin-respaldo-ayuda-' + item_id">
+			{{ textos.sin_respaldo_ayuda }}
+		</p>
 		<ul class="med-fuente__sin-respaldo-lista">
 			<li
 			v-for="campo in sin_respaldo"
@@ -60,9 +65,9 @@ class="med-fuente"
 				v-if="campo.cita"
 				class="med-fuente__cita-texto">{{ campo.cita }}</q>
 				<a
-				v-if="campo.url"
+				v-if="enlace(campo.url)"
 				class="med-fuente__link"
-				:href="campo.url"
+				:href="enlace(campo.url)"
 				target="_blank"
 				rel="noopener noreferrer">
 					{{ dominio(campo.url) }}
@@ -117,9 +122,9 @@ class="med-fuente"
 			<span class="med-fuente__cita-pie">
 				<span v-if="alcance_de(campo)">{{ alcance_de(campo) }}</span>
 				<a
-				v-if="campo.url"
+				v-if="enlace(campo.url)"
 				class="med-fuente__link"
-				:href="campo.url"
+				:href="enlace(campo.url)"
 				target="_blank"
 				rel="noopener noreferrer">
 					{{ dominio(campo.url) }}
@@ -134,7 +139,7 @@ class="med-fuente"
 </div>
 </template>
 <script>
-import { dominio_de } from '@/utils/medidas_de_catalogo'
+import { dominio_de, url_segura } from '@/utils/medidas_de_catalogo'
 import { ALCANCES, TEXTOS, texto_de, aviso_de_campo_sin_respaldo } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 
 /**
@@ -186,12 +191,13 @@ export default {
 			return this.campos.filter(campo => !campo.falta && campo.sin_respaldo === true)
 		},
 		/**
-		 * Los campos que tienen una cita para mostrar.
+		 * Los campos que tienen una cita para mostrar en el desplegable. Los «sin respaldo» no entran:
+		 * su cita y su link ya salen en el bloque ámbar, y repetirlos confundiría.
 		 *
 		 * @returns {Array}
 		 */
 		citas() {
-			return this.campos.filter(campo => !campo.falta && !!campo.cita)
+			return this.campos.filter(campo => !campo.falta && !!campo.cita && campo.sin_respaldo !== true)
 		},
 		/**
 		 * Los tipos de medidas distintos que hay entre los campos, ya traducidos ("Medidas del envío").
@@ -213,6 +219,18 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * La URL que va a un `href`: solo http(s). Los datos ya llegan normalizados, pero la URL viene de
+		 * internet (resultados de búsqueda de terceros) y el último paso antes del DOM la vuelve a
+		 * filtrar: un `javascript:` o un `data:` nunca llega a un link. `null` hace que Vue no escriba
+		 * el atributo.
+		 *
+		 * @param {*} url
+		 * @returns {String|null}
+		 */
+		enlace(url) {
+			return url_segura(url)
+		},
 		/**
 		 * Por qué no se pudo comprobar un campo, en lenguaje de comerciante ("La cita no aparece en la página.").
 		 *
@@ -292,6 +310,11 @@ export default {
 	display: flex
 	align-items: center
 	gap: 6px
+
+.med-fuente__sin-respaldo-ayuda
+	margin: 0
+	font-size: 0.78rem
+	line-height: 1.4
 
 .med-fuente__sin-respaldo-lista
 	display: flex
