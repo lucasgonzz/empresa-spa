@@ -176,6 +176,12 @@ export default {
 			if (coincidencia) {
 				return 'Medido sobre los últimos ' + coincidencia[1] + ' días.'
 			}
+			// Una cuenta sin ventas recientes llega con el período en meses ("60 months", visto con el
+			// vendedor de prueba el 28/10/2026)
+			let meses = String(periodo).match(/(\d+)\s*month/i)
+			if (meses) {
+				return 'Medido sobre los últimos ' + meses[1] + ' meses.'
+			}
 			if (String(periodo).toLowerCase() == 'historic') {
 				return 'Medido sobre toda tu historia en Mercado Libre.'
 			}
