@@ -323,7 +323,11 @@ export default {
 /* Teléfono (<768px): columna única. Zona derecha NO se oculta */
 @media (max-width: 767px)
 	.view-header
-		grid-template-columns: 1fr
+		// minmax(0, 1fr) y no 1fr a secas: 1fr es minmax(auto, 1fr) y la columna crecía hasta el ancho
+		// natural de su contenido. La tira de días de ControlFecha (que está hecha para achicarse y
+		// scrollear adentro) la estiraba a 394px en un teléfono de 375 y la página entera scrolleaba
+		// de costado (Mercado Libre → Pedidos, misión mercado-libre-pruebas, 27/10/2026).
+		grid-template-columns: minmax(0, 1fr)
 		grid-template-areas: "left" "center" "right"
 		/* Sin row-gap: separación con margin para no reservar espacio en zonas vacías */
 		row-gap: 0

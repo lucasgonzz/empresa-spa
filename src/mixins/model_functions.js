@@ -217,6 +217,112 @@ export default {
                 return 'sync-meli-danger'
             }
         },
+
+        /**
+         * Columna "Estado" de Mercado Libre → Publicaciones (salientes) (prop `status` de
+         * src/models/sync_to_meli_article.js; misión mercado-libre-pruebas, 27/10/2026).
+         *
+         * La tabla mostraba el valor crudo de la base (`en_progreso`, `exitosa`...). Acá se traduce
+         * a lo que le pasa a la publicación. Una sincronización exitosa con un aviso en el detalle
+         * (por ejemplo, el stock se actualizó pero el precio no) se dice "Con aviso" para que no se
+         * lea como que salió todo bien. Las etiquetas son de una o dos palabras para que no se corten
+         * en la celda: el porqué está en "Detalle".
+         *
+         * @param {Object} model la sincronización.
+         * @returns {String}
+         */
+        sync_meli_estado_texto(model) {
+            if (!model) {
+                return ''
+            }
+            if (model.status == 'pendiente') {
+                return 'En cola'
+            }
+            if (model.status == 'en_progreso') {
+                return 'Enviando'
+            }
+            if (model.status == 'exitosa') {
+                let con_aviso = typeof model.error_message == 'string' && model.error_message.indexOf('Aviso:') === 0
+                return con_aviso ? 'Con aviso' : 'Actualizada'
+            }
+            if (model.status == 'error') {
+                return 'Con error'
+            }
+            return model.status || ''
+        },
+
+        /**
+         * Fecha CON hora de una columna de fecha (la key sale de la prop): "27/10/26 14:32".
+         *
+         * Para las columnas de un registro de sincronizaciones ("Intentado", "Sincronizado"), donde
+         * importa cuándo pasó en el día. El formato de fecha del sistema muestra solo el día, y el
+         * completo usa la hora de 12 sin a.m./p.m. (las 2:15 pueden ser las 14:15).
+         *
+         * @param {Object} model registro de la fila.
+         * @param {Object} prop columna (se lee `prop.key`).
+         * @returns {String}
+         */
+        fecha_y_hora_texto(model, prop) {
+            if (!model || !prop || !model[prop.key]) {
+                return '-'
+            }
+            return moment(model[prop.key]).format('DD/MM/YY HH:mm')
+        },
+
+        /**
+         * Columna "N° en Mercado Libre" de Mercado Libre → Pedidos (prop `meli_order_id` de
+         * src/models/meli_order.js; misión mercado-libre-pruebas, 27/10/2026).
+         *
+         * 🔴 Sin esta función la celda salía VACÍA siempre: la tabla genérica trata toda key que
+         * termina en `_id` como una relación (buscaba un `meli_order` adentro del pedido) y el
+         * número del pedido, que es un texto, no se mostraba nunca. `function` le gana a esa
+         * regla (ver propertyText en common-vue/mixins/generals.js).
+         *
+         * @param {Object} model el pedido.
+         * @returns {String}
+         */
+        meli_order_numero_texto(model) {
+            if (!model || !model.meli_order_id) {
+                return ''
+            }
+            return String(model.meli_order_id)
+        },
+
+        /**
+         * Columna "Estado" de Mercado Libre → Pedidos: el estado del pedido en Mercado Libre, en
+         * castellano (la API de Mercado Libre lo manda en inglés: `paid`, `cancelled`...).
+         *
+         * @param {Object} model el pedido.
+         * @returns {String}
+         */
+        meli_order_estado_texto(model) {
+            if (!model || !model.status) {
+                return ''
+            }
+            let estados = {
+                confirmed: 'Confirmado, sin pagar',
+                payment_required: 'Esperando el pago',
+                payment_in_process: 'Pago en proceso',
+                partially_paid: 'Pagado en parte',
+                paid: 'Pagado',
+                partially_refunded: 'Devuelto en parte',
+                pending_cancel: 'Cancelándose',
+                cancelled: 'Cancelado',
+                invalid: 'Inválido',
+            }
+            return estados[model.status] || model.status
+        },
+
+        /**
+         * true si el pedido de Mercado Libre no admite venta: cancelado o inválido en Mercado
+         * Libre. Lo usa Orders.vue para no ofrecer "Crear venta" (la API también lo rechaza).
+         *
+         * @param {Object} model el pedido.
+         * @returns {Boolean}
+         */
+        meli_order_sin_venta_posible(model) {
+            return !!model && (model.status == 'cancelled' || model.status == 'invalid')
+        },
         go_to_sync_from_meli_order() {
             this.$router.push({name: 'mercado_libre', params: {view: 'sinc-pedido-entrantes'}})
             this.$store.dispatch('sync_from_meli_order/getModels')

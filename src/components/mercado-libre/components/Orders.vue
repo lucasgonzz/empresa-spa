@@ -7,18 +7,24 @@
 	model_name="meli_order">
 
 		<template #table_left_options="data">
+			<p
+			class="m-b-0"
+			v-if="data.model.sale">
+				Venta N° {{ data.model.sale.num }}
+			</p>
+			<!-- Un pedido cancelado en Mercado Libre no lleva venta: antes el botón aparecía igual y la creaba, con el stock descontado (misión mercado-libre-pruebas) -->
+			<p
+			class="m-b-0 text-muted"
+			v-else-if="meli_order_sin_venta_posible(data.model)">
+				Sin venta: {{ meli_order_estado_texto(data.model).toLowerCase() }}
+			</p>
 			<b-button
 			@click.stop="crear_venta(data.model)"
 			size="sm"
 			variant="success"
-			v-if="!data.model.sale">
+			v-else>
 				Crear venta
 			</b-button>
-			<p
-			class="m-b-0"
-			v-else>
-				Venta N° {{ data.model.sale.num }}
-			</p>
 		</template>
 	</view-component>
 </template>
