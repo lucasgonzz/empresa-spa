@@ -70,6 +70,14 @@ export default {
 					this.$toast.info('Este pedido ya tenía venta')
 					return
 				}
+				// Se canceló en Mercado Libre mientras la fila estaba abierta: se actualiza la fila (deja de ofrecer el botón) y no se pide la venta
+				if (actual && this.meli_order_sin_venta_posible(actual)) {
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
+					this.$store.commit('meli_order/add', actual)
+					this.$toast.info('Este pedido ya no admite venta: en Mercado Libre figura ' + this.meli_order_estado_texto(actual).toLowerCase())
+					return
+				}
 				this.mandar_crear_venta(meli_order)
 			})
 			.catch(err => {

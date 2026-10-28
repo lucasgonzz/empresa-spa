@@ -165,7 +165,8 @@
 						</button>
 						<strong
 						v-else
-						:key="'miga-' + paso.id">
+						:key="'miga-' + paso.id"
+						data-testid="meli-arbol-actual">
 							{{ paso.name }}
 						</strong>
 					</template>

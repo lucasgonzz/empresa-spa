@@ -226,6 +226,16 @@ test.describe.serial('Listado: categoria de Mercado Libre del articulo', () => {
 			await expect(page.locator('[data-testid="meli-atributos-faltan"]')).toBeVisible()
 		}
 
+		// Si la categoria que sugirio Mercado Libre no pide nada completable, los tests 2 y 3 no
+		// prueban ningun atributo. No se falla (depende de lo que sugiera Mercado Libre ese dia), pero
+		// queda ANOTADO en el informe y en la consola para que un verde asi no pase por completo.
+		if (completables.length === 0) {
+			const aviso = `la categoria "${categoria.meli_category_name}" no pide datos obligatorios completables: ` +
+				'los tests 2 y 3 no probaron atributos en esta corrida'
+			test.info().annotations.push({ type: 'sin-atributos', description: aviso })
+			console.warn(`[meli] OJO: ${aviso}`)
+		}
+
 		for (const atributo of completables) {
 			const caja = page.locator(`[data-testid="meli-atributo-${atributo.meli_id}"]`)
 			await expect(caja, `no se dibujo el dato obligatorio "${atributo.name}"`).toBeVisible()
@@ -320,6 +330,7 @@ test.describe.serial('Listado: categoria de Mercado Libre del articulo', () => {
 		await esperar_recursos_descargados(page, { abrir_panel: false })
 		await limpiar_busqueda_del_listado(page)
 		const id = await buscar_articulo(page, NOMBRE)
+		expect(id).toBe(contexto.id_creado)
 
 		await page.locator(`[data-testid="article-row-${id}"]`).click()
 		await abrir_pestania(page, 'article', 'Mercado Libre')
@@ -349,6 +360,11 @@ test.describe.serial('Listado: categoria de Mercado Libre del articulo', () => {
 		// Al cambiar de categoria los datos de la anterior no sirven: viaja la lista (vacia o con lo
 		// de la nueva) para que la API reemplace los atributos y aplique el cambio.
 		expect(Array.isArray(enviado.meli_attributes), 'cambiar de categoria tiene que mandar meli_attributes').toBeTruthy()
+		// Y lo completado para la categoria ANTERIOR no viaja: no le sirve a la nueva.
+		Object.keys(contexto.completados).forEach(id_viejo => {
+			const viajo = enviado.meli_attributes.find(item => String(item.meli_attribute_id) === String(id_viejo))
+			expect(viajo, `el atributo ${id_viejo} de la categoria anterior viajo con la nueva`).toBeFalsy()
+		})
 
 		const cuerpo = await respuesta.json()
 		expect(respuesta.ok(), `guardar el articulo fallo: ${cuerpo.message || respuesta.status()}`).toBeTruthy()
@@ -370,16 +386,27 @@ test.describe.serial('Listado: categoria de Mercado Libre del articulo', () => {
 		const hijas = page.locator('[data-testid="meli-categoria-del-arbol"]')
 		await expect(hijas.first()).toBeVisible()
 
-		// Se baja siempre por la primera rama hasta que aparece "Usar esta categoria". Cada nivel se
-		// espera por su RESPUESTA: clickear la siguiente hija antes de que llegue relee el nivel viejo.
+		// Se baja siempre por la primera rama hasta que aparece "Usar esta categoria".
+		//
+		// 🔴 Cada nivel se espera dos veces: la RESPUESTA y el REDIBUJO. waitForResponse vuelve cuando
+		//    llega el JSON, no cuando Vue pinto el nivel nuevo; decidir ahi mismo con isVisible() leia
+		//    el nivel viejo (volvia a clickear la misma hija, o esperaba 4 minutos una hija que en la
+		//    hoja ya no existe). La señal del redibujo es la ultima miga, que pasa a ser la hija
+		//    clickeada; y recien despues se mira si hay "Usar esta categoria" u otra hija para seguir.
 		let niveles = 0
-		while (!(await usar.isVisible()) && niveles < MAXIMO_DE_NIVELES) {
+		while (niveles < MAXIMO_DE_NIVELES) {
+			await expect(usar.or(hijas.first())).toBeVisible()
+			if (await usar.isVisible()) {
+				break
+			}
+			const nombre_de_la_hija = (await hijas.first().innerText()).trim()
 			const nivel = page.waitForResponse(
 				res => res.url().includes('/meli-category-children/') && res.request().method() === 'GET',
 				{ timeout: 60000 }
 			)
 			await hijas.first().click()
 			expect((await nivel).ok()).toBeTruthy()
+			await expect(page.locator('[data-testid="meli-arbol-actual"]')).toHaveText(nombre_de_la_hija)
 			niveles++
 		}
 

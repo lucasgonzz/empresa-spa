@@ -314,14 +314,15 @@ export default {
         },
 
         /**
-         * true si el pedido de Mercado Libre no admite venta: cancelado o inválido en Mercado
-         * Libre. Lo usa Orders.vue para no ofrecer "Crear venta" (la API también lo rechaza).
+         * true si el pedido de Mercado Libre no admite venta: cancelado, cancelándose o inválido en
+         * Mercado Libre. Lo usa Orders.vue para no ofrecer "Crear venta"; la API rechaza los mismos
+         * tres estados (`VentaDelPedidoMeli::ESTADOS_SIN_VENTA`).
          *
          * @param {Object} model el pedido.
          * @returns {Boolean}
          */
         meli_order_sin_venta_posible(model) {
-            return !!model && (model.status == 'cancelled' || model.status == 'invalid')
+            return !!model && ['cancelled', 'pending_cancel', 'invalid'].indexOf(model.status) !== -1
         },
         go_to_sync_from_meli_order() {
             this.$router.push({name: 'mercado_libre', params: {view: 'sinc-pedido-entrantes'}})

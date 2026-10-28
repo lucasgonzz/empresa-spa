@@ -323,11 +323,7 @@ export default {
 /* Teléfono (<768px): columna única. Zona derecha NO se oculta */
 @media (max-width: 767px)
 	.view-header
-		// minmax(0, 1fr) y no 1fr a secas: 1fr es minmax(auto, 1fr) y la columna crecía hasta el ancho
-		// natural de su contenido. La tira de días de ControlFecha (que está hecha para achicarse y
-		// scrollear adentro) la estiraba a 394px en un teléfono de 375 y la página entera scrolleaba
-		// de costado (Mercado Libre → Pedidos, misión mercado-libre-pruebas, 27/10/2026).
-		grid-template-columns: minmax(0, 1fr)
+		grid-template-columns: 1fr
 		grid-template-areas: "left" "center" "right"
 		/* Sin row-gap: separación con margin para no reservar espacio en zonas vacías */
 		row-gap: 0
@@ -358,6 +354,13 @@ export default {
 	/* Con display-nav de fechas (Ventas): separación de su fila propia */
 	.view-header__right--fechas
 		margin-top: 10px
+		// min-width: 0 SOLO en la zona de fechas (misión mercado-libre-pruebas, 27/10/2026). Como
+		// item de grilla tenía min-width: auto y la columna `1fr` crecía hasta el ancho natural de la
+		// tira de días de ControlFecha (hecha para achicarse y scrollear adentro): 394px en un teléfono
+		// de 375, y la página entera scrolleaba de costado (Mercado Libre → Pedidos). No se cambió la
+		// columna de toda la grilla a minmax(0, 1fr) a propósito: Caja tiene una fila de chips que no
+		// envuelve y, con la columna fija, le quedaba el total cortado del lado izquierdo.
+		min-width: 0
 
 // La altura, el radio, el color y el espaciado de los controles de esta barra ya NO se declaran
 // aca: viven en src/sass/_toolbar_botones.sass, que es global y los define una sola vez para todos
