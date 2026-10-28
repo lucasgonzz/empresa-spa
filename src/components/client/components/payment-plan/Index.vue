@@ -20,6 +20,15 @@
 			model_name="payment_plan_cuota"></menu-fechas>
 		</div>
 
+		<p
+		v-if="cliente_filtrado"
+		class="m-t-10 m-b-10"
+		role="status"
+		aria-live="polite"
+		data-testid="payment-plan-cliente-filtrado">
+			Cliente: <strong>{{ cliente_filtrado.name }}</strong>
+		</p>
+
 		<cuotas-pendientes></cuotas-pendientes>
 		<cuotas-pagas></cuotas-pagas>
 	</div>
@@ -31,6 +40,11 @@ export default {
 		MenuFechas: () => import('@/common-vue/components/menu-fechas/Index'),
 		CuotasPendientes: () => import('@/components/client/components/payment-plan/cuotas-pendientes/Index'),
 		CuotasPagas: () => import('@/components/client/components/payment-plan/cuotas-pagas/Index'),
+	},
+	computed: {
+		cliente_filtrado() {
+			return this.$store.getters['payment_plan_cuota/cliente_filtrado']
+		},
 	},
 	watch: {
 		/** Conserva y reaplica el criterio también al entrar por URL o volver con Atrás. */

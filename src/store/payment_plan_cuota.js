@@ -8,6 +8,12 @@ const cuotas = __base_store({
 	state: {
 		model_name: 'payment_plan_cuota',
 		from_dates: true,
+		cliente_del_filtro: null,
+	},
+	mutations: {
+		set_cliente_del_filtro(state, cliente) {
+			state.cliente_del_filtro = cliente
+		},
 	},
 	actions: {
 		/**
@@ -15,7 +21,7 @@ const cuotas = __base_store({
 		 * Click y navegación por URL pasan por acá; si ya coincide, no se pide dos veces.
 		 * Los filtros siguen siendo históricos y la restricción a la solapa sale del getter.
 		 */
-		cambiarSolapa({state, commit, dispatch}, estado) {
+		cambiarSolapa({state, getters, commit, dispatch}, estado) {
 			if (['pendiente', 'pagado'].indexOf(estado) === -1 || state.route_prefix === estado) {
 				return Promise.resolve()
 			}
@@ -23,6 +29,7 @@ const cuotas = __base_store({
 			// Solo se repite lo aplicado, incluida una primera búsqueda que todavía no respondió.
 			let hay_criterios = (state.is_filtered && !state.listado_por_defecto) || state.loading_filtered
 
+			commit('set_cliente_del_filtro', getters.cliente_filtrado)
 			commit('set_route_prefix', estado)
 			commit('incrementar_consulta_vigente_token')
 			commit('incrementar_descarga_de_models_token')
@@ -69,6 +76,30 @@ const cuotas = __base_store({
 		},
 	},
 	getters: {
+		/** Nombre del criterio activo, incluso si la nueva solapa no devuelve ninguna cuota. */
+		cliente_filtrado(state, getters, rootState) {
+			if (!(state.is_filtered && !state.listado_por_defecto) && !state.loading_filtered) {
+				return null
+			}
+			let filtro = state.filters.find(filter => filter.key === 'client_id')
+			let id = filtro && filtro.igual_que
+			if (!id || id === '0' || filtro.en_blanco || filtro.no_en_blanco) {
+				return null
+			}
+			let clientes = rootState.client || {}
+			let candidatos = (clientes.models || []).concat(clientes.filtered || [])
+				.concat(state.filtered.map(cuota => cuota.client))
+				.concat(state.models.map(cuota => cuota.client))
+			let cliente = candidatos.find(model => model && model.id == id && model.name)
+			if (cliente) {
+				return {id: id, name: cliente.name}
+			}
+			if (state.cliente_del_filtro && state.cliente_del_filtro.id == id) {
+				return state.cliente_del_filtro
+			}
+			// No inventar un nombre cuando el relacionado todavía no está entre los datos cargados.
+			return {id: id, name: 'N° ' + id}
+		},
 		/**
 		 * Marca de pedido que `runGlobalSearch` (__base_store.js) suma al body del POST a
 		 * global-search/payment-plan-cuota: restringe la busqueda a la solapa en la que esta parado el
@@ -115,14 +146,17 @@ cuotas.actions.runGlobalSearch = function(context, payload = {}) {
 	let consulta = buscar(context, payload)
 	let token = context.state.consulta_vigente_token
 	context.commit('setLoadingFiltered', true)
+	context.commit('set_cliente_del_filtro', context.getters.cliente_filtrado)
 	return consulta.then(() => {
 		if (context.state.consulta_vigente_token === token) {
+			context.commit('set_cliente_del_filtro', context.getters.cliente_filtrado)
 			context.commit('setLoadingFiltered', false)
 		}
 	})
 }
 let listar = cuotas.actions.getModels
 cuotas.actions.getModels = function(context) {
+	context.commit('set_cliente_del_filtro', null)
 	context.commit('setLoadingFiltered', false)
 	return listar(context)
 }

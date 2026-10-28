@@ -240,3 +240,48 @@ test('elegir fechas mientras busca cancela la intención histórica pendiente', 
 	await Promise.all([cambio, busqueda])
 	assert.equal(estado.is_filtered, false)
 })
+
+test('el nombre del cliente sigue visible con resultados vacíos y cambia solo con su id', async () => {
+	const { store, estado, pedidos, cambiar } = preparar()
+	cliente(estado)
+	estado.filtered[0].client = { id: 12, name: 'Ana de prueba' }
+	assert.equal(store.getters['payment_plan_cuota/cliente_filtrado'].name, 'Ana de prueba')
+	const cambio = cambiar('pagado')
+	await avanzar()
+	responder(pedidos[0], [])
+	await cambio
+	assert.equal(store.getters['payment_plan_cuota/cliente_filtrado'].name, 'Ana de prueba')
+	assert.equal(estado.cliente_del_filtro.name, 'Ana de prueba')
+	store.commit('payment_plan_cuota/addFilter', { key: 'client_id', type: 'search', igual_que: 13 })
+	assert.equal(store.getters['payment_plan_cuota/cliente_filtrado'].name, 'N° 13', 'jamás mostrar nombre del cliente anterior')
+	store.commit('payment_plan_cuota/limpiar_criterios_de_columna')
+	assert.equal(store.getters['payment_plan_cuota/cliente_filtrado'], null)
+})
+
+test('elegir fechas oculta y limpia el resumen del cliente inactivo', async () => {
+	const { store, estado, pedidos, cambiar } = preparar()
+	cliente(estado)
+	estado.filtered[0].client = { id: 12, name: 'Ana de prueba' }
+	const cambio = cambiar('pagado')
+	await avanzar()
+	responder(pedidos[0], [])
+	await cambio
+	const fecha = store.dispatch('payment_plan_cuota/getModels')
+	assert.equal(estado.cliente_del_filtro, null)
+	assert.equal(store.getters['payment_plan_cuota/cliente_filtrado'], null)
+	responder(pedidos[1], [])
+	await fecha
+})
+
+test('el resumen usa el cliente cargado en el store y la pantalla lo expone accesible', () => {
+	const { store, estado } = preparar()
+	store.registerModule('client', { state: { models: [{ id: 12, name: 'Ana de caché' }], filtered: [] } })
+	cliente(estado)
+	assert.equal(store.getters['payment_plan_cuota/cliente_filtrado'].name, 'Ana de caché')
+	const pantalla = cargar('components/client/components/payment-plan/Index.vue').default
+	assert.equal(pantalla.computed.cliente_filtrado.call({ $store: store }).name, 'Ana de caché')
+	const plantilla = require('node:fs').readFileSync(require('node:path').join(__dirname, '../src/components/client/components/payment-plan/Index.vue'), 'utf8')
+	assert.match(plantilla, /role="status"/)
+	assert.match(plantilla, /aria-live="polite"/)
+	assert.match(plantilla, /Cliente: <strong>{{ cliente_filtrado.name }}<\/strong>/)
+})
