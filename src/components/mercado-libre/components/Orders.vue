@@ -33,6 +33,17 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 	},
+	created() {
+		/*
+			Prueba real del 28/10/2026: entrando directo a /mercado-libre/pedidos (F5, un link) la
+			tabla quedaba en "No hay Pedidos" aunque hubiera del día, porque solo el click en la solapa
+			pedía los pedidos. El componente se crea siempre (la solapa se elige con el v-if de
+			adentro), así que se piden solo si esta es la solapa abierta y todavía no hay.
+		*/
+		if (this.view == 'pedidos' && !this.$store.state.meli_order.models.length) {
+			this.$store.dispatch('meli_order/getModels')
+		}
+	},
 	mounted() {
 		// Estados internos (pendiente / confirmado) para selects del formulario de pedido ML.
 		this.$store.dispatch('meli_order_status/getModels')
