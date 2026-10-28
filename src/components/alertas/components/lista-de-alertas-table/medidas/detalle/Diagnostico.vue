@@ -96,7 +96,7 @@ class="med-diag"
 						<span
 						v-if="!campo.ok && campo.motivo"
 						class="med-diag__motivo-pagina">
-							{{ campo.motivo }}
+							{{ motivo_del_campo(campo.motivo) }}
 						</span>
 					</li>
 				</ul>
@@ -136,6 +136,13 @@ class="med-diag"
 					:class="'med-etiqueta--' + (pagina.leida ? 'neutro' : 'aviso')">
 						{{ pagina.leida ? 'Se leyó' : 'No se leyó' }}
 					</span>
+					<!-- Misión medidas-sin-datos: la página se bajó con el respaldo del buscador (bloqueada o PDF) y cuántos créditos costó. -->
+					<span
+					v-if="lectura_con_respaldo(pagina)"
+					class="med-etiqueta med-etiqueta--neutro"
+					:data-testid="'medidas-pagina-respaldo-' + item_id + '-' + indice + '-' + posicion">
+						{{ lectura_con_respaldo(pagina) }}
+					</span>
 					<span
 					v-if="pagina.motivo"
 					class="med-diag__motivo-pagina">
@@ -149,7 +156,7 @@ class="med-diag"
 </div>
 </template>
 <script>
-import { CRITERIOS, MOTIVOS_DE_DESCARTE, RESULTADOS_DE_PLAN, COINCIDENCIAS_DE_LA_IA, texto_de, entero_es } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { CRITERIOS, MOTIVOS_DE_DESCARTE, RESULTADOS_DE_PLAN, COINCIDENCIAS_DE_LA_IA, texto_de, entero_es, texto_de_lectura_con_respaldo, motivo_de_campo_de_la_ia } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 
 /**
  * Qué se probó con un artículo que quedó sin datos: un bloque por plan de búsqueda (código de
@@ -223,6 +230,24 @@ export default {
 		 */
 		motivo_de_descarte(codigo) {
 			return texto_de(MOTIVOS_DE_DESCARTE, codigo)
+		},
+		/**
+		 * «Leída con el respaldo · 4 créditos» si la página se bajó con el scrape del buscador; '' si no.
+		 *
+		 * @param {Object} pagina
+		 * @returns {String}
+		 */
+		lectura_con_respaldo(pagina) {
+			return texto_de_lectura_con_respaldo(pagina)
+		},
+		/**
+		 * Por qué no pasó la validación un campo que dio la IA ("La cita no aparece en la página").
+		 *
+		 * @param {String} motivo
+		 * @returns {String}
+		 */
+		motivo_del_campo(motivo) {
+			return motivo_de_campo_de_la_ia(motivo)
 		},
 	},
 }

@@ -204,7 +204,7 @@ import FilaAsignada from '@/components/alertas/components/lista-de-alertas-table
 import FilaARevisar from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/FilaARevisar'
 import FilaSinDatos from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/FilaSinDatos'
 import PaginacionItems from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/PaginacionItems'
-import { SOLAPAS_DE_MEDIDAS, VALORES_DE_SOLAPA } from '@/utils/medidas_de_catalogo'
+import { SOLAPAS_DE_MEDIDAS, VALORES_DE_SOLAPA, contar_sin_respaldo } from '@/utils/medidas_de_catalogo'
 import { TEXTOS, esta_activa, conteo, entero_es, aviso_de_aprobacion, aviso_de_quitar } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 import { es_cancelacion } from '@/store/dimension_search'
 
@@ -1043,6 +1043,13 @@ export default {
 			let id_de_la_corrida = self.corrida.id
 			let cantidad = ids.length
 			let texto_cantidad = cantidad + (cantidad === 1 ? ' propuesta' : ' propuestas')
+			// Misión medidas-sin-datos: si en el lote hay propuestas con valores que el sistema no pudo
+			// comprobar en la página, la confirmación lo dice (aprobar en lote es la forma más fácil de
+			// cargar algo sin haberlo mirado).
+			let sin_respaldo = accion === 'aprobar' ? contar_sin_respaldo(self.items, ids) : 0
+			let aviso_sin_respaldo = sin_respaldo > 0
+				? ' Ojo: ' + sin_respaldo + (sin_respaldo === 1 ? ' tiene valores que el sistema no pudo comprobar en la página.' : ' tienen valores que el sistema no pudo comprobar en la página.')
+				: ''
 
 			let confirmacion = accion === 'rechazar'
 				? self.confirmar('¿Rechazar ' + texto_cantidad + '? Se descartan y no se carga ninguna medida en esos artículos.', {
@@ -1052,7 +1059,7 @@ export default {
 					cancelTitle: 'No',
 					centered: true,
 				})
-				: self.confirmar('¿Aprobar ' + texto_cantidad + '? Se cargan las medidas en esos artículos (solo en los campos que tengan vacíos). Después se pueden quitar de a uno desde «Asignadas».', {
+				: self.confirmar('¿Aprobar ' + texto_cantidad + '? Se cargan las medidas en esos artículos (solo en los campos que tengan vacíos). Después se pueden quitar de a uno desde «Asignadas».' + aviso_sin_respaldo, {
 					title: 'Aprobar seleccionadas',
 					okTitle: 'Aprobar',
 					okVariant: 'success',

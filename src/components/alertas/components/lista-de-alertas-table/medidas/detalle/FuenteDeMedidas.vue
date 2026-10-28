@@ -1,6 +1,6 @@
 <template>
 <div
-v-if="fuentes.length || citas.length"
+v-if="fuentes.length || citas.length || sin_respaldo.length"
 class="med-fuente"
 :data-testid="'medidas-fuente-' + item_id">
 
@@ -26,6 +26,52 @@ class="med-fuente"
 			class="bi bi-box-arrow-up-right"
 			aria-hidden="true"></i>
 		</a>
+	</div>
+
+	<!--
+		Misión medidas-sin-datos: valores que la IA encontró pero el sistema no pudo comprobar en el texto
+		de la página. Va SIEMPRE visible (no dentro del desplegable de citas): es lo que decide si se
+		aprueba, se edita o se rechaza. Cada uno dice qué falló, qué cita trajo la IA y de qué página.
+	-->
+	<div
+	v-if="sin_respaldo.length"
+	class="med-fuente__sin-respaldo"
+	role="note"
+	:data-testid="'medidas-sin-respaldo-' + item_id">
+		<p class="med-fuente__sin-respaldo-titulo">
+			<i
+			class="bi bi-exclamation-triangle"
+			aria-hidden="true"></i>
+			{{ textos.sin_respaldo_titulo }}
+		</p>
+		<ul class="med-fuente__sin-respaldo-lista">
+			<li
+			v-for="campo in sin_respaldo"
+			:key="'sin-respaldo-' + campo.clave"
+			class="med-fuente__sin-respaldo-campo"
+			:data-testid="'medidas-sin-respaldo-campo-' + item_id + '-' + campo.clave">
+				<span class="med-fuente__sin-respaldo-nombre">{{ campo.etiqueta }}</span>
+				<span
+				v-if="aviso_del_rechazo(campo)"
+				class="med-fuente__sin-respaldo-motivo">
+					{{ aviso_del_rechazo(campo) }}
+				</span>
+				<q
+				v-if="campo.cita"
+				class="med-fuente__cita-texto">{{ campo.cita }}</q>
+				<a
+				v-if="campo.url"
+				class="med-fuente__link"
+				:href="campo.url"
+				target="_blank"
+				rel="noopener noreferrer">
+					{{ dominio(campo.url) }}
+					<i
+					class="bi bi-box-arrow-up-right"
+					aria-hidden="true"></i>
+				</a>
+			</li>
+		</ul>
 	</div>
 
 	<!--
@@ -89,7 +135,7 @@ class="med-fuente"
 </template>
 <script>
 import { dominio_de } from '@/utils/medidas_de_catalogo'
-import { ALCANCES, texto_de } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { ALCANCES, TEXTOS, texto_de, aviso_de_campo_sin_respaldo } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 
 /**
  * La fuente de las medidas de un artículo: los dominios de las páginas de donde salieron (con link),
@@ -125,9 +171,20 @@ export default {
 		return {
 			/** true con la lista de citas desplegada. */
 			abierto: false,
+			/** Textos de la pantalla (para el template). */
+			textos: TEXTOS,
 		}
 	},
 	computed: {
+		/**
+		 * Los campos con valor que el sistema no pudo comprobar en la página (`sin_respaldo`). Sin el
+		 * dato (API vieja) la lista queda vacía y no se dibuja nada.
+		 *
+		 * @returns {Array}
+		 */
+		sin_respaldo() {
+			return this.campos.filter(campo => !campo.falta && campo.sin_respaldo === true)
+		},
 		/**
 		 * Los campos que tienen una cita para mostrar.
 		 *
@@ -156,6 +213,15 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Por qué no se pudo comprobar un campo, en lenguaje de comerciante ("La cita no aparece en la página.").
+		 *
+		 * @param {Object} campo
+		 * @returns {String}
+		 */
+		aviso_del_rechazo(campo) {
+			return aviso_de_campo_sin_respaldo(campo)
+		},
 		alcance_de(campo) {
 			return campo.alcance ? texto_de(ALCANCES, campo.alcance) : ''
 		},
@@ -205,6 +271,51 @@ export default {
 	margin: 0
 	font-size: 0.78rem
 	color: var(--color-text-secondary, #6c757d)
+
+// El aviso de valores sin comprobar: ámbar, como los demás avisos de la pantalla.
+.med-fuente__sin-respaldo
+	display: flex
+	flex-direction: column
+	gap: 6px
+	width: 100%
+	margin: 2px 0
+	padding: 10px 12px
+	border-radius: 10px
+	background: var(--bg-warning-soft, rgba(255, 193, 7, .16))
+	color: var(--color-text-warning-strong, #856404)
+	min-width: 0
+
+.med-fuente__sin-respaldo-titulo
+	margin: 0
+	font-size: 0.8125rem
+	font-weight: 600
+	display: flex
+	align-items: center
+	gap: 6px
+
+.med-fuente__sin-respaldo-lista
+	display: flex
+	flex-direction: column
+	gap: 8px
+	margin: 0
+	padding: 0
+	list-style: none
+
+.med-fuente__sin-respaldo-campo
+	display: flex
+	flex-wrap: wrap
+	align-items: baseline
+	gap: 2px 10px
+	min-width: 0
+
+.med-fuente__sin-respaldo-nombre
+	font-size: 0.72rem
+	font-weight: 600
+	letter-spacing: .02em
+	text-transform: uppercase
+
+.med-fuente__sin-respaldo-motivo
+	font-size: 0.8125rem
 
 .med-fuente__citas
 	display: flex
