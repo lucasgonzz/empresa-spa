@@ -337,3 +337,19 @@ test('una cancelación sale marcada y no como un error', async () => {
 	assert.equal(modulo.es_cancelacion(rechazo), true)
 	assert.equal(modulo.es_cancelacion(error_http(500, 'x')), false)
 })
+
+// --- Ronda de arreglos (28/10/2026): lote sin respaldo, URLs seguras, menores del revisor -------
+
+test('aprobar_varios: normaliza omitidos_sin_respaldo (0 si la API no lo manda) y deja fallidos como lista', async () => {
+	const nuevo = store_con(() => Promise.resolve({ data: { aprobados: 3, fallidos: [{ id: 9, message: 'x' }], omitidos_sin_respaldo: 2 } }))
+	const r = await nuevo.store.actions.aprobar_varios({}, [1, 2, 3, 4, 5, 6])
+	assert.equal(r.aprobados, 3)
+	assert.equal(r.omitidos_sin_respaldo, 2)
+	assert.equal(r.fallidos.length, 1)
+	const viejo = store_con(() => Promise.resolve({ data: { aprobados: 1 } }))
+	const rv = await viejo.store.actions.aprobar_varios({}, [1])
+	assert.equal(rv.omitidos_sin_respaldo, 0)
+	assert.deepEqual(rv.fallidos, [])
+	const vacio = store_con(() => Promise.resolve({ data: null }))
+	assert.equal((await vacio.store.actions.aprobar_varios({}, [1])).omitidos_sin_respaldo, 0)
+})

@@ -8,6 +8,7 @@ import {
 	normalizar_conteos,
 	normalizar_resultado_de_accion,
 	normalizar_previa,
+	normalizar_resultado_de_lote,
 	extraer_paginador,
 	extraer_modelo,
 	a_numero,
@@ -524,11 +525,13 @@ export default {
 		 *
 		 * @param {Object} context
 		 * @param {Array} ids Ids de items.
-		 * @returns {Promise<Object>} {aprobados: n, fallidos: [{id, message}]}
+		 * @returns {Promise<Object>} {aprobados: n, fallidos: [{id, message}], omitidos_sin_respaldo: n}. La
+		 *   API no aprueba en lote las propuestas con valores sin comprobar (se aprueban de a una): las
+		 *   cuenta en `omitidos_sin_respaldo` (0 si la API no lo manda).
 		 */
 		aprobar_varios(context, ids) {
 			return axios.post(RUTA_DE_ITEMS + '/aprobar-varios', { ids: ids }, opciones())
-				.then(res => res.data || {})
+				.then(res => normalizar_resultado_de_lote(res.data))
 				.catch(relanzar_marcando_la_cancelacion)
 		},
 		/**

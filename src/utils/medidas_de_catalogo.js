@@ -764,6 +764,22 @@ export function normalizar_item(crudo) {
 }
 
 /**
+ * El resultado de aprobar o rechazar varias a la vez: `{aprobados|rechazados, fallidos, ...}` tal
+ * como llegó, más `omitidos_sin_respaldo` (cuántas propuestas con valores sin comprobar dejó afuera la
+ * API: siguen en «A revisar» y se aprueban de a una). Aditivo: una API vieja no lo manda y vale 0.
+ *
+ * @param {*} crudo `res.data`.
+ * @returns {Object}
+ */
+export function normalizar_resultado_de_lote(crudo) {
+	let datos = crudo && typeof crudo === 'object' ? crudo : {}
+	return Object.assign({}, datos, {
+		fallidos: a_lista(datos.fallidos),
+		omitidos_sin_respaldo: Math.max(0, a_numero(datos.omitidos_sin_respaldo)),
+	})
+}
+
+/**
  * Cuántos de los ítems indicados (por id) tienen valores que el sistema no pudo comprobar en la
  * página. Sirve para avisar antes de aprobar un lote en el que hay propuestas sin respaldo.
  *

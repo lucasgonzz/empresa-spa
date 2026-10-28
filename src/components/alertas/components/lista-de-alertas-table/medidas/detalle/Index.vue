@@ -205,7 +205,7 @@ import FilaARevisar from '@/components/alertas/components/lista-de-alertas-table
 import FilaSinDatos from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/FilaSinDatos'
 import PaginacionItems from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/PaginacionItems'
 import { SOLAPAS_DE_MEDIDAS, VALORES_DE_SOLAPA, contar_sin_respaldo } from '@/utils/medidas_de_catalogo'
-import { TEXTOS, esta_activa, conteo, entero_es, aviso_de_aprobacion, aviso_de_quitar } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { TEXTOS, esta_activa, conteo, entero_es, aviso_de_aprobacion, aviso_de_quitar, aviso_de_lote_con_sin_respaldo, texto_de_omitidos_sin_respaldo } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 import { es_cancelacion } from '@/store/dimension_search'
 
 /** Cada cuánto se refresca el encabezado mientras la corrida sigue avanzando. */
@@ -1047,9 +1047,7 @@ export default {
 			// comprobar en la página, la confirmación lo dice (aprobar en lote es la forma más fácil de
 			// cargar algo sin haberlo mirado).
 			let sin_respaldo = accion === 'aprobar' ? contar_sin_respaldo(self.items, ids) : 0
-			let aviso_sin_respaldo = sin_respaldo > 0
-				? ' Ojo: ' + sin_respaldo + (sin_respaldo === 1 ? ' tiene valores que el sistema no pudo comprobar en la página.' : ' tienen valores que el sistema no pudo comprobar en la página.')
-				: ''
+			let aviso_sin_respaldo = aviso_de_lote_con_sin_respaldo(sin_respaldo)
 
 			let confirmacion = accion === 'rechazar'
 				? self.confirmar('¿Rechazar ' + texto_cantidad + '? Se descartan y no se carga ninguna medida en esos artículos.', {
@@ -1116,7 +1114,12 @@ export default {
 				? (hechos === 1 ? 'aprobada' : 'aprobadas')
 				: (hechos === 1 ? 'rechazada' : 'rechazadas')
 
-			if (hechos > 0) {
+			// Misión medidas-sin-datos: la API no aprueba en lote las propuestas con valores sin comprobar
+			// (siguen en «A revisar», no son fallos): se dice cuántas son y que se aprueban de a una.
+			let omitidos = accion === 'aprobar' ? (Number(datos.omitidos_sin_respaldo) || 0) : 0
+			if (omitidos > 0) {
+				this.$toast.warning(texto_de_omitidos_sin_respaldo(hechos, omitidos), { duration: 10000 })
+			} else if (hechos > 0) {
 				this.$toast.success(entero_es(hechos) + (hechos === 1 ? ' propuesta ' : ' propuestas ') + participio)
 			}
 			if (fallidos.length) {

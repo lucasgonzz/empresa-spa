@@ -449,6 +449,20 @@ export function texto_de_lectura_con_respaldo(pagina) {
 }
 
 /**
+ * Lo que se dice de una página que se intentó leer con el respaldo, gastó créditos y no se pudo leer:
+ * "Respaldo sin resultado · 2 créditos". Si se leyó, o no se usó el respaldo, o no costó nada, ''.
+ *
+ * @param {Object} pagina Página normalizada (`leida`, `via_scrape`, `creditos`).
+ * @returns {String}
+ */
+export function texto_de_respaldo_sin_resultado(pagina) {
+	if (!pagina || pagina.via_scrape !== true || pagina.leida === true || !(pagina.creditos > 0)) {
+		return ''
+	}
+	return 'Respaldo sin resultado · ' + creditos_en_texto(pagina.creditos)
+}
+
+/**
  * La línea de la previa que dice cuántos artículos suma la casilla «Volver a buscar también los que
  * quedaron sin datos». Cero (o una API vieja que no lo manda) no dice nada.
  *
@@ -463,6 +477,45 @@ export function texto_de_reintento(cantidad) {
 	return numero === 1
 		? 'Esta opción suma 1 artículo que ya se había buscado sin datos.'
 		: 'Esta opción suma ' + entero_es(numero) + ' artículos que ya se habían buscado sin datos.'
+}
+
+/**
+ * El aviso de la confirmación de «Aprobar seleccionadas» cuando el lote incluye propuestas con valores
+ * que el sistema no pudo comprobar: esas NO se aprueban en lote, se aprueban de a una.
+ *
+ * @param {Number} cantidad Cuántas del lote están en ese caso.
+ * @returns {String} '' si no hay ninguna.
+ */
+export function aviso_de_lote_con_sin_respaldo(cantidad) {
+	let numero = a_numero(cantidad)
+	if (numero <= 0) {
+		return ''
+	}
+	return numero === 1
+		? ' Ojo: 1 tiene valores que el sistema no pudo comprobar en la página y no se aprueba en lote: se aprueba de a una.'
+		: ' Ojo: ' + entero_es(numero) + ' tienen valores que el sistema no pudo comprobar en la página y no se aprueban en lote: se aprueban de a una.'
+}
+
+/**
+ * El mensaje del resultado de aprobar en lote cuando la API dejó afuera propuestas sin respaldo
+ * (`omitidos_sin_respaldo`): "3 aprobadas; 2 tienen valores sin comprobar y se aprueban de a una,
+ * mirando la cita y la fuente."
+ *
+ * @param {Number} aprobadas Cuántas se aprobaron.
+ * @param {Number} omitidos Cuántas quedaron afuera por no tener respaldo.
+ * @returns {String} '' si no se omitió ninguna.
+ */
+export function texto_de_omitidos_sin_respaldo(aprobadas, omitidos) {
+	let sin_comprobar = a_numero(omitidos)
+	if (sin_comprobar <= 0) {
+		return ''
+	}
+	let hechas = a_numero(aprobadas)
+	let inicio = hechas > 0 ? entero_es(hechas) + (hechas === 1 ? ' aprobada; ' : ' aprobadas; ') : ''
+	let resto = sin_comprobar === 1
+		? '1 tiene valores sin comprobar y se aprueba de a una'
+		: entero_es(sin_comprobar) + ' tienen valores sin comprobar y se aprueban de a una'
+	return inicio + resto + ', mirando la cita y la fuente.'
 }
 
 /**
