@@ -31,6 +31,25 @@ title="Buscar peso y medidas de todo el catálogo"
 			</p>
 		</div>
 
+		<!--
+			Misión medidas-sin-datos (28/10/2026): volver a buscar los que quedaron «sin datos» en búsquedas
+			anteriores. Apagada por defecto: sin ella la búsqueda sigue salteando lo que ya se buscó sin
+			éxito en los últimos 90 días. Cambiarla recalcula la previa, igual que «Solo con stock».
+		-->
+		<div class="med-cat__opcion">
+			<b-form-checkbox
+			v-model="reintentar_sin_datos"
+			switch
+			data-testid="medidas-catalogo-reintentar-sin-datos"
+			:disabled="lanzando"
+			@change="al_cambiar_reintento">
+				{{ textos.reintentar_sin_datos }}
+			</b-form-checkbox>
+			<p class="med-cat__opcion-ayuda">
+				{{ textos.reintentar_sin_datos_ayuda }}
+			</p>
+		</div>
+
 		<div
 		v-if="cargando"
 		class="med-cat__cargando">
@@ -138,6 +157,12 @@ title="Buscar peso y medidas de todo el catálogo"
 			<ul
 			class="med-cat__lista"
 			:class="{ 'med-cat__lista--recalculando': recalculando }">
+				<!-- Lo que suma la casilla de reintento (solo si está tildada y la API lo informa). -->
+				<li
+				v-if="reintentar_sin_datos && texto_del_reintento"
+				data-testid="medidas-catalogo-reintento">
+					{{ texto_del_reintento }}
+				</li>
 				<!--
 					🔴 El `&nbsp;` al principio de cada <template> es a propósito. Entre </strong> y <template>
 					no hay texto, solo un salto de línea, y Vue 2 (whitespace: 'condense') borra todo nodo de
@@ -229,6 +254,18 @@ title="Buscar peso y medidas de todo el catálogo"
 				</p>
 			</div>
 
+			<!--
+				Leer páginas bloqueadas y PDF se hace con un servicio de respaldo del buscador y cuesta
+				créditos de búsqueda aparte de las consultas de la estimación. Se dice siempre que hay algo
+				para buscar: puede pasar con cualquier artículo, no solo con los reintentos.
+			-->
+			<div
+			v-if="!previa.corrida_activa && !sin_nada_para_buscar"
+			class="med-cat__aviso med-cat__aviso--creditos"
+			data-testid="medidas-catalogo-creditos">
+				{{ textos.creditos_de_lectura }}
+			</div>
+
 		</template>
 
 	</div>
@@ -258,7 +295,7 @@ title="Buscar peso y medidas de todo el catálogo"
 </b-modal>
 </template>
 <script>
-import { entero_es, duracion_en_texto, dolares_en_texto, esta_activa, porcentaje_de } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { entero_es, duracion_en_texto, dolares_en_texto, esta_activa, porcentaje_de, texto_de_reintento, TEXTOS } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 import { es_cancelacion } from '@/store/dimension_search'
 import { normalizar_tope_demo, aviso_de_tope_demo, mensaje_de_tope_demo_agotado } from '@/store/image_assignment'
 
@@ -292,9 +329,21 @@ export default {
 			lanzando: false,
 			/** El interruptor «Solo artículos con stock»: tildado por defecto. */
 			solo_con_stock: true,
+			/** La casilla «Volver a buscar también los que quedaron sin datos»: apagada por defecto. */
+			reintentar_sin_datos: false,
+			/** Textos de la pantalla (para el template). */
+			textos: TEXTOS,
 		}
 	},
 	computed: {
+		/**
+		 * "Esta opción suma 140 artículos..." con lo que dice la previa; '' si la API no lo manda o es cero.
+		 *
+		 * @returns {String}
+		 */
+		texto_del_reintento() {
+			return this.previa ? texto_de_reintento(this.previa.reintento_sin_datos) : ''
+		},
 		estimacion() {
 			return this.previa ? this.previa.estimacion : null
 		},
@@ -422,6 +471,7 @@ export default {
 		al_abrir() {
 			this.previa = null
 			this.solo_con_stock = true
+			this.reintentar_sin_datos = false
 			this.cargar()
 		},
 		al_cerrar() {
@@ -442,6 +492,21 @@ export default {
 				this.cargar()
 			})
 		},
+		/** La casilla de reintento cambió: igual que el stock, se espera al tick y se recalcula la previa. */
+		al_cambiar_reintento() {
+			this.$nextTick(() => {
+				this.cargar()
+			})
+		},
+		/**
+		 * Lo que se manda a la API (previa y lanzamiento): las dos opciones de la pantalla. Un solo lugar
+		 * para que lo que se calcula en la previa sea exactamente lo que se lanza.
+		 *
+		 * @returns {{solo_con_stock: Boolean, reintentar_sin_datos: Boolean}}
+		 */
+		opciones_del_pedido() {
+			return { solo_con_stock: this.solo_con_stock, reintentar_sin_datos: this.reintentar_sin_datos }
+		},
 		/**
 		 * Pide la previa del catálogo con el estado del interruptor. Un 403 (sesión que no es de acceso
 		 * maestro) lo anuncia el interceptor global con el mensaje de la API. Una cancelación no es un
@@ -458,7 +523,7 @@ export default {
 				self.cargando = true
 			}
 			self.error = false
-			self.$store.dispatch('dimension_search/get_previa_catalogo', { solo_con_stock: self.solo_con_stock })
+			self.$store.dispatch('dimension_search/get_previa_catalogo', self.opciones_del_pedido())
 			.then(previa => {
 				// Respuesta vieja (se cambió el interruptor mientras viajaba): la del último pedido es la que vale.
 				if (typeof previa === 'undefined') {
@@ -496,7 +561,7 @@ export default {
 			self.$store.commit('auth/setMessage', 'Lanzando la búsqueda de medidas')
 			self.$store.commit('auth/setLoading', true)
 
-			self.$store.dispatch('dimension_search/lanzar_catalogo', { solo_con_stock: self.solo_con_stock })
+			self.$store.dispatch('dimension_search/lanzar_catalogo', self.opciones_del_pedido())
 			.then(corrida => {
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
@@ -580,6 +645,11 @@ export default {
 .med-cat__aviso--info
 	background: var(--bg-info-soft, rgba(23, 162, 184, .1))
 	color: var(--color-text-info-strong, #0c5460)
+
+.med-cat__aviso--creditos
+	background: var(--bg-warning-soft, rgba(255, 193, 7, .16))
+	color: var(--color-text-warning-strong, #856404)
+	font-size: 0.8125rem
 
 .med-cat__aviso--mal
 	background: var(--btn-peligro-fondo, #fdf3f2)

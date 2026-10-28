@@ -289,6 +289,27 @@ test('lanzar catálogo: manda solo_con_stock (y el límite solo si hay) y devuel
 	assert.deepEqual(pedidos[1].cuerpo, { solo_con_stock: false, limite: 100 })
 })
 
+test('previa: reintentar_sin_datos viaja solo si está pedido (sin él, el pedido es el de siempre)', async () => {
+	const { store, pedidos } = store_con(() => Promise.resolve({ data: { a_buscar: 5, reintento_sin_datos: 3 } }))
+	const sin = await store.actions.get_previa_catalogo({}, { solo_con_stock: true, reintentar_sin_datos: false })
+	assert.deepEqual(pedidos[0].config.params, { solo_con_stock: 1 })
+	assert.equal(sin.reintento_sin_datos, 3)
+	await store.actions.get_previa_catalogo({}, { solo_con_stock: true, reintentar_sin_datos: true })
+	assert.deepEqual(pedidos[1].config.params, { solo_con_stock: 1, reintentar_sin_datos: 1 })
+	await store.actions.get_previa_catalogo({}, { solo_con_stock: false, reintentar_sin_datos: true })
+	assert.deepEqual(pedidos[2].config.params, { solo_con_stock: 0, reintentar_sin_datos: 1 })
+})
+
+test('lanzar catálogo: reintentar_sin_datos viaja en el cuerpo solo si está tildado', async () => {
+	const { store, pedidos } = store_con(() => Promise.resolve({ data: { id: 12, model: { id: 12, status: 'pendiente', total: 10 } } }))
+	await store.actions.lanzar_catalogo({}, { solo_con_stock: true, reintentar_sin_datos: false })
+	assert.deepEqual(pedidos[0].cuerpo, { solo_con_stock: true })
+	await store.actions.lanzar_catalogo({}, { solo_con_stock: true, reintentar_sin_datos: true })
+	assert.deepEqual(pedidos[1].cuerpo, { solo_con_stock: true, reintentar_sin_datos: true })
+	await store.actions.lanzar_catalogo({}, { solo_con_stock: false, limite: 50, reintentar_sin_datos: true })
+	assert.deepEqual(pedidos[2].cuerpo, { solo_con_stock: false, reintentar_sin_datos: true, limite: 50 })
+})
+
 test('detener y reanudar actualizan la fila de la tabla', async () => {
 	const { store, pedidos } = store_con(() => Promise.resolve({ data: { id: 12, model: { id: 12, status: 'detenida', puede_reanudar: true } } }))
 	const estado = nuevo_estado(store)

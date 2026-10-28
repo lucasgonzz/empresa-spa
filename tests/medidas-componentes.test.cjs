@@ -39,6 +39,15 @@ const Diagnostico = cargar('components/alertas/components/lista-de-alertas-table
 const Encabezado = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/Encabezado.vue').default
 const BarraDeSolapa = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/BarraDeSolapa.vue').default
 const PaginacionItems = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/PaginacionItems.vue').default
+// El modal importa dos stores que traen axios: se cargan con dobles (solo se usan sus funciones puras).
+const ModalCatalogo = cargar('components/alertas/components/lista-de-alertas-table/medidas/ModalCatalogo.vue', {
+	'@/store/dimension_search': { es_cancelacion: () => false },
+	'@/store/image_assignment': {
+		normalizar_tope_demo: () => ({ aplica: false, tope: 0, usadas: 0, restantes: 0 }),
+		aviso_de_tope_demo: () => '',
+		mensaje_de_tope_demo_agotado: () => '',
+	},
+}).default
 const EstadoCorrida = cargar('components/alertas/components/lista-de-alertas-table/medidas/EstadoCorrida.vue').default
 const TablaCorridas = cargar('components/alertas/components/lista-de-alertas-table/medidas/TablaCorridas.vue').default
 
@@ -730,4 +739,181 @@ test('Asignadas: el motivo nuevo y su frase también se ven', () => {
 	assert.match(texto_de(arbol), /Valor ambiguo/)
 	assert.match(texto_de(arbol), /Frase larga\./)
 	assert.match(texto_de(por_testid(arbol, 'medidas-nota-ia-11')), /Nota IA\./)
+})
+
+// --- Misión medidas-sin-datos (28/10/2026) -----------------------------------------------------
+
+/** Un ítem a revisar con dos valores que el sistema no pudo comprobar en la página. */
+function item_sin_respaldo(extra) {
+	return item(Object.assign({
+		motivo: 'valor_sin_respaldo',
+		motivo_detalle: 'La IA encontró estos valores pero el sistema no pudo comprobarlos en la página: revisalos antes de aprobar.',
+		propuesta: { peso: 1.2, alto: 30, ancho: null, profundidad: null },
+		campos: [
+			{ clave: 'peso', valor: 1.2, unidad: 'kg', cita: 'Peso bruto 1,2 kg', url: 'https://www.ficha.com.ar/espada', alcance: 'producto', sin_respaldo: true, motivo_rechazo: 'cita_no_esta_en_la_pagina' },
+			{ clave: 'alto', valor: 30, unidad: 'cm', cita: 'Alto 30 cm', url: 'https://www.ficha.com.ar/espada', alcance: 'producto', sin_respaldo: true, motivo_rechazo: 'cita_no_coincide_con_el_valor' },
+		],
+	}, extra || {}))
+}
+
+test('Sin respaldo: el aviso se ve sin desplegar nada, con el motivo en lenguaje de comerciante, la cita y el link', () => {
+	const it = item_sin_respaldo()
+	const arbol = instanciar(Fuente, { fuentes: it.fuentes, campos: it.campos, item_id: it.id })._render()
+	const aviso = por_testid(arbol, 'medidas-sin-respaldo-11')
+	assert.ok(aviso, 'el aviso tiene que estar a la vista sin tocar el desplegable')
+	const texto = texto_de(aviso)
+	assert.match(texto, /No se pudo comprobar en la página/)
+	assert.match(texto_de(por_testid(arbol, 'medidas-sin-respaldo-campo-11-peso')), /Peso La cita no aparece en la página\. Peso bruto 1,2 kg/)
+	assert.match(texto_de(por_testid(arbol, 'medidas-sin-respaldo-campo-11-alto')), /Alto La cita dice otro número\./)
+	const links = buscar_todos(aviso, nodo => nodo.tag === 'a')
+	assert.equal(links.length, 2)
+	assert.equal(links[0].data.attrs.href, 'https://www.ficha.com.ar/espada')
+	assert.equal(links[0].data.attrs.rel, 'noopener noreferrer')
+})
+
+test('Sin respaldo: un campo sin cita igual se avisa, y sin ningún campo sin respaldo no se dibuja el aviso', () => {
+	const sin_cita = item_sin_respaldo({
+		fuentes: [],
+		propuesta: { peso: 1.2 },
+		campos: [{ clave: 'peso', valor: 1.2, unidad: 'kg', sin_respaldo: true, motivo_rechazo: 'sin_cita' }],
+	})
+	const arbol = instanciar(Fuente, { fuentes: sin_cita.fuentes, campos: sin_cita.campos, item_id: sin_cita.id })._render()
+	assert.match(texto_de(por_testid(arbol, 'medidas-sin-respaldo-campo-11-peso')), /Peso No trajo cita\./)
+	const normal = item()
+	const arbol_normal = instanciar(Fuente, { fuentes: normal.fuentes, campos: normal.campos, item_id: normal.id })._render()
+	assert.equal(por_testid(arbol_normal, 'medidas-sin-respaldo-11'), undefined)
+})
+
+test('Sin respaldo: el chip del valor lo marca, y los demás chips no', () => {
+	const it = item_sin_respaldo()
+	const arbol = instanciar(Chips, { campos: it.campos, item_id: it.id })._render()
+	assert.match(texto_de(por_testid(arbol, 'medidas-sin-respaldo-chip-11-peso')), /sin comprobar en la página/)
+	assert.ok(por_testid(arbol, 'medidas-sin-respaldo-chip-11-alto'))
+	assert.equal(por_testid(arbol, 'medidas-sin-respaldo-chip-11-ancho'), undefined)
+})
+
+test('Sin respaldo: la fila a revisar muestra su motivo en ámbar, el aviso, y aprobar y editar funcionan igual', () => {
+	const it = item_sin_respaldo()
+	const vm = instanciar(FilaARevisar, { item: it })
+	assert.equal(vm.tono_del_motivo, 'aviso')
+	const arbol = vm._render()
+	assert.equal(texto_de(por_testid(arbol, 'medidas-motivo-11')), 'Sin respaldo en la página')
+	assert.match(texto_de(arbol), /revisalos antes de aprobar/)
+	// Aprobar tal cual está habilitado (hay valores).
+	assert.equal(vm.hay_algo_para_aprobar, true)
+	// Editar: los valores propuestos se pueden corregir y salen en el aprobar.
+	const emitidos = []
+	vm.$on('aprobar', valores => emitidos.push(valores))
+	vm.abrir_edicion()
+	assert.equal(vm.entradas.peso, '1,2')
+	vm.entradas.peso = '1,5'
+	vm.guardar_y_aprobar()
+	assert.deepEqual(emitidos, [{ peso: 1.5 }])
+})
+
+test('Un motivo desconocido en una fila a revisar o sin datos se muestra humanizado, sin romper', () => {
+	const a_revisar = instanciar(FilaARevisar, { item: item({ motivo: 'motivo_de_manana', motivo_detalle: '' }) })
+	assert.equal(texto_de(por_testid(a_revisar._render(), 'medidas-motivo-11')), 'Motivo de manana')
+	assert.equal(a_revisar.tono_del_motivo, 'neutro')
+	const sin_datos = instanciar(FilaSinDatos, { item: item({ status: 'sin_datos', motivo: 'paginas_bloqueadas', motivo_detalle: 'El producto apareció pero 3 páginas no se pudieron leer.', propuesta: {}, campos: [], fuentes: [] }) })
+	const arbol = sin_datos._render()
+	assert.equal(texto_de(por_testid(arbol, 'medidas-motivo-11')), 'Páginas bloqueadas')
+	assert.match(texto_de(arbol), /3 páginas no se pudieron leer/)
+	const pdf = instanciar(FilaSinDatos, { item: item({ status: 'sin_datos', motivo: 'pdf_no_leido', propuesta: {}, campos: [], fuentes: [] }) })
+	assert.equal(texto_de(por_testid(pdf._render(), 'medidas-motivo-11')), 'PDF sin leer')
+})
+
+test('Diagnóstico: una página leída con el respaldo lo dice con los créditos, y las no leídas dicen su motivo', () => {
+	const sin = item({ status: 'sin_datos', diagnostico: [{
+		criterio: 'codigo_de_barras', usado: true, consulta: '"7790000000001"', resultados: 3,
+		paginas: [
+			{ url: 'https://toolnation.com/x', dominio: 'toolnation.com', leida: true, via_scrape: true, creditos: 4, motivo: '' },
+			{ url: 'https://b.com/ficha.pdf', dominio: 'b.com', leida: true, via_scrape: true, creditos: 2, motivo: 'PDF leído con el respaldo.' },
+			{ url: 'https://c.com/y', dominio: 'c.com', leida: false, motivo: 'El sitio bloquea la descarga (403)' },
+			{ url: 'https://d.com/z', dominio: 'd.com', leida: false, via_scrape: true, creditos: 2, motivo: 'No se pudo leer ni con el respaldo.' },
+			{ url: 'https://e.com/w', dominio: 'e.com', leida: true, motivo: '' },
+		],
+		ia: { llamada: true, respondio: true, match: 'exacto', campos: { peso: 'cita_no_esta_en_la_pagina', alto: 'ok' } },
+	}] })
+	const arbol = instanciar(Diagnostico, { diagnostico: sin.diagnostico, item_id: sin.id })._render()
+	const texto = texto_de(arbol)
+	assert.match(texto, /toolnation\.com Se leyó Leída con el respaldo · 4 créditos/)
+	assert.match(texto, /b\.com Se leyó Leída con el respaldo · 2 créditos PDF leído con el respaldo\./)
+	assert.match(texto, /c\.com No se leyó El sitio bloquea la descarga \(403\)/)
+	assert.match(texto, /d\.com No se leyó No se pudo leer ni con el respaldo\./)
+	// La página leída de la forma normal no lleva la etiqueta del respaldo; tampoco la que falló.
+	assert.ok(por_testid(arbol, 'medidas-pagina-respaldo-11-0-0'))
+	assert.equal(por_testid(arbol, 'medidas-pagina-respaldo-11-0-2'), undefined)
+	assert.equal(por_testid(arbol, 'medidas-pagina-respaldo-11-0-3'), undefined)
+	assert.equal(por_testid(arbol, 'medidas-pagina-respaldo-11-0-4'), undefined)
+	// El motivo por el que la IA no pasó la validación sale traducido.
+	assert.match(texto, /Peso: sin valor La cita no aparece en la página/)
+})
+
+// --- Modal de lanzamiento ----------------------------------------------------------------------
+
+/** Un modal con la previa ya cargada (sin montar). */
+function modal_con_previa(extra) {
+	const vm = instanciar(ModalCatalogo, {})
+	vm.previa = medidas.normalizar_previa(Object.assign({
+		a_buscar: 300, sin_medidas: 4000, proveedor_configurado: true, ia_configurada: true, tope: 5000,
+		estimacion: { busquedas: 600, minutos: 30, usd_busquedas: 1.2, usd_ia: 0.5 },
+	}, extra || {}))
+	return vm
+}
+
+test('Modal: la casilla de reintento viene apagada y el aviso de créditos de lectura se ve con algo para buscar', () => {
+	const vm = modal_con_previa()
+	assert.equal(vm.reintentar_sin_datos, false)
+	const arbol = vm._render()
+	assert.ok(por_testid(arbol, 'medidas-catalogo-reintentar-sin-datos'))
+	assert.match(texto_de(arbol), /Volver a buscar también los que quedaron sin datos/)
+	assert.match(texto_de(por_testid(arbol, 'medidas-catalogo-creditos')), /Leer páginas bloqueadas y PDF consume créditos de búsqueda \(de 2 a 10 por página\)\./)
+	// Apagada: no se habla de cuántos suma.
+	assert.equal(por_testid(arbol, 'medidas-catalogo-reintento'), undefined)
+})
+
+test('Modal: con la casilla tildada la previa muestra cuántos artículos suma; sin el dato de la API (0) no dice nada', () => {
+	const vm = modal_con_previa({ reintento_sin_datos: 140 })
+	vm.reintentar_sin_datos = true
+	assert.match(texto_de(por_testid(vm._render(), 'medidas-catalogo-reintento')), /Esta opción suma 140 artículos/)
+	const vieja = modal_con_previa()
+	vieja.reintentar_sin_datos = true
+	assert.equal(por_testid(vieja._render(), 'medidas-catalogo-reintento'), undefined)
+})
+
+test('Modal: sin nada para buscar no se dibuja el aviso de créditos', () => {
+	const vm = modal_con_previa({ a_buscar: 0 })
+	assert.equal(por_testid(vm._render(), 'medidas-catalogo-creditos'), undefined)
+})
+
+test('Modal: previa y lanzamiento reciben las mismas opciones, con o sin la casilla', () => {
+	const vm = modal_con_previa()
+	assert.deepEqual(vm.opciones_del_pedido(), { solo_con_stock: true, reintentar_sin_datos: false })
+	vm.reintentar_sin_datos = true
+	vm.solo_con_stock = false
+	assert.deepEqual(vm.opciones_del_pedido(), { solo_con_stock: false, reintentar_sin_datos: true })
+})
+
+test('Modal: cargar y lanzar mandan la casilla al store', async () => {
+	const vm = modal_con_previa()
+	const enviados = []
+	vm.$store = {
+		dispatch: (nombre, valor) => {
+			enviados.push([nombre, valor])
+			return Promise.resolve(nombre === 'dimension_search/get_previa_catalogo' ? vm.previa : { id: 1 })
+		},
+		commit: () => {},
+	}
+	vm.$toast = { success: () => {} }
+	vm.$bvModal = { hide: () => {} }
+	vm.reintentar_sin_datos = true
+	vm.cargar()
+	// Se espera a que la previa vuelva: mientras se recalcula, lanzar está apagado.
+	await new Promise(resolver => setTimeout(resolver, 0))
+	assert.equal(vm.puede_lanzar, true)
+	vm.lanzar()
+	await new Promise(resolver => setTimeout(resolver, 0))
+	assert.deepEqual(enviados[0], ['dimension_search/get_previa_catalogo', { solo_con_stock: true, reintentar_sin_datos: true }])
+	assert.deepEqual(enviados[1], ['dimension_search/lanzar_catalogo', { solo_con_stock: true, reintentar_sin_datos: true }])
 })
