@@ -1109,3 +1109,33 @@ test('Asignadas: un campo con sin_respaldo:false (la API lo baja al aprobar) no 
 	const fila = texto_de(instanciar(FilaAsignada, { item: it })._render())
 	assert.doesNotMatch(fila, /No se pudo comprobar en la página|sin comprobar/)
 })
+
+test('Asignadas: lo aprobado que salió sin respaldo dice «Revisada a mano», sin la frase de revisar antes de aprobar', () => {
+	const it = item({
+		status: 'aprobada', motivo: 'valor_sin_respaldo', revisado_por: 'Juan',
+		motivo_detalle: 'La IA encontró estos valores pero el sistema no pudo comprobarlos en la página: revisalos antes de aprobar.',
+		nota_ia: 'Nota de la IA que sigue valiendo.',
+	})
+	const vm = instanciar(FilaAsignada, { item: it })
+	assert.equal(vm.motivo, 'Revisada a mano')
+	assert.equal(vm.tono_del_motivo, 'neutro')
+	const arbol = vm._render()
+	const texto = texto_de(arbol)
+	assert.match(texto, /Revisada a mano/)
+	assert.doesNotMatch(texto, /Sin respaldo en la página/)
+	assert.doesNotMatch(texto, /revisalos antes de aprobar/)
+	// La nota de la IA, con contenido, se conserva; y sigue diciendo quién aprobó.
+	assert.match(texto_de(por_testid(arbol, 'medidas-nota-ia-11')), /Nota de la IA que sigue valiendo\./)
+	assert.match(texto_de(por_testid(arbol, 'medidas-aprobada-por-11')), /Aprobada por Juan/)
+	// Sin nota de la IA no queda ningún párrafo suelto.
+	const sin_nota = instanciar(FilaAsignada, { item: item({ status: 'aprobada', motivo: 'valor_sin_respaldo', nota_ia: '', motivo_detalle: 'revisalos antes de aprobar' }) })._render()
+	assert.equal(por_testid(sin_nota, 'medidas-nota-ia-11'), undefined)
+	assert.doesNotMatch(texto_de(sin_nota), /revisalos antes de aprobar/)
+})
+
+test('Asignadas: los demás motivos y su frase se ven como siempre', () => {
+	const vm = instanciar(FilaAsignada, { item: item({ status: 'aprobada', motivo: 'valor_ambiguo', motivo_detalle: 'Frase larga.' }) })
+	assert.equal(vm.motivo, 'Valor ambiguo')
+	assert.equal(vm.tono_del_motivo, 'aviso')
+	assert.match(texto_de(vm._render()), /Frase larga\./)
+})

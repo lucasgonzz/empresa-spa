@@ -194,6 +194,8 @@ export const TEXTOS = {
 	reintentar_sin_datos_ayuda: 'Sirve para reintentar los artículos de búsquedas anteriores que terminaron sin datos. No repite los que ya tienen medidas, los que esperan revisión ni los que alguien rechazó.',
 	creditos_de_lectura: 'Leer páginas bloqueadas y PDF consume créditos de búsqueda (de 2 a 10 por página).',
 	leida_con_respaldo: 'Leída con el respaldo',
+	// Etiqueta de «Asignadas» para lo que salió sin respaldo en la página y ya aprobó una persona.
+	revisada_a_mano: 'Revisada a mano',
 	nota_sin_datos: 'No se encontró nada confiable para estos artículos. Abrí «Ver qué se probó» para ver las consultas y las páginas que se leyeron.',
 }
 
