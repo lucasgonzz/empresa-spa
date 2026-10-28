@@ -161,6 +161,7 @@
 						:data-tour="ancla_tour_guardar"
 						:prop_to_send_on_emit="{close: true}"
 						:loader="loading"
+						:disabled="model_name == 'provider_order' && compra_guardado_en_curso"
 						text="Guardar y cerrar"></btn-loader>
 
 						<!-- Restaurar usa el mismo chasis del footer pero conserva su verde: no lleva
@@ -336,6 +337,11 @@ export default {
 		return {
 			clear_model: 1,
 			restaurando: false,
+			compra_guardado_en_curso: false,
+			compra_envio_iniciado: false,
+			compra_confirmada: false,
+			compra_temporizador: null,
+			compra_modelo_enviado: null,
 			/* Mensaje de error/advertencia del chequeo previo a guardar (visible sobre los botones). */
 			save_check_alert_message: '',
 			/* Variante Bootstrap del alert (danger, warning, etc.). */
@@ -462,6 +468,7 @@ export default {
 		this.$root.$on(this.model_name + ':save-retry', this.guardar_de_nuevo_con)
 	},
 	beforeDestroy() {
+		if (this.compra_temporizador) clearTimeout(this.compra_temporizador)
 		/*
 			🔴 El $off es obligatorio, no higiene. `$root` vive toda la sesion: sin esto, cada vez
 			que se monta un formulario queda otro listener pegado y un solo evento dispara N
@@ -541,7 +548,7 @@ export default {
 			}
 		},
 		onModalClosed() {
-			this.clearSaveCheckAlert()
+			if (!this.compra_guardado_en_curso) this.clearSaveCheckAlert()
 			this.$root.$emit(this.model_name+'-modal-closed');
 		},
 		/**
@@ -591,10 +598,22 @@ export default {
 			// alert('emitiendo model_deleted desde Index')
 			this.$emit('modelDeleted')
 		},
-		async save(info) {
+		save(info) {
+			let self = this
+			const es_compra = this.model_name == 'provider_order'
+			if (es_compra) {
+				if (this.compra_guardado_en_curso || this.loading) {
+					return Promise.resolve()
+				}
+				// El loading global puede apagarse por un pedido accesorio que falla. El POST de
+				// una compra sigue siendo único aunque ese otro pedido libere la pantalla.
+				this.compra_guardado_en_curso = true
+				this.compra_envio_iniciado = false
+				this.compra_confirmada = false
+			}
+			return Promise.resolve().then(() => self.check()).then(isValid => {
 			// this.setPropsValues()}
 			console.log('se mando check')
-			const isValid = await this.check();
 			console.log('llego esto de check:')
 			console.log(isValid)
 
@@ -605,6 +624,7 @@ export default {
 					que nadie lo haya pedido.
 				*/
 				this.extra_props_del_proximo_guardado = {}
+				if (es_compra) this.terminar_guardado_compra()
 			}
 
 			if (isValid && !this.loading) {
@@ -613,6 +633,7 @@ export default {
 				console.log('mandando solicitud')
 				this.$store.commit('auth/setMessage', 'Guardando')
 				this.loading = true 
+				const modelo_enviado = this.model
 				let route = this.route_model_name()
 				// let model_to_send = this.model 
 				let model_to_send = this.getModelToSend()
@@ -631,16 +652,27 @@ export default {
 
 				/* Config de axios de este envio. Ver la prop `skip_global_error_event`. */
 				let config_del_envio = {
-					skip_global_error_event: this.skip_global_error_event,
+					// Compras da su propio aviso: el toast genérico invita a reintentar,
+					// pero una respuesta perdida no demuestra que la escritura falló.
+					skip_global_error_event: es_compra || this.skip_global_error_event,
+					// Navegar no deshace una escritura que ya recibió el servidor.
+					skip_navigation_cancel: es_compra,
 				}
+				this.iniciar_espera_de_compra(es_compra)
 
 				// console.log('model_to_send:')
 				// console.log(model_to_send)
 				if (this.model.id) {
-					this.$api.put(route+'/'+this.model.id, model_to_send, config_del_envio)
+					return this.$api.put(route+'/'+this.model.id, model_to_send, config_del_envio)
 					.then(res => {
+						this.confirmar_guardado_compra(res, es_compra)
 						this.extra_props_del_proximo_guardado = {}
 						this.loading = false
+						if (es_compra && this.model !== modelo_enviado) {
+							this.$store.commit('provider_order/add', res.data.model)
+							this.$toast.success('Compra actualizada')
+							return
+						}
 						this.clearSaveCheckAlert()
 						this.$toast.success('Actualizado')
 						if (this.has_many_parent_model) {
@@ -692,12 +724,21 @@ export default {
 						if (!manejado.valor) {
 							this.setSaveErrorFromApi(err)
 						}
+						this.atender_error_de_compra(err, es_compra)
 					})
 				} else {
-					this.$api.post(route, model_to_send, config_del_envio)
+					return this.$api.post(route, model_to_send, config_del_envio)
 					.then(res => {
+						this.confirmar_guardado_compra(res, es_compra)
 						this.extra_props_del_proximo_guardado = {}
 						this.loading = false
+						// Una respuesta tardía actualiza el listado, pero no cierra ni limpia
+						// otra compra que el usuario haya abierto mientras esperaba.
+						if (es_compra && this.model !== modelo_enviado) {
+							this.$store.commit('provider_order/add', res.data.model)
+							this.$toast.success('Compra guardada')
+							return
+						}
 						this.clearSaveCheckAlert()
 						this.$toast.success('Guardado')
 						let created_model = res.data.model 
@@ -759,9 +800,61 @@ export default {
 						if (!manejado.valor) {
 							this.setSaveErrorFromApi(err)
 						}
+						this.atender_error_de_compra(err, es_compra)
 					})
 				}
+			} else {
+				if (es_compra) this.terminar_guardado_compra()
 			}
+			}).catch(err => {
+				self.loading = false
+				self.$store.commit('auth/setMessage', '')
+				self.extra_props_del_proximo_guardado = {}
+				self.setSaveErrorFromApi(err)
+				self.atender_error_de_compra(err, es_compra)
+			})
+		},
+		iniciar_espera_de_compra(es_compra) {
+			if (!es_compra) return
+			this.compra_envio_iniciado = true
+			this.compra_modelo_enviado = this.model
+			// El plazo libera la interfaz, NO aborta ni reintenta la compra: el servidor
+			// puede seguir procesándola. El candado local permanece hasta tener respuesta.
+			this.compra_temporizador = setTimeout(() => {
+				this.loading = false
+				this.$store.commit('auth/setMessage', '')
+				this.setSaveCheckAlert('Seguimos esperando la confirmación de la compra. Podés consultar el listado en otra pestaña. No vuelvas a cargarla: todavía puede guardarse. Conservá el comprobante y el detalle antes de cerrar esta pestaña.', 'warning')
+			}, 60000)
+		},
+		terminar_guardado_compra() {
+			if (this.compra_temporizador) clearTimeout(this.compra_temporizador)
+			this.compra_temporizador = null
+			this.compra_guardado_en_curso = false
+		},
+		confirmar_guardado_compra(res, es_compra) {
+			if (!es_compra) return
+			if (!res || !res.data || !res.data.model || !res.data.model.id) {
+				throw new Error('La respuesta no confirmó la compra guardada')
+			}
+			// Conservar la identidad ANTES de los efectos de interfaz: si alguno falla,
+			// el formulario ya no puede repetir el alta de una compra que sí se confirmó.
+			this.$set(this.compra_modelo_enviado, 'id', res.data.model.id)
+			this.compra_confirmada = true
+			this.terminar_guardado_compra()
+			this.clearSaveCheckAlert()
+		},
+		atender_error_de_compra(err, es_compra) {
+			if (!es_compra) return
+			if (this.compra_temporizador) clearTimeout(this.compra_temporizador)
+			this.compra_temporizador = null
+			const status = err && err.response && err.response.status
+			if (!this.compra_envio_iniciado || this.compra_confirmada || (status >= 400 && status < 500 && status != 408)) {
+				this.terminar_guardado_compra()
+				return
+			}
+			// Incluso un 500 puede venir de armar la respuesta DESPUÉS del commit. Sin
+			// confirmación no hay reintento seguro: no se libera otro POST a ciegas.
+			this.setSaveCheckAlert('No pudimos confirmar si la compra se guardó. Antes de volver a cargarla, revisá el listado en otra pestaña y consultá a soporte si no aparece. Conservá el comprobante y el detalle antes de cerrar esta pestaña.', 'warning')
 		},
 		route_model_name() {
 			
