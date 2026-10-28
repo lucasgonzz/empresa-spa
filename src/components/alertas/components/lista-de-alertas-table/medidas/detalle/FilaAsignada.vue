@@ -57,9 +57,9 @@ class="med-fila med-fila--asignada"
 		</div>
 
 		<p
-		v-if="item.motivo_detalle"
+		v-if="detalle"
 		class="med-fila__detalle">
-			{{ item.motivo_detalle }}
+			{{ detalle }}
 		</p>
 		<p
 		v-if="item.nota_ia"
@@ -95,7 +95,7 @@ class="med-fila med-fila--asignada"
 // nueva parpadearía vacía hasta que llegara el componente.
 import ChipsDeMedidas from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/ChipsDeMedidas'
 import FuenteDeMedidas from '@/components/alertas/components/lista-de-alertas-table/medidas/detalle/FuenteDeMedidas'
-import { CRITERIOS, MOTIVOS, MOTIVOS_DE_AVISO, texto_de, consultas_del_articulo } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { CRITERIOS, MOTIVOS, MOTIVOS_DE_AVISO, TEXTOS, texto_de, consultas_del_articulo } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 
 /**
  * Un artículo al que la búsqueda le cargó las medidas (sola, o aprobada después de revisarla): los
@@ -140,10 +140,29 @@ export default {
 		 * @returns {String}
 		 */
 		motivo() {
-			return texto_de(MOTIVOS, this.item.motivo)
+			return this.revisada_a_mano ? TEXTOS.revisada_a_mano : texto_de(MOTIVOS, this.item.motivo)
 		},
 		tono_del_motivo() {
-			return MOTIVOS_DE_AVISO.indexOf(this.item.motivo) !== -1 ? 'aviso' : 'neutro'
+			return !this.revisada_a_mano && MOTIVOS_DE_AVISO.indexOf(this.item.motivo) !== -1 ? 'aviso' : 'neutro'
+		},
+		/**
+		 * true si la propuesta salió con valores sin comprobar en la página y alguien ya la aprobó: el
+		 * motivo «Sin respaldo en la página» y su frase («revisalos antes de aprobar») quedaron viejos,
+		 * y lo que corresponde decir es que una persona la revisó.
+		 *
+		 * @returns {Boolean}
+		 */
+		revisada_a_mano() {
+			return this.item.motivo === 'valor_sin_respaldo'
+		},
+		/**
+		 * La frase larga del motivo que manda la API. En una revisada a mano no se muestra: es la que pide
+		 * revisar antes de aprobar.
+		 *
+		 * @returns {String}
+		 */
+		detalle() {
+			return this.revisada_a_mano ? '' : this.item.motivo_detalle
 		},
 		/** true si llegó a «Asignadas» pasando por «A revisar». */
 		aprobada() {

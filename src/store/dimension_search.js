@@ -8,6 +8,7 @@ import {
 	normalizar_conteos,
 	normalizar_resultado_de_accion,
 	normalizar_previa,
+	normalizar_resultado_de_lote,
 	extraer_paginador,
 	extraer_modelo,
 	a_numero,
@@ -524,11 +525,13 @@ export default {
 		 *
 		 * @param {Object} context
 		 * @param {Array} ids Ids de items.
-		 * @returns {Promise<Object>} {aprobados: n, fallidos: [{id, message}]}
+		 * @returns {Promise<Object>} {aprobados: n, fallidos: [{id, message}], omitidos_sin_respaldo: n}. La
+		 *   API no aprueba en lote las propuestas con valores sin comprobar (se aprueban de a una): las
+		 *   cuenta en `omitidos_sin_respaldo` (0 si la API no lo manda).
 		 */
 		aprobar_varios(context, ids) {
 			return axios.post(RUTA_DE_ITEMS + '/aprobar-varios', { ids: ids }, opciones())
-				.then(res => res.data || {})
+				.then(res => normalizar_resultado_de_lote(res.data))
 				.catch(relanzar_marcando_la_cancelacion)
 		},
 		/**
@@ -552,15 +555,23 @@ export default {
 		 * `undefined`, y quien llamó la ignora).
 		 *
 		 * @param {Object} context
-		 * @param {Object} [pedido] {solo_con_stock: Boolean}
+		 * Con `reintentar_sin_datos` la previa cuenta también los artículos que quedaron sin datos en
+		 * búsquedas anteriores (misión medidas-sin-datos); el parámetro solo viaja si está pedido, así una
+		 * API vieja recibe exactamente el pedido de siempre.
+		 *
+		 * @param {Object} [pedido] {solo_con_stock: Boolean, reintentar_sin_datos: Boolean}
 		 * @returns {Promise<Object|undefined>} Previa normalizada.
 		 */
 		get_previa_catalogo(context, pedido) {
 			ultimo_pedido_de_previa++
 			let esta_previa = ultimo_pedido_de_previa
 			let solo_con_stock = !!(pedido && pedido.solo_con_stock)
+			let params = { solo_con_stock: solo_con_stock ? 1 : 0 }
+			if (pedido && pedido.reintentar_sin_datos) {
+				params.reintentar_sin_datos = 1
+			}
 
-			return axios.get(RUTA_DE_CORRIDAS + '/catalogo/previa', opciones({ params: { solo_con_stock: solo_con_stock ? 1 : 0 } }))
+			return axios.get(RUTA_DE_CORRIDAS + '/catalogo/previa', opciones({ params: params }))
 				.then(res => {
 					if (esta_previa !== ultimo_pedido_de_previa) {
 						return undefined
@@ -579,11 +590,15 @@ export default {
 		 * falta el buscador o la IA, si no hay artículos para buscar o si ya hay otra corriendo.
 		 *
 		 * @param {Object} context
-		 * @param {Object} pedido {solo_con_stock: Boolean, limite: Number|null}
+		 * @param {Object} pedido {solo_con_stock: Boolean, limite: Number|null, reintentar_sin_datos: Boolean}
+		 *   `reintentar_sin_datos` viaja solo si está tildado (una API vieja lo ignoraría de todos modos).
 		 * @returns {Promise<Object>} RunPayload normalizado de la corrida creada.
 		 */
 		lanzar_catalogo(context, pedido) {
 			let cuerpo = { solo_con_stock: !!(pedido && pedido.solo_con_stock) }
+			if (pedido && pedido.reintentar_sin_datos) {
+				cuerpo.reintentar_sin_datos = true
+			}
 			if (pedido && Number(pedido.limite) > 0) {
 				cuerpo.limite = Number(pedido.limite)
 			}
