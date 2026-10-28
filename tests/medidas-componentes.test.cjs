@@ -917,3 +917,48 @@ test('Modal: cargar y lanzar mandan la casilla al store', async () => {
 	assert.deepEqual(enviados[0], ['dimension_search/get_previa_catalogo', { solo_con_stock: true, reintentar_sin_datos: true }])
 	assert.deepEqual(enviados[1], ['dimension_search/lanzar_catalogo', { solo_con_stock: true, reintentar_sin_datos: true }])
 })
+
+// --- Ajuste de contrato (28/10/2026): respaldo en la estimación y diagnóstico en «A revisar» ----
+
+test('Modal: la estimación suma el respaldo al costo total y muestra su fila', () => {
+	const vm = modal_con_previa({ estimacion: { busquedas: 600, minutos: 30, usd_busquedas: 1.2, usd_respaldo: 0.3, usd_ia: 0.5, creditos_respaldo: 300, texto_respaldo: '2 a 10 créditos por página, hasta 3 por artículo: ~300 créditos.' } })
+	assert.equal(vm.costo_total, 2)
+	const arbol = vm._render()
+	assert.match(texto_de(por_testid(arbol, 'medidas-catalogo-usd-respaldo')), /USD 0,30/)
+	assert.match(texto_de(por_testid(arbol, 'medidas-catalogo-costo-total')), /Costo total USD 2,00/)
+})
+
+test('Modal: sin las claves del respaldo el total es la suma de lo que hay, y con solo un total se muestra ese', () => {
+	const sin_respaldo = modal_con_previa()
+	assert.equal(sin_respaldo.costo_total, 1.7)
+	assert.equal(por_testid(sin_respaldo._render(), 'medidas-catalogo-usd-respaldo'), undefined)
+	const solo_total = modal_con_previa({ estimacion: { busquedas: 10, usd_total: 3.5 } })
+	assert.equal(solo_total.costo_total, 3.5)
+	assert.match(texto_de(por_testid(solo_total._render(), 'medidas-catalogo-costo-total')), /USD 3,50/)
+})
+
+test('Modal: el aviso de créditos usa el texto_respaldo de la API y, si no viene, el fijo', () => {
+	const con = modal_con_previa({ estimacion: { busquedas: 10, texto_respaldo: '2 a 10 créditos por página, hasta 3 por artículo: ~300 créditos.' } })
+	assert.match(texto_de(por_testid(con._render(), 'medidas-catalogo-creditos')), /~300 créditos/)
+	const sin = modal_con_previa()
+	assert.match(texto_de(por_testid(sin._render(), 'medidas-catalogo-creditos')), /consume créditos de búsqueda \(de 2 a 10 por página\)/)
+})
+
+test('Modal: con la casilla apagada no se muestra el N de artículos, aunque la API lo mande siempre', () => {
+	const vm = modal_con_previa({ reintento_sin_datos: 140 })
+	assert.equal(vm.reintentar_sin_datos, false)
+	assert.equal(por_testid(vm._render(), 'medidas-catalogo-reintento'), undefined)
+	vm.reintentar_sin_datos = true
+	assert.match(texto_de(por_testid(vm._render(), 'medidas-catalogo-reintento')), /suma 140 artículos/)
+})
+
+test('A revisar sin respaldo: con diagnóstico ofrece «Ver qué se probó» y lo despliega; sin diagnóstico no ofrece nada', () => {
+	const con = item_sin_respaldo({ diagnostico: [{ criterio: 'codigo_de_barras', usado: true, consulta: '"779"', resultados: 2, paginas: [{ url: 'https://a.com/x', dominio: 'a.com', leida: true, via_scrape: true, creditos: 2 }] }] })
+	const vm = instanciar(FilaARevisar, { item: con })
+	assert.match(texto_de(por_testid(vm._render(), 'medidas-diagnostico-11')), /Ver qué se probó/)
+	vm.diagnostico_abierto = true
+	const arbol = vm._render()
+	assert.match(texto_de(por_testid(arbol, 'medidas-diagnostico-11')), /Ocultar qué se probó/)
+	const sin = instanciar(FilaARevisar, { item: item_sin_respaldo() })
+	assert.equal(por_testid(sin._render(), 'medidas-diagnostico-11'), undefined)
+})

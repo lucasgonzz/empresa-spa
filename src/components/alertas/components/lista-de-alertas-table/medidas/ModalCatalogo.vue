@@ -243,10 +243,22 @@ title="Buscar peso y medidas de todo el catálogo"
 						<dd>USD {{ dolares(estimacion.usd_ia) }}</dd>
 					</div>
 					<div
-					v-if="estimacion.usd_total !== null && estimacion.usd_busquedas === null && estimacion.usd_ia === null"
-					class="med-cat__dato">
+					v-if="estimacion.usd_respaldo !== null && estimacion.usd_respaldo > 0"
+					class="med-cat__dato"
+					data-testid="medidas-catalogo-usd-respaldo">
+						<dt>Páginas bloqueadas y PDF (costo)</dt>
+						<dd>USD {{ dolares(estimacion.usd_respaldo) }}</dd>
+					</div>
+					<!--
+						El total suma las partes: buscador + respaldo + IA (el buscador NO incluye el respaldo).
+						Si la API solo manda un total, se muestra ese.
+					-->
+					<div
+					v-if="costo_total !== null"
+					class="med-cat__dato"
+					data-testid="medidas-catalogo-costo-total">
 						<dt>Costo total</dt>
-						<dd>USD {{ dolares(estimacion.usd_total) }}</dd>
+						<dd>USD {{ dolares(costo_total) }}</dd>
 					</div>
 				</dl>
 				<p class="med-cat__nota">
@@ -263,7 +275,7 @@ title="Buscar peso y medidas de todo el catálogo"
 			v-if="!previa.corrida_activa && !sin_nada_para_buscar"
 			class="med-cat__aviso med-cat__aviso--creditos"
 			data-testid="medidas-catalogo-creditos">
-				{{ textos.creditos_de_lectura }}
+				{{ aviso_de_creditos }}
 			</div>
 
 		</template>
@@ -347,10 +359,42 @@ export default {
 		estimacion() {
 			return this.previa ? this.previa.estimacion : null
 		},
+		/**
+		 * Costo total estimado: buscador + respaldo + IA (lo que no venga cuenta como 0). Si la API no
+		 * manda ninguna de las tres partes, el total que traiga; si no trae nada, null.
+		 *
+		 * @returns {Number|null}
+		 */
+		costo_total() {
+			let e = this.estimacion
+			if (!e) {
+				return null
+			}
+			let partes = [e.usd_busquedas, e.usd_respaldo, e.usd_ia]
+			let hay_partes = partes.some(parte => parte !== null)
+			if (!hay_partes) {
+				return e.usd_total
+			}
+			let total = 0
+			partes.forEach(function (parte) {
+				total += parte === null ? 0 : parte
+			})
+			return total
+		},
+		/**
+		 * El aviso de créditos de la lectura con respaldo: la frase de la API (`texto_respaldo`) si vino, o
+		 * la fija como respaldo.
+		 *
+		 * @returns {String}
+		 */
+		aviso_de_creditos() {
+			let texto = this.estimacion ? this.estimacion.texto_respaldo : ''
+			return texto || this.textos.creditos_de_lectura
+		},
 		/** true si la estimación trae al menos un dato para mostrar. */
 		hay_estimacion() {
 			let e = this.estimacion
-			return !!e && (e.busquedas !== null || e.minutos !== null || e.usd_busquedas !== null || e.usd_ia !== null || e.usd_total !== null)
+			return !!e && (e.busquedas !== null || e.minutos !== null || e.usd_busquedas !== null || e.usd_ia !== null || e.usd_total !== null || e.usd_respaldo !== null)
 		},
 		/**
 		 * true solo si la previa dice EXPLÍCITAMENTE que no hay clave del buscador. Sin el dato

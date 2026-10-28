@@ -696,3 +696,14 @@ test('normalizar_previa: reintento_sin_datos, y 0 si la API no lo manda', () => 
 	assert.equal(medidas.normalizar_previa({ a_buscar: 10 }).reintento_sin_datos, 0)
 	assert.equal(medidas.normalizar_previa(null).reintento_sin_datos, 0)
 })
+
+test('normalizar_previa: la estimación trae el respaldo (créditos, dólares y texto) y lo vacío si la API no lo manda', () => {
+	const e = medidas.normalizar_previa({ estimacion: { usd_busquedas: 1, creditos_respaldo: 300, usd_respaldo: 0.3, texto_respaldo: '2 a 10 créditos por página' } }).estimacion
+	assert.equal(e.creditos_respaldo, 300)
+	assert.equal(e.usd_respaldo, 0.3)
+	assert.equal(e.texto_respaldo, '2 a 10 créditos por página')
+	const vieja = medidas.normalizar_previa({ estimacion: { usd_busquedas: 1 } }).estimacion
+	assert.equal(vieja.creditos_respaldo, null)
+	assert.equal(vieja.usd_respaldo, null)
+	assert.equal(vieja.texto_respaldo, '')
+})

@@ -860,6 +860,11 @@ export function normalizar_previa(crudo) {
 			minutos: numero_o_null(primero_definido([estimacion.minutos, previa.minutos_estimados])),
 			usd_busquedas: numero_o_null(estimacion.usd_busquedas),
 			usd_ia: numero_o_null(estimacion.usd_ia),
+			// Lectura de páginas bloqueadas y PDF con el respaldo del buscador (misión medidas-sin-datos):
+			// créditos y dólares estimados, y la frase lista para mostrar. Una API vieja no los manda.
+			creditos_respaldo: numero_o_null(estimacion.creditos_respaldo),
+			usd_respaldo: numero_o_null(estimacion.usd_respaldo),
+			texto_respaldo: a_texto(estimacion.texto_respaldo),
 			usd_total: numero_o_null(primero_definido([estimacion.usd_total, previa.costo_estimado_usd])),
 		},
 	}

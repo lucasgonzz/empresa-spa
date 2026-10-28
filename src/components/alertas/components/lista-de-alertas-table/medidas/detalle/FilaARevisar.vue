@@ -86,6 +86,30 @@ class="med-fila med-fila--revisar"
 		:item_id="item.id"></fuente-de-medidas>
 
 		<!--
+			Misión medidas-sin-datos: si la API mandó el diagnóstico (pasa en «Sin respaldo en la página»),
+			se ofrece ver qué se probó: las páginas leídas, cuáles con el respaldo y qué dijo la IA de cada
+			medida. Es lo que ayuda a decidir si el valor propuesto es de fiar.
+		-->
+		<template v-if="hay_diagnostico">
+			<button
+			type="button"
+			class="med-fila__desplegar"
+			:aria-expanded="diagnostico_abierto ? 'true' : 'false'"
+			:data-testid="'medidas-diagnostico-' + item.id"
+			@click="diagnostico_abierto = !diagnostico_abierto">
+				<i
+				class="bi"
+				:class="diagnostico_abierto ? 'bi-chevron-down' : 'bi-chevron-right'"
+				aria-hidden="true"></i>
+				{{ diagnostico_abierto ? 'Ocultar qué se probó' : 'Ver qué se probó' }}
+			</button>
+			<diagnostico
+			v-if="diagnostico_abierto"
+			:diagnostico="item.diagnostico"
+			:item_id="item.id"></diagnostico>
+		</template>
+
+		<!--
 			Editar los cuatro valores en el lugar. Los números son los de la base (kg y cm), y los que
 			se dejan vacíos no se tocan en el artículo. «Guardar y aprobar» manda `valores` con lo
 			escrito; no hay otra forma de aprobar un valor distinto del que propuso el sistema.
@@ -231,6 +255,8 @@ export default {
 	components: {
 		ChipsDeMedidas,
 		FuenteDeMedidas,
+		// Perezoso: solo se pide si se despliega «Ver qué se probó».
+		Diagnostico: () => import('@/components/alertas/components/lista-de-alertas-table/medidas/detalle/Diagnostico'),
 	},
 	props: {
 		/** ItemPayload normalizado (contrato §2.6). */
@@ -253,6 +279,8 @@ export default {
 		return {
 			/** true con los cuatro inputs de edición abiertos. */
 			editando: false,
+			/** true con el diagnóstico («Ver qué se probó») desplegado. */
+			diagnostico_abierto: false,
 			/** Texto de cada input, por clave: {peso: '0,82', alto: '', ...}. */
 			entradas: { peso: '', alto: '', ancho: '', profundidad: '' },
 			/** Mensaje de cada campo mal escrito, por clave. */
@@ -289,6 +317,15 @@ export default {
 		 */
 		hay_algo_para_aprobar() {
 			return this.item.cantidad_con_valor > 0
+		},
+		/**
+		 * true si el ítem trae el diagnóstico de lo que se probó (la API solo lo manda en «Sin datos» y
+		 * en «A revisar» por valores sin respaldo).
+		 *
+		 * @returns {Boolean}
+		 */
+		hay_diagnostico() {
+			return Array.isArray(this.item.diagnostico) && this.item.diagnostico.length > 0
 		},
 	},
 	watch: {
