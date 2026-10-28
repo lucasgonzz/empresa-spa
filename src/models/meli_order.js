@@ -1,16 +1,24 @@
 export default {
 	properties: [
+		/*
+			Número del pedido y estado en castellano (misión mercado-libre-pruebas, 27/10/2026). Sin
+			`function` la columna del número salía VACÍA: la tabla trata toda key terminada en `_id`
+			como una relación. Ver `meli_order_numero_texto` y `meli_order_estado_texto` en
+			src/mixins/model_functions.js.
+		*/
 		{
-			text: 'Id',
+			text: 'N° en Mercado Libre',
 			key: 'meli_order_id',
 			type: 'text',
 			only_show: true,
+			function: 'meli_order_numero_texto',
 		},
 		{
 			text: 'Estado',
 			key: 'status',
 			type: 'text',
 			only_show: true,
+			function: 'meli_order_estado_texto',
 		},
 		{
 			text: 'Detalle Estado',

@@ -354,6 +354,13 @@ export default {
 	/* Con display-nav de fechas (Ventas): separación de su fila propia */
 	.view-header__right--fechas
 		margin-top: 10px
+		// min-width: 0 SOLO en la zona de fechas (misión mercado-libre-pruebas, 27/10/2026). Como
+		// item de grilla tenía min-width: auto y la columna `1fr` crecía hasta el ancho natural de la
+		// tira de días de ControlFecha (hecha para achicarse y scrollear adentro): 394px en un teléfono
+		// de 375, y la página entera scrolleaba de costado (Mercado Libre → Pedidos). No se cambió la
+		// columna de toda la grilla a minmax(0, 1fr) a propósito: Caja tiene una fila de chips que no
+		// envuelve y, con la columna fija, le quedaba el total cortado del lado izquierdo.
+		min-width: 0
 
 // La altura, el radio, el color y el espaciado de los controles de esta barra ya NO se declaran
 // aca: viven en src/sass/_toolbar_botones.sass, que es global y los define una sola vez para todos

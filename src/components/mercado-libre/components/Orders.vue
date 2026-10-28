@@ -7,18 +7,24 @@
 	model_name="meli_order">
 
 		<template #table_left_options="data">
+			<p
+			class="m-b-0"
+			v-if="data.model.sale">
+				Venta N° {{ data.model.sale.num }}
+			</p>
+			<!-- Un pedido cancelado en Mercado Libre no lleva venta: antes el botón aparecía igual y la creaba, con el stock descontado (misión mercado-libre-pruebas) -->
+			<p
+			class="m-b-0 text-muted"
+			v-else-if="meli_order_sin_venta_posible(data.model)">
+				Sin venta: {{ meli_order_estado_texto(data.model).toLowerCase() }}
+			</p>
 			<b-button
 			@click.stop="crear_venta(data.model)"
 			size="sm"
 			variant="success"
-			v-if="!data.model.sale">
+			v-else>
 				Crear venta
 			</b-button>
-			<p
-			class="m-b-0"
-			v-else>
-				Venta N° {{ data.model.sale.num }}
-			</p>
 		</template>
 	</view-component>
 </template>
@@ -62,6 +68,14 @@ export default {
 					this.$store.commit('auth/setMessage', '')
 					this.$store.commit('meli_order/add', actual)
 					this.$toast.info('Este pedido ya tenía venta')
+					return
+				}
+				// Se canceló en Mercado Libre mientras la fila estaba abierta: se actualiza la fila (deja de ofrecer el botón) y no se pide la venta
+				if (actual && this.meli_order_sin_venta_posible(actual)) {
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
+					this.$store.commit('meli_order/add', actual)
+					this.$toast.info('Este pedido ya no admite venta: en Mercado Libre figura ' + this.meli_order_estado_texto(actual).toLowerCase())
 					return
 				}
 				this.mandar_crear_venta(meli_order)
