@@ -182,6 +182,12 @@ export default {
 				state.online = typeof navigator === 'undefined' || navigator.onLine !== false
 			}
 			state.user = user
+			this.commit('current_acount/restaurar_consulta', user)
+		},
+		setCurrentAcountConsulta(state, value) {
+			if (state.user) {
+				state.user = Object.assign({}, state.user, { current_acount_consulta: value })
+			}
 		},
 		setSelectedAddress(state, value) {
 			state.selected_address = value

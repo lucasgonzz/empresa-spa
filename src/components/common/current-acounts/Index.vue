@@ -86,7 +86,7 @@
     body-class="p-0">
         <current-acounts-nav></current-acounts-nav>
         <!-- <color-info></color-info> -->
-        <saldo-y-limite></saldo-y-limite>
+        <saldo-y-limite v-if="from_credit_account.id"></saldo-y-limite>
         <list></list>
 
         <!--
@@ -99,6 +99,7 @@
         -->
         <template #modal-footer>
             <btn-pago-nota-credito
+            v-if="from_credit_account.id"
             :consolidar_modal_id="consolidar_modal_id"></btn-pago-nota-credito>
         </template>
     </b-modal>
