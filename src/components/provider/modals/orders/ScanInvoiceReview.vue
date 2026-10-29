@@ -403,7 +403,7 @@
 									</span>
 								</template>
 								<template v-else>
-									<b-badge variant="danger">Artículo nuevo</b-badge>
+									<b-badge variant="warning">Sin coincidencia segura</b-badge>
 									<b-form-checkbox
 									v-model="articulo.crear_en_catalogo"
 									class="scan-review__crear">
@@ -430,6 +430,44 @@
 									:options="opciones_candidatos(articulo)"
 									@change="vincular(articulo, $event)"></b-form-select>
 								</template>
+								<b-button
+								size="sm"
+								variant="outline-secondary"
+								:data-testid="'scan-vincular-' + articulo.fila"
+								@click="$set(articulo, 'buscar_articulo', !articulo.buscar_articulo)">
+									{{ es_nuevo(articulo) ? 'Buscar artículo existente' : 'Cambiar artículo vinculado' }}
+								</b-button>
+								<div v-if="articulo.buscar_articulo" class="scan-review__buscar-catalogo">
+									<label :for="'scan-buscar-' + articulo.fila">Buscá por nombre o código del artículo</label>
+									<div class="scan-review__buscar-controles">
+										<b-form-input
+										:id="'scan-buscar-' + articulo.fila"
+										v-model="articulo.busqueda_catalogo"
+										size="sm"
+										placeholder="Nombre o código"
+										@keydown.enter.prevent.stop="buscar_en_catalogo(articulo)"></b-form-input>
+										<b-button
+										size="sm"
+										variant="outline-primary"
+										:disabled="articulo.buscando_catalogo || !articulo.busqueda_catalogo.trim()"
+										@click="buscar_en_catalogo(articulo)">
+											{{ articulo.buscando_catalogo ? 'Buscando…' : 'Buscar' }}
+										</b-button>
+									</div>
+									<p v-if="articulo.error_catalogo" class="text-danger" role="alert">{{ articulo.error_catalogo }}</p>
+									<div v-if="articulo.resultados_catalogo.length" class="scan-review__resultados-catalogo">
+										<b-button
+										v-for="candidato in articulo.resultados_catalogo"
+										:key="candidato.id"
+										variant="outline-secondary"
+										size="sm"
+										@click="vincular_modelo(articulo, candidato)">
+											{{ candidato.name }}<span v-if="candidato.provider_code"> · {{ candidato.provider_code }}</span>
+										</b-button>
+									</div>
+									<p v-if="articulo.mas_resultados_catalogo" class="scan-review__ayuda-catalogo">Hay más resultados. Agregá palabras o el código completo para encontrarlo.</p>
+									<p class="scan-review__ayuda-catalogo">Elegí el artículo que corresponde. Al confirmar, se guardará el código leído para el proveedor de esta compra.</p>
+								</div>
 							</div>
 
 							<!--
@@ -741,6 +779,7 @@ const ETIQUETAS_CRITERIO = {
 	bar_code: 'por código de barras',
 	provider_code: 'por código de proveedor',
 	name: 'por nombre',
+	manual: 'vinculado por vos',
 }
 
 /* Cuántos artículos a descartar se nombran en el aviso antes de resumir con "y N más". */
@@ -1332,6 +1371,13 @@ export default {
 					crear_en_catalogo: articulo.crear_en_catalogo === true,
 					/* Solo de interfaz: el "+" del ancho intermedio. */
 					expandida: false,
+					buscar_articulo: false,
+					busqueda_catalogo: articulo.nombre || articulo.codigo_proveedor || '',
+					resultados_catalogo: [],
+					buscando_catalogo: false,
+					error_catalogo: '',
+					mas_resultados_catalogo: false,
+					secuencia_catalogo: 0,
 				}
 			})
 
@@ -1726,7 +1772,7 @@ export default {
 			return !!(articulo.match && articulo.match.candidatos && articulo.match.candidatos.length)
 		},
 		opciones_candidatos(articulo) {
-			let opciones = [{ value: null, text: '…o vincularlo a un artículo del catálogo' }]
+			let opciones = [{ value: null, text: 'Revisar sugerencias del catálogo' }]
 
 			articulo.match.candidatos.forEach(candidato => {
 				let texto = candidato.nombre
@@ -1754,14 +1800,59 @@ export default {
 				return item.article_id === article_id
 			})
 
-			this.$set(articulo, 'article_id', article_id)
+			this.vincular_modelo(articulo, { id: article_id, name: candidato ? candidato.nombre : null })
+		},
+		vincular_modelo(articulo, candidato) {
+			// El código de la factura se conserva: el catálogo puede mostrar el de otro proveedor.
+			this.$set(articulo, 'article_id', candidato.id)
 			this.$set(articulo, 'crear_en_catalogo', false)
+			this.$set(articulo, 'buscar_articulo', false)
 			this.$set(articulo, 'match', {
 				estado: 'encontrado',
-				article_id: article_id,
-				criterio: 'name',
-				nombre_en_catalogo: candidato ? candidato.nombre : null,
+				article_id: candidato.id,
+				criterio: 'manual',
+				nombre_en_catalogo: candidato.name,
 				candidatos: [],
+			})
+		},
+		buscar_en_catalogo(articulo) {
+			let query = articulo.busqueda_catalogo.trim()
+			if (!query || articulo.buscando_catalogo) {
+				return
+			}
+			let self = this
+			let secuencia = articulo.secuencia_catalogo + 1
+			this.$set(articulo, 'secuencia_catalogo', secuencia)
+			this.$set(articulo, 'buscando_catalogo', true)
+			this.$set(articulo, 'error_catalogo', '')
+			this.$set(articulo, 'resultados_catalogo', [])
+			this.$set(articulo, 'mas_resultados_catalogo', false)
+			this.$api.post('global-search/article', {
+				query_value: query,
+				props: ['name', 'bar_code', 'provider_code'],
+				relation_props: [],
+				conector: 'or',
+				extra_filters: [],
+				contexto: 'provider_order',
+				provider_id: this.compra ? this.compra.provider_id : null,
+				per_page: 10,
+			})
+			.then(res => {
+				if (articulo.secuencia_catalogo !== secuencia || self.articulos.indexOf(articulo) === -1) {
+					return
+				}
+				let pagina = res.data.models || res.data
+				let resultados = pagina.data || []
+				self.$set(articulo, 'resultados_catalogo', resultados)
+				self.$set(articulo, 'mas_resultados_catalogo', pagina.total > resultados.length)
+				self.$set(articulo, 'error_catalogo', resultados.length ? '' : 'No encontramos coincidencias. Probá con otro nombre o código.')
+				self.$set(articulo, 'buscando_catalogo', false)
+			})
+			.catch(() => {
+				if (articulo.secuencia_catalogo === secuencia) {
+					self.$set(articulo, 'error_catalogo', 'No pudimos buscar en el catálogo. Volvé a intentar.')
+					self.$set(articulo, 'buscando_catalogo', false)
+				}
 			})
 		},
 		url_imagen(orden) {
@@ -2436,6 +2527,44 @@ export default {
 
 	&__candidatos
 		font-size: 0.78rem
+
+	&__buscar-catalogo
+		flex-basis: 100%
+		min-width: 0
+		padding: 10px
+		border: 1px solid var(--color-border)
+		border-radius: var(--metodo-pago-input-radius)
+		background: var(--bg-card)
+
+		label
+			display: block
+			margin-bottom: 6px
+
+		p
+			margin: 8px 0 0
+
+	&__buscar-controles
+		display: flex
+		gap: 8px
+
+		.form-control
+			min-width: 0
+			flex: 1
+
+	&__resultados-catalogo
+		display: flex
+		flex-direction: column
+		gap: 6px
+		margin-top: 8px
+
+		.btn
+			white-space: normal
+			overflow-wrap: anywhere
+			text-align: left
+
+	&__ayuda-catalogo
+		color: var(--color-text-secondary)
+		font-size: 0.75rem
 
 	// El bloque de lo que no es columna de la factura: apagado hasta que se abre el "+".
 	&__extra

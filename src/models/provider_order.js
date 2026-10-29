@@ -163,7 +163,7 @@ export default {
 				'3. El articulo pasa a pertenecer al proveedor de esta compra.',
 				'4. Los costos extra tipados (transporte, seguro, arancel, etc.) se prorratean entre los articulos de la compra y se materializan como recargos del articulo.',
 				'5. Se recalcula el costo real y el precio final del articulo en base a todo lo anterior.',
-				'Si nunca activa esta opcion (desactivado), no se toca nada del articulo: ni su costo, ni sus descuentos, ni su proveedor, ni su precio. La compra se registra igual (stock, cuenta corriente del proveedor, factura), solo que sin impactar en el LISTADO de articulos.',
+				'Si no activa esta opción, no se cambian el costo vigente, los descuentos, el proveedor principal ni el precio de venta del artículo. La compra se registra igual. El código y el costo de este proveedor se conservan como referencia para próximas compras.',
 			]
 		},
 		{

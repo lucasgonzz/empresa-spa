@@ -6,8 +6,10 @@ size="lg"
 id="article-providers">
 	<div
 	v-if="!loading">
+		<p class="text-muted">Cada proveedor conserva su código y su costo de referencia para este artículo.</p>
 		<b-table
 		v-if="items.length"
+		stacked="sm"
 		head-variant="dark"
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
 		:fields="fields"
@@ -16,7 +18,7 @@ id="article-providers">
 		v-else
 		class="text-with-icon">
 			<i class="icon-eye-slash"></i>
-			No hay historial de proveedores para este articulo
+			No hay referencias de proveedores para este artículo
 		</p>
 	</div>
 	<b-skeleton-table
@@ -47,15 +49,15 @@ export default {
 				},
 				{
 					key: 'provider_code',
-					label: 'Codigo proveedor'
+					label: 'Código del proveedor'
 				},
 				{
 					key: 'amount',
-					label: 'Ultima Cantidad comprada'
+					label: 'Última cantidad comprada'
 				},
 				{
 					key: 'cost',
-					label: 'Costo'
+					label: 'Costo de referencia'
 				},
 				{
 					key: 'price',
