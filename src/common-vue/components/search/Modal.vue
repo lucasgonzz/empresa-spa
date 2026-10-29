@@ -1155,7 +1155,10 @@ export default {
 						console.log('response')
 						console.log(response)
 
-						this.results = response.data 
+						// También deriva el código con una API anterior que todavía ignore provider_id.
+						this.results = this.es_busqueda_de_compra ? response.data.map(model => {
+							return Object.assign({}, model, { provider_code: this.codigo_de_proveedor_de_compra(model) })
+						}) : response.data
 						this.total_pages = response.last_page
 						this.total_results = response.total
 
