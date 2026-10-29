@@ -108,3 +108,34 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+#article-providers
+	.table > tbody > tr,
+	.table th,
+	.table td
+		white-space: normal
+		overflow-wrap: anywhere
+
+@media (max-width: 575.98px)
+	#article-providers .table.b-table.b-table-stacked-sm > tbody > tr > [data-label]
+		// El reparto 40/60 de Bootstrap hereda el nowrap global y superpone etiquetas largas.
+		// En teléfono cada etiqueta ocupa su propia línea y el valor usa el ancho completo.
+		&::before
+			display: block
+			float: none
+			width: 100%
+			padding: 0
+			margin-bottom: 4px
+			text-align: left
+			white-space: normal
+			overflow-wrap: anywhere
+			color: var(--color-text-secondary)
+			font-size: 0.75rem
+
+		> div
+			display: block
+			width: 100%
+			padding: 0
+			white-space: normal
+			overflow-wrap: anywhere
+</style>
