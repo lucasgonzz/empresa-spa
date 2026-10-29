@@ -367,12 +367,14 @@ export default {
 			// viejo, y el primer Enter no buscaba nunca (bug del 30/7/2026). `null` significa "no hay
 			// nada tipeado aca, mandan las props".
 			query_local: null,
+			generacion_busqueda: 0,
 		}
 	},
 	watch: {
 		proveedor_de_compra() {
 			// Un resultado del proveedor anterior no puede conservar su código al cambiar la compra.
 			if (this.es_busqueda_de_compra) {
+				this.generacion_busqueda++
 				this.results = []
 				this.selected_index = -1
 				this.busqueda_realizada = false
@@ -1080,6 +1082,9 @@ export default {
 				return
 			} 
 
+			// Comparar solo el proveedor no alcanza: A → B → A puede dejar una respuesta vieja de A en vuelo.
+			let generacion_de_esta_busqueda = ++this.generacion_busqueda
+
 			// Sin minimo de caracteres (Lucas, 23/7/2026). Se busca con lo que haya: alcanza con que
 			// exista criterio de texto, o con que el buscador general haya mandado filtros fijos
 			// (extra_filters), que es la busqueda "solo por categoria" del grupo 179. El filtrado
@@ -1140,10 +1145,9 @@ export default {
 
 					}
 
-					let proveedor_de_esta_busqueda = this.proveedor_de_compra
 					this.$api.post(route, info)
 					.then(res => {
-						if (this.es_busqueda_de_compra && proveedor_de_esta_busqueda !== this.proveedor_de_compra) {
+						if (generacion_de_esta_busqueda !== this.generacion_busqueda) {
 							return
 						}
 						
@@ -1165,6 +1169,9 @@ export default {
 						this.finishSearch()
 					})
 					.catch(err => {
+						if (generacion_de_esta_busqueda !== this.generacion_busqueda) {
+							return
+						}
 						this.loading = false
 						console.log(err)
 						this.$toast.error('Error al buscar')
@@ -1256,6 +1263,9 @@ export default {
 					}
 					
 
+					if (generacion_de_esta_busqueda !== this.generacion_busqueda) {
+						return
+					}
 					this.results = this.es_busqueda_de_compra ? results.map(model => {
 						return Object.assign({}, model, { provider_code: this.codigo_de_proveedor_de_compra(model) })
 					}) : results
