@@ -64,6 +64,9 @@ export function rangoDeAtajo(clave) {
  * personalizado respeta las fechas que el usuario eligió.
  */
 export function paramsDePeriodo(periodo) {
+	if (periodo.modo == 'ultimos') {
+		return {}
+	}
 	if (periodo.modo == 'defecto') {
 		return { desde: rangoDeAtajo('defecto').desde, minimo: MINIMO_POR_DEFECTO }
 	}
@@ -80,9 +83,46 @@ export function paramsDePeriodo(periodo) {
 // historial" y enseguida "Este mes", o se cambia de cuenta rápido, la respuesta lenta del primer
 // pedido no puede pisar a la del segundo.
 let ultimo_pedido = 0
+let ultimo_guardado = 0
+let sesion_consulta = 0
+let cola_guardados = Promise.resolve()
 
 function periodoPorDefecto() {
-	return { modo: 'defecto', clave: 'defecto', desde: null, hasta: null }
+	return { modo: 'defecto', clave: 'defecto', desde: null, hasta: null, cantidad: 10 }
+}
+
+export function fechaDeConsultaValida(fecha) {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha || '')) return false
+	let partes = fecha.split('-').map(Number)
+	let valor = new Date(partes[0], partes[1] - 1, partes[2])
+	return partes[0] >= 2000 && partes[0] <= 2099 && fechaLocal(valor) == fecha
+}
+
+export function normalizarConsulta(valor) {
+	if (!valor || typeof valor != 'object') return null
+	if (!/^\d+$/.test(String(valor.cantidad))) return null
+	let cantidad = Number(valor.cantidad)
+	if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 2000) return null
+	let modo = valor.modo
+	let claves = ['este_mes', 'mes_anterior', 'ultimos_30_dias', 'ultimos_3_meses', 'este_anio', 'todo']
+	if (modo == 'atajo' ? claves.indexOf(valor.clave) == -1 : ['defecto', 'personalizado', 'ultimos'].indexOf(modo) == -1 || valor.clave != modo) return null
+	if (modo == 'personalizado' && (!fechaDeConsultaValida(valor.desde) || !fechaDeConsultaValida(valor.hasta) || valor.desde > valor.hasta)) return null
+	return { modo, clave: valor.clave, cantidad, desde: modo == 'personalizado' ? valor.desde : null, hasta: modo == 'personalizado' ? valor.hasta : null }
+}
+
+function limpiarCuenta(state) {
+	++ultimo_pedido
+	state.models = []
+	state.to_show = []
+	state.selected = []
+	state.to_pay = null
+	state.to_pay_list = []
+	state.model = {}
+	state.delete = null
+	state.delete_image = null
+	state.to_show_payment_methods = {}
+	state.periodo_efectivo = null
+	state.loading = false
 }
 
 export default {
@@ -101,6 +141,9 @@ export default {
 		// Período pedido. En 'defecto' las fechas quedan en null a propósito: se calculan en cada
 		// pedido (ver paramsDePeriodo), no se congelan acá.
 		periodo: periodoPorDefecto(),
+		consulta_user_id: null,
+		guardando_consulta: false,
+		error_guardado_consulta: false,
 		// Lo que la API dice que aplicó (res.data.periodo). null si todavía no respondió o si es
 		// una API vieja que ignora las fechas.
 		periodo_efectivo: null,
@@ -133,6 +176,26 @@ export default {
 		props_to_show: [],
 	},
 	mutations: {
+		invalidar_cuenta(state) {
+			limpiarCuenta(state)
+			state.from_credit_account = {}
+		},
+		restaurar_consulta(state, user) {
+			let id = user ? user.id : null
+			if (id == state.consulta_user_id) return
+			++sesion_consulta
+			state.consulta_user_id = id
+			state.periodo = normalizarConsulta(user && user.current_acount_consulta) || periodoPorDefecto()
+			state.guardando_consulta = false
+			state.error_guardado_consulta = false
+			state.from_credit_account = {}
+			state.from_model = {}
+			limpiarCuenta(state)
+		},
+		set_guardado_consulta(state, value) {
+			state.guardando_consulta = value.guardando
+			state.error_guardado_consulta = value.error
+		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},
@@ -189,11 +252,12 @@ export default {
 				state.to_show = state.models.slice(0, 20)
 			}
 		},
-		addToShow(state, value) {
+		addToShow(state) {
 			state.to_show = state.to_show.concat(state.models.slice(state.to_show.length, state.to_show.length + 20))
 		},
 		set_periodo(state, value) {
-			state.periodo = value
+			state.periodo = normalizarConsulta(value) || periodoPorDefecto()
+			limpiarCuenta(state)
 			// El período efectivo anterior ya no corresponde. Es seguro limpiarlo porque quien cambia
 			// el período recarga en el mismo tick (getModels pone loading en true antes del render),
 			// y mientras carga el texto muestra lo pedido, no "Últimos 10 movimientos".
@@ -210,11 +274,9 @@ export default {
 		},
 		set_from_credit_account(state, value) {
 			state.from_credit_account = value  
-			// Cada vez que se abre una cuenta --aunque sea la misma de nuevo-- el período arranca
-			// por defecto. El reset vive acá y no en cada llamador porque esta mutación se llama
-			// antes de getModels desde una decena de lugares.
-			state.periodo = periodoPorDefecto()
-			state.periodo_efectivo = null
+			// La elección pertenece a la persona; filas y selección pertenecen a UNA cuenta.
+			// Invalidar incluso antes del próximo GET impide que una respuesta anterior la repueble.
+			limpiarCuenta(state)
 		},
 		setSelected(state, value) {
 			state.selected = value 
@@ -254,7 +316,7 @@ export default {
 		setDeleteImage(state, value) {
 			state.delete_image = value
 		},
-		deleteImage(state, value) {
+		deleteImage(state) {
 			let index = state.models.images.findIndex(model => {
 				return model.id == state.delete.id
 			})
@@ -283,13 +345,56 @@ export default {
 		},
 	},
 	actions: {
+		aplicarConsulta({ commit, dispatch }, value) {
+			let consulta = normalizarConsulta(value)
+			if (!consulta) return Promise.resolve(false)
+			commit('set_periodo', consulta)
+			return dispatch('guardarConsulta', consulta)
+		},
+		guardarConsulta({ commit }, value) {
+			let consulta = normalizarConsulta(value)
+			if (!consulta) return Promise.resolve(false)
+			commit('auth/setCurrentAcountConsulta', consulta, { root: true })
+			commit('set_guardado_consulta', { guardando: true, error: false })
+			let guardado = ++ultimo_guardado
+			let sesion = sesion_consulta
+			// Serializar evita que un PUT lento del primer clic sobreescriba la última elección.
+			// La sesión además descarta lo encolado si otra persona ingresó en esta pestaña.
+			cola_guardados = cola_guardados.then(() => {
+				if (sesion != sesion_consulta) return false
+				return axios.put('/api/user/current-acount/consulta', consulta, {
+					skip_global_error_event: true,
+					skip_navigation_cancel: true,
+				})
+				.then(() => {
+					if (sesion == sesion_consulta && guardado == ultimo_guardado) {
+						commit('set_guardado_consulta', { guardando: false, error: false })
+					}
+					return true
+				})
+				.catch(() => {
+					if (sesion == sesion_consulta && guardado == ultimo_guardado) {
+						commit('set_guardado_consulta', { guardando: false, error: true })
+					}
+					return false
+				})
+			})
+			return cola_guardados
+		},
 		getModels({ commit, state }) {
+			let cuenta = state.from_credit_account
+			if (!cuenta.id || (cuenta.model_id && cuenta.model_id != state.from_model.id)
+				|| (cuenta.model_name && cuenta.model_name != state.from_model_name)) {
+				// Hay llamadores antiguos que cambian el titular sin fijar su cuenta.
+				// Nunca consultar la cuenta previa bajo el nombre de otro cliente/proveedor.
+				commit('invalidar_cuenta')
+				return Promise.resolve(false)
+			}
 			commit('setLoading', true)
 			let pedido = ++ultimo_pedido
-			// return axios.get(`/api/${generals.methods.routeString(state.model_name)}/${state.from_model_name}/${state.from_model.id}/${state.months_ago}`)
-			// La ruta no cambia: el segmento de cantidad queda en 10 y es el que usa una API vieja,
-			// que ignora los params de fecha.
-			return axios.get(`/api/${generals.methods.routeString(state.model_name)}/${state.from_credit_account.id}/10`, {
+			let cantidad = state.periodo.modo == 'ultimos' ? state.periodo.cantidad : 10
+			// Contrato histórico: cantidad en la ruta, sin parámetros de fecha para últimos N.
+			return axios.get(`/api/${generals.methods.routeString(state.model_name)}/${state.from_credit_account.id}/${cantidad}`, {
 				params: paramsDePeriodo(state.periodo),
 			})
 			.then(res => {
