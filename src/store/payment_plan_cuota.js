@@ -1,14 +1,64 @@
+import Vue from 'vue'
 import __base_store from '@/store/__base_store'
 
 /**
  * Store de cuotas de planes de pago (modelo `payment_plan_cuota`) construido desde el factory común.
  */
-export default __base_store({
+const cuotas = __base_store({
 	state: {
 		model_name: 'payment_plan_cuota',
 		from_dates: true,
+		cliente_del_filtro: null,
+	},
+	mutations: {
+		set_cliente_del_filtro(state, cliente) {
+			state.cliente_del_filtro = cliente
+		},
 	},
 	actions: {
+		/**
+		 * Cambia el estado de las cuotas conservando el criterio de búsqueda, no las filas.
+		 * Click y navegación por URL pasan por acá; si ya coincide, no se pide dos veces.
+		 * Los filtros siguen siendo históricos y la restricción a la solapa sale del getter.
+		 */
+		cambiarSolapa({state, getters, commit, dispatch}, estado) {
+			if (['pendiente', 'pagado'].indexOf(estado) === -1 || state.route_prefix === estado) {
+				return Promise.resolve()
+			}
+			// Un criterio guardado puede ser un borrador o haber quedado inactivo al elegir fechas.
+			// Solo se repite lo aplicado, incluida una primera búsqueda que todavía no respondió.
+			let hay_criterios = (state.is_filtered && !state.listado_por_defecto) || state.loading_filtered
+
+			commit('set_cliente_del_filtro', getters.cliente_filtrado)
+			commit('set_route_prefix', estado)
+			commit('incrementar_consulta_vigente_token')
+			commit('incrementar_descarga_de_models_token')
+			let token = state.consulta_vigente_token
+			commit('setLoading', true)
+			commit('setModels', [])
+			commit('setFiltered', [])
+			commit('setSelected', [])
+			commit('setTotalFilterPages', null)
+			commit('setTotalFilterResults', 0)
+			commit('setSaldosFiltrados', null)
+			commit('set_totales_de_busqueda', null)
+
+			// Desmontar la paginación antes de volver a 1: su watcher pediría otra búsqueda.
+			return Vue.nextTick().then(() => {
+				if (state.consulta_vigente_token !== token) {
+					return
+				}
+				commit('setFilterPage', 1)
+				if (!hay_criterios) {
+					return dispatch('getModels')
+				}
+				commit('setIsFiltered', true)
+				let consulta = dispatch('runGlobalSearch', {page: 1})
+				// La búsqueda ya tiene su overlay; el loading local solo desmontó la paginación.
+				commit('setLoading', false)
+				return consulta
+			})
+		},
 		/**
 		 * Pisa el listado por defecto del factory: «Quitar todos los filtros» (BtnRestartFilter) lo
 		 * dispara, y el del factory pide TODAS las cuotas de la solapa sin fechas -- o sea un
@@ -26,6 +76,30 @@ export default __base_store({
 		},
 	},
 	getters: {
+		/** Nombre del criterio activo, incluso si la nueva solapa no devuelve ninguna cuota. */
+		cliente_filtrado(state, getters, rootState) {
+			if (!(state.is_filtered && !state.listado_por_defecto) && !state.loading_filtered) {
+				return null
+			}
+			let filtro = state.filters.find(filter => filter.key === 'client_id')
+			let id = filtro && filtro.igual_que
+			if (!id || id === '0' || filtro.en_blanco || filtro.no_en_blanco) {
+				return null
+			}
+			let clientes = rootState.client || {}
+			let candidatos = (clientes.models || []).concat(clientes.filtered || [])
+				.concat(state.filtered.map(cuota => cuota.client))
+				.concat(state.models.map(cuota => cuota.client))
+			let cliente = candidatos.find(model => model && model.id == id && model.name)
+			if (cliente) {
+				return {id: id, name: cliente.name}
+			}
+			if (state.cliente_del_filtro && state.cliente_del_filtro.id == id) {
+				return state.cliente_del_filtro
+			}
+			// No inventar un nombre cuando el relacionado todavía no está entre los datos cargados.
+			return {id: id, name: 'N° ' + id}
+		},
 		/**
 		 * Marca de pedido que `runGlobalSearch` (__base_store.js) suma al body del POST a
 		 * global-search/payment-plan-cuota: restringe la busqueda a la solapa en la que esta parado el
@@ -65,3 +139,26 @@ export default __base_store({
 	},
 })
 
+// La intención se marca en este módulo al iniciar la búsqueda, antes de que is_filtered pase a
+// true con la respuesta. Elegir fechas la apaga: no se reactivan criterios que quedaron cargados.
+let buscar = cuotas.actions.runGlobalSearch
+cuotas.actions.runGlobalSearch = function(context, payload = {}) {
+	let consulta = buscar(context, payload)
+	let token = context.state.consulta_vigente_token
+	context.commit('setLoadingFiltered', true)
+	context.commit('set_cliente_del_filtro', context.getters.cliente_filtrado)
+	return consulta.then(() => {
+		if (context.state.consulta_vigente_token === token) {
+			context.commit('set_cliente_del_filtro', context.getters.cliente_filtrado)
+			context.commit('setLoadingFiltered', false)
+		}
+	})
+}
+let listar = cuotas.actions.getModels
+cuotas.actions.getModels = function(context) {
+	context.commit('set_cliente_del_filtro', null)
+	context.commit('setLoadingFiltered', false)
+	return listar(context)
+}
+
+export default cuotas

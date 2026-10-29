@@ -6,8 +6,10 @@ size="lg"
 id="article-providers">
 	<div
 	v-if="!loading">
+		<p class="text-muted">Cada proveedor conserva su código y su costo de referencia para este artículo.</p>
 		<b-table
 		v-if="items.length"
+		stacked="sm"
 		head-variant="dark"
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
 		:fields="fields"
@@ -16,7 +18,7 @@ id="article-providers">
 		v-else
 		class="text-with-icon">
 			<i class="icon-eye-slash"></i>
-			No hay historial de proveedores para este articulo
+			No hay referencias de proveedores para este artículo
 		</p>
 	</div>
 	<b-skeleton-table
@@ -47,15 +49,15 @@ export default {
 				},
 				{
 					key: 'provider_code',
-					label: 'Codigo proveedor'
+					label: 'Código del proveedor'
 				},
 				{
 					key: 'amount',
-					label: 'Ultima Cantidad comprada'
+					label: 'Última cantidad comprada'
 				},
 				{
 					key: 'cost',
-					label: 'Costo'
+					label: 'Costo de referencia'
 				},
 				{
 					key: 'price',
@@ -106,3 +108,34 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+#article-providers
+	.table > tbody > tr,
+	.table th,
+	.table td
+		white-space: normal
+		overflow-wrap: anywhere
+
+@media (max-width: 575.98px)
+	#article-providers .table.b-table.b-table-stacked-sm > tbody > tr > [data-label]
+		// El reparto 40/60 de Bootstrap hereda el nowrap global y superpone etiquetas largas.
+		// En teléfono cada etiqueta ocupa su propia línea y el valor usa el ancho completo.
+		&::before
+			display: block
+			float: none
+			width: 100%
+			padding: 0
+			margin-bottom: 4px
+			text-align: left
+			white-space: normal
+			overflow-wrap: anywhere
+			color: var(--color-text-secondary)
+			font-size: 0.75rem
+
+		> div
+			display: block
+			width: 100%
+			padding: 0
+			white-space: normal
+			overflow-wrap: anywhere
+</style>

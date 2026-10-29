@@ -367,9 +367,21 @@ export default {
 			// viejo, y el primer Enter no buscaba nunca (bug del 30/7/2026). `null` significa "no hay
 			// nada tipeado aca, mandan las props".
 			query_local: null,
+			generacion_busqueda: 0,
 		}
 	},
 	watch: {
+		proveedor_de_compra() {
+			// Un resultado del proveedor anterior no puede conservar su código al cambiar la compra.
+			if (this.es_busqueda_de_compra) {
+				this.generacion_busqueda++
+				this.results = []
+				this.selected_index = -1
+				this.busqueda_realizada = false
+				this.loading = false
+				this.searching = false
+			}
+		},
 		preview_results() {
 			console.log('seteando con preview_results')
 			this.results = this.preview_results
@@ -400,6 +412,12 @@ export default {
 		await this.loadSearchColumnsPreference()
 	},
 	computed: {
+		es_busqueda_de_compra() {
+			return this.model_name === 'article' && this._id === 'provider_order-articles'
+		},
+		proveedor_de_compra() {
+			return this.es_busqueda_de_compra && this.model ? this.model.provider_id : null
+		},
 		properties() {
 			const base_properties = this.getBaseSearchProperties()
 			return this.applySearchPreferenceToProperties(base_properties)
@@ -581,6 +599,29 @@ export default {
 		},
 	},
 	methods: {
+		codigo_de_proveedor_de_compra(article) {
+			if (!this.proveedor_de_compra) {
+				return null
+			}
+			let relacion = (article.providers || []).find(provider => {
+				return provider.id == this.proveedor_de_compra
+			})
+			if (relacion && relacion.pivot && relacion.pivot.provider_code) {
+				return relacion.pivot.provider_code
+			}
+			return article.provider_id == this.proveedor_de_compra ? article.provider_code : null
+		},
+		valor_para_buscar(article, key) {
+			if (!this.es_busqueda_de_compra || key !== 'provider_code') {
+				return article[key] == null ? '' : '' + article[key]
+			}
+			if (this.proveedor_de_compra) {
+				return '' + (this.codigo_de_proveedor_de_compra(article) || '')
+			}
+			return [article.provider_code || ''].concat((article.providers || []).map(provider => {
+				return provider.pivot ? provider.pivot.provider_code || '' : ''
+			})).join(' ')
+		},
 		/**
 		 * Estado limpio cada vez que se abre el modal: todavia no se busco nada.
 		 *
@@ -1041,6 +1082,9 @@ export default {
 				return
 			} 
 
+			// Comparar solo el proveedor no alcanza: A → B → A puede dejar una respuesta vieja de A en vuelo.
+			let generacion_de_esta_busqueda = ++this.generacion_busqueda
+
 			// Sin minimo de caracteres (Lucas, 23/7/2026). Se busca con lo que haya: alcanza con que
 			// exista criterio de texto, o con que el buscador general haya mandado filtros fijos
 			// (extra_filters), que es la busqueda "solo por categoria" del grupo 179. El filtrado
@@ -1075,7 +1119,7 @@ export default {
 					// su propia route_to_search y NO declaro contexto, se sigue respetando esa ruta
 					// vieja tal cual (ej: road_map, production_batch, pedido a proveedor/receta que
 					// todavia no migraron). En cualquier otro caso se va por global-search.
-					let usa_route_to_search_propio = !!(this.prop && this.prop.route_to_search && !this.contexto)
+					let usa_route_to_search_propio = !!(this.prop && this.prop.route_to_search && !this.contexto && !this.es_busqueda_de_compra)
 
 					let route
 					let info
@@ -1103,6 +1147,9 @@ export default {
 
 					this.$api.post(route, info)
 					.then(res => {
+						if (generacion_de_esta_busqueda !== this.generacion_busqueda) {
+							return
+						}
 						
 						let response = res.data.models 
 						if (!res.data.models) {
@@ -1112,13 +1159,19 @@ export default {
 						console.log('response')
 						console.log(response)
 
-						this.results = response.data 
+						// También deriva el código con una API anterior que todavía ignore provider_id.
+						this.results = this.es_busqueda_de_compra ? response.data.map(model => {
+							return Object.assign({}, model, { provider_code: this.codigo_de_proveedor_de_compra(model) })
+						}) : response.data
 						this.total_pages = response.last_page
 						this.total_results = response.total
 
 						this.finishSearch()
 					})
 					.catch(err => {
+						if (generacion_de_esta_busqueda !== this.generacion_busqueda) {
+							return
+						}
 						this.loading = false
 						console.log(err)
 						this.$toast.error('Error al buscar')
@@ -1153,7 +1206,7 @@ export default {
 
 						_results = models_to_search.filter(model => {
 
-							let value = ''+model[this.prop_to_filter.key]
+							let value = this.valor_para_buscar(model, this.prop_to_filter.key)
 							let query_array = this.query.toLowerCase().split(' ')
 
 							let coincide = query_array.every((palabra) =>
@@ -1163,7 +1216,7 @@ export default {
 							if (this.props_to_filter.length && !coincide) {
 								this.props_to_filter.forEach(prop_to_filter => {
 									if (!coincide) {
-										value = ''+model[prop_to_filter]
+										value = this.valor_para_buscar(model, prop_to_filter)
 										coincide = query_array.every((palabra) =>
 											value.toLowerCase().includes(palabra)
 										)
@@ -1210,7 +1263,12 @@ export default {
 					}
 					
 
-					this.results = results
+					if (generacion_de_esta_busqueda !== this.generacion_busqueda) {
+						return
+					}
+					this.results = this.es_busqueda_de_compra ? results.map(model => {
+						return Object.assign({}, model, { provider_code: this.codigo_de_proveedor_de_compra(model) })
+					}) : results
 
 					console.log('luego:')
 					console.log(results)
@@ -1291,6 +1349,10 @@ export default {
 			if (this.contexto) {
 				info.contexto = this.contexto
 			}
+			if (this.es_busqueda_de_compra) {
+				info.contexto = 'provider_order'
+				info.provider_id = this.proveedor_de_compra || null
+			}
 
 			if (this.prop && this.prop.depends_on) {
 				info.depends_on_key = this.prop.depends_on
@@ -1300,6 +1362,10 @@ export default {
 			return info
 		},
 		searchFromApi() {
+			// El catálogo descargado puede no incluir los códigos de todos los proveedores.
+			if (this.es_busqueda_de_compra && this.$store.state.auth.online) {
+				return true
+			}
 			if (this.search_from_api) {
 				return true
 			}

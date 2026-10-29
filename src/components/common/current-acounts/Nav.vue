@@ -3,9 +3,7 @@
 	class="cc-toolbar">
 
 		<!--
-			Grupo 1: el período. Es lo único de la barra que cambia lo que la tabla muestra, así que va
-			primero. Reemplazó al campo "Últimos [N] movimientos" + "Buscar" (1/10/2026): ahora se elige
-			un atajo o un rango de fechas, y el período activo se ve SIEMPRE en el disparador.
+			La consulta permite período o últimos N; se guarda solo la elección de la persona.
 		-->
 		<div
 		class="cc-toolbar__grupo cc-periodo">
@@ -13,19 +11,20 @@
 			ref="periodo_dropdown"
 			class="cc-toolbar__dropdown cc-periodo__dropdown"
 			variant="light"
-			:toggle-attrs="{ 'aria-label': 'Período de la cuenta corriente: ' + texto_periodo }"
+			:toggle-attrs="{ 'aria-label': 'Consulta de cuenta corriente: ' + texto_periodo }"
 			@show="prepararPersonalizado">
 				<template #button-content>
 					<i class="bi bi-calendar3"></i>
 					<span
 					class="cc-toolbar__label cc-periodo__etiqueta">
-						Período:
+						Consulta:
 					</span>
 					<span
 					class="cc-periodo__texto">
 						{{ texto_periodo }}
 					</span>
 				</template>
+				<b-dropdown-header>Por período</b-dropdown-header>
 				<b-dropdown-item
 				v-for="atajo in atajos"
 				:key="atajo.clave"
@@ -47,10 +46,10 @@
 					</p>
 					<label
 					class="cc-periodo__campo"
-					for="cc-periodo-desde">
+						:for="'cc-periodo-desde-' + _uid">
 						Desde
 						<input
-						id="cc-periodo-desde"
+						:id="'cc-periodo-desde-' + _uid"
 						v-model="desde_input"
 						class="form-control cc-periodo__fecha"
 						aria-label="Fecha desde"
@@ -60,10 +59,10 @@
 					</label>
 					<label
 					class="cc-periodo__campo"
-					for="cc-periodo-hasta">
+						:for="'cc-periodo-hasta-' + _uid">
 						Hasta
 						<input
-						id="cc-periodo-hasta"
+						:id="'cc-periodo-hasta-' + _uid"
 						v-model="hasta_input"
 						class="form-control cc-periodo__fecha"
 						aria-label="Fecha hasta"
@@ -91,7 +90,22 @@
 						Aplicar
 					</b-button>
 				</b-dropdown-form>
+				<b-dropdown-divider></b-dropdown-divider>
+				<b-dropdown-form class="cc-periodo__form" @submit.prevent="aplicarUltimos">
+					<p class="cc-periodo__titulo">Por cantidad</p>
+					<label class="cc-periodo__campo" :for="'cc-cantidad-' + _uid">
+						Últimos movimientos
+						<input :id="'cc-cantidad-' + _uid" v-model="cantidad_input" class="form-control cc-periodo__fecha" type="number" min="1" max="2000" step="1" aria-label="Cantidad de últimos movimientos">
+					</label>
+					<p v-if="!cantidad_valida" class="cc-periodo__error" role="alert">Elegí una cantidad entera entre 1 y 2000.</p>
+					<b-button class="cc-toolbar__btn cc-toolbar__btn--acento cc-periodo__aplicar" variant="primary" type="submit" :disabled="!cantidad_valida">Ver últimos movimientos</b-button>
+				</b-dropdown-form>
 			</b-dropdown>
+			<span v-if="guardando_consulta" class="cc-periodo__aviso" role="status">Guardando tu elección…</span>
+			<div v-if="error_guardado_consulta" class="cc-periodo__error" role="alert">
+				No se pudo guardar tu elección para la próxima vez.
+				<b-button size="sm" variant="link" @click="reintentarGuardado">Reintentar</b-button>
+			</div>
 
 			<!--
 				Si la API devolvió un período ampliado (por defecto, con menos de 10 movimientos en el
@@ -131,7 +145,7 @@
 			class="cc-toolbar__dropdown"
 			data-tour="cuentas_corrientes.dropdown_imprimir"
 			variant="light"
-			:disabled="current_acounts.length == 0"
+			:disabled="loading || current_acounts.length == 0"
 			right>
 				<template #button-content>
 					<i class="bi bi-printer"></i>
@@ -156,6 +170,7 @@
 			<btn-loader
 			class="cc-toolbar__btn"
 			:block="false"
+			:disabled="!from_credit_account.id"
 			:loader="checking"
 			variant="light"
 			icon_class="bi bi-arrow-repeat"
@@ -168,7 +183,7 @@
 <script>
 import current_acounts from '@/mixins/current_acounts'
 import { env } from '@/runtime_config'
-import { FECHA_INICIO_HISTORIAL, fechaLocal, rangoDeAtajo, paramsDePeriodo } from '@/store/current_acount'
+import { FECHA_INICIO_HISTORIAL, fechaLocal, rangoDeAtajo, paramsDePeriodo, fechaDeConsultaValida } from '@/store/current_acount'
 
 // Atajos del menú de período. La clave es la que entiende rangoDeAtajo() del store.
 const ATAJOS = [
@@ -201,9 +216,19 @@ export default {
 			// Valores de los dos campos del rango personalizado (se precargan al abrir el menú).
 			desde_input: '',
 			hasta_input: '',
+			cantidad_input: 10,
 		}
 	},
 	computed: {
+		cantidad_valida() {
+			return /^\d+$/.test(String(this.cantidad_input)) && Number(this.cantidad_input) >= 1 && Number(this.cantidad_input) <= 2000
+		},
+		guardando_consulta() {
+			return this.$store.state.current_acount.guardando_consulta
+		},
+		error_guardado_consulta() {
+			return this.$store.state.current_acount.error_guardado_consulta
+		},
 		periodo() {
 			return this.$store.state.current_acount.periodo
 		},
@@ -222,9 +247,7 @@ export default {
 		 * aplicaron: se dice que son los últimos 10, que es lo que esa API devuelve.
 		 */
 		texto_periodo() {
-			if (this.periodo.clave == 'todo') {
-				return 'Todo el historial'
-			}
+			if (this.periodo.modo == 'ultimos') return 'Últimos ' + this.periodo.cantidad + ' movimientos'
 			let rango = this.periodo_efectivo
 			if (!rango) {
 				if (!this.loading) {
@@ -232,6 +255,9 @@ export default {
 				}
 				// Mientras carga se muestra lo pedido.
 				rango = paramsDePeriodo(this.periodo)
+			}
+			if (this.periodo.clave == 'todo') {
+				return 'Todo el historial'
 			}
 			if (!rango.hasta) {
 				return 'Desde ' + fechaLegible(rango.desde)
@@ -259,21 +285,22 @@ export default {
             return this.$store.state.current_acount.client
         },
         can_print() {
-        	return this.selected_current_acounts.length == 0 || this.is_selected_printable
+			return this.selected_current_acounts.length == 0 || this.is_selected_printable
         },
         is_selected_printable() {
-        	return this.selected_current_acounts.length == 1 && (this.selected_current_acounts[0].status == 'nota_credito' || this.selected_current_acounts[0].status == 'pago_from_client')
+			return this.selected_current_acounts.length == 1 && (this.selected_current_acounts[0].status == 'nota_credito' || this.selected_current_acounts[0].status == 'pago_from_client')
         }
 	},
 	methods: {
 		checkSaldos() {
+			if (!this.from_credit_account.id) return
 			this.checking = true
 			this.$api.get('check-saldos/'+this.from_credit_account.id)
 			.then(() => {
 				this.checking = false
 				this.$store.dispatch('current_acount/getModels')
 			})
-			.catch(err => {
+			.catch(() => {
 				this.checking = false
 			})
 		},
@@ -286,15 +313,11 @@ export default {
 		 * el store en cada pedido, así una SPA que quedó abierta días no arrastra un "hoy" viejo.
 		 */
 		aplicarPeriodo(modo, clave, desde, hasta) {
-			this.$store.commit('current_acount/set_periodo', { modo, clave, desde, hasta })
+			this.$store.dispatch('current_acount/aplicarConsulta', { modo, clave, desde, hasta, cantidad: this.periodo.cantidad })
 			this.$store.dispatch('current_acount/getModels')
 		},
 		fecha_valida(fecha) {
-			if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha || '')) {
-				return false
-			}
-			let anio = parseInt(fecha.substring(0, 4), 10)
-			return anio >= 2000 && anio <= 2099
+			return fechaDeConsultaValida(fecha)
 		},
 		elegirAtajo(clave) {
 			if (clave == 'defecto') {
@@ -309,6 +332,7 @@ export default {
 		 * sirve de punto de partida: ahí se precarga el rango por defecto.
 		 */
 		prepararPersonalizado() {
+			this.cantidad_input = this.periodo.cantidad
 			let rango = null
 			if (this.periodo.clave != 'todo') {
 				rango = this.periodo_efectivo
@@ -328,12 +352,26 @@ export default {
 			this.aplicarPeriodo('personalizado', 'personalizado', this.desde_input, this.hasta_input)
 			this.$refs.periodo_dropdown.hide(true)
 		},
+		aplicarUltimos() {
+			if (!this.cantidad_valida) return
+			this.$store.dispatch('current_acount/aplicarConsulta', { modo: 'ultimos', clave: 'ultimos', desde: null, hasta: null, cantidad: Number(this.cantidad_input) })
+			this.$store.dispatch('current_acount/getModels')
+			this.$refs.periodo_dropdown.hide(true)
+		},
+		reintentarGuardado() {
+			this.$store.dispatch('current_acount/guardarConsulta', this.periodo)
+		},
 		/**
 		 * El PDF sale con el período que se ve. La cantidad del medio es la de movimientos en
 		 * pantalla (o 10): es lo que imprime una API vieja que ignora las fechas, así el papel
 		 * coincide con la pantalla igual. "Todo el historial" va con 2000-01-01 y sin `hasta`.
 		 */
 		print(detail) {
+			// Últimos N recupera el contrato anterior (ccd4c1a2^): cantidad en la ruta, sin fechas.
+			if (this.periodo.modo == 'ultimos') {
+				window.open(env('VUE_APP_API_URL')+'/current-acount/pdf/'+this.from_credit_account.id+'/'+this.periodo.cantidad+'/'+detail)
+				return
+			}
 			let desde = FECHA_INICIO_HISTORIAL
 			let hasta = null
 			if (this.periodo.clave != 'todo') {
