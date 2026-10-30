@@ -400,6 +400,18 @@ export default {
             return pathname.slice(-RUTA_ACCESO_SOPORTE.length) === RUTA_ACCESO_SOPORTE
         },
         /**
+         * ¿La sesión actual es un acceso de soporte (`/acceso-soporte`) y no un ingreso normal?
+         *
+         * El backend la marca en `GET /api/user` con `es_sesion_soporte: true` (contrato C2 de la
+         * misión acceso-soporte-firmado). Una API vieja no manda la clave: `undefined` es "no es
+         * de soporte" y todo sigue como siempre.
+         *
+         * @returns {Boolean}
+         */
+        es_sesion_de_soporte() {
+            return Boolean(this.user && this.user.es_sesion_soporte === true)
+        },
+        /**
          * Manda a la pantalla de login si todavía no se está en ella.
          *
          * Es lo que hacía el watch de `authenticated` en línea; se sacó a un método para poder
@@ -653,8 +665,16 @@ export default {
                  *
                  * `debe_cambiar_de_version()` es sincrónico a propósito: para cuando
                  * `check_version()` decidía, las otras llamadas ya habían salido.
+                 *
+                 * 🔴 Una sesión de SOPORTE nunca se transfiere de frente (misión
+                 * acceso-soporte-firmado). La transferencia pide un token de versión
+                 * (`create_version_session_token()` libera el candado de sesión única del dueño),
+                 * cierra esta sesión y entra en el otro frente como una sesión NORMAL del dueño,
+                 * que sí toma ese candado: justo lo que el acceso de soporte promete no hacer. Si
+                 * el `default_version` del dueño apunta a otro frente que el que le habló el admin,
+                 * el acceso de soporte se queda en este y listo (los frentes comparten la base).
                  */
-                if (this.debe_cambiar_de_version()) {
+                if (!this.es_sesion_de_soporte() && this.debe_cambiar_de_version()) {
                     /*
                         🔴 Salvo que este equipo tenga ventas hechas sin conexión esperando subir
                         (misión ingreso-sin-internet). Las ventas viven en el IndexedDB de ESTE
