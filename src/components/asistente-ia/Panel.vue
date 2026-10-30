@@ -488,6 +488,8 @@ export default {
 	inset: 0
 	background: var(--ia-velo)
 	z-index: 1055
+	/* El contenedor global del sistema centra el texto: la ventana va alineada a la izquierda, como la app. */
+	text-align: left
 	display: flex
 	align-items: center
 	justify-content: center
