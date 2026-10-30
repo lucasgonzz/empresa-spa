@@ -214,7 +214,7 @@ export default {
 			🔴 Un solo juego de listeners delegados en document, no uno por mención. Es lo
 			mismo que hace el popover de descripciones de control, y por el mismo motivo: las
 			menciones nacen y mueren con cada mensaje que llega, y cablear listeners por
-			elemento obligaría a MessageBubble a conocer esta tarjeta.
+			elemento obligaría a mensaje/MensajeAgente.vue a conocer esta tarjeta.
 
 			mouseover/mouseout (no mouseenter/mouseleave) porque son los que burbujean, que es
 			justamente lo que hace posible la delegación.
@@ -242,7 +242,7 @@ export default {
 	methods: {
 		/**
 		 * Busca, desde el elemento donde entró el mouse, la mención de artículo más cercana.
-		 * Los `data-*` los escribe MessageBubble.vue; este componente no conoce a aquél.
+		 * Los `data-*` los escribe mensaje/MensajeAgente.vue; este componente no conoce a aquél.
 		 *
 		 * @param {EventTarget} target Elemento donde ocurrió el evento.
 		 * @returns {Object|null} { el, id, nombre } o null.
@@ -415,7 +415,7 @@ export default {
 // 🔴 EL FONDO SE RESUELVE APARTE, y no con --bg-card. El escalón de relleno del chat es
 // `panel #fff -> viñeta #f1f3f5 -> tarjeta de acción #fff` en claro y
 // `#2e333a -> #3a4048 -> #2e333a` en oscuro: --bg-card y --bg-hover ya están tomados por la
-// viñeta (MessageBubble.vue:101-118) y por la tarjeta de acción (AccionCard.vue:459-469).
+// respuesta (mensaje/MensajeAgente.vue) y por la tarjeta de acción (AccionCard.vue:459-469).
 // Esta tarjeta FLOTA por encima de todo eso, así que necesita leerse elevada en los dos
 // temas, y para eso el relleno tiene que ir SIEMPRE hacia arriba: blanco en claro, y un gris
 // un escalón MÁS CLARO que --bg-hover en oscuro (#3f4650 sobre #3a4048). Con --bg-card en

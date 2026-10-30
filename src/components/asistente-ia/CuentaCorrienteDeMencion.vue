@@ -29,7 +29,7 @@ import { MODAL_CUENTA_CORRIENTE_DEL_CHAT } from '@/store/ai_chat'
  * Por eso el modal lo monta el chat, colgado del botón flotante (`FloatingButton.vue`), que
  * es el único componente que está montado siempre que la extensión `agentes_ia` esté
  * prendida — y que cubre de una vez los DOS contenedores de la conversación: el panel
- * flotante y el sidebar del informe del mostrador, que dibujan el mismo `MessageBubble`.
+ * flotante y el sidebar del informe del mostrador, que dibujan el mismo mensaje (`mensaje/Index.vue`).
  *
  * 🔴 Y con un `modal_id` PROPIO, nunca 'current-acounts'. Si el chat se abre encima de una
  * pantalla que ya montó el suyo, quedarían dos `<b-modal>` con el mismo id y `$bvModal.show()`

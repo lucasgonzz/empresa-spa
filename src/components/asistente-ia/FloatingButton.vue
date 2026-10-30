@@ -36,7 +36,7 @@
 
 		1. La conversación se dibuja en DOS contenedores —el panel flotante y el sidebar
 		   del informe del mostrador (`ia/SidebarConversacion.vue`)—, que montan el mismo
-		   `MessageBubble`. Este componente es el único que está montado siempre que la
+		   `mensaje/Index.vue`. Este componente es el único que está montado siempre que la
 		   extensión esté prendida, así que cubre los dos de una vez sin duplicar nada.
 		2. El panel tiene `overflow: hidden` (Panel.vue:367) y el informe también
 		   (InformeAbierto.vue:256 y :308): una tarjeta flotante hija de cualquiera de los
