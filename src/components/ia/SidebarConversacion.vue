@@ -19,7 +19,7 @@
 		</div>
 
 		<!--
-			La conversación es la misma pieza del panel flotante (MessageBubble,
+			La conversación es la misma pieza del panel flotante (mensaje/Index.vue,
 			PensandoIndicator, aviso de demora, scroll infinito hacia arriba), leyendo
 			ai_chat.messages. `sin_puente`: el botón "Ver el informe" no tiene sentido
 			cuando ya se está parado sobre el informe.
@@ -112,12 +112,17 @@ export default {
 </script>
 
 <style lang="sass">
+// Desde la misión agente-mejoras-uso-real (29/10/2026) la conversación se dibuja como la de
+// ia.comerciocity.com (burbuja gris para la persona, respuesta a lo ancho con avatar), y esos
+// grises están pensados sobre el fondo de la app: el sidebar toma ese fondo (--ia-bg) en vez del
+// gris de sección del sistema, sobre el que la burbuja (#f4f4f4 sobre #f8f9fa) casi no se veía.
 .sidebar-conversacion
 	flex: 1
 	min-height: 0
 	display: flex
 	flex-direction: column
-	background: var(--bg-section, #f8f9fa)
+	background: var(--ia-bg)
+	color: var(--ia-texto)
 
 	&__cabecera
 		height: 48px
@@ -125,7 +130,7 @@ export default {
 		display: flex
 		align-items: center
 		padding: 0 16px
-		border-bottom: 1px solid var(--color-border, #dee2e6)
+		border-bottom: 1px solid var(--ia-borde)
 
 	&__titulo
 		display: inline-flex
@@ -133,7 +138,7 @@ export default {
 		gap: 8px
 		font-weight: 600
 		font-size: .92rem
-		color: var(--color-text-primary, #212529)
+		color: var(--ia-texto)
 
 	&__volver
 		appearance: none
@@ -145,14 +150,14 @@ export default {
 		font: inherit
 		font-size: .92rem
 		font-weight: 600
-		color: var(--color-primary, #007bff)
+		color: var(--ia-primario)
 		display: inline-flex
 		align-items: center
 		gap: 8px
 		cursor: pointer
 
-	// La conversación del panel viene con padding para un modal ancho; acá es una
-	// columna de 380px.
-	.asistente-ia-conversacion
-		padding: 14px 14px 4px 14px
+	// La columna de la conversación viene con el aire de un panel ancho (24px a cada lado); acá
+	// es una columna de 380px y alcanza con 14.
+	.asistente-ia-conversacion__columna
+		padding: 0 14px
 </style>

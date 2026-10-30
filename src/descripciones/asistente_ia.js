@@ -97,7 +97,7 @@ export default {
 			'La foto que adjunta el asistente es la misma que tiene el artículo en el sistema y en la tienda. Si no carga, en su lugar queda la línea "No se pudo cargar la imagen" y el mensaje sigue entero.',
 			'Las fotos que le mandás por WhatsApp se ven arriba de tu propio texto, en tu mensaje. Un mensaje que es solo una foto, sin texto, se ve igual de bien.',
 		],
-		nota_interna: 'Los adjuntos del asistente viajan en message.adjuntos ({ tipo, url, texto, articulo_id }, tope 6, contrato seccion 1 de asistente-omnisciente) y se pintan debajo del texto y arriba de las tarjetas. Desde la mision asistente-capacidades-y-hilos (22/9/2026) el MISMO AdjuntosDeMensaje.vue pinta las fotos del dueño, que viajan en message.imagenes ({ id, orden, url }, contrato 1) y van ARRIBA del texto; MessageBubble.vue las traduce a la forma de los adjuntos antes de pasarlas. En los dos casos solo se pinta tipo imagen con url. La url de una foto del dueño es un endpoint AUTENTICADO de empresa-api (disco privado): el <img> la pide con la cookie de sesion porque no lleva crossorigin -- ponerle crossorigin="anonymous" la romperia --, y ademas lleva referrerpolicy="origin", porque Sanctum solo levanta la sesion de la cookie si el request trae Referer u Origin de un dominio stateful y el nginx del VPS sirve la SPA con Referrer-Policy: same-origin (sin el atributo, la foto daba "No se pudo cargar la imagen"; mision asistente-fotos-barras-y-compras, 24/9/2026). El visor es un b-modal propio con el z-index fijado en 1065 por id, como el modal de cuenta corriente (el porque esta en el componente). Sin la clave (API viejo) no se pinta nada.',
+		nota_interna: 'Los adjuntos del asistente viajan en message.adjuntos ({ tipo, url, texto, articulo_id }, tope 6, contrato seccion 1 de asistente-omnisciente) y se pintan debajo del texto y arriba de las tarjetas. Desde la mision asistente-capacidades-y-hilos (22/9/2026) el MISMO AdjuntosDeMensaje.vue pinta las fotos del dueño, que viajan en message.imagenes ({ id, orden, url }, contrato 1) y van ARRIBA del texto; mensaje/usuario/Index.vue las traduce a la forma de los adjuntos antes de pasarlas. En los dos casos solo se pinta tipo imagen con url. La url de una foto del dueño es un endpoint AUTENTICADO de empresa-api (disco privado): el <img> la pide con la cookie de sesion porque no lleva crossorigin -- ponerle crossorigin="anonymous" la romperia --, y ademas lleva referrerpolicy="origin", porque Sanctum solo levanta la sesion de la cookie si el request trae Referer u Origin de un dominio stateful y el nginx del VPS sirve la SPA con Referrer-Policy: same-origin (sin el atributo, la foto daba "No se pudo cargar la imagen"; mision asistente-fotos-barras-y-compras, 24/9/2026). El visor es un b-modal propio con el z-index fijado en 1065 por id, como el modal de cuenta corriente (el porque esta en el componente). Sin la clave (API viejo) no se pinta nada.',
 	},
 
 	'asistente-bajar-al-ultimo-mensaje': {
@@ -111,5 +111,46 @@ export default {
 			'Una foto que termina de cargar, confirmar una tarjeta o agrandar el panel cambian el alto de la conversación, y el botón se entera: si venías siguiendo el final te quedás pegado abajo, y si estabas leyendo más arriba aparece el botón.',
 		],
 		nota_interna: 'Conversation.vue. La condicion es scrollHeight - scrollTop - clientHeight > TOLERANCIA_FINAL (120px). El boton vive en un marco no scrolleable que envuelve al scroller (un hijo absoluto del scroller se iria con el scroll). Baja de un SALTO y no deslizando, a proposito: el scroll suave dispara scroll en cada cuadro y el boton reaparecia a mitad de camino; taparlo pedia una ventana de tiempo que se rompia si la persona cancelaba con la rueda y se quedaba quieta. La bandera lejos_del_final es un cache de una medicion del DOM: los watch de messages.length y hay_respuesta_en_curso MIDEN primero (los watchers de usuario corren antes que el de render, asi que ahi el DOM todavia es el de antes del mensaje nuevo) en vez de leerla guardada. Los cambios de alto que no disparan scroll --foto que decodifica, resize del panel, AccionCard que cambia-- los cubre un ResizeObserver sobre el scroller y sobre el div de los mensajes. Una pagina vieja que se antepone se distingue por la clave del ULTIMO mensaje, no por loading_more (que cuando corre el watcher ya vale false: el store lo apaga sincronicamente justo despues del prepend).',
+	},
+
+	'asistente-valoracion-me-gusta': {
+		titulo: 'Me gusta',
+		que_hace: 'Marca que la respuesta del asistente te sirvió. Volver a tocarlo saca la marca.',
+		repercute: [
+			'No cambia nada del negocio: queda anotado en la respuesta para mejorar al asistente.',
+			'Si antes le habías puesto "No me gusta" con un comentario, el comentario se borra.',
+			'Se ve solo en las respuestas que terminaron bien (no en una que quedó en error).',
+		],
+		nota_interna: 'mensaje/agente/ValoracionMensaje.vue. PUT api/ai-mensajes/{id}/valoracion {valoracion: me_gusta|null} (contrato C1 de la mision agente-mejoras-uso-real, 29/10/2026). Optimista en ai_chat/valorarMensaje, en fila por mensaje (colas_de_valoracion): si falla vuelve a lo ultimo que el servidor confirmo. Lo lee el analisis diario de las 22 h.',
+	},
+
+	'asistente-valoracion-no-me-gusta': {
+		titulo: 'No me gusta',
+		que_hace: 'Marca que la respuesta no te sirvió y abre un cuadro para contar qué no te gustó. Volver a tocarlo saca la marca.',
+		repercute: [
+			'No cambia nada del negocio: queda anotado en la respuesta para mejorar al asistente.',
+			'La marca se guarda apenas lo tocás; el comentario es opcional. Cancelar o Escape cierran el cuadro y la marca queda.',
+		],
+		nota_interna: 'mensaje/agente/ValoracionMensaje.vue. PUT api/ai-mensajes/{id}/valoracion {valoracion: no_me_gusta} al tocar; el cuadro es en linea, no un modal. Escape adentro del cuadro no cierra el chat (keydown.esc.stop).',
+	},
+
+	'asistente-valoracion-comentario': {
+		titulo: 'Qué mejorar',
+		que_hace: 'Para contar con tus palabras qué estuvo mal o qué esperabas de la respuesta.',
+		repercute: [
+			'Es opcional. Se manda junto con las opciones que elegiste arriba, hasta 1000 caracteres en total.',
+			'Si al elegir una opción lo que escribiste ya no entra, se recorta y el contador te lo avisa.',
+		],
+		nota_interna: 'El comentario viaja como "Opcion · Opcion — texto" (opciones en el orden de la lista), igual que en ia-spa: components/asistente-ia/valoracion.js::armar_comentario. El tope se cuenta por puntos de codigo, como mb_strlen del API.',
+	},
+
+	'asistente-valoracion-enviar': {
+		titulo: 'Enviar el comentario',
+		que_hace: 'Manda lo que elegiste y escribiste sobre la respuesta que no te gustó.',
+		repercute: [
+			'Se habilita cuando elegiste al menos una opción o escribiste algo.',
+			'Si no se pudo mandar, el cuadro queda abierto con lo que escribiste para que lo vuelvas a intentar.',
+		],
+		nota_interna: 'PUT api/ai-mensajes/{id}/valoracion {valoracion: no_me_gusta, comentario}. Al terminar bien muestra "Gracias, lo vamos a usar para mejorar" unos 4,5 s.',
 	},
 }

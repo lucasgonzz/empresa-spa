@@ -14,7 +14,12 @@
 	BootstrapVue que abre el chat (la ficha del artículo, la cuenta corriente, el visor de
 	fotos) se montan colgados de <body>, fuera de este árbol, y un click adentro de ellos
 	contaría como "afuera del panel" y cerraría el chat. Un click en esos elementos nunca
-	tiene como target al overlay, así que acá no molestan. -->
+	tiene como target al overlay, así que acá no molestan.
+
+	Desde la misión agente-mejoras-uso-real (29/10/2026) la ventana se dibuja como la app de
+	ia.comerciocity.com (pedido de Lucas): barra lateral gris con "Nuevo chat" y la
+	configuración abajo, encabezado de 52px sin borde, la conversación en la columna centrada
+	de ChatGPT y el compositor en píldora. Toda la mecánica de acá abajo es la de antes. -->
 	<div
 	class="asistente-ia-overlay"
 	@mousedown.capture="al_mousedown_overlay"
@@ -24,7 +29,7 @@
 		:style="panel_inline_style">
 			<!-- Manijas para estirar el modal entero desde los dos bordes. No existen en
 			móvil, igual que el divisor de la sidebar: ahí el panel ocupa el ancho de la
-			pantalla y no hay nada que elegir. -->
+			pantalla y no hay nada que elegir. Son invisibles en reposo (ver PanelResizer). -->
 			<panel-resizer
 			v-if="!es_movil"
 			lado="izquierda"
@@ -44,7 +49,9 @@
 			:class="{ 'asistente-ia-panel__sidebar--abierta': sidebar_movil_abierta }"
 			:style="sidebar_inline_style">
 				<conversation-list
-				@select="on_conversation_selected"></conversation-list>
+				:es_cajon="es_movil"
+				@select="on_conversation_selected"
+				@cerrar="sidebar_movil_abierta = false"></conversation-list>
 			</div>
 
 			<!-- Fondito que cierra el cajón móvil al tocar afuera de la lista. -->
@@ -53,37 +60,78 @@
 			class="asistente-ia-panel__telon"
 			@click="sidebar_movil_abierta = false"></div>
 
-			<!-- Divisor redimensionable reusado de Vender (D39); no existe en móvil. -->
+			<!-- Divisor redimensionable reusado de Vender (D39); no existe en móvil. Acá se
+			pinta transparente (ver el <style>): en ia-spa la barra y la conversación se
+			separan solo por el color de fondo. -->
 			<vender-resizer
 			v-if="!es_movil"
 			@resize="on_sidebar_resize"
 			@resize-end="on_sidebar_resize_end"></vender-resizer>
 
 			<div class="asistente-ia-panel__main">
-				<div class="asistente-ia-panel__header">
-					<b-button
+				<!-- Encabezado de 52px sin borde, como el de ia-spa (chat/Encabezado.vue): en el
+				teléfono, el botón de la lista a la izquierda y el de chat nuevo a la derecha. -->
+				<header class="asistente-ia-panel__header">
+					<button
 					v-if="es_movil"
-					size="sm"
-					variant="outline-secondary"
+					type="button"
+					class="asistente-ia-panel__boton"
+					title="Conversaciones"
+					aria-label="Abrir la lista de conversaciones"
+					:aria-expanded="sidebar_movil_abierta ? 'true' : 'false'"
 					@click="sidebar_movil_abierta = !sidebar_movil_abierta">
-						<i class="bi bi-layout-sidebar"></i>
-						Conversaciones
-					</b-button>
+						<icono nombre="menu"></icono>
+					</button>
 					<span class="asistente-ia-panel__titulo">
 						{{ titulo_cabecera }}
 					</span>
 					<button
-					class="asistente-ia-panel__cerrar"
+					v-if="es_movil"
+					type="button"
+					class="asistente-ia-panel__boton"
+					title="Nueva conversación"
+					aria-label="Nueva conversación"
+					:disabled="vacia"
+					@click="nueva_conversacion">
+						<icono nombre="nuevo"></icono>
+					</button>
+					<button
+					class="asistente-ia-panel__boton"
 					type="button"
 					title="Cerrar el asistente"
+					aria-label="Cerrar el asistente"
 					@click="cerrar">
-						<i class="bi bi-x-lg"></i>
+						<icono nombre="cerrar"></icono>
 					</button>
-				</div>
+				</header>
 
-				<div class="asistente-ia-panel__cuerpo">
-					<conversation></conversation>
-					<composer></composer>
+				<!-- Con la conversación en blanco, en escritorio y tablet, el saludo y el
+				compositor quedan centrados y las sugerencias abajo (como ChatGPT e ia-spa,
+				views/Chat.vue). En el teléfono el saludo queda en el medio y las sugerencias van
+				arriba del compositor, en una fila que se desliza. -->
+				<div
+				class="asistente-ia-panel__cuerpo"
+				:class="{ 'asistente-ia-panel__cuerpo--vacia': vacia && !es_movil }">
+					<conversation
+					:esperando_bandeja="!bandeja_cargada"></conversation>
+					<composer
+					ref="composer"
+					:vacia="vacia">
+						<template v-slot:arriba>
+							<pantalla-vacia
+							v-if="vacia && es_movil"
+							class="asistente-ia-panel__sugerencias-tel"
+							solo_sugerencias
+							@sugerencia="usar_sugerencia"></pantalla-vacia>
+						</template>
+					</composer>
+					<div
+					v-if="vacia && !es_movil"
+					class="asistente-ia-panel__sugerencias">
+						<pantalla-vacia
+						solo_sugerencias
+						@sugerencia="usar_sugerencia"></pantalla-vacia>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -95,6 +143,8 @@ import ConversationList from '@/components/asistente-ia/ConversationList'
 import Conversation from '@/components/asistente-ia/Conversation'
 import Composer from '@/components/asistente-ia/Composer'
 import PanelResizer from '@/components/asistente-ia/PanelResizer'
+import PantallaVacia from '@/components/asistente-ia/PantallaVacia'
+import Icono from '@/components/asistente-ia/Icono'
 import VenderResizer from '@/components/vender/components/VenderResizer'
 
 // Límites del ancho de la sidebar en px (D38).
@@ -117,6 +167,8 @@ export default {
 		Conversation,
 		Composer,
 		PanelResizer,
+		PantallaVacia,
+		Icono,
 		VenderResizer,
 	},
 	data() {
@@ -132,6 +184,14 @@ export default {
 			// true si el último mousedown arrancó en el overlay (el fondo, afuera del panel).
 			// Es la guarda del cierre por click afuera: ver el comentario del <template>.
 			mousedown_en_overlay: false,
+			// true cuando terminó (bien o mal) la primera carga de la bandeja al abrir el panel.
+			//
+			// 🔴 Existe por la pantalla vacía centrada (misión agente-mejoras-uso-real): hasta que
+			// llega la bandeja no hay conversación elegida y los mensajes están vacíos, o sea que
+			// "conversación en blanco" daba true durante el viaje del GET y el compositor saltaba
+			// del centro a abajo en cada apertura. Mientras tanto la conversación muestra su
+			// "cargando" (ver la prop esperando_bandeja de Conversation.vue).
+			bandeja_cargada: false,
 		}
 	},
 	computed: {
@@ -152,6 +212,17 @@ export default {
 		},
 		es_movil() {
 			return this.viewport_width < 768
+		},
+		/**
+		 * true con la conversación en blanco (la de "Nuevo chat", todavía sin crear): ahí va la
+		 * pantalla vacía de ia-spa, con el saludo, el compositor centrado y las sugerencias.
+		 * Deja de serlo apenas sube el globo optimista del primer mensaje, como en ChatGPT.
+		 *
+		 * @returns {Boolean}
+		 */
+		vacia() {
+			let chat = this.$store.state.ai_chat
+			return this.bandeja_cargada && !chat.selected_conversation_id && !chat.messages.length && !chat.loading_messages
 		},
 		/**
 		 * En escritorio la sidebar lleva el ancho elegido; en móvil el ancho lo fija
@@ -197,6 +268,7 @@ export default {
 		// ejemplo la que dejó seteada abrir_chat_ia() desde la notificación (D22).
 		this.$store.dispatch('ai_chat/getConversations')
 			.then(() => {
+				self.bandeja_cargada = true
 				if (self.selected_conversation_id) {
 					self.$store.dispatch('ai_chat/getMessages', {
 						conversation_id: self.selected_conversation_id,
@@ -361,6 +433,28 @@ export default {
 			this.sidebar_movil_abierta = false
 		},
 		/**
+		 * El botón de chat nuevo del encabezado del teléfono (el de ia-spa): lo mismo que
+		 * "Nuevo chat" de la barra lateral (ConversationList.vue::nueva_conversacion), sin
+		 * tener que abrir el cajón. La conversación real se crea recién al enviar el primer
+		 * mensaje.
+		 */
+		nueva_conversacion() {
+			this.$store.commit('ai_chat/setSelectedConversationId', null)
+			this.$store.commit('ai_chat/setMessages', [])
+			this.sidebar_movil_abierta = false
+		},
+		/**
+		 * Una sugerencia de la pantalla vacía: el compositor la escribe y la manda, por el
+		 * mismo camino que un mensaje tipeado (su manejo del 409 incluido).
+		 *
+		 * @param {String} texto
+		 */
+		usar_sugerencia(texto) {
+			if (this.$refs.composer) {
+				this.$refs.composer.escribir_y_mandar(texto)
+			}
+		},
+		/**
 		 * Anota si el mousedown arrancó en el overlay mismo. Corre en captura, así que ve
 		 * todos los mousedown del árbol: uno sobre el panel (una manija, el texto, un botón)
 		 * apaga la bandera, y solo uno sobre el fondo la prende.
@@ -387,11 +481,15 @@ export default {
 </script>
 
 <style lang="sass">
+@import '@/components/asistente-ia/_mixins'
+
 .asistente-ia-overlay
 	position: fixed
 	inset: 0
-	background: rgba(0, 0, 0, .35)
+	background: var(--ia-velo)
 	z-index: 1055
+	/* El contenedor global del sistema centra el texto: la ventana va alineada a la izquierda, como la app. */
+	text-align: left
 	display: flex
 	align-items: center
 	justify-content: center
@@ -401,30 +499,63 @@ export default {
 // El ancho ya NO vive acá: lo pone panel_inline_style, porque desde el 19/8/2026 se
 // arrastra y se guarda por persona. Lo que queda acá es el techo, y es el que hace que
 // un ancho guardado en el escritorio no desborde después en un teléfono.
+//
+// Desde la misión agente-mejoras-uso-real la superficie, la letra y el tamaño base son los de
+// ia-spa (base.css): fondo --ia-bg, la letra del sistema operativo y 16px. Todo lo de adentro se
+// mide en rem/em contra eso.
 .asistente-ia-panel
 	max-width: 96vw
 	height: min(88vh, 900px)
-	background: var(--bg-card, #fff)
-	color: var(--color-text-primary, #212529)
-	border-radius: 14px
+	background: var(--ia-bg)
+	color: var(--ia-texto)
+	font-family: var(--ia-fuente)
+	font-size: 16px
+	line-height: 1.5
+	-webkit-font-smoothing: antialiased
+	-moz-osx-font-smoothing: grayscale
+	border-radius: 16px
 	box-shadow: 0 18px 60px rgba(0, 0, 0, .28)
 	display: flex
 	overflow: hidden
 	position: relative
 	animation: asistente-ia-panel-entrada .18s ease-out
 
+	// 🔴 common-vue/sass/_inputs.sass le pone a TODO <button> del sistema una sombra diagonal de
+	// formulario (salvo en modales, navbar y sidebars). En ia-spa ningún botón tiene sombra, así
+	// que adentro del panel se apaga para todos de una vez. Pesa (0,1,1) contra el (0,0,1) de
+	// allá; el anillo de foco de un .btn de bootstrap (`.btn:focus`, 0,2,0) sigue ganando.
+	button
+		box-shadow: none
+
+	// Barras de desplazamiento discretas, las de ia-spa.
+	*
+		scrollbar-width: thin
+		scrollbar-color: var(--ia-borde-fuerte) transparent
+
+	*::-webkit-scrollbar
+		width: 8px
+		height: 8px
+
+	*::-webkit-scrollbar-thumb
+		background: var(--ia-borde-fuerte)
+		border-radius: 8px
+
+	*::-webkit-scrollbar-track
+		background: transparent
+
+	// La barra lateral de ia-spa: gris apenas más oscuro que la conversación y sin borde (el
+	// cambio de fondo ya separa).
 	&__sidebar
 		flex-shrink: 0
 		min-width: 0
-		border-right: 1px solid var(--color-border, #dee2e6)
-		background: var(--bg-section, #f8f9fa)
+		background: var(--ia-bg-barra)
 		display: flex
 		flex-direction: column
 
 	&__telon
 		position: absolute
 		inset: 0
-		background: rgba(0, 0, 0, .25)
+		background: var(--ia-velo)
 		z-index: 2
 
 	&__main
@@ -432,6 +563,7 @@ export default {
 		min-width: 0
 		display: flex
 		flex-direction: column
+		background: var(--ia-bg)
 		// 🔴 Franja reservada para la manija derecha. La conversación scrollea sola
 		// (overflow-y: auto) y su barra de scroll se apoya en el borde derecho de este
 		// contenedor: sin estos 6px, la barra queda DEBAJO de la manija y agarrar el thumb
@@ -439,40 +571,34 @@ export default {
 		// scroll, hay que angostar el contenedor -- por eso va acá y no en la conversación.
 		padding-right: 6px
 
+	// Encabezado de ia-spa (chat/Encabezado.vue): 52px, sin borde abajo, el título a la izquierda.
 	&__header
-		height: 52px
+		height: var(--ia-alto-encabezado)
 		flex-shrink: 0
-		border-bottom: 1px solid var(--color-border, #dee2e6)
 		display: flex
 		align-items: center
-		gap: 10px
-		padding: 0 10px 0 16px
+		gap: 2px
+		padding: 0 8px 0 16px
+		background: var(--ia-bg)
 
-	// Título de la conversación en UNA línea con ellipsis, como Claude.
+	// Título de la conversación en UNA línea con ellipsis, con el peso de la marca del
+	// encabezado de ia-spa.
 	&__titulo
 		flex: 1
 		min-width: 0
-		font-weight: 600
+		padding: 0 4px
+		font-size: 1.06rem
+		font-weight: 500
 		white-space: nowrap
 		overflow: hidden
 		text-overflow: ellipsis
 
-	&__cerrar
-		flex-shrink: 0
-		width: 34px
-		height: 34px
-		border: none
-		border-radius: 8px
-		background: transparent
-		color: var(--color-text-secondary, #6c757d)
-		display: flex
-		align-items: center
-		justify-content: center
-		transition: background .15s ease
+	&__boton
+		+asistente-ia-boton-icono
 
-		&:hover
-			background: var(--bg-hover, #f1f3f5)
-			color: var(--color-text-primary, #212529)
+		&:disabled
+			opacity: .35
+			cursor: default
 
 	&__cuerpo
 		flex: 1
@@ -480,9 +606,59 @@ export default {
 		display: flex
 		flex-direction: column
 
+	// La pantalla vacía de ia-spa en escritorio y tablet (views/Chat.vue,
+	// `.principal__cuerpo--vacia`): saludo y compositor centrados en el alto, sugerencias abajo.
+	// La conversación deja de ocupar todo el alto (deja de ser `flex: 1`) para que el centrado
+	// sea del bloque entero, y el aviso de "puede equivocarse" se esconde como allá.
+	&__cuerpo--vacia
+		justify-content: center
+		padding-bottom: 8vh
+
+		.asistente-ia-conversacion-marco, .asistente-ia-conversacion
+			flex: 0 0 auto
+
+		.asistente-ia-conversacion
+			overflow: visible
+
+		// El saludo pegado al compositor: su propio margen de abajo (28px) ya es la separación.
+		.asistente-ia-conversacion__bienvenida
+			padding: 0
+
+		.asistente-ia-composer__aviso
+			display: none
+
+	&__sugerencias
+		+asistente-ia-columna
+		flex-shrink: 0
+		margin-top: 16px
+
+	&__sugerencias-tel
+		margin-bottom: 10px
+
+// El divisor de Vender pinta una barra gris de 6px entre la lista y la conversación. En ia-spa
+// no hay nada ahí: se deja transparente (la "manija invisible") y se tiñe apenas al pasar el
+// mouse o mientras se arrastra, para que se descubra. Las dos manijas de los bordes del modal,
+// lo mismo con los tokens de acá.
+//
+// 🔴 Los selectores llevan las dos clases del panel adelante a propósito: los dos resizers tienen
+// estilo `scoped` (clase + atributo, 0,2,0 o 0,3,0 con el estado) y a igual peso ganaría el orden
+// de la hoja final, que depende del orden de carga de los módulos.
+.asistente-ia-overlay .asistente-ia-panel
+	.vender-resizer
+		background: transparent
+
+		&:hover, &.vender-resizer--active
+			background: var(--ia-borde)
+
+	.asistente-ia-resizer:hover, .asistente-ia-resizer.asistente-ia-resizer--activo
+		background: var(--ia-borde-fuerte)
+
 // Bajo 768px la sidebar es un cajón absoluto adentro del panel (D38): se abre
-// con el botón "Conversaciones" de la cabecera y el resizer no existe.
+// con el botón de la lista del encabezado y el resizer no existe.
 @media screen and (max-width: 767px)
+	.asistente-ia-panel__header
+		padding-left: 8px
+
 	.asistente-ia-panel__sidebar
 		position: absolute
 		top: 0
@@ -491,11 +667,12 @@ export default {
 		width: min(300px, 85%)
 		z-index: 3
 		transform: translateX(-100%)
-		transition: transform .2s ease
-		box-shadow: 6px 0 24px rgba(0, 0, 0, .12)
+		transition: transform .24s ease
+		box-shadow: none
 
 		&--abierta
 			transform: translateX(0)
+			box-shadow: 0 0 40px rgba(0, 0, 0, .3)
 
 @keyframes asistente-ia-panel-entrada
 	from

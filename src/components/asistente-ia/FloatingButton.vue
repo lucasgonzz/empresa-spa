@@ -36,7 +36,7 @@
 
 		1. La conversación se dibuja en DOS contenedores —el panel flotante y el sidebar
 		   del informe del mostrador (`ia/SidebarConversacion.vue`)—, que montan el mismo
-		   `MessageBubble`. Este componente es el único que está montado siempre que la
+		   `mensaje/Index.vue`. Este componente es el único que está montado siempre que la
 		   extensión esté prendida, así que cubre los dos de una vez sin duplicar nada.
 		2. El panel tiene `overflow: hidden` (Panel.vue:367) y el informe también
 		   (InformeAbierto.vue:256 y :308): una tarjeta flotante hija de cualquiera de los
@@ -642,6 +642,18 @@ export default {
 	},
 }
 </script>
+
+<style lang="sass">
+// Los tokens `--ia-*` de la ventana del agente (misión agente-mejoras-uso-real, 29/10/2026), los de
+// ia.comerciocity.com, en :root y html.dark-mode.
+//
+// 🔴 SE EMITEN UNA SOLA VEZ Y ACÁ, y no es casualidad: App.vue importa este componente de forma
+// estática, así que esta hoja viaja en el CSS principal y está cargada siempre. Cubre el panel y
+// también el sidebar del informe del mostrador (ia/SidebarConversacion.vue), que vive en otro chunk.
+// Este bloque NO puede ser `scoped` (las reglas saldrían con `[data-v-…]` y no aplicarían) ni
+// mudarse a un componente que se carga a demanda. Ver `_tokens.sass`.
+@import '@/components/asistente-ia/_tokens'
+</style>
 
 <style lang="sass">
 // Botón flotante del asistente IA. Convive con el de soporte (1052/1053):

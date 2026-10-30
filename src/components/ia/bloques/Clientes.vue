@@ -15,9 +15,11 @@
 				class="informe-clientes__punto"
 				aria-hidden="true"></span>
 				<span class="informe-clientes__texto">
-					<!-- El nombre abre el modal del cliente (§2.3 del plan): mismo lenguaje
-					visual que la mención de cliente del chat IA (MessageBubble.vue), para que
-					se lea como el mismo gesto en todo el sistema. -->
+					<!-- El nombre abre el modal del cliente (§2.3 del plan). Nació con el mismo
+					lenguaje visual que la mención de cliente del chat IA; desde la misión
+					agente-mejoras-uso-real (29/10/2026) la mención del chat se dibuja como la de
+					ia.comerciocity.com (subrayado punteado) y este nombre conserva el azul del
+					sistema, que es el del resto del informe. -->
 					<span
 					class="informe-clientes__nombre"
 					:class="{ 'informe-clientes__nombre--clickeable': !solo_lectura }"
@@ -107,7 +109,7 @@ export default {
 		 * siempre que el mostrador puede verse (FloatingButton.vue en App.vue, gateado
 		 * por la misma extensión agentes_ia que gatea al mostrador) — el mismo
 		 * mecanismo que ya usa la mención de cliente del chat IA
-		 * (asistente-ia/MessageBubble.vue → ai_chat/pedirCuentaCorrienteDeCliente →
+		 * (asistente-ia/mensaje/agente/Index.vue → ai_chat/pedirCuentaCorrienteDeCliente →
 		 * asistente-ia/CuentaCorrienteDeMencion.vue). No hace falta un bridge propio acá.
 		 *
 		 * @param {Object} item
@@ -181,9 +183,11 @@ export default {
 		display: inline
 		font-weight: 600
 
-		// Mismo tinte que la mención de cliente del chat IA (asistente-ia/MessageBubble.vue
-		// .asistente-ia-mencion--cliente): el mismo gesto visual en todo el sistema para
-		// "este texto abre a una persona".
+		// El azul de acción del sistema con subrayado: "este texto abre a una persona". Nació
+		// como el mismo tinte de la mención de cliente del chat IA; desde la misión
+		// agente-mejoras-uso-real (29/10/2026) esa mención se dibuja como la de
+		// ia.comerciocity.com (asistente-ia/mensaje/agente/Index.vue, `.asistente-ia-mencion`) y
+		// ya no son iguales: este queda con el lenguaje del informe.
 		&--clickeable
 			color: var(--color-primary, #007bff)
 			cursor: pointer

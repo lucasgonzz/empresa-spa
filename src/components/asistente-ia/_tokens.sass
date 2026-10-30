@@ -1,0 +1,106 @@
+// Tokens de la ventana del agente personal (misión agente-mejoras-uso-real, 29/10/2026).
+//
+// Pedido de Lucas: "quiero que la ventana que se abre cuando pulso el botón del agente personal
+// en el sistema de ComercioCity tenga el mismo diseño que tiene hoy la aplicación de
+// ia.comerciocity.com". Estos son los MISMOS valores de la paleta de ia-spa
+// (ia-spa/src/styles/base.css: el gris neutro de ChatGPT, oscuro #212121 / barra #171717, con la
+// marca de ComercioCity), copiados con un prefijo propio.
+//
+// 🔴 EL PREFIJO `--ia-` NO ES DECORACIÓN. ia-spa usa nombres pelados (`--bg`, `--bg-hover`,
+// `--texto`), y el sistema YA tiene un `--bg-hover` con otro valor (#f1f3f5 en claro, el de las
+// filas de las tablas y los menús): definir los de ia-spa sin prefijo en :root repintaría TODO el
+// sistema, no solo la ventana. Con `--ia-*` no se cruzan con nada.
+//
+// 🔴 Van en :root (claro) y en html.dark-mode (oscuro), que es como el sistema prende el modo
+// oscuro (sass/_dark_theme.sass), nunca en un contenedor del panel: la conversación también se
+// dibuja en el sidebar del informe del mostrador (ia/SidebarConversacion.vue), fuera del panel, y
+// tiene que leer los mismos tokens. Mismo criterio que online/components/mensajes/_tokens.sass.
+// Sin respaldo `var(--x, #hex)` en quien los usa: un respaldo taparía un token faltante y dejaría
+// el modo oscuro roto sin que nadie se entere.
+//
+// 🔴 ESTE ARCHIVO EMITE CSS Y SE IMPORTA UNA SOLA VEZ: desde el <style lang="sass"> NO scoped de
+// FloatingButton.vue. Ese componente lo importa App.vue de forma estática, así que su hoja viaja en
+// el CSS principal y está cargada siempre que haya sistema: alcanza para el panel y para el sidebar
+// del informe del mostrador (ia/SidebarConversacion.vue), que vive en otro chunk pero lee los mismos
+// tokens. Importarlo en cada componente (como se hizo al principio) repetía el bloque entero una
+// vez por componente, y en uno `scoped` las reglas salían con `[data-v-…]` y no aplicaban.
+//
+// Los componentes NO lo importan: usan `var(--ia-*)` directo. Lo que sí importan donde lo usan es
+// `_mixins.sass` (la columna y los botones), que no emite nada por sí solo.
+
+:root
+	// La marca (iguales en los dos temas).
+	--ia-marca-1: #0b84f8
+	--ia-marca-2: #3a31fc
+	--ia-acento: #fa7e06
+	--ia-degrade: linear-gradient(135deg, #0b84f8, #3a31fc)
+
+	// La letra de ia-spa (la de ChatGPT): la del sistema operativo. El sistema usa Inter; adentro
+	// de la ventana manda esta para que se lea igual que la app.
+	--ia-fuente: ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'
+
+	// Medidas de ia-spa: la columna de lectura de ChatGPT (48rem), el encabezado de 52px y el
+	// radio de la píldora del compositor.
+	--ia-ancho-columna: 48rem
+	--ia-alto-encabezado: 52px
+	--ia-radio-compositor: 28px
+	--ia-transicion: .18s ease
+
+	// Superficies y texto, modo claro.
+	--ia-bg: #ffffff
+	--ia-bg-barra: #f9f9f9
+	--ia-bg-hover: #ececec
+	--ia-bg-activo: #e3e3e3
+	--ia-bg-burbuja: #f4f4f4
+	--ia-bg-compositor: #ffffff
+	--ia-bg-elevado: #ffffff
+	--ia-bg-sutil: #f7f7f8
+	--ia-texto: #0d0d0d
+	--ia-texto-2: #5d5d5d
+	--ia-texto-3: #8f8f8f
+	--ia-borde: #e5e5e5
+	--ia-borde-fuerte: #d4d4d4
+	--ia-sombra-compositor: 0 0 0 1px rgba(0, 0, 0, .06), 0 4px 18px rgba(0, 0, 0, .06)
+	--ia-sombra-flotante: 0 4px 14px rgba(0, 0, 0, .12)
+	--ia-boton-enviar: #0d0d0d
+	--ia-boton-enviar-texto: #ffffff
+	--ia-boton-enviar-apagado: #d7d7d7
+	--ia-boton-enviar-apagado-texto: #ffffff
+	--ia-primario: #0b84f8
+	--ia-primario-tinte: rgba(11, 132, 248, .09)
+	--ia-primario-tinte-fuerte: rgba(11, 132, 248, .18)
+	--ia-peligro: #d0302f
+	--ia-peligro-tinte: rgba(208, 48, 47, .08)
+	--ia-ok: #10a37f
+	--ia-whatsapp: #25d366
+	--ia-velo: rgba(0, 0, 0, .35)
+	--ia-foco: #0b84f8
+
+html.dark-mode
+	--ia-bg: #212121
+	--ia-bg-barra: #171717
+	--ia-bg-hover: #262626
+	--ia-bg-activo: #2f2f2f
+	--ia-bg-burbuja: #303030
+	--ia-bg-compositor: #303030
+	--ia-bg-elevado: #353535
+	--ia-bg-sutil: #2a2a2a
+	--ia-texto: #ececec
+	--ia-texto-2: #b4b4b4
+	--ia-texto-3: #8b8b8b
+	--ia-borde: #3a3a3a
+	--ia-borde-fuerte: #4a4a4a
+	--ia-sombra-compositor: 0 0 0 1px rgba(255, 255, 255, .04), 0 4px 18px rgba(0, 0, 0, .25)
+	--ia-sombra-flotante: 0 4px 14px rgba(0, 0, 0, .45)
+	--ia-boton-enviar: #ececec
+	--ia-boton-enviar-texto: #0d0d0d
+	--ia-boton-enviar-apagado: #676767
+	--ia-boton-enviar-apagado-texto: #2f2f2f
+	--ia-primario: #4aa3ff
+	--ia-primario-tinte: rgba(74, 163, 255, .16)
+	--ia-primario-tinte-fuerte: rgba(74, 163, 255, .28)
+	--ia-peligro: #ff6b6b
+	--ia-peligro-tinte: rgba(255, 107, 107, .12)
+	--ia-ok: #34c59a
+	--ia-velo: rgba(0, 0, 0, .6)
+	--ia-foco: #4aa3ff
