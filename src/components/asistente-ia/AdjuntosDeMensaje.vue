@@ -116,7 +116,7 @@
  *     del texto: la foto es parte de lo que el asistente dice.
  *   - Lo que MANDA EL DUEÑO por WhatsApp (misión asistente-capacidades-y-hilos, 22/9/2026,
  *     contrato 1): viaja en `message.imagenes` como `{ id, orden, url }` y va ARRIBA del texto,
- *     como en cualquier chat. `mensaje/MensajeUsuario.vue` lo traduce a la forma de los adjuntos antes
+ *     como en cualquier chat. `mensaje/usuario/Index.vue` lo traduce a la forma de los adjuntos antes
  *     de pasarlo, así este componente conoce UN solo formato.
  *
  * Se pintan SOLO los de `tipo === 'imagen'` con `url`, y cualquier tipo que esta SPA no conozca
@@ -188,7 +188,7 @@ export default {
 	name: 'AdjuntosDeMensaje',
 	props: {
 		// Las fotos a pintar, en la forma de `message.adjuntos` del asistente. Quién las manda
-		// ya lo resolvieron mensaje/MensajeUsuario.vue y mensaje/MensajeAgente.vue: o son los adjuntos tal cual llegan del API, o son
+		// ya lo resolvieron mensaje/usuario/Index.vue y mensaje/agente/Index.vue: o son los adjuntos tal cual llegan del API, o son
 		// las fotos del dueño (`message.imagenes`) traducidas a esta forma. Puede traer tipos
 		// que esta SPA no conoce.
 		adjuntos: {

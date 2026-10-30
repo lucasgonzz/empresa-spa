@@ -674,7 +674,7 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
+@import '@/components/asistente-ia/_mixins'
 
 // ─── El marco quieto, y el botón flotante que cuelga de él ──────────────────────────────
 //
@@ -810,7 +810,7 @@ export default {
 		padding: 24px 0
 
 	// El puente al submódulo cuelga del primer mensaje del asistente (D24), alineado con el texto
-	// de la respuesta: el avatar mide 30px y el espacio 14px (ver mensaje/MensajeAgente.vue).
+	// de la respuesta: el avatar mide 30px y el espacio 14px (ver mensaje/agente/Index.vue).
 	&__origen
 		align-self: flex-start
 		margin: -8px 0 0 44px

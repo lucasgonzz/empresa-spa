@@ -173,6 +173,42 @@ function inicio_del_dia(fecha) {
 }
 
 /**
+ * Una fecha del API pasada a Date, o null si no se entiende.
+ *
+ * 🔴 `last_message_at` llega CRUDO de la base, «AAAA-MM-DD HH:MM:SS» (el modelo no lo castea), y
+ * `new Date()` con ese formato --fecha y hora separadas por un espacio-- no es estándar: Chrome lo
+ * entiende, pero Safari viejo (iPhone con iOS < 15, el de muchos dueños) devuelve Invalid Date y
+ * toda la bandeja caía en el grupo más viejo. Por eso ese formato se arma a mano con sus números,
+ * en hora local (es la hora del negocio, la misma que la del navegador). Lo demás (los ISO de
+ * `created_at` / `updated_at`, o el `toISOString()` que pone el store al mandar) va por `Date`,
+ * que esos sí los entiende cualquier navegador.
+ *
+ * @param {String|null} crudo
+ * @returns {Date|null}
+ */
+function fecha_del_api(crudo) {
+	if (!crudo) {
+		return null
+	}
+	let texto = String(crudo).trim()
+	let partes = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(texto)
+	let fecha = null
+	if (partes) {
+		fecha = new Date(
+			Number(partes[1]),
+			Number(partes[2]) - 1,
+			Number(partes[3]),
+			Number(partes[4] || 0),
+			Number(partes[5] || 0),
+			Number(partes[6] || 0)
+		)
+	} else {
+		fecha = new Date(texto)
+	}
+	return isNaN(fecha.getTime()) ? null : fecha
+}
+
+/**
  * La fecha que ubica a una conversación en un grupo: su último mensaje, o cuándo se creó (una
  * conversación recién creada todavía no tiene `last_message_at`). Sin ninguna de las dos, el
  * 1/1/1970: cae en el grupo más viejo en vez de romper el agrupado.
@@ -182,8 +218,7 @@ function inicio_del_dia(fecha) {
  */
 function fecha_de_conversacion(conversation) {
 	let crudo = (conversation && (conversation.last_message_at || conversation.updated_at || conversation.created_at)) || null
-	let fecha = crudo ? new Date(crudo) : null
-	return fecha && !isNaN(fecha.getTime()) ? fecha : new Date(0)
+	return fecha_del_api(crudo) || new Date(0)
 }
 
 export default {
@@ -349,7 +384,7 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
+@import '@/components/asistente-ia/_mixins'
 
 .asistente-ia-lista
 	flex: 1

@@ -481,7 +481,7 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
+@import '@/components/asistente-ia/_mixins'
 
 .asistente-ia-overlay
 	position: fixed

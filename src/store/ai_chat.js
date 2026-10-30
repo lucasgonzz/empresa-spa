@@ -75,6 +75,20 @@ let preferencias_timer_id = null
 let sin_endpoint_de_cuenta_corriente = false
 
 /**
+ * Las valoraciones en curso (misión agente-mejoras-uso-real, contrato C1): una fila por mensaje,
+ * por id. Ver `valorarMensaje`. Cada fila es
+ * { ultima: Promise (la del último pedido, que nunca rechaza), confirmado: { valoracion,
+ *   valoracion_comentario } (lo último que el servidor guardó), emitidos: Number, pendientes: Number }.
+ *
+ * 🔴 Existe porque dos toques seguidos (👍 y enseguida 👎, o 👎 y enseguida Enviar) eran dos PUT en
+ * paralelo: el servidor podía guardar el primero DESPUÉS del segundo, y la vuelta atrás de un error
+ * volvía a lo que estaba en pantalla al tocar --otro cambio optimista a medio camino--, no a lo
+ * guardado. Con la fila, los pedidos de un mismo mensaje salen de a uno y en orden (como
+ * `colas_de_valoracion` de ia-spa/src/stores/chat.js). La fila se borra cuando no le queda nada.
+ */
+let colas_de_valoracion = {}
+
+/**
  * Estado de la espera de respuesta (polling de respaldo del broadcast, D46).
  * Patrón del modal de importación IA (ai-excel-import, grupos 297/299/303):
  * `token` identifica la corrida y las puertas de los helpers SOLO LO LEEN. El
@@ -498,7 +512,7 @@ export default {
 		seleccion_sin_recarga: false,
 
 		// Pedido de abrir la cuenta corriente de un cliente, puesto por el clic en una
-		// mención (MessageBubble) y atendido por CuentaCorrienteDeMencion.vue, que es
+		// mención (asistente-ia/mensaje/agente/Index.vue) y atendido por CuentaCorrienteDeMencion.vue, que es
 		// quien tiene el <b-modal> montado: { client_id, nombre, token }. null = ninguno.
 		//
 		// 🔴 `token` es un contador que sube en cada clic y no decora: sin él, tocar dos
@@ -1463,9 +1477,21 @@ export default {
 		 * devuelve `{ model: { id, valoracion, valoracion_comentario, valorado_at } }`.
 		 *
 		 * Optimista, como un "me gusta" de cualquier chat: el mensaje cambia en pantalla al toque
-		 * (patchMessage) y, si el PUT falla, vuelve a lo que tenía antes y la promesa rechaza para
-		 * que ValoracionMensaje.vue avise. Lo que vuelve del API pisa lo optimista (es la verdad:
-		 * por ejemplo, un comentario de puros espacios el API lo guarda como null).
+		 * (patchMessage), y la promesa rechaza si el PUT falla para que
+		 * mensaje/agente/ValoracionMensaje.vue avise.
+		 *
+		 * 🔴 EN FILA POR MENSAJE (`colas_de_valoracion`, arriba de todo). Cada pedido sale recién
+		 * cuando terminó el anterior del mismo mensaje, así el servidor los guarda en el orden en
+		 * que se tocaron. La fila recuerda lo último que el servidor CONFIRMÓ, y eso decide qué se
+		 * ve al terminar:
+		 *   - Si terminó el último pedido de la fila, en pantalla queda lo que devolvió el servidor
+		 *     (es la verdad: un comentario de puros espacios, por ejemplo, lo guarda como null) o,
+		 *     si falló, lo último confirmado. NO lo que había antes de tocar, que podía ser otro
+		 *     cambio optimista todavía sin guardar.
+		 *   - Si detrás viene otro pedido, no se toca la pantalla: ya muestra el cambio más nuevo,
+		 *     y el que lo cierre va a dejar la verdad.
+		 * Al abrir una fila nueva, lo de la pantalla cuenta como confirmado: sin pedidos en vuelo,
+		 * lo que se ve es lo que vino del servidor.
 		 *
 		 * Reglas del contrato que se reflejan también en lo optimista: `null` saca la valoración y
 		 * el comentario; con `me_gusta` el comentario se borra; el comentario solo viaja con
@@ -1485,17 +1511,41 @@ export default {
 		 */
 		valorarMensaje({ commit, state }, payload) {
 			let message_id = payload.message_id
+			let clave = String(message_id)
 			let valoracion = payload.valoracion || null
 			let comentario = null
 			if (valoracion == 'no_me_gusta' && typeof payload.comentario == 'string' && payload.comentario.trim() != '') {
 				comentario = payload.comentario.trim()
 			}
 
-			let actual = state.messages.find(m => m.id == message_id)
-			let previo = {
-				id: message_id,
-				valoracion: actual ? (actual.valoracion || null) : null,
-				valoracion_comentario: actual ? (actual.valoracion_comentario || null) : null,
+			let cola = colas_de_valoracion[clave]
+			if (!cola) {
+				let actual = state.messages.find(m => m.id == message_id)
+				cola = {
+					ultima: Promise.resolve(),
+					confirmado: {
+						valoracion: actual ? (actual.valoracion || null) : null,
+						valoracion_comentario: actual ? (actual.valoracion_comentario || null) : null,
+					},
+					emitidos: 0,
+					pendientes: 0,
+				}
+				colas_de_valoracion[clave] = cola
+			}
+			cola.emitidos = cola.emitidos + 1
+			cola.pendientes = cola.pendientes + 1
+			let turno = cola.emitidos
+
+			// true si después de este pedido no se pidió otro para el mismo mensaje.
+			let es_el_ultimo = function () {
+				return turno === cola.emitidos
+			}
+			// Cierra el pedido; la fila se borra cuando ya no le queda ninguno.
+			let terminar = function () {
+				cola.pendientes = cola.pendientes - 1
+				if (cola.pendientes === 0 && colas_de_valoracion[clave] === cola) {
+					delete colas_de_valoracion[clave]
+				}
 			}
 
 			commit('patchMessage', {
@@ -1509,27 +1559,44 @@ export default {
 				body.comentario = comentario
 			}
 
-			return axios.put('/api/ai-mensajes/' + message_id + '/valoracion', body, {
-				skip_global_error_event: true,
-				skip_navigation_cancel: true,
-			})
+			let esta = cola.ultima
+				.then(() => {
+					return axios.put('/api/ai-mensajes/' + message_id + '/valoracion', body, {
+						skip_global_error_event: true,
+						skip_navigation_cancel: true,
+					})
+				})
 				.then(res => {
-					let model = res.data && res.data.model ? res.data.model : null
+					let model = res && res.data && res.data.model ? res.data.model : null
 					if (model && model.id) {
-						commit('patchMessage', {
-							id: model.id,
+						cola.confirmado = {
 							valoracion: model.valoracion || null,
 							valoracion_comentario: model.valoracion_comentario || null,
 							valorado_at: model.valorado_at || null,
-						})
+						}
+					} else {
+						cola.confirmado = {
+							valoracion: valoracion,
+							valoracion_comentario: comentario,
+						}
 					}
+					if (es_el_ultimo()) {
+						commit('patchMessage', Object.assign({ id: message_id }, cola.confirmado))
+					}
+					terminar()
 					return model
-				})
-				.catch(err => {
-					commit('patchMessage', previo)
+				}, err => {
+					if (es_el_ultimo()) {
+						commit('patchMessage', Object.assign({ id: message_id }, cola.confirmado))
+					}
+					terminar()
 					console.log(err)
 					return Promise.reject(err)
 				})
+
+			// La fila sigue aunque este pedido falle: el siguiente sale igual.
+			cola.ultima = esta.catch(() => null)
+			return esta
 		},
 		/**
 		 * Persiste las preferencias de UI de la PERSONA (posición del botón flotante,

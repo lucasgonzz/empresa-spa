@@ -197,8 +197,6 @@ export default {
 }
 </script>
 <style lang="sass" scoped>
-@import '@/components/asistente-ia/_tokens'
-
 // Ámbar del aviso "te estás acercando al límite". Hasta hoy el sistema no tenía token de
 // warning y este color iba como literal documentado; ahora sale de --color-text-warning-strong
 // (agregado a _dark_theme.sass en este mismo barrido), con este literal como fallback de modo

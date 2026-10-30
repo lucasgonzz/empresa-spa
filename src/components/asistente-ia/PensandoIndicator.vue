@@ -5,7 +5,7 @@
 	agente-mejoras-uso-real, 29/10/2026.
 
 	Tiene la MISMA forma que una respuesta del agente (avatar de 30px + cuerpo, ver
-	mensaje/MensajeAgente.vue), y no es cosmético: ocupa el lugar donde en un segundo va a estar
+	mensaje/agente/Index.vue), y no es cosmético: ocupa el lugar donde en un segundo va a estar
 	la respuesta, así que cuando llega el bloque se queda quieto y solo cambia el contenido (D41,
 	D18: nunca queda un globo vacío a la vista). Si cambia la respuesta, este va con ella.
 
@@ -72,15 +72,13 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
-
 .asistente-ia-pensando
 	display: flex
 	align-items: flex-start
 	gap: 14px
 	padding: 4px 0 0 0
 
-	// El mismo avatar de la respuesta (MensajeAgente.vue).
+	// El mismo avatar de la respuesta (mensaje/agente/Index.vue).
 	&__avatar
 		flex: 0 0 auto
 		width: 30px

@@ -18,7 +18,15 @@
 // Sin respaldo `var(--x, #hex)` en quien los usa: un respaldo taparía un token faltante y dejaría
 // el modo oscuro roto sin que nadie se entere.
 //
-// Cada componente que los usa hace `@import '@/components/asistente-ia/_tokens'`.
+// 🔴 ESTE ARCHIVO EMITE CSS Y SE IMPORTA UNA SOLA VEZ: desde el <style lang="sass"> NO scoped de
+// FloatingButton.vue. Ese componente lo importa App.vue de forma estática, así que su hoja viaja en
+// el CSS principal y está cargada siempre que haya sistema: alcanza para el panel y para el sidebar
+// del informe del mostrador (ia/SidebarConversacion.vue), que vive en otro chunk pero lee los mismos
+// tokens. Importarlo en cada componente (como se hizo al principio) repetía el bloque entero una
+// vez por componente, y en uno `scoped` las reglas salían con `[data-v-…]` y no aplicaban.
+//
+// Los componentes NO lo importan: usan `var(--ia-*)` directo. Lo que sí importan donde lo usan es
+// `_mixins.sass` (la columna y los botones), que no emite nada por sí solo.
 
 :root
 	// La marca (iguales en los dos temas).
@@ -96,99 +104,3 @@ html.dark-mode
 	--ia-ok: #34c59a
 	--ia-velo: rgba(0, 0, 0, .6)
 	--ia-foco: #4aa3ff
-
-// La columna centrada de ChatGPT (`.principal__columna` de ia-spa/src/views/Chat.vue): 48rem de
-// texto más el aire de los costados, centrada, y con menos aire en el teléfono. La usan la
-// conversación, el compositor y las sugerencias para que los tres bordes caigan en la misma
-// vertical. Es un mixin y no una clase para que no emita nada en cada componente que importa
-// este archivo sin usarla.
-=asistente-ia-columna
-	width: 100%
-	max-width: calc(var(--ia-ancho-columna) + 48px)
-	margin: 0 auto
-	padding: 0 24px
-	box-sizing: border-box
-
-	@media screen and (max-width: 767px)
-		padding: 0 16px
-
-// El botón de ícono de ia-spa (`.boton-icono`): cuadrado de esquinas redondeadas, transparente,
-// que se tiñe al pasar el mouse.
-//
-// 🔴 `box-shadow: none` explícito: common-vue/sass/_inputs.sass le pone a TODO <button> del
-// sistema una sombra diagonal de formulario, y en ia-spa los botones no tienen sombra. Gana por
-// especificidad (una clase contra un elemento pelado), así que no depende del orden de la hoja.
-=asistente-ia-boton-icono($lado: 36px, $radio: 10px)
-	display: inline-flex
-	align-items: center
-	justify-content: center
-	flex: 0 0 auto
-	width: $lado
-	height: $lado
-	padding: 0
-	border: 0
-	border-radius: $radio
-	background: transparent
-	color: var(--ia-texto-2)
-	box-shadow: none
-	cursor: pointer
-	transition: background var(--ia-transicion), color var(--ia-transicion)
-
-	&:hover:not(:disabled)
-		background: var(--ia-bg-hover)
-		color: var(--ia-texto)
-
-	&:focus
-		outline: none
-
-	&:focus-visible
-		outline: 2px solid var(--ia-foco)
-		outline-offset: 2px
-
-// Los botones de texto de ia-spa (`.boton`, `.boton--primario`, `.boton--secundario`): píldora de
-// 40px, el primario en el negro (o blanco, en oscuro) del botón de enviar.
-=asistente-ia-boton
-	display: inline-flex
-	align-items: center
-	justify-content: center
-	gap: 8px
-	min-height: 36px
-	padding: 0 16px
-	border-radius: 999px
-	font-family: inherit
-	font-weight: 500
-	font-size: .9rem
-	line-height: 1.2
-	white-space: nowrap
-	box-shadow: none
-	cursor: pointer
-	transition: background var(--ia-transicion), border-color var(--ia-transicion), opacity var(--ia-transicion)
-
-	&:disabled
-		opacity: .5
-		cursor: default
-
-	&:focus
-		outline: none
-
-	&:focus-visible
-		outline: 2px solid var(--ia-foco)
-		outline-offset: 2px
-
-=asistente-ia-boton-primario
-	+asistente-ia-boton
-	border: 1px solid var(--ia-boton-enviar)
-	background: var(--ia-boton-enviar)
-	color: var(--ia-boton-enviar-texto)
-
-	&:hover:not(:disabled)
-		opacity: .86
-
-=asistente-ia-boton-secundario
-	+asistente-ia-boton
-	border: 1px solid var(--ia-borde-fuerte)
-	background: transparent
-	color: var(--ia-texto)
-
-	&:hover:not(:disabled)
-		background: var(--ia-bg-hover)

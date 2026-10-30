@@ -3,7 +3,7 @@
  * (misión agente-ia-mano-derecha, §1 del contrato, 16/9/2026).
  *
  * 🔴 ESTO EXISTE JUSTAMENTE PARA NO USAR `v-html`. El chat pinta texto plano por decisión
- * (D43), repetida en `mensaje/MensajeAgente.vue`, `AccionCard.vue`, `ia/Informe.vue` y
+ * (D43), repetida en `mensaje/agente/Index.vue`, `AccionCard.vue`, `ia/Informe.vue` y
  * `Conversation.vue`, y no hay ninguna librería de markdown en `package.json`. El API manda
  * las menciones ANOTADAS aparte —`[{ tipo, id, texto }]`— y acá se calculan los cortes; la
  * plantilla las dibuja con la interpolación normal `{{ }}`, que ya escapa. Ningún string que

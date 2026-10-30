@@ -225,7 +225,7 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
+@import '@/components/asistente-ia/_mixins'
 
 // El mensaje de la persona de ia-spa (mensajes/MensajeUsuario.vue): todo pegado a la derecha,
 // la burbuja gris con radio 22, las fotos arriba.

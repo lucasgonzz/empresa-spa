@@ -108,7 +108,7 @@
 import AccionCard from '@/components/asistente-ia/AccionCard'
 import AdjuntosDeMensaje from '@/components/asistente-ia/AdjuntosDeMensaje'
 import Icono from '@/components/asistente-ia/Icono'
-import ValoracionMensaje from '@/components/asistente-ia/ValoracionMensaje'
+import ValoracionMensaje from '@/components/asistente-ia/mensaje/agente/ValoracionMensaje'
 import { segmentar_mensaje } from '@/components/asistente-ia/formato'
 import { valoracion_de } from '@/components/asistente-ia/valoracion'
 import { logo_del_negocio } from '@/components/asistente-ia/identidad'
@@ -357,7 +357,7 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
+@import '@/components/asistente-ia/_mixins'
 
 // La respuesta del agente de ia-spa (mensajes/MensajeAsistente.vue): avatar de 30px a la
 // izquierda y el cuerpo a lo ancho, sin burbuja. La prosa con las medidas de ChatGPT

@@ -28,6 +28,41 @@ const ENTRE_OPCIONES = ' · '
 const ANTES_DEL_TEXTO = ' — '
 
 /**
+ * Lo que se le muestra a la persona por cada `code` de error del contrato C1 (los mismos textos que
+ * ia-spa/src/api/mensajes.js).
+ */
+const MENSAJES_POR_CODE = {
+	mensaje_inexistente: 'Esa respuesta ya no está disponible. Recargá la conversación.',
+	no_es_del_agente: 'Solo se pueden valorar las respuestas del asistente.',
+	valoracion_invalida: 'No pudimos guardar tu valoración. Probá de nuevo.',
+	comentario_invalido: 'No pudimos guardar tu comentario. Probá de nuevo.',
+	comentario_muy_largo: 'El comentario es demasiado largo: dejalo en 1000 caracteres.',
+}
+
+/**
+ * Cuántos caracteres tiene un texto contados como los cuenta el API (`mb_strlen`): por PUNTOS DE
+ * CÓDIGO y no por unidades de UTF-16. Con `.length` un emoji cuenta 2 y el tope se corría.
+ *
+ * @param {String} texto
+ * @returns {Number}
+ */
+export function largo(texto) {
+	return Array.from(String(texto || '')).length
+}
+
+/**
+ * Los primeros `tope` caracteres de un texto, cortando por puntos de código: un `slice` común puede
+ * partir un emoji al medio y dejar un carácter roto al final.
+ *
+ * @param {String} texto
+ * @param {Number} tope
+ * @returns {String}
+ */
+export function recortar(texto, tope) {
+	return Array.from(String(texto || '')).slice(0, Math.max(0, tope)).join('')
+}
+
+/**
  * Las opciones elegidas, en el orden de la lista (no en el que se tocaron) y sin repetir.
  *
  * @param {Array<String>} elegidas
@@ -49,13 +84,16 @@ export function prefijo_de_opciones(elegidas) {
  */
 export function lugar_para_el_texto(elegidas) {
 	let prefijo = prefijo_de_opciones(elegidas)
-	return Math.max(0, TOPE_COMENTARIO - (prefijo ? prefijo.length + ANTES_DEL_TEXTO.length : 0))
+	return Math.max(0, TOPE_COMENTARIO - (prefijo ? largo(prefijo) + largo(ANTES_DEL_TEXTO) : 0))
 }
 
 /**
- * Arma el comentario que viaja al API: «Opción · Opción — texto libre», recortado al tope. Sin
- * opciones queda el texto solo; sin texto, las opciones solas; sin nada, cadena vacía (y entonces no
- * se manda comentario).
+ * Arma el comentario que viaja al API: «Opción · Opción — texto libre», recortado al tope (por
+ * puntos de código, sin partir un emoji). Sin opciones queda el texto solo; sin texto, las opciones
+ * solas; sin nada, cadena vacía (y entonces no se manda comentario).
+ *
+ * El recorte acá es la última red: el cuadro ya no deja escribir más de lo que entra (ver
+ * `lugar_para_el_texto` y ValoracionMensaje.vue::recortar_texto_al_lugar).
  *
  * @param {Array<String>} elegidas Opciones rápidas tocadas.
  * @param {String} texto Lo que escribió el dueño.
@@ -65,8 +103,8 @@ export function armar_comentario(elegidas, texto) {
 	let prefijo = prefijo_de_opciones(elegidas)
 	let libre = String(texto || '').trim()
 	let comentario = prefijo && libre ? prefijo + ANTES_DEL_TEXTO + libre : (prefijo || libre)
-	if (comentario.length > TOPE_COMENTARIO) {
-		comentario = comentario.slice(0, TOPE_COMENTARIO).trim()
+	if (largo(comentario) > TOPE_COMENTARIO) {
+		comentario = recortar(comentario, TOPE_COMENTARIO).trim()
 	}
 	return comentario
 }
@@ -81,4 +119,33 @@ export function armar_comentario(elegidas, texto) {
 export function valoracion_de(mensaje) {
 	let valor = (mensaje && mensaje.valoracion) || null
 	return valor === ME_GUSTA || valor === NO_ME_GUSTA ? valor : null
+}
+
+/**
+ * El texto para el aviso de un PUT de valoración que falló: el del `code` del contrato si vino, y si
+ * no, uno por el tipo de falla (como `mensaje_de_error` de ia-spa).
+ *
+ * @param {Object} err El error de axios.
+ * @param {String} generico Lo que se dice si no hay nada más preciso.
+ * @returns {String}
+ */
+export function mensaje_de_error_de_valoracion(err, generico) {
+	let response = err && err.response ? err.response : null
+	let data = response && response.data && typeof response.data == 'object' ? response.data : {}
+	if (data.code && MENSAJES_POR_CODE[data.code]) {
+		return MENSAJES_POR_CODE[data.code]
+	}
+	if (!response) {
+		return 'No pudimos conectarnos con el servidor. Revisá tu conexión y volvé a intentar.'
+	}
+	if (response.status == 401) {
+		return 'Tu sesión venció. Volvé a entrar.'
+	}
+	if (response.status == 403) {
+		return data.message || 'No tenés permiso para hacer eso.'
+	}
+	if (response.status >= 500) {
+		return 'Algo falló de nuestro lado. Probá de nuevo en un momento.'
+	}
+	return generico
 }

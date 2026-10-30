@@ -19,7 +19,7 @@
 		</div>
 
 		<!--
-			La conversación es la misma pieza del panel flotante (MessageBubble,
+			La conversación es la misma pieza del panel flotante (mensaje/Index.vue,
 			PensandoIndicator, aviso de demora, scroll infinito hacia arriba), leyendo
 			ai_chat.messages. `sin_puente`: el botón "Ver el informe" no tiene sentido
 			cuando ya se está parado sobre el informe.
@@ -112,8 +112,6 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
-
 // Desde la misión agente-mejoras-uso-real (29/10/2026) la conversación se dibuja como la de
 // ia.comerciocity.com (burbuja gris para la persona, respuesta a lo ancho con avatar), y esos
 // grises están pensados sobre el fondo de la app: el sidebar toma ese fondo (--ia-bg) en vez del

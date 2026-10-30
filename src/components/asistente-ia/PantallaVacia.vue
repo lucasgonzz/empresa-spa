@@ -113,8 +113,6 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
-
 .asistente-ia-vacia
 	display: flex
 	flex-direction: column

@@ -164,7 +164,7 @@ import { ruta_de_la_accion } from '@/store/ai_chat'
 /**
  * Texto e ícono de cada estado cerrado de una tarjeta. Los textos son los del §4 del plan
  * de asistente-ia-acciones, literales. 'descartada' no está a propósito: esa tarjeta ni se
- * pinta (la filtra mensaje/MensajeAgente.vue).
+ * pinta (la filtra mensaje/agente/Index.vue).
  */
 const CIERRE_POR_ESTADO = {
 	cancelada: {
@@ -254,7 +254,7 @@ function texto_de_falla(verbo, falla) {
  * como antes; hoy las manda solo la tarjeta `imagen_categoria`, la que escribe el job de
  * imágenes de categorías cuando encontró una foto pero no está seguro de que corresponda.
  *
- * Vive adentro de la respuesta del asistente (mensaje/MensajeAgente.vue), así que aparece en el panel
+ * Vive adentro de la respuesta del asistente (mensaje/agente/Index.vue), así que aparece en el panel
  * flotante y también en el sidebar del informe del mostrador (SidebarConversacion.vue reusa
  * Conversation.vue). Por eso el id de la conversación llega del MENSAJE que trae la tarjeta
  * y no de lo que esté abierto en el panel.
@@ -595,8 +595,6 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
-
 // Tarjeta de una carga propuesta por el asistente (misión asistente-ia-acciones, 15/9/2026).
 //
 // Desde la misión agente-mejoras-uso-real (29/10/2026) se dibuja como la tarjeta de acción de

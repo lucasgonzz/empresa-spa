@@ -5,7 +5,7 @@
 	explicar por qué o qué le gustaría mejorar; con los botones "con el mismo diseño estético que
 	la aplicación de ia.comerciocity.com".
 
-	Va dentro de la barra de acciones de MensajeAgente, después de «Copiar», y dibuja tres cosas:
+	Va dentro de la barra de acciones de la respuesta (agente/Index.vue), después de «Copiar», y dibuja tres cosas:
 	  - los dos botones 👍 / 👎 (el activo, relleno); volver a tocar el activo saca la valoración;
 	  - la línea «Gracias, lo vamos a usar para mejorar», un rato después de mandar el comentario;
 	  - con 👎, el cuadro EN LÍNEA (no un modal) «¿Qué no te gustó?»: opciones rápidas, el texto
@@ -19,7 +19,11 @@
 
 	El 👎 se guarda apenas se toca (como en ChatGPT): el comentario es opcional, y Cancelar o
 	Escape cierran el cuadro sin sacar el 👎. Enviar vuelve a mandar el no me gusta, ahora con el
-	comentario. Si falla, el cuadro queda abierto con lo escrito. -->
+	comentario. Si falla, el cuadro queda abierto con lo escrito.
+
+	Los toques nunca se ignoran ni se pisan: el store manda los pedidos de un mismo mensaje en
+	fila y en orden (`valorarMensaje`, `colas_de_valoracion`), así que tocar 👍 mientras viaja el
+	comentario deja guardado el 👍. -->
 	<div
 	v-if="disponible"
 	class="asistente-ia-valoracion">
@@ -71,7 +75,6 @@
 		ref="cuadro"
 		class="asistente-ia-valoracion__cuadro"
 		:aria-labelledby="id_titulo"
-		data-testid="asistente-valoracion-cuadro"
 		@submit.prevent="enviar"
 		@keydown.esc.stop.prevent="cancelar">
 			<div class="asistente-ia-valoracion__tarjeta">
@@ -106,9 +109,14 @@
 				aria-label="Contanos qué mejorar (opcional)"
 				data-testid="asistente-valoracion-comentario"></textarea>
 				<div class="asistente-ia-valoracion__pie">
+					<!-- El contador cuenta como el API (puntos de código). Aparece cerca del tope, o
+					cuando elegir una opción recortó lo escrito para que entre (ver
+					recortar_texto_al_lugar): así el recorte nunca es en silencio. -->
 					<span
-					v-if="comentario.length >= mostrar_contador_desde"
-					class="asistente-ia-valoracion__contador">{{ comentario.length }}/{{ tope_comentario }}</span>
+					v-if="mostrar_contador"
+					class="asistente-ia-valoracion__contador"
+					:class="{ 'asistente-ia-valoracion__contador--tope': texto_recortado || largo_del_comentario >= tope_comentario }"
+					role="status">{{ largo_del_comentario }}/{{ tope_comentario }}{{ texto_recortado ? ' · se recortó para que entre' : '' }}</span>
 					<div class="asistente-ia-valoracion__botones">
 						<button
 						type="button"
@@ -139,7 +147,10 @@ import {
 	OPCIONES_NO_ME_GUSTA,
 	TOPE_COMENTARIO,
 	armar_comentario,
+	largo,
 	lugar_para_el_texto,
+	mensaje_de_error_de_valoracion,
+	recortar,
 	valoracion_de,
 } from '@/components/asistente-ia/valoracion'
 
@@ -176,7 +187,6 @@ export default {
 			// con valoracion.js.
 			opciones: OPCIONES_NO_ME_GUSTA.slice(),
 			tope_comentario: TOPE_COMENTARIO,
-			mostrar_contador_desde: MOSTRAR_CONTADOR_DESDE,
 			// true mientras el cuadro de «no me gusta» está abierto.
 			abierto: false,
 			// Opciones rápidas tocadas y texto libre del cuadro.
@@ -184,9 +194,9 @@ export default {
 			texto: '',
 			// true mientras viaja el comentario (el botón dice «Enviando…»).
 			enviando: false,
-			// true mientras viaja un 👍/👎: un segundo toque en ese rato se ignora, así dos PUT no
-			// se cruzan y la respuesta del primero no pisa a la del segundo.
-			guardando: false,
+			// true cuando elegir una opción recortó lo escrito para que el comentario entre en el
+			// tope: el contador lo dice.
+			texto_recortado: false,
 			// true mientras se ve el «Gracias, lo vamos a usar para mejorar».
 			gracias: false,
 		}
@@ -228,10 +238,30 @@ export default {
 		/**
 		 * Lugar que le queda al texto libre después de las opciones (el `maxlength` del textarea).
 		 *
+		 * El `maxlength` del navegador cuenta unidades de UTF-16 (un emoji vale 2) y este número
+		 * puntos de código: con emojis el textarea frena ANTES de lo que el API aceptaría, nunca
+		 * después, que es lo que importa.
+		 *
 		 * @returns {Number}
 		 */
 		max_texto() {
 			return lugar_para_el_texto(this.elegidas)
+		},
+		/**
+		 * El largo del comentario como lo cuenta el API (puntos de código).
+		 *
+		 * @returns {Number}
+		 */
+		largo_del_comentario() {
+			return largo(this.comentario)
+		},
+		/**
+		 * El contador se muestra cerca del tope, o si se recortó lo escrito.
+		 *
+		 * @returns {Boolean}
+		 */
+		mostrar_contador() {
+			return this.texto_recortado || this.largo_del_comentario >= MOSTRAR_CONTADOR_DESDE
 		},
 		/**
 		 * Enviar queda apagado mientras no haya nada elegido ni escrito (sin nada, el 👎 ya quedó
@@ -254,8 +284,24 @@ export default {
 	},
 	watch: {
 		/**
+		 * Cada opción que se prende le come lugar al texto (va adelante, con su separador): si lo
+		 * ya escrito deja de entrar, se recorta a la vista.
+		 */
+		elegidas() {
+			this.recortar_texto_al_lugar()
+		},
+		/**
+		 * El aviso de "se recortó" se apaga cuando la persona borra algo de lo recortado: ya
+		 * vio el límite y lo está acomodando.
+		 */
+		texto() {
+			if (this.texto_recortado && largo(this.texto) < this.max_texto) {
+				this.texto_recortado = false
+			}
+		},
+		/**
 		 * Le avisa al mensaje que el cuadro está abierto, para que la barra no se esconda al sacar
-		 * el mouse (MensajeAgente.vue::barra_siempre).
+		 * el mouse (agente/Index.vue::barra_siempre).
 		 *
 		 * @param {Boolean} valor
 		 */
@@ -288,11 +334,23 @@ export default {
 			this.elegidas = this.elegidas.concat([opcion])
 		},
 		/**
+		 * Si lo escrito ya no entra con las opciones elegidas, lo recorta A LA VISTA (por puntos de
+		 * código, sin partir un emoji) y prende el aviso del contador. Sin esto, `armar_comentario`
+		 * cortaba el final al mandar y la persona no se enteraba de que su texto no llegó entero.
+		 */
+		recortar_texto_al_lugar() {
+			if (largo(this.texto) > this.max_texto) {
+				this.texto = recortar(this.texto, this.max_texto)
+				this.texto_recortado = true
+			}
+		},
+		/**
 		 * Vacía las opciones y el texto del cuadro.
 		 */
 		limpiar_cuadro() {
 			this.elegidas = []
 			this.texto = ''
+			this.texto_recortado = false
 		},
 		/**
 		 * Cierra el cuadro; con `devolver_foco`, el foco vuelve al 👎 (Cancelar, Escape, Enviar),
@@ -364,29 +422,24 @@ export default {
 			}, DURACION_GRACIAS_MS)
 		},
 		/**
-		 * Guarda una valoración por el store (que la pone en pantalla al toque y la vuelve atrás
-		 * si falla). Ignora el pedido si ya hay uno de los botones viajando.
+		 * Guarda una valoración por el store, que la pone en pantalla al toque, la manda en fila
+		 * detrás de los pedidos anteriores del mismo mensaje y, si falla, vuelve a lo último que
+		 * el servidor confirmó. Acá solo se avisa el error, con el texto de su `code`.
 		 *
 		 * @param {String|null} valoracion
-		 * @returns {Promise} resuelve con true si se guardó y false si falló o se ignoró.
+		 * @returns {Promise} resuelve con true si se guardó y false si falló.
 		 */
 		guardar(valoracion) {
 			let self = this
-			if (this.guardando) {
-				return Promise.resolve(false)
-			}
-			this.guardando = true
 			return this.$store.dispatch('ai_chat/valorarMensaje', {
 				message_id: this.message.id,
 				valoracion: valoracion,
 			})
 				.then(function () {
-					self.guardando = false
 					return true
 				})
-				.catch(function () {
-					self.guardando = false
-					self.$toast.error('No se pudo guardar tu valoración. Probá de nuevo.')
+				.catch(function (err) {
+					self.$toast.error(mensaje_de_error_de_valoracion(err, 'No se pudo guardar tu valoración. Probá de nuevo.'))
 					return false
 				})
 		},
@@ -395,9 +448,6 @@ export default {
 		 * borra el comentario con un me gusta).
 		 */
 		tocar_me_gusta() {
-			if (this.guardando) {
-				return
-			}
 			this.ocultar_gracias()
 			this.cerrar_cuadro(false)
 			this.limpiar_cuadro()
@@ -409,9 +459,6 @@ export default {
 		 */
 		tocar_no_me_gusta() {
 			let self = this
-			if (this.guardando) {
-				return
-			}
 			this.ocultar_gracias()
 			if (this.actual === NO_ME_GUSTA) {
 				this.cerrar_cuadro(false)
@@ -424,8 +471,11 @@ export default {
 			this.enfocar_cuadro()
 			this.guardar(NO_ME_GUSTA)
 				.then(function (guardo) {
-					// Volvió atrás: sin 👎 guardado, el cuadro no tiene a qué comentarle.
-					if (!guardo) {
+					// Volvió atrás: sin 👎 guardado, el cuadro vacío no tiene a qué comentarle y se
+					// cierra. Si la persona ya eligió o escribió algo (o lo está mandando), queda
+					// abierto: Enviar vuelve a mandar el 👎, ahora con el comentario.
+					let con_algo = self.elegidas.length > 0 || self.texto.trim() != '' || self.enviando
+					if (!guardo && !con_algo) {
 						self.abierto = false
 					}
 				})
@@ -449,11 +499,15 @@ export default {
 					self.enviando = false
 					self.cerrar_cuadro(true)
 					self.limpiar_cuadro()
-					self.mostrar_gracias()
+					// Si mientras viajaba se tocó 👍 (va en la fila detrás de este), el gracias por
+					// el comentario ya no corresponde.
+					if (self.actual === NO_ME_GUSTA) {
+						self.mostrar_gracias()
+					}
 				})
-				.catch(function () {
+				.catch(function (err) {
 					self.enviando = false
-					self.$toast.error('No se pudo enviar tu comentario. Probá de nuevo.')
+					self.$toast.error(mensaje_de_error_de_valoracion(err, 'No se pudo enviar tu comentario. Probá de nuevo.'))
 				})
 		},
 		/**
@@ -471,7 +525,7 @@ export default {
 </script>
 
 <style lang="sass">
-@import '@/components/asistente-ia/_tokens'
+@import '@/components/asistente-ia/_mixins'
 
 // Los estilos son los de ia-spa (mensajes/ValoracionMensaje.vue) con los tokens `--ia-*`.
 .asistente-ia-valoracion
@@ -603,6 +657,10 @@ export default {
 		margin-right: auto
 		font-size: .8rem
 		color: var(--ia-texto-3)
+
+		// En el tope (o recortado para que entre) se lee en el color de aviso.
+		&--tope
+			color: var(--ia-peligro)
 
 	&__botones
 		display: flex
