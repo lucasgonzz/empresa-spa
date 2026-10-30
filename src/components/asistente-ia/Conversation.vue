@@ -9,98 +9,107 @@
 	lo unico que le da altura al hilo adentro del flex column que lo aloja
 	(`.asistente-ia-panel__cuerpo` y `.sidebar-conversacion`). Si se queda solo en el
 	scroller, el marco crece con el contenido, el hilo deja de scrollear y el composer se
-	va afuera del panel. -->
+	va afuera del panel.
+
+	Desde la misión agente-mejoras-uso-real (29/10/2026) el hilo se dibuja como el de
+	ia.comerciocity.com (ia-spa/src/views/Chat.vue y chat/ListaMensajes.vue): una columna
+	centrada de 48rem que se angosta sola en el sidebar de 380px del informe. -->
 	<div class="asistente-ia-conversacion-marco">
 		<div
 		class="asistente-ia-conversacion"
 		ref="container"
 		@scroll="on_scroll">
-			<p
-			v-if="loading"
-			class="asistente-ia-conversacion__aviso">
-				Cargando la conversación...
-			</p>
+			<div class="asistente-ia-conversacion__columna">
+				<!-- Cargando: el punto que late de ia-spa, en el medio. -->
+				<div
+				v-if="loading"
+				class="asistente-ia-conversacion__cargando"
+				role="status"
+				aria-label="Cargando la conversación">
+					<span
+					class="asistente-ia-conversacion__pulso"
+					aria-hidden="true"></span>
+				</div>
 
-			<!-- Bienvenida de conversación en blanco: refleja lo que el asistente
-			puede consultar de verdad (las tools de lectura, D15) y, desde la misión
-			asistente-ia-acciones (15/9/2026), lo que puede proponer cargar con una
-			tarjeta que la persona confirma. -->
-			<div
-			v-else-if="!messages.length"
-			class="asistente-ia-conversacion__bienvenida">
-				<span class="asistente-ia-conversacion__bienvenida-avatar">
-					<img
-					v-if="logo_url"
-					:src="logo_url"
-					alt="">
-					<i
-					v-else
-					class="bi bi-robot"></i>
-				</span>
-				<h5>¿En qué te puedo ayudar?</h5>
-				<p>
-					Preguntame por el stock o el precio de un artículo, el saldo de un
-					cliente o qué se está vendiendo más.
-				</p>
-				<p>
-					También puedo cargar gastos, pagos y tareas de la agenda: te dejo una
-					tarjeta para que confirmes.
-				</p>
-			</div>
+				<!-- Conversación en blanco: el saludo de ia-spa. Las sugerencias (lo que el
+				asistente puede consultar y lo que puede proponer cargar con una tarjeta, que
+				antes contaba este texto) las dibuja el panel junto al compositor, porque al
+				tocarlas se mandan. En el sidebar del informe no hay sugerencias: ahí se escribe
+				con la caja del informe. -->
+				<div
+				v-else-if="!messages.length"
+				class="asistente-ia-conversacion__bienvenida">
+					<pantalla-vacia solo_saludo></pantalla-vacia>
+				</div>
 
-			<!-- `ref="mensajes"`: este div ES el alto del contenido (es la columna flex que
-			aloja todas las viñetas), así que observarlo es la forma de enterarse de que el
-			hilo creció o encogió SIN que nadie haya scrolleado -- una foto que termina de
-			decodificar, una tarjeta que se confirma, el indicador de pensando que se va. Ver
-			`arrancar_observador_de_alto()`. -->
-			<div
-			v-else
-			ref="mensajes"
-			class="asistente-ia-conversacion__mensajes">
-				<p
-				v-if="loading_more"
-				class="asistente-ia-conversacion__aviso asistente-ia-conversacion__aviso--chico">
-					Cargando mensajes anteriores...
-				</p>
-				<template v-for="(message, index) in mensajes_visibles">
-					<!-- local_id primero: un globo que nació optimista conserva su key al
-					confirmarse y Vue no re-monta el nodo (la entrada no parpadea). -->
-					<message-bubble
-					:key="message.local_id || message.id"
-					:message="message"
-					@retry="reintentar"></message-bubble>
-					<!-- Puente al submódulo que originó la conversación, debajo del primer
-					mensaje del asistente (D24): sin markdown no hay links en el texto, el
-					botón es de la SPA. -->
+				<!-- `ref="mensajes"`: este div ES el alto del contenido (es la columna flex que
+				aloja todos los mensajes), así que observarlo es la forma de enterarse de que el
+				hilo creció o encogió SIN que nadie haya scrolleado -- una foto que termina de
+				decodificar, una tarjeta que se confirma, el indicador de pensando que se va. Ver
+				`arrancar_observador_de_alto()`. -->
+				<div
+				v-else
+				ref="mensajes"
+				class="asistente-ia-conversacion__mensajes">
+					<p
+					v-if="loading_more"
+					class="asistente-ia-conversacion__aviso"
+					role="status">
+						Cargando mensajes anteriores…
+					</p>
+					<template v-for="(message, index) in mensajes_visibles">
+						<!-- local_id primero: un mensaje que nació optimista conserva su key al
+						confirmarse y Vue no re-monta el nodo (la entrada no parpadea). -->
+						<mensaje-del-chat
+						:key="message.local_id || message.id"
+						:message="message"
+						:ultimo="clave_de(message) === clave_del_ultimo_del_agente"
+						@retry="reintentar"></mensaje-del-chat>
+						<!-- Puente al submódulo que originó la conversación, debajo del primer
+						mensaje del asistente (D24): sin markdown no hay links en el texto, el
+						botón es de la SPA. Va alineado con el texto de la respuesta, no con el
+						avatar. -->
+						<div
+						v-if="mostrar_boton_de_origen(message, index)"
+						:key="'origen-' + (message.id || message.local_id)"
+						class="asistente-ia-conversacion__origen">
+							<button
+							type="button"
+							class="asistente-ia-conversacion__boton-origen"
+							@click="ir_al_origen">
+								<icono
+								nombre="externo"
+								:tamano="16"></icono>
+								<span>{{ texto_boton_de_origen }}</span>
+							</button>
+						</div>
+					</template>
+
+					<pensando-indicator
+					v-if="hay_respuesta_en_curso"
+					:progreso="progreso_en_curso"></pensando-indicator>
+
+					<!-- Aviso de demora (R8: la cola es compartida con las importaciones). -->
 					<div
-					v-if="mostrar_boton_de_origen(message, index)"
-					:key="'origen-' + (message.id || message.local_id)"
-					class="asistente-ia-conversacion__origen">
-						<b-button
-						size="sm"
-						variant="outline-primary"
-						@click="ir_al_origen">
-							<i class="bi bi-box-arrow-up-right"></i>
-							{{ texto_boton_de_origen }}
-						</b-button>
+					v-if="hay_respuesta_en_curso && respuesta_demorada"
+					class="asistente-ia-conversacion__demora"
+					role="status">
+						<icono
+						nombre="reloj"
+						:tamano="18"></icono>
+						<span>
+							La respuesta está tardando más de lo normal. Puede haber una importación
+							en curso ocupando el servidor.
+						</span>
 					</div>
-				</template>
-
-				<pensando-indicator
-				v-if="hay_respuesta_en_curso"></pensando-indicator>
-
-				<!-- Aviso de demora (R8: la cola es compartida con las importaciones). -->
-				<p
-				v-if="hay_respuesta_en_curso && respuesta_demorada"
-				class="asistente-ia-conversacion__demora">
-					La respuesta está tardando más de lo normal. Puede haber una importación
-					en curso ocupando el servidor.
-				</p>
+				</div>
 			</div>
 		</div>
 
 		<!-- "Ir al ultimo mensaje" (pedido de Lucas, 22/9/2026). Sale solo cuando la persona
-		no esta abajo de todo; el umbral de tolerancia esta en TOLERANCIA_FINAL. -->
+		no esta abajo de todo; el umbral de tolerancia esta en TOLERANCIA_FINAL. Desde la
+		misión agente-mejoras-uso-real va centrado justo arriba del compositor, como el
+		«bajar» de ia-spa. -->
 		<button
 		v-if="lejos_del_final"
 		type="button"
@@ -109,16 +118,18 @@
 		aria-label="Ir al último mensaje"
 		data-testid="asistente-bajar-al-ultimo-mensaje"
 		@click="ir_al_final">
-			<i
-			class="bi bi-arrow-down"
-			aria-hidden="true"></i>
+			<icono
+			nombre="flecha_abajo"
+			:tamano="18"></icono>
 		</button>
 	</div>
 </template>
 
 <script>
-import MessageBubble from '@/components/asistente-ia/MessageBubble'
+import MensajeDelChat from '@/components/asistente-ia/mensaje/Index'
 import PensandoIndicator from '@/components/asistente-ia/PensandoIndicator'
+import PantallaVacia from '@/components/asistente-ia/PantallaVacia'
+import Icono from '@/components/asistente-ia/Icono'
 
 /**
  * Mapa origen de la conversación -> name de la ruta del submódulo (D24).
@@ -154,8 +165,8 @@ const ETIQUETA_POR_ORIGEN = {
  * "no está abajo de todo" (botón de ir al último mensaje, pedido de Lucas del 22/9/2026).
  *
  * ⚠️ En este módulo "el botón flotante" a secas es OTRO: `FloatingButton.vue`, el que abre
- * el chat (así lo nombra el comentario de `logo_url` acá abajo). Éste es el de la esquina de
- * la conversación.
+ * el chat (así lo nombran identidad.js y los comentarios del logo del negocio). Éste es el que
+ * aparece abajo de la conversación, justo arriba del compositor.
  *
  * 🔴 No es 0 y no puede serlo: el alto de un contenedor que scrollea es fraccionario (zoom
  * del navegador, densidad de pantalla), así que `scrollHeight - scrollTop - clientHeight`
@@ -173,8 +184,10 @@ const TOLERANCIA_FINAL = 120
 
 export default {
 	components: {
-		MessageBubble,
+		MensajeDelChat,
 		PensandoIndicator,
+		PantallaVacia,
+		Icono,
 	},
 	props: {
 		/**
@@ -184,6 +197,17 @@ export default {
 		 * sobre el informe. Desde el panel flotante queda en false y el puente sale.
 		 */
 		sin_puente: {
+			type: Boolean,
+			default: false,
+		},
+		/**
+		 * true mientras el panel flotante espera la primera carga de la bandeja (misión
+		 * agente-mejoras-uso-real, ver `bandeja_cargada` en Panel.vue). Hasta que llega no se
+		 * sabe si hay una conversación para abrir, así que en vez del saludo de la conversación
+		 * en blanco va el "cargando". El sidebar del informe no la pasa: ahí la conversación ya
+		 * viene elegida.
+		 */
+		esperando_bandeja: {
 			type: Boolean,
 			default: false,
 		},
@@ -240,8 +264,16 @@ export default {
 		respuesta_demorada() {
 			return this.$store.state.ai_chat.respuesta_demorada
 		},
+		/**
+		 * "Cargando la conversación": mientras viaja su primera página o, en el panel, mientras
+		 * llega la bandeja sin nada elegido ni en pantalla todavía. Con mensajes ya en pantalla
+		 * (se reabre el panel sobre la misma conversación) se los deja ver mientras tanto.
+		 */
 		loading() {
-			return this.$store.state.ai_chat.loading_messages
+			if (this.$store.state.ai_chat.loading_messages) {
+				return true
+			}
+			return this.esperando_bandeja && !this.selected_conversation_id && !this.messages.length
 		},
 		loading_more() {
 			return this.$store.state.ai_chat.loading_more_messages
@@ -263,16 +295,34 @@ export default {
 			return !this.messages_last_page || this.messages_page >= this.messages_last_page
 		},
 		/**
-		 * Mismo criterio que el botón flotante (D37).
+		 * La clave (la misma del :key) de la última respuesta del agente a la vista. Esa es la
+		 * que lleva la barra de acciones (copiar y valorar) siempre visible, como en ia-spa; las
+		 * anteriores la muestran al pasar el mouse.
+		 *
+		 * @returns {String|Number|null}
 		 */
-		logo_url() {
-			if (!this.user) {
+		clave_del_ultimo_del_agente() {
+			let del_agente = this.mensajes_visibles.filter(m => m.rol == 'assistant')
+			if (!del_agente.length) {
 				return null
 			}
-			if (this.user.online_configuration && this.user.online_configuration.logo_url) {
-				return this.user.online_configuration.logo_url
+			return this.clave_de(del_agente[del_agente.length - 1])
+		},
+		/**
+		 * La línea de progreso de la respuesta en curso («Buscando las ventas…»), la que el API
+		 * escribe en `ai_messages.progreso` antes de cada herramienta (ProgresoIaHelper, misión
+		 * app-ia-y-memoria). null si el mensaje pendiente no la trae (API viejo, o todavía no
+		 * arrancó ninguna herramienta): ahí el indicador dice "Pensando…".
+		 *
+		 * @returns {String|null}
+		 */
+		progreso_en_curso() {
+			let pendientes = this.messages.filter(m => m.rol == 'assistant' && m.estado == 'pendiente')
+			if (!pendientes.length) {
+				return null
 			}
-			return this.user.image_url || null
+			let progreso = pendientes[pendientes.length - 1].progreso
+			return progreso && String(progreso).trim() ? String(progreso).trim() : null
 		},
 		/**
 		 * Texto del botón de puente al submódulo (D24), según el origen de la
@@ -427,6 +477,16 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * La clave con la que se dibuja un mensaje (la del :key del template): el local_id del
+		 * optimista si lo tiene, si no el id.
+		 *
+		 * @param {Object} message
+		 * @returns {String|Number|null}
+		 */
+		clave_de(message) {
+			return message ? (message.local_id || message.id || null) : null
+		},
 		/**
 		 * Baja al último mensaje, de un salto.
 		 *
@@ -614,6 +674,8 @@ export default {
 </script>
 
 <style lang="sass">
+@import '@/components/asistente-ia/_tokens'
+
 // ─── El marco quieto, y el botón flotante que cuelga de él ──────────────────────────────
 //
 // 🔴 ESTE BLOQUE NO ES DECORACIÓN Y NO SE PUEDE COLAPSAR CON EL DE ABAJO. El elemento que
@@ -624,8 +686,8 @@ export default {
 //
 // 🔴 `flex: 1` + `min-height: 0` van acá ADEMÁS de en el scroller. Ese par es lo único que le
 // da altura al hilo adentro del flex column que lo aloja --`.asistente-ia-panel__cuerpo` en el
-// panel flotante y `.sidebar-conversacion` en el informe del mostrador--. Si se queda solo en
-// el scroller, este marco crece con el contenido, el hilo deja de scrollear y el composer se va
+// panel flotante y `.sidebar-conversacion` en el informe del mostrador--. Si se queda solo en el
+// scroller, este marco crece con el contenido, el hilo deja de scrollear y el composer se va
 // abajo de todo, fuera del panel.
 .asistente-ia-conversacion-marco
 	flex: 1
@@ -636,154 +698,166 @@ export default {
 	// contra esta columna.
 	display: flex
 	flex-direction: column
+	color: var(--ia-texto)
+	font-family: var(--ia-fuente)
 
-	// "Ir al último mensaje" (pedido de Lucas, 22/9/2026). Una píldora chica, del color de una
-	// tarjeta, pegada a la esquina de abajo a la derecha: justo arriba del input de escribir.
+	// "Ir al último mensaje" (pedido de Lucas, 22/9/2026): el «bajar» de ia-spa, un círculo
+	// centrado justo arriba del compositor (el borde de abajo de este marco ES el borde de
+	// arriba del compositor).
+	//
+	// Centrado ya no choca con la franja de la derecha (la barra de scroll que reserva el
+	// `scrollbar-gutter` y, en el panel flotante, la manija de 6px del borde): el botón quedaba a
+	// 22px del borde justamente para no caer debajo de las dos, y en el medio no hay nada.
 	&__ir-al-final
 		position: absolute
-		// 🔴 22px de separación del borde derecho, y NO los 12 de costumbre. La franja de la
-		// derecha ya está ocupada por dos cosas:
-		//   · el `scrollbar-gutter: stable` del scroller (ver abajo) reserva el ancho de la
-		//     barra --~15-17px en Windows-- contra el borde derecho de ESTE marco, así que un
-		//     botón a 12px queda debajo del thumb y el clic se lo lleva la barra;
-		//   · en el panel flotante, los 6px de `padding-right` de `.asistente-ia-panel__main`
-		//     son la franja de la manija de resize (`.asistente-ia-resizer`, `width: 6px;
-		//     right: 0`). Esos 6px quedan FUERA de este marco, porque el padding es del
-		//     abuelo: el botón no puede pisar la manija --agarrarla redimensionaría el
-		//     modal--, pero son la razón de que el borde derecho ya venga justo.
-		// 22 deja ~5px de aire entre el botón y la barra en Windows. Donde la barra se
-		// superpone (macOS, teléfonos) el gutter no reserva nada y el botón queda apenas más
-		// adentro, que se ve igual de bien.
-		right: 22px
+		left: 50%
 		bottom: 12px
+		transform: translateX(-50%)
 		z-index: 1
-		width: 34px
-		height: 34px
+		width: 36px
+		height: 36px
 		padding: 0
-		display: flex
+		display: inline-flex
 		align-items: center
 		justify-content: center
-		border: 1px solid var(--color-border, #dee2e6)
-		border-radius: 999px
-		background: var(--bg-card, #fff)
-		color: var(--color-text-secondary, #6c757d)
-		font-size: 15px
-		line-height: 1
+		border: 1px solid var(--ia-borde-fuerte)
+		border-radius: 50%
+		background: var(--ia-bg)
+		color: var(--ia-texto)
 		cursor: pointer
 		// 🔴 Explícito y no heredado: `common-vue/sass/_inputs.sass` le pone a TODO <button>
 		// del sistema una sombra diagonal (`1.95px 1.95px`), que es chasis de formulario. Acá
-		// hace falta una sombra pareja alrededor, como la de cualquier píldora flotante del
-		// repo. Gana por especificidad (0,2,0 contra 0,0,1), así que no depende del orden en
-		// que quede la hoja final.
-		box-shadow: 0 2px 8px var(--shadow-color, rgba(99, 99, 99, .2))
-		transition: background .12s ease, border-color .12s ease, color .12s ease
+		// hace falta la sombra pareja de la píldora flotante de ia-spa. Gana por especificidad
+		// (0,2,0 contra 0,0,1), así que no depende del orden en que quede la hoja final.
+		box-shadow: var(--ia-sombra-flotante)
+		transition: background var(--ia-transicion)
 
 		&:hover
-			background: var(--bg-hover, #f1f3f5)
-			border-color: var(--color-primary, #007bff)
-			color: var(--color-primary, #007bff)
+			background: var(--ia-bg-hover)
+
+		&:focus
+			outline: none
 
 		&:focus-visible
-			outline: 2px solid var(--color-primary, #007bff)
+			outline: 2px solid var(--ia-foco)
 			outline-offset: 2px
 
 .asistente-ia-conversacion
 	flex: 1
 	min-height: 0
 	overflow-y: auto
+	overflow-x: hidden
+	overscroll-behavior: contain
 	// Reserva siempre el lugar de la barra de scroll (misión asistente-ia-acciones). Sin esto,
 	// cuando la conversación empieza a scrollear aparece la barra, se come su ancho y los
 	// renglones de las tarjetas de carga (AccionCard.vue, que se acomodan por el ancho del
 	// contenedor) pueden saltar de una a dos líneas en el sidebar de 380px o a ~360px. Con
 	// barras superpuestas (teléfonos, macOS) no reserva nada, que es lo correcto.
 	scrollbar-gutter: stable
-	padding: 16px 18px 6px 18px
+	// Columna flex para que la columna de lectura pueda estirarse al alto entero y el saludo y
+	// el "cargando" queden en el medio.
+	display: flex
+	flex-direction: column
 
-	// 🔴 900 y no 640 (decisión de Lucas, 19/8/2026). El tope viejo lo alcanzaba el
-	// panel con apenas 942px de ancho, así que desde el default nuevo de 984 en adelante
-	// TODO lo que se ganaba estirando el modal se convertía en margen vacío y la
-	// conversación no se movía: la manija existía pero no servía para nada.
+	// La columna de lectura de ia-spa (`.principal__columna`, 48rem + aire), centrada.
 	//
-	// Sigue habiendo un tope, y no es capricho: una línea de texto muy larga se lee peor
-	// porque el ojo pierde el renglón al volver. 900 es el punto donde estirar el panel
-	// hasta el máximo todavía agranda la conversación sin que las líneas se vuelvan
-	// incómodas. Sacarlo del todo NO es "mejor": es volver al problema que el tope evita.
+	// 🔴 HASTA EL 29/10/2026 ESTE TOPE ERA DE 900px (decisión de Lucas del 19/8/2026, "900 y no
+	// 640": que estirar el panel agrande la conversación). Lo cambió el pedido de Lucas de que la
+	// ventana tenga el diseño de ia.comerciocity.com, que lee en la columna de ChatGPT: 48rem de
+	// texto, ~816px con el aire. Estirar el panel sigue agrandando la conversación hasta ese tope
+	// (con el ancho por defecto de 984 la columna ni lo alcanza); de ahí en más queda margen,
+	// como en ChatGPT, porque un renglón más largo se lee peor.
+	&__columna
+		+asistente-ia-columna
+		flex: 1 0 auto
+		display: flex
+		flex-direction: column
+
+	// La lista de mensajes de ia-spa (chat/ListaMensajes.vue): 18px entre mensaje y mensaje.
 	&__mensajes
 		display: flex
 		flex-direction: column
-		max-width: 900px
-		margin: 0 auto
+		gap: 18px
+		padding: 12px 0 28px 0
 
 	&__aviso
 		text-align: center
-		color: var(--color-text-secondary, #6c757d)
-		margin: 14px 0
-		font-size: .85rem
+		color: var(--ia-texto-3)
+		margin: 0
+		font-size: .86rem
 
-		&--chico
-			margin: 0 0 10px 0
-			font-size: .8rem
+	&__cargando
+		flex: 1
+		display: flex
+		align-items: center
+		justify-content: center
+		padding: 60px 0
 
+	// El punto que late de ia-spa mientras carga la conversación.
+	&__pulso
+		width: 12px
+		height: 12px
+		border-radius: 50%
+		background: var(--ia-texto)
+		animation: asistente-ia-conversacion-pulso 1.3s ease-in-out infinite
+
+	// El saludo de la conversación en blanco, en el medio del alto que hay.
 	&__bienvenida
-		height: 100%
-		display: flex
-		flex-direction: column
-		align-items: center
-		justify-content: center
-		text-align: center
-		padding: 0 26px
-		color: var(--color-text-secondary, #6c757d)
-
-		h5
-			color: var(--color-text-primary, #212529)
-			margin-bottom: 6px
-
-		p
-			max-width: 380px
-			font-size: .9rem
-			margin: 0
-
-			// La segunda línea (lo que el asistente puede cargar, misión
-			// asistente-ia-acciones) va apenas separada de la primera: son dos ideas.
-			& + p
-				margin-top: 6px
-
-	&__bienvenida-avatar
-		width: 44px
-		height: 44px
-		border-radius: 999px
-		background: var(--color-primary, #007bff)
-		color: #fff
-		font-size: 22px
+		flex: 1
 		display: flex
 		align-items: center
 		justify-content: center
-		margin-bottom: 12px
-		overflow: hidden
+		padding: 24px 0
 
-		img
-			width: 100%
-			height: 100%
-			object-fit: cover
-			display: block
-
-	// El puente al submódulo cuelga del primer mensaje del asistente (D24). El margen
-	// superior era -6px para pegarlo al texto suelto que el asistente tenía antes; con la
-	// viñeta (19/8/2026) ese negativo lo mete contra el borde del recuadro, así que va 0.
+	// El puente al submódulo cuelga del primer mensaje del asistente (D24), alineado con el texto
+	// de la respuesta: el avatar mide 30px y el espacio 14px (ver mensaje/MensajeAgente.vue).
 	&__origen
 		align-self: flex-start
-		margin: 0 0 14px 0
-		padding: 0 2px
+		margin: -8px 0 0 44px
 
+	&__boton-origen
+		+asistente-ia-boton-secundario
+		min-height: 32px
+		padding: 0 14px
+		font-size: .86rem
+
+	// El aviso de demora, como el de ia-spa: un recuadro suave alineado con las respuestas.
 	&__demora
-		font-size: .8rem
-		color: var(--color-text-secondary, #6c757d)
-		margin: 0 0 12px 0
-		padding: 0 2px
+		display: flex
+		align-items: center
+		gap: 10px
+		margin-left: 44px
+		padding: 10px 14px
+		border-radius: 14px
+		background: var(--ia-bg-sutil)
+		color: var(--ia-texto-2)
+		font-size: .9rem
+		line-height: 1.45
 
-// El botón no anima nada por su cuenta --baja de un salto, ver `scrollToBottom()`--, así que lo
-// único que hay para apagar acá es el tinte del hover.
+		.asistente-ia-icono
+			flex-shrink: 0
+
+// En el teléfono el avatar de las respuestas mide 26px y el espacio 10px: el puente y el aviso
+// se corren a la par.
+@media screen and (max-width: 767px)
+	.asistente-ia-conversacion__origen
+		margin-left: 36px
+
+	.asistente-ia-conversacion__demora
+		margin-left: 0
+
+@keyframes asistente-ia-conversacion-pulso
+	0%, 100%
+		transform: scale(.85)
+		opacity: .55
+	50%
+		transform: scale(1)
+		opacity: 1
+
 @media (prefers-reduced-motion: reduce)
 	.asistente-ia-conversacion-marco__ir-al-final
 		transition: none
+
+	.asistente-ia-conversacion__pulso
+		animation: none
 </style>

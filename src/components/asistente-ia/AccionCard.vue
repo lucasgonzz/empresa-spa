@@ -595,17 +595,15 @@ export default {
 </script>
 
 <style lang="sass">
+@import '@/components/asistente-ia/_tokens'
+
 // Tarjeta de una carga propuesta por el asistente (misión asistente-ia-acciones, 15/9/2026).
 //
-// 🔴 El fondo es --bg-hover + borde. Con la viñeta del asistente de vuelta en --bg-section
-// (MessageBubble.vue, misión burbujas-y-negrita-asistente-ia, 21/9/2026), la tarjeta siempre
-// cae DENTRO de esa viñeta y el escalón es siempre el mismo, sin importar si el panel que la
-// aloja es el flotante o el sidebar del informe del mostrador:
-//
-//   claro:  tarjeta #f1f3f5 sobre viñeta #f8f9fa · oscuro: tarjeta #3a4048 sobre viñeta #272b31
-//
-// Los dos grises quedan cerca en claro; ahí el borde --color-border es el que la define. Sin
-// sombra: repetida en cada tarjeta, ensuciaría la conversación.
+// Desde la misión agente-mejoras-uso-real (29/10/2026) se dibuja como la tarjeta de acción de
+// ia.comerciocity.com (ia-spa, mensajes/AccionCard.vue): fondo sutil, borde fino, radio 16 y los
+// botones en píldora (el primario en el negro del botón de enviar). La respuesta del agente ya no
+// tiene viñeta, así que la tarjeta se apoya directo sobre el fondo de la conversación, como allá.
+// Sin sombra: repetida en cada tarjeta, ensuciaría la conversación.
 //
 // 🔴 Todo se acomoda por el ancho del CONTENEDOR y no del viewport: la misma tarjeta vive en
 // el panel flotante (984px por defecto, casi pantalla completa en teléfono) y en el sidebar
@@ -613,35 +611,34 @@ export default {
 // query de pantalla ahí se equivoca. Por eso los renglones son flex-wrap: la etiqueta tiene
 // un ancho fijo chico y el valor baja a la línea de abajo cuando no le quedan 140px al lado.
 //
-// Los 140px no son a ojo. Con los paddings de hoy, al valor le quedan ~150px en el sidebar
-// de 380, ~123px en el panel de un teléfono de 360 y ~320px en el panel de escritorio. El
-// sidebar da ~150 fijos porque Conversation.vue reserva siempre el lugar de la barra de
-// scroll (scrollbar-gutter: stable): sin esa reserva pasaba de ~169px a ~150px en el momento
-// en que la conversación empezaba a scrollear, y un umbral entre esos dos números hacía
-// saltar los renglones de una a dos líneas. Si cambian los paddings de la viñeta o del
-// sidebar, o se saca el gutter, hay que volver a medir.
+// Los 140px no son a ojo: se midieron con la viñeta de antes (~150px al valor en el sidebar de
+// 380, ~123px en un teléfono de 360, ~320px en el panel de escritorio). Sin la viñeta del
+// agente el cuerpo de la respuesta ganó unos 30px de ancho, así que el valor tiene un poco más
+// de lugar en los tres. Conversation.vue sigue reservando el lugar de la barra de scroll
+// (scrollbar-gutter: stable) para que ese ancho no salte cuando la conversación empieza a
+// scrollear. Si cambian los paddings de la columna o del sidebar, o se saca el gutter, hay que
+// volver a medir.
 .asistente-ia-accion
-	max-width: 460px
-	margin-top: 10px
-	padding: 12px 14px
-	background: var(--bg-hover, #f1f3f5)
-	border: 1px solid var(--color-border, #dee2e6)
-	border-radius: 12px
-	color: var(--color-text-primary, #212529)
+	max-width: 520px
+	padding: 14px 16px
+	background: var(--ia-bg-sutil)
+	border: 1px solid var(--ia-borde)
+	border-radius: 16px
+	color: var(--ia-texto)
 	text-align: left
 
 	&__titulo
-		font-size: .9rem
+		font-size: .98rem
 		font-weight: 600
 		line-height: 1.35
-		margin-bottom: 2px
+		margin-bottom: 6px
 
 	&__renglones
 		transition: opacity .15s ease
 
 	// Miniatura de la imagen candidata (misión asistente-masivas-imagenes-y-remito, 19/9/2026).
 	// Se acomoda por el ancho del CONTENEDOR, como todo lo demás de la tarjeta: en el panel de
-	// escritorio la tarjeta mide sus 460px de tope, en el sidebar de 380 del mostrador y en un
+	// escritorio la tarjeta mide sus 520px de tope, en el sidebar de 380 del mostrador y en un
 	// teléfono de 360 queda bastante más angosta, y la foto entra siempre porque su ancho
 	// máximo es el 100% de la tarjeta y su alto máximo 160px; la proporción la conserva el
 	// navegador (width/height auto) y `object-fit: contain` es la red por si algún día se le
@@ -667,8 +664,8 @@ export default {
 			padding: 4px
 			box-sizing: border-box
 			background: #fff
-			border: 1px solid var(--color-border-secondary, #e9ecef)
-			border-radius: 8px
+			border: 1px solid var(--ia-borde)
+			border-radius: 12px
 
 	// La URL no cargó: una línea atenuada donde iba la foto, con el mismo molde ícono + texto
 	// del aviso, para que la tarjeta no cambie de forma.
@@ -677,72 +674,73 @@ export default {
 		align-items: baseline
 		gap: 7px
 		margin: 8px 0 6px 0
-		font-size: .8rem
-		line-height: 1.4
-		color: var(--color-text-secondary, #6c757d)
+		font-size: .84rem
+		line-height: 1.45
+		color: var(--ia-texto-2)
 
 		i
 			flex-shrink: 0
 
+	// Los renglones de ia-spa: separados por una raya punteada, la etiqueta en el gris y el valor
+	// con peso.
 	&__renglon
 		display: flex
 		flex-wrap: wrap
 		align-items: baseline
 		column-gap: 12px
-		padding: 6px 0
-		border-top: 1px solid var(--color-border-secondary, #e9ecef)
-		line-height: 1.4
+		padding: 5px 0
+		border-top: 1px dashed var(--ia-borde)
+		line-height: 1.45
 
 		&:first-child
 			border-top: none
 
 	&__etiqueta
 		flex: 0 0 96px
-		font-size: .8rem
-		color: var(--color-text-secondary, #6c757d)
+		font-size: .86rem
+		color: var(--ia-texto-2)
 
 	&__valor
 		flex: 1 1 140px
 		min-width: 0
-		font-size: .85rem
-		word-break: break-word
+		font-size: .92rem
+		font-weight: 500
+		overflow-wrap: anywhere
 
 	// Las cuatro líneas de ícono + texto comparten la forma: el ícono no se achica y el
 	// texto largo se envuelve a su lado, no debajo del ícono.
 	&__aviso, &__error, &__resultado, &__cierre
 		display: flex
 		align-items: baseline
-		gap: 7px
+		gap: 8px
 		margin: 0
-		line-height: 1.4
+		line-height: 1.45
 
 		i
 			flex-shrink: 0
 
 	&__aviso
-		margin-top: 8px
-		font-size: .8rem
-		color: var(--color-text-secondary, #6c757d)
+		margin-top: 10px
+		font-size: .86rem
+		color: var(--ia-texto-2)
 		transition: opacity .15s ease
 
 	&__pie
-		margin-top: 10px
-		padding-top: 10px
-		border-top: 1px solid var(--color-border-secondary, #e9ecef)
+		margin-top: 12px
 
 	&__error
 		margin-bottom: 10px
-		font-size: .8rem
-		color: var(--btn-peligro-texto, #9c3a36)
+		font-size: .86rem
+		color: var(--ia-peligro)
 
 	// Nota "Esperá a que responda el asistente": alineada a la derecha, pegada a los botones,
 	// porque habla de Confirmar y no de la tarjeta.
 	&__espera
 		margin: 0 0 8px 0
-		font-size: .8rem
+		font-size: .82rem
 		line-height: 1.4
 		text-align: right
-		color: var(--color-text-secondary, #6c757d)
+		color: var(--ia-texto-3)
 
 	&__botones
 		display: flex
@@ -750,29 +748,77 @@ export default {
 		justify-content: flex-end
 		gap: 8px
 
-	// El verde de la caja abierta es el único verde del tema con contraparte oscura
-	// (#2f7d5d en claro, #57b48d en oscuro): los dos pasan 4,5:1 contra --bg-card.
+	// El verde de "quedó registrado" de ia-spa (--ia-ok), con su contraparte oscura.
 	&__resultado
-		font-size: .85rem
+		font-size: .92rem
 		font-weight: 500
-
-		i
-			color: var(--caja-abierta-acento, #2f7d5d)
+		color: var(--ia-ok)
 
 	&__ver
 		margin-top: 10px
 
 	&__cierre
-		font-size: .8rem
-		color: var(--color-text-secondary, #6c757d)
+		font-size: .88rem
+		color: var(--ia-texto-2)
 
-	// common-vue/sass/_inputs.sass le pone sombra a todo <button> del sistema, salvo en
-	// modales, navbar y sidebars. La tarjeta es una confirmación chica, de la misma familia
-	// que un modal, y con sombra los botones se veían pesados. El :not(:focus) deja intacto
-	// el anillo de foco de bootstrap, que también es un box-shadow y es lo que ve quien
-	// maneja la pantalla con teclado.
-	.btn:not(:focus)
+	// Los b-button de la tarjeta, vestidos como los botones de ia-spa: el primario (Confirmar)
+	// en píldora negra --blanca en oscuro--, y Cancelar y «Ver en …» en píldora con borde.
+	//
+	// 🔴 Los selectores llevan `.asistente-ia-accion` adelante y la clase de la variante a
+	// propósito: bootstrap pinta `.btn-primary`, `.btn-outline-*` y sus `:hover` / `:focus` /
+	// `:disabled` con (0,2,0) a (0,3,0), y el modo oscuro del sistema los vuelve a pintar; con la
+	// tarjeta adelante estos pesan una clase más y no dependen del orden de la hoja.
+	//
+	// Y la sombra: common-vue/sass/_inputs.sass le pone sombra a todo <button> del sistema, y el
+	// `:focus` de bootstrap pone un anillo que también es un box-shadow. Acá ninguno de los dos: el
+	// foco de teclado va con `outline`, como en ia-spa.
+	.btn
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		gap: 6px
+		min-height: 36px
+		padding: 0 16px
+		border-radius: 999px
+		font-family: inherit
+		font-size: .9rem
+		font-weight: 500
+		line-height: 1.2
 		box-shadow: none
+		transition: background var(--ia-transicion), border-color var(--ia-transicion), opacity var(--ia-transicion)
+
+		&:focus, &:active, &:not(:disabled):not(.disabled):active
+			box-shadow: none
+
+		&:focus-visible
+			outline: 2px solid var(--ia-foco)
+			outline-offset: 2px
+
+		&:disabled, &.disabled
+			opacity: .5
+
+	.btn.btn-primary
+		border: 1px solid var(--ia-boton-enviar)
+		background: var(--ia-boton-enviar)
+		color: var(--ia-boton-enviar-texto)
+
+		&:hover:not(:disabled), &:focus, &:not(:disabled):not(.disabled):active
+			border-color: var(--ia-boton-enviar)
+			background: var(--ia-boton-enviar)
+			color: var(--ia-boton-enviar-texto)
+
+		&:hover:not(:disabled)
+			opacity: .86
+
+	.btn.btn-outline-secondary, .btn.btn-outline-primary
+		border: 1px solid var(--ia-borde-fuerte)
+		background: transparent
+		color: var(--ia-texto)
+
+		&:hover:not(:disabled), &:focus, &:not(:disabled):not(.disabled):active
+			border-color: var(--ia-borde-fuerte)
+			background: var(--ia-bg-hover)
+			color: var(--ia-texto)
 
 	// Cancelada, reemplazada, vencida (o un estado que esta SPA no conoce): lo que decía la
 	// tarjeta queda atenuado --la miniatura también: es parte de lo que se propuso--, y el

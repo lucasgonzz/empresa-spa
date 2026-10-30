@@ -1,7 +1,22 @@
 <template>
-	<div class="asistente-ia-pensando">
-		<!-- El mismo avatar del botón flotante, a 28px, con un halo que late (D42). -->
-		<span class="asistente-ia-pensando__avatar">
+	<!-- El "pensando" de ia-spa (mensajes/MensajeAsistente.vue mientras la respuesta está
+	pendiente): el avatar del agente en el lugar donde en un rato va a estar la respuesta, un punto
+	que late y la línea de progreso con el brillo que la recorre, como ChatGPT. Misión
+	agente-mejoras-uso-real, 29/10/2026.
+
+	Tiene la MISMA forma que una respuesta del agente (avatar de 30px + cuerpo, ver
+	mensaje/MensajeAgente.vue), y no es cosmético: ocupa el lugar donde en un segundo va a estar
+	la respuesta, así que cuando llega el bloque se queda quieto y solo cambia el contenido (D41,
+	D18: nunca queda un globo vacío a la vista). Si cambia la respuesta, este va con ella.
+
+	Bajo prefers-reduced-motion se apagan el latido y el brillo y queda el texto fijo (D42). -->
+	<div
+	class="asistente-ia-pensando"
+	role="status"
+	aria-live="polite">
+		<span
+		class="asistente-ia-pensando__avatar"
+		aria-hidden="true">
 			<img
 			v-if="logo_url"
 			:src="logo_url"
@@ -9,145 +24,141 @@
 			<i
 			v-else
 			class="bi bi-robot"></i>
-			<span class="asistente-ia-pensando__distintivo">
-				<i class="bi bi-stars"></i>
-			</span>
 		</span>
-		<!-- Tres puntitos con latido escalonado; bajo prefers-reduced-motion se
-		apagan las animaciones y queda el texto fijo (D42). -->
-		<span class="asistente-ia-pensando__puntos">
-			<span class="asistente-ia-pensando__punto"></span>
-			<span class="asistente-ia-pensando__punto"></span>
-			<span class="asistente-ia-pensando__punto"></span>
+		<span class="asistente-ia-pensando__cuerpo">
+			<span
+			class="asistente-ia-pensando__pulso"
+			aria-hidden="true"></span>
+			<span class="asistente-ia-pensando__texto">{{ texto }}</span>
 		</span>
-		<span class="asistente-ia-pensando__texto">Pensando…</span>
 	</div>
 </template>
 
 <script>
+import { logo_del_negocio } from '@/components/asistente-ia/identidad'
+
 export default {
+	props: {
+		/**
+		 * La línea de progreso de la respuesta en curso («Buscando las ventas…»), la que el API
+		 * escribe en `ai_messages.progreso` antes de cada herramienta. null o vacía = "Pensando…".
+		 * La resuelve Conversation.vue (`progreso_en_curso`).
+		 */
+		progreso: {
+			type: String,
+			default: null,
+		},
+	},
 	computed: {
 		/**
-		 * Mismo criterio que el botón flotante (D37): logo de la tienda online,
-		 * si no la imagen de la cuenta, si no el robotito.
+		 * Mismo criterio que el botón flotante (D37): logo de la tienda online, si no la imagen
+		 * de la cuenta, si no el robotito.
+		 *
+		 * @returns {String|null}
 		 */
 		logo_url() {
-			if (!this.user) {
-				return null
-			}
-			if (this.user.online_configuration && this.user.online_configuration.logo_url) {
-				return this.user.online_configuration.logo_url
-			}
-			return this.user.image_url || null
+			return logo_del_negocio(this.user)
+		},
+		/**
+		 * Lo que se lee: el progreso si vino, si no "Pensando…" (el texto de ia-spa).
+		 *
+		 * @returns {String}
+		 */
+		texto() {
+			return this.progreso ? this.progreso : 'Pensando…'
 		},
 	},
 }
 </script>
 
 <style lang="sass">
-// Lleva la MISMA viñeta que un mensaje del asistente (ver MessageBubble.vue), y no es
-// cosmético: los puntitos ocupan el lugar donde en un segundo va a estar la respuesta.
-// Sueltos sobre el fondo, la llegada del texto se veía como un salto de "nada" a
-// "tarjeta con borde" -- exactamente el tirón que la viñeta vino a sacar. Con el
-// recuadro puesto desde antes, el bloque se queda quieto y solo se le cambia el
-// contenido. Si algún día cambia el aspecto del globo del asistente, este va con él.
-.asistente-ia-pensando
-	align-self: flex-start
-	display: flex
-	align-items: center
-	gap: 10px
-	margin-bottom: 14px
-	padding: 9px 14px
-	background: var(--bg-hover, #f1f3f5)
-	border: 1px solid var(--color-border, #dee2e6)
-	border-radius: 14px
-	box-shadow: 0 1px 2px var(--shadow-color, rgba(99, 99, 99, .2))
+@import '@/components/asistente-ia/_tokens'
 
+.asistente-ia-pensando
+	display: flex
+	align-items: flex-start
+	gap: 14px
+	padding: 4px 0 0 0
+
+	// El mismo avatar de la respuesta (MensajeAgente.vue).
 	&__avatar
-		position: relative
-		width: 28px
-		height: 28px
-		border-radius: 999px
-		background: var(--color-primary, #007bff)
-		color: #fff
-		font-size: 14px
-		display: flex
+		flex: 0 0 auto
+		width: 30px
+		height: 30px
+		margin-top: 1px
+		border-radius: 50%
+		border: 1px solid var(--ia-borde)
+		background: var(--ia-bg)
+		color: var(--ia-primario)
+		font-size: 15px
+		display: inline-flex
 		align-items: center
 		justify-content: center
-		flex-shrink: 0
-		// Halo de color de marca que late (D42). El rgba es el azul de marca en
-		// claro al 25%; sobre el tema oscuro se lee igual de bien como glow.
-		animation: asistente-ia-latido 2.4s ease-in-out infinite
+		overflow: hidden
 
 		img
 			width: 100%
 			height: 100%
-			border-radius: 999px
 			object-fit: cover
 			display: block
 
-	&__distintivo
-		position: absolute
-		right: -4px
-		bottom: -4px
-		width: 14px
-		height: 14px
-		border-radius: 999px
-		background: var(--color-primary, #007bff)
-		// Recorte contra el fondo que tiene DETRAS, que desde la viñeta es el del globo
-		// y ya no el del panel.
-		border: 1.5px solid var(--bg-hover, #f1f3f5)
-		color: #fff
-		font-size: 7px
-		line-height: 1
+	&__cuerpo
+		flex: 1 1 auto
+		min-width: 0
+		min-height: 30px
 		display: flex
 		align-items: center
-		justify-content: center
+		gap: 10px
+		font-size: .98rem
 
-	&__puntos
-		display: flex
-		align-items: center
-		gap: 5px
+	// El punto que late de ia-spa (`.msj-asistente__pulso`).
+	&__pulso
+		flex: 0 0 auto
+		width: 12px
+		height: 12px
+		border-radius: 50%
+		background: var(--ia-texto)
+		animation: asistente-ia-pensando-pulso 1.3s ease-in-out infinite
 
-	&__punto
-		width: 5px
-		height: 5px
-		border-radius: 999px
-		background: var(--color-text-secondary, #6c757d)
-		opacity: .25
-		animation: asistente-ia-punto 1.2s infinite
-
-		&:nth-child(2)
-			animation-delay: .2s
-
-		&:nth-child(3)
-			animation-delay: .4s
-
-	// El texto fijo existe solo para quien pidió menos movimiento.
+	// El brillo que recorre el texto, como el de ChatGPT (`.texto-brillante` de ia-spa).
 	&__texto
-		display: none
-		font-size: .85rem
-		color: var(--color-text-secondary, #6c757d)
+		min-width: 0
+		overflow-wrap: anywhere
+		background: linear-gradient(90deg, var(--ia-texto-3) 0%, var(--ia-texto-3) 40%, var(--ia-texto) 50%, var(--ia-texto-3) 60%, var(--ia-texto-3) 100%)
+		background-size: 300% 100%
+		-webkit-background-clip: text
+		background-clip: text
+		color: transparent
+		animation: asistente-ia-pensando-brillo 2.2s linear infinite
 
-@keyframes asistente-ia-latido
-	0%, 100%
-		box-shadow: 0 0 0 0 rgba(0, 123, 255, .25)
-	50%
-		box-shadow: 0 0 0 8px rgba(0, 123, 255, 0)
+@media screen and (max-width: 767px)
+	.asistente-ia-pensando
+		gap: 10px
 
-@keyframes asistente-ia-punto
+	.asistente-ia-pensando__avatar
+		width: 26px
+		height: 26px
+
+@keyframes asistente-ia-pensando-pulso
 	0%, 100%
-		opacity: .25
+		transform: scale(.85)
+		opacity: .55
 	50%
+		transform: scale(1)
 		opacity: 1
 
+@keyframes asistente-ia-pensando-brillo
+	0%
+		background-position: 100% 50%
+	100%
+		background-position: 0% 50%
+
 @media (prefers-reduced-motion: reduce)
-	.asistente-ia-pensando__avatar
+	.asistente-ia-pensando__pulso
 		animation: none
 
-	.asistente-ia-pensando__puntos
-		display: none
-
 	.asistente-ia-pensando__texto
-		display: inline
+		animation: none
+		background: none
+		color: var(--ia-texto-2)
 </style>

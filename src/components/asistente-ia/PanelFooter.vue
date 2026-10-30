@@ -197,19 +197,25 @@ export default {
 }
 </script>
 <style lang="sass" scoped>
+@import '@/components/asistente-ia/_tokens'
+
 // Ámbar del aviso "te estás acercando al límite". Hasta hoy el sistema no tenía token de
 // warning y este color iba como literal documentado; ahora sale de --color-text-warning-strong
 // (agregado a _dark_theme.sass en este mismo barrido), con este literal como fallback de modo
-// claro. El rojo de "llegaste al límite" y el azul normal ya salían de tokens del sistema.
+// claro. ia-spa no tiene un ámbar propio, así que se queda el del sistema, que existe en los dos
+// temas.
 $aviso-cerca: #d97706
 
+// Desde la misión agente-mejoras-uso-real (29/10/2026) el footer vive en el bloque de abajo de la
+// barra lateral, entre "Nuevo chat" y la fila de la persona, como el resto de ia-spa: sin borde
+// propio (la raya de arriba del bloque ya separa) y con el mismo margen izquierdo que los
+// renglones de esa barra.
 .asistente-ia-footer
 	flex-shrink: 0
-	border-top: 1px solid var(--color-border, #dee2e6)
-	padding: 10px 12px
+	padding: 6px 10px 4px 10px
 	display: flex
 	flex-direction: column
-	gap: 8px
+	gap: 6px
 
 	&__modo
 		display: flex
@@ -217,7 +223,7 @@ $aviso-cerca: #d97706
 		justify-content: space-between
 		gap: 8px
 		font-size: .8rem
-		color: var(--color-text-secondary, #6c757d)
+		color: var(--ia-texto-2)
 
 	&__modo-activo
 		display: inline-flex
@@ -233,7 +239,7 @@ $aviso-cerca: #d97706
 	&__plan
 		flex-shrink: 0
 		font-weight: 600
-		color: var(--color-text-primary, #212529)
+		color: var(--ia-texto)
 
 	&__uso
 		display: flex
@@ -243,33 +249,33 @@ $aviso-cerca: #d97706
 	&__barra
 		height: 5px
 		border-radius: 999px
-		background: var(--bg-hover, #f1f3f5)
+		background: var(--ia-bg-activo)
 		overflow: hidden
 
 	&__barra-relleno
 		height: 100%
 		border-radius: 999px
-		background: var(--color-primary, #007bff)
+		background: var(--ia-primario)
 		transition: width .3s ease
 
 		&.es-cerca
 			background: var(--color-text-warning-strong, $aviso-cerca)
 
 		&.es-supero
-			background: var(--btn-peligro-borde, #b4443f)
+			background: var(--ia-peligro)
 
 	&__texto
 		margin: 0
 		font-size: .74rem
 		line-height: 1.3
-		color: var(--color-text-secondary, #6c757d)
+		color: var(--ia-texto-3)
 
 		// El texto acompaña el color de la barra en los dos estados de aviso.
 		&.es-cerca
 			color: var(--color-text-warning-strong, $aviso-cerca)
 
 		&.es-supero
-			color: var(--btn-peligro-texto, #9c3a36)
+			color: var(--ia-peligro)
 
 @media (prefers-reduced-motion: reduce)
 	.asistente-ia-footer__barra-relleno

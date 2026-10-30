@@ -1339,6 +1339,22 @@ export default {
 							return
 						}
 
+						// Sigue pendiente: se trae SOLO la línea de progreso («Buscando las
+						// ventas…», misión app-ia-y-memoria) para el indicador de pensando
+						// (misión agente-mejoras-uso-real, 29/10/2026). El API la escribe sin
+						// broadcast, así que este polling es la única vía por la que llega.
+						//
+						// 🔴 Solo `progreso` y no el modelo entero: el pendiente no tiene texto ni
+						// tarjetas todavía, y parchearlo completo podría pisar con vacío algo que
+						// el evento de Echo ya hubiera traído. Sin la clave (API viejo) no se toca
+						// nada y el indicador dice "Pensando…".
+						if (state.selected_conversation_id == payload.conversation_id && typeof model.progreso != 'undefined') {
+							commit('patchMessage', {
+								id: model.id,
+								progreso: model.progreso || null,
+							})
+						}
+
 						agendar_proxima_consulta()
 					})
 					.catch(err => {
