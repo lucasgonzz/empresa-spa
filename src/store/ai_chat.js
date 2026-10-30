@@ -1457,6 +1457,81 @@ export default {
 			commit('setRespuestaDemorada', false)
 		},
 		/**
+		 * Me gusta / no me gusta de una respuesta del agente, con el comentario del no me gusta
+		 * (misión agente-mejoras-uso-real, 29/10/2026, contrato C1):
+		 * `PUT api/ai-mensajes/{message_id}/valoracion` con `{ valoracion, comentario }`, que
+		 * devuelve `{ model: { id, valoracion, valoracion_comentario, valorado_at } }`.
+		 *
+		 * Optimista, como un "me gusta" de cualquier chat: el mensaje cambia en pantalla al toque
+		 * (patchMessage) y, si el PUT falla, vuelve a lo que tenía antes y la promesa rechaza para
+		 * que ValoracionMensaje.vue avise. Lo que vuelve del API pisa lo optimista (es la verdad:
+		 * por ejemplo, un comentario de puros espacios el API lo guarda como null).
+		 *
+		 * Reglas del contrato que se reflejan también en lo optimista: `null` saca la valoración y
+		 * el comentario; con `me_gusta` el comentario se borra; el comentario solo viaja con
+		 * `no_me_gusta` y si hay algo escrito o elegido (si no, no se manda la clave).
+		 *
+		 * 🔴 Las dos banderas no decoran. `skip_global_error_event`: el aviso de un fallo lo da el
+		 * componente (sin la bandera, el interceptor de main.js tiraría ADEMÁS su toast genérico).
+		 * `skip_navigation_cancel`: el chat es global (App.vue) y cambiar de pantalla con el PUT en
+		 * vuelo --tocar «Ver en …» justo después de valorar-- lo cancelaría en el navegador aunque el
+		 * API ya lo hubiera guardado, y la pantalla volvería atrás algo que quedó registrado.
+		 *
+		 * Los valores del mensaje se leen con `|| null`: contra un API viejo, o una base que todavía
+		 * no tiene las columnas, `valoracion` y `valoracion_comentario` no vienen.
+		 *
+		 * @param {Object} payload { message_id, valoracion: 'me_gusta'|'no_me_gusta'|null, comentario? }
+		 * @returns {Promise} resuelve con el `model` del API; rechaza con el error de axios.
+		 */
+		valorarMensaje({ commit, state }, payload) {
+			let message_id = payload.message_id
+			let valoracion = payload.valoracion || null
+			let comentario = null
+			if (valoracion == 'no_me_gusta' && typeof payload.comentario == 'string' && payload.comentario.trim() != '') {
+				comentario = payload.comentario.trim()
+			}
+
+			let actual = state.messages.find(m => m.id == message_id)
+			let previo = {
+				id: message_id,
+				valoracion: actual ? (actual.valoracion || null) : null,
+				valoracion_comentario: actual ? (actual.valoracion_comentario || null) : null,
+			}
+
+			commit('patchMessage', {
+				id: message_id,
+				valoracion: valoracion,
+				valoracion_comentario: comentario,
+			})
+
+			let body = { valoracion: valoracion }
+			if (comentario) {
+				body.comentario = comentario
+			}
+
+			return axios.put('/api/ai-mensajes/' + message_id + '/valoracion', body, {
+				skip_global_error_event: true,
+				skip_navigation_cancel: true,
+			})
+				.then(res => {
+					let model = res.data && res.data.model ? res.data.model : null
+					if (model && model.id) {
+						commit('patchMessage', {
+							id: model.id,
+							valoracion: model.valoracion || null,
+							valoracion_comentario: model.valoracion_comentario || null,
+							valorado_at: model.valorado_at || null,
+						})
+					}
+					return model
+				})
+				.catch(err => {
+					commit('patchMessage', previo)
+					console.log(err)
+					return Promise.reject(err)
+				})
+		},
+		/**
 		 * Persiste las preferencias de UI de la PERSONA (posición del botón flotante,
 		 * ancho de la sidebar, ancho del modal) con un debounce de 500 ms: una sola
 		 * escritura por gesto, y si dos gestos se pisan los payloads se funden. El endpoint

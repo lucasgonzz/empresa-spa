@@ -77,8 +77,10 @@
 				:conversation_id="message.ai_conversation_id"></accion-card>
 			</div>
 
-			<!-- La barra de acciones de ia-spa: aparece al pasar el mouse (siempre en la última
-			respuesta y en pantallas táctiles). -->
+			<!-- La barra de acciones de ia-spa: «Copiar» y la valoración (👍 / 👎, con el cuadro
+			del no me gusta en su propio renglón). Aparece al pasar el mouse; queda siempre a la
+			vista en la última respuesta, en una respuesta ya valorada (que se vea qué se marcó),
+			con el cuadro abierto y en pantallas táctiles. -->
 			<div
 			v-if="con_barra"
 			class="asistente-ia-msj-agente__barra"
@@ -94,6 +96,9 @@
 					:nombre="copiado ? 'check' : 'copiar'"
 					:tamano="17"></icono>
 				</button>
+				<valoracion-mensaje
+				:message="message"
+				@cuadro="valoracion_abierta = $event"></valoracion-mensaje>
 			</div>
 		</div>
 	</article>
@@ -103,7 +108,9 @@
 import AccionCard from '@/components/asistente-ia/AccionCard'
 import AdjuntosDeMensaje from '@/components/asistente-ia/AdjuntosDeMensaje'
 import Icono from '@/components/asistente-ia/Icono'
+import ValoracionMensaje from '@/components/asistente-ia/ValoracionMensaje'
 import { segmentar_mensaje } from '@/components/asistente-ia/formato'
+import { valoracion_de } from '@/components/asistente-ia/valoracion'
 import { logo_del_negocio } from '@/components/asistente-ia/identidad'
 import { copiar_al_portapapeles } from '@/components/asistente-ia/portapapeles'
 
@@ -127,6 +134,7 @@ export default {
 		AccionCard,
 		AdjuntosDeMensaje,
 		Icono,
+		ValoracionMensaje,
 	},
 	props: {
 		/**
@@ -148,6 +156,9 @@ export default {
 		return {
 			// true durante un rato después de copiar: el botón muestra el tilde.
 			copiado: false,
+			// true mientras el cuadro del 👎 está abierto (lo avisa ValoracionMensaje): la barra no
+			// se esconde al sacar el mouse.
+			valoracion_abierta: false,
 		}
 	},
 	created() {
@@ -269,7 +280,8 @@ export default {
 		},
 		/**
 		 * La barra existe para una respuesta guardada (con id) que ya terminó y tiene algo que
-		 * copiar.
+		 * hacer: texto que copiar, o la valoración (solo de una respuesta 'listo': una que quedó en
+		 * error no se valora, ver ValoracionMensaje.vue::disponible).
 		 *
 		 * @returns {Boolean}
 		 */
@@ -277,15 +289,16 @@ export default {
 			if (!this.message.id || this.message.estado == 'pendiente') {
 				return false
 			}
-			return Boolean(this.texto_plano)
+			return Boolean(this.texto_plano) || this.message.estado == 'listo'
 		},
 		/**
-		 * La barra se ve sin pasar el mouse en la última respuesta, como en ia-spa.
+		 * La barra se ve sin pasar el mouse en la última respuesta, en una ya valorada (que se vea
+		 * qué se marcó) y con el cuadro del 👎 abierto, como en ia-spa.
 		 *
 		 * @returns {Boolean}
 		 */
 		barra_siempre() {
-			return this.ultimo
+			return this.ultimo || valoracion_de(this.message) !== null || this.valoracion_abierta
 		},
 	},
 	methods: {
