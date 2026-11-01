@@ -4,6 +4,7 @@ import syncClientsMixin from '@/offline/sync_clients'
 import db from './db'
 import { borrar_sesion } from './sesion_sin_conexion'
 import { contar_ventas_del_equipo } from './sync_sales'
+import { esta_en_espera } from './reintentos_de_ventas'
 
 /**
  * Cada cuánto se vuelve a preguntar por el servidor mientras se trabaja con la sesión restaurada
@@ -431,8 +432,9 @@ export default {
             }
             db.sales.toArray()
             .then(ventas => {
-                /** Las que todavía no fueron rechazadas por el servidor. */
-                let reintentables = ventas.filter(venta => !venta.rechazada_at)
+                /** Las que todavía no fueron rechazadas por el servidor y no están en pausa por un 5xx. */
+                let ahora = Date.now()
+                let reintentables = ventas.filter(venta => !venta.rechazada_at && !esta_en_espera(venta, ahora))
                 if (!reintentables.length || this.sincronizacion_offline_en_curso) {
                     return
                 }
