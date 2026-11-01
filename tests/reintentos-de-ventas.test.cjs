@@ -107,19 +107,111 @@ test('los campos de reintento son locales: no viajan al POST /sale', () => {
 	])
 })
 
-test('solo un 4xx marca rechazada_at; el 5xx y la caida de red van por la rama del reintento', () => {
-	const fuente = fs.readFileSync(path.join(__dirname, '../src/offline/sync_sales.js'), 'utf8')
-	assert.match(fuente, /status >= 400 && status < 500 && !es_problema_de_sesion/)
-	// rechazada_at solo se escribe en la rama del 4xx y en la del 200 sin modelo, nunca en la del 5xx.
-	const rama_5xx = fuente.slice(fuente.indexOf('campos_tras_fallo_de_servidor(sale, message'))
-	assert.equal(rama_5xx.slice(0, 1500).includes('rechazada_at'), false)
+// ---- Comportamiento real de subir_ventas_del_equipo con la base y la API simuladas ----
+
+/** Una "IndexedDB" en memoria con lo que usa sync_sales.js: sales.toArray / update / delete. */
+function base_en_memoria(ventas) {
+	const filas = ventas.map(v => Object.assign({}, v))
+	return {
+		filas,
+		sales: {
+			toArray: () => Promise.resolve(filas.map(f => Object.assign({}, f))),
+			update(id, campos) {
+				const fila = filas.find(f => f.id === id)
+				if (fila) { Object.assign(fila, campos) }
+				return Promise.resolve(1)
+			},
+			delete(id) {
+				const i = filas.findIndex(f => f.id === id)
+				if (i >= 0) { filas.splice(i, 1) }
+				return Promise.resolve()
+			},
+		},
+	}
+}
+
+/** El mixin con sus dependencias simuladas. `respuestas` es la cola de lo que contesta POST /sale. */
+function escenario_de_subida(ventas, respuestas) {
+	const db = base_en_memoria(ventas)
+	const avisos = []
+	const posts = []
+	const modulo = cargar('offline/sync_sales.js', {
+		'./db': { __esModule: true, default: db },
+		'moment': { __esModule: true, default: () => ({ format: () => '01/11/2026 21:00' }) },
+	}).default
+	const contexto = Object.assign({}, modulo.methods, {
+		$toast: {
+			error: texto => avisos.push(['error', texto]),
+			warning: texto => avisos.push(['warning', texto]),
+			success: texto => avisos.push(['success', texto]),
+		},
+		$store: { commit() {} },
+		$api: {
+			post(url, cuerpo) {
+				posts.push(cuerpo)
+				const respuesta = respuestas.shift()
+				return respuesta.error ? Promise.reject(respuesta.error) : Promise.resolve(respuesta)
+			},
+		},
+		owner_id: null,
+		price: valor => String(valor),
+	})
+	return { db, avisos, posts, subir: opciones => contexto.subir_ventas_del_equipo(opciones) }
+}
+
+const error_http = (status, message) => ({ error: { response: { status, data: { message } } } })
+
+test('un 500 NO rechaza ni borra la venta: queda reintentable, con su pausa, y no manda campos locales', async () => {
+	const e = escenario_de_subida([{ id: 1, offline_uuid: 'u-1', total: 100, created_at: '2026-11-01T20:00:00Z' }], [error_http(500, 'boom')])
+	await e.subir({ omitir_rechazadas: true })
+	assert.equal(e.db.filas.length, 1, 'la venta sigue en el equipo')
+	assert.equal(e.db.filas[0].rechazada_at, undefined, 'un 5xx no es un rechazo')
+	assert.equal(e.db.filas[0].fallos_de_servidor, 1)
+	assert.equal(e.db.filas[0].ultimo_fallo_de_servidor, 'boom')
+	assert.ok(new Date(e.db.filas[0].reintentar_despues_de).getTime() > Date.now())
+	assert.equal(e.posts.length, 1)
+	assert.equal('reintentar_despues_de' in e.posts[0], false, 'los campos de reintento no viajan al POST')
+	assert.equal('fallos_de_servidor' in e.posts[0], false)
+	assert.equal(e.avisos.filter(a => a[0] === 'warning').length, 1, 'avisa en el primer fallo')
 })
 
-test('el reintento periodico saltea las ventas en pausa; el online y el login no', () => {
-	const sync = fs.readFileSync(path.join(__dirname, '../src/offline/sync_sales.js'), 'utf8')
-	const index = fs.readFileSync(path.join(__dirname, '../src/offline/index.js'), 'utf8')
-	assert.match(sync, /omitir_rechazadas\) \{[\s\S]*esta_en_espera\(sale, ahora\)/)
-	assert.match(index, /!venta\.rechazada_at && !esta_en_espera\(venta, ahora\)/)
+test('el reintento periodico no vuelve a golpear una venta en pausa; el online/login si la intenta', async () => {
+	const e = escenario_de_subida([{ id: 1, offline_uuid: 'u-1', total: 100, created_at: '2026-11-01T20:00:00Z' }], [error_http(500, 'boom'), error_http(500, 'boom'), { status: 201, data: { model: { id: 9 } } }])
+	await e.subir({ omitir_rechazadas: true })
+	assert.equal(e.posts.length, 1)
+	// 30 segundos despues, otra vuelta del reintento periodico: en pausa, no hay POST ni aviso nuevo.
+	await e.subir({ omitir_rechazadas: true })
+	assert.equal(e.posts.length, 1, 'la pausa frena al reintento periodico')
+	assert.equal(e.avisos.length, 1)
+	// El evento online / el login (sin opciones) intentan todo igual: el segundo 500 suma un fallo.
+	await e.subir()
+	assert.equal(e.posts.length, 2)
+	assert.equal(e.db.filas[0].fallos_de_servidor, 2)
+	assert.equal(e.avisos.length, 1, 'el segundo fallo no repite el aviso')
+	// Cuando el servidor se arregla, la venta entra y se borra del equipo.
+	await e.subir()
+	assert.equal(e.posts.length, 3)
+	assert.equal(e.db.filas.length, 0, 'entro y se borro del equipo')
+})
+
+test('un 422 si es un rechazo: marca rechazada_at con el motivo y la venta sigue en el equipo', async () => {
+	const e = escenario_de_subida([{ id: 1, offline_uuid: 'u-1', total: 100, created_at: '2026-11-01T20:00:00Z' }], [error_http(422, 'El artículo X tiene una fila sin precio')])
+	await e.subir({ omitir_rechazadas: true })
+	assert.equal(e.db.filas.length, 1)
+	assert.ok(e.db.filas[0].rechazada_at)
+	assert.match(e.db.filas[0].rechazo_mensaje, /sin precio/)
+	assert.equal(e.db.filas[0].fallos_de_servidor, undefined)
+})
+
+test('un 5xx despues de varios 5xx sigue sin marcar rechazada, hasta el infinito', async () => {
+	const respuestas = []
+	for (let i = 0; i < 30; i++) { respuestas.push(error_http(500, 'boom')) }
+	const e = escenario_de_subida([{ id: 1, offline_uuid: 'u-1', total: 100, created_at: '2026-11-01T20:00:00Z' }], respuestas)
+	for (let i = 0; i < 30; i++) { await e.subir() }
+	assert.equal(e.db.filas.length, 1)
+	assert.equal(e.db.filas[0].rechazada_at, undefined)
+	assert.equal(e.db.filas[0].fallos_de_servidor, 30)
+	assert.equal(e.avisos.length, 3, 'avisos en el fallo 1, 5 y 20, no uno por intento')
 })
 
 test('agregar_otro_precio no crea una fila sin precio (undefined/null), pero el vacio sigue creandola', () => {
