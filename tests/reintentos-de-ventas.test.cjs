@@ -64,6 +64,15 @@ test('una venta sin fallos, o con una fecha ilegible, no esta en pausa (nunca se
 	assert.equal(esta_en_espera(null, AHORA), false)
 })
 
+test('si el reloj del equipo retrocedio, una pausa de mas de 60 minutos no se respeta', () => {
+	const venta = Object.assign({ id: 1 }, campos_tras_fallo_de_servidor({ id: 1, fallos_de_servidor: 9 }, 'error', AHORA))
+	// El reloj salta 3 horas hacia atras: la pausa guardada queda a ~3 h 60 min en el futuro.
+	assert.equal(esta_en_espera(venta, AHORA - 3 * 60 * MINUTO), false)
+	// Con el reloj normal, la pausa de 60 minutos se respeta hasta cumplirse.
+	assert.equal(esta_en_espera(venta, AHORA + 59 * MINUTO), true)
+	assert.equal(esta_en_espera(venta, AHORA + 60 * MINUTO), false)
+})
+
 test('el corte de MySQL de la medianoche no pierde ventas: con la base de vuelta entra en <= 1 hora', () => {
 	// Cortes cada vez mas largos: la venta sigue reintentable (sin rechazada_at) y la espera maxima es 1 h.
 	let venta = { id: 3 }

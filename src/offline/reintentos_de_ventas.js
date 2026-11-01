@@ -55,13 +55,20 @@ export function pausa_tras_fallos(cantidad_de_fallos) {
  *
  * @param {Object} venta Registro de `db.sales`.
  * @param {Number} ahora_ms Reloj (Date.now()).
- * @returns {Boolean} true si todavía no se cumplió su `reintentar_despues_de`.
+ * @returns {Boolean} true si todavía no se cumplió su `reintentar_despues_de` (y no es una pausa imposible).
  */
 export function esta_en_espera(venta, ahora_ms) {
 	if (!venta || !venta.reintentar_despues_de) {
 		return false
 	}
 	let hasta = new Date(venta.reintentar_despues_de).getTime()
+	/*
+		Una pausa que se pasa de la maxima (60 min) solo puede venir de un reloj del equipo que
+		retrocedio despues del fallo: no se respeta, para que la venta no quede salteada de mas.
+	*/
+	if (hasta - ahora_ms > PAUSAS_ENTRE_REINTENTOS_MS[PAUSAS_ENTRE_REINTENTOS_MS.length - 1]) {
+		return false
+	}
 	return !isNaN(hasta) && hasta > ahora_ms
 }
 
