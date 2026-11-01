@@ -90,31 +90,32 @@ hide-footer
 				inputmode="numeric"
 				v-model.trim="form.street_number"></b-form-input>
 			</b-col>
-			<b-col
-			cols="12"
-			sm="6"
-			class="mercado-pago-qr-crear__campo">
-				<label
-				for="mercado-pago-qr-crear-ciudad"
-				class="mercado-pago-qr-crear__label">Ciudad</label>
-				<b-form-input
-				id="mercado-pago-qr-crear-ciudad"
-				data-testid="mercado-pago-qr-crear-ciudad"
-				v-model.trim="form.city_name"></b-form-input>
-			</b-col>
-			<b-col
-			cols="12"
-			sm="6"
-			class="mercado-pago-qr-crear__campo">
-				<label
-				for="mercado-pago-qr-crear-provincia"
-				class="mercado-pago-qr-crear__label">Provincia</label>
-				<b-form-input
+			<b-col cols="12" sm="6" class="mercado-pago-qr-crear__campo">
+				<label for="mercado-pago-qr-crear-provincia" class="mercado-pago-qr-crear__label">Provincia</label>
+				<b-form-select
 				id="mercado-pago-qr-crear-provincia"
 				data-testid="mercado-pago-qr-crear-provincia"
-				v-model.trim="form.state_name"></b-form-input>
+				:options="opciones_de_provincia"
+				:disabled="creando || cargando_provincias"
+				v-model="form.state_id"
+				@change="al_elegir_provincia"></b-form-select>
+			</b-col>
+			<b-col cols="12" sm="6" class="mercado-pago-qr-crear__campo">
+				<label for="mercado-pago-qr-crear-ciudad" class="mercado-pago-qr-crear__label">Ciudad o partido</label>
+				<b-form-select
+				id="mercado-pago-qr-crear-ciudad"
+				data-testid="mercado-pago-qr-crear-ciudad"
+				:options="opciones_de_localidad"
+				:disabled="creando || !form.state_id || cargando_localidades"
+				v-model="form.city_id"></b-form-select>
 			</b-col>
 		</b-row>
+
+		<p class="mercado-pago-qr-crear__ayuda">Si no encontrás tu localidad, buscá el partido al que pertenece.</p>
+		<b-alert :show="!!error_catalogo" variant="warning">
+			{{ error_catalogo }}
+			<b-button size="sm" variant="outline-primary" :disabled="cargando_provincias || cargando_localidades" @click="reintentar_catalogo">Volver a cargar</b-button>
+		</b-alert>
 
 		<b-link
 		class="mercado-pago-qr-crear__toggle"
@@ -160,7 +161,7 @@ hide-footer
 			</b-button>
 			<b-button
 			variant="primary"
-			:disabled="creando"
+			:disabled="creando || !ubicacion_valida || cargando_provincias || cargando_localidades"
 			data-testid="mercado-pago-qr-crear-confirmar"
 			@click="crear">
 				<b-spinner
@@ -189,6 +190,8 @@ function formulario_vacio() {
 		street_number: '',
 		city_name: '',
 		state_name: '',
+		city_id: null,
+		state_id: null,
 		latitude: '',
 		longitude: '',
 	}
@@ -218,9 +221,36 @@ export default {
 			// Mensaje de error de la API (o de la validación de acá)
 			error: '',
 			mostrar_ubicacion: false,
+			provincias: [],
+			localidades: [],
+			cargando_provincias: false,
+			cargando_localidades: false,
+			error_catalogo: '',
+			pedido_provincias: 0,
+			pedido_localidades: 0,
+			ubicacion_precargada: null,
 		}
 	},
+	beforeDestroy() {
+		this.pedido_provincias++
+		this.pedido_localidades++
+	},
 	computed: {
+		provincia_elegida() {
+			return this.provincias.find(item => item.id === this.form.state_id)
+		},
+		localidad_elegida() {
+			return this.localidades.find(item => item.id === this.form.city_id)
+		},
+		ubicacion_valida() {
+			return !!(this.provincia_elegida && this.localidad_elegida) && !this.error_catalogo
+		},
+		opciones_de_provincia() {
+			return [{ value: null, text: this.cargando_provincias ? 'Cargando provincias…' : 'Elegí la provincia' }].concat(this.provincias.map(item => ({ value: item.id, text: item.name })))
+		},
+		opciones_de_localidad() {
+			return [{ value: null, text: this.cargando_localidades ? 'Cargando localidades…' : 'Elegí la ciudad o partido' }].concat(this.localidades.map(item => ({ value: item.id, text: item.name })))
+		},
 		/**
 		 * Cajas del comercio.
 		 *
@@ -283,6 +313,64 @@ export default {
 		},
 	},
 	methods: {
+		cargar_provincias() {
+			let self = this
+			let pedido = ++this.pedido_provincias
+			this.cargando_provincias = true
+			this.error_catalogo = ''
+			return this.qr_pedir_provincias().then(res => {
+				if (pedido !== self.pedido_provincias) return
+				if (!res || !res.data || !Array.isArray(res.data.provincias) || !res.data.provincias.length) throw new Error('Catálogo vacío')
+				self.provincias = res.data.provincias
+				self.cargando_provincias = false
+				self.precargar_ubicacion()
+			}).catch(() => {
+				if (pedido !== self.pedido_provincias) return
+				self.cargando_provincias = false
+				self.error_catalogo = 'No pudimos cargar las provincias y localidades. Volvé a intentar en un rato.'
+			})
+		},
+		reintentar_catalogo() {
+			if (!this.provincias.length) this.cargar_provincias()
+			else this.al_elegir_provincia(this.form.state_id)
+		},
+		normalizar_nombre(nombre) {
+			return String(nombre || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+		},
+		precargar_ubicacion() {
+			if (!this.ubicacion_precargada || !this.provincias.length) return
+			let provincia = this.provincias.find(item => this.normalizar_nombre(item.name) === this.normalizar_nombre(this.ubicacion_precargada.provincia))
+			if (provincia) {
+				let ciudad = this.ubicacion_precargada.ciudad
+				this.form.state_id = provincia.id
+				this.al_elegir_provincia(provincia.id, ciudad)
+			}
+		},
+		al_elegir_provincia(provincia_id, ciudad_precargada = '') {
+			let self = this
+			let pedido = ++this.pedido_localidades
+			this.ubicacion_precargada = null
+			this.form.city_id = null
+			this.localidades = []
+			this.error_catalogo = ''
+			this.cargando_localidades = false
+			if (!provincia_id || !this.provincia_elegida) return
+			this.cargando_localidades = true
+			this.qr_pedir_localidades(provincia_id).then(res => {
+				// Una respuesta de la provincia anterior nunca puede reponer su localidad.
+				if (pedido !== self.pedido_localidades || provincia_id !== self.form.state_id) return
+				if (!res || !res.data || !res.data.provincia || res.data.provincia.id !== provincia_id || !Array.isArray(res.data.localidades) || !res.data.localidades.length) throw new Error('Catálogo inválido')
+				self.localidades = res.data.localidades
+				self.cargando_localidades = false
+				let ciudad = self.localidades.find(item => self.normalizar_nombre(item.name) === self.normalizar_nombre(ciudad_precargada))
+				if (ciudad) self.form.city_id = ciudad.id
+			}).catch(() => {
+				if (pedido !== self.pedido_localidades || provincia_id !== self.form.state_id) return
+				self.cargando_localidades = false
+				self.error_catalogo = 'No pudimos cargar las localidades de esa provincia. Volvé a intentar en un rato.'
+			})
+		},
+
 		/**
 		 * Abre el formulario vacío, con la sucursal principal precargada si el comercio tiene una sola.
 		 *
@@ -293,12 +381,19 @@ export default {
 			this.error = ''
 			this.creando = false
 			this.mostrar_ubicacion = false
+			this.pedido_localidades++
+			this.provincias = []
+			this.localidades = []
+			this.ubicacion_precargada = null
+			this.cargando_localidades = false
+			this.error_catalogo = ''
 
 			if (this.sucursales.length == 1) {
 				this.form.address_id = this.sucursales[0].id
 				this.al_elegir_sucursal(this.form.address_id)
 			}
 
+			this.cargar_provincias()
 			this.$bvModal.show('mercado-pago-qr-crear')
 		},
 
@@ -352,8 +447,14 @@ export default {
 				this.form.street_number = ''
 			}
 
-			this.form.city_name = sucursal.city || ''
-			this.form.state_name = sucursal.province || ''
+			this.ubicacion_precargada = { provincia: sucursal.province || '', ciudad: sucursal.city || '' }
+			this.form.state_id = null
+			this.form.city_id = null
+			this.localidades = []
+			this.pedido_localidades++
+			this.cargando_localidades = false
+			this.precargar_ubicacion()
+
 			this.form.latitude = sucursal.lat ? String(sucursal.lat) : ''
 			this.form.longitude = sucursal.lng ? String(sucursal.lng) : ''
 		},
@@ -373,8 +474,8 @@ export default {
 			if (!this.form.street_name || !this.form.street_number) {
 				return 'Completá la calle y el número del local.'
 			}
-			if (!this.form.city_name || !this.form.state_name) {
-				return 'Completá la ciudad y la provincia del local.'
+			if (!this.ubicacion_valida || this.cargando_provincias || this.cargando_localidades) {
+				return 'Elegí una provincia y una ciudad o partido del listado.'
 			}
 			return null
 		},
@@ -409,8 +510,10 @@ export default {
 				address_id: this.form.address_id || null,
 				street_name: this.form.street_name,
 				street_number: this.form.street_number,
-				city_name: this.form.city_name,
-				state_name: this.form.state_name,
+				city_id: this.form.city_id,
+				state_id: this.form.state_id,
+				city_name: this.localidad_elegida.name,
+				state_name: this.provincia_elegida.name,
 				latitude: isNaN(latitud) ? null : latitud,
 				longitude: isNaN(longitud) ? null : longitud,
 			})
