@@ -160,6 +160,9 @@ export default {
 		},
 		texto_uso() {
 			if (this.consumo && this.consumo.supero) {
+				if (this.supero_solo_el_tope_diario) {
+					return 'Llegaste al límite de mensajes de hoy de tu plan. Mañana se renueva.'
+				}
 				return 'Llegaste al límite de tu plan este mes.'
 			}
 			let base = 'Usaste ' + this.formato_corto(this.tokens_usados) + ' de ' + this.formato_corto(this.tope_tokens)
@@ -167,6 +170,16 @@ export default {
 				return base + ' · te estás acercando al límite'
 			}
 			return base
+		},
+		/**
+		 * true si lo que se pasó es SOLO el tope diario de interacciones (se renueva mañana).
+		 * Misma regla que el backend: si también se pasó el de tokens, manda el mensual. Un
+		 * backend anterior a la 4.3.27 no manda estas claves y cae en el texto mensual de siempre.
+		 *
+		 * @returns {Boolean}
+		 */
+		supero_solo_el_tope_diario() {
+			return !!(this.consumo && this.consumo.supero_interacciones && !this.consumo.supero_tokens)
 		},
 		texto_uso_sin_tope() {
 			return 'Usaste ' + this.formato_corto(this.tokens_usados) + ' tokens este mes'
