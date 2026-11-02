@@ -1,6 +1,12 @@
 // sync_sales.js
 import db from './db'
 import moment from 'moment'
+import {
+    CAMPOS_LOCALES_DE_REINTENTO,
+    campos_tras_fallo_de_servidor,
+    debe_avisar_el_fallo,
+    esta_en_espera,
+} from './reintentos_de_ventas'
 
 /**
  * Identificador único de una venta hecha sin conexión (misión ingreso-sin-internet, 23/10/2026).
@@ -36,7 +42,7 @@ export function generar_offline_uuid() {
  * Campos que existen solo en la tabla `sales` de IndexedDB y no viajan nunca en el POST /sale.
  * `offline_uuid` NO está: ese sí viaja.
  */
-const CAMPOS_LOCALES = ['id', 'created_at', 'created_at_elegido', 'rechazada_at', 'rechazo_mensaje', 'adjuntos_pendientes', 'owner_id_local']
+const CAMPOS_LOCALES = ['id', 'created_at', 'created_at_elegido', 'rechazada_at', 'rechazo_mensaje', 'adjuntos_pendientes', 'owner_id_local', ...CAMPOS_LOCALES_DE_REINTENTO]
 
 /**
  * Cuenta las ventas guardadas en el equipo y lo deja en el store: `auth.ventas_sin_subir` (todas)
@@ -185,6 +191,14 @@ export default {
 
                 if (opciones && opciones.omitir_rechazadas) {
                     pending_sales = pending_sales.filter(sale => !sale.rechazada_at)
+
+                    /*
+                        Y las que el servidor no pudo guardar hace poco (5xx): el reintento periodico
+                        espera la pausa de cada una (ver offline/reintentos_de_ventas.js). El evento
+                        `online` y el login no pasan por aca y las intentan todas.
+                    */
+                    let ahora = Date.now()
+                    pending_sales = pending_sales.filter(sale => !esta_en_espera(sale, ahora))
                 }
 
                 /*
@@ -392,14 +406,28 @@ export default {
                                 })
                             } else {
                                 /*
-                                    Caida de red o error del servidor: no es un rechazo, se vuelve a
-                                    intentar con la proxima conexion. Se avisa igual porque el aviso
-                                    global quedo apagado para este POST y antes si se veia.
+                                    Caida de red o error del servidor: no es un rechazo, la venta NO
+                                    se marca ni se borra y se vuelve a intentar. Pero el reintento
+                                    periodico no la repite cada 30 segundos: queda en pausa 1, 2, 5,
+                                    15 y 60 minutos segun cuantos fallos seguidos lleva (ver
+                                    offline/reintentos_de_ventas.js). Un corte de minutos --el MySQL
+                                    del VPS se cae cerca de las 00:00-- se recupera solo; un error
+                                    que no se arregla deja de golpear al servidor y de molestar al
+                                    cajero. El evento `online` y el login la intentan igual.
                                 */
-                                this.$toast.warning(`No se pudo sincronizar la venta offline del ${fecha} por ${total}: ${message}. Se vuelve a intentar con la proxima conexion.`, {
-                                    duration: 8000,
-                                    position: 'top-right',
-                                })
+                                let campos_del_fallo = campos_tras_fallo_de_servidor(sale, message, Date.now())
+                                await db.sales.update(sale.id, campos_del_fallo).catch(err => console.log(err))
+
+                                /*
+                                    Se avisa en el primer fallo, en el quinto y despues cada 20 (antes
+                                    era uno por vuelta). El aviso global quedo apagado para este POST.
+                                */
+                                if (debe_avisar_el_fallo(campos_del_fallo.fallos_de_servidor)) {
+                                    this.$toast.warning(`No se pudo sincronizar la venta offline del ${fecha} por ${total}: ${message}. Sigue guardada en este equipo y se vuelve a intentar sola. Si el aviso se repite, avisá a soporte y no borres los datos del navegador.`, {
+                                        duration: 8000,
+                                        position: 'top-right',
+                                    })
+                                }
                             }
                         }
                     }

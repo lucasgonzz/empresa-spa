@@ -186,6 +186,15 @@ const RUTA_INGRESO_DEMO = '/demo/ingreso'
  */
 const RUTA_INFORME_COMPARTIDO = '/informe/'
 
+/**
+ * Ruta pública del ingreso con acceso de soporte, tal como está declarada en `router/index.js`
+ * (misión acceso-soporte-firmado, 30/10/2026).
+ *
+ * El literal se deja también allá: acá se necesita el path y allá el nombre. Es un path exacto
+ * (el token viaja en el fragmento `#t=`, que nunca es parte del pathname), no un prefijo.
+ */
+const RUTA_ACCESO_SOPORTE = '/acceso-soporte'
+
 export default {
     mixins: [app, start_methods, broadcast, check_version, offline],
     components: {
@@ -256,7 +265,11 @@ export default {
         // y el watch de abajo hace `router.replace({name: 'login'})` — el dueño toca el link del
         // informe desde el teléfono y aterriza en la pantalla de login, con el informe que nunca
         // llegó a ver. Es exactamente lo que le pasaba al lead con el link de la demo.
-        if (this.es_ingreso_a_la_demo() || this.es_informe_compartido()) {
+        //
+        // El ingreso con acceso de soporte (misión acceso-soporte-firmado) es el caso de la demo:
+        // la vista canjea un token por una sesión, así que el `auth/me` de arranque —que salía
+        // sin cookie, resolvía "no autenticado" y mandaba a login— le gana de mano al canje.
+        if (this.es_ingreso_a_la_demo() || this.es_informe_compartido() || this.es_acceso_soporte()) {
             return
         }
         /**
@@ -355,6 +368,48 @@ export default {
             }
 
             return window.location.pathname.indexOf(RUTA_INFORME_COMPARTIDO) !== -1
+        },
+        /**
+         * ¿Este arranque es el ingreso con acceso de soporte (`/acceso-soporte#t=...`)?
+         *
+         * Misma mecánica —y el mismo 🔴— que `es_ingreso_a_la_demo()`: se decide por
+         * `window.location.pathname` y NO por `$route.name`, porque en el `created()` de App.vue
+         * la navegación inicial todavía no resolvió (todas las rutas son lazy) y `$route.name` es
+         * null. Ver el comentario largo de `es_ingreso_a_la_demo()` para las dos consecuencias
+         * medidas de que la guarda no dispare (el toast "Unauthenticated." y el rebote a /login).
+         *
+         * Es el mismo caso que la demo y no el del informe: la vista canjea el token por una
+         * sesión, y recién entonces hay `authenticated`. Por eso la guarda del `created()` solo
+         * evita el `auth/me` de ARRANQUE (que le ganaría de mano al canje); el `auth/me` de después
+         * del canje lo despacha la propia vista.
+         *
+         * Se compara por sufijo y no por igualdad, por el mismo motivo que la demo: un
+         * `publicPath` distinto de '/' no rompe la guarda en silencio. La barra inicial de la
+         * constante ancla la comparación: '/xxacceso-soporte' no coincide. El fragmento no cuenta:
+         * `pathname` no lo incluye.
+         *
+         * @returns {Boolean}
+         */
+        es_acceso_soporte() {
+            if (this.$route.name === 'accesoSoporte') {
+                return true
+            }
+
+            const pathname = window.location.pathname.replace(/\/+$/, '')
+
+            return pathname.slice(-RUTA_ACCESO_SOPORTE.length) === RUTA_ACCESO_SOPORTE
+        },
+        /**
+         * ¿La sesión actual es un acceso de soporte (`/acceso-soporte`) y no un ingreso normal?
+         *
+         * El backend la marca en `GET /api/user` con `es_sesion_soporte: true` (contrato C2 de la
+         * misión acceso-soporte-firmado). Una API vieja no manda la clave: `undefined` es "no es
+         * de soporte" y todo sigue como siempre.
+         *
+         * @returns {Boolean}
+         */
+        es_sesion_de_soporte() {
+            return Boolean(this.user && this.user.es_sesion_soporte === true)
         },
         /**
          * Manda a la pantalla de login si todavía no se está en ella.
@@ -610,8 +665,16 @@ export default {
                  *
                  * `debe_cambiar_de_version()` es sincrónico a propósito: para cuando
                  * `check_version()` decidía, las otras llamadas ya habían salido.
+                 *
+                 * 🔴 Una sesión de SOPORTE nunca se transfiere de frente (misión
+                 * acceso-soporte-firmado). La transferencia pide un token de versión
+                 * (`create_version_session_token()` libera el candado de sesión única del dueño),
+                 * cierra esta sesión y entra en el otro frente como una sesión NORMAL del dueño,
+                 * que sí toma ese candado: justo lo que el acceso de soporte promete no hacer. Si
+                 * el `default_version` del dueño apunta a otro frente que el que le habló el admin,
+                 * el acceso de soporte se queda en este y listo (los frentes comparten la base).
                  */
-                if (this.debe_cambiar_de_version()) {
+                if (!this.es_sesion_de_soporte() && this.debe_cambiar_de_version()) {
                     /*
                         🔴 Salvo que este equipo tenga ventas hechas sin conexión esperando subir
                         (misión ingreso-sin-internet). Las ventas viven en el IndexedDB de ESTE

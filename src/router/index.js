@@ -23,6 +23,17 @@ const routes = [
         component: () => import('@/views/DemoIngreso'),
     },
     {
+        // Ingreso con acceso de soporte (misión acceso-soporte-firmado, 30/10/2026). Ruta PÚBLICA:
+        // el agente (Claude Code, Codex) o quien da soporte llega con un token de un solo uso
+        // en el FRAGMENTO de la dirección (`/acceso-soporte#t=<token>`, no en la query: el
+        // fragmento no viaja al servidor ni queda en sus logs) y la vista lo canjea por una
+        // sesión ya iniciada, igual que `demoIngreso`. Va listada abajo en `public_route_names`,
+        // y App.vue la excluye de su arranque autenticado por el mismo motivo que a `demoIngreso`.
+        path: '/acceso-soporte',
+        name: 'accesoSoporte',
+        component: () => import('@/views/AccesoSoporte'),
+    },
+    {
         // Informe del mostrador abierto desde el link que llegó por WhatsApp (misión
         // asistente-por-whatsapp, 16/9/2026). Ruta PÚBLICA: el dueño la abre desde el
         // teléfono, en la calle, sin tipear usuario ni contraseña — decisión de Lucas en la
@@ -278,7 +289,10 @@ router.beforeEach((to, from, next) => {
     // 'informeCompartido' es el informe del mostrador abierto desde el link que llegó por
     // WhatsApp (misión asistente-por-whatsapp): no inicia ninguna sesión y el que la autoriza es
     // el token de la URL, contra la ruta pública informe-compartido/{token} del API.
-    const public_route_names = ['login', 'passwordReset', 'demoIngreso', 'informeCompartido']
+    // 'accesoSoporte' es el ingreso con acceso de soporte (misión acceso-soporte-firmado): igual
+    // que la demo, la vista canjea su token por una sesión y maneja su propia autenticación;
+    // sin esta entrada la guarda la rebotaría a `login` antes de que el canje termine.
+    const public_route_names = ['login', 'passwordReset', 'demoIngreso', 'informeCompartido', 'accesoSoporte']
 
     // Estado de sesión: `null` se trata como no autenticado (hasta que `auth/me` resuelva).
     const is_authenticated = store && store.state && store.state.auth && store.state.auth.authenticated

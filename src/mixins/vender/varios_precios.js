@@ -76,9 +76,20 @@ export default {
 		 *        (set_items_prices.js) le suma el recargo en su propia clave.
 		 * @param {Number|String} [cantidad=''] Cantidad de la fila. Vacia cuenta como 1 (en la SPA y en
 		 *        la API), que es lo que deja el Enter.
-		 * @returns {void}
+		 * @returns {void} No hace nada si el precio es undefined o null.
 		 */
 		agregar_otro_precio(item, precio, cantidad = '') {
+
+			/*
+				🔴 Sin precio no hay fila (mision panchito-venta-price-vender, 1/11/2026). Un precio
+				`undefined` --el Enter en el input "Personalizado" de un renglon que todavia no tiene
+				precio tipeado-- creaba una fila con `price_vender: undefined`, y `JSON.stringify` descarta
+				esa clave: la API recibia la fila SIN `price_vender` y la venta entera daba 500. Un precio
+				vacio ('') SI sigue creando la fila, como siempre.
+			*/
+			if (precio === undefined || precio === null) {
+				return
+			}
 
 			/*
 				Asignacion directa y no $set, como siempre: el renglon se vuelve a meter en el store

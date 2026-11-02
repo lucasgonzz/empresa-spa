@@ -35,6 +35,12 @@ const CONFIG_SIN_AVISO_GLOBAL = {
 
 export default {
 	methods: {
+		qr_pedir_provincias() {
+			return this.$api.get('mercado-pago/qr/provincias', CONFIG_SIN_AVISO_GLOBAL)
+		},
+		qr_pedir_localidades(provincia_id) {
+			return this.$api.get('mercado-pago/qr/provincias/' + encodeURIComponent(provincia_id) + '/localidades', CONFIG_SIN_AVISO_GLOBAL)
+		},
 		/**
 		 * Pide la configuración del cobro con QR del comercio: si Mercado Pago está conectado, con
 		 * qué método de pago se registran los cobros y la lista de QRs creados.
