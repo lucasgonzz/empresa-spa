@@ -1140,8 +1140,14 @@ export default {
 
 <style lang="sass" scoped>
 .cotizacion-articulo
-	min-width: 115px
+	width: 100%
+	min-width: 0
 	max-width: 150px
+	input.form-control
+		width: 100% !important
+		min-width: 0 !important
+		max-width: 100%
+		box-sizing: border-box
 	.cotizacion-origen-vender
 		border-color: var(--color-text-success-strong, #218838)
 		background-color: var(--bg-success-soft, rgba(40, 167, 69, 0.12))
