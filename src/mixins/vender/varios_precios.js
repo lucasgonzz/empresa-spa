@@ -1,3 +1,4 @@
+import { copiar_cotizacion, moneda_normalizada } from '@/utils/cotizacion_por_articulo'
 import vender_set_total from '@/mixins/vender_set_total'
 
 /*
@@ -101,11 +102,12 @@ export default {
 				item.varios_precios = []
 			}
 
-			item.varios_precios.unshift({
+			item.varios_precios.unshift(copiar_cotizacion(item, {
 				price_vender: precio,
 				amount: cantidad,
 				id: siguiente_id_de_otro_precio(item.varios_precios),
-			})
+			}))
+			if (item.cotizacion_origen) item.varios_precios[0].moneda_base_precio = moneda_normalizada(this.$store.state.vender.moneda_id)
 
 			this.recalcular_varios_precios(item)
 		},

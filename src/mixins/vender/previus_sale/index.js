@@ -1,3 +1,4 @@
+import { inicializar_cotizacion } from '@/utils/cotizacion_por_articulo'
 // import set_employee_vender from '@/mixins/set_employee_vender'
 // import vender from '@/mixins/vender'
 
@@ -1001,6 +1002,8 @@ export default {
 				item.status = article.status
 				item.article_variants = article.article_variants
 				item.cost_in_dollars = article.cost_in_dollars
+				item.provider = article.provider
+				item.provider_id = article.provider_id
 				item.pivot = article.pivot
 				item.cost = Number(article.pivot.cost)
 				item.price = Number(article.price)
@@ -1086,6 +1089,7 @@ export default {
 					item_to_add.variant_description = this.descripcion_de_variante_del_pivot(article, variante_del_renglon)
 				}
 
+				inicializar_cotizacion(item_to_add, this.$store.state.vender, this.owner, model)
 				items.push(item_to_add)
 			})
 			if (model.combos) {

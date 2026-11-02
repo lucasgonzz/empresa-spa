@@ -1,3 +1,4 @@
+import { copiar_cotizacion } from './cotizacion_por_articulo'
 /**
  * Las filas de un comprobante GUARDADO que en VENDER eran UN renglon con "varios precios" vuelven a
  * ser ese renglon al abrirlo para editarlo (mision varios-precios-descuento-renglon, 3/10/2026).
@@ -313,12 +314,14 @@ function filas_del_renglon_reagrupado(renglones, legado, legado_descuentos) {
 
 		suma_de_las_filas += precio * cantidad
 
-		filas.push({
+		filas.push(copiar_cotizacion(renglon, {
+			pivot: Object.assign({}, renglon.pivot),
+			cost: renglon.cost,
 			id: indice,
 			price_vender: precio,
 			amount: cantidad_de_la_fila(cantidad),
 			desde_comprobante_guardado: true,
-		})
+		}))
 	})
 
 	if (redondear_a_centavos(suma_de_las_filas) === 0) {

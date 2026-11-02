@@ -31,20 +31,31 @@
 			<b-form-input
 			type="number"
 			:disabled="disabled"
-			class="input-dolar"
+			class="input-dolar cotizacion-vender"
 			@input="set_valor_dolar"
 			@blur="restaurar_dolar_si_falta"
 			v-model="input_dolar_valor"></b-form-input>
+			<b-input-group-append v-if="cotizaciones_por_articulo_habilitadas">
+				<b-button variant="outline-success" @click="actualizar_cotizaciones_articulos" title="Consultar proveedores actuales y reemplazar cotizaciones manuales">Actualizar artículos</b-button>
+			</b-input-group-append>
 		</b-input-group>
-
+		<small v-if="cotizaciones_por_articulo_habilitadas" class="d-block m-t-5 cotizacion-leyenda">
+			<span class="text-success">Vender (verde): {{ resumen_cotizaciones_articulos.vender }}</span> ·
+			<span class="text-danger">Proveedor (rojo): {{ resumen_cotizaciones_articulos.proveedor }}</span> ·
+			Manual: {{ resumen_cotizaciones_articulos.manual }} · Histórica: {{ resumen_cotizaciones_articulos.historica }} · Sin cotización: {{ resumen_cotizaciones_articulos.sin_cotizacion }}.
+			{{ comprobante_en_edicion ? 'Cotizaciones guardadas: sólo cambian al editarlas o al actualizar artículos.' : 'Las manuales no siguen el dólar de Vender.' }}
+		</small>
+		<small v-else class="text-muted d-block">Cotización general. Las cotizaciones por artículo requieren actualizar el sistema.</small>
 	</div>
 </template>
 <script>
+import cotizacion_por_articulo from '@/mixins/vender/cotizacion_por_articulo'
+import { aplicar_cotizacion, cotizacion_valida } from '@/utils/cotizacion_por_articulo'
 import vender_set_total from '@/mixins/vender_set_total'
 import cotizacion_dolar_por_defecto from '@/mixins/vender/cotizacion_dolar_por_defecto'
 import reexpresar_comprobante from '@/mixins/vender/reexpresar_comprobante'
 export default {
-	mixins: [vender_set_total, cotizacion_dolar_por_defecto, reexpresar_comprobante],
+	mixins: [cotizacion_por_articulo, vender_set_total, cotizacion_dolar_por_defecto, reexpresar_comprobante],
 	computed: {
 		show() {
 			return this.user && this.hasExtencion('ventas_en_dolares')
@@ -118,6 +129,7 @@ export default {
 	},
 	created() {
 		this.iniciar_dolar()
+		this.cargar_capacidad_cotizaciones()
 	},
 	watch: {
 		/*
@@ -150,7 +162,17 @@ export default {
 				esto, la cotizacion nueva quedaba guardada con renglones convertidos con la vieja.
 				No hay recursion: reexpresar no toca valor_dolar.
 			*/
-			this.reexpresar_por_cambio_de_cotizacion()
+			if (this.cotizaciones_por_articulo_habilitadas) {
+				if (!this.comprobante_en_edicion) {
+					this.$store.state.vender.items.forEach(item => {
+						if (!item.is_article) return
+						let filas = item.varios_precios && item.varios_precios.length ? item.varios_precios : [item]
+						filas.forEach(fila => { if (fila.cotizacion_origen === 'vender') aplicar_cotizacion(fila, valor, 'vender', this.moneda_id) })
+					})
+				}
+			} else {
+				this.reexpresar_por_cambio_de_cotizacion()
+			}
 		},
 	},
 	methods: {
@@ -263,6 +285,12 @@ export default {
 			let cotizacion = null
 
 			if (cambia_de_expresion) {
+				if (this.cotizaciones_por_articulo_habilitadas && this.$store.state.vender.items.some(item => item.is_article && (item.varios_precios && item.varios_precios.length ? item.varios_precios : [item]).some(fila => !cotizacion_valida(fila.cotizacion_aplicada)))) {
+					this.$toast.warning('Antes de cambiar la moneda, ingresá la cotización de los artículos que no tienen una cotización histórica guardada.')
+					this.select_moneda_key++
+					return
+				}
+
 
 				let importes_sin_convertir = this.reexpresar_importes_fijos_sin_convertir()
 
@@ -354,6 +382,13 @@ export default {
 }
 </script>
 <style lang="sass">
+.cotizacion-vender
+	border-color: var(--color-text-success-strong, #218838) !important
+	background-color: var(--bg-success-soft, rgba(40, 167, 69, 0.12)) !important
+
+.cotizacion-leyenda
+	line-height: 1.5
+
 .select-moneda, .input-dolar
 	font-size: 15px !important
 

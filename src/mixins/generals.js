@@ -1,3 +1,4 @@
+import { inicializar_cotizacion, convertir_importe } from '@/utils/cotizacion_por_articulo'
 import moment from 'moment'
 import { env } from '@/runtime_config'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
@@ -590,6 +591,8 @@ export default {
             Prioriza la relacion iva del item y luego cae al iva_id / pivot.iva_id.
         */
         get_item_iva_percentage(item) {
+            if (item && item.cotizacion_origen && item.pivot && item.pivot.iva_percentage !== null && item.pivot.iva_percentage !== undefined) return this.normalize_iva_percentage(item.pivot.iva_percentage)
+
             // Porcentaje de IVA normalizado para usar en calculos.
             let iva_percentage = 0
 
@@ -808,6 +811,9 @@ export default {
             return name
         },
         getPriceVender(item, from_pivot = false) {
+            let estado_cotizacion = this.$store.state.vender
+            inicializar_cotizacion(item, estado_cotizacion, this.owner, estado_cotizacion.budget || estado_cotizacion.previus_sales.previus_sale)
+
             // console.log('getPriceVender para '+item.name)
             // console.log(item)
 
@@ -1034,6 +1040,7 @@ export default {
                 && typeof item.pivot.price != 'undefined'
                 && (
                     !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
+                    || item.cotizacion_origen
                     || item.is_combo
                 )
                 // && (
@@ -1373,12 +1380,22 @@ export default {
          * @param {Boolean} price_desde_pivot   Si el precio salio literalmente de item.pivot.price.
          */
         check_moneda(item, price, from_pivot, price_desde_pivot = false) {
+            if (item.is_article && this.$store.state.vender.cotizacion_por_articulo_disponible && item.price_vender_personalizado
+                && !(item.precio_fijo_de_oferta_por_cantidad !== null && typeof item.precio_fijo_de_oferta_por_cantidad !== 'undefined' && Number(item.precio_fijo_de_oferta_por_cantidad) === Number(item.price_vender_personalizado))) {
+                if (item._precio_manual_cotizacion !== item.price_vender_personalizado) {
+                    item.moneda_base_precio = Number(this.$store.state.vender.moneda_id) === 2 ? 2 : 1
+                    Object.defineProperty(item, '_precio_manual_cotizacion', { configurable: true, writable: true, value: item.price_vender_personalizado })
+                }
+                return convertir_importe(price, item.moneda_base_precio, this.$store.state.vender.moneda_id, item.cotizacion_aplicada)
+            }
+
 
             // Los items con price_type_monedas traen su propia moneda: no se tocan. Igual que hoy.
             if (
                 typeof item.price_type_monedas != 'undefined'
                 && item.price_type_monedas.length
             ) {
+                if (item.cotizacion_origen && !item.pivot) item.moneda_base_precio = Number(this.$store.state.vender.moneda_id) === 2 ? 2 : 1
                 return price
             }
 
@@ -1408,6 +1425,11 @@ export default {
          * @returns {Number}
          */
         convertir_precio_a_moneda_de_la_venta(item, price) {
+            if (item.is_article && this.$store.state.vender.cotizacion_por_articulo_disponible && item.cotizacion_origen) {
+                if (!item.pivot) item.moneda_base_precio = Number(item.cost_in_dollars) === 1 && !Number(this.owner.cotizar_precios_en_dolares) ? 2 : 1
+                return convertir_importe(price, item.moneda_base_precio, this.$store.state.vender.moneda_id, item.cotizacion_aplicada)
+            }
+
 
             if (this.$store.state.vender.moneda_id == 2) {
                 // La venta es en dolares
