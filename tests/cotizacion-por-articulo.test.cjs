@@ -103,3 +103,13 @@ test('cotización aplicada se normaliza antes de calcular a los seis decimales p
  inicializar_cotizacion(nuevo,estado(),owner)
  assert.equal(nuevo.cotizacion_aplicada,1234.123457)
 })
+
+
+test('una capacidad no consultable no descarta fotos históricas que el servidor ya devolvió', () => {
+ const item={is_article:true,provider:{dolar:5000},pivot:{price:15,cost:10,cotizacion_aplicada:'1000.000000',cotizacion_origen:'proveedor',moneda_base_precio:1,moneda_base_costo:2}}
+ inicializar_cotizacion(item,{cotizacion_por_articulo_disponible:false,valor_dolar:9000},owner,{moneda_id:2,valor_dolar:8000})
+ assert.equal(item.cotizacion_origen,'proveedor')
+ assert.equal(item.cotizacion_aplicada,'1000.000000')
+ assert.equal(item.moneda_base_costo,2)
+ assert.equal(item.pivot.price,15)
+})

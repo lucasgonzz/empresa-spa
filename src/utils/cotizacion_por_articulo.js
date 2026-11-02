@@ -20,11 +20,13 @@ export function copiar_cotizacion(origen, destino) {
 }
 
 export function inicializar_cotizacion(item, estado, owner, documento = null) {
-	if (!item || !item.is_article || !estado.cotizacion_por_articulo_disponible) return item
+	if (!item || !item.is_article) return item
 	if (item.cotizacion_origen) return item
 	if (item.pivot && item.pivot.cotizacion_origen) {
-		copiar_cotizacion(item.pivot, item)
-	} else if (item.pivot && documento) {
+		return copiar_cotizacion(item.pivot, item)
+	}
+	if (!estado.cotizacion_por_articulo_disponible) return item
+	if (item.pivot && documento) {
 		item.cotizacion_aplicada = cotizacion_valida(documento.valor_dolar) ? normalizar_cotizacion(documento.valor_dolar) : null
 		item.cotizacion_origen = 'historica'
 		item.moneda_base_precio = moneda_normalizada(documento.moneda_id)
