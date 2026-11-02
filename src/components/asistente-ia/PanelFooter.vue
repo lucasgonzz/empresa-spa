@@ -7,6 +7,10 @@
 		Lee del store (ai_chat.mi_consumo, que trae GET api/mi-consumo-ia). Si el consumo es
 		null —API viejo sin ese endpoint, o todavía sin pedir— NO se dibuja nada: degradación
 		limpia, el panel funciona igual que antes.
+
+		Misión plan-ia-por-gasto (2/11/2026): si el plan tiene tope de gasto, el backend manda
+		`porcentaje_del_plan` y se muestra eso, «Usaste 42 % de tu plan de este mes». El dueño nunca
+		ve dólares ni tokens contra un tope que ya no corta. Sin esa clave, lo de siempre.
 	-->
 	<div
 	v-if="consumo"
@@ -124,19 +128,39 @@ export default {
 		tope_tokens() {
 			return Number(this.plan.tope_tokens_mensual) || 0
 		},
+		/**
+		 * El porcentaje del plan que manda el backend cuando el tope es de gasto (misión
+		 * plan-ia-por-gasto), acotado a 0..100. null si no viene: un plan con tope de tokens, sin
+		 * tope, o un backend anterior a esa misión.
+		 *
+		 * @returns {Number|null}
+		 */
+		porcentaje_del_plan() {
+			if (!this.consumo || this.consumo.porcentaje_del_plan === undefined || this.consumo.porcentaje_del_plan === null) {
+				return null
+			}
+			return Math.min(Math.max(Number(this.consumo.porcentaje_del_plan) || 0, 0), 100)
+		},
+		tiene_porcentaje_del_plan() {
+			return this.porcentaje_del_plan !== null
+		},
 		tiene_tope() {
-			return this.tope_tokens > 0
+			return this.tiene_porcentaje_del_plan || this.tope_tokens > 0
 		},
 		tokens_usados() {
 			return Number(this.consumo_mes.tokens) || 0
 		},
 		/**
 		 * Porcentaje del tope consumido, acotado a 0..100 (aunque el backend informe que se
-		 * pasó, la barra no se desborda).
+		 * pasó, la barra no se desborda). Con tope de gasto lo calcula el backend: acá no están
+		 * ni el gasto ni el tope.
 		 *
 		 * @returns {Number}
 		 */
 		porcentaje() {
+			if (this.tiene_porcentaje_del_plan) {
+				return this.porcentaje_del_plan
+			}
 			if (!this.tiene_tope) {
 				return 0
 			}
@@ -163,7 +187,13 @@ export default {
 				if (this.supero_solo_el_tope_diario) {
 					return 'Llegaste al límite de mensajes de hoy de tu plan. Mañana se renueva.'
 				}
+				if (this.tiene_porcentaje_del_plan) {
+					return this.texto_del_porcentaje + ' · llegaste al límite'
+				}
 				return 'Llegaste al límite de tu plan este mes.'
+			}
+			if (this.tiene_porcentaje_del_plan) {
+				return this.texto_del_porcentaje + this.aviso_de_cerca_del_porcentaje
 			}
 			let base = 'Usaste ' + this.formato_corto(this.tokens_usados) + ' de ' + this.formato_corto(this.tope_tokens)
 			if (this.consumo && this.consumo.cerca) {
@@ -180,6 +210,25 @@ export default {
 		 */
 		supero_solo_el_tope_diario() {
 			return !!(this.consumo && this.consumo.supero_interacciones && !this.consumo.supero_tokens)
+		},
+		texto_del_porcentaje() {
+			return 'Usaste ' + this.porcentaje_del_plan + ' % de tu plan de este mes'
+		},
+		/**
+		 * El aviso de que se acerca al límite. `cerca` también se prende por las interacciones de
+		 * hoy: si el porcentaje del mes está lejos (`cerca_del_mes` en false), el aviso dice que es
+		 * el de hoy, porque «Usaste 12 % · te estás acercando al límite» no se entiende.
+		 *
+		 * @returns {String}
+		 */
+		aviso_de_cerca_del_porcentaje() {
+			if (!this.consumo.cerca) {
+				return ''
+			}
+			if (this.consumo.cerca_del_mes) {
+				return ' · te estás acercando al límite'
+			}
+			return ' · te estás acercando al límite de mensajes de hoy'
 		},
 		texto_uso_sin_tope() {
 			return 'Usaste ' + this.formato_corto(this.tokens_usados) + ' tokens este mes'
