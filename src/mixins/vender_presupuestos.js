@@ -1,3 +1,5 @@
+import { instalar_guardia_cotizaciones } from '@/utils/guardia_cotizaciones_articulos'
+import { copiar_cotizacion } from '@/utils/cotizacion_por_articulo'
 import vender_mixin from '@/mixins/vender'
 import limpiar_vender from '@/mixins/vender/limpiar_vender'
 
@@ -287,6 +289,7 @@ export default {
 		},
 
 		actualizar() {
+			instalar_guardia_cotizaciones(this.$api, '')
 			// Se calculan una vez y se usan en el payload y en la respuesta: lo que se mando es lo que se compara.
 			let selected_payment_methods = this.get_selected_payment_methods()
 			let de_contado = this.viaja_de_contado(selected_payment_methods)
@@ -463,6 +466,7 @@ export default {
 			})
 		},
 		crear() {
+			instalar_guardia_cotizaciones(this.$api, '')
 			// Se calculan una vez y se usan en el payload y en la respuesta: lo que se mando es lo que se compara.
 			let selected_payment_methods = this.get_selected_payment_methods()
 			let de_contado = this.viaja_de_contado(selected_payment_methods)
@@ -715,6 +719,8 @@ export default {
 					price_vender_sin_descuentos : this.precio_sin_descuentos_del_renglon(article),
 				}
 
+				copiar_cotizacion(article, pivot_info)
+
 				if (
 					for_update
 					&& ya_estaba_cargado
@@ -881,6 +887,7 @@ export default {
 				&& typeof article.pivot != 'undefined'
 			) {
 				return {
+					...copiar_cotizacion(otro_precio.cotizacion_origen ? otro_precio : article, {}),
 					id: article.id,
 					status: article.status,
 					cost_in_dollars: article.cost_in_dollars,
@@ -891,7 +898,7 @@ export default {
 					pivot: {
 						amount: cantidad,
 						price: precio,
-						cost: article.cost,
+						cost: otro_precio.pivot ? otro_precio.pivot.cost : article.cost,
 						costo_real: article.costo_real,
 						unidades_individuales: article.unidades_individuales,
 						presentacion: article.presentacion,
@@ -905,6 +912,7 @@ export default {
 			}
 
 			return {
+					...copiar_cotizacion(otro_precio.cotizacion_origen ? otro_precio : article, {}),
 				id: article.id,
 				status: article.status,
 				cost_in_dollars: article.cost_in_dollars,
@@ -914,7 +922,7 @@ export default {
 				article_variant_id: this.variante_del_renglon_de_presupuesto(article),
 				amount: cantidad,
 				price: precio,
-				cost: article.cost,
+				cost: otro_precio.pivot ? otro_precio.pivot.cost : article.cost,
 				costo_real: article.costo_real,
 				unidades_individuales: article.unidades_individuales,
 				presentacion: article.presentacion,

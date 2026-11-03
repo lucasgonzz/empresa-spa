@@ -5,6 +5,9 @@ import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = env('VUE_APP_API_URL')
 
+import { instalar_guardia_cotizaciones } from '@/utils/guardia_cotizaciones_articulos'
+instalar_guardia_cotizaciones(axios)
+
 import previus_sales from '@/store/vender/previus_sales'
 import current_acount_payment_methods from '@/store/vender/current_acount_payment_methods'
 import current_acount_payment_methods_with_discounts from '@/store/vender/current_acount_payment_methods_with_discounts'
@@ -261,6 +264,7 @@ export default {
 
 		moneda_id: 1,
 		valor_dolar: null,
+		cotizacion_por_articulo_disponible: false,
 		
 
 		cuota_id: 0,
@@ -1215,6 +1219,7 @@ export default {
 		set_moneda_id(state, value) {
 			state.moneda_id = value 
 		},
+		set_cotizacion_por_articulo_disponible(state, value) { state.cotizacion_por_articulo_disponible = value },
 		set_valor_dolar(state, value) {
 			state.valor_dolar = value 
 		},

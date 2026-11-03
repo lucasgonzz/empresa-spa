@@ -18,6 +18,15 @@
 					:sale-id="previus_sale && previus_sale.id ? previus_sale.id : null"></item-attachments>
 				</template>
 
+				<template #cell(cotizacion_aplicada)="data">
+					<div v-if="items[data.index].is_article" class="cotizacion-articulo">
+						<div v-for="(fila, indice) in (items[data.index].varios_precios && items[data.index].varios_precios.length ? items[data.index].varios_precios : [items[data.index]])" :key="indice + '-' + cotizacion_input_version" class="m-b-5">
+							<b-form-input type="number" min="0.000001" step="any" :value="fila.cotizacion_aplicada" :class="'cotizacion-origen-' + fila.cotizacion_origen" :aria-label="'Cotización de ' + items[data.index].name + ' fila ' + (indice + 1)" @change="editar_cotizacion_articulo(fila, $event)" />
+							<small>{{ fila.cotizacion_origen === 'proveedor' ? 'Proveedor' : fila.cotizacion_origen === 'vender' ? 'Vender' : fila.cotizacion_origen === 'manual' ? 'Manual' : fila.cotizacion_origen === 'historica' ? 'Histórica' : 'Sin cotización' }}</small>
+						</div>
+					</div>
+					<span v-else>—</span>
+				</template>
 				<template #cell(price_vender)="data">
 					<b-input-group
 					v-if="can('article.vender.change_price') || items[data.index].default_in_vender || se_creo_en_vender(items[data.index])"
@@ -283,6 +292,7 @@
 <script>
 import vender from '@/mixins/vender/index'
 import vender_set_total from '@/mixins/vender_set_total'
+import cotizacion_por_articulo from '@/mixins/vender/cotizacion_por_articulo'
 import previus_sales from '@/mixins/vender/previus_sale/index'
 import check_stock from '@/mixins/vender/check_stock'
 /*
@@ -305,7 +315,7 @@ import { enfocar_primera_entrada_de_articulos } from '@/components/vender/layout
 */
 import { id_de_renglon_vender } from '@/utils/id_de_renglon_vender'
 export default {
-	mixins: [vender, vender_set_total, previus_sales, check_stock, varios_precios],
+	mixins: [cotizacion_por_articulo, vender, vender_set_total, previus_sales, check_stock, varios_precios],
 	components: {
 		PriceType: () => import('@/components/vender/components/remito/table-slots/PriceType'),
 		ItemAttachments: () => import('@/components/vender/components/remito/table-slots/ItemAttachments'),
@@ -333,6 +343,7 @@ export default {
 		},
 		fields() {
 			let fields = []
+			if (this.cotizaciones_por_articulo_habilitadas && this.hasExtencion('ventas_en_dolares')) fields.push({ key: 'cotizacion_aplicada', label: 'Cotización' })
 
 			if (this.hasExtencion('adjuntar_archivos_en_vantas')) {
 				fields.push({ key: 'attachments', label: 'Adj.' })
@@ -1125,4 +1136,22 @@ export default {
 	margin: 0
 	font-size: 0.82rem
 	color: var(--color-text-secondary, #6c757d)
+</style>
+
+<style lang="sass" scoped>
+.cotizacion-articulo
+	width: 100%
+	min-width: 0
+	max-width: 150px
+	input.form-control
+		width: 100% !important
+		min-width: 0 !important
+		max-width: 100%
+		box-sizing: border-box
+	.cotizacion-origen-vender
+		border-color: var(--color-text-success-strong, #218838)
+		background-color: var(--bg-success-soft, rgba(40, 167, 69, 0.12))
+	.cotizacion-origen-proveedor
+		border-color: var(--color-text-danger-strong, #c82333)
+		background-color: var(--bg-danger-soft, rgba(220, 53, 69, 0.12))
 </style>

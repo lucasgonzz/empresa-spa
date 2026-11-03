@@ -535,6 +535,8 @@ export default {
 		// (misión proveedores-ia-deepseek; si el elegido no tiene clave en la instalación, acá viene
 		// el que lo reemplazó). modelo: el id del modelo con el que corre el chat. Las dos últimas
 		// pueden no venir contra un API viejo: el footer las trata como opcionales.
+		// porcentaje_del_plan (misión plan-ia-por-gasto): entero de 0 a 100 si el plan tiene tope de
+		// gasto, null o ausente si no; ahí `plan.tope_tokens_mensual` viene null. Nunca trae plata.
 		mi_consumo: null,
 
 		// Config del agente del dueño (S3): { confianza:'cauteloso'|'resuelto'|'directo',

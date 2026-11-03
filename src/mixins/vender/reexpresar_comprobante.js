@@ -1,3 +1,4 @@
+import { aplicar_cotizacion } from '@/utils/cotizacion_por_articulo'
 import { numero_o_null, redondear_a_centavos } from '@/utils/recargos_en_precios'
 
 // Decimales de article_budget.price_sin_recargos_de_venta (decimal(25,6)): la base sin recargos.
@@ -296,9 +297,18 @@ export default {
 				if (
 					Array.isArray(item.price_type_monedas)
 					&& item.price_type_monedas.length
+					&& !(item.cotizacion_origen && item.pivot)
 				) {
 					// Trae sus propios precios por moneda: ver "LIMITE CONOCIDO" arriba.
 					resultado.con_precios_propios_por_moneda++
+					return
+				}
+
+				if (item.cotizacion_origen && item.pivot) {
+					let filas = item.varios_precios && item.varios_precios.length ? item.varios_precios : [item]
+					filas.forEach(fila => {
+						if (aplicar_cotizacion(fila, fila.cotizacion_aplicada, fila.cotizacion_origen, moneda_nueva, moneda_anterior)) resultado.convertidos++
+					})
 					return
 				}
 
