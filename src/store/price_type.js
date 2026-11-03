@@ -1,5 +1,5 @@
 import __base_store from '@/store/__base_store'
-import { es_solo_lista_precio_final } from '@/utils/lista_precio_final'
+import { es_solo_lista_precio_final, se_ven_las_listas } from '@/utils/lista_precio_final'
 
 /**
  * ¿El flag `users.listas_de_precio` del dueño está prendido? Un 1 / true real: el "1" en texto
@@ -55,8 +55,9 @@ export default __base_store({
 			return Array.isArray(state.models) ? state.models : []
 		},
 		/**
-		 * ¿Se muestra la interfaz de listas? El flag del dueño prendido Y dos o más listas. El flag
-		 * participa a propósito: una cuenta de márgenes por categoría (`lista_de_precios_por_categoria`,
+		 * ¿Se muestra la interfaz de listas? El flag del dueño prendido Y dos o más listas, o una sola
+		 * que no sea la «Precio final» (una cuenta con una lista propia no cambia). El flag participa a
+		 * propósito: una cuenta de márgenes por categoría (`lista_de_precios_por_categoria`,
 		 * flag apagado y listas cargadas) tiene su propia interfaz y no entra por acá.
 		 *
 		 * @param {Object} state
@@ -65,7 +66,7 @@ export default __base_store({
 		 * @returns {Boolean}
 		 */
 		muestra_listas(state, getters, rootState) {
-			return flag_del_dueno(rootState) && getters.listas.length >= 2
+			return flag_del_dueno(rootState) && se_ven_las_listas(getters.listas)
 		},
 		/**
 		 * ¿La cuenta tiene una sola lista y es la «Precio final»? Ahí Vender precia como un negocio sin
@@ -81,8 +82,8 @@ export default __base_store({
 			return flag_del_dueno(rootState) && es_solo_lista_precio_final(getters.listas)
 		},
 		/**
-		 * Las listas que se DIBUJAN (tarjetas, columnas, opciones): todas desde la segunda, ninguna
-		 * con una sola.
+		 * Las listas que se DIBUJAN (tarjetas, columnas, opciones): todas desde la segunda o si la única
+		 * es propia; ninguna si la única es la «Precio final».
 		 *
 		 * @param {Object} state
 		 * @param {Object} getters

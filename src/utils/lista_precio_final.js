@@ -23,6 +23,21 @@ export function es_solo_lista_precio_final(listas) {
 }
 
 /**
+ * ¿Estas listas se dibujan? Dos o más, o una sola que NO es la «Precio final». Una cuenta que ya trabajaba
+ * con una sola lista PROPIA tiene que seguir viendo sus tarjetas y su selector como hasta ahora: el recuadro
+ * del artículo no le serviría, porque su precio sale de esa lista y no del precio manual. Solo la «Precio
+ * final» sola se ve como un negocio sin listas.
+ *
+ * @param {Array} listas Las listas de precios cargadas.
+ * @returns {Boolean}
+ */
+export function se_ven_las_listas(listas) {
+	return Array.isArray(listas)
+		&& listas.length > 0
+		&& !es_solo_lista_precio_final(listas)
+}
+
+/**
  * ¿El renglón trae sus propios precios por moneda, de los que Vender tiene que tomar el precio?
  *
  * @param {Object} item Renglón de Vender.

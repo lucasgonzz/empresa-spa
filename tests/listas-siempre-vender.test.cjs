@@ -8,7 +8,7 @@ const { test } = require('node:test')
 const assert = require('node:assert/strict')
 const { cargar } = require('./helpers/cargar_modulo_esm.cjs')
 
-const { es_solo_lista_precio_final, trae_precios_propios_por_moneda } = cargar('utils/lista_precio_final.js')
+const { es_solo_lista_precio_final, se_ven_las_listas, trae_precios_propios_por_moneda } = cargar('utils/lista_precio_final.js')
 const generals = cargar('mixins/generals.js', { moment: () => ({}) }).default
 
 const LISTA = 9
@@ -74,4 +74,15 @@ test('2R con una sola lista: en dólares es el final_price tal cual', () => {
 
 test('con otra lista, las filas por moneda siguen mandando como hasta hoy', () => {
 	assert.equal(precio_de_vender(contexto(false), articulo_2r()), 15000)
+})
+
+test('las listas se dibujan salvo que la única sea la «Precio final»', () => {
+	const precio_final = { id: 1, es_precio_final: 1 }
+	const propia = { id: 2, es_precio_final: 0 }
+
+	assert.equal(se_ven_las_listas([]), false)
+	assert.equal(se_ven_las_listas([precio_final]), false)
+	// Una cuenta que ya trabajaba con una sola lista propia sigue viendo sus tarjetas.
+	assert.equal(se_ven_las_listas([propia]), true)
+	assert.equal(se_ven_las_listas([precio_final, propia]), true)
 })
