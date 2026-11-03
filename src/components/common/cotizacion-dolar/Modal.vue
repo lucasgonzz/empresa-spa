@@ -4,7 +4,7 @@
 		que lo abre tampoco existe en ese caso y el endpoint contesta 403. Es un v-if y no un
 		v-show a propósito -- para un usuario sin acceso no se ejecuta una línea de acá.
 	-->
-	<div v-if="hasExtencion('costo_en_dolares') && is_admin">
+	<div v-if="is_admin">
 		<b-modal
 		id="cotizacion-dolar"
 		size="md"

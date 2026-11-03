@@ -37,9 +37,8 @@
 					@change="al_cambiar_monto"></b-form-input>
 				</b-form-group>
 
-				<!-- Sin la extension de dolares el gasto es siempre en pesos (moneda 1) y el select no se muestra. -->
+				<!-- La moneda del gasto, para todo negocio (misión prueba-listas-siempre, 3/11/2026). -->
 				<b-form-group
-				v-if="hasExtencion('ventas_en_dolares')"
 				label="Moneda"
 				class="agenda-completar__moneda">
 					<b-form-select
@@ -204,10 +203,6 @@ export default {
 		 * @returns {number}
 		 */
 		base_moneda() {
-			if (!this.hasExtencion('ventas_en_dolares')) {
-				return 1
-			}
-
 			let moneda_id = Number(this.expense.moneda_id)
 			if (Number.isNaN(moneda_id) || !moneda_id) {
 				return 1

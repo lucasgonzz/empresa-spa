@@ -308,11 +308,8 @@ export default {
                 partes.push('Se ofrecen las cajas abiertas de todas las sucursales')
             }
 
-            if (this.hasExtencion('ventas_en_dolares')) {
-                partes.push('en la moneda de cada método de pago')
-            } else if (this.moneda_label) {
-                partes.push('en ' + this.moneda_label.toLowerCase())
-            }
+            // Cada medio de pago tiene su moneda, para todo negocio (misión prueba-listas-siempre, 3/11/2026).
+            partes.push('en la moneda de cada método de pago')
 
             let texto = partes.join(', ') + '.'
 

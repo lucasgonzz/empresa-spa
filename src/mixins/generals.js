@@ -44,6 +44,29 @@ export default {
             return this.$store.getters['address/muestra_sucursales']
         },
         /**
+         * Misión prueba-listas-siempre (3/11/2026, D4): todo negocio trabaja con listas de precios,
+         * pero la INTERFAZ de listas aparece desde la SEGUNDA (con una sola, la «Precio final», la
+         * pantalla es la de un negocio sin listas). Es el gemelo de `muestra_sucursales`: cada
+         * bifurcación de interfaz lee el getter price_type/muestra_listas en vez de repetir
+         * `ownerUsesListasDePrecio()` o `price_types.length`.
+         *
+         * 🔴 Solo para decidir QUÉ SE VE. Lo que es dato (la venta viaja con su price_type_id, la
+         * regla "toda venta lleva lista") sigue en el flag: requiere_lista_de_precios().
+         *
+         * @returns {Boolean}
+         */
+        muestra_listas() {
+            return this.$store.getters['price_type/muestra_listas']
+        },
+        /**
+         * Las listas que se dibujan (todas desde la segunda, ninguna con una sola).
+         *
+         * @returns {Array}
+         */
+        listas_visibles() {
+            return this.$store.getters['price_type/visibles']
+        },
+        /**
          * La sucursal principal del negocio (ver el getter address/principal), o null.
          *
          * @returns {Object|null}
@@ -573,8 +596,16 @@ export default {
             return v === 1 || v === true || v === '1'
         },
         hasExtencion(slug, check_has_one_extencion_permission = true) {
+            /*
+                La "extensión" de márgenes por lista es la pregunta "¿se ve la interfaz de listas?":
+                la hacen las props del artículo (margen de ganancia, precio manual, precio final: con
+                `if_has_not_extencions`), las columnas dinámicas y las tarjetas del modal. Hasta la
+                misión prueba-listas-siempre (3/11/2026) contestaba el flag del dueño; ahora contesta
+                `muestra_listas` (flag Y dos o más listas), así que con una sola lista el artículo
+                muestra su recuadro «Precio final» de siempre.
+            */
             if (slug === 'articulo_margen_de_ganancia_segun_lista_de_precios') {
-                return this.ownerUsesListasDePrecio()
+                return this.muestra_listas
             }
             if (
                 this.authenticated 

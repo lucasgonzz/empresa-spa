@@ -78,12 +78,9 @@ export default {
 		 * @returns {Object|null}
 		 */
 		cuenta_corriente_a_abrir(provider, moneda_id) {
+			// Las dos cuentas (pesos y dólares) para todo negocio, como las ofrece BtnCurrentAcounts
+			// desde la misión prueba-listas-siempre (3/11/2026).
 			let cuentas = provider && Array.isArray(provider.credit_accounts) ? provider.credit_accounts : []
-			if (!this.hasExtencion('ventas_en_dolares')) {
-				cuentas = cuentas.filter(function (cuenta) {
-					return (Number(cuenta.moneda_id) || 1) == 1
-				})
-			}
 			if (!cuentas.length) {
 				return null
 			}

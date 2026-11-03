@@ -27,8 +27,8 @@ id="Comisiones de vendedor">
 
 	<div class="comision-modal__controles">
 
+		<!-- Pesos / dólares para todo negocio (misión prueba-listas-siempre, 3/11/2026). -->
 		<segmento
-		v-if="hasExtencion('ventas_en_dolares')"
 		:opciones="opciones_moneda"
 		v-model="moneda_id"></segmento>
 

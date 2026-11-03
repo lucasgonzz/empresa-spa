@@ -49,9 +49,10 @@
 			</button>
 		</div>
 
-		<!-- Chip: Lista de precios -->
+		<!-- Chip: Lista de precios. Desde la SEGUNDA lista (misión prueba-listas-siempre, 3/11/2026):
+		     con una sola no hay nada que elegir ni que mostrar, igual que la sucursal. -->
 		<div
-		v-if="price_type_vender"
+		v-if="muestra_listas && price_type_vender"
 		class="vender-summary-bar__chip">
 			<i class="icon-list vender-summary-bar__chip-icon"></i>
 			<span class="vender-summary-bar__chip-text">{{ price_type_vender.name }}</span>
@@ -71,7 +72,7 @@
 			chip normal: llevar al selector de la lista, este en la etapa que este.
 		-->
 		<div
-		v-else-if="falta_lista_de_precios"
+		v-else-if="muestra_listas && falta_lista_de_precios"
 		class="vender-summary-bar__chip vender-summary-bar__chip--alerta"
 		data-testid="chip-sin-lista-de-precios">
 			<i class="icon-exclamation vender-summary-bar__chip-icon"></i>

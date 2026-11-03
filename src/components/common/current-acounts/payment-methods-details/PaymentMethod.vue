@@ -103,14 +103,12 @@ export default {
 				},
 			]
 
-			// La moneda solo tiene sentido para quien puede cobrar en mas de una: sin la extension
-			// de ventas en dolares todos los metodos son en pesos y la columna seria ruido.
-			if (this.hasExtencion('ventas_en_dolares')) {
-				fields.push({
-					key: '_moneda',
-					label: 'Moneda',
-				})
-			}
+			// La moneda de cada medio de pago, para todo negocio (misión prueba-listas-siempre,
+			// 3/11/2026: cobrar en dólares ya no depende de la extensión `ventas_en_dolares`).
+			fields.push({
+				key: '_moneda',
+				label: 'Moneda',
+			})
 
 			fields = fields.concat([
 				{

@@ -343,7 +343,7 @@ export default {
 		},
 		fields() {
 			let fields = []
-			if (this.cotizaciones_por_articulo_habilitadas && this.hasExtencion('ventas_en_dolares')) fields.push({ key: 'cotizacion_aplicada', label: 'Cotización' })
+			if (this.cotizaciones_por_articulo_habilitadas) fields.push({ key: 'cotizacion_aplicada', label: 'Cotización' })
 
 			if (this.hasExtencion('adjuntar_archivos_en_vantas')) {
 				fields.push({ key: 'attachments', label: 'Adj.' })
@@ -445,7 +445,8 @@ export default {
 					return this.can('vender.article_discount')
 				}
 				if (prop.key == 'price_type_personalizado_id') {
-					return this.price_types.length > 0
+					// La lista por renglón, desde la SEGUNDA lista (misión prueba-listas-siempre, 3/11/2026).
+					return this.muestra_listas
 				}
 				return true
 			})
@@ -574,8 +575,10 @@ export default {
 			return item.name || 'Personalizado'
 		},
 		se_creo_en_vender(item) {
-			if (!this.owner.listas_de_precio && !item.final_price) {
-				return true 
+			// "Sin listas visibles" en vez del flag (misión prueba-listas-siempre, 3/11/2026): el
+			// flag va siempre en 1 y con una sola lista el renglón se arma como sin listas.
+			if (!this.muestra_listas && !item.final_price) {
+				return true
 			}
 			return false
 		},

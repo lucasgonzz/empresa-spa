@@ -78,6 +78,22 @@ function build_generals_context(store_wrapper) {
 		return app_generals.methods.ownerUsesListasDePrecio.call(context)
 	}
 
+	/*
+		Misión prueba-listas-siempre (3/11/2026): hasExtencion() del mixin contesta la "extensión" de
+		márgenes por lista con el computed `muestra_listas` (flag del dueño y dos o más listas). Este
+		contexto no es un componente —no tiene computeds—, así que se le da el mismo valor leído del
+		store, para que las columnas dinámicas decidan igual que la pantalla.
+	*/
+	Object.defineProperty(context, 'muestra_listas', {
+		configurable: true,
+		get: function () {
+			let listas = root_state && root_state.price_type && Array.isArray(root_state.price_type.models)
+				? root_state.price_type.models
+				: []
+			return context.ownerUsesListasDePrecio() && listas.length >= 2
+		},
+	})
+
 	context.hasExtencion = function (slug, check_has_one_extencion_permission) {
 		return app_generals.methods.hasExtencion.call(context, slug, check_has_one_extencion_permission)
 	}

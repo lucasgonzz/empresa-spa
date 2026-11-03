@@ -49,7 +49,8 @@ export default {
 		 * @returns {boolean}
 		 */
 		owner_uses_listas_de_precio() {
-			return this.ownerUsesListasDePrecio()
+			// Las opciones por lista, desde la SEGUNDA lista (misión prueba-listas-siempre, 3/11/2026).
+			return this.muestra_listas
 		},
 		article_pdf_models() {
 			return this.$store.state.article_pdf.models
@@ -68,7 +69,7 @@ export default {
 		self.$store.dispatch('article_pdf/getModels')
 			.then(function () {})
 			.catch(function () {})
-		if (self.owner_uses_listas_de_precio && !self.price_types.length) {
+		if (self.ownerUsesListasDePrecio() && !self.price_types.length) {
 			self.$store.dispatch('price_type/getModels')
 				.then(function () {})
 				.catch(function () {})

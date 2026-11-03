@@ -6,22 +6,14 @@
 		title="Documentos PDF"
 		icon="icon-pdf"></dropdown-section-title>
 
-		<div
-		v-if="hasExtencion('ventas_en_dolares')">
+		<!-- Un PDF por moneda para todo negocio (misión prueba-listas-siempre, 3/11/2026). -->
+		<div>
 			<dropdown-option-item
 			v-for="moneda in monedas"
 			:key="moneda.id"
 			icon="icon-pdf"
 			@click="pdf(moneda)">
 				PDF con imagenes ({{ moneda.name }})
-			</dropdown-option-item>
-		</div>
-		<div
-		v-else>
-			<dropdown-option-item
-			icon="icon-pdf"
-			@click="pdf">
-				Catalogo con imagenes
 			</dropdown-option-item>
 		</div>
 

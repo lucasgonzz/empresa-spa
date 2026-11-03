@@ -20,10 +20,9 @@ export default {
 		 * @returns {void}
 		 */
 		check_cotizacion_dolar() {
-			// La extensión es de la EMPRESA y el rol es de la PERSONA: son dos preguntas
-			// distintas y las dos tienen que dar que sí. El endpoint las vuelve a hacer.
+			// El rol es de la PERSONA: solo un admin. (La extensión `costo_en_dolares` dejó de
+			// gatear esto en la misión prueba-listas-siempre, 3/11/2026: los dólares son del núcleo.)
 			if (!this.is_admin) return
-			if (!this.hasExtencion('costo_en_dolares')) return
 
 			let self = this
 			this.$store.dispatch('dolar_cotizacion/consultar', { silencioso: true })

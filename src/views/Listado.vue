@@ -129,8 +129,13 @@
 		</template>
 
 		
+		<!--
+			Tarjetas por lista del modal del artículo: desde la SEGUNDA lista (misión
+			prueba-listas-siempre, 3/11/2026, `listas_visibles`). Con una sola, el artículo muestra
+			su recuadro «Precio final» de siempre, que es el de esa lista.
+		-->
 		<template
-		v-for="price_type in price_types"
+		v-for="price_type in listas_visibles"
 		v-slot:[get_model_form_price_type_slot(price_type)]="props">
 			<price-type-input
 			:article="props.model"
@@ -155,7 +160,7 @@
 
 
 		<template
-		v-for="price_type in price_types"
+		v-for="price_type in listas_visibles"
 		v-slot:[get_table_price_type_prop(price_type)]="props">
 			{{ get_price_type_price(props.model, price_type) }}
 		</template>

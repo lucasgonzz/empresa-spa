@@ -218,14 +218,13 @@ export const ELEMENTOS = [
 		motivo_obligatorio: MOTIVO_NO_SE_GUARDA,
 		entrada_de_articulos: false,
 		/*
-			price-type/Index.vue: show() = requiere_lista_de_precios() || !!price_type_vender.
-			La parte estable es "la cuenta vende con listas" (mismo criterio que
-			mixins/vender/price_types.js::requiere_lista_de_precios, sin el caso transitorio del
-			catalogo confirmado vacio).
+			price-type/Index.vue: show() = muestra_listas && (requiere_lista_de_precios() || !!price_type_vender).
+			Misión prueba-listas-siempre (3/11/2026, D4): el selector aparece desde la SEGUNDA lista;
+			con una sola, Vender la elige solo (misma regla que el selector de sucursal de arriba).
 		*/
 		disponible: function (vm) {
-			let usa_listas = !!(vm && typeof vm.ownerUsesListasDePrecio == 'function' && vm.ownerUsesListasDePrecio())
-			return usa_listas && !tiene_extencion(vm, 'lista_de_precios_por_rango_de_cantidad_vendida')
+			let muestra_listas = !!(vm && vm.$store && vm.$store.getters['price_type/muestra_listas'])
+			return muestra_listas && !tiene_extencion(vm, 'lista_de_precios_por_rango_de_cantidad_vendida')
 		},
 		aparece_cuando: null,
 	},
@@ -237,8 +236,8 @@ export const ELEMENTOS = [
 		cols: 4,
 		obligatorio: false,
 		entrada_de_articulos: false,
-		/* Moneda.vue: show() = user && hasExtencion('ventas_en_dolares') */
-		disponible: function (vm) { return tiene_extencion(vm, 'ventas_en_dolares') },
+		/* Moneda.vue: show() = !!user. Para todo negocio desde la misión prueba-listas-siempre (3/11/2026). */
+		disponible: function () { return true },
 		aparece_cuando: null,
 	},
 	{

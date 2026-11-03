@@ -52,6 +52,14 @@ export default {
 			la extension de rangos), que es lo que se mostraba hasta ahora.
 		*/
 		show() {
+			/*
+				Desde la SEGUNDA lista (misión prueba-listas-siempre, 3/11/2026, D4): con una sola, la
+				lista se aplica sola (setPriceType) y no hay nada que elegir. El dato sigue viajando.
+			*/
+			if (!this.muestra_listas) {
+				return false
+			}
+
 			return this.requiere_lista_de_precios() || !!this.price_type_vender
 		},
 		/*

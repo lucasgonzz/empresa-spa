@@ -107,14 +107,13 @@ export default {
 			if (this.hasExtencion('no_usar_codigos_de_barra')) {
 				omit.push('bar_code')
 			}
-			const has_price_types = this.price_types && this.price_types.length
-			if (
-				has_price_types
-				&& (
-					this.hasExtencion('cambiar_price_type_en_vender')
-					|| this.list_price_extensions
-				)
-			) {
+			/*
+				Columnas por lista en vez de la de precio final: desde la SEGUNDA lista (misión
+				prueba-listas-siempre, 3/11/2026). Antes alcanzaba con tener listas y la extensión de
+				cambiar la lista en Vender, que ahora todo negocio tiene; con una sola lista, la
+				columna es la de precio final de siempre.
+			*/
+			if (this.muestra_listas) {
 				omit.push('final_price')
 			}
 			return omit
@@ -131,7 +130,7 @@ export default {
 
 			if (
 				use_final_price_column
-				&& !this.hasExtencion('cambiar_price_type_en_vender')
+				&& !this.muestra_listas
 				&& this.current_acount_payment_method_discounts.length
 			) {
 				this.current_acount_payment_method_discounts.forEach(payment_method => {
@@ -143,14 +142,7 @@ export default {
 				})
 			}
 
-			const has_price_types = this.price_types && this.price_types.length
-			if (
-				has_price_types
-				&& (
-					this.hasExtencion('cambiar_price_type_en_vender')
-					|| this.list_price_extensions
-				)
-			) {
+			if (this.muestra_listas) {
 				this.price_types.forEach(price_type => {
 					extras.push({
 						text: price_type.name,

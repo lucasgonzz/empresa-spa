@@ -70,7 +70,7 @@ export default {
 				datasets: [
 					{
 						// El grafico es en pesos: con la extension de dolares el rotulo lo aclara, para que no se lea como el total de la deuda.
-						label: this.hasExtencion('ventas_en_dolares') ? 'Saldo en pesos' : 'Saldo',
+						label: 'Saldo en pesos',
 						backgroundColor: '#007bff',
 						data: data,
 					},
