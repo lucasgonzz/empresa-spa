@@ -26,6 +26,11 @@ export default {
 			primer ingreso no se muestra, porque ya decidió importar.
 		*/
 		importacion_por_link: false,
+		/*
+			«Importar mi información ahora» del modal de bienvenida (que vive en App.vue): el modal de Importar
+			con IA está en el menú del Listado, así que la orden espera a que el Listado monte su barra.
+		*/
+		abrir_importador: false,
 	},
 	mutations: {
 		set_vencida(state, whatsapp_soporte) {
@@ -36,6 +41,9 @@ export default {
 		},
 		set_importacion_por_link(state, valor) {
 			state.importacion_por_link = !!valor
+		},
+		set_abrir_importador(state, valor) {
+			state.abrir_importador = !!valor
 		},
 		limpiar(state) {
 			state.vencida = false

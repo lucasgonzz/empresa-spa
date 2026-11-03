@@ -34,7 +34,7 @@ export default {
 				return Promise.resolve(true)
 			}
 			return this.$bvModal.msgBoxConfirm(
-				'Al importar tu información se elimina toda la información de prueba que viene cargada en el sistema: los artículos, clientes, proveedores, ventas y la caja de ejemplo. Lo que vos cargaste a mano queda. Es el momento en que tu sistema empieza a trabajar en serio con tus datos.',
+				'Se eliminan los artículos, clientes, proveedores y movimientos de ejemplo, y también las ventas, presupuestos y cobros que hayas hecho con ellos para probar. Lo que cargaste con tus propios datos (artículos, clientes y proveedores creados por vos y sus operaciones) queda. Es el momento en que tu sistema empieza a trabajar en serio con tus datos.',
 				{
 					title: 'Antes de importar',
 					okTitle: 'Sí, eliminar los datos de ejemplo e importar',

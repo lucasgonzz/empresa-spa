@@ -119,7 +119,8 @@ export default {
 		 * @returns {boolean}
 		 */
 		llego_por_un_link_de_importacion() {
-			return !!this.$store.state.prueba.importacion_por_link
+			let query = this.$route && this.$route.query ? this.$route.query : {}
+			return !!this.$store.state.prueba.importacion_por_link || !!query.importacion
 		},
 		/** @returns {boolean} */
 		hay_que_marcar_por_el_link() {
@@ -146,6 +147,10 @@ export default {
 	methods: {
 		mostrar() {
 			let self = this
+			/* Nunca encima de «Tu prueba terminó» ni del login. */
+			if (this.$route && (this.$route.name == 'pruebaTerminada' || this.$route.name == 'login')) {
+				return
+			}
 			this.$nextTick(() => {
 				self.$bvModal.show('prueba-primer-ingreso')
 			})
@@ -161,7 +166,12 @@ export default {
 			}
 			this.marcado = true
 			let self = this
-			return this.$api.post('prueba/modal-visto', {}, { skip_global_error_event: true })
+			/*
+				`skip_navigation_cancel`: «Importar ahora» navega al Listado en el mismo tick, y el interceptor de
+				main.js cancela los pedidos de la pantalla que se abandona; sin la bandera, este POST moría y el
+				modal volvía a aparecer en el próximo ingreso (medido el 3/11/2026).
+			*/
+			return this.$api.post('prueba/modal-visto', {}, { skip_global_error_event: true, skip_navigation_cancel: true })
 			.then(res => {
 				self.$store.commit('auth/setPrueba', res.data.prueba)
 			})
@@ -169,14 +179,20 @@ export default {
 				console.log('prueba/modal-visto', err)
 			})
 		},
+		/**
+		 * Este modal vive en App.vue y el de Importar con IA en el menú del Listado: se deja la orden en el
+		 * store y se navega al Listado si hace falta; el botón «Importar mi información» (montado en la barra
+		 * del Listado) la consume y abre el modal apenas existe (ver BtnImportarMiInformacion.vue).
+		 *
+		 * @returns {void}
+		 */
 		importar_ahora() {
-			let self = this
 			this.marcar_visto()
 			this.$bvModal.hide('prueba-primer-ingreso')
-			/* El modal de Importar con IA del Listado (id fijo de ExcelDropDown.vue para artículos). */
-			this.$nextTick(() => {
-				self.$bvModal.show('ai-excel-import-modal')
-			})
+			this.$store.commit('prueba/set_abrir_importador', true)
+			if (this.$route.name != 'article') {
+				this.$router.push({ name: 'article' }).catch(() => {})
+			}
 		},
 		mas_adelante() {
 			this.marcar_visto()

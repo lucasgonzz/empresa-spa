@@ -143,7 +143,16 @@ export default {
 						}
 					})
 			})
-			.catch(function () {
+			.catch(function (err) {
+				/*
+					Prueba gratuita vencida (misión prueba-experiencia-empresa, 3/11/2026): el canje contesta 403
+					`prueba_vencida` y el interceptor de main.js ya mandó a «Tu prueba terminó». No es «token
+					inválido».
+				*/
+				if (err && err.response && err.response.status === 403
+					&& err.response.data && err.response.data.error === 'prueba_vencida') {
+					return
+				}
 				// Cubre el 401 `token_invalido` del POST de canje.
 				self.mostrar_error()
 			})

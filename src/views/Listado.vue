@@ -47,9 +47,6 @@
 
 	<articles-pre-import-modal></articles-pre-import-modal>
 
-	<!-- Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el video de bienvenida y la pregunta de importar, una sola vez. Para un cliente real no muestra nada. -->
-	<prueba-primer-ingreso-modal></prueba-primer-ingreso-modal>
-
 	<view-component
 	show_view_header
 	show_filter_modal
@@ -196,7 +193,6 @@ export default {
 
 		ExcelDropdownOptions: () => import('@/components/listado/components/excel-dropdown-options/Index'),
 		ArticlesPreImportModal: () => import('@/components/listado/modals/articles-pre-import/Index'),
-		PruebaPrimerIngresoModal: () => import('@/components/prueba/PrimerIngresoModal'),
 		// StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
 		
 		Buttons: () => import('@/components/listado/components/Buttons'),

@@ -22,9 +22,38 @@ import prueba from '@/mixins/prueba'
 export default {
 	name: 'PruebaBtnImportarMiInformacion',
 	mixins: [prueba],
+	watch: {
+		/* La orden del modal de bienvenida («Importar ahora»), desde cualquier pantalla. */
+		'$store.state.prueba.abrir_importador': {
+			immediate: true,
+			handler(valor) {
+				if (valor) {
+					this.$store.commit('prueba/set_abrir_importador', false)
+					this.abrir_cuando_exista(0)
+				}
+			},
+		},
+	},
 	methods: {
 		abrir() {
 			this.$bvModal.show('ai-excel-import-modal')
+		},
+		/**
+		 * El modal de Importar con IA es lazy (vive en el menú de Excel del Listado): si todavía no montó,
+		 * `$bvModal.show` se pierde. Se reintenta cada 300 ms hasta verlo abierto, con un techo de 5 segundos.
+		 *
+		 * @param {Number} intento
+		 * @returns {void}
+		 */
+		abrir_cuando_exista(intento) {
+			let self = this
+			this.abrir()
+			setTimeout(() => {
+				let abierto = document.querySelector('#ai-excel-import-modal.show')
+				if (!abierto && intento < 16) {
+					self.abrir_cuando_exista(intento + 1)
+				}
+			}, 300)
 		},
 		/**
 		 * Cuando termina una importación, el aviso de resultado abre su modal: se vuelve a pedir el estado

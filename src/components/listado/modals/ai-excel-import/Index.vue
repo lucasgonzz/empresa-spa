@@ -5190,12 +5190,13 @@ export default {
 			}
 
 			/*
-				Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el primer import de artículos
-				de un negocio en prueba elimina toda la información de ejemplo, y se le avisa antes (decisión
-				de Lucas). La confirmación es una promesa, así que se sale y se vuelve a entrar con la marca
-				puesta; fuera de la prueba, o sin datos de ejemplo, no pregunta nada.
+				Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el primer import (artículos,
+				clientes o proveedores: Lucas, «ya cuenta como la migración») de un negocio en prueba elimina
+				toda la información de ejemplo, y se le avisa antes. La confirmación es una promesa, así que se
+				sale y se vuelve a entrar con la marca puesta; fuera de la prueba, o sin datos de ejemplo, no
+				pregunta nada.
 			*/
-			if (this.model === 'article' && this.prueba_con_semilla && !this.semilla_confirmada) {
+			if (this.prueba_con_semilla && !this.semilla_confirmada) {
 				let self = this
 				this.confirmar_borrado_de_la_semilla().then(seguir => {
 					if (!seguir) {
