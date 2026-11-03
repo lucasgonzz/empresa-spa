@@ -257,6 +257,15 @@ export default {
 					.catch(err => {
 						console.log(err)
 						this.loading = false
+						/*
+							Prueba gratuita vencida (misión prueba-experiencia-empresa, 3/11/2026): la API
+							contesta 403 `prueba_vencida` y el interceptor de main.js ya mandó a «Tu prueba
+							terminó». No es un error de ingreso.
+						*/
+						if (err && err.response && err.response.status === 403
+							&& err.response.data && err.response.data.error === 'prueba_vencida') {
+							return
+						}
 						this.$toast.error('Error al ingresar. Recargá la página e intentá de nuevo.')
 					})
 			}

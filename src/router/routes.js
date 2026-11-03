@@ -111,29 +111,12 @@ export default [
 			},
 		],
 	},
-	{
-		path: '/deposito-para-checkear',
-		text: 'Deposito',
-		name: 'deposito-para-checkear',
-		component: '@/views/DepositoParaCheckear',
-		can: 'deposito_para_checkear',
-		image_url: 'nav-icons/ventas-to-check.png',
-		icon: 'clipboard-check',
-		if_has_extencion: 'check_sales',
-		params: {
-			view: 'para-checkear',
-		},
-	},
-	{
-		path: '/deposito-checkeadas',
-		text: 'Checkeadas',
-		name: 'deposito-checkeadas',
-		component: '@/views/DepositoCheckeadas',
-		can: 'deposito_checkeadas',
-		image_url: 'nav-icons/ventas-checked.png',
-		icon: 'patch-check',
-		if_has_extencion: 'check_sales',
-	},
+	/*
+		Depósito y Checkeadas (check sales) se sacaron del sistema (decisión de Lucas, 3/11/2026, programa
+		«Prueba gratuita de 7 días»): no se van a usar más. Se fueron las dos rutas y sus vistas; el backend
+		de `check_sales` no se tocó, y `components/deposito/components/SaleButtons` queda porque lo usan
+		Por entregar y Por estado.
+	*/
 	{
 		path: '/ventas',
 		model_name: 'sale',
@@ -535,6 +518,13 @@ export default [
 		]
 	},
 	{
+		/*
+			ABM se esconde del menú (decisión de Lucas, 3/11/2026, programa «Prueba gratuita de 7 días»). Con
+			`not_show` y NO borrando la entrada: Abm.vue la busca por `name` para resolver el modelo por
+			defecto, y redirect() (permissions.js) la saltea como aterrizaje. La pantalla sigue existiendo por
+			URL (/abm) y por los atajos que llegan a ella (integraciones de tienda online, UserConfig.vue).
+		*/
+		not_show: true,
 		text: 'ABM',
 		name: 'abm',
 		params: {

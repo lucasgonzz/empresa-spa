@@ -78,6 +78,14 @@ export default {
 				if (route.no_aterrizar) {
 					continue
 				}
+				/*
+					Misma idea para `not_show` (misión prueba-experiencia-empresa, 3/11/2026): ABM quedó
+					escondido del menú con esa marca y no puede ser la pantalla por defecto de nadie. Hasta
+					acá ninguna ruta de primer nivel la llevaba, así que las demás siguen igual.
+				*/
+				if (route.not_show) {
+					continue
+				}
 				if (route.check_is_owner && (this.is_owner || this.user.admin_access)) {
 					route_to_redirect = route
 					break

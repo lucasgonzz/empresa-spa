@@ -676,7 +676,10 @@ import * as XLSX from 'xlsx/xlsx.mjs'
 import Advises from '@/common-vue/components/import/Advises'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import { env } from '@/runtime_config'
-export default { 
+import prueba from '@/mixins/prueba'
+export default {
+	/* Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el aviso antes del primer import. */
+	mixins: [prueba],
 	components: {
 		Advises,
 		BtnLoader,
@@ -1593,6 +1596,18 @@ export default {
 		},
 		async upload() {
 			if (this.check()) {
+
+				/*
+					Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el primer import de
+					artículos de un negocio en prueba elimina toda la información de ejemplo, y se le avisa
+					antes. Fuera de la prueba, o sin datos de ejemplo, resuelve true sin preguntar.
+				*/
+				if (this.model_name == 'article') {
+					let seguir = await this.confirmar_borrado_de_la_semilla()
+					if (!seguir) {
+						return
+					}
+				}
 
 				this.loading = true
 				let form_data = new FormData()

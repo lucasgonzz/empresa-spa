@@ -95,21 +95,11 @@
 
 		</div>
 		
-		<div 
-	    v-b-toggle.download-resources
-		class="route">
-			<div class="menu-trigger">
-				<div class="ruta-principal">
-					<span class="route-text">Recursos</span>
-					<div class="route-icon-badge-wrap">
-			        	<img
-			        	class="route-nav-img"
-			        	src="@/assets/nuevos-nav-icons/recursos.png"
-			        	alt="Recursos">
-					</div>
-				</div>
-			</div>
-		</div>
+		<!--
+			El ítem «Recursos» (la descarga de catálogos al arrancar) se sacó del menú (decisión de Lucas,
+			3/11/2026, programa «Prueba gratuita de 7 días»). El panel <download-resources> de abajo queda
+			montado: otras partes lo abren con v-b-toggle.download-resources.
+		-->
 
 		<slot name="nav_bottom"></slot>
 

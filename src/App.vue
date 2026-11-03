@@ -426,7 +426,8 @@ export default {
          * @returns {void}
          */
         ir_a_login() {
-            if (this.$route.name !== 'login' && this.$route.name !== 'passwordReset') {
+            // 'pruebaTerminada': la prueba gratuita vencida ya tiene su pantalla (misión prueba-experiencia-empresa).
+            if (this.$route.name !== 'login' && this.$route.name !== 'passwordReset' && this.$route.name !== 'pruebaTerminada') {
                 this.$router.replace({name: 'login'}).catch(() => {})
             }
         },
