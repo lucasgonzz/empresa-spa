@@ -3,6 +3,7 @@
 	id="prueba-primer-ingreso"
 	title="¡Bienvenido a tu sistema!"
 	size="lg"
+	dialog-class="prueba-primer-ingreso__dialog"
 	centered
 	hide-footer
 	no-close-on-backdrop
@@ -109,7 +110,20 @@ export default {
 		 * @returns {boolean}
 		 */
 		debe_mostrarse() {
-			return this.prueba_con_semilla && !this.prueba_del_usuario.modal_visto
+			return this.prueba_con_semilla && !this.prueba_del_usuario.modal_visto && !this.llego_por_un_link_de_importacion
+		},
+		/**
+		 * Llegó por `?importacion=<uuid>` (el aviso de soporte): ya decidió importar, la pregunta sobra. Se
+		 * marca visto igual, así tampoco aparece la próxima vez.
+		 *
+		 * @returns {boolean}
+		 */
+		llego_por_un_link_de_importacion() {
+			return !!this.$store.state.prueba.importacion_por_link
+		},
+		/** @returns {boolean} */
+		hay_que_marcar_por_el_link() {
+			return this.llego_por_un_link_de_importacion && this.prueba_con_semilla && !this.prueba_del_usuario.modal_visto
 		},
 	},
 	watch: {
@@ -118,6 +132,15 @@ export default {
 			if (valor) {
 				this.mostrar()
 			}
+		},
+		/* Mismo motivo: el usuario (y su `prueba`) puede llegar después del montaje. */
+		hay_que_marcar_por_el_link: {
+			immediate: true,
+			handler(valor) {
+				if (valor) {
+					this.marcar_visto()
+				}
+			},
 		},
 	},
 	methods: {
@@ -168,6 +191,14 @@ export default {
 }
 </script>
 <style lang="sass">
+// El modal "lg" de este sistema ocupa casi toda la pantalla (`.modal-dialog.modal-lg { max-width: 90% !important }`,
+// medido: 1229px a 1366): acá se acota con un selector más específico, porque un video a ese ancho mide 672px de
+// alto y deja los dos botones abajo del borde en una pantalla de 768.
+.modal-dialog.modal-lg.prueba-primer-ingreso__dialog
+	max-width: 820px !important
+	margin-left: auto
+	margin-right: auto
+
 .prueba-primer-ingreso
 	display: flex
 	flex-direction: column

@@ -20,6 +20,12 @@ export default {
 	state: {
 		vencida: false,
 		whatsapp_soporte: null,
+		/*
+			El dueño llegó al Listado por el link de WhatsApp «ya leí tu Excel» (`?importacion=<uuid>`, lo
+			manda Martín desde el admin, M4): el modal de Importar con IA se abre solo en ese análisis y el de
+			primer ingreso no se muestra, porque ya decidió importar.
+		*/
+		importacion_por_link: false,
 	},
 	mutations: {
 		set_vencida(state, whatsapp_soporte) {
@@ -27,6 +33,9 @@ export default {
 			if (whatsapp_soporte) {
 				state.whatsapp_soporte = whatsapp_soporte
 			}
+		},
+		set_importacion_por_link(state, valor) {
+			state.importacion_por_link = !!valor
 		},
 		limpiar(state) {
 			state.vencida = false
