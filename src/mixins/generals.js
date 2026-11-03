@@ -1,4 +1,5 @@
 import { inicializar_cotizacion, convertir_importe } from '@/utils/cotizacion_por_articulo'
+import { trae_precios_propios_por_moneda } from '@/utils/lista_precio_final'
 import moment from 'moment'
 import { env } from '@/runtime_config'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
@@ -57,6 +58,15 @@ export default {
          */
         muestra_listas() {
             return this.$store.getters['price_type/muestra_listas']
+        },
+        /**
+         * Una sola lista y es la «Precio final»: Vender precia como un negocio sin listas (corrección
+         * C5 de la misión, ver utils/lista_precio_final.js).
+         *
+         * @returns {Boolean}
+         */
+        solo_lista_precio_final() {
+            return this.$store.getters['price_type/solo_precio_final']
         },
         /**
          * Las listas que se dibujan (todas desde la segunda, ninguna con una sola).
@@ -1421,11 +1431,10 @@ export default {
             }
 
 
-            // Los items con price_type_monedas traen su propia moneda: no se tocan. Igual que hoy.
-            if (
-                typeof item.price_type_monedas != 'undefined'
-                && item.price_type_monedas.length
-            ) {
+            // Los items con price_type_monedas traen su propia moneda: no se tocan. Igual que hoy. Con
+            // una sola lista, la «Precio final», esas filas son informativas y el precio del artículo
+            // se convierte con la cotización de la venta (utils/lista_precio_final.js).
+            if (trae_precios_propios_por_moneda(item, this.solo_lista_precio_final)) {
                 if (item.cotizacion_origen && !item.pivot) item.moneda_base_precio = Number(this.$store.state.vender.moneda_id) === 2 ? 2 : 1
                 return price
             }
@@ -1626,6 +1635,15 @@ export default {
             console.log('aplicar_tipos_de_precio a: ')
             console.log(item)
             if (item.is_article) {
+
+                /*
+                    Una sola lista, la «Precio final»: esa lista ES el precio del artículo, así que el
+                    precio que llega se queda como está y check_moneda lo convierte con la cotización de
+                    la venta, como en un negocio sin listas (corrección C5, utils/lista_precio_final.js).
+                */
+                if (this.solo_lista_precio_final) {
+                    return price
+                }
 
                 let price_vender_id = null
 
