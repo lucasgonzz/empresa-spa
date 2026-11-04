@@ -192,7 +192,9 @@ export default {
 		 * @returns {boolean}
 		 */
 		falta_lista_de_precios() {
-			return !this.price_type_vender && this.requiere_lista_de_precios()
+			return !this.price_type_vender
+				&& !this.catalogo_de_listas_cargando
+				&& this.requiere_lista_de_precios()
 		},
 
 		/**

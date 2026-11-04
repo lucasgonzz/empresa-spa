@@ -200,8 +200,8 @@ export default {
 		/*
 			La tilde "Trabajar con listas de precio (margen por lista)" (`listas_de_precio`) ya no está
 			(misión prueba-listas-siempre, 3/11/2026): todo negocio trabaja con listas, el flag va
-			siempre en 1 y la API ignora un 0. La interfaz de listas aparece sola desde la segunda
-			lista (`muestra_listas`); con una sola, el sistema se ve como sin listas.
+			siempre en 1 y la API ignora un 0. Si la única lista es la «Precio final», el sistema se ve
+			como sin listas (`muestra_listas`); con cualquier otra, aparece la interfaz de listas.
 		*/
 		/*
 		 * Tarea 4 — las cuatro tildes de redondeo (centenas, decenas, de a 50 y centavos) se

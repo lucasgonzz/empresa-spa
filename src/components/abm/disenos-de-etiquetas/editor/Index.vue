@@ -269,7 +269,7 @@ export default {
 		 * @returns {boolean}
 		 */
 		usa_listas() {
-			// Elementos "precio de lista" desde la SEGUNDA lista (misión prueba-listas-siempre, 3/11/2026).
+			// Elementos "precio de lista", salvo que la única sea la «Precio final» (misión prueba-listas-siempre, 3/11/2026).
 			return this.muestra_listas
 		},
 		/**

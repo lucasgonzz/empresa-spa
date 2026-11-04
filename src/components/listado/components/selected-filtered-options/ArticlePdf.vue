@@ -49,7 +49,7 @@ export default {
 		 * @returns {boolean}
 		 */
 		owner_uses_listas_de_precio() {
-			// Las opciones por lista, desde la SEGUNDA lista (misión prueba-listas-siempre, 3/11/2026).
+			// Las opciones por lista, salvo que la única sea la «Precio final» (misión prueba-listas-siempre, 3/11/2026).
 			return this.muestra_listas
 		},
 		article_pdf_models() {

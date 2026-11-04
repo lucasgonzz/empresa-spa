@@ -130,6 +130,66 @@ test('«Precio final» y otra lista: se ve todo', () => {
 	assert.equal(g.solo_precio_final, false)
 })
 
+/** Los módulos reales con sus dependencias de pantalla reemplazadas. */
+function mixin_de_listas() {
+	return cargar('mixins/vender/price_types.js', {
+		vue: { observable: objeto => objeto },
+		'@/mixins/vender/computed': {},
+	}).default
+}
+
+function contexto_del_catalogo(mixin, cargando_el_store, estado_del_arranque, price_types = []) {
+	return {
+		...mixin.methods,
+		price_types,
+		$store: { state: { price_type: { loading: cargando_el_store } } },
+		estado_del_arranque_de_recursos: () => estado_del_arranque,
+	}
+}
+
+test('el catálogo está cargando mientras baja o el arranque no terminó, y deja de estarlo cuando terminó', () => {
+	const mixin = mixin_de_listas()
+	const cargando = ctx => mixin.computed.catalogo_de_listas_cargando.call(ctx)
+
+	assert.equal(cargando(contexto_del_catalogo(mixin, true, 'cargando')), true, 'Baja por getModels.')
+	assert.equal(cargando(contexto_del_catalogo(mixin, false, 'cargando')), true, 'El arranque sigue en vuelo.')
+	assert.equal(cargando(contexto_del_catalogo(mixin, false, 'listo')), false, 'Terminó y no hay catálogo: caso Trama.')
+	assert.equal(cargando(contexto_del_catalogo(mixin, true, 'cargando', [PRECIO_FINAL])), false, 'Ya llegó.')
+})
+
+test('el chip de falta de lista espera al catálogo y sigue saliendo si terminó sin lista', () => {
+	const barra = cargar('components/vender/components/VenderStage1SummaryBar.vue', {
+		'@/mixins/vender/price_types': {},
+		'@/mixins/vender/diseno_de_vender': {},
+	}).default
+	const falta = (cargando, price_type_vender = null) => barra.computed.falta_lista_de_precios.call({
+		price_type_vender,
+		catalogo_de_listas_cargando: cargando,
+		requiere_lista_de_precios: () => true,
+	})
+
+	assert.equal(falta(true), false, 'Recargando Vender: no se muestra el chip rojo.')
+	assert.equal(falta(false), true, 'Terminó y no hay lista: el chip sale, es el caso de Trama.')
+	assert.equal(falta(false, PROPIA), false)
+})
+
+test('el selector no aparece vacío mientras baja el catálogo', () => {
+	const selector = cargar('components/vender/components/remito/total-previus-sales/price-type/Index.vue', {
+		'@/mixins/vender': {},
+		'@/mixins/vender/price_types': {},
+	}).default
+	const show = (solo, cargando, requiere) => selector.computed.show.call({
+		solo_lista_precio_final: solo,
+		catalogo_de_listas_cargando: cargando,
+		price_type_vender: null,
+		requiere_lista_de_precios: () => requiere,
+	})
+
+	assert.equal(show(false, true, true), false)
+	assert.equal(show(true, false, true), false)
+	assert.equal(show(false, false, true), true)
+})
+
 test('las listas se dibujan salvo que la única sea la «Precio final»', () => {
 	const precio_final = { id: 1, es_precio_final: 1 }
 	const propia = { id: 2, es_precio_final: 0 }
