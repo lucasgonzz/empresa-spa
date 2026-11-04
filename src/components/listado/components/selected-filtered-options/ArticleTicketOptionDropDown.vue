@@ -89,7 +89,9 @@ export default {
 		 * @return {boolean}
 		 */
 		owner_uses_listas_de_precio() {
-			return this.ownerUsesListasDePrecio()
+			// Las etiquetas por lista (misión prueba-listas-siempre, 3/11/2026): si la única es la «Precio
+			// final» vale la etiqueta genérica de siempre, con el precio final.
+			return this.muestra_listas
 		},
 		/**
 		 * Listas de precios disponibles en store.

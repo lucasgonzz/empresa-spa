@@ -125,14 +125,13 @@ const routes = [
         component: () => import('@/views/Listado')
     },
     {
-        path: '/deposito-para-checkear/:view',
-        name: 'deposito-para-checkear',
-        component: () => import('@/views/DepositoParaCheckear')
-    },
-    {
-        path: '/deposito-checkeadas',
-        name: 'deposito-checkeadas',
-        component: () => import('@/views/DepositoCheckeadas')
+        /*
+            «Tu prueba terminó» (misión prueba-experiencia-empresa, 3/11/2026): la pantalla a la que manda el
+            403 `prueba_vencida` de la API. Pública: no hay usuario detrás (ver public_route_names).
+        */
+        path: '/prueba-terminada',
+        name: 'pruebaTerminada',
+        component: () => import('@/views/PruebaTerminada'),
     },
     {
         path: '/por-entregar/:view',
@@ -292,7 +291,8 @@ router.beforeEach((to, from, next) => {
     // 'accesoSoporte' es el ingreso con acceso de soporte (misión acceso-soporte-firmado): igual
     // que la demo, la vista canjea su token por una sesión y maneja su propia autenticación;
     // sin esta entrada la guarda la rebotaría a `login` antes de que el canje termine.
-    const public_route_names = ['login', 'passwordReset', 'demoIngreso', 'informeCompartido', 'accesoSoporte']
+    // 'pruebaTerminada' es la pantalla de la prueba gratuita vencida: la API ya cortó la sesión con 403.
+    const public_route_names = ['login', 'passwordReset', 'demoIngreso', 'informeCompartido', 'accesoSoporte', 'pruebaTerminada']
 
     // Estado de sesión: `null` se trata como no autenticado (hasta que `auth/me` resuelva).
     const is_authenticated = store && store.state && store.state.auth && store.state.auth.authenticated

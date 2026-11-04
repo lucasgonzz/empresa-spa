@@ -1,0 +1,262 @@
+// Vender con la lista «Precio final» (misión prueba-listas-siempre, 3/11/2026, corrección C5): con una sola
+// lista, el caso 2R (`ventas_en_dolares` + costo en dólares + `cotizar_precios_en_dolares` apagado) precia
+// EXACTAMENTE como hoy: `final_price` en dólares, convertido con la cotización de la VENTA. Se prueba el
+// mixin real de precios (aplicar_tipos_de_precio y check_moneda), sin navegador.
+//
+// Ejecutar con: node --test tests/listas-siempre-vender.test.cjs
+const { test } = require('node:test')
+const assert = require('node:assert/strict')
+const { cargar } = require('./helpers/cargar_modulo_esm.cjs')
+
+const { es_solo_lista_precio_final, se_ven_las_listas, trae_precios_propios_por_moneda } = cargar('utils/lista_precio_final.js')
+const generals = cargar('mixins/generals.js', { moment: () => ({}) }).default
+
+const LISTA = 9
+
+/**
+ * Un artículo del caso 2R: USD 15 de precio final, y las filas por moneda de «Precio final» que dejó el
+ * último recálculo con `users.dollar` = 1000.
+ */
+function articulo_2r() {
+	return {
+		is_article: true,
+		name: 'zz 2R',
+		cost_in_dollars: 1,
+		final_price: 15,
+		price_types: [{ id: LISTA, pivot: { final_price: 15 } }],
+		price_type_monedas: [
+			{ price_type_id: LISTA, moneda_id: 1, final_price: 15000 },
+			{ price_type_id: LISTA, moneda_id: 2, final_price: 15 },
+		],
+	}
+}
+
+/** El `this` del mixin: la venta en pesos con cotización 1200 (el dólar de la cuenta es 1000). */
+function contexto(solo_precio_final, moneda_id = 1) {
+	const vender = { moneda_id, valor_dolar: 1200, cotizacion_por_articulo_disponible: false }
+	return {
+		...generals.methods,
+		$store: { state: { vender } },
+		owner: { cotizar_precios_en_dolares: 0 },
+		solo_lista_precio_final: solo_precio_final,
+		price_type_vender: { id: LISTA },
+		hasExtencion: slug => slug === 'ventas_en_dolares',
+	}
+}
+
+/** El tramo de getPriceVender que importa: la lista y después la moneda. */
+function precio_de_vender(ctx, item) {
+	return ctx.check_moneda(item, ctx.aplicar_tipos_de_precio(item, item.final_price), false, false)
+}
+
+test('una sola lista «Precio final» es esa y ninguna otra', () => {
+	assert.equal(es_solo_lista_precio_final([{ id: 1, es_precio_final: 1 }]), true)
+	assert.equal(es_solo_lista_precio_final([{ id: 1, es_precio_final: '1' }]), true)
+	assert.equal(es_solo_lista_precio_final([{ id: 1, es_precio_final: 0 }]), false, 'Una sola lista propia no entra.')
+	assert.equal(es_solo_lista_precio_final([{ id: 1, es_precio_final: 1 }, { id: 2 }]), false, 'Con dos ya se ven las listas.')
+	assert.equal(es_solo_lista_precio_final([]), false)
+})
+
+test('las filas por moneda solo mandan si no es la «Precio final» sola', () => {
+	assert.equal(trae_precios_propios_por_moneda(articulo_2r(), true), false)
+	assert.equal(trae_precios_propios_por_moneda(articulo_2r(), false), true)
+	assert.equal(trae_precios_propios_por_moneda({ price_type_monedas: [] }, false), false)
+	assert.equal(trae_precios_propios_por_moneda({}, false), false)
+})
+
+test('2R con una sola lista: en pesos se convierte con la cotización de la venta, no con users.dollar', () => {
+	assert.equal(precio_de_vender(contexto(true), articulo_2r()), 18000, 'USD 15 × 1200, no la fila fija de 15000.')
+})
+
+test('2R con una sola lista: en dólares es el final_price tal cual', () => {
+	assert.equal(precio_de_vender(contexto(true, 2), articulo_2r()), 15)
+})
+
+test('con otra lista, las filas por moneda siguen mandando como hasta hoy', () => {
+	assert.equal(precio_de_vender(contexto(false), articulo_2r()), 15000)
+})
+
+/**
+ * Los getters reales del store, sin red: `__base_store` es un falso que devuelve la configuración.
+ */
+function getters_de(listas, flag) {
+	const config = cargar('store/price_type.js', { '@/store/__base_store': configuracion => configuracion }).default
+	const rootState = { auth: { authenticated: true, user: { listas_de_precio: flag } } }
+	const state = { models: listas }
+	const getters = { listas: config.getters.listas(state) }
+	return {
+		muestra_listas: config.getters.muestra_listas(state, getters, rootState),
+		solo_precio_final: config.getters.solo_precio_final(state, getters, rootState),
+		visibles: config.getters.visibles(state, getters),
+	}
+}
+
+const PRECIO_FINAL = { id: 1, es_precio_final: 1 }
+const PROPIA = { id: 2, es_precio_final: 0 }
+const OTRA = { id: 3, es_precio_final: null }
+
+test('cuenta por categoría, con el flag apagado y varias listas: ve sus listas y no trabaja con el flag', () => {
+	const g = getters_de([PROPIA, OTRA], 0)
+	assert.equal(g.muestra_listas, false, 'Lo que leía el flag sigue en false: el artículo muestra margen y precio.')
+	assert.deepEqual(g.visibles, [PROPIA, OTRA], 'Lo que leía price_types.length sigue viéndolas: sin esto, celdas vacías en el Listado.')
+	assert.equal(g.solo_precio_final, false)
+})
+
+test('flag prendido y cero listas: como en la base, esconde margen y precio y no dibuja nada', () => {
+	const g = getters_de([], 1)
+	assert.equal(g.muestra_listas, true)
+	assert.deepEqual(g.visibles, [])
+	assert.equal(g.solo_precio_final, false)
+})
+
+test('la «Precio final» sola: se ve como un negocio sin listas', () => {
+	const g = getters_de([PRECIO_FINAL], 1)
+	assert.equal(g.muestra_listas, false)
+	assert.deepEqual(g.visibles, [])
+	assert.equal(g.solo_precio_final, true)
+})
+
+test('una sola lista propia: con el flag o sin él, como en la base', () => {
+	assert.equal(getters_de([PROPIA], 1).muestra_listas, true)
+	assert.deepEqual(getters_de([PROPIA], 1).visibles, [PROPIA])
+	assert.equal(getters_de([PROPIA], 0).muestra_listas, false)
+	assert.deepEqual(getters_de([PROPIA], 0).visibles, [PROPIA])
+})
+
+test('«Precio final» y otra lista: se ve todo', () => {
+	const g = getters_de([PRECIO_FINAL, PROPIA], 1)
+	assert.equal(g.muestra_listas, true)
+	assert.deepEqual(g.visibles, [PRECIO_FINAL, PROPIA])
+	assert.equal(g.solo_precio_final, false)
+})
+
+/** Los módulos reales con sus dependencias de pantalla reemplazadas. */
+function mixin_de_listas() {
+	return cargar('mixins/vender/price_types.js', {
+		vue: { observable: objeto => objeto },
+		'@/mixins/vender/computed': {},
+	}).default
+}
+
+function contexto_del_catalogo(mixin, cargando_el_store, estado_del_arranque, price_types = []) {
+	return {
+		...mixin.methods,
+		price_types,
+		$store: { state: { price_type: { loading: cargando_el_store } } },
+		estado_del_arranque_de_recursos: () => estado_del_arranque,
+	}
+}
+
+test('el catálogo está cargando mientras baja o el arranque no terminó, y deja de estarlo cuando terminó', () => {
+	const mixin = mixin_de_listas()
+	const cargando = ctx => mixin.computed.catalogo_de_listas_cargando.call(ctx)
+
+	assert.equal(cargando(contexto_del_catalogo(mixin, true, 'cargando')), true, 'Baja por getModels.')
+	assert.equal(cargando(contexto_del_catalogo(mixin, false, 'cargando')), true, 'El arranque sigue en vuelo.')
+	assert.equal(cargando(contexto_del_catalogo(mixin, false, 'listo')), false, 'Terminó y no hay catálogo: caso Trama.')
+	assert.equal(cargando(contexto_del_catalogo(mixin, true, 'cargando', [PRECIO_FINAL])), false, 'Ya llegó.')
+})
+
+test('el chip de falta de lista espera al catálogo y sigue saliendo si terminó sin lista', () => {
+	const barra = cargar('components/vender/components/VenderStage1SummaryBar.vue', {
+		'@/mixins/vender/price_types': {},
+		'@/mixins/vender/diseno_de_vender': {},
+	}).default
+	const falta = (cargando, price_type_vender = null) => barra.computed.falta_lista_de_precios.call({
+		price_type_vender,
+		catalogo_de_listas_cargando: cargando,
+		requiere_lista_de_precios: () => true,
+	})
+
+	assert.equal(falta(true), false, 'Recargando Vender: no se muestra el chip rojo.')
+	assert.equal(falta(false), true, 'Terminó y no hay lista: el chip sale, es el caso de Trama.')
+	assert.equal(falta(false, PROPIA), false)
+})
+
+test('el selector no aparece vacío mientras baja el catálogo', () => {
+	const selector = cargar('components/vender/components/remito/total-previus-sales/price-type/Index.vue', {
+		'@/mixins/vender': {},
+		'@/mixins/vender/price_types': {},
+	}).default
+	const show = (solo, cargando, requiere) => selector.computed.show.call({
+		solo_lista_precio_final: solo,
+		catalogo_de_listas_cargando: cargando,
+		price_type_vender: null,
+		requiere_lista_de_precios: () => requiere,
+	})
+
+	assert.equal(show(false, true, true), false)
+	assert.equal(show(true, false, true), false)
+	assert.equal(show(false, false, true), true)
+})
+
+test('las listas se dibujan salvo que la única sea la «Precio final»', () => {
+	const precio_final = { id: 1, es_precio_final: 1 }
+	const propia = { id: 2, es_precio_final: 0 }
+
+	assert.equal(se_ven_las_listas([]), false)
+	assert.equal(se_ven_las_listas([precio_final]), false)
+	// Una cuenta que ya trabajaba con una sola lista propia sigue viendo sus tarjetas.
+	assert.equal(se_ven_las_listas([propia]), true)
+	assert.equal(se_ven_las_listas([precio_final, propia]), true)
+})
+
+/*
+	Misión vender-tras-migrar-precio-final (4/11/2026). El caso real, en navegador: negocio migrado con la API
+	de price-type caída. Chip «Sin lista de precios», selector vacío y Guardar frenado para siempre con
+	"recargá la página". Con `user.solo_lista_precio_final`, que viaja en el login y en GET /api/user, la
+	pantalla sabe que no hay nada que elegir: la venta sale sin lista y la API toma la «Precio final».
+*/
+function getters_sin_catalogo(usuario) {
+	const config = cargar('store/price_type.js', { '@/store/__base_store': configuracion => configuracion }).default
+	const rootState = { auth: { authenticated: true, user: { listas_de_precio: 1, ...usuario } } }
+	const state = { models: [] }
+	const getters = { listas: config.getters.listas(state) }
+	return {
+		muestra_listas: config.getters.muestra_listas(state, getters, rootState),
+		solo_precio_final: config.getters.solo_precio_final(state, getters, rootState),
+	}
+}
+
+test('sin catálogo y con el servidor diciendo «Precio final» sola: se ve como un negocio sin listas', () => {
+	const g = getters_sin_catalogo({ solo_lista_precio_final: true })
+	assert.equal(g.solo_precio_final, true)
+	assert.equal(g.muestra_listas, false)
+})
+
+test('sin catálogo y sin ese dato (cuenta con listas propias, o API anterior): como hasta hoy', () => {
+	for (const usuario of [{ solo_lista_precio_final: false }, {}]) {
+		const g = getters_sin_catalogo(usuario)
+		assert.equal(g.solo_precio_final, false)
+		assert.equal(g.muestra_listas, true)
+	}
+})
+
+test('con catálogo manda el catálogo, diga lo que diga el dato del login', () => {
+	const config = cargar('store/price_type.js', { '@/store/__base_store': configuracion => configuracion }).default
+	const rootState = { auth: { authenticated: true, user: { listas_de_precio: 1, solo_lista_precio_final: true } } }
+	const state = { models: [PRECIO_FINAL, PROPIA] }
+	const getters = { listas: config.getters.listas(state) }
+	assert.equal(config.getters.solo_precio_final(state, getters, rootState), false, 'Se cargó otra lista después de entrar.')
+	assert.equal(config.getters.muestra_listas(state, getters, rootState), true)
+})
+
+function contexto_de_la_regla(mixin, price_types, solo_lista_precio_final) {
+	return {
+		...mixin.methods,
+		price_types,
+		solo_lista_precio_final,
+		ownerUsesListasDePrecio: () => true,
+		hasExtencion: () => false,
+	}
+}
+
+test('la regla de la pantalla: sin catálogo no pide lista solo si la cuenta tiene la «Precio final» sola', () => {
+	const mixin = mixin_de_listas()
+	const requiere = (price_types, solo) => mixin.methods.requiere_lista_de_precios.call(contexto_de_la_regla(mixin, price_types, solo))
+
+	assert.equal(requiere([], true), false, 'Catálogo caído en un negocio migrado: la venta no se frena.')
+	assert.equal(requiere([], false), true, 'Catálogo caído en una cuenta con listas: se sigue frenando, es el caso de Trama.')
+	assert.equal(requiere([PRECIO_FINAL], true), true, 'Con el catálogo, la lista se aplica sola como siempre.')
+	assert.equal(requiere([PROPIA], false), true)
+})

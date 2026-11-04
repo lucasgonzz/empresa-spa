@@ -397,6 +397,24 @@ function global_api_error_interceptor(error) {
     const is_authenticated = store.state.auth && store.state.auth.authenticated === true
 
     const { status, data } = response
+
+    /*
+     * Prueba gratuita vencida (misión prueba-experiencia-empresa, 3/11/2026). La API contesta 403
+     * `{error: 'prueba_vencida', whatsapp_soporte}` en toda ruta con sesión y en el login. Va ANTES de la
+     * guarda de `is_authenticated` y de las banderas de skip: en el login todavía no hay sesión, y lo que
+     * tiene que pasar es siempre lo mismo, mostrar «Tu prueba terminó» con el WhatsApp de soporte. No se
+     * cierra la sesión del front a propósito: si el admin extiende los días, el negocio recarga y sigue.
+     */
+    if (status === 403 && data && typeof data === 'object' && data.error === 'prueba_vencida') {
+        store.commit('prueba/set_vencida', data.whatsapp_soporte || null)
+        store.commit('auth/setLoading', false)
+        store.commit('auth/setMessage', '')
+        if (router.currentRoute.name !== 'pruebaTerminada') {
+            router.replace({ name: 'pruebaTerminada' }).catch(() => {})
+        }
+        return Promise.reject(error)
+    }
+
     const skip_validation_toast = Boolean(
         error.config && error.config.skip_global_validation_toast
     )

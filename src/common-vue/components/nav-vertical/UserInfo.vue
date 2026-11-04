@@ -57,6 +57,20 @@
 				Procesos
 			</div>
 
+			<!--
+				Pantallas que salieron de la barra principal (ABM y sus hijas, decisión de Lucas, 3/11/2026).
+				Lista y condiciones en el computed accesos_de_configuracion.
+			-->
+			<div
+			v-for="acceso in accesos_de_configuracion"
+			:key="acceso.name"
+			class="item"
+			:data-testid="acceso.testid"
+			@click="abrir_acceso(acceso)">
+				<i :class="acceso.icono"></i>
+				{{ acceso.texto }}
+			</div>
+
 		    <div
 		    v-if="is_admin">
 		        <div
@@ -87,7 +101,18 @@
 </template>
 <script>
 import nav from '@/common-vue/mixins/nav'
+import routes from '@/router/routes'
 import { apply_dark_mode_class } from '@/utils/dark_mode'
+
+/**
+ * Accesos del bloque «Configuración» a pantallas que no se dibujan en la barra principal. `name` es
+ * el nombre de la ruta en router/routes.js: de ahí salen las condiciones, el ícono y los params.
+ */
+const accesos_a_rutas = [
+	{name: 'abm', texto: 'ABM', testid: 'menu-abm'},
+	{name: 'employee', texto: 'Empleados', testid: 'menu-empleados'},
+	{name: 'papelera', texto: 'Papelera', testid: 'menu-papelera'},
+]
 
 /**
  * Bloque inferior del menú lateral: usuario, logout y accesos de configuración.
@@ -116,6 +141,26 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Accesos a dibujar: los que tienen ruta en este proyecto (este componente lo comparten otros,
+		 * y si la ruta no existe el ítem no se dibuja) y que el usuario puede ver.
+		 *
+		 * @returns {Array<Object>}
+		 */
+		accesos_de_configuracion() {
+			let accesos = []
+			accesos_a_rutas.forEach(acceso => {
+				let ruta = this.buscar_ruta_por_nombre(acceso.name)
+				if (ruta && this.puede_ver_acceso(ruta)) {
+					accesos.push({
+						...acceso,
+						ruta,
+						icono: 'bi bi-' + (ruta.icon || 'circle'),
+					})
+				}
+			})
+			return accesos
+		},
 		/**
 		 * Preferencia de modo oscuro del usuario autenticado (defensivo ante `user` nulo).
 		 *
@@ -161,6 +206,48 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Busca una ruta del menú por nombre, en el primer nivel y entre las hijas.
+		 *
+		 * @param {string} name Nombre de la ruta.
+		 * @returns {Object|null}
+		 */
+		buscar_ruta_por_nombre(name) {
+			let encontrada = null
+			routes.forEach(route => {
+				if (this.getRouteName(route) == name) {
+					encontrada = route
+				} else if (route.childrens) {
+					route.childrens.forEach(child => {
+						if (this.getRouteName(child) == name) {
+							encontrada = child
+						}
+					})
+				}
+			})
+			return encontrada
+		},
+		/**
+		 * Decide con showRoute() sobre una copia de la definición: sin `not_show`, que es lo que la
+		 * saca de la barra pero no aplica acá, y sin `childrens`, porque showRoute() muestra a un
+		 * padre con que se vea una hija y ABM depende solo de su propio permiso.
+		 *
+		 * @param {Object} ruta Definición en router/routes.js.
+		 * @returns {boolean}
+		 */
+		puede_ver_acceso(ruta) {
+			return Boolean(this.showRoute({...ruta, not_show: false, childrens: null}))
+		},
+		/**
+		 * Le pasa la ruta a NavVertical.vue para que la abra como a un ítem de la barra: es la que
+		 * tiene el estado del menú en teléfono y lo cierra.
+		 *
+		 * @param {Object} acceso Elemento de accesos_de_configuracion.
+		 * @returns {void}
+		 */
+		abrir_acceso(acceso) {
+			this.$emit('abrir-ruta', acceso.ruta)
+		},
 		/**
 		 * Abre el modal de configuración general del usuario.
 		 *

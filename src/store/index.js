@@ -18,6 +18,8 @@ import papelera from '@/store/papelera/index'
 
 // Estado de la demo del lead (misión 51). Arranca apagado: para un cliente real no hace nada.
 import demo from '@/store/demo'
+// Prueba gratuita de 7 días (misión prueba-experiencia-empresa, 3/11/2026). Mismo criterio: para un cliente real no hace nada.
+import prueba from '@/store/prueba'
 
 import article from '@/store/article'
 import brand from '@/store/brand'
@@ -344,6 +346,7 @@ export default new Vuex.Store({
         papelera,
 
         demo,
+        prueba,
 
         article,
         brand,

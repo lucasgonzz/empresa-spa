@@ -145,6 +145,13 @@
         v-if="!version_bloqueada"
         fluid>
             <payment-expire></payment-expire>
+            <!--
+                Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el video de bienvenida y la
+                pregunta de importar, UNA vez, en la primera pantalla que ve el dueño (el aterrizaje tras el
+                login y tras demo/ingreso es Reportes, no el Listado: por eso va acá y no en Listado.vue).
+                Para un cliente real no muestra nada.
+            -->
+            <prueba-primer-ingreso-modal v-if="authenticated"></prueba-primer-ingreso-modal>
             <router-view/>
 
         </b-container>
@@ -199,6 +206,7 @@ export default {
     mixins: [app, start_methods, broadcast, check_version, offline],
     components: {
         ErrorModal,
+        PruebaPrimerIngresoModal: () => import('@/components/prueba/PrimerIngresoModal'),
         LogoLoading, 
         NavComponent,
         BtnScrollTop,
@@ -426,7 +434,8 @@ export default {
          * @returns {void}
          */
         ir_a_login() {
-            if (this.$route.name !== 'login' && this.$route.name !== 'passwordReset') {
+            // 'pruebaTerminada': la prueba gratuita vencida ya tiene su pantalla (misión prueba-experiencia-empresa).
+            if (this.$route.name !== 'login' && this.$route.name !== 'passwordReset' && this.$route.name !== 'pruebaTerminada') {
                 this.$router.replace({name: 'login'}).catch(() => {})
             }
         },

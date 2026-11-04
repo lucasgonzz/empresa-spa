@@ -197,16 +197,12 @@ export default {
 				'Si se activa, los porcentajes de descuento y recargo de la venta modifican el costo usado en el cálculo.',
 			],
 		},
-		{
-			text: 'Trabajar con listas de precio (margen por lista)',
-			key: 'listas_de_precio',
-			type: 'checkbox',
-			value: 0,
-			descriptions:
-			[
-			 	'Si se activa, cada articulo un precio final para cada lista de precio que haya creada.',
-			],
-		},
+		/*
+			La tilde "Trabajar con listas de precio (margen por lista)" (`listas_de_precio`) ya no está
+			(misión prueba-listas-siempre, 3/11/2026): todo negocio trabaja con listas, el flag va
+			siempre en 1 y la API ignora un 0. Si la única lista es la «Precio final», el sistema se ve
+			como sin listas (`muestra_listas`); con cualquier otra, aparece la interfaz de listas.
+		*/
 		/*
 		 * Tarea 4 — las cuatro tildes de redondeo (centenas, decenas, de a 50 y centavos) se
 		 * reemplazaron por este unico select. Las cinco columnas booleanas siguen existiendo en la

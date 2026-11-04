@@ -34,7 +34,6 @@ export default {
 			type: 'select',
 			use_store_models: true,
 			use_to_update: true,
-			if_has_extencion: 'ventas_en_dolares',
 		},
 		{
 			text: 'Monto',

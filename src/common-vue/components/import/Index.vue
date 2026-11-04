@@ -676,7 +676,10 @@ import * as XLSX from 'xlsx/xlsx.mjs'
 import Advises from '@/common-vue/components/import/Advises'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import { env } from '@/runtime_config'
-export default { 
+import prueba from '@/mixins/prueba'
+export default {
+	/* Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el aviso antes del primer import. */
+	mixins: [prueba],
 	components: {
 		Advises,
 		BtnLoader,
@@ -775,6 +778,8 @@ export default {
 	},
 	data() {
 		return {
+			/* Prueba gratuita: el negocio ya confirmó que se eliminan los datos de ejemplo (ver upload()). */
+			semilla_confirmada: false,
 			loading: false,
 			file: null,
 			start_row: 2,
@@ -1593,6 +1598,26 @@ export default {
 		},
 		async upload() {
 			if (this.check()) {
+
+				/*
+					Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el primer import (artículos,
+					clientes o proveedores) de un negocio en prueba elimina toda la información de ejemplo, y se
+					le avisa antes. La confirmación es una promesa: se sale y se vuelve a entrar con la marca
+					puesta (mismo patrón que ai-excel-import/Index.vue). Fuera de la prueba, o sin datos de
+					ejemplo, no pregunta nada.
+				*/
+				if (['article', 'client', 'provider'].indexOf(this.model_name) !== -1 && this.prueba_con_semilla && !this.semilla_confirmada) {
+					let self = this
+					this.confirmar_borrado_de_la_semilla().then(seguir => {
+						if (!seguir) {
+							return
+						}
+						self.semilla_confirmada = true
+						self.upload()
+						self.semilla_confirmada = false
+					})
+					return
+				}
 
 				this.loading = true
 				let form_data = new FormData()

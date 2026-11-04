@@ -129,8 +129,13 @@
 		</template>
 
 		
+		<!--
+			Tarjetas por lista del modal del artículo (misión prueba-listas-siempre, 3/11/2026,
+			`listas_visibles`). Si la única es la «Precio final», el artículo muestra su recuadro
+			«Precio final» de siempre, que es el de esa lista.
+		-->
 		<template
-		v-for="price_type in price_types"
+		v-for="price_type in listas_visibles"
 		v-slot:[get_model_form_price_type_slot(price_type)]="props">
 			<price-type-input
 			:article="props.model"
@@ -155,7 +160,7 @@
 
 
 		<template
-		v-for="price_type in price_types"
+		v-for="price_type in listas_visibles"
 		v-slot:[get_table_price_type_prop(price_type)]="props">
 			{{ get_price_type_price(props.model, price_type) }}
 		</template>
@@ -307,6 +312,31 @@ export default {
 			console.log('addressMovement')
 		},
 		/**
+		 * `/listado-de-articulos?importacion=<uuid>` (misión prueba-experiencia-empresa, 3/11/2026): es el
+		 * link del aviso por WhatsApp «ya leí tu Excel» que manda soporte desde el admin (M4). Deja la orden
+		 * de apertura en el store, igual que el aviso de «terminó el análisis» (ExcelAnalysisReadyModal.vue),
+		 * y el modal de Importar con IA la consume al montarse o por su watch: se abre en el paso que
+		 * corresponde al estado del análisis (en curso → progreso; listo → paso 2 de mapeo). La query se
+		 * limpia para que un F5 no vuelva a abrirlo. No es solo de la prueba: sirve para cualquier negocio.
+		 *
+		 * @returns {void}
+		 */
+		abrir_importacion_del_link() {
+			let uuid = this.$route && this.$route.query ? this.$route.query.importacion : null
+			if (!uuid || typeof uuid != 'string') {
+				return
+			}
+			this.$store.commit('prueba/set_importacion_por_link', true)
+			this.$store.commit('excel_analysis/set_abrir_en', {
+				uuid: uuid,
+				tipo: 'analisis',
+				model: 'article',
+			})
+			let query = Object.assign({}, this.$route.query)
+			delete query.importacion
+			this.$router.replace({ name: this.$route.name, params: this.$route.params, query: query }).catch(() => {})
+		},
+		/**
 		 * Al cerrarse el formulario del artículo, saca los atributos de Mercado Libre que el
 		 * componente de Mercado Libre le había agregado al modelo (misión mercado-libre-integracion,
 		 * 27/10/2026).
@@ -362,6 +392,7 @@ export default {
 	created() {
 		this.get_ultimos_articulos_actualizados()
 		this.$root.$on('bv::modal::hidden', this.limpiar_atributos_de_mercado_libre)
+		this.abrir_importacion_del_link()
 	},
 	mounted() {
 		if (this.hasExtencion('usa_mercado_libre')) {

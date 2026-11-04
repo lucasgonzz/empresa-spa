@@ -102,6 +102,15 @@ export default {
 		set_online(state, value) {
 			state.online = value
 		},
+		/*
+			`user.prueba` (misión prueba-experiencia-empresa, 3/11/2026): lo que la API devuelve en
+			prueba/estado y prueba/modal-visto. Con Vue.set porque el usuario puede haber llegado sin la clave.
+		*/
+		setPrueba(state, prueba) {
+			if (state.user) {
+				Vue.set(state.user, 'prueba', prueba)
+			}
+		},
 		/* Ver el comentario de `sesion_sin_conexion` en el state. */
 		set_sesion_sin_conexion(state, value) {
 			state.sesion_sin_conexion = value
@@ -325,6 +334,16 @@ export default {
 					*/
 					if (es_falta_de_conexion(err)) {
 						return dispatch('restaurar_sesion_sin_conexion')
+					}
+					/*
+						Prueba gratuita vencida (misión prueba-experiencia-empresa, 3/11/2026): el 403
+						`prueba_vencida` no es "no hay sesión". El interceptor de main.js ya guardó el
+						WhatsApp de soporte y mandó a la pantalla «Tu prueba terminó»; acá no se toca
+						`authenticated` para que el watch de App.vue no la pise con el login.
+					*/
+					if (err && err.response && err.response.status === 403
+						&& err.response.data && err.response.data.error === 'prueba_vencida') {
+						return
 					}
 
 					console.log('NO ESTA AUTH')

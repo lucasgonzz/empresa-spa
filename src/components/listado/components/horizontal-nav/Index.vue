@@ -33,6 +33,9 @@
 			-->
 			<select-address></select-address>
 
+			<!-- Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): visible mientras queden datos de ejemplo. -->
+			<btn-importar-mi-informacion></btn-importar-mi-informacion>
+
 			<btn-update-article-list
 			class="toolbar-btn--desde-md"></btn-update-article-list>
 
@@ -75,6 +78,7 @@
 export default {
 	components: {
 		SelectAddress: () => import('@/components/listado/components/horizontal-nav/SelectAddress'),
+		BtnImportarMiInformacion: () => import('@/components/prueba/BtnImportarMiInformacion'),
 		BtnUpdateArticleList: () => import('@/components/listado/components/horizontal-nav/BtnUpdateArticleList'),
 		BtnInventoryPerformance: () => import('@/components/listado/components/horizontal-nav/BtnInventoryPerformance'),
 		StockSuggestion: () => import('@/components/listado/components/horizontal-nav/stock-suggestion/Index'),

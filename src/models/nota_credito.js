@@ -18,7 +18,6 @@ export default {
 			type: 'select',
 			only_show: true,
 			use_store_models: true,
-			if_has_extencion: 'ventas_en_dolares',
 		},
 		{
 			text: 'Cliente',

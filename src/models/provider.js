@@ -37,7 +37,6 @@ export default {
 			is_price: true,
 			use_to_filter_in_modal: true,
 			filter_modal_position: 2,
-			if_has_extencion: 'ventas_en_dolares',
 		},
 		{
 			text: 'Observaciones',

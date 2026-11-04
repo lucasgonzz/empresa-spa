@@ -1,7 +1,6 @@
 <template>
-	<!-- Selector unico de moneda (Pesos/Dolares/Consolidado). Solo visible con la extension de ventas en dolares activa (tarea 05 del prompt): sin la extension, todo es pesos y no hay nada que elegir. Reemplaza el comportamiento anterior que duplicaba las tarjetas cuando la extension estaba activa. -->
+	<!-- Selector unico de moneda (Pesos/Dolares/Consolidado), para todo negocio desde la misión prueba-listas-siempre (3/11/2026): las ventas en dólares pasaron al núcleo y la extensión ya no lo esconde. -->
 	<div
-	v-if="hasExtencion('ventas_en_dolares')"
 	class="selector-moneda-row">
 		<div class="horizontal-nav selector-moneda">
 			<div

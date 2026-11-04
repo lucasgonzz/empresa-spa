@@ -44,7 +44,7 @@ export default {
 			let bar_style = this.get_reportes_bar_dataset_style(data.length, true)
 			let datasets = [{
 				// Con la extension de dolares tambien puede haber deuda en USD: el rotulo aclara que esta barra es solo la de pesos.
-				label: this.hasExtencion('ventas_en_dolares') ? 'Deuda en pesos' : 'Deuda',
+				label: 'Deuda en pesos',
 				data: data,
 				...bar_style,
 			}]

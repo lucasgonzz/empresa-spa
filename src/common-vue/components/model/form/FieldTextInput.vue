@@ -34,7 +34,7 @@
 				cotizacion del dia.
 			-->
 			<b-button
-			v-if="prop.key == 'dollar' && model_name == 'user' && is_admin && hasExtencion('costo_en_dolares')"
+			v-if="prop.key == 'dollar' && model_name == 'user' && is_admin"
 			data-tour="configuracion.boton_cotizacion_dolar"
 			@click="$emit('chequear-cotizacion-dolar')"
 			class="m-l-5"

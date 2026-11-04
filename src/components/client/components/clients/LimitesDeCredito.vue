@@ -77,7 +77,8 @@ export default {
 	},
 	methods: {
 		mostrar(credit_account) {
-			return credit_account.moneda_id == 1 || this.hasExtencion('ventas_en_dolares')
+			// Las dos monedas para todo negocio (misión prueba-listas-siempre, 3/11/2026).
+			return true
 		},
 		moneda_nombre(moneda_id) {
 			return moneda_id == 2 ? 'Dolar' : 'Peso'

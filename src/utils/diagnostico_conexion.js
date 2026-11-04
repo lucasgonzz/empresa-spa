@@ -1,7 +1,7 @@
 /* Diagnóstico optativo. No reintenta operaciones de negocio ni conserva datos de ellas. */
 export const FAMILIAS = 'user login logout sanctum csrf-cookie provider-order provider provider-order-status article client sale budget order afip-ticket current-acount payment-method table-column-preferences pdf-column-options column-position recursos-iniciales background-processes article-pdf configuration address download-resources estado'
 export const SUFIJOS = 'config index show search all count total totals status pending health not-received days-to-advise last activity user csrf-cookie problemas-al-facturar'
-export const RUTAS = 'root login demoIngreso informeCompartido passwordReset configuration abm employee alertas vender expense cheque reportes panel article deposito-para-checkear deposito-checkeadas por-entregar por-estado rutas sale VentasAll provider client budget produccion produccionV2 caja online whatsapp tienda_nube mercado_libre pending comprobantes consultora_de_precios papelera devoluciones ia ofertas'
+export const RUTAS = 'root login demoIngreso informeCompartido passwordReset pruebaTerminada configuration abm employee alertas vender expense cheque reportes panel article por-entregar por-estado rutas sale VentasAll provider client budget produccion produccionV2 caja online whatsapp tienda_nube mercado_libre pending comprobantes consultora_de_precios papelera devoluciones ia ofertas'
 
 export function endpoint_seguro(valor) {
 	const partes = String(valor || '').replace(/[?#][\s\S]*$/, '').replace(/^[a-z]+:\/\/[^/]*/i, '').split('/').filter(Boolean)

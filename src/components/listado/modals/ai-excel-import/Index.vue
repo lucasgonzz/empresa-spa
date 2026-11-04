@@ -1463,6 +1463,7 @@
 <script>
 import * as XLSX from 'xlsx/xlsx.mjs'
 import RelacionesParecidas from './RelacionesParecidas'
+import prueba from '@/mixins/prueba'
 import {
 	decisiones_iniciales,
 	armar_equivalencias,
@@ -1472,6 +1473,8 @@ import {
 } from './relaciones_parecidas'
 
 export default {
+	/* Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el aviso antes del primer import. */
+	mixins: [prueba],
 
 	/*
 	 * Import estático y no `() => import(...)`: la lista se dibuja en el mismo paso en que llega
@@ -1496,6 +1499,9 @@ export default {
 	/* Estado reactivo del modal. */
 	data() {
 		return {
+			/* Prueba gratuita: el negocio ya confirmó que se eliminan los datos de ejemplo (ver importar()). */
+			semilla_confirmada: false,
+
 			/* Paso actual del flujo (1, 2 o 3). */
 			step: 1,
 
@@ -5180,6 +5186,26 @@ export default {
 
 			if (!this.can_start_import) {
 				this.$toast.error('Indicá un rango de filas válido (inicio y última fila)')
+				return
+			}
+
+			/*
+				Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el primer import (artículos,
+				clientes o proveedores: Lucas, «ya cuenta como la migración») de un negocio en prueba elimina
+				toda la información de ejemplo, y se le avisa antes. La confirmación es una promesa, así que se
+				sale y se vuelve a entrar con la marca puesta; fuera de la prueba, o sin datos de ejemplo, no
+				pregunta nada.
+			*/
+			if (this.prueba_con_semilla && !this.semilla_confirmada) {
+				let self = this
+				this.confirmar_borrado_de_la_semilla().then(seguir => {
+					if (!seguir) {
+						return
+					}
+					self.semilla_confirmada = true
+					self.importar()
+					self.semilla_confirmada = false
+				})
 				return
 			}
 

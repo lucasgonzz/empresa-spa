@@ -1,4 +1,5 @@
 import { inicializar_cotizacion, convertir_importe } from '@/utils/cotizacion_por_articulo'
+import { trae_precios_propios_por_moneda } from '@/utils/lista_precio_final'
 import moment from 'moment'
 import { env } from '@/runtime_config'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
@@ -42,6 +43,37 @@ export default {
          */
         muestra_sucursales() {
             return this.$store.getters['address/muestra_sucursales']
+        },
+        /**
+         * Misión prueba-listas-siempre (3/11/2026, D4): todo negocio trabaja con listas de precios,
+         * pero si la única es la «Precio final» la pantalla es la de un negocio sin listas. Este es el
+         * reemplazo de lo que leía `ownerUsesListasDePrecio()`: el flag, salvo esa lista sola. Lo que
+         * leía `price_types.length` usa `listas_visibles`, que no mira el flag.
+         *
+         * 🔴 Solo para decidir QUÉ SE VE. Lo que es dato (la venta viaja con su price_type_id, la
+         * regla "toda venta lleva lista") sigue en el flag: requiere_lista_de_precios().
+         *
+         * @returns {Boolean}
+         */
+        muestra_listas() {
+            return this.$store.getters['price_type/muestra_listas']
+        },
+        /**
+         * Una sola lista y es la «Precio final»: Vender precia como un negocio sin listas (corrección
+         * C5 de la misión, ver utils/lista_precio_final.js).
+         *
+         * @returns {Boolean}
+         */
+        solo_lista_precio_final() {
+            return this.$store.getters['price_type/solo_precio_final']
+        },
+        /**
+         * Las listas que se dibujan: todas, salvo que la única sea la «Precio final». Sin el flag.
+         *
+         * @returns {Array}
+         */
+        listas_visibles() {
+            return this.$store.getters['price_type/visibles']
         },
         /**
          * La sucursal principal del negocio (ver el getter address/principal), o null.
@@ -573,8 +605,16 @@ export default {
             return v === 1 || v === true || v === '1'
         },
         hasExtencion(slug, check_has_one_extencion_permission = true) {
+            /*
+                La "extensión" de márgenes por lista es la pregunta "¿se ve la interfaz de listas?":
+                la hacen las props del artículo (margen de ganancia, precio manual, precio final: con
+                `if_has_not_extencions`), las columnas dinámicas y las tarjetas del modal. Hasta la
+                misión prueba-listas-siempre (3/11/2026) contestaba el flag del dueño; ahora contesta
+                `muestra_listas` (el flag, salvo que la única lista sea la «Precio final»), así que con esa
+                lista sola el artículo muestra su recuadro «Precio final» de siempre.
+            */
             if (slug === 'articulo_margen_de_ganancia_segun_lista_de_precios') {
-                return this.ownerUsesListasDePrecio()
+                return this.muestra_listas
             }
             if (
                 this.authenticated 
@@ -1390,11 +1430,10 @@ export default {
             }
 
 
-            // Los items con price_type_monedas traen su propia moneda: no se tocan. Igual que hoy.
-            if (
-                typeof item.price_type_monedas != 'undefined'
-                && item.price_type_monedas.length
-            ) {
+            // Los items con price_type_monedas traen su propia moneda: no se tocan. Igual que hoy. Con
+            // una sola lista, la «Precio final», esas filas son informativas y el precio del artículo
+            // se convierte con la cotización de la venta (utils/lista_precio_final.js).
+            if (trae_precios_propios_por_moneda(item, this.solo_lista_precio_final)) {
                 if (item.cotizacion_origen && !item.pivot) item.moneda_base_precio = Number(this.$store.state.vender.moneda_id) === 2 ? 2 : 1
                 return price
             }
@@ -1595,6 +1634,15 @@ export default {
             console.log('aplicar_tipos_de_precio a: ')
             console.log(item)
             if (item.is_article) {
+
+                /*
+                    Una sola lista, la «Precio final»: esa lista ES el precio del artículo, así que el
+                    precio que llega se queda como está y check_moneda lo convierte con la cotización de
+                    la venta, como en un negocio sin listas (corrección C5, utils/lista_precio_final.js).
+                */
+                if (this.solo_lista_precio_final) {
+                    return price
+                }
 
                 let price_vender_id = null
 
