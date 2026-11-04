@@ -4,10 +4,21 @@
 	title="¡Bienvenido a tu sistema!"
 	size="lg"
 	dialog-class="prueba-primer-ingreso__dialog"
+	content-class="prueba-modal"
 	centered
+	scrollable
 	hide-footer
 	no-close-on-backdrop
 	@hidden="marcar_visto">
+		<template #modal-title>
+			<span class="prueba-modal__encabezado">
+				<i class="bi bi-stars prueba-modal__insignia" aria-hidden="true"></i>
+				<span>
+					<span class="prueba-modal__etiqueta">Prueba gratuita</span>
+					¡Bienvenido a tu sistema!
+				</span>
+			</span>
+		</template>
 		<!--
 			Modal de primer ingreso de la prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026). Se
 			muestra UNA sola vez por negocio (el flag `modal_visto` vive en la API, no en el navegador: un F5
@@ -34,23 +45,29 @@
 				preload="metadata"></video>
 			</div>
 
-			<p class="prueba-primer-ingreso__texto">
-				Tu sistema ya viene con <strong>artículos, clientes, proveedores y ventas de ejemplo</strong> para que
-				lo recorras con datos cargados. Cuando importes tu información, esos datos de ejemplo se eliminan y
-				queda lo tuyo.
-			</p>
-
-			<p class="prueba-primer-ingreso__pregunta">
+			<h6 class="prueba-primer-ingreso__pregunta">
 				¿Querés importar tu información ahora?
-			</p>
-			<p class="prueba-primer-ingreso__detalle">
-				Subís el Excel de tus artículos y lo cargamos con inteligencia artificial, en minutos.
-			</p>
+			</h6>
+			<div class="prueba-primer-ingreso__opciones">
+				<div class="prueba-modal__bloque">
+					<i class="bi bi-file-earmark-spreadsheet prueba-modal__icono" aria-hidden="true"></i>
+					<div>
+						<strong>Empezá con tus artículos</strong>
+						<p>Subí tu Excel y cargá los artículos con ayuda de la IA. Al importar se eliminan los datos de ejemplo.</p>
+					</div>
+				</div>
+				<div class="prueba-modal__bloque">
+					<i class="bi bi-box-seam prueba-modal__icono" aria-hidden="true"></i>
+					<div>
+						<strong>Recorré el sistema primero</strong>
+						<p>Probalo con artículos, clientes, proveedores y ventas de ejemplo. Podés importar más adelante.</p>
+					</div>
+				</div>
+			</div>
 
 			<div class="prueba-primer-ingreso__botones">
 				<b-button
 				variant="primary"
-				size="lg"
 				class="prueba-primer-ingreso__boton"
 				@click="importar_ahora">
 					<i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
@@ -58,9 +75,9 @@
 				</b-button>
 				<b-button
 				variant="outline-secondary"
-				size="lg"
 				class="prueba-primer-ingreso__boton"
 				@click="mas_adelante">
+					<i class="bi bi-clock" aria-hidden="true"></i>
 					Más adelante
 				</b-button>
 			</div>
@@ -211,57 +228,55 @@ export default {
 // medido: 1229px a 1366): acá se acota con un selector más específico, porque un video a ese ancho mide 672px de
 // alto y deja los dos botones abajo del borde en una pantalla de 768.
 .modal-dialog.modal-lg.prueba-primer-ingreso__dialog
-	max-width: 820px !important
+	max-width: min(820px, calc(100% - 1rem)) !important
 	margin-left: auto
 	margin-right: auto
 
 .prueba-primer-ingreso
 	display: flex
 	flex-direction: column
-	align-items: center
-	text-align: center
+	gap: 1rem
 
 .prueba-primer-ingreso__video
 	position: relative
-	width: 100%
+	width: min(100%, 550px)
+	align-self: center
 	aspect-ratio: 16 / 9
 	background: #000
-	border-radius: 8px
+	border-radius: 12px
 	overflow: hidden
-	margin-bottom: 1.25rem
 	iframe, video
 		position: absolute
 		inset: 0
 		width: 100%
 		height: 100%
 
-.prueba-primer-ingreso__texto
-	font-size: 1rem
-	color: var(--color-text-primary, #111827)
-	margin-bottom: 1rem
-
 .prueba-primer-ingreso__pregunta
-	font-size: 1.25rem
+	font-size: 1.0625rem
 	font-weight: 700
 	color: var(--color-text-primary, #111827)
-	margin-bottom: 0.25rem
+	margin: 0
 
-.prueba-primer-ingreso__detalle
-	font-size: 0.9375rem
-	color: var(--color-text-secondary, #6b7280)
-	margin-bottom: 1.25rem
+.prueba-primer-ingreso__opciones
+	display: grid
+	grid-template-columns: repeat(2, minmax(0, 1fr))
+	gap: 0.75rem
 
 .prueba-primer-ingreso__botones
 	display: flex
 	flex-wrap: wrap
-	justify-content: center
-	gap: 0.75rem
-	width: 100%
+	gap: 0.5rem
 
 .prueba-primer-ingreso__boton
 	display: inline-flex
 	align-items: center
 	gap: 0.5rem
-	flex: 1 1 220px
 	justify-content: center
+
+@media (max-width: 575.98px)
+	.prueba-primer-ingreso__opciones
+		grid-template-columns: minmax(0, 1fr)
+
+	.prueba-primer-ingreso__boton
+		width: 100%
 </style>

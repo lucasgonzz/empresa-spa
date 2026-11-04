@@ -1,3 +1,5 @@
+import ConfirmarImportacion from '@/components/prueba/ConfirmarImportacion.vue'
+
 /**
  * Lo que las pantallas necesitan saber de la prueba gratuita de 7 días (misión
  * prueba-experiencia-empresa, 3/11/2026). Todo sale de `user.prueba`, que la API arma en el login y en
@@ -33,15 +35,25 @@ export default {
 			if (!this.prueba_con_semilla) {
 				return Promise.resolve(true)
 			}
+			const h = this.$createElement
 			return this.$bvModal.msgBoxConfirm(
-				'Se eliminan los artículos, clientes, proveedores y movimientos de ejemplo, y también las ventas, presupuestos y cobros que hayas hecho con ellos para probar. Lo que cargaste con tus propios datos (artículos, clientes y proveedores creados por vos y sus operaciones) queda. Es el momento en que tu sistema empieza a trabajar en serio con tus datos.',
+				[h(ConfirmarImportacion)],
 				{
-					title: 'Antes de importar',
-					okTitle: 'Sí, eliminar los datos de ejemplo e importar',
+					title: [h('span', { class: 'prueba-modal__encabezado' }, [
+						h('i', {
+							class: 'bi bi-exclamation-triangle prueba-modal__insignia prueba-modal__insignia--aviso',
+							attrs: { 'aria-hidden': 'true' },
+						}),
+						'Antes de importar',
+					])],
+					okTitle: 'Eliminar ejemplos e importar',
 					cancelTitle: 'Cancelar',
 					okVariant: 'danger',
 					cancelVariant: 'outline-secondary',
 					centered: true,
+					scrollable: true,
+					contentClass: 'prueba-modal',
+					footerClass: 'prueba-modal__acciones',
 					hideHeaderClose: false,
 				}
 			)
