@@ -62,9 +62,9 @@ export default {
 				},
 			]
 
-			// Una columna por lista desde la SEGUNDA lista (misión prueba-listas-siempre, 3/11/2026);
-			// con una sola, el precio final de siempre.
-			if (this.muestra_listas) {
+			// Una columna por lista, salvo que la única sea la «Precio final» (misión
+			// prueba-listas-siempre, 3/11/2026): ahí, el precio final de siempre.
+			if (this.listas_visibles.length) {
 
 				this.price_types.forEach(price_type => {
 					fields.push({
@@ -98,7 +98,7 @@ export default {
 					created_at: this.date(model.created_at),
 				}
 
-				if (this.muestra_listas) {
+				if (this.listas_visibles.length) {
 
 					this.price_types.forEach(price_type => {
 						let relation_price_type = model.price_types.find(p => p.id == price_type.id)

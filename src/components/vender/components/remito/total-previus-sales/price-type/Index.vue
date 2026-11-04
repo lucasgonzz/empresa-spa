@@ -53,10 +53,10 @@ export default {
 		*/
 		show() {
 			/*
-				Desde la SEGUNDA lista (misión prueba-listas-siempre, 3/11/2026, D4): con una sola, la
-				lista se aplica sola (setPriceType) y no hay nada que elegir. El dato sigue viajando.
+				Si la única lista es la «Precio final» (misión prueba-listas-siempre, 3/11/2026, D4), se
+				aplica sola (setPriceType) y no hay nada que elegir. El dato sigue viajando.
 			*/
-			if (!this.muestra_listas) {
+			if (this.solo_lista_precio_final) {
 				return false
 			}
 

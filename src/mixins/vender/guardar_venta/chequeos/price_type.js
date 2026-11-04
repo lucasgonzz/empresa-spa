@@ -65,13 +65,13 @@ export default {
 					this.setTotal()
 
 					/*
-						Con UNA sola lista (misión prueba-listas-siempre, 3/11/2026) no hay importes que
-						puedan cambiar: el precio de esa lista es el precio final con el que ya se
+						Si la única lista es la «Precio final» (misión prueba-listas-siempre, 3/11/2026) no
+						hay importes que puedan cambiar: el precio de esa lista es el precio final con el que ya se
 						preciaron los renglones. Se aplica en silencio y se sigue guardando; avisar
 						"se aplicó la lista Precio final, revisá los importes" sería pedirle al
 						vendedor que mire lo que no se movió.
 					*/
-					if (!this.muestra_listas) {
+					if (this.solo_lista_precio_final) {
 						return true
 					}
 

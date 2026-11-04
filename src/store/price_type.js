@@ -28,9 +28,10 @@ function flag_del_dueno(rootState) {
  * precios (el flag va siempre en 1 y el que no carga listas tiene UNA, «Precio final», que es el precio
  * del artículo de siempre), pero la INTERFAZ de listas —tarjetas por lista del modal del artículo,
  * columnas por lista del listado, selector de lista en Vender, opciones por lista de PDF / Excel /
- * etiquetas, mapeo por lista de la importación— aparece recién desde la SEGUNDA lista. Con una sola, la
+ * etiquetas, mapeo por lista de la importación— no aparece si la única lista es la «Precio final». Ahí la
  * pantalla se comporta exactamente como la de un negocio sin listas: el recuadro «Precio final» del
- * artículo y la columna del listado son los de esa lista, y Vender la elige solo sin pedirla.
+ * artículo y la columna del listado son los de esa lista, y Vender la elige solo sin pedirla. Cualquier
+ * otra cuenta ve lo mismo que veía: cada lugar conserva su condición de siempre, más esa salvedad.
  *
  * Es el molde de `address/muestra_sucursales` (misión sucursal-siempre): antes cada componente decidía
  * con `ownerUsesListasDePrecio()` o con `price_types.length`; ahora todos le preguntan a estos getters
@@ -55,10 +56,12 @@ export default __base_store({
 			return Array.isArray(state.models) ? state.models : []
 		},
 		/**
-		 * ¿Se muestra la interfaz de listas? El flag del dueño prendido Y dos o más listas, o una sola
-		 * que no sea la «Precio final» (una cuenta con una lista propia no cambia). El flag participa a
-		 * propósito: una cuenta de márgenes por categoría (`lista_de_precios_por_categoria`,
-		 * flag apagado y listas cargadas) tiene su propia interfaz y no entra por acá.
+		 * ¿Se trabaja con listas? Para lo que en la base leía el flag del dueño o la "extensión" de
+		 * márgenes por lista: el flag prendido, salvo que la única lista sea la «Precio final». Con el
+		 * flag y CERO listas da true, como en la base: el artículo sigue escondiendo margen y precio. El
+		 * flag participa a propósito: una cuenta de márgenes por categoría (`lista_de_precios_por_categoria`,
+		 * flag apagado y listas cargadas) tiene su propia interfaz y no entra por acá. Lo que en la base
+		 * leía `price_types.length` no usa este getter: usa `visibles`.
 		 *
 		 * @param {Object} state
 		 * @param {Object} getters
@@ -66,7 +69,7 @@ export default __base_store({
 		 * @returns {Boolean}
 		 */
 		muestra_listas(state, getters, rootState) {
-			return flag_del_dueno(rootState) && se_ven_las_listas(getters.listas)
+			return flag_del_dueno(rootState) && !es_solo_lista_precio_final(getters.listas)
 		},
 		/**
 		 * ¿La cuenta tiene una sola lista y es la «Precio final»? Ahí Vender precia como un negocio sin
@@ -82,15 +85,16 @@ export default __base_store({
 			return flag_del_dueno(rootState) && es_solo_lista_precio_final(getters.listas)
 		},
 		/**
-		 * Las listas que se DIBUJAN (tarjetas, columnas, opciones): todas desde la segunda o si la única
-		 * es propia; ninguna si la única es la «Precio final».
+		 * Las listas que se DIBUJAN, para lo que en la base leía `price_types.length`: todas, salvo que la
+		 * única sea la «Precio final». 🔴 SIN el flag: una cuenta `lista_de_precios_por_categoria` o con
+		 * listas y el flag apagado tiene que seguir viendo sus columnas y su lista por renglón.
 		 *
 		 * @param {Object} state
 		 * @param {Object} getters
 		 * @returns {Array}
 		 */
 		visibles(state, getters) {
-			return getters.muestra_listas ? getters.listas : []
+			return se_ven_las_listas(getters.listas) ? getters.listas : []
 		},
 	},
 })

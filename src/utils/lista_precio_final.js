@@ -23,10 +23,10 @@ export function es_solo_lista_precio_final(listas) {
 }
 
 /**
- * ¿Estas listas se dibujan? Dos o más, o una sola que NO es la «Precio final». Una cuenta que ya trabajaba
- * con una sola lista PROPIA tiene que seguir viendo sus tarjetas y su selector como hasta ahora: el recuadro
- * del artículo no le serviría, porque su precio sale de esa lista y no del precio manual. Solo la «Precio
- * final» sola se ve como un negocio sin listas.
+ * ¿Estas listas se dibujan? Dos o más, o una sola que NO es la «Precio final». Es la pregunta de lo que en la
+ * base leía `price_types.length`, y por eso NO mira el flag: una cuenta `lista_de_precios_por_categoria` o con
+ * listas y el flag apagado sigue viendo sus columnas. Una cuenta con una sola lista PROPIA, también. Solo la
+ * «Precio final» sola se ve como un negocio sin listas.
  *
  * @param {Array} listas Las listas de precios cargadas.
  * @returns {Boolean}

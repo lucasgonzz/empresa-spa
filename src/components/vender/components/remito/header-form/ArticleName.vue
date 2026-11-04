@@ -137,12 +137,13 @@ export default {
 			})
 
 			/*
-				La columna "Precio" (precio final) va cuando NO se ven las listas: desde la segunda
-				lista las columnas son una por lista (misión prueba-listas-siempre, 3/11/2026). Antes
-				decidía la extensión de cambiar la lista en Vender, que ahora todo negocio tiene.
+				La columna "Precio" (precio final): la condición de siempre, más la cuenta cuya única
+				lista es la «Precio final» (misión prueba-listas-siempre, 3/11/2026), que tiene la
+				extensión de cambiar la lista en Vender pero no tiene nada que cambiar.
 			*/
 			if (
-				!this.muestra_listas
+				!this.hasExtencion('cambiar_price_type_en_vender')
+				|| this.solo_lista_precio_final
 			) {
 
 				props.push({

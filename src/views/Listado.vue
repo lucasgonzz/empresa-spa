@@ -130,9 +130,9 @@
 
 		
 		<!--
-			Tarjetas por lista del modal del artículo: desde la SEGUNDA lista (misión
-			prueba-listas-siempre, 3/11/2026, `listas_visibles`). Con una sola, el artículo muestra
-			su recuadro «Precio final» de siempre, que es el de esa lista.
+			Tarjetas por lista del modal del artículo (misión prueba-listas-siempre, 3/11/2026,
+			`listas_visibles`). Si la única es la «Precio final», el artículo muestra su recuadro
+			«Precio final» de siempre, que es el de esa lista.
 		-->
 		<template
 		v-for="price_type in listas_visibles"

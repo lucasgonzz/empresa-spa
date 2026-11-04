@@ -445,8 +445,9 @@ export default {
 					return this.can('vender.article_discount')
 				}
 				if (prop.key == 'price_type_personalizado_id') {
-					// La lista por renglón, desde la SEGUNDA lista (misión prueba-listas-siempre, 3/11/2026).
-					return this.muestra_listas
+					// La lista por renglón, salvo que la única sea la «Precio final» (misión
+					// prueba-listas-siempre, 3/11/2026).
+					return this.listas_visibles.length > 0
 				}
 				return true
 			})
@@ -575,8 +576,8 @@ export default {
 			return item.name || 'Personalizado'
 		},
 		se_creo_en_vender(item) {
-			// "Sin listas visibles" en vez del flag (misión prueba-listas-siempre, 3/11/2026): el
-			// flag va siempre en 1 y con una sola lista el renglón se arma como sin listas.
+			// El flag, salvo que la única lista sea la «Precio final» (misión prueba-listas-siempre,
+			// 3/11/2026): con esa lista sola el renglón se arma como sin listas.
 			if (!this.muestra_listas && !item.final_price) {
 				return true
 			}

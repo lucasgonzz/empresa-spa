@@ -218,9 +218,9 @@ export const ELEMENTOS = [
 		motivo_obligatorio: MOTIVO_NO_SE_GUARDA,
 		entrada_de_articulos: false,
 		/*
-			price-type/Index.vue: show() = muestra_listas && (requiere_lista_de_precios() || !!price_type_vender).
-			Misión prueba-listas-siempre (3/11/2026, D4): el selector aparece desde la SEGUNDA lista;
-			con una sola, Vender la elige solo (misma regla que el selector de sucursal de arriba).
+			price-type/Index.vue: show() = !solo_lista_precio_final && (requiere_lista_de_precios() || !!price_type_vender).
+			Misión prueba-listas-siempre (3/11/2026, D4): si la única lista es la «Precio final», Vender
+			la elige solo (misma regla que el selector de sucursal de arriba).
 		*/
 		disponible: function (vm) {
 			let muestra_listas = !!(vm && vm.$store && vm.$store.getters['price_type/muestra_listas'])

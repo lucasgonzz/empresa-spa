@@ -102,18 +102,23 @@ export default {
 			return this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')
 				|| this.hasExtencion('lista_de_precios_por_categoria')
 		},
+		/*
+			Columnas por lista en vez de la de precio final: la condición de siempre, salvo que la única
+			lista sea la «Precio final» (misión prueba-listas-siempre, 3/11/2026).
+		*/
+		usa_columnas_por_lista() {
+			return this.listas_visibles.length > 0
+				&& (
+					this.hasExtencion('cambiar_price_type_en_vender')
+					|| this.list_price_extensions
+				)
+		},
 		search_modal_omit_property_keys() {
 			const omit = []
 			if (this.hasExtencion('no_usar_codigos_de_barra')) {
 				omit.push('bar_code')
 			}
-			/*
-				Columnas por lista en vez de la de precio final: desde la SEGUNDA lista (misión
-				prueba-listas-siempre, 3/11/2026). Antes alcanzaba con tener listas y la extensión de
-				cambiar la lista en Vender, que ahora todo negocio tiene; con una sola lista, la
-				columna es la de precio final de siempre.
-			*/
-			if (this.muestra_listas) {
+			if (this.usa_columnas_por_lista) {
 				omit.push('final_price')
 			}
 			return omit
@@ -130,7 +135,7 @@ export default {
 
 			if (
 				use_final_price_column
-				&& !this.muestra_listas
+				&& (!this.hasExtencion('cambiar_price_type_en_vender') || this.solo_lista_precio_final)
 				&& this.current_acount_payment_method_discounts.length
 			) {
 				this.current_acount_payment_method_discounts.forEach(payment_method => {
@@ -142,7 +147,7 @@ export default {
 				})
 			}
 
-			if (this.muestra_listas) {
+			if (this.usa_columnas_por_lista) {
 				this.price_types.forEach(price_type => {
 					extras.push({
 						text: price_type.name,

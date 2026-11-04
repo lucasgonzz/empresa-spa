@@ -14,8 +14,9 @@
 			Todas las listas de precio
 		</excel-dropdown-option-item>
 
+		<!-- Por lista, salvo que la única sea la «Precio final» (misión prueba-listas-siempre, 3/11/2026). -->
 		<excel-dropdown-option-item
-		v-for="price_type in price_types"
+		v-for="price_type in listas_visibles"
 		:key="price_type.id"
 		icon="icon-right"
 		@click="exportModels(price_type)">

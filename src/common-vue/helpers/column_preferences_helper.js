@@ -7,7 +7,7 @@ import generals from '@/common-vue/mixins/generals'
 import { add_article_dynamic_columns } from '@/common-vue/helpers/article_dynamic_table_columns'
 import { article_dynamic_dependencies_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
 import { left_options_property } from '@/common-vue/helpers/table_left_options'
-import { se_ven_las_listas } from '@/utils/lista_precio_final'
+import { es_solo_lista_precio_final } from '@/utils/lista_precio_final'
 
 /** Relaciones mal declaradas ya avisadas por consola, por `<modelo>.<key>` (ver get_relation_column_groups). */
 let relaciones_avisadas = {}
@@ -81,7 +81,7 @@ function build_generals_context(store_wrapper) {
 
 	/*
 		Misión prueba-listas-siempre (3/11/2026): hasExtencion() del mixin contesta la "extensión" de
-		márgenes por lista con el computed `muestra_listas` (flag del dueño y `se_ven_las_listas`). Este
+		márgenes por lista con el computed `muestra_listas` (el flag, salvo la «Precio final» sola). Este
 		contexto no es un componente —no tiene computeds—, así que se le da el mismo valor leído del
 		store, para que las columnas dinámicas decidan igual que la pantalla.
 	*/
@@ -91,7 +91,7 @@ function build_generals_context(store_wrapper) {
 			let listas = root_state && root_state.price_type && Array.isArray(root_state.price_type.models)
 				? root_state.price_type.models
 				: []
-			return context.ownerUsesListasDePrecio() && se_ven_las_listas(listas)
+			return context.ownerUsesListasDePrecio() && !es_solo_lista_precio_final(listas)
 		},
 	})
 

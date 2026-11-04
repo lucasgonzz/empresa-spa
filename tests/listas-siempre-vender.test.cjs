@@ -76,6 +76,60 @@ test('con otra lista, las filas por moneda siguen mandando como hasta hoy', () =
 	assert.equal(precio_de_vender(contexto(false), articulo_2r()), 15000)
 })
 
+/**
+ * Los getters reales del store, sin red: `__base_store` es un falso que devuelve la configuración.
+ */
+function getters_de(listas, flag) {
+	const config = cargar('store/price_type.js', { '@/store/__base_store': configuracion => configuracion }).default
+	const rootState = { auth: { authenticated: true, user: { listas_de_precio: flag } } }
+	const state = { models: listas }
+	const getters = { listas: config.getters.listas(state) }
+	return {
+		muestra_listas: config.getters.muestra_listas(state, getters, rootState),
+		solo_precio_final: config.getters.solo_precio_final(state, getters, rootState),
+		visibles: config.getters.visibles(state, getters),
+	}
+}
+
+const PRECIO_FINAL = { id: 1, es_precio_final: 1 }
+const PROPIA = { id: 2, es_precio_final: 0 }
+const OTRA = { id: 3, es_precio_final: null }
+
+test('cuenta por categoría, con el flag apagado y varias listas: ve sus listas y no trabaja con el flag', () => {
+	const g = getters_de([PROPIA, OTRA], 0)
+	assert.equal(g.muestra_listas, false, 'Lo que leía el flag sigue en false: el artículo muestra margen y precio.')
+	assert.deepEqual(g.visibles, [PROPIA, OTRA], 'Lo que leía price_types.length sigue viéndolas: sin esto, celdas vacías en el Listado.')
+	assert.equal(g.solo_precio_final, false)
+})
+
+test('flag prendido y cero listas: como en la base, esconde margen y precio y no dibuja nada', () => {
+	const g = getters_de([], 1)
+	assert.equal(g.muestra_listas, true)
+	assert.deepEqual(g.visibles, [])
+	assert.equal(g.solo_precio_final, false)
+})
+
+test('la «Precio final» sola: se ve como un negocio sin listas', () => {
+	const g = getters_de([PRECIO_FINAL], 1)
+	assert.equal(g.muestra_listas, false)
+	assert.deepEqual(g.visibles, [])
+	assert.equal(g.solo_precio_final, true)
+})
+
+test('una sola lista propia: con el flag o sin él, como en la base', () => {
+	assert.equal(getters_de([PROPIA], 1).muestra_listas, true)
+	assert.deepEqual(getters_de([PROPIA], 1).visibles, [PROPIA])
+	assert.equal(getters_de([PROPIA], 0).muestra_listas, false)
+	assert.deepEqual(getters_de([PROPIA], 0).visibles, [PROPIA])
+})
+
+test('«Precio final» y otra lista: se ve todo', () => {
+	const g = getters_de([PRECIO_FINAL, PROPIA], 1)
+	assert.equal(g.muestra_listas, true)
+	assert.deepEqual(g.visibles, [PRECIO_FINAL, PROPIA])
+	assert.equal(g.solo_precio_final, false)
+})
+
 test('las listas se dibujan salvo que la única sea la «Precio final»', () => {
 	const precio_final = { id: 1, es_precio_final: 1 }
 	const propia = { id: 2, es_precio_final: 0 }
