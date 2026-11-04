@@ -87,7 +87,8 @@
 
 					<pensando-indicator
 					v-if="hay_respuesta_en_curso"
-					:progreso="progreso_en_curso"></pensando-indicator>
+					:progreso="respuesta_en_curso && respuesta_en_curso.progreso"
+					:detalle_fallo="respuesta_en_curso && respuesta_en_curso.detalle_fallo"></pensando-indicator>
 
 					<!-- Aviso de demora (R8: la cola es compartida con las importaciones). -->
 					<div
@@ -311,18 +312,13 @@ export default {
 		/**
 		 * La línea de progreso de la respuesta en curso («Buscando las ventas…»), la que el API
 		 * escribe en `ai_messages.progreso` antes de cada herramienta (ProgresoIaHelper, misión
-		 * app-ia-y-memoria). null si el mensaje pendiente no la trae (API viejo, o todavía no
-		 * arrancó ninguna herramienta): ahí el indicador dice "Pensando…".
+		 * app-ia-y-memoria), y el motivo de un eventual reintento.
 		 *
-		 * @returns {String|null}
+		 * @returns {Object|null}
 		 */
-		progreso_en_curso() {
+		respuesta_en_curso() {
 			let pendientes = this.messages.filter(m => m.rol == 'assistant' && m.estado == 'pendiente')
-			if (!pendientes.length) {
-				return null
-			}
-			let progreso = pendientes[pendientes.length - 1].progreso
-			return progreso && String(progreso).trim() ? String(progreso).trim() : null
+		return pendientes[pendientes.length - 1] || null
 		},
 		/**
 		 * Texto del botón de puente al submódulo (D24), según el origen de la
