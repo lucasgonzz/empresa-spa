@@ -200,3 +200,63 @@ test('las listas se dibujan salvo que la única sea la «Precio final»', () => 
 	assert.equal(se_ven_las_listas([propia]), true)
 	assert.equal(se_ven_las_listas([precio_final, propia]), true)
 })
+
+/*
+	Misión vender-tras-migrar-precio-final (4/11/2026). El caso real, en navegador: negocio migrado con la API
+	de price-type caída. Chip «Sin lista de precios», selector vacío y Guardar frenado para siempre con
+	"recargá la página". Con `user.solo_lista_precio_final`, que viaja en el login y en GET /api/user, la
+	pantalla sabe que no hay nada que elegir: la venta sale sin lista y la API toma la «Precio final».
+*/
+function getters_sin_catalogo(usuario) {
+	const config = cargar('store/price_type.js', { '@/store/__base_store': configuracion => configuracion }).default
+	const rootState = { auth: { authenticated: true, user: { listas_de_precio: 1, ...usuario } } }
+	const state = { models: [] }
+	const getters = { listas: config.getters.listas(state) }
+	return {
+		muestra_listas: config.getters.muestra_listas(state, getters, rootState),
+		solo_precio_final: config.getters.solo_precio_final(state, getters, rootState),
+	}
+}
+
+test('sin catálogo y con el servidor diciendo «Precio final» sola: se ve como un negocio sin listas', () => {
+	const g = getters_sin_catalogo({ solo_lista_precio_final: true })
+	assert.equal(g.solo_precio_final, true)
+	assert.equal(g.muestra_listas, false)
+})
+
+test('sin catálogo y sin ese dato (cuenta con listas propias, o API anterior): como hasta hoy', () => {
+	for (const usuario of [{ solo_lista_precio_final: false }, {}]) {
+		const g = getters_sin_catalogo(usuario)
+		assert.equal(g.solo_precio_final, false)
+		assert.equal(g.muestra_listas, true)
+	}
+})
+
+test('con catálogo manda el catálogo, diga lo que diga el dato del login', () => {
+	const config = cargar('store/price_type.js', { '@/store/__base_store': configuracion => configuracion }).default
+	const rootState = { auth: { authenticated: true, user: { listas_de_precio: 1, solo_lista_precio_final: true } } }
+	const state = { models: [PRECIO_FINAL, PROPIA] }
+	const getters = { listas: config.getters.listas(state) }
+	assert.equal(config.getters.solo_precio_final(state, getters, rootState), false, 'Se cargó otra lista después de entrar.')
+	assert.equal(config.getters.muestra_listas(state, getters, rootState), true)
+})
+
+function contexto_de_la_regla(mixin, price_types, solo_lista_precio_final) {
+	return {
+		...mixin.methods,
+		price_types,
+		solo_lista_precio_final,
+		ownerUsesListasDePrecio: () => true,
+		hasExtencion: () => false,
+	}
+}
+
+test('la regla de la pantalla: sin catálogo no pide lista solo si la cuenta tiene la «Precio final» sola', () => {
+	const mixin = mixin_de_listas()
+	const requiere = (price_types, solo) => mixin.methods.requiere_lista_de_precios.call(contexto_de_la_regla(mixin, price_types, solo))
+
+	assert.equal(requiere([], true), false, 'Catálogo caído en un negocio migrado: la venta no se frena.')
+	assert.equal(requiere([], false), true, 'Catálogo caído en una cuenta con listas: se sigue frenando, es el caso de Trama.')
+	assert.equal(requiere([PRECIO_FINAL], true), true, 'Con el catálogo, la lista se aplica sola como siempre.')
+	assert.equal(requiere([PROPIA], false), true)
+})

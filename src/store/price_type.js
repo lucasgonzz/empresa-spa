@@ -22,6 +22,20 @@ function flag_del_dueno(rootState) {
 }
 
 /**
+ * El catálogo no llegó, pero el servidor ya dijo que la única lista de la cuenta es la «Precio final»
+ * (`user.solo_lista_precio_final`, que viaja en el login y en GET /api/user). Una API anterior no lo
+ * manda: da false y queda como hasta hoy.
+ *
+ * @param {Object} rootState Estado raíz.
+ * @param {Array} listas Las listas cargadas.
+ * @returns {Boolean}
+ */
+function sin_catalogo_y_con_precio_final_sola(rootState, listas) {
+	let usuario = rootState && rootState.auth ? rootState.auth.user : null
+	return listas.length === 0 && !!usuario && usuario.solo_lista_precio_final === true
+}
+
+/**
  * Store de tipos de precio (modelo `price_type`) construido desde el factory común.
  *
  * Misión prueba-listas-siempre (3/11/2026, decisión D4 del plan): todo negocio trabaja con listas de
@@ -69,7 +83,9 @@ export default __base_store({
 		 * @returns {Boolean}
 		 */
 		muestra_listas(state, getters, rootState) {
-			return flag_del_dueno(rootState) && !es_solo_lista_precio_final(getters.listas)
+			return flag_del_dueno(rootState)
+				&& !es_solo_lista_precio_final(getters.listas)
+				&& !sin_catalogo_y_con_precio_final_sola(rootState, getters.listas)
 		},
 		/**
 		 * ¿La cuenta tiene una sola lista y es la «Precio final»? Ahí Vender precia como un negocio sin
@@ -82,7 +98,8 @@ export default __base_store({
 		 * @returns {Boolean}
 		 */
 		solo_precio_final(state, getters, rootState) {
-			return flag_del_dueno(rootState) && es_solo_lista_precio_final(getters.listas)
+			return flag_del_dueno(rootState)
+				&& (es_solo_lista_precio_final(getters.listas) || sin_catalogo_y_con_precio_final_sola(rootState, getters.listas))
 		},
 		/**
 		 * Las listas que se DIBUJAN, para lo que en la base leía `price_types.length`: todas, salvo que la

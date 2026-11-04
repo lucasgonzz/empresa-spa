@@ -93,6 +93,16 @@ export default {
 				return false
 			}
 
+			/*
+				El catálogo no llegó, pero el servidor ya dijo que la única lista es la «Precio final»
+				(misión vender-tras-migrar-precio-final, 4/11/2026). No hay nada que elegir ni que
+				pueda cambiar un importe: la venta sale sin lista y la API toma esa misma. Sin esto, la
+				pantalla frenaba para siempre con "recargá la página" mientras price-type siguiera caído.
+			*/
+			if (!this.price_types.length && this.solo_lista_precio_final) {
+				return false
+			}
+
 			return this.ownerUsesListasDePrecio()
 				&& !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
 		},
