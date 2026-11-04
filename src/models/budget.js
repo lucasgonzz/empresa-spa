@@ -37,7 +37,6 @@ export default {
 			type: 'select',
 			key: 'moneda_id',
 			only_show: true,
-			if_has_extencion: 'ventas_en_dolares',
 			use_store_models: true,
 		},
 		{

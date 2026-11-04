@@ -234,7 +234,6 @@ export default {
 				text: 'Valor: ',
 				model_prop: 'provider.dolar',
 			},
-			if_has_extencion: 'costo_en_dolares',
 			not_show: true,
 			description: 'Active esta opcion si quiere indicar el costo en dolares, para que una vez calculado el "Precio Final", este se cotice a pesos en base a la cotizacion del Dolar del proveedor del articulo, o, en caso de no tener indicado ese dato, en base a la cotizacion que tenga indicada en la configuracion'
 		},

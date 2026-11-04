@@ -281,7 +281,7 @@ export default {
 				El diseño generado para una lista: al borrarlo, esa lista vuelve a tener su opcion de
 				siempre en el menu de Listado (el respaldo por lista sin diseño). Se dice la verdad.
 			*/
-			let lista = modelo.price_type_id && this.ownerUsesListasDePrecio() ? buscar_lista(this.listas, modelo.price_type_id) : null
+			let lista = modelo.price_type_id && this.muestra_listas ? buscar_lista(this.listas, modelo.price_type_id) : null
 			if (lista) {
 				mensaje = '¿Eliminar el diseño «' + modelo.name + '»? No se puede deshacer. La lista «' + lista.name + '» va a seguir apareciendo en Listado, con la etiqueta de siempre.'
 			}

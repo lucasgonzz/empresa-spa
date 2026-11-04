@@ -36,7 +36,6 @@ export default {
 			type: 'select',
 			use_store_models: true,
 			value: 1,
-			if_has_extencion: 'ventas_en_dolares',
 		},
 
 	],

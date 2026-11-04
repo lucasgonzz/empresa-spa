@@ -15,10 +15,9 @@ export default {
 	mixins: [vender],
 	computed: {
 		disabled() {
-			if (this.hasExtencion('ventas_en_dolares')) {
-				return false
-			}
-			return true
+			// Editable para todo negocio (misión prueba-listas-siempre, 3/11/2026: antes solo con
+			// la extensión `ventas_en_dolares`).
+			return false
 		},
 		facturando() {
 			return this.afip_information_id != 0

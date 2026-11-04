@@ -52,6 +52,15 @@ export default {
 			la extension de rangos), que es lo que se mostraba hasta ahora.
 		*/
 		show() {
+			/*
+				Si la única lista es la «Precio final» (misión prueba-listas-siempre, 3/11/2026, D4), se
+				aplica sola (setPriceType) y no hay nada que elegir. El dato sigue viajando. Y mientras el
+				catálogo no llegó todavía no se sabe: un selector vacío no sirve para nada.
+			*/
+			if (this.solo_lista_precio_final || this.catalogo_de_listas_cargando) {
+				return false
+			}
+
 			return this.requiere_lista_de_precios() || !!this.price_type_vender
 		},
 		/*

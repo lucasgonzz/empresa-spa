@@ -20,7 +20,8 @@ export default {
 		cargar_capacidad_cotizaciones() {
 			let self = this
 			return axios.get('/api/vender/cotizaciones-articulos').then(function (res) {
-				self.$store.commit('vender/set_cotizacion_por_articulo_disponible', res.data.supported === true && self.hasExtencion('ventas_en_dolares'))
+				// Sin la extensión `ventas_en_dolares` desde la misión prueba-listas-siempre (3/11/2026): la cotización por artículo es de Vender, para todo negocio.
+				self.$store.commit('vender/set_cotizacion_por_articulo_disponible', res.data.supported === true)
 				self.$store.state.vender.items.forEach(item => self.iniciar_cotizacion_articulo(item))
 				self.setTotal()
 			}).catch(function () {

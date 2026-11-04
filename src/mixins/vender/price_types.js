@@ -27,12 +27,15 @@ let catalogo_de_listas_ya_pedido = false
 	  (el HTML generico que devuelve el shared hosting saturado llega con 200 y sin `models`) NO lo
 	  prende, y ahi se sigue frenando: es el caso de Trama, donde no se distingue "no hay listas"
 	  de "no llego el catalogo", asi que ante la duda se frena.
+	- espera_agotada: el reintento diferido llego a su tope sin que el arranque termine. Va aca para que
+	  catalogo_de_listas_cargando se entere: reintentos_de_lista_hechos es una variable suelta.
 	- pedido_en_vuelo: el re-pedido salio y todavia no volvio. Lo mira el chequeo del guardado
 	  para no decir "recarga la pagina" cuando la respuesta esta por llegar.
 */
 const estado_del_catalogo_de_listas = Vue.observable({
 	confirmado_vacio: false,
 	pedido_en_vuelo: false,
+	espera_agotada: false,
 })
 
 /*
@@ -51,6 +54,19 @@ const MARCADOR_DEL_ARRANQUE_DE_RECURSOS = '[data-testid="recursos-estado"]'
 
 export default {
 	mixins: [computed],
+	computed: {
+		/**
+		 * El catálogo de listas todavía no llegó y puede llegar. Con esto, el chip «Sin lista de precios» y
+		 * el selector no aparecen por unos segundos al recargar Vender, que en un negocio cuya única lista es
+		 * la «Precio final» sería mostrarle algo que nunca vio (misión prueba-listas-siempre, 3/11/2026). Si
+		 * terminó y no hay lista, da false y el chip sale igual: es el caso de Trama.
+		 *
+		 * @returns {boolean}
+		 */
+		catalogo_de_listas_cargando() {
+			return !this.price_types.length && this.catalogo_de_listas_todavia_puede_llegar()
+		},
+	},
 	methods: {
 		/**
 		 * La regla entera de "esta cuenta vende con lista de precios si o si", en UN solo lugar.
@@ -233,6 +249,10 @@ export default {
 				return true
 			}
 
+			if (estado_del_catalogo_de_listas.espera_agotada) {
+				return false
+			}
+
 			return !catalogo_de_listas_ya_pedido
 				&& reintentos_de_lista_hechos < MAXIMO_DE_REINTENTOS
 				&& this.estado_del_arranque_de_recursos() !== 'listo'
@@ -354,6 +374,10 @@ export default {
 			setTimeout(() => {
 				reintento_de_lista_agendado = false
 				reintentos_de_lista_hechos++
+
+				if (reintentos_de_lista_hechos >= MAXIMO_DE_REINTENTOS) {
+					estado_del_catalogo_de_listas.espera_agotada = true
+				}
 
 				/*
 					El componente que agendo el reintento ya no existe (el vendedor salio de /vender

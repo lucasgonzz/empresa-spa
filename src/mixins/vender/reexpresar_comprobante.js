@@ -1,3 +1,4 @@
+import { trae_precios_propios_por_moneda } from '@/utils/lista_precio_final'
 import { aplicar_cotizacion } from '@/utils/cotizacion_por_articulo'
 import { numero_o_null, redondear_a_centavos } from '@/utils/recargos_en_precios'
 
@@ -295,8 +296,7 @@ export default {
 			items.forEach(item => {
 
 				if (
-					Array.isArray(item.price_type_monedas)
-					&& item.price_type_monedas.length
+					trae_precios_propios_por_moneda(item, this.solo_lista_precio_final)
 					&& !(item.cotizacion_origen && item.pivot)
 				) {
 					// Trae sus propios precios por moneda: ver "LIMITE CONOCIDO" arriba.

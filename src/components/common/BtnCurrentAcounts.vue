@@ -91,7 +91,9 @@ export default {
 			return null
 		},
 		show(credit_account) {
-			return credit_account.moneda_id == 1 || this.hasExtencion('ventas_en_dolares')
+			// Un botón por moneda para todo negocio (misión prueba-listas-siempre, 3/11/2026: las
+			// cuentas en dólares dejaron de depender de la extensión `ventas_en_dolares`).
+			return true
 		},
 		showCurrentAcounts(credit_account) {
 			this.$store.commit('current_acount/setFromModelName', this.model_name)

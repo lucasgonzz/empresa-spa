@@ -269,7 +269,8 @@ export default {
 		 * @returns {boolean}
 		 */
 		usa_listas() {
-			return this.ownerUsesListasDePrecio()
+			// Elementos "precio de lista", salvo que la única sea la «Precio final» (misión prueba-listas-siempre, 3/11/2026).
+			return this.muestra_listas
 		},
 		/**
 		 * Ancho de la etiqueta, mm.

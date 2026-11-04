@@ -25,10 +25,9 @@
 			</div>
 		</div>
 
-		<!-- Chip de suma de saldos en dólares (solo con extensión habilitada) -->
+		<!-- Chip de suma de saldos en dólares (para todo negocio desde la misión prueba-listas-siempre, 3/11/2026) -->
 		<div
-		class="saldos-filtrados__chip saldos-filtrados__chip--usd"
-		v-if="hasExtencion('ventas_en_dolares')">
+		class="saldos-filtrados__chip saldos-filtrados__chip--usd">
 			<div class="saldos-filtrados__icon-wrap">
 				<i
 				class="bi bi-currency-exchange"

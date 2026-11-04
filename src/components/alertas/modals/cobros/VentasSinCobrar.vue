@@ -102,7 +102,7 @@ export default {
 				moneda_id = Number(sale.current_acount.moneda_id)
 			}
 			// La venta es en dolares solo si lo dice su moneda Y el negocio trabaja con cuentas en dolares.
-			let en_dolares = moneda_id == 2 && this.hasExtencion('ventas_en_dolares')
+			let en_dolares = moneda_id == 2
 			// Saldo del cliente en esa moneda; es NULL hasta que su cuenta tiene el primer movimiento.
 			let saldo = en_dolares ? sale.client.saldo_dolares : sale.client.saldo_pesos
 			// Sin dato: un guion, y no "USD -", que dejaria el rotulo de la moneda solo. El cero SI se muestra.
