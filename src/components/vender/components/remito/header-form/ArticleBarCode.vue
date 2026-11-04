@@ -70,6 +70,7 @@ import {
 } from '@/utils/balanzas'
 
 import db from '@/offline/db'
+import { codigo_escaneado } from '@/utils/codigo_de_barras'
 
 /**
  * Escapa un texto para meterlo en un toast: vue-toast-notification dibuja el mensaje con v-html, y
@@ -171,6 +172,8 @@ export default {
 				mientras se espera que el usuario elija una variante en el modal.
 			*/
 			opening_variant_selector: false,
+			// Hay una busqueda por codigo en vuelo: un segundo Enter no la pisa (ver set_article_from_barcode).
+			buscando_codigo: false,
 		}
 	},
 	methods: {
@@ -184,7 +187,16 @@ export default {
 			Todo empieza con este metodo
 		*/
 		async set_article_from_barcode() {
-			if (this.item_vender.codigo != '') {
+			/*
+				Sin nada tipeado no hay que buscar: antes `undefined != ''` daba true y getBarCode tiraba un
+				TypeError sin ningun aviso. Pasa con un Enter en "Cod barras" mientras hay un articulo
+				pendiente de cantidad (el item de la cabecera es el articulo y no trae la clave `codigo`).
+				Ademas, mientras una busqueda sigue en vuelo un segundo Enter se ignora: la API tarda y el
+				segundo pisaba el estado de la primera (finded_article) antes de que termine.
+			*/
+			if (codigo_escaneado(this.item_vender.codigo) != '' && !this.buscando_codigo) {
+
+				this.buscando_codigo = true
 
 				this.finded_article = undefined
 				this.from_balanza = false
@@ -192,7 +204,13 @@ export default {
 				// para un nuevo escaneo, tiene que volver a bloquear el agregado automatico.
 				this.opening_variant_selector = false
 
-				let resultado = await this.set_finded_article(this.item_vender.codigo)
+				let resultado
+
+				try {
+					resultado = await this.set_finded_article(this.item_vender.codigo)
+				} finally {
+					this.buscando_codigo = false
+				}
 
 				/*
 					Variante encontrada en la cache sin conexion (mision

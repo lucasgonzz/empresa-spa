@@ -2,6 +2,8 @@ import { inicializar_cotizacion, convertir_importe } from '@/utils/cotizacion_po
 import { trae_precios_propios_por_moneda } from '@/utils/lista_precio_final'
 import moment from 'moment'
 import { env } from '@/runtime_config'
+/* Código de barras sin espacios y siempre como texto: un campo vacío no tira (misión prueba-defectos-asistente-y-vender). */
+import { codigo_escaneado } from '@/utils/codigo_de_barras'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
 import { precio as precio_de_oferta_por_cantidad, porcentaje_legible } from '@/utils/criterio_de_oferta_por_cantidad'
 import { factor_de_recargos, renglon_lleva_recargos_de_venta, precio_sin_recargos_guardado, redondear_a_centavos } from '@/utils/recargos_en_precios'
@@ -1969,7 +1971,7 @@ export default {
             return price
         },
         getBarCode(bar_code) {
-            return bar_code.replace(/\s+/g, '')
+            return codigo_escaneado(bar_code)
         },
         amount(amount) {
             let punto_index = amount.indexOf('.')
