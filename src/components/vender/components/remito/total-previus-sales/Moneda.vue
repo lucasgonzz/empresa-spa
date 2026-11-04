@@ -58,7 +58,9 @@ export default {
 	mixins: [cotizacion_por_articulo, vender_set_total, cotizacion_dolar_por_defecto, reexpresar_comprobante],
 	computed: {
 		show() {
-			return this.user && this.hasExtencion('ventas_en_dolares')
+			// Para todo negocio (misión prueba-listas-siempre, 3/11/2026: las ventas en dólares pasaron
+			// al núcleo; la extensión `ventas_en_dolares` ya no gatea el selector).
+			return !!this.user
 		},
 		valor_dolar: {
 			get() {

@@ -56,7 +56,6 @@ export default {
 			type: 'select',
 			value: 1,
 			use_store_models: true,
-			if_has_extencion: 'ventas_en_dolares',
 			description: 'Moneda de esta compra, dependiendo la moneda se va a cargar en la cuenta corriente correspondiente',
 		},
 		{
@@ -357,7 +356,6 @@ export default {
 					{
 						text: 'Costo en dolares',
 						key: 'cost_in_dollars',
-						if_has_extencion: 'costo_en_dolares',
 						// value: 0,
 						value: {
 							key: 'cost_in_dollars',

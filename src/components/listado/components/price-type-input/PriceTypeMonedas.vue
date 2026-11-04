@@ -157,11 +157,21 @@ export default {
             console.log('existente:')
             console.log(existente)
 
+            /*
+                Fila nueva (el artículo todavía no tiene esta lista en esta moneda): el tilde por
+                defecto de "Cotizar desde la otra moneda" sigue `users.cotizar_precios_en_dolares`
+                del dueño (misión prueba-listas-siempre, 3/11/2026, D3): prendido → tildada la fila en
+                DÓLARES (el precio se arma en pesos y los dólares se derivan); apagado → tildada la
+                fila en PESOS (el precio se arma en dólares y los pesos se derivan). Lo que ya está
+                guardado se respeta tal cual.
+            */
+            let cotiza_a_pesos = !!(this.owner && Number(this.owner.cotizar_precios_en_dolares))
+
             let info = {
                 percentage: '',
                 final_price: '',
                 setear_precio_final: 0,
-                cotizar_desde_otra_moneda: 0,
+                cotizar_desde_otra_moneda: (cotiza_a_pesos && m.id == 2) || (!cotiza_a_pesos && m.id == 1) ? 1 : 0,
             }
 
             if (typeof existente != 'undefined') {

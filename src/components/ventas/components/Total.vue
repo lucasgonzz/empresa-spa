@@ -147,7 +147,8 @@
 				mostrar. Por eso la extensión la reemplaza en vez de sumarse a ella: no había nada que
 				conservar.
 			-->
-			<template v-if="hasExtencion('ventas_en_dolares')">
+			<!-- Para todo negocio desde la misión prueba-listas-siempre (3/11/2026): la extensión ya no los esconde. -->
+			<template>
 				<explicacion-de-numero
 				class="totales-chip totales-chip--usd"
 				v-if="mostrar_total_ventas"
@@ -494,7 +495,7 @@ export default {
 				sin_medir: this.ventas_con_iva_sin_medir,
 				mostrar_consolidadas: !!this.$store.state.sale.mostrar_consolidadas,
 				desde: this.from_date,
-				tiene_dolares: this.hasExtencion('ventas_en_dolares'),
+				tiene_dolares: true,
 				metodo_de_pago: metodo_de_pago,
 			}
 			let tarjetas = ['total', 'costos', 'ganancia', 'cuenta_corriente', 'ventas', 'total_usd', 'costos_usd', 'ganancia_usd', 'cuenta_corriente_usd']

@@ -61,7 +61,8 @@ export default {
 		 * @returns {boolean}
 		 */
 		owner_uses_listas_de_precio() {
-			return this.ownerUsesListasDePrecio()
+			// Las opciones por lista, salvo que la única sea la «Precio final» (misión prueba-listas-siempre, 3/11/2026).
+			return this.muestra_listas
 		},
 		/**
 		 * Listas de precios cargadas en store (una opción de PDF por cada una).
@@ -92,7 +93,7 @@ export default {
 			.catch(function () {
 				self.loading_profiles = false
 			})
-		if (self.owner_uses_listas_de_precio && !self.price_types.length) {
+		if (self.ownerUsesListasDePrecio() && !self.price_types.length) {
 			self.$store.dispatch('price_type/getModels')
 				.then(function () {})
 				.catch(function () {})

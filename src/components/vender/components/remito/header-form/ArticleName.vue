@@ -136,8 +136,14 @@ export default {
 				key: 'provider_id',
 			})
 
+			/*
+				La columna "Precio" (precio final): la condición de siempre, más la cuenta cuya única
+				lista es la «Precio final» (misión prueba-listas-siempre, 3/11/2026), que tiene la
+				extensión de cambiar la lista en Vender pero no tiene nada que cambiar.
+			*/
 			if (
 				!this.hasExtencion('cambiar_price_type_en_vender')
+				|| this.solo_lista_precio_final
 			) {
 
 				props.push({

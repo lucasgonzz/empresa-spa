@@ -44,7 +44,6 @@ export default {
 			type: 'select',
 			key: 'moneda_id',
 			only_show: true,
-			if_has_extencion: 'ventas_en_dolares',
 			use_store_models: true,
 		},
 		{
@@ -52,7 +51,6 @@ export default {
 			type: 'number',
 			key: 'valor_dolar',
 			only_show: true,
-			if_has_extencion: 'ventas_en_dolares',
 			is_price: true,
 		},
 		{
@@ -241,19 +239,16 @@ export default {
 						key: 'moneda_id',
 						// type: 'select',
 						use_store_models: true,
-						if_has_extencion: 'ventas_en_dolares',
 					},
 					{
 						text: 'Cotizacion',
 						key: 'cotizacion',
 						is_price: true,
-						if_has_extencion: 'ventas_en_dolares',
 					},
 					{
 						text: 'Monto cotizado',
 						key: 'amount_cotizado',
 						is_price: true,
-						if_has_extencion: 'ventas_en_dolares',
 					},
 					{
 						text: 'Descuento',

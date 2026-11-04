@@ -47,10 +47,9 @@
 			</div>
 		</div>
 
-		<!-- Chip de total en dólares (solo con extensión habilitada) -->
+		<!-- Chip de total en dólares (para todo negocio desde la misión prueba-listas-siempre, 3/11/2026) -->
 		<div
-		class="caja-totales__chip caja-totales__chip--usd"
-		v-if="hasExtencion('ventas_en_dolares')">
+		class="caja-totales__chip caja-totales__chip--usd">
 			<div class="caja-totales__icon-wrap">
 				<i
 				class="bi bi-currency-exchange"

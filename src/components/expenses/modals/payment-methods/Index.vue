@@ -85,10 +85,6 @@ export default {
          * @returns {number}
          */
         base_moneda() {
-            if (!this.hasExtencion('ventas_en_dolares')) {
-                return 1
-            }
-
             const moneda_id = Number(this.expense.moneda_id)
             if (Number.isNaN(moneda_id) || !moneda_id) {
                 return 1
@@ -122,8 +118,9 @@ export default {
             // ✅ fuerza remount del MultiPaymentMethods
             this.payment_methods_key += 1
 
-            // Sin extensión dólares el gasto siempre es en pesos aunque el formulario oculte moneda_id
-            if (!this.hasExtencion('ventas_en_dolares')) {
+            // Un gasto sin moneda elegida es en pesos (la moneda se elige en el formulario para todo
+            // negocio desde la misión prueba-listas-siempre, 3/11/2026).
+            if (!this.expense.moneda_id) {
                 this.$set(this.expense, 'moneda_id', 1)
             }
 

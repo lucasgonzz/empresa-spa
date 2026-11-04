@@ -64,6 +64,17 @@ export default {
 
 					this.setTotal()
 
+					/*
+						Si la única lista es la «Precio final» (misión prueba-listas-siempre, 3/11/2026) no
+						hay importes que puedan cambiar: el precio de esa lista es el precio final con el que ya se
+						preciaron los renglones. Se aplica en silencio y se sigue guardando; avisar
+						"se aplicó la lista Precio final, revisá los importes" sería pedirle al
+						vendedor que mire lo que no se movió.
+					*/
+					if (this.solo_lista_precio_final) {
+						return true
+					}
+
 					this.$store.commit('vender/append_sale_log', {
 						event_key: 'price_list_applied_on_save',
 						source_component: 'vender/check_price_type',

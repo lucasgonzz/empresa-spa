@@ -45,7 +45,6 @@ export default {
 			is_price: true,
 			use_to_filter_in_modal: true,
 			filter_modal_position: 2,
-			if_has_extencion: 'ventas_en_dolares',
 		},
 		{
 			text: 'Pais exportacion',
@@ -53,7 +52,6 @@ export default {
 			type: 'select',
 			value: 1,
 			use_store_models: true,
-			if_has_extencion: 'ventas_en_dolares',
 		},
 		{
 			text: 'Sucursal',

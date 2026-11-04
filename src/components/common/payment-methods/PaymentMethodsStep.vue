@@ -27,7 +27,6 @@
 
                     <!-- METODO DE PAGO -->
                     <b-form-group
-                    :class="{ 'metodo-pago-card__campo--ancho': !hasExtencion('ventas_en_dolares') }"
                     label="Metodo de pago">
 
                         <!--
@@ -46,9 +45,8 @@
                     </b-form-group>
 
 
-                    <!-- MONEDA -->
+                    <!-- MONEDA (para todo negocio desde la misión prueba-listas-siempre, 3/11/2026) -->
                     <b-form-group
-                    v-if="hasExtencion('ventas_en_dolares')"
                     label="Moneda">
                         <b-form-select
                             :data-testid="'pago-moneda-'+index"
@@ -444,10 +442,6 @@ export default {
          * @returns {number}
          */
         resolve_payment_method_moneda_id(payment_method) {
-            if (!this.hasExtencion('ventas_en_dolares')) {
-                return Number(this.base_moneda) || 1
-            }
-
             const moneda_id = Number(payment_method.moneda_id)
             if (!Number.isNaN(moneda_id) && moneda_id) {
                 return moneda_id

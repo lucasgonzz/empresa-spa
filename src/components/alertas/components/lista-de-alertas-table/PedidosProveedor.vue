@@ -115,7 +115,7 @@ export default {
 		 */
 		saldo_del_proveedor(provider_order) {
 			// La compra es en dolares solo si lo dice su moneda Y el negocio trabaja con cuentas en dolares.
-			let en_dolares = (Number(provider_order.moneda_id) || 1) == 2 && this.hasExtencion('ventas_en_dolares')
+			let en_dolares = (Number(provider_order.moneda_id) || 1) == 2
 			// Saldo del proveedor en esa moneda; es NULL hasta que su cuenta tiene el primer movimiento.
 			let saldo = en_dolares ? provider_order.provider.saldo_dolares : provider_order.provider.saldo_pesos
 			// Sin dato: un guion, y no "USD -", que dejaria el rotulo de la moneda solo. El cero SI se muestra.

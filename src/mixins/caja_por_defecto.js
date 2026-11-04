@@ -70,7 +70,7 @@ export default {
                  * la caja en pesos y con el monto crudo -guardar_movimiento_caja usa pivot->amount sin
                  * convertir-. Es exactamente el error de plata que este hotfix vino a evitar.
                  */
-                if (this.hasExtencion('ventas_en_dolares') && moneda_id) {
+                if (moneda_id) {
 
                     let de_la_moneda = cajas_por_defecto.filter(caja => caja.moneda_id == moneda_id)
 
