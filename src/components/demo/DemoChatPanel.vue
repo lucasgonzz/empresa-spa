@@ -44,7 +44,8 @@ import TarjetaClip from '@/components/demo/TarjetaClip'
 import SelectorVideosDemo from '@/components/demo/SelectorVideosDemo'
 import { tour_habilitado } from '@/tours/habilitados'
 
-// Campos de la fila de carga de VENDER (código de barras, buscador, servicio y cantidad) que ningún flotante puede tapar.
+// Campos de carga de artículos (en VENDER: código de barras, buscador, servicio y cantidad) que el launcher no puede tapar.
+// Los ids también existen en otras pantallas de carga (Ingresar, buscadores): ahí también se esquivan, y no hace daño.
 const CAMPOS_DE_VENDER = '#article-bar-code, #search-article, #service_name, #article-amount'
 
 export default {
@@ -151,7 +152,8 @@ export default {
 				let r = e.getBoundingClientRect()
 				if (r.width && r.height && r.bottom > 0 && r.top < innerHeight && getComputedStyle(e).visibility !== 'hidden') top = Math.min(top, r.top)
 			})
-			this.reserva_compositor = Math.max(0, innerHeight - top + 12, this.reserva_sobre_campos(campos))
+			let reserva_editores = Math.max(0, innerHeight - top + 12)
+			this.reserva_compositor = Math.max(reserva_editores, this.reserva_sobre_campos(campos, reserva_editores))
 		},
 		/**
 		 * Cuánto hay que subir el launcher para no tapar un campo de carga de Vender (misión
@@ -163,16 +165,17 @@ export default {
 		 * sigue subiendo hasta quedar libre o hasta el tope que ya pone el CSS.
 		 *
 		 * @param {Element[]} campos Los campos de CAMPOS_DE_VENDER presentes en pantalla.
+		 * @param {number} reserva_editores Lo que ya sube el launcher por el editor de WhatsApp (parte de ahí si es mayor).
 		 * @returns {number} La reserva en px, o 0 si no hay choque.
 		 */
-		reserva_sobre_campos(campos) {
+		reserva_sobre_campos(campos, reserva_editores) {
 			let boton = this.$el && this.$el.querySelector ? this.$el.querySelector('.demo-ai__launcher') : null
 			if (!boton || !campos.length) return 0
 			let caja = boton.getBoundingClientRect()
 			if (!caja.width || !caja.height) return 0
 			let rectas = campos.filter(function (e) { return getComputedStyle(e).visibility !== 'hidden' }).map(function (e) { return e.getBoundingClientRect() }).filter(function (r) { return r.width && r.height && r.bottom > 0 && r.top < innerHeight })
 			let tope = Math.max(0, innerHeight - 144)
-			let reserva = Math.min(this.reserva_base, tope)
+			let reserva = Math.min(Math.max(this.reserva_base, reserva_editores || 0), tope)
 			let subio = false
 			for (let i = 0; i <= rectas.length; i++) {
 				let abajo = innerHeight - reserva
