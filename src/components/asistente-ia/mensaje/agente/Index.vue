@@ -6,6 +6,7 @@
 	<article
 	class="asistente-ia-msj-agente"
 	:class="{ 'asistente-ia-msj-agente--error': con_error }"
+	:tabindex="hora_de_respuesta || demora || detalle_fallo ? 0 : null"
 	aria-label="Respuesta del asistente">
 		<div
 		class="asistente-ia-msj-agente__avatar"
@@ -75,6 +76,19 @@
 				:key="accion.id"
 				:accion="accion"
 				:conversation_id="message.ai_conversation_id"></accion-card>
+			</div>
+			<div
+			v-if="hora_de_respuesta || demora || detalle_fallo"
+			class="asistente-ia-msj-agente__detalle">
+				<div
+				v-if="hora_de_respuesta || demora"
+				class="asistente-ia-msj-agente__tiempos">
+					<time
+					v-if="hora_de_respuesta"
+					:datetime="message.respuesta_publicada_at">{{ con_error ? 'Aviso a las' : 'Enviado a las' }} {{ hora_de_respuesta }}</time>
+					<span v-if="demora">Demoró {{ demora }}</span>
+				</div>
+				<div v-if="detalle_fallo">Motivo del fallo: {{ detalle_fallo }}</div>
 			</div>
 
 			<!-- La barra de acciones de ia-spa: «Copiar» y la valoración (👍 / 👎, con el cuadro
@@ -178,6 +192,31 @@ export default {
 		 */
 		con_error() {
 			return this.message.estado == 'error'
+		},
+		hora_de_respuesta() {
+			if (!this.message.respuesta_publicada_at) {
+				return null
+			}
+			let fecha = new Date(this.message.respuesta_publicada_at)
+			if (!Number.isFinite(fecha.getTime())) {
+				return null
+			}
+			return fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+		},
+		demora() {
+			let total = this.message.demora_respuesta_seg
+			if (!Number.isInteger(total) || total < 0) {
+				return null
+			}
+			if (total === 0) {
+				return 'menos de 1 s'
+			}
+			let minutos = Math.floor(total / 60)
+			let segundos = total % 60
+			return minutos > 0 ? minutos + ' min ' + segundos + ' s' : segundos + ' s'
+		},
+		detalle_fallo() {
+			return this.message.detalle_fallo || null
 		},
 		/**
 		 * La cara del agente: el logo del negocio (D37).
@@ -411,6 +450,21 @@ export default {
 	&--error &__texto
 		color: var(--ia-texto-2)
 
+	&__detalle
+		margin-top: 4px
+		font-size: .78rem
+		color: var(--ia-texto-2)
+		overflow-wrap: anywhere
+		opacity: 0
+
+	&__tiempos
+		display: flex
+		flex-wrap: wrap
+		column-gap: 12px
+
+	&:hover &__detalle, &:focus-within &__detalle
+		opacity: 1
+
 	// Las tarjetas de carga van una debajo de la otra, separadas del texto.
 	&__acciones
 		display: flex
@@ -438,7 +492,7 @@ export default {
 
 // En pantallas táctiles no hay hover: la barra queda siempre a la vista.
 @media (pointer: coarse)
-	.asistente-ia-msj-agente__barra
+	.asistente-ia-msj-agente__barra, .asistente-ia-msj-agente__detalle
 		opacity: 1
 
 @media screen and (max-width: 767px)

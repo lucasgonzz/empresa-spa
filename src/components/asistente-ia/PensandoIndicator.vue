@@ -12,6 +12,7 @@
 	Bajo prefers-reduced-motion se apagan el latido y el brillo y queda el texto fijo (D42). -->
 	<div
 	class="asistente-ia-pensando"
+	:tabindex="detalle_fallo ? 0 : null"
 	role="status"
 	aria-live="polite">
 		<span
@@ -29,7 +30,12 @@
 			<span
 			class="asistente-ia-pensando__pulso"
 			aria-hidden="true"></span>
-			<span class="asistente-ia-pensando__texto">{{ texto }}</span>
+			<span>
+				<span class="asistente-ia-pensando__texto">{{ texto }}</span>
+				<span
+				v-if="detalle_fallo"
+				class="asistente-ia-pensando__detalle">Motivo del reintento: {{ detalle_fallo }}</span>
+			</span>
 		</span>
 	</div>
 </template>
@@ -42,9 +48,13 @@ export default {
 		/**
 		 * La línea de progreso de la respuesta en curso («Buscando las ventas…»), la que el API
 		 * escribe en `ai_messages.progreso` antes de cada herramienta. null o vacía = "Pensando…".
-		 * La resuelve Conversation.vue (`progreso_en_curso`).
+		 * La pasa Conversation.vue desde el mensaje pendiente.
 		 */
 		progreso: {
+			type: String,
+			default: null,
+		},
+		detalle_fallo: {
 			type: String,
 			default: null,
 		},
@@ -65,7 +75,7 @@ export default {
 		 * @returns {String}
 		 */
 		texto() {
-			return this.progreso ? this.progreso : 'Pensando…'
+			return (this.progreso || '').trim() || 'Pensando…'
 		},
 	},
 }
@@ -128,6 +138,20 @@ export default {
 		background-clip: text
 		color: transparent
 		animation: asistente-ia-pensando-brillo 2.2s linear infinite
+
+	&__detalle
+		display: block
+		font-size: .78rem
+		color: var(--ia-texto-2)
+		overflow-wrap: anywhere
+		opacity: 0
+
+	&:hover &__detalle, &:focus-within &__detalle
+		opacity: 1
+
+@media (pointer: coarse)
+	.asistente-ia-pensando__detalle
+		opacity: 1
 
 @media screen and (max-width: 767px)
 	.asistente-ia-pensando

@@ -1360,7 +1360,7 @@ export default {
 						// (misión agente-mejoras-uso-real, 29/10/2026). El API la escribe sin
 						// broadcast, así que este polling es la única vía por la que llega.
 						//
-						// 🔴 Solo `progreso` y no el modelo entero: el pendiente no tiene texto ni
+						// 🔴 Solo progreso y el motivo del reintento: el pendiente no tiene texto ni
 						// tarjetas todavía, y parchearlo completo podría pisar con vacío algo que
 						// el evento de Echo ya hubiera traído. Sin la clave (API viejo) no se toca
 						// nada y el indicador dice "Pensando…".
@@ -1368,6 +1368,7 @@ export default {
 							commit('patchMessage', {
 								id: model.id,
 								progreso: model.progreso || null,
+								detalle_fallo: model.detalle_fallo || null,
 							})
 						}
 
