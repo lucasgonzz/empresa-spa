@@ -18,6 +18,9 @@ export default {
 		prueba_activa() {
 			return !!(this.prueba_del_usuario && this.prueba_del_usuario.activa)
 		},
+		prueba_permite_pdf() {
+			return this.prueba_activa && !!this.prueba_del_usuario.puede_importar_pdf
+		},
 		/** @returns {boolean} True mientras el negocio en prueba todavía tiene los datos de ejemplo. */
 		prueba_con_semilla() {
 			return this.prueba_activa && !!this.prueba_del_usuario.semilla_presente
