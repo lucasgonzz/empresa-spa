@@ -68,6 +68,7 @@ export default {
 	components: { Robot },
 	data() {
 		return {
+			canal: null,
 			intervalo: null,
 			temporizadores: [],
 			animar_tarjeta: false,
@@ -111,17 +112,29 @@ export default {
 		},
 	},
 	mounted() {
+		if (this.Echo) {
+			this.canal = 'implementacion.user.' + this.$store.state.auth.user.id
+			this.Echo.private(this.canal)
+				.listen('.ImplementacionActualizada', this.refrescar_en_vivo)
+				.subscribed(this.refrescar_en_vivo)
+		}
 		this.refrescar()
 		this.intervalo = window.setInterval(this.refrescar, 15000)
 		document.addEventListener('visibilitychange', this.refrescar)
 	},
 	beforeDestroy() {
+		if (this.canal) {
+			this.Echo.leave(this.canal)
+		}
 		window.clearInterval(this.intervalo)
 		document.removeEventListener('visibilitychange', this.refrescar)
 		this.limpiar_animacion()
 		this.$store.commit('implementacion/limpiar')
 	},
 	methods: {
+		refrescar_en_vivo() {
+			this.$store.dispatch('implementacion/refrescar', { en_vivo: true })
+		},
 		refrescar() {
 			if (!document.hidden) {
 				this.$store.dispatch('implementacion/refrescar')
@@ -148,11 +161,13 @@ export default {
 			this.animar_tarjeta = true
 			this.espera_animacion = false
 			this.fase_robot = 'saludando'
+			const fin_saludo = 660 + 3000
+			const salida = siguientes ? fin_saludo + 650 + 3000 : fin_saludo
 			if (siguientes) {
-				this.temporizadores.push(window.setTimeout(() => { this.fase_robot = 'senalando' }, 2200))
+				this.temporizadores.push(window.setTimeout(() => { this.fase_robot = 'senalando' }, fin_saludo))
 			}
-			this.temporizadores.push(window.setTimeout(() => { this.fase_robot = 'saliendo' }, siguientes ? 4700 : 2900))
-			this.temporizadores.push(window.setTimeout(() => { this.fase_robot = null }, siguientes ? 5400 : 3600))
+			this.temporizadores.push(window.setTimeout(() => { this.fase_robot = 'saliendo' }, salida))
+			this.temporizadores.push(window.setTimeout(() => { this.fase_robot = null }, salida + 650))
 		},
 		cerrar() {
 			this.$refs.modal.hide()
@@ -326,8 +341,7 @@ export default {
 		top: -.95rem
 		width: 4.2rem
 		&.fase-senalando
-			right: 1rem
-			transform: translateY(var(--salto-robot)) scale(.65)
+			transform: translate(2.5rem, var(--salto-robot)) scale(.65)
 	.implementacion-modal-tarjeta h2
 		font-size: 1.35rem
 	.implementacion-modal-siguientes

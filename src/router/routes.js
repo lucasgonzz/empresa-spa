@@ -518,13 +518,7 @@ export default [
 		]
 	},
 	{
-		/*
-			ABM se esconde del menú (decisión de Lucas, 3/11/2026, programa «Prueba gratuita de 7 días»). Con
-			`not_show` y NO borrando la entrada: Abm.vue la busca por `name` para resolver el modelo por
-			defecto, y redirect() (permissions.js) la saltea como aterrizaje. La pantalla sigue existiendo por
-			URL (/abm) y por los atajos que llegan a ella (integraciones de tienda online, UserConfig.vue).
-		*/
-		not_show: true,
+		no_aterrizar: true,
 		text: 'ABM',
 		name: 'abm',
 		params: {

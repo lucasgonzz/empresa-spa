@@ -1,5 +1,5 @@
 <template>
-<div>
+<div class="contenedor-nav-vertical" :class="{ 'aviso-retiene-barra': aviso_implementacion && aviso_retiene_barra }">
 	<div 
 	class="mobile-nav-header d-md-none">
 		<span 
@@ -7,7 +7,7 @@
 		class="route-name">
 			{{ routeText(selected_route) }}
 		</span>
-		<aviso-de-implementacion v-if="!show_nav_mobile" mostrar_texto></aviso-de-implementacion>
+		<aviso-de-implementacion v-if="!show_nav_mobile"></aviso-de-implementacion>
 		<button
 		type="button"
 		data-menu-implementacion-movil
@@ -25,8 +25,11 @@
 	</div>
 
 	<div 
+	ref="barra"
 	:class="_class"
-	class="nav-vertical s-1">
+	class="nav-vertical s-1"
+	@mouseleave="al_salir_de_barra"
+	@scroll.passive="alinear_aviso">
 
 		<slot name="nav_top"></slot>
 
@@ -74,7 +77,7 @@
 				    	:src="image(route)">
 						<aviso-de-implementacion
 						v-if="route.name === 'implementacion'"
-						class="aviso-implementacion-menu"></aviso-de-implementacion>
+						class="aviso-implementacion-menu d-md-none"></aviso-de-implementacion>
 
 				    	<b-badge
 				    	class="route-alert-badge"
@@ -116,9 +119,16 @@
 
 		<slot name="nav_bottom"></slot>
 
-		<user-info
-		@abrir-ruta="callSetRoute"></user-info>
+		<user-info></user-info>
 
+	</div>
+
+	<div v-if="aviso_implementacion && centro_aviso !== null"
+		ref="aviso_lateral"
+		class="aviso-implementacion-lateral d-none d-md-block"
+		@mouseleave="aviso_retiene_barra = false"
+		:style="{ '--centro-aviso': centro_aviso + 'px' }">
+		<aviso-de-implementacion></aviso-de-implementacion>
 	</div>
 
 	<download-resources></download-resources>
@@ -144,15 +154,40 @@ export default {
 	},
 	data() {
 		return {
+			centro_aviso: null,
+			aviso_retiene_barra: false,
+			observador_aviso: null,
 			show_nav_mobile: false,
 			openItem: null,
 			hideTimeout: null,
 		}
 	},
 	watch: {
+		aviso_implementacion(aviso) {
+			if (!aviso) {
+				this.aviso_retiene_barra = false
+			}
+		},
 		route_name() {
 			this.show_nav_mobile = false
 		},
+	},
+	mounted() {
+		window.addEventListener('resize', this.alinear_aviso)
+		if (window.ResizeObserver) {
+			this.observador_aviso = new ResizeObserver(this.alinear_aviso)
+			this.observador_aviso.observe(this.$refs.barra)
+		}
+		this.alinear_aviso()
+	},
+	updated() {
+		this.alinear_aviso()
+	},
+	beforeDestroy() {
+		window.removeEventListener('resize', this.alinear_aviso)
+		if (this.observador_aviso) {
+			this.observador_aviso.disconnect()
+		}
 	},
 	computed: {
 		routes() {
@@ -178,6 +213,16 @@ export default {
 		},
 	},
 	methods: {
+		al_salir_de_barra(event) {
+			const aviso = this.$refs.aviso_lateral
+			this.aviso_retiene_barra = !!(aviso && aviso.contains(event.relatedTarget))
+		},
+		alinear_aviso() {
+			const item = this.aviso_implementacion && this.$refs.barra
+				&& this.$refs.barra.querySelector('[data-nav-implementacion]')
+			const rect = item && item.getBoundingClientRect()
+			this.centro_aviso = rect ? rect.top + rect.height / 2 : null
+		},
 		toggleSubmenu(route) {
 			if (this.openItem === route.name) {
 				this.openItem = null;
@@ -308,6 +353,40 @@ $nav_item_radius: 8px
 @media (max-width: 767px)
 	.nav-vertical:not(.active-mobile-nav) .aviso-implementacion-menu
 		display: none
+	.nav-vertical .aviso-implementacion-menu
+		position: absolute
+		right: -4px
+		width: 177px
+		flex-direction: row-reverse
+		.vineta::before
+			left: auto
+			right: -.32rem
+			transform: rotate(225deg)
+	.nav-vertical.active-mobile-nav [data-nav-implementacion]:has(.aviso-implementacion-menu) .route-text
+		visibility: hidden
+
+.aviso-implementacion-lateral
+	position: fixed
+	z-index: 1001
+	left: $nav_collapsed_visible - 20px
+	top: clamp(44px, var(--centro-aviso), calc(100% - 44px))
+	transform: translateY(-50%)
+	transition: left .22s ease
+
+@media (min-width: 768px)
+	.nav-vertical:hover ~ .aviso-implementacion-lateral,
+	.aviso-retiene-barra > .aviso-implementacion-lateral,
+	.aviso-implementacion-lateral:has(button:focus-visible)
+		left: $nav_width - 20px
+	.aviso-retiene-barra > .nav-vertical,
+	.contenedor-nav-vertical:has(> .aviso-implementacion-lateral button:focus-visible) > .nav-vertical
+		transform: translateX(0)
+		box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18)
+
+@media (prefers-reduced-motion: reduce)
+	.contenedor-nav-vertical > .nav-vertical,
+	.aviso-implementacion-lateral
+		transition: none
 
 .nav-vertical
 	display: flex

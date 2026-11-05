@@ -12,6 +12,7 @@ export default {
 		hitos: [],
 		usuario_id: null,
 		cargando: false,
+		refresco_pendiente: false,
 		disponible: null,
 		error: false,
 		apertura: null,
@@ -26,6 +27,10 @@ export default {
 		iniciar(state, usuario_id) {
 			state.usuario_id = usuario_id
 			state.cargando = true
+			state.refresco_pendiente = false
+		},
+		dejar_refresco_pendiente(state) {
+			state.refresco_pendiente = true
 		},
 		recibir(state, { hitos, disponible }) {
 			const anteriores = new Map(state.hitos.map(hito => [hito.id, hito]))
@@ -70,19 +75,26 @@ export default {
 			state.hitos = []
 			state.usuario_id = null
 			state.cargando = false
+			state.refresco_pendiente = false
 			state.disponible = null
 			state.error = false
 			state.apertura = null
 		},
 	},
 	actions: {
-		refrescar({ commit, state, rootState }) {
-			if (!puede_ver_implementacion(rootState.auth) || state.cargando || state.disponible === false) {
+		refrescar({ commit, dispatch, state, rootState }, { en_vivo = false } = {}) {
+			if (!puede_ver_implementacion(rootState.auth) || (!en_vivo && state.disponible === false)) {
+				return Promise.resolve()
+			}
+			if (state.cargando) {
+				if (en_vivo) {
+					commit('dejar_refresco_pendiente')
+				}
 				return Promise.resolve()
 			}
 			const usuario_id = rootState.auth.user.id
 			commit('iniciar', usuario_id)
-			return axios.get('/api/implementacion', { skip_global_error_event: true })
+			return axios.get('/api/implementacion', { skip_global_error_event: true, skip_navigation_cancel: true })
 			.then(({ data }) => {
 				if (state.usuario_id === usuario_id && puede_ver_implementacion(rootState.auth)) {
 					commit('recibir', { hitos: Array.isArray(data.hitos) ? data.hitos : [], disponible: data.disponible !== false })
@@ -91,6 +103,11 @@ export default {
 			.catch(error => {
 				if (state.usuario_id === usuario_id) {
 					commit('fallar', error.response && error.response.status)
+				}
+			})
+			.then(() => {
+				if (state.usuario_id === usuario_id && state.refresco_pendiente) {
+					return dispatch('refrescar', { en_vivo: true })
 				}
 			})
 		},
