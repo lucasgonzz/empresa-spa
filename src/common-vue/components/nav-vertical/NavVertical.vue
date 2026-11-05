@@ -116,8 +116,7 @@
 
 		<slot name="nav_bottom"></slot>
 
-		<user-info
-		@abrir-ruta="callSetRoute"></user-info>
+		<user-info></user-info>
 
 	</div>
 
