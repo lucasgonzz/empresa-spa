@@ -4,7 +4,7 @@ id="imagenes-catalogo"
 size="md"
 centered
 scrollable
-title="Asignar imágenes a todo el catálogo"
+:title="es_acceso_maestro ? 'Asignar imágenes a todo el catálogo' : 'Buscar imágenes para mi catálogo'"
 @show="al_abrir"
 @hidden="al_cerrar">
 
@@ -45,7 +45,7 @@ title="Asignar imágenes a todo el catálogo"
 			class="img-cat__aviso img-cat__aviso--info"
 			data-testid="imagenes-catalogo-activa">
 				<span>
-					Ya hay una asignación de todo el catálogo en curso ({{ avance_de_la_activa }}). Esperá a que termine, o detenela desde su detalle.
+					Ya hay una asignación de catálogo en curso ({{ avance_de_la_activa }}). Esperá a que termine o detenela desde su detalle.
 				</span>
 				<button
 				type="button"
@@ -65,7 +65,8 @@ title="Asignar imágenes a todo el catálogo"
 			v-else-if="!previa.proveedor_configurado"
 			class="img-cat__aviso img-cat__aviso--mal"
 			data-testid="imagenes-catalogo-sin-proveedor">
-				Falta cargar la clave de Serper (SERPER_API_KEY) en el servidor de este cliente. Sin esa clave no se pueden asignar imágenes a todo el catálogo; la asignación desde el listado sigue andando como siempre.
+				<template v-if="es_acceso_maestro">Falta configurar la clave de Serper (SERPER_API_KEY) en el servidor o para este comercio.</template>
+				<template v-else>El buscador automático de imágenes no está disponible en este momento.</template>
 			</div>
 
 			<!--
@@ -100,7 +101,7 @@ title="Asignar imágenes a todo el catálogo"
 				sin explicacion.
 			-->
 			<div
-			v-if="!previa.corrida_activa && sin_nada_para_buscar"
+			v-if="!previa.corrida_activa && sin_nada_para_buscar && (!tope_demo.aplica || tope_demo.restantes > 0)"
 			class="img-cat__aviso img-cat__aviso--info"
 			data-testid="imagenes-catalogo-nada-para-buscar">
 				{{ motivo_de_nada_para_buscar }}
@@ -151,11 +152,15 @@ title="Asignar imágenes a todo el catálogo"
 					<template v-if="Number(previa.excluidos_en_otra_asignacion) === 1">&nbsp;no se busca ahora: ya está en otra asignación en curso.</template>
 					<template v-else>&nbsp;no se buscan ahora: ya están en otra asignación en curso.</template>
 				</li>
-				<li v-if="Number(previa.quedan_para_otra_corrida) > 0">
+				<li v-if="tope_demo.unidad === 'producto' && Number(previa.quedan_para_otra_corrida) > 0">
+					<strong>{{ entero(previa.quedan_para_otra_corrida) }}</strong>
+					quedan fuera de esta asignación por el cupo de la prueba.
+				</li>
+				<li v-else-if="Number(previa.quedan_para_otra_corrida) > 0">
 					<strong>{{ entero(previa.quedan_para_otra_corrida) }}</strong>
 					quedan para otra asignación: el tope es de {{ entero(previa.tope) }} artículos por vez. Cuando termine, lanzala de nuevo y sigue con los que faltan.
 				</li>
-				<li v-else-if="Number(previa.tope) > 0 && !sin_nada_para_buscar">
+				<li v-else-if="tope_demo.unidad !== 'producto' && Number(previa.tope) > 0 && !sin_nada_para_buscar">
 					El tope es de <strong>{{ entero(previa.tope) }}</strong> artículos por asignación: esta vez entran todos.
 				</li>
 				<li v-if="!sin_nada_para_buscar">
@@ -171,7 +176,7 @@ title="Asignar imágenes a todo el catálogo"
 					Estimación
 				</p>
 				<dl class="img-cat__datos">
-					<div class="img-cat__dato">
+					<div v-if="es_acceso_maestro" class="img-cat__dato">
 						<dt>Búsquedas</dt>
 						<dd>~{{ entero(estimacion.busquedas) }}</dd>
 					</div>
@@ -179,11 +184,11 @@ title="Asignar imágenes a todo el catálogo"
 						<dt>Tiempo</dt>
 						<dd>~{{ duracion(estimacion.minutos) }}</dd>
 					</div>
-					<div class="img-cat__dato">
+					<div v-if="es_acceso_maestro" class="img-cat__dato">
 						<dt>Búsquedas (costo)</dt>
 						<dd>USD {{ dolares(estimacion.usd_busquedas) }}</dd>
 					</div>
-					<div class="img-cat__dato">
+					<div v-if="es_acceso_maestro" class="img-cat__dato">
 						<dt>Revisión con IA (costo)</dt>
 						<dd>USD {{ dolares(estimacion.usd_ia) }}</dd>
 					</div>
@@ -239,6 +244,12 @@ import { es_cancelacion, normalizar_tope_demo, aviso_de_tope_demo, mensaje_de_to
  * Eventos: `lanzada(asignacion)` y `ver_asignacion(asignacion)` (la que estaba en curso).
  */
 export default {
+	props: {
+		es_acceso_maestro: {
+			type: Boolean,
+			default: false,
+		},
+	},
 	data() {
 		return {
 			/** Respuesta de la previa (§5.4), o null mientras no llegó. */
@@ -313,6 +324,9 @@ export default {
 		 * @returns {String}
 		 */
 		motivo_sin_ia() {
+			if (!this.es_acceso_maestro) {
+				return 'La revisión automática de imágenes no está disponible en este momento.'
+			}
 			let motivo = this.previa && this.previa.ia_motivo ? String(this.previa.ia_motivo).trim() : ''
 			return motivo || 'La validación con IA no está configurada: sin ella todas las imágenes quedarían para revisar a mano.'
 		},

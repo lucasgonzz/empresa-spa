@@ -36,6 +36,18 @@
 			<!-- Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): visible mientras queden datos de ejemplo. -->
 			<btn-importar-mi-informacion></btn-importar-mi-informacion>
 
+			<b-button
+			v-if="is_owner && user.prueba && user.prueba.imagenes_catalogo && !user.prueba.semilla_presente && hasExtencion('agentes_ia')"
+			:to="{ name: 'alertas', params: { view: 'imagenes' } }"
+			aria-label="Imágenes inteligentes"
+			data-testid="prueba-imagenes-inteligentes"
+			title="Imágenes inteligentes"
+			variant="outline-primary"
+			size="sm">
+				<i class="bi bi-images" aria-hidden="true"></i>
+				<span class="d-none d-xl-inline m-l-5">Imágenes inteligentes</span>
+			</b-button>
+
 			<btn-update-article-list
 			class="toolbar-btn--desde-md"></btn-update-article-list>
 

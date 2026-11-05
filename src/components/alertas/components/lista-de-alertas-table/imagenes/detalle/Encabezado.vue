@@ -162,6 +162,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		puede_gestionar_catalogo: {
+			type: Boolean,
+			default: false,
+		},
 		/** true mientras viaja un detener / reanudar: los botones se apagan. */
 		operando: {
 			type: Boolean,
@@ -194,7 +198,7 @@ export default {
 		 * @returns {Boolean}
 		 */
 		puede_operar() {
-			return this.es_de_catalogo ? this.es_acceso_maestro : true
+			return !this.es_de_catalogo || this.es_acceso_maestro || this.puede_gestionar_catalogo
 		},
 		/** Se puede detener mientras corre o espera turno. */
 		puede_detener() {
