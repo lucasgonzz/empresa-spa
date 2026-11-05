@@ -49,10 +49,10 @@ class="cc-lista">
                         <i class="bi bi-journal-text"></i>
                     </div>
                     <p class="cc-vacio__titulo">
-                        Sin movimientos
+                        {{ consulta_filtrada ? 'Sin movimientos en esta consulta' : 'Sin movimientos' }}
                     </p>
                     <p class="cc-vacio__detalle">
-                        Todavía no hay movimientos registrados en esta cuenta corriente.
+                        {{ consulta_filtrada ? 'Elegí otro período o volvé a los movimientos recientes.' : 'Todavía no hay movimientos registrados en esta cuenta corriente.' }}
                     </p>
                 </div>
             </template>
@@ -149,6 +149,9 @@ export default {
         },
     },
     computed: {
+        consulta_filtrada() {
+            return this.$store.state.current_acount.periodo.modo != 'defecto'
+        },
         model_name() {
             return 'current_acount'
         },

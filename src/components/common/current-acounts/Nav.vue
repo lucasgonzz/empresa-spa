@@ -2,9 +2,6 @@
 	<div
 	class="cc-toolbar">
 
-		<!--
-			La consulta permite período o últimos N; se guarda solo la elección de la persona.
-		-->
 		<div
 		class="cc-toolbar__grupo cc-periodo">
 			<b-dropdown
@@ -101,11 +98,12 @@
 					<b-button class="cc-toolbar__btn cc-toolbar__btn--acento cc-periodo__aplicar" variant="primary" type="submit" :disabled="!cantidad_valida">Ver últimos movimientos</b-button>
 				</b-dropdown-form>
 			</b-dropdown>
-			<span v-if="guardando_consulta" class="cc-periodo__aviso" role="status">Guardando tu elección…</span>
-			<div v-if="error_guardado_consulta" class="cc-periodo__error" role="alert">
-				No se pudo guardar tu elección para la próxima vez.
-				<b-button size="sm" variant="link" @click="reintentarGuardado">Reintentar</b-button>
-			</div>
+			<b-button
+			v-if="periodo.modo != 'defecto'"
+			size="sm"
+			variant="link"
+			class="p-0"
+			@click="elegirAtajo('defecto')">Volver a movimientos recientes</b-button>
 
 			<!--
 				Si la API devolvió un período ampliado (por defecto, con menos de 10 movimientos en el
@@ -223,12 +221,6 @@ export default {
 		cantidad_valida() {
 			return /^\d+$/.test(String(this.cantidad_input)) && Number(this.cantidad_input) >= 1 && Number(this.cantidad_input) <= 2000
 		},
-		guardando_consulta() {
-			return this.$store.state.current_acount.guardando_consulta
-		},
-		error_guardado_consulta() {
-			return this.$store.state.current_acount.error_guardado_consulta
-		},
 		periodo() {
 			return this.$store.state.current_acount.periodo
 		},
@@ -313,7 +305,7 @@ export default {
 		 * el store en cada pedido, así una SPA que quedó abierta días no arrastra un "hoy" viejo.
 		 */
 		aplicarPeriodo(modo, clave, desde, hasta) {
-			this.$store.dispatch('current_acount/aplicarConsulta', { modo, clave, desde, hasta, cantidad: this.periodo.cantidad })
+			this.$store.commit('current_acount/set_periodo', { modo, clave, desde, hasta, cantidad: this.periodo.cantidad })
 			this.$store.dispatch('current_acount/getModels')
 		},
 		fecha_valida(fecha) {
@@ -321,7 +313,8 @@ export default {
 		},
 		elegirAtajo(clave) {
 			if (clave == 'defecto') {
-				return this.aplicarPeriodo('defecto', 'defecto', null, null)
+				this.$store.commit('current_acount/set_periodo')
+				return this.$store.dispatch('current_acount/getModels')
 			}
 			let rango = rangoDeAtajo(clave)
 			this.aplicarPeriodo('atajo', clave, rango.desde, rango.hasta)
@@ -354,12 +347,9 @@ export default {
 		},
 		aplicarUltimos() {
 			if (!this.cantidad_valida) return
-			this.$store.dispatch('current_acount/aplicarConsulta', { modo: 'ultimos', clave: 'ultimos', desde: null, hasta: null, cantidad: Number(this.cantidad_input) })
+			this.$store.commit('current_acount/set_periodo', { modo: 'ultimos', clave: 'ultimos', desde: null, hasta: null, cantidad: Number(this.cantidad_input) })
 			this.$store.dispatch('current_acount/getModels')
 			this.$refs.periodo_dropdown.hide(true)
-		},
-		reintentarGuardado() {
-			this.$store.dispatch('current_acount/guardarConsulta', this.periodo)
 		},
 		/**
 		 * El PDF sale con el período que se ve. La cantidad del medio es la de movimientos en
