@@ -152,7 +152,7 @@ scrollable
 					<template v-if="Number(previa.excluidos_en_otra_asignacion) === 1">&nbsp;no se busca ahora: ya está en otra asignación en curso.</template>
 					<template v-else>&nbsp;no se buscan ahora: ya están en otra asignación en curso.</template>
 				</li>
-				<li v-if="tope_demo.unidad === 'producto' && Number(previa.quedan_para_otra_corrida) > 0">
+				<li v-if="tope_demo.unidad === 'producto' && tope_demo.restantes <= Number(previa.tope) && Number(previa.quedan_para_otra_corrida) > 0">
 					<strong>{{ entero(previa.quedan_para_otra_corrida) }}</strong>
 					quedan fuera de esta asignación por el cupo de la prueba.
 				</li>
