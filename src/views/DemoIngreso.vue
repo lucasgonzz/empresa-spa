@@ -113,7 +113,13 @@ export default {
 				// una demo, asi que es el unico lugar donde se prende: mientras siga apagado,
 				// App.vue no monta el panel y nadie pide el plan. Un cliente real nunca pasa
 				// por aca, y por eso su arranque no agrega ni una llamada.
-				self.$store.commit('demo/setEsDemo', true)
+				//
+				// Prueba gratuita (4/11/2026, misión prueba-defectos-asistente-y-vender): el link de una prueba
+				// entra por acá igual, pero el servidor ya no la anuncia como demo (`es_sesion_demo` en false) y
+				// no tiene que aparecer ni el asistente ni el recorrido. Se prende solo lo que el servidor confirmó;
+				// `auth/me` terminó recién arriba, así que el usuario ya está en el store.
+				const usuario = self.$store.state.auth.user
+				self.$store.commit('demo/setEsDemo', Boolean(usuario && usuario.es_sesion_demo))
 
 				// 🔴 `auth/me` apaga el overlay por su cuenta cuando termina (`src/store/auth.js`
 				// hace `commit('setLoading', false)` adentro), así que hay que volver a prenderlo

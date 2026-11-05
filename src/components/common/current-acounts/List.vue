@@ -57,6 +57,12 @@ class="cc-lista">
                 </div>
             </template>
 
+            <template #table_left_options="{ model }">
+                <b-badge
+                v-if="model.sale && model.sale.en_acopio"
+                variant="danger">Acopio</b-badge>
+            </template>
+
             <template v-slot:default="slotProps">
 
                 <b-badge
@@ -88,10 +94,6 @@ class="cc-lista">
                 <cerrar-venta
                 v-if="slotProps.model.sale"
                 :sale="slotProps.model.sale"></cerrar-venta>
-
-                <b-badge
-                v-if="slotProps.model.sale && slotProps.model.sale.en_acopio"
-                variant="danger">Acopio</b-badge>
 
                 <btn-payment-methods-info
                 :model="slotProps.model"></btn-payment-methods-info>
@@ -169,7 +171,13 @@ export default {
             // get_properties_to_show cubre el instante en que ese store todavia no se pobló
             // (cache de table_column_preference sin bajar) para no dejar la tabla sin columnas.
             let props = this.get_properties_to_show_ordenadas(this.model_name)
-            return props.length ? props : this.get_properties_to_show(this.model_name)
+            if (!props.length) {
+                props = this.get_properties_to_show(this.model_name)
+            }
+            if (this.models.some(model => model.sale && model.sale.en_acopio)) {
+                return [{ key: 'table_left_options', text: 'Acopio' }, ...props]
+            }
+            return props
         },
     },
     methods: {

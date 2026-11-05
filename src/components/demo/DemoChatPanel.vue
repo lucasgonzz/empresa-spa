@@ -44,6 +44,10 @@ import TarjetaClip from '@/components/demo/TarjetaClip'
 import SelectorVideosDemo from '@/components/demo/SelectorVideosDemo'
 import { tour_habilitado } from '@/tours/habilitados'
 
+// Campos de carga de artículos (en VENDER: código de barras, buscador, servicio y cantidad) que el launcher no puede tapar.
+// Los ids también existen en otras pantallas de carga (Ingresar, buscadores): ahí también se esquivan, y no hace daño.
+const CAMPOS_DE_VENDER = '#article-bar-code, #search-article, #service_name, #article-amount'
+
 export default {
 	components: { TarjetaClip, SelectorVideosDemo },
 	props: { colapsado: { type: Boolean, default: false } },
@@ -51,12 +55,15 @@ export default {
 		return { mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, foco_seleccion: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0 }
 	},
 	computed: {
-		reserva_launcher() {
+		reserva_base() {
 			// Comparte la reserva de Vender y deja lugar al asistente personal y al soporte.
 			let vender = this.$store.state.vender
 			let barra = Math.max(0, Number(vender && vender.actions_bar_height_px) || 0)
 			let soporte = this.hasExtencion('support_chat') ? 76 : 0
-			return { '--demo-launcher-base': Math.max(barra + soporte + 96, this.reserva_compositor) + 'px' }
+			return barra + soporte + 96
+		},
+		reserva_launcher() {
+			return { '--demo-launcher-base': Math.max(this.reserva_base, this.reserva_compositor) + 'px' }
 		},
 		estado_editores_whatsapp() {
 			let chat = this.$store.state.whatsapp_chat || {}
@@ -98,14 +105,18 @@ export default {
 			let self = this
 			this._mover_launcher = function () { self.programar_ubicacion_launcher() }
 			this._editores_launcher = []
+			this._observados_launcher = []
 			this._scroll_launcher = []
 			if (window.ResizeObserver) this._resize_launcher = new ResizeObserver(this._mover_launcher)
 			window.addEventListener('resize', this._mover_launcher)
+			// Capture: la pantalla de Vender scrollea en un contenedor propio y el scroll no burbujea.
+			window.addEventListener('scroll', this._mover_launcher, { passive: true, capture: true })
 			if (window.visualViewport) window.visualViewport.addEventListener('resize', this._mover_launcher)
 			this.programar_ubicacion_launcher()
 		},
 		limpiar_ubicacion_launcher() {
 			window.removeEventListener('resize', this._mover_launcher)
+			window.removeEventListener('scroll', this._mover_launcher, { capture: true })
 			if (window.visualViewport) window.visualViewport.removeEventListener('resize', this._mover_launcher)
 			if (this._resize_launcher) this._resize_launcher.disconnect()
 			;(this._scroll_launcher || []).forEach(e => e.removeEventListener('scroll', this._mover_launcher))
@@ -123,8 +134,14 @@ export default {
 			if (!this.colapsado) return
 			// Reserva explícita del editor real y del editor de simulación; no busca controles globales.
 			let editores = Array.from(document.querySelectorAll('.whatsapp-composer, .whatsapp-simulated-composer'))
+			// Campos de carga de Vender: se observan igual, pero solo reservan si el launcher los tapa de verdad.
+			let campos = Array.from(document.querySelectorAll(CAMPOS_DE_VENDER))
+			let observados = editores.concat(campos)
+			if (observados.length !== this._observados_launcher.length || observados.some((e, i) => e !== this._observados_launcher[i])) {
+				if (this._resize_launcher) { this._resize_launcher.disconnect(); observados.forEach(e => this._resize_launcher.observe(e)) }
+				this._observados_launcher = observados
+			}
 			if (editores.length !== this._editores_launcher.length || editores.some((e, i) => e !== this._editores_launcher[i])) {
-				if (this._resize_launcher) { this._resize_launcher.disconnect(); editores.forEach(e => this._resize_launcher.observe(e)) }
 				this._editores_launcher = editores
 				this._scroll_launcher.forEach(e => e.removeEventListener('scroll', this._mover_launcher))
 				this._scroll_launcher = Array.from(document.querySelectorAll('.whatsapp-messages-container'))
@@ -135,7 +152,40 @@ export default {
 				let r = e.getBoundingClientRect()
 				if (r.width && r.height && r.bottom > 0 && r.top < innerHeight && getComputedStyle(e).visibility !== 'hidden') top = Math.min(top, r.top)
 			})
-			this.reserva_compositor = Math.max(0, innerHeight - top + 12)
+			let reserva_editores = Math.max(0, innerHeight - top + 12)
+			this.reserva_compositor = Math.max(reserva_editores, this.reserva_sobre_campos(campos, reserva_editores))
+		},
+		/**
+		 * Cuánto hay que subir el launcher para no tapar un campo de carga de Vender (misión
+		 * prueba-defectos-asistente-y-vender, 4/11/2026: a 1366x850 la tarjeta quedaba justo encima de
+		 * «Cantidad» y no se le podía hacer clic).
+		 *
+		 * Solo cuentan los campos que chocan de verdad con el launcher, en horizontal y en vertical: el
+		 * resto de la pantalla no se toca. Si al subirlo choca con otro campo (en teléfono la fila se apila),
+		 * sigue subiendo hasta quedar libre o hasta el tope que ya pone el CSS.
+		 *
+		 * @param {Element[]} campos Los campos de CAMPOS_DE_VENDER presentes en pantalla.
+		 * @param {number} reserva_editores Lo que ya sube el launcher por el editor de WhatsApp (parte de ahí si es mayor).
+		 * @returns {number} La reserva en px, o 0 si no hay choque.
+		 */
+		reserva_sobre_campos(campos, reserva_editores) {
+			let boton = this.$el && this.$el.querySelector ? this.$el.querySelector('.demo-ai__launcher') : null
+			if (!boton || !campos.length) return 0
+			let caja = boton.getBoundingClientRect()
+			if (!caja.width || !caja.height) return 0
+			let rectas = campos.filter(function (e) { return getComputedStyle(e).visibility !== 'hidden' }).map(function (e) { return e.getBoundingClientRect() }).filter(function (r) { return r.width && r.height && r.bottom > 0 && r.top < innerHeight })
+			let tope = Math.max(0, innerHeight - 144)
+			let reserva = Math.min(Math.max(this.reserva_base, reserva_editores || 0), tope)
+			let subio = false
+			for (let i = 0; i <= rectas.length; i++) {
+				let abajo = innerHeight - reserva
+				let arriba = abajo - caja.height
+				let choques = rectas.filter(function (r) { return r.left < caja.right && r.right > caja.left && r.top < abajo && r.bottom > arriba })
+				if (!choques.length || reserva >= tope) break
+				reserva = Math.min(tope, innerHeight - Math.min.apply(null, choques.map(function (r) { return r.top })) + 12)
+				subio = true
+			}
+			return subio ? reserva : 0
 		},
 		actualizar_espacio() { document.body.classList.toggle('demo-chat-abierto', !this.colapsado) },
 		// El panel vive entre módulos: sus pedidos no pertenecen a la pantalla que se abandona.

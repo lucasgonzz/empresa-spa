@@ -70,6 +70,7 @@ import {
 } from '@/utils/balanzas'
 
 import db from '@/offline/db'
+import { codigo_escaneado } from '@/utils/codigo_de_barras'
 
 /**
  * Escapa un texto para meterlo en un toast: vue-toast-notification dibuja el mensaje con v-html, y
@@ -184,7 +185,14 @@ export default {
 			Todo empieza con este metodo
 		*/
 		async set_article_from_barcode() {
-			if (this.item_vender.codigo != '') {
+			/*
+				Sin nada tipeado no hay que buscar: antes `undefined != ''` daba true y getBarCode tiraba un
+				TypeError sin ningun aviso. Pasa con un Enter en "Cod barras" mientras hay un articulo
+				pendiente de cantidad (el item de la cabecera es el articulo y no trae la clave `codigo`).
+				No se descarta un Enter mientras hay otra busqueda en vuelo: seria perder un articulo que el
+				vendedor paso por el lector.
+			*/
+			if (codigo_escaneado(this.item_vender.codigo) != '') {
 
 				this.finded_article = undefined
 				this.from_balanza = false
