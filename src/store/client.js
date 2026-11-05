@@ -4,13 +4,18 @@ import __base_store from '@/store/__base_store'
 /**
  * Store de clientes construido desde el factory común.
  */
-export default __base_store({
+const client_store = __base_store({
 	state: {
 		model_name: 'client',
 		from_dates: false,
 		not_download_on_mobile: true,
 		use_per_page: true,
 		per_page: 100,
+	},
+	getters: {
+		cuerpo_extra_de_busqueda() {
+			return { clientes_acopio_pendiente: true }
+		},
 	},
 	actions: {
 		/**
@@ -32,4 +37,21 @@ export default __base_store({
 		},
 	},
 })
+
+const agregar_cliente = client_store.mutations.add
+client_store.mutations.add = function (state, cliente) {
+	// Editar la ficha o el límite de crédito reemplaza la fila, pero no modifica el acopio.
+	// Si esa respuesta no trae el dato, mantenemos el de la página hasta que se vuelva a pedir.
+	if (typeof cliente.tiene_acopio_pendiente === 'undefined') {
+		const filas_visibles = state.is_filtered ? state.filtered : state.models
+		const fila = filas_visibles.find(model => model.id == cliente.id)
+		if (fila && typeof fila.tiene_acopio_pendiente === 'boolean') {
+			cliente = { ...cliente, tiene_acopio_pendiente: fila.tiene_acopio_pendiente }
+		}
+	}
+
+	agregar_cliente(state, cliente)
+}
+
+export default client_store
 

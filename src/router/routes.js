@@ -622,4 +622,11 @@ export default [
 		icon: 'collection-play',
 		no_aterrizar: true,
 	},
+	{
+		text: 'Implementación',
+		path: '/implementacion',
+		name: 'implementacion',
+		icon: 'list-check',
+		no_aterrizar: true,
+	},
 ]

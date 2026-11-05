@@ -83,9 +83,6 @@ export function paramsDePeriodo(periodo) {
 // historial" y enseguida "Este mes", o se cambia de cuenta rápido, la respuesta lenta del primer
 // pedido no puede pisar a la del segundo.
 let ultimo_pedido = 0
-let ultimo_guardado = 0
-let sesion_consulta = 0
-let cola_guardados = Promise.resolve()
 
 function periodoPorDefecto() {
 	return { modo: 'defecto', clave: 'defecto', desde: null, hasta: null, cantidad: 10 }
@@ -142,8 +139,6 @@ export default {
 		// pedido (ver paramsDePeriodo), no se congelan acá.
 		periodo: periodoPorDefecto(),
 		consulta_user_id: null,
-		guardando_consulta: false,
-		error_guardado_consulta: false,
 		// Lo que la API dice que aplicó (res.data.periodo). null si todavía no respondió o si es
 		// una API vieja que ignora las fechas.
 		periodo_efectivo: null,
@@ -183,18 +178,12 @@ export default {
 		restaurar_consulta(state, user) {
 			let id = user ? user.id : null
 			if (id == state.consulta_user_id) return
-			++sesion_consulta
 			state.consulta_user_id = id
-			state.periodo = normalizarConsulta(user && user.current_acount_consulta) || periodoPorDefecto()
-			state.guardando_consulta = false
-			state.error_guardado_consulta = false
+			// Una elección guardada de otra versión puede ocultar cobros al entrar.
+			state.periodo = periodoPorDefecto()
 			state.from_credit_account = {}
 			state.from_model = {}
 			limpiarCuenta(state)
-		},
-		set_guardado_consulta(state, value) {
-			state.guardando_consulta = value.guardando
-			state.error_guardado_consulta = value.error
 		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
@@ -273,8 +262,11 @@ export default {
 			state.from_model = value 
 		},
 		set_from_credit_account(state, value) {
-			state.from_credit_account = value  
-			// La elección pertenece a la persona; filas y selección pertenecen a UNA cuenta.
+			// Actualizar el saldo de la misma cuenta conserva la consulta que se está viendo.
+			if (state.from_credit_account.id != value.id) {
+				state.periodo = periodoPorDefecto()
+			}
+			state.from_credit_account = value
 			// Invalidar incluso antes del próximo GET impide que una respuesta anterior la repueble.
 			limpiarCuenta(state)
 		},
@@ -345,41 +337,13 @@ export default {
 		},
 	},
 	actions: {
-		aplicarConsulta({ commit, dispatch }, value) {
-			let consulta = normalizarConsulta(value)
-			if (!consulta) return Promise.resolve(false)
-			commit('set_periodo', consulta)
-			return dispatch('guardarConsulta', consulta)
-		},
-		guardarConsulta({ commit }, value) {
-			let consulta = normalizarConsulta(value)
-			if (!consulta) return Promise.resolve(false)
-			commit('auth/setCurrentAcountConsulta', consulta, { root: true })
-			commit('set_guardado_consulta', { guardando: true, error: false })
-			let guardado = ++ultimo_guardado
-			let sesion = sesion_consulta
-			// Serializar evita que un PUT lento del primer clic sobreescriba la última elección.
-			// La sesión además descarta lo encolado si otra persona ingresó en esta pestaña.
-			cola_guardados = cola_guardados.then(() => {
-				if (sesion != sesion_consulta) return false
-				return axios.put('/api/user/current-acount/consulta', consulta, {
-					skip_global_error_event: true,
-					skip_navigation_cancel: true,
-				})
-				.then(() => {
-					if (sesion == sesion_consulta && guardado == ultimo_guardado) {
-						commit('set_guardado_consulta', { guardando: false, error: false })
-					}
-					return true
-				})
-				.catch(() => {
-					if (sesion == sesion_consulta && guardado == ultimo_guardado) {
-						commit('set_guardado_consulta', { guardando: false, error: true })
-					}
-					return false
-				})
-			})
-			return cola_guardados
+		abrirConsulta({ state, commit, dispatch }) {
+			// Al reabrir la misma cuenta, una carga iniciada por el botón puede llevar
+			// el filtro anterior. El cambio de período invalida esa respuesta.
+			if (state.periodo.modo != 'defecto') {
+				commit('set_periodo')
+				return dispatch('getModels')
+			}
 		},
 		getModels({ commit, state }) {
 			let cuenta = state.from_credit_account

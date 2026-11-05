@@ -82,8 +82,9 @@
     ref="current_acounts"
     :title="title" 
     modal-class="cuenta-corriente-modal"
-    size="xl" 
-    body-class="p-0">
+    size="xl"
+    body-class="p-0"
+    @show="abrir_consulta">
         <current-acounts-nav></current-acounts-nav>
         <!-- <color-info></color-info> -->
         <saldo-y-limite v-if="from_credit_account.id"></saldo-y-limite>
@@ -241,6 +242,9 @@ export default {
         },
     },
     methods: {
+        abrir_consulta() {
+            this.$store.dispatch('current_acount/abrirConsulta')
+        },
         /**
          * Se emitio la factura consolidada: la seleccion ya no existe (las ventas quedaron marcadas)
          * y la lista tiene que traer el badge nuevo. No se recarga el cliente: consolidar no mueve

@@ -79,6 +79,11 @@ const routes = [
         component: () => import('@/views/Alertas')
     },
     {
+        path: '/implementacion',
+        name: 'implementacion',
+        component: () => import('@/components/implementacion/LineaDeTiempo'),
+    },
+    {
         path: '/vender/:view?',
         name: 'vender',
         component: () => import('@/views/Vender')

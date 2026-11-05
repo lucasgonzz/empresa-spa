@@ -1,7 +1,7 @@
 <template>
 	<div class="prueba-confirmar-importacion">
 		<p class="prueba-confirmar-importacion__introduccion">
-			Al importar tu Excel, el sistema elimina los datos de ejemplo.
+			Al importar tus datos, el sistema elimina los datos de ejemplo.
 		</p>
 		<div class="prueba-modal__bloque prueba-modal__bloque--aviso">
 			<i class="bi bi-trash3 prueba-modal__icono" aria-hidden="true"></i>

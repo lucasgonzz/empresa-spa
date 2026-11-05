@@ -7,7 +7,12 @@
 		class="route-name">
 			{{ routeText(selected_route) }}
 		</span>
-		<div 
+		<aviso-de-implementacion v-if="!show_nav_mobile" mostrar_texto></aviso-de-implementacion>
+		<button
+		type="button"
+		data-menu-implementacion-movil
+		:aria-expanded="String(show_nav_mobile)"
+		aria-label="Menú de navegación"
 		@click="setShow"
 		class="button-toggle">
 			<i 
@@ -16,7 +21,7 @@
 			<i 
 			v-else
 			class="icon-cancel"></i>
-		</div>
+		</button>
 	</div>
 
 	<div 
@@ -30,8 +35,13 @@
 	    v-if="showRoute(route)"
 	    :key="i"
 	    :class="route_item_class(route)"
+	    :data-nav-implementacion="route.name === 'implementacion' ? '' : null"
+	    :role="route.name === 'implementacion' ? 'link' : null"
+	    :aria-label="route.name === 'implementacion' ? 'Implementación' : null"
+	    :tabindex="route.name === 'implementacion' ? tabindex_implementacion : null"
 		class="route"
-	    @click="callSetRoute(route)">
+	    @click="callSetRoute(route)"
+	    @keydown.enter.self="route.name === 'implementacion' && callSetRoute(route)">
 
 	    	<div 
 	    	class="menu-trigger">
@@ -56,12 +66,15 @@
 			    	<div class="route-icon-badge-wrap">
 				    	<i
 				    	v-if="route.icon"
-				    	:class="get_icon_class(route)"
+						:class="[get_icon_class(route), { 'implementacion-con-aviso': route.name === 'implementacion' && aviso_implementacion }]"
 				    	class="route-icon"></i>
 				    	<img 
 				    	v-else-if="route.image_url"
 				    	class="route-nav-img"
 				    	:src="image(route)">
+						<aviso-de-implementacion
+						v-if="route.name === 'implementacion'"
+						class="aviso-implementacion-menu"></aviso-de-implementacion>
 
 				    	<b-badge
 				    	class="route-alert-badge"
@@ -119,9 +132,11 @@
 import nav from '@/common-vue/mixins/nav'
 import routes from '@/router/routes'
 import nav_functions from '@/mixins/nav_functions'
+import { puede_ver_implementacion } from '@/store/implementacion'
 export default {
 	mixins: [nav, nav_functions],
 	components: {
+		AvisoDeImplementacion: () => import('@/components/implementacion/BotonAviso'),
         DownloadResources: () => import('@/common-vue/components/download-resources/Index'),
         UserInfo: () => import('@/common-vue/components/nav-vertical/UserInfo'),
         UserConfig: () => import('@/common-vue/components/nav/UserConfig'),
@@ -141,7 +156,15 @@ export default {
 	},
 	computed: {
 		routes() {
-			return routes
+			const tiene_implementacion = puede_ver_implementacion(this.$store.state.auth)
+				&& this.$store.state.implementacion.disponible === true
+			return routes.filter(route => route.name !== 'implementacion' || tiene_implementacion)
+		},
+		aviso_implementacion() {
+			return this.$store.getters['implementacion/aviso_pendiente'] && !this.$store.state.implementacion.apertura
+		},
+		tabindex_implementacion() {
+			return this.is_mobile && !this.show_nav_mobile ? -1 : 0
 		},
 		_class() {
 			let _class = ''
@@ -274,6 +297,17 @@ $nav_item_radius: 8px
 		letter-spacing: -0.01em
 	i
 		font-size: 1.125rem
+	.button-toggle
+		border: 0
+		background: transparent
+		color: inherit
+
+.implementacion-con-aviso
+	display: none !important
+
+@media (max-width: 767px)
+	.nav-vertical:not(.active-mobile-nav) .aviso-implementacion-menu
+		display: none
 
 .nav-vertical
 	display: flex
@@ -318,6 +352,14 @@ $nav_item_radius: 8px
 		cursor: pointer
 		border-radius: $nav_item_radius
 		transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease
+		&[data-nav-implementacion]
+			flex-shrink: 0
+			position: sticky
+			bottom: 0
+			z-index: 1
+			background-color: $nav_bg
+			&.active-item, &:hover, &:focus-visible
+				background-color: $nav_active_bg
 		&:hover
 			background: $nav_hover_bg
 			color: #ffffff
