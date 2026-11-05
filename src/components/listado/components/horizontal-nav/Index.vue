@@ -101,11 +101,13 @@
 	</div>
 </template>
 <script>
+import SimularAgenteModal from '@/components/prueba/SimularAgenteModal'
+
 export default {
 	components: {
 		SelectAddress: () => import('@/components/listado/components/horizontal-nav/SelectAddress'),
 		BtnImportarMiInformacion: () => import('@/components/prueba/BtnImportarMiInformacion'),
-		SimularAgenteModal: () => import('@/components/prueba/SimularAgenteModal'),
+		SimularAgenteModal,
 		BtnUpdateArticleList: () => import('@/components/listado/components/horizontal-nav/BtnUpdateArticleList'),
 		BtnInventoryPerformance: () => import('@/components/listado/components/horizontal-nav/BtnInventoryPerformance'),
 		StockSuggestion: () => import('@/components/listado/components/horizontal-nav/stock-suggestion/Index'),
@@ -119,6 +121,28 @@ export default {
 		puede_simular_agente() {
 			const prueba = this.user && this.user.prueba
 			return this.is_owner && prueba && prueba.puede_simular_agente && !prueba.semilla_presente && this.hasExtencion('agentes_ia')
+		},
+	},
+	watch: {
+		puede_simular_agente() {
+			this.abrir_simulador_desde_implementacion()
+		},
+		'$route.query.probar_agente'() {
+			this.abrir_simulador_desde_implementacion()
+		},
+	},
+	mounted() {
+		this.abrir_simulador_desde_implementacion()
+	},
+	methods: {
+		abrir_simulador_desde_implementacion() {
+			if (!this.puede_simular_agente || this.$route.query.probar_agente !== '1') {
+				return
+			}
+			const query = { ...this.$route.query }
+			delete query.probar_agente
+			this.$router.replace({ query })
+			this.$nextTick(() => this.$bvModal.show('prueba-simular-agente'))
 		},
 	},
 }

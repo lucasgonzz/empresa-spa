@@ -13,6 +13,7 @@
         -->
         <app-instalada-vieja></app-instalada-vieja>
         <nav-component></nav-component>
+        <avisos-de-implementacion v-if="implementacion_usuario_id" :key="implementacion_usuario_id"></avisos-de-implementacion>
         <btn-scroll-top></btn-scroll-top>
         <support-chat-floating-button></support-chat-floating-button>
         <asistente-ia-floating-button></asistente-ia-floating-button>
@@ -168,6 +169,7 @@ import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
 import TiendaMensajesSidebarHost from '@/components/online/components/mensajes/SidebarHost'
 import DescripcionDeControl from '@/common-vue/components/ayuda/DescripcionDeControl'
 import AppInstaladaVieja from '@/components/common/AppInstaladaVieja'
+import { puede_ver_implementacion } from '@/store/implementacion'
 
 import app from '@/common-vue/mixins/app'
 import start_methods from '@/mixins/start_methods'
@@ -207,6 +209,7 @@ export default {
     components: {
         ErrorModal,
         PruebaPrimerIngresoModal: () => import('@/components/prueba/PrimerIngresoModal'),
+        AvisosDeImplementacion: () => import('@/components/implementacion/Avisos'),
         LogoLoading, 
         NavComponent,
         BtnScrollTop,
@@ -237,6 +240,10 @@ export default {
         PanelDemo: () => import('@/components/demo/PanelDemo'),
     },
     computed: {
+        implementacion_usuario_id() {
+            return !this.version_bloqueada && puede_ver_implementacion(this.$store.state.auth)
+                ? this.$store.state.auth.user.id : null
+        },
         uiSizeClass() {
             const slug = this.$store.state.auth.user?.inputs_size?.slug
             return slug ? `ui-${slug}` : ''
