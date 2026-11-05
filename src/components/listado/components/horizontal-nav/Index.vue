@@ -48,6 +48,18 @@
 				<span class="d-none d-xl-inline m-l-5">Imágenes inteligentes</span>
 			</b-button>
 
+			<b-button
+			v-if="puede_simular_agente"
+			v-b-modal.prueba-simular-agente
+			aria-label="Probar agente de WhatsApp"
+			data-testid="prueba-abrir-simulador-agente"
+			title="Probar agente de WhatsApp"
+			variant="outline-primary"
+			size="sm">
+				<i class="bi bi-whatsapp" aria-hidden="true"></i>
+				<span class="d-none d-xl-inline m-l-5">Probar agente de WhatsApp</span>
+			</b-button>
+
 			<btn-update-article-list
 			class="toolbar-btn--desde-md"></btn-update-article-list>
 
@@ -84,6 +96,8 @@
 		<stock-suggestion></stock-suggestion>
 
 		<deposit-movements></deposit-movements>
+
+		<simular-agente-modal v-if="puede_simular_agente"></simular-agente-modal>
 	</div>
 </template>
 <script>
@@ -91,6 +105,7 @@ export default {
 	components: {
 		SelectAddress: () => import('@/components/listado/components/horizontal-nav/SelectAddress'),
 		BtnImportarMiInformacion: () => import('@/components/prueba/BtnImportarMiInformacion'),
+		SimularAgenteModal: () => import('@/components/prueba/SimularAgenteModal'),
 		BtnUpdateArticleList: () => import('@/components/listado/components/horizontal-nav/BtnUpdateArticleList'),
 		BtnInventoryPerformance: () => import('@/components/listado/components/horizontal-nav/BtnInventoryPerformance'),
 		StockSuggestion: () => import('@/components/listado/components/horizontal-nav/stock-suggestion/Index'),
@@ -99,6 +114,12 @@ export default {
 		ArticlePdfPersonalizado: () => import('@/components/listado/components/horizontal-nav/ArticlePdfPersonalizado'),
 		DepositButtons: () => import('@/components/listado/components/horizontal-nav/DepositButtons'),
 
-	}
+	},
+	computed: {
+		puede_simular_agente() {
+			const prueba = this.user && this.user.prueba
+			return this.is_owner && prueba && prueba.puede_simular_agente && !prueba.semilla_presente && this.hasExtencion('agentes_ia')
+		},
+	},
 }
 </script>
