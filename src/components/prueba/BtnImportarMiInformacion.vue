@@ -1,8 +1,9 @@
 <template>
 	<b-button
-	v-if="prueba_con_semilla"
+	v-if="prueba_activa && prueba_del_usuario.vence_at"
 	v-b-tooltip.hover
-	title="Subí el Excel de tus artículos: se cargan con IA y se eliminan los datos de ejemplo"
+	:title="prueba_permite_pdf ? 'Importá tus artículos desde Excel o PDF' : 'Importá tus artículos desde Excel'"
+	aria-label="Importar mi información"
 	variant="primary"
 	size="sm"
 	class="prueba-btn-importar"
@@ -14,10 +15,7 @@
 <script>
 import prueba from '@/mixins/prueba'
 /**
- * Botón «Importar mi información» del Listado (misión prueba-experiencia-empresa, 3/11/2026): queda a la
- * vista mientras el negocio en prueba todavía tenga los datos de ejemplo (eligió «Más adelante» en el modal
- * de primer ingreso, o cerró el modal). Abre el mismo modal de Importar con IA del menú de Excel. Para un
- * cliente real no se monta.
+ * Acceso al importador de artículos durante toda la prueba, aunque ya no queden datos de ejemplo.
  */
 export default {
 	name: 'PruebaBtnImportarMiInformacion',
@@ -56,8 +54,8 @@ export default {
 			}, 300)
 		},
 		/**
-		 * Cuando termina una importación, el aviso de resultado abre su modal: se vuelve a pedir el estado
-		 * de la prueba, que ya no tiene semilla, y este botón desaparece solo.
+		 * Al terminar una importación, actualiza si todavía hay datos de ejemplo para que el
+		 * próximo archivo no vuelva a pedir confirmación de borrado.
 		 *
 		 * @param {Object} evento Evento de bootstrap-vue.
 		 * @param {String} modal_id Id del modal que se mostró.

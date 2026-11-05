@@ -23,15 +23,20 @@
 		<!-- ========================================================== -->
 		<div v-if="step === 1">
 
-			<p class="text-muted m-b-15">
+			<p v-if="permite_pdf" class="text-muted m-b-15">
+				Subí una planilla Excel o un catálogo PDF de hasta 10 MB y 30 páginas por archivo.
+				Vas a poder revisar los datos antes de importarlos.
+			</p>
+			<p v-else class="text-muted m-b-15">
 				Subí tu planilla Excel y la IA detectará automáticamente qué columna corresponde a cada propiedad del sistema.
 			</p>
 
-			<b-form-group label="Archivo Excel (.xlsx, .xls)">
+			<b-form-group :label="permite_pdf ? 'Archivo Excel o PDF (.xlsx, .xls, .pdf)' : 'Archivo Excel (.xlsx, .xls)'">
 				<b-form-file
 				v-model="file"
 				data-testid="ai-import-archivo"
-				accept=".xlsx,.xls"
+				:accept="permite_pdf ? '.xlsx,.xls,.pdf' : '.xlsx,.xls'"
+				:disabled="loading"
 				placeholder="Seleccioná un archivo..."
 				browse-text="Explorar"
 				@input="onFileChange">
@@ -185,6 +190,11 @@
 		<div
 		v-if="step === 2"
 		data-tour="listado.tabla_mapeo_columnas">
+
+			<b-alert v-if="filas_del_pdf" show variant="info">
+				Encontramos <strong>{{ numero_es(filas_del_pdf) }}</strong> filas de artículos en tu PDF.
+				Compará el total y la vista previa con el catálogo original antes de seguir.
+			</b-alert>
 
 			<!--
 				De qué hoja y con qué fila de encabezado salió el mapeo que el usuario está
@@ -1507,6 +1517,7 @@ export default {
 
 			/* Archivo Excel seleccionado por el usuario en el paso 1. */
 			file: null,
+			filas_del_pdf: null,
 
 			/* Lectura local del Excel para detectar última fila (como importación clásica). */
 			file_processing: false,
@@ -1861,6 +1872,9 @@ export default {
 	},
 
 	computed: {
+		permite_pdf() {
+			return this.model === 'article' && this.prueba_permite_pdf
+		},
 
 		/*
 		 * ID único del modal según el modelo; mantiene compatibilidad con artículos
@@ -3075,6 +3089,9 @@ export default {
 	},
 
 	methods: {
+		es_archivo_pdf(file) {
+			return !!(file && /\.pdf$/i.test(file.name))
+		},
 
 		/*
 		 * Procesa el archivo elegido (File o evento nativo del input), igual que import/Index.vue.
@@ -3083,6 +3100,7 @@ export default {
 			let selected_file = this.resolve_selected_excel_file(file_or_event)
 
 			if (!selected_file) {
+				this.file_processing = false
 				this.finish_row = ''
 				this.finish_row_original = ''
 				this.excel_rows_read_error = ''
@@ -3150,10 +3168,20 @@ export default {
 			self.encabezado_fila      = null
 			self.encabezado_confianza = 'alta'
 
+			if (self.es_archivo_pdf(file)) {
+				self.file_processing = false
+				return Promise.resolve()
+			}
+
 			return new Promise(function(resolve, reject) {
 				let reader = new FileReader()
 
 				reader.onload = function(e) {
+					if (self.file !== file) {
+						resolve()
+						return
+					}
+
 					try {
 						let ultima_fila_con_contenido = self.detect_last_excel_row_from_buffer(e.target.result)
 
@@ -3170,6 +3198,11 @@ export default {
 				}
 
 				reader.onerror = function() {
+					if (self.file !== file) {
+						resolve()
+						return
+					}
+
 					self.file_processing = false
 					self.excel_rows_read_error = 'Error al leer el archivo en el navegador.'
 					reject(new Error('FileReader error'))
@@ -3883,7 +3916,7 @@ export default {
 			let self = this
 
 			if (!self.file) {
-				self.$toast.error('Seleccioná un archivo Excel')
+				self.$toast.error(self.permite_pdf ? 'Seleccioná un archivo Excel o PDF' : 'Seleccioná un archivo Excel')
 				return
 			}
 
@@ -3900,7 +3933,7 @@ export default {
 			 */
 			let detect_promise = Promise.resolve()
 
-			if (!self.finish_row) {
+			if (!self.finish_row && !self.es_archivo_pdf(self.file)) {
 				let file_to_read = self.resolve_selected_excel_file(self.file)
 				if (file_to_read) {
 					detect_promise = self.process_excel_file(file_to_read)
@@ -4309,6 +4342,13 @@ export default {
 
 		aplicar_resultado_analisis(resultado) {
 			this.excel_path           = resultado.excel_path
+			this.filas_del_pdf        = resultado.filas_del_pdf || null
+			if (this.filas_del_pdf) {
+				this.start_row = 2
+				this.finish_row = this.filas_del_pdf + 1
+				this.finish_row_original = this.finish_row
+				this.has_header_row = true
+			}
 			this.column_mapping       = this.normalize_column_mapping(resultado.column_mapping)
 			this.selected_provider_id = resultado.provider_id
 			this.provider_confidence  = resultado.provider_confidence
@@ -6271,6 +6311,7 @@ export default {
 			this.recomendacion_uuid = null
 			this.step          = 1
 			this.file          = null
+			this.filas_del_pdf = null
 			this.file_processing = false
 			this.start_row     = 2
 			this.finish_row    = ''

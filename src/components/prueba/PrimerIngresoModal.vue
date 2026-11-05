@@ -53,7 +53,7 @@
 					<i class="bi bi-file-earmark-spreadsheet prueba-modal__icono" aria-hidden="true"></i>
 					<div>
 						<strong>Empezá con tus artículos</strong>
-						<p>Subí tu Excel y cargá los artículos con ayuda de la IA. Al importar se eliminan los datos de ejemplo.</p>
+						<p>Subí {{ prueba_permite_pdf ? 'tu Excel o PDF' : 'tu Excel' }} y cargá los artículos con ayuda de la IA. Al importar se eliminan los datos de ejemplo.</p>
 					</div>
 				</div>
 				<div class="prueba-modal__bloque">
