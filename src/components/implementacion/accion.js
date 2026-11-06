@@ -13,7 +13,7 @@ export function destino_de_accion(accion) {
 		}
 	}
 	if (accion.tipo === 'agente') {
-		return { texto: 'Probar el agente de WhatsApp', ruta: { name: 'article', query: { probar_agente: '1' } } }
+		return { texto: 'Probar el agente de WhatsApp', ruta: { name: 'whatsapp', query: { probar_agente: '1' } } }
 	}
 	return null
 }

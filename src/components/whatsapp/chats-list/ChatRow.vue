@@ -1,5 +1,7 @@
 <template>
-	<div
+	<button
+	type="button"
+	:aria-pressed="is_active"
 	class="whatsapp-chat-row"
 	:class="{
 		'whatsapp-chat-row--active': is_active,
@@ -11,12 +13,12 @@
 		'whatsapp-chat-row--seguimiento': chat.follow_up && !chat.estado_pendiente,
 	}"
 	@click="$emit('select', chat)">
-		<div class="whatsapp-chat-row__main">
+		<span class="whatsapp-chat-row__main">
 			<span class="whatsapp-chat-row__name">
 				<!-- Puntito indicando que la IA está apagada para este chat -->
 				<i
-				v-if="!chat.ai_enabled"
-				title="Respuesta automática (IA) apagada"
+				v-if="chat.ai_mode ? chat.ai_mode === 'manual' : !chat.ai_enabled"
+				title="Modo manual"
 				class="whatsapp-chat-row__ai-off-dot"></i>
 				<!-- El nombre en un <span> propio: el contenedor es flex (por el puntito de la
 				IA) y ahí `text-overflow: ellipsis` no dibuja los puntos, corta a filo. -->
@@ -29,10 +31,10 @@
 			class="whatsapp-chat-row__time">
 				{{ format_time(chat.last_message_at) }}
 			</span>
-		</div>
-		<div class="whatsapp-chat-row__sub">
+		</span>
+		<span class="whatsapp-chat-row__sub">
 			<span class="whatsapp-chat-row__phone">
-				{{ chat.phone }}
+				{{ chat.is_test ? 'Chat de prueba' : chat.phone }}
 				<!-- El último entrante de este chat fue simulado: los envíos hacia WhatsApp
 				están frenados. Sale de `whatsapp_chats.last_inbound_simulated`, que llega con
 				el listado; el broadcast en vivo NO manda esa columna, así que si el cliente
@@ -40,7 +42,7 @@
 				chat (adentro de la conversación el dato se saca del último mensaje y siempre
 				está al día). -->
 				<span
-				v-if="chat.last_inbound_simulated == 1"
+				v-if="chat.last_inbound_simulated == 1 && !chat.is_test"
 				class="whatsapp-chat-row__sim"
 				title="Chat en simulación: el último mensaje entrante lo simulaste vos y los envíos están frenados.">
 					<i class="bi bi-cone-striped"></i>
@@ -67,8 +69,8 @@
 			pill>
 				{{ chat.unread_count }}
 			</b-badge>
-		</div>
-	</div>
+		</span>
+	</button>
 </template>
 <script>
 import moment from 'moment'
@@ -94,7 +96,7 @@ export default {
 			if (this.chat.display_name) {
 				return this.chat.display_name
 			}
-			return this.chat.phone
+			return this.chat.is_test ? 'Cliente de prueba' : this.chat.phone
 		},
 		/**
 		 * Texto del tooltip del chip de seguimiento: qué dejó el agente y, si lo escribió, el detalle.
@@ -130,6 +132,10 @@ export default {
 </script>
 <style lang="sass">
 .whatsapp-chat-row
+	width: 100%
+	text-align: left
+	background: transparent
+	border: 0
 	padding: 10px 14px
 	cursor: pointer
 	border-bottom: 1px solid var(--wa-borde)
@@ -137,6 +143,9 @@ export default {
 	transition: background .12s ease
 	&:hover
 		background: var(--wa-hover)
+	&:focus-visible
+		outline: 2px solid var(--wa-verde)
+		outline-offset: -2px
 	// La fila abierta se marca con el verde de la marca en velo, no con un gris: es la unica
 	// pista de en que conversacion esta parado el operador cuando el sidebar tapa media pantalla.
 	//

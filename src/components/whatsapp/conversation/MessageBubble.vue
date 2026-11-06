@@ -93,8 +93,12 @@
 		v-if="muestra_texto && (!editando || !espera_confirmacion)"
 		class="whatsapp-bubble__text"
 		:class="{'whatsapp-bubble__text--editable': espera_confirmacion}"
+		:role="espera_confirmacion ? 'button' : null"
+		:tabindex="espera_confirmacion ? 0 : null"
 		:title="espera_confirmacion ? 'Clic para editar antes de enviar' : null"
-		@click="espera_confirmacion && entrar_en_edicion()">
+		@click="espera_confirmacion && entrar_en_edicion()"
+		@keydown.enter.prevent="espera_confirmacion && entrar_en_edicion()"
+		@keydown.space.prevent="espera_confirmacion && entrar_en_edicion()">
 			{{ message.body }}
 		</p>
 
@@ -108,7 +112,7 @@
 			class="whatsapp-bubble__pending-label"
 			title="El agente ya la escribió pero no salió hacia WhatsApp. Si el cliente vuelve a escribir antes de que se envíe, esta respuesta se descarta y el agente arma una nueva.">
 				<i class="bi bi-hourglass-split"></i>
-				Sin enviar — esperando tu aprobación
+				Pendiente de aprobación
 			</span>
 
 			<!-- Modo edición: clic en el texto de arriba lo trajo hasta acá. Copia local del
@@ -146,7 +150,7 @@
 					title="Guarda el texto (si lo cambiaste) y lo manda ahora."
 					@click="enviar_edicion">
 						<i class="bi bi-send"></i>
-						Enviar
+						{{ confirm_text }}
 					</b-button>
 					<b-button
 					size="sm"
@@ -155,7 +159,7 @@
 					title="Descarta los cambios y vuelve al texto original."
 					@click="cancelar_edicion">
 						<i class="bi bi-x-lg"></i>
-						Cancelar
+						Cancelar edición
 					</b-button>
 				</template>
 				<b-button
@@ -175,7 +179,7 @@
 				title="Borra la respuesta: no se envía ni queda en la conversación."
 				@click="discard">
 					<i class="bi bi-x-lg"></i>
-					Descartar
+					Cancelar envío
 				</b-button>
 			</div>
 		</div>
@@ -220,7 +224,7 @@
 			No aplica al envío de una demo (`envio_de_demo`): ahí el backend lo dio por enviado a
 			propósito y los tildes de arriba ya lo muestran. -->
 			<span
-			v-else-if="is_out && es_simulado && !envio_de_demo"
+			v-else-if="is_out && es_simulado && !envio_de_demo && !espera_confirmacion && !esta_enviandose"
 			class="whatsapp-bubble__status whatsapp-bubble__status--blocked"
 			title="No salió hacia WhatsApp: el chat está en simulación. El cliente no recibió este mensaje.">
 				<i class="bi bi-slash-circle"></i>
@@ -360,7 +364,7 @@ export default {
 		 * backend), así que el botón no puede prometer un envío que no va a pasar.
 		 */
 		confirm_text() {
-			return this.es_simulado ? 'Aprobar' : 'Enviar ahora'
+			return this.es_simulado ? 'Aprobar' : 'Confirmar envío'
 		},
 		confirm_title() {
 			if (this.es_simulado) {
@@ -374,7 +378,9 @@ export default {
 		 * canceló (falló un intento anterior, o alguien lo confirmó/descartó).
 		 */
 		cuenta_regresiva_activa() {
-			return this.espera_confirmacion && !!this.message.ai_auto_send_at
+			const chat = this.$store.getters['whatsapp_chat/selected_chat']
+			const modo_permite_autoenvio = !chat || !chat.ai_mode || chat.ai_mode === 'automatic'
+			return modo_permite_autoenvio && this.espera_confirmacion && !!this.message.ai_auto_send_at
 		},
 		segundos_para_auto_envio() {
 			if (!this.cuenta_regresiva_activa) {
@@ -385,7 +391,7 @@ export default {
 		},
 		texto_auto_envio() {
 			if (!this.cuenta_regresiva_activa) {
-				return 'No se envía solo: sale cuando lo confirmes.'
+				return 'Sale cuando confirmes el envío.'
 			}
 			if (this.segundos_para_auto_envio <= 0) {
 				return 'Se está enviando solo...'
@@ -885,10 +891,35 @@ export default {
 	// que se note de un vistazo que esta burbuja todavia no salio (pedido de Lucas, misión
 	// sugerencia-ia-como-borrador, 29/9/2026).
 	&--a-confirmar
-		background: var(--wa-pendiente-bg)
-		border: 2px dashed var(--wa-pendiente-borde)
+		background: var(--wa-burbuja-out)
+		border: 1px dashed var(--wa-pendiente-borde)
+		box-shadow: none
 		color: var(--wa-texto)
-		max-width: 85%
+		width: max-content
+		max-width: 92%
+		padding: .7rem .85rem
+	&__pending-actions .btn
+		display: inline-flex
+		align-items: center
+		gap: .35rem
+		min-height: 32px
+		padding: .3rem .65rem
+		border-radius: 8px
+		box-shadow: none !important
+		&:focus-visible
+			outline: 2px solid var(--wa-verde)
+			outline-offset: 2px
+		&.btn-success
+			background: var(--wa-verde)
+			border-color: var(--wa-verde)
+			color: var(--wa-verde-texto)
+			&:hover:not(:disabled)
+				background: var(--wa-verde-hover)
+		&.btn-outline-danger
+			border-color: var(--wa-error)
+			color: var(--wa-error)
+			&:hover:not(:disabled)
+				background: var(--wa-panel)
 
 	// --- Fila del emisor y la marca de simulado ---------------------------------------------
 	// El lado lo decide la direccion del mensaje, no un valor fijo: entrantes a la izquierda,

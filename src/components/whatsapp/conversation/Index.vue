@@ -1,9 +1,4 @@
 <template>
-	<!--
-		⚠️ Esta conversacion NO vive en la vista: se monta adentro del sidebar de WhatsApp
-		(position fixed, montado desde App.vue), que se crea y se destruye al abrir y cerrar el
-		chat. Si el lead lo cierra, este ancla desaparece del DOM y el tour saltea sus pasos.
-	-->
 	<div
 	class="whatsapp-conversation"
 	data-tour="whatsapp.conversacion">
@@ -19,7 +14,7 @@
 		<div
 		v-else
 		class="whatsapp-conversation__content">
-			<header-component></header-component>
+			<header-component :embedded="embedded"></header-component>
 			<!-- Pedido o consulta que el agente dejó para atender (misión senal-pedidos-y-consultas-del-agente):
 			solo se dibuja mientras el chat tiene la marca. -->
 			<follow-up-bar></follow-up-bar>
@@ -34,6 +29,9 @@ import FollowUpBar from '@/components/whatsapp/conversation/FollowUpBar'
 import Messages from '@/components/whatsapp/conversation/Messages'
 import Composer from '@/components/whatsapp/conversation/Composer'
 export default {
+	props: {
+		embedded: Boolean,
+	},
 	components: {
 		HeaderComponent,
 		FollowUpBar,
@@ -81,6 +79,7 @@ export default {
 				// Limpia la conversación anterior para no mostrar mensajes de otro chat
 				// mientras carga.
 				this.$store.commit('whatsapp_chat/setMessages', [])
+				this.$store.commit('whatsapp_chat/setLoadingMoreMessages', false)
 				this.$store.dispatch('whatsapp_chat/getMessages', {chat_id: id, page: 1})
 				this.$store.dispatch('whatsapp_chat/markRead', id)
 			},

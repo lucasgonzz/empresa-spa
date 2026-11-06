@@ -18,7 +18,7 @@
 				Cargando mensajes anteriores...
 			</p>
 			<p
-			v-if="!messages.length"
+			v-if="!messages.length && !simulando_en_vivo"
 			class="text-center text-muted m-t-20">
 				Todavía no hay mensajes en esta conversación
 			</p>
@@ -51,10 +51,13 @@ export default {
 			// Id del último mensaje entrante con el que ya se reconcilió la conversación contra
 			// la base (ver `reconciliar_pendiente_tras_entrante`). Evita el bucle de recargas.
 			ultimo_entrante_reconciliado: null,
+			seguir_ultimo_mensaje: true,
+			observador_tamano: null,
 		}
 	},
 	computed: {
 		chat_id() {
+			this.seguir_ultimo_mensaje = true
 			return this.$store.state.whatsapp_chat.selected_chat_id
 		},
 		// El getter ya existía; este computed está copiado byte por byte también en
@@ -63,7 +66,7 @@ export default {
 			return this.$store.getters['whatsapp_chat/selected_chat']
 		},
 		simulando_en_vivo() {
-			return this.$store.state.whatsapp_chat.simulando_en_vivo
+			return this.is_owner && (Boolean(this.chat && this.chat.is_test) || this.$store.state.whatsapp_chat.simulando_en_vivo)
 		},
 		messages() {
 			return this.$store.state.whatsapp_chat.messages
@@ -128,6 +131,21 @@ export default {
 			}
 		},
 	},
+	mounted() {
+		if (typeof ResizeObserver !== 'undefined') {
+			this.observador_tamano = new ResizeObserver(() => {
+				if (this.seguir_ultimo_mensaje) {
+					this.scrollToBottom()
+				}
+			})
+			this.observador_tamano.observe(this.$refs.container)
+		}
+	},
+	beforeDestroy() {
+		if (this.observador_tamano) {
+			this.observador_tamano.disconnect()
+		}
+	},
 	methods: {
 		scrollToBottom() {
 			if (this.$refs.container) {
@@ -173,6 +191,8 @@ export default {
 		 * pide la página anterior de mensajes (si hay y no hay otra carga en curso).
 		 */
 		on_scroll(event) {
+			const panel = event.target
+			this.seguir_ultimo_mensaje = panel.scrollHeight - panel.clientHeight - panel.scrollTop < 36
 			if (event.target.scrollTop < 80 && this.has_more_pages && !this.loading_more && !this.loading) {
 				this.$store.dispatch('whatsapp_chat/getMessages', {
 					chat_id: this.chat_id,
@@ -193,6 +213,7 @@ export default {
 	// WhatsApp usa un beige propio en claro y un azul casi negro en oscuro, y es la mitad de lo
 	// que hace que la conversacion se lea como una conversacion. Sale del token, no de un hex.
 	background: var(--wa-fondo-chat)
+	background-image: url('./fondo-chat.svg')
 	color: var(--wa-texto)
 .whatsapp-messages
 	display: flex

@@ -19,12 +19,12 @@
 				</strong>
 				<span class="whatsapp-header__sub">
 					<span class="whatsapp-header__phone">
-						{{ chat.phone }}
+						{{ chat.is_test ? 'Chat de prueba' : chat.phone }}
 					</span>
 					<!-- El chat está corriendo sobre un entrante simulado: nada de lo que salga de
 					acá llega al cliente hasta que escriba de verdad. -->
 					<b-badge
-					v-if="en_simulacion"
+					v-if="en_simulacion && !chat.is_test"
 					variant="warning"
 					class="whatsapp-header__sim"
 					title="El último mensaje entrante lo simulaste vos. Los envíos hacia WhatsApp están frenados hasta que el cliente escriba de verdad.">
@@ -97,9 +97,10 @@
 				<button
 				class="whatsapp-header__cerrar"
 				type="button"
-				title="Cerrar la conversación"
+				:aria-label="embedded ? 'Volver a los chats' : 'Cerrar la conversación'"
+				:title="embedded ? 'Volver a los chats' : 'Cerrar la conversación'"
 				@click="cerrar_sidebar">
-					<i class="bi bi-x-lg"></i>
+					<i :class="embedded ? 'bi bi-arrow-left' : 'bi bi-x-lg'" aria-hidden="true"></i>
 				</button>
 			</div>
 		</div>
@@ -115,15 +116,15 @@
 		para Sugerir/Plantillas: con cuatro controles en vez de dos, salta antes, y es lo que
 		Lucas pidió. -->
 		<div class="whatsapp-header__fila whatsapp-header__fila--ayudas">
-			<!-- Toggle de respuesta automática por IA para este chat -->
-			<b-form-checkbox
-			switch
-			:checked="chat.ai_enabled"
-			@change="toggleAi"
-			data-tour="whatsapp.toggle_ia"
-			class="whatsapp-header__ai-toggle">
-				IA
-			</b-form-checkbox>
+			<label class="whatsapp-header__modo" data-tour="whatsapp.toggle_ia">
+				<span>Cómo responde la IA</span>
+				<b-form-select
+				size="sm"
+				v-model="modo_seleccionado"
+				:options="modos_ia"
+				:disabled="cambiando_modo"
+				@change="cambiar_modo"></b-form-select>
+			</label>
 
 			<b-button
 			size="sm"
@@ -137,6 +138,7 @@
 				{{ suggesting ? 'Sugiriendo...' : 'Sugerir respuesta' }}
 			</b-button>
 			<b-button
+			v-if="!chat.is_test"
 			size="sm"
 			variant="outline-secondary"
 			class="whatsapp-header__btn"
@@ -152,7 +154,7 @@
 			tenía el botón que reemplaza: solo el dueño, y solo si `chat_simulation_enabled` está
 			prendido en la config del agente (apagado de fábrica). -->
 			<b-form-checkbox
-			v-if="is_owner && config && config.chat_simulation_enabled"
+			v-if="!chat.is_test && is_owner && config && config.chat_simulation_enabled"
 			switch
 			:checked="simulando_en_vivo"
 			@change="toggleSimulandoEnVivo"
@@ -194,6 +196,9 @@ import LinkClientModal from '@/components/whatsapp/conversation/LinkClientModal'
 import SummaryModal from '@/components/whatsapp/conversation/SummaryModal'
 import BtnCurrentAcounts from '@/components/common/BtnCurrentAcounts'
 export default {
+	props: {
+		embedded: Boolean,
+	},
 	components: {
 		LinkClientModal,
 		SummaryModal,
@@ -207,6 +212,13 @@ export default {
 	},
 	data() {
 		return {
+			cambiando_modo: false,
+			modo_seleccionado: null,
+			modos_ia: [
+				{value: 'automatic', text: 'Automático'},
+				{value: 'semi_automatic', text: 'Semiautomático'},
+				{value: 'manual', text: 'Manual'},
+			],
 			// true mientras viaja el pedido de sugerencia (deshabilita el botón).
 			suggesting: false,
 			// Cliente vinculado, completo (con credit_accounts y el resto de withAll()). null
@@ -216,6 +228,9 @@ export default {
 		}
 	},
 	computed: {
+		ai_mode() {
+			return this.chat.ai_mode || (this.chat.ai_enabled ? 'automatic' : 'manual')
+		},
 		// El getter del store hace exactamente esto y ya existía; este computed estaba copiado
 		// byte por byte también en conversation/Index.vue y en Composer.vue.
 		chat() {
@@ -287,6 +302,12 @@ export default {
 		},
 	},
 	watch: {
+		ai_mode: {
+			immediate: true,
+			handler(modo) {
+				this.modo_seleccionado = modo
+			},
+		},
 		/**
 		 * 🔴 El indicador de "pidiendo sugerencia" se limpia al saltar de conversación.
 		 *
@@ -327,12 +348,15 @@ export default {
 		cerrar_sidebar() {
 			this.$store.commit('whatsapp_chat/setSidebarAbierto', false)
 		},
-		toggleAi() {
-			this.$store.dispatch('whatsapp_chat/toggleAi', this.chat.id)
-			.catch(err => {
-				console.log(err)
-				this.$toast.error('No se pudo cambiar la respuesta automática')
-			})
+		cambiar_modo(ai_mode) {
+			this.cambiando_modo = true
+			this.$store.dispatch('whatsapp_chat/setAiMode', {chat_id: this.chat.id, ai_mode})
+				.catch(err => {
+					const data = err.response && err.response.data
+					this.$toast.error((data && data.message) || 'No se pudo cambiar el modo de respuesta')
+					this.modo_seleccionado = this.ai_mode
+				})
+				.finally(() => { this.cambiando_modo = false })
 		},
 		openSummary() {
 			this.$bvModal.show('whatsapp-summary')
@@ -572,6 +596,21 @@ export default {
 	&__ai-toggle
 		margin-right: 4px
 		margin-bottom: 0
+	&__modo
+		display: inline-flex
+		align-items: center
+		flex-wrap: wrap
+		gap: .35rem .55rem
+		margin: 0
+		font-size: .8rem
+		font-weight: 600
+		.custom-select
+			width: auto
+			font-size: .875rem !important
+			border-radius: 8px
+			color: var(--wa-texto)
+			border-color: var(--wa-borde)
+			background-color: var(--wa-panel)
 	// Geometría compartida de los botones del header. Copia la de .btn-modulo
 	// (_controles_modulo.sass) pero con el alto más chico: acá conviven dos filas dentro de un
 	// panel de 320px de ancho mínimo, y los 36px del token de barra las estiran demasiado.

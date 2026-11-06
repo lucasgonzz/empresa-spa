@@ -1166,7 +1166,7 @@ function mostrar_paso(i) {
 				 * sabe cuántos son en total, y el total real no se conoce hasta el final (los
 				 * pasos que no aparecen se saltean). Se usa el total declarado, que es el que el
 				 * lead entiende. */
-				title: 'Paso ' + (i + 1) + ' de ' + corrida.pasos.length,
+				title: paso.titulo || 'Paso ' + (i + 1) + ' de ' + corrida.pasos.length,
 				showButtons: botones_de(paso, i),
 				nextBtnText: i === corrida.pasos.length - 1 ? 'Listo' : 'Siguiente',
 				doneBtnText: 'Listo',
@@ -2768,6 +2768,9 @@ export function iniciar_tour(clip, contexto) {
 
 			if (popover.previousButton) {
 				popover.previousButton.style.display = corrida.indice > 0 ? '' : 'none'
+			}
+			if (contexto.decorar_popover) {
+				contexto.decorar_popover(popover)
 			}
 		},
 		/**

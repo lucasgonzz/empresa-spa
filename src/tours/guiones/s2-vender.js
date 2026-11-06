@@ -603,7 +603,7 @@ export default {
 			},
 			{
 				ancla: 'whatsapp.toggle_ia',
-				texto: 'Y entrás cuando quieras: apagás la IA en esa conversación y seguís vos.',
+				texto: 'Elegí cómo responde la IA en esta conversación. Con Manual, respondés vos.',
 				avanza: 'siguiente',
 			},
 			{
