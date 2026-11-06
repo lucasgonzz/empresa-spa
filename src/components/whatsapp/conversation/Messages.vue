@@ -57,7 +57,6 @@ export default {
 	},
 	computed: {
 		chat_id() {
-			this.seguir_ultimo_mensaje = true
 			return this.$store.state.whatsapp_chat.selected_chat_id
 		},
 		// El getter ya existía; este computed está copiado byte por byte también en
@@ -102,6 +101,7 @@ export default {
 			})
 		},
 		chat_id() {
+			this.seguir_ultimo_mensaje = true
 			// Al abrir un chat nuevo, arranca siempre desde abajo (mensaje más reciente).
 			this.$nextTick(() => {
 				this.scrollToBottom()
@@ -149,6 +149,7 @@ export default {
 	methods: {
 		scrollToBottom() {
 			if (this.$refs.container) {
+				this.seguir_ultimo_mensaje = true
 				this.$refs.container.scrollTop = this.$refs.container.scrollHeight
 			}
 		},
@@ -208,6 +209,7 @@ export default {
 	flex: 1
 	min-height: 0
 	overflow-y: auto
+	overflow-anchor: none
 	padding: 14px
 	// El fondo del panel de mensajes es el unico color del modulo sin equivalente en el sistema:
 	// WhatsApp usa un beige propio en claro y un azul casi negro en oscuro, y es la mitad de lo

@@ -108,6 +108,8 @@
 			id="whatsapp-composer-text"
 			class="form-control whatsapp-composer__texto"
 			rows="1"
+			aria-label="Mensaje del negocio"
+			enterkeyhint="send"
 			data-tour="whatsapp.campo_respuesta"
 			:placeholder="placeholder"
 			@keydown.enter="onKeydownEnter"></textarea>
@@ -273,12 +275,12 @@ export default {
 		 */
 		placeholder() {
 			if (this.chat && this.chat.is_test) {
-				return 'Respondé como negocio…'
+				return 'Como negocio…'
 			}
 			if (this.en_simulacion) {
 				return 'Simulación: lo que escribas se guarda pero no le llega al cliente'
 			}
-			return 'Escribí un mensaje (Enter para enviar, Shift+Enter para salto de línea)'
+			return 'Escribí un mensaje…'
 		},
 		/**
 		 * Ayuda del micrófono. El botón tiene dos semánticas y ninguna se ve mirándolo, así que

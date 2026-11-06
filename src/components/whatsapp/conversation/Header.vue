@@ -45,6 +45,8 @@
 				size="sm"
 				variant="outline-secondary"
 				class="whatsapp-header__btn"
+				title="Vincular cliente"
+				aria-label="Vincular cliente"
 				@click="$bvModal.show('whatsapp-link-client')">
 					<i class="bi bi-person"></i>
 					<span class="whatsapp-header__btn-texto">
