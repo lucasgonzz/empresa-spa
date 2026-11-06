@@ -323,9 +323,7 @@ export default {
 				ya_esta_en_los_articulos_para_vender antes de agregar — asi que no molesta
 				que los llamadores que ya los invocan (guardar_venta) los repitan.
 
-				NO se re-aplica la caja por defecto: limpiar_vender nunca la toco (su
-				set_caja_id esta comentado mas arriba) y set_caja_por_defecto depende de
-				computeds que no todos los llamadores tienen.
+				La caja por defecto se resuelve al cambiar el medio de pago.
 			*/
 			this.set_omitir_en_cuenta_corriente()
 			this.set_default_articles()
@@ -340,6 +338,10 @@ export default {
 				era una venta cobrada sin metodo ni movimiento de caja.
 			*/
 			this.setDefaultPaymentMethod(true)
+			if (this.exigir_eleccion_medio_pago) {
+				// La próxima venta todavía no tiene método para resolver su caja.
+				this.$store.commit('vender/set_caja_id', 0)
+			}
 
 			/*
 				🔴 Lo que el vendedor dejo TIPEADO en los buscadores tambien se vacia: la venta nueva
