@@ -55,6 +55,15 @@ export default {
 		transform: rotate(30deg)
 	&.pose-senalar .izquierdo
 		transform: rotate(-43deg)
+	&.pose-pensar .derecho
+		transform-origin: 75% 65%
+		animation: pensar 1.2s ease-in-out infinite alternate
+
+@keyframes pensar
+	from
+		transform: rotate(-35deg)
+	to
+		transform: rotate(-12deg)
 
 @keyframes flotar
 	0%, 100%
