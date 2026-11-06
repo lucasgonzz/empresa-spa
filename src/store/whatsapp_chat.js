@@ -596,14 +596,14 @@ export default {
 		 * cuenta acá también, aunque el cliente le haya escrito último.
 		 */
 		chats_sin_responder_count(state) {
-			return state.chats.filter(c => c.estado_pendiente == 'sin_responder').length
+			return state.chats.filter(c => !c.is_test && c.estado_pendiente == 'sin_responder').length
 		},
 		/**
 		 * Cantidad de chats con una respuesta de la IA generada y esperando que el negocio la
 		 * apruebe (tarjeta amarilla del tablero).
 		 */
 		chats_esperando_aprobacion_count(state) {
-			return state.chats.filter(c => c.estado_pendiente == 'esperando_aprobacion').length
+			return state.chats.filter(c => !c.is_test && c.estado_pendiente == 'esperando_aprobacion').length
 		},
 		/**
 		 * La API ya manda el seguimiento (`follow_up`) en los chats. Contra una API vieja el campo ni existe y
@@ -621,14 +621,14 @@ export default {
 		 * acá y además en "sin responder" a la vez.
 		 */
 		chats_con_pedido_count(state) {
-			return state.chats.filter(c => c.follow_up == 'pedido').length
+			return state.chats.filter(c => !c.is_test && c.follow_up == 'pedido').length
 		},
 		/**
 		 * Cantidad de chats donde el agente prometió "lo consulto y te confirmo" y todavía nadie
 		 * atendió (tarjeta violeta del tablero). Mismo criterio que `chats_con_pedido_count`.
 		 */
 		chats_con_consulta_count(state) {
-			return state.chats.filter(c => c.follow_up == 'consulta').length
+			return state.chats.filter(c => !c.is_test && c.follow_up == 'consulta').length
 		},
 		/**
 		 * Cantidad de chats con actividad en el día de hoy (tarjeta verde del tablero).
@@ -638,7 +638,7 @@ export default {
 		 * conversación hoy — no hace falta mirar la tabla de mensajes completa.
 		 */
 		chats_hoy_count(state) {
-			return state.chats.filter(c => c.last_message_at && moment(c.last_message_at).isSame(moment(), 'day')).length
+			return state.chats.filter(c => !c.is_test && c.last_message_at && moment(c.last_message_at).isSame(moment(), 'day')).length
 		},
 	},
 	actions: {
@@ -961,7 +961,7 @@ export default {
 		 *                                 entera parpadeaba a "Cargando mensajes..." por una
 		 *                                 recarga que el operador ni pidió.
 		 */
-		getMessages({ commit }, payload) {
+		getMessages({ commit, state }, payload) {
 			let chat_id = payload.chat_id
 			let page = payload.page || 1
 			let silent = !!payload.silent
@@ -978,6 +978,9 @@ export default {
 				},
 			})
 				.then(res => {
+					if (state.selected_chat_id != chat_id) {
+						return
+					}
 					let paginator = res.data.models
 					// El backend devuelve DESC (más nuevo primero); para renderizar de arriba a abajo
 					// se necesita orden cronológico ascendente, así que se invierte cada página.
@@ -993,8 +996,10 @@ export default {
 					commit('setMessagesLastPage', paginator.last_page)
 				})
 				.catch(err => {
-					commit('setLoadingMessages', false)
-					commit('setLoadingMoreMessages', false)
+					if (state.selected_chat_id == chat_id) {
+						commit('setLoadingMessages', false)
+						commit('setLoadingMoreMessages', false)
+					}
 					console.log(err)
 				})
 		},
@@ -1107,15 +1112,12 @@ export default {
 		/**
 		 * Prende/apaga la IA para un chat puntual.
 		 */
-		toggleAi({ commit, dispatch }, chat_id) {
-			return axios.put('/api/whatsapp-chats/' + chat_id + '/toggle-ai')
+		setAiMode({ commit, dispatch, state }, {chat_id, ai_mode}) {
+			return axios.put('/api/whatsapp-chats/' + chat_id + '/ai-mode', { ai_mode })
 				.then(res => {
 					commit('upsertChat', res.data.model)
-					// Apagar la IA del chat también es una intervención humana y el backend
-					// descarta ahí mismo lo que el agente dejó esperando confirmación
-					// (`WhatsappChatController::toggle_ai()`). Al prender no hay nada que sacar.
-					if (!res.data.model.ai_enabled) {
-						commit('removePendingAiMessages')
+					if (state.sidebar_abierto && state.selected_chat_id == chat_id) {
+						dispatch('getMessages', {chat_id, page: 1, silent: true})
 					}
 					dispatch('getResumen')
 					return res.data.model
@@ -1317,6 +1319,7 @@ export default {
 		 */
 		simulateInbound({ commit, dispatch, state }, payload) {
 			return axios.post('/api/whatsapp-bot/simulate-inbound', {
+				chat_id: payload.chat_id,
 				phone: payload.phone,
 				body: payload.body,
 			})

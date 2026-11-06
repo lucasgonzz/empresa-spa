@@ -1,4 +1,4 @@
-import { build_price_type_modal_extra_properties } from '@/common-vue/helpers/article_dynamic_table_columns'
+import { build_price_type_modal_extra_properties, usa_lista_de_precios } from '@/common-vue/helpers/article_dynamic_table_columns'
 
 export default {
 	computed: {
@@ -14,10 +14,26 @@ export default {
 		properties_to_show() {
 	        return this.set_properties_to_show()
 	    },
-		// Todas las listas de precio, siempre, para las tarjetas del modal de edicion de
-		// articulo — independiente de la configuracion de columnas visibles en la tabla.
+		listas_de_la_ficha() {
+			if (!this.ownerUsesListasDePrecio() && !usa_lista_de_precios(this)) {
+				return []
+			}
+			return this.$store.getters['price_type/listas'].slice().sort((a, b) => {
+				return (Number(b.position) || 0) - (Number(a.position) || 0) || a.id - b.id
+			})
+		},
+		puede_crear_lista() {
+			return this.ownerUsesListasDePrecio()
+				&& this.listas_de_la_ficha.length > 0
+				&& this.can('price_type.store')
+		},
+		hidden_price_properties() {
+			// La lista espejo edita estos mismos campos dentro de la tarjeta.
+			let tiene_precio_final = this.listas_de_la_ficha.some(lista => Number(lista.es_precio_final) === 1)
+			return tiene_precio_final ? ['percentage_gain', 'price', 'final_price'] : []
+		},
 		price_type_modal_extra_properties() {
-			return build_price_type_modal_extra_properties(this, this.price_types)
+			return build_price_type_modal_extra_properties(this.listas_de_la_ficha)
 		},
 	},
 	methods: {
@@ -49,9 +65,6 @@ export default {
 		},
 		get_table_relation_prop(relation_name, model) {
 			return 'table-prop-'+relation_name+'_'+model.id
-		},
-		get_model_form_price_type_slot(model) {
-			return 'price_type_'+model.id
 		},
 		get_table_price_type_prop(model) {
 			return 'table-prop-price_type_'+model.id

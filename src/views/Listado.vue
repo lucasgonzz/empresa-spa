@@ -47,6 +47,15 @@
 
 	<articles-pre-import-modal></articles-pre-import-modal>
 
+	<model-index
+	v-if="puede_crear_lista"
+	model_name="price_type"
+	:show_btn_pdf="false"
+	:show_btn_delete="false"
+	check_permissions>
+		<template #model_modal_title>Nueva lista de precios</template>
+	</model-index>
+
 	<view-component
 	show_view_header
 	show_filter_modal
@@ -55,6 +64,7 @@
 	:has_permission_create_dropdown="has_permission_create_dropdown"
 	:properties_to_show="properties_to_show"
 	:extra_properties_for_modal="price_type_modal_extra_properties"
+	:hidden_properties_for_modal="hidden_price_properties"
 	@addressMovement="addressMovement"
 	:show_empty_text="show_empty_text"
 	:filtros_fijos_por_defecto="filtros_fijos_por_defecto"
@@ -129,17 +139,26 @@
 		</template>
 
 		
-		<!--
-			Tarjetas por lista del modal del artículo (misión prueba-listas-siempre, 3/11/2026,
-			`listas_visibles`). Si la única es la «Precio final», el artículo muestra su recuadro
-			«Precio final» de siempre, que es el de esa lista.
-		-->
-		<template
-		v-for="price_type in listas_visibles"
-		v-slot:[get_model_form_price_type_slot(price_type)]="props">
-			<price-type-input
-			:article="props.model"
-			:price_type="price_type"></price-type-input>
+		<template #article_price_list_cards>
+			<div class="article-price-list-cards">
+				<price-type-input
+				v-for="price_type in listas_de_la_ficha"
+				:key="price_type.id"
+				:price_type="price_type"
+				:es_primera_lista="price_type === lista_anclada_en_el_tour"
+				:anclar_opciones="price_type === primera_lista_editable"></price-type-input>
+
+				<div
+				v-if="puede_crear_lista"
+				class="article-price-list-cards__nueva">
+					<b-button
+					variant="outline-primary"
+					@click="crear_lista">
+						<i class="bi bi-plus-lg" aria-hidden="true"></i>
+						Nueva lista
+					</b-button>
+				</div>
+			</div>
 		</template>
 
 
@@ -194,6 +213,7 @@ export default {
 	components: {
 		ProductFactsProposal: () => import('@/components/listado/components/ProductFactsProposal'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		ModelIndex: () => import('@/common-vue/components/model/Index'),
 
 
 		ExcelDropdownOptions: () => import('@/components/listado/components/excel-dropdown-options/Index'),
@@ -264,6 +284,14 @@ export default {
 		next()
 	},
 	computed: {
+		primera_lista_editable() {
+			// El recorrido apunta a la primera lista propia según el orden del catálogo.
+			return this.listas_de_la_ficha.filter(lista => Number(lista.es_precio_final) !== 1)
+				.sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0) || a.id - b.id)[0]
+		},
+		lista_anclada_en_el_tour() {
+			return this.primera_lista_editable || this.listas_de_la_ficha[0]
+		},
 		has_permission_create_dropdown() {
 			return this.authenticated && this.can('article.export_excel_clients')
 		},
@@ -308,6 +336,13 @@ export default {
 		},
 	},
 	methods: {
+		crear_lista() {
+			// La lista nueva queda al final y la prioridad actual se conserva como valor inicial.
+			let ultima = this.listas_de_la_ficha[this.listas_de_la_ficha.length - 1]
+			this.setModel(null, 'price_type', [
+				{ key: 'position', value: (Number(ultima.position) || 0) - 1 },
+			])
+		},
 		addressMovement() {
 			console.log('addressMovement')
 		},
@@ -405,3 +440,18 @@ export default {
 	},
 }
 </script>
+<style lang="sass">
+.article-price-list-cards
+	display: grid
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr))
+	gap: 12px
+
+.article-price-list-cards__nueva
+	display: flex
+	align-items: center
+	justify-content: center
+	min-height: 120px
+	padding: 12px
+	border: 2px dashed var(--color-border-secondary, #ced4da)
+	border-radius: 8px
+</style>

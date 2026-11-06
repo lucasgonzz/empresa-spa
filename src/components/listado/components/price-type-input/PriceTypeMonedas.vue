@@ -9,18 +9,23 @@
 
             La logica de datos (local.ptm, toPayload, is_inputs_disabled) no cambio.
         -->
-        <div v-for="moneda in monedas" :key="moneda.id" class="moneda-block">
+        <div
+        v-for="(moneda, index) in monedas"
+        :key="moneda.id"
+        :data-tour="solo_lectura && index === 0 ? 'listado.campo_precio_final' : null"
+        class="moneda-block">
             <h5 class="price-type-moneda__nombre">{{ moneda.name }}</h5>
 
             <div class="price-type-card__encabezado">
                 <div class="price-type-card__precio">
-                    {{ price(local.ptm[moneda.id].final_price) }}
+                    {{ price(precio_por_moneda(moneda.id).final_price) }}
                 </div>
 
                 <!-- Sin id de articulo no hay nada que explicar (alta nueva) y el endpoint
                      contestaria 404, asi que el boton no se dibuja. -->
                 <b-button
                 v-if="article.id"
+                :data-tour="solo_lectura && index === 0 ? 'listado.boton_explicacion_precio' : null"
                 class="price-type-card__info btn-explicacion"
                 @click="info(moneda.id)"
                 variant="outline-secondary"
@@ -34,7 +39,7 @@
                 {{ origen_del_precio(moneda) }}
             </div>
 
-            <div class="price-type-card__campos">
+            <div v-if="!solo_lectura" class="price-type-card__campos">
                 <b-input-group
                 class="price-type-card__campo"
                 :class="is_inputs_disabled(moneda.id, 'percentage') ? 'price-type-card__campo--derivado' : 'price-type-card__campo--manda'"
@@ -60,7 +65,7 @@
                 </b-input-group>
             </div>
 
-            <div class="price-type-card__opciones m-t-10">
+            <div v-if="!solo_lectura" class="price-type-card__opciones m-t-10">
                 <div class="price-type-card__interruptor">
                     <b-form-checkbox
                     variant="success"
@@ -100,7 +105,7 @@
                 -->
                 <div
                 class="price-type-card__interruptor"
-                :data-tour="es_primer_toggle_cotizacion(moneda) ? 'listado.toggle_cotizar_desde_otra_moneda' : null">
+                :data-tour="anclar_opciones && index === 0 ? 'listado.toggle_cotizar_desde_otra_moneda' : null">
                     <b-form-checkbox
                     variant="success"
                     :value="1"
@@ -124,7 +129,11 @@ import descripcion_de_lista from '@/components/listado/components/price-type-inp
 
 export default {
     mixins: [descripcion_de_lista],
-    props: ['article_price_type'],
+    props: {
+        article_price_type: Object,
+        anclar_opciones: Boolean,
+        solo_lectura: Boolean,
+    },
     data() {
         return {
             local: {
@@ -134,13 +143,17 @@ export default {
     },
     computed: {
         monedas() {
-            return this.$store.state.moneda.models 
+            let modelos = this.$store.state.moneda.models
+            return this.solo_lectura ? modelos.filter(moneda => this.dato_guardado(moneda.id)) : modelos
         },
         article() {
             return this.$store.state.article.model
         },
     },
     created() {
+        if (this.solo_lectura) {
+            return
+        }
         console.log('CREADO PRICE TYPE MOENDAS, ARTICLE:')
         console.log(this.article.price_type_monedas)
 
@@ -149,10 +162,7 @@ export default {
 
         this.monedas.forEach(m => {
 
-            const existente = this.article.price_type_monedas?.find(ptm =>
-                ptm.price_type_id === this.article_price_type.id &&
-                ptm.moneda_id === m.id
-            );
+            const existente = this.dato_guardado(m.id)
 
             console.log('existente:')
             console.log(existente)
@@ -205,6 +215,15 @@ export default {
         }
     },
     methods: {
+        dato_guardado(moneda_id) {
+            return (this.article.price_type_monedas || []).find(ptm =>
+                ptm.price_type_id == this.article_price_type.id && ptm.moneda_id == moneda_id
+            )
+        },
+
+        precio_por_moneda(moneda_id) {
+            return this.solo_lectura ? this.dato_guardado(moneda_id) : this.local.ptm[moneda_id]
+        },
 
         /**
          * "?" de una moneda de la lista: el desglose del precio de ESTA lista en ESTA moneda, en el
@@ -226,7 +245,7 @@ export default {
          * @returns {String}
          */
         origen_del_precio(moneda) {
-            const entry = this.local.ptm[moneda.id]
+            const entry = this.precio_por_moneda(moneda.id)
 
             if (entry.cotizar_desde_otra_moneda == 1) {
                 const otra = this.monedas.find(m => m.id != moneda.id)
@@ -245,27 +264,6 @@ export default {
             }
 
             return 'Margen de ' + this.porcentaje_es(Math.round(parseFloat(valor) * 100) / 100) + '%'
-        },
-
-        /**
-         * ¿Este es el toggle de la PRIMERA moneda de la PRIMERA lista de precios?
-         *
-         * Es lo unico que decide si el bloque lleva el `data-tour`. Sin esta condicion el valor
-         * se repetiria tantas veces como listas por monedas tenga la cuenta.
-         *
-         * `price_types` viene del mixin global `mixins/generals.js`; `article_price_type.id` es el
-         * id de la lista de precios (lo arma `price-type-input/Index.vue`).
-         *
-         * @param {Object} moneda
-         * @returns {Boolean}
-         */
-        es_primer_toggle_cotizacion(moneda) {
-            if (!this.price_types.length || !this.monedas.length || !this.article_price_type) {
-                return false
-            }
-
-            return this.price_types[0].id == this.article_price_type.id
-                && this.monedas[0].id == moneda.id
         },
 
         is_inputs_disabled(moneda_id, field) {
@@ -324,7 +322,7 @@ export default {
 
             // Eliminamos las entradas anteriores del mismo price_type_id
             const actuales = this.article.price_type_monedas.filter(
-                e => e.price_type_id !== this.article_price_type.id
+                e => e.price_type_id != this.article_price_type.id
             );
 
             // Agregamos las nuevas sin duplicar

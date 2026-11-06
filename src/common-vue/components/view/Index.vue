@@ -399,6 +399,10 @@ export default {
 			type: Array,
 			default: null,
 		},
+		hidden_properties_for_modal: {
+			type: Array,
+			default: () => [],
+		},
 		show_actualizado: {
 			type: Boolean,
 			default: true,
@@ -539,6 +543,9 @@ export default {
 			// }
 
 			let props = this.get_properties_to_show(this.model_name)
+				.map(prop => this.hidden_properties_for_modal.includes(prop.key)
+					? { ...prop, not_show_on_form: true }
+					: prop)
  
 			props = this.check_propiedades_extras(props)
 

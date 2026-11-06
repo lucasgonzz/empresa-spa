@@ -1,171 +1,250 @@
 <template>
-	<!--
-		Gate por extension (mision agentes-ia-extension-unica, 22/10/2026): el modulo de WhatsApp es
-		parte de "Agentes de IA" (agentes_ia). El menu ya lo esconde, pero la ruta /whatsapp existe
-		siempre (el router no procesa extensiones), asi que quien la tipee sin la extension ve un
-		aviso en vez de una bandeja que responderia 403. Mientras auth/me no resolvio no se dibuja
-		ni el modulo ni el aviso (hasExtencion devuelve undefined): sin parpadeo.
-	-->
 	<b-row
 	v-if="tiene_agentes_ia"
-	class="whatsapp-module">
-		<b-col
-		class="whatsapp-module__chats"
-		cols="12"
-		md="4">
-			<chats-list></chats-list>
+	class="whatsapp-module"
+	:style="{'--wa-alto-menu-movil': alto_menu_movil + 'px'}"
+	:class="{'whatsapp-module--chat': conversacion_abierta}">
+		<b-col class="whatsapp-module__chats" cols="12" md="4">
+			<chats-list :chat_de_prueba_id="chat_de_prueba_id"></chats-list>
 		</b-col>
-		<b-col
-		class="whatsapp-module__tablero"
-		cols="12"
-		md="8">
-			<dashboard-tablero></dashboard-tablero>
+		<b-col class="whatsapp-module__panel" cols="12" md="8">
+			<template v-if="conversacion_abierta">
+				<conversation embedded></conversation>
+				<image-lightbox
+				:show="Boolean(lightbox_url)"
+				:image_url="lightbox_url || ''"
+				@close="cerrar_lightbox"></image-lightbox>
+			</template>
+			<dashboard-tablero v-show="!conversacion_abierta"></dashboard-tablero>
+			<div ref="robot_guardado" hidden>
+				<robot ref="robot" pose="senalar" class="whatsapp-tour-robot"></robot>
+			</div>
 		</b-col>
 	</b-row>
-	<b-alert
-	v-else-if="extensiones_cargadas"
-	show
-	variant="warning"
-	class="m-t-15">
+	<b-alert v-else-if="extensiones_cargadas" show variant="warning" class="m-t-15">
 		Este módulo requiere la extensión Agentes de IA. Comunicate con ComercioCity si querés activarla.
 	</b-alert>
 </template>
 <script>
 import ChatsList from '@/components/whatsapp/chats-list/Index'
 import DashboardTablero from '@/components/whatsapp/dashboard/Index'
+import Conversation from '@/components/whatsapp/conversation/Index'
+import ImageLightbox from '@/components/whatsapp/conversation/ImageLightbox'
+import Robot from '@/components/implementacion/Robot'
+import { iniciar_tour, cortar_tour, hay_tour_activo } from '@/tours/motor'
 
-/**
- * Módulo de WhatsApp: la bandeja de chats (un tercio de la pantalla) y el tablero de estado
- * (los dos tercios restantes) — misión whatsapp-tablero-clientes, 14/9/2026. Hasta esa misión
- * esta vista era una sola columna con solo la bandeja; se resolvió el pedido de Lucas de dejar
- * de ocupar toda la pantalla con la lista y sumar un panel fijo con el resumen de la bandeja.
- *
- * 🔴 **Acá NO se dibuja la conversación.** Vive en un único lugar de toda la aplicación:
- * el sidebar (`components/whatsapp/sidebar/Index.vue`), que monta `SidebarHost.vue` desde
- * `App.vue`, `position: fixed` sobre la parte derecha. Es lo que hace que "reutilizable"
- * signifique algo: si la conversación se dibujara también acá, habría dos copias de lo mismo
- * para mantener. Al abrir un chat, el sidebar tapa parte del tablero (no la bandeja, que queda
- * a la izquierda) — es el mismo comportamiento de siempre, no algo que esta misión cambie.
- *
- * 🔴 **Y acá tampoco vive la suscripción a Echo.** También se mudó a `SidebarHost.vue`. No
- * puede volver: con las dos escuchas activas, cada mensaje entrante sonaría dos veces y
- * dispararía dos `markRead`.
- *
- * Queda como `b-row` con `b-col` (y no como dos `div` sueltos) para conservar los márgenes
- * negativos de Bootstrap que compensan el padding del `b-container` de App.vue: sin eso el
- * módulo dejaría de llegar hasta el borde de la pantalla.
- */
 export default {
-	components: {
-		ChatsList,
-		DashboardTablero,
-	},
+	components: { ChatsList, DashboardTablero, Conversation, ImageLightbox, Robot },
 	data() {
 		return {
-			// true cuando ya se hizo la carga inicial (se hace una sola vez, apenas se sabe que hay extension).
-			cargado: false,
+			carga_de_bandeja: null,
+			preparando_prueba: false,
+			chat_de_prueba_id: null,
+			recorrido_activo: false,
+			alto_menu_movil: 54,
+			observador_menu: null,
 		}
 	},
 	computed: {
-		/**
-		 * La cuenta tiene la extension "Agentes de IA". hasExtencion devuelve undefined mientras
-		 * auth/me no resolvio: se lee como "no" (y por eso hay que mirar tambien extensiones_cargadas).
-		 */
 		tiene_agentes_ia() {
-			return !!this.hasExtencion('agentes_ia')
+			return Boolean(this.hasExtencion('agentes_ia'))
 		},
-		/** true cuando el usuario y sus extensiones ya llegaron (para no mostrar el aviso antes de tiempo). */
 		extensiones_cargadas() {
-			return !!(this.authenticated && this.owner_extencions)
+			return Boolean(this.authenticated && this.owner_extencions)
+		},
+		conversacion_abierta() {
+			return this.$store.state.whatsapp_chat.sidebar_abierto
+		},
+		lightbox_url() {
+			return this.$store.state.whatsapp_chat.lightbox_url
 		},
 	},
 	watch: {
-		// En una carga fria la extension llega despues de montar la vista: la carga inicial espera a eso.
-		tiene_agentes_ia(tiene) {
-			if (tiene) {
-				this.cargar_modulo()
-			}
+		tiene_agentes_ia: {
+			immediate: true,
+			handler(tiene) {
+				if (!tiene || this.carga_de_bandeja) {
+					return
+				}
+				this.carga_de_bandeja = this.$store.dispatch('whatsapp_chat/getChats')
+				this.$store.dispatch('whatsapp_template/getModels')
+				this.abrir_destino()
+			},
 		},
+		'$route.params.chat_id': 'abrir_destino',
+		'$route.query.probar_agente': 'abrir_destino',
 	},
-	created() {
-		if (this.tiene_agentes_ia) {
-			this.cargar_modulo()
+	mounted() {
+		document.addEventListener('keydown', this.cerrar_con_escape)
+		const menu_movil = document.querySelector('.mobile-nav-header')
+		if (menu_movil && typeof ResizeObserver !== 'undefined') {
+			this.observador_menu = new ResizeObserver(() => {
+				this.alto_menu_movil = menu_movil.offsetHeight
+			})
+			this.observador_menu.observe(menu_movil)
 		}
 	},
+	beforeDestroy() {
+		document.removeEventListener('keydown', this.cerrar_con_escape)
+		if (this.observador_menu) {
+			this.observador_menu.disconnect()
+		}
+		if (this.recorrido_activo) {
+			cortar_tour()
+		}
+		this.$store.commit('whatsapp_chat/setSidebarAbierto', false)
+		this.cerrar_lightbox()
+	},
 	methods: {
-		/**
-		 * Carga inicial de la bandeja de chats y del catálogo de plantillas (lo usa el
-		 * composer para el modal de plantillas), y abre el chat del link directo si lo hay.
-		 * Una sola vez: sin la extension no se llama a nada (la API contestaria 403).
-		 */
-		cargar_modulo() {
-			if (this.cargado) {
+		cerrar_con_escape(event) {
+			if (event.key === 'Escape' && !event.defaultPrevented && this.conversacion_abierta
+				&& !this.lightbox_url && !hay_tour_activo() && !document.body.classList.contains('modal-open')) {
+				this.$store.commit('whatsapp_chat/setSidebarAbierto', false)
+			}
+		},
+		abrir_destino() {
+			if (!this.carga_de_bandeja) {
 				return
 			}
-			this.cargado = true
-
-			/*
-				Carga inicial de la bandeja de chats y del catálogo de plantillas (lo usa el
-				composer para el modal de plantillas). Se cargan acá, una sola vez al entrar
-				al módulo, en vez de en cada sub-componente.
-			*/
-			this.$store.dispatch('whatsapp_chat/getChats')
-			this.$store.dispatch('whatsapp_template/getModels')
-
-			/*
-				Link directo a /whatsapp/{id} (ej: desde otra parte del sistema). Antes esto solo
-				commiteaba `setSelectedChatId` y nunca pedía los mensajes: la conversación se abría
-				vacía. Ahora abre el sidebar y la carga la dispara el watch de conversation/Index.vue,
-				que es el mismo camino que recorren los otros tres modos de abrir un chat.
-			*/
-			if (this.$route.params.chat_id) {
-				let chat_id = parseInt(this.$route.params.chat_id, 10)
-				// Con un id que no es un número no se intenta nada: sin esta guarda el payload
-				// saldría con chat_id NaN y el store creería que le pidieron abrir por teléfono.
-				if (!isNaN(chat_id)) {
-					this.abrir_chat_whatsapp({chat_id: chat_id})
-				}
+			if (this.$route.query.probar_agente === '1') {
+				this.preparar_prueba()
+				return
 			}
+			const chat_id = Number(this.$route.params.chat_id)
+			if (Number.isInteger(chat_id) && chat_id > 0) {
+				this.abrir_chat_whatsapp({chat_id})
+			}
+		},
+		preparar_prueba() {
+			if (this.preparando_prueba) {
+				return
+			}
+			this.preparando_prueba = true
+			this.$store.commit('whatsapp_chat/setSidebarAbierto', false)
+			this.carga_de_bandeja
+				.then(() => {
+					if (this.$route.name === 'whatsapp' && this.$store.state.whatsapp_chat.search_query) {
+						this.$store.commit('whatsapp_chat/setSearchQuery', '')
+						return this.$store.dispatch('whatsapp_chat/getChats')
+					}
+				})
+				.then(() => {
+					if (this.$route.name === 'whatsapp' && this.$route.query.probar_agente === '1') {
+						return this.$store.dispatch('whatsapp_chat/createChat', {is_test: true, trial_demo: true})
+					}
+				})
+				.then(chat => {
+					if (!chat || !this.$el || !this.$el.isConnected || this.$route.query.probar_agente !== '1') {
+						return
+					}
+					this.chat_de_prueba_id = chat.id
+					this.$nextTick(() => this.iniciar_recorrido_de_prueba(chat))
+				})
+				.catch(err => {
+					const data = err.response && err.response.data
+					this.$toast.error((data && data.message) || 'No pudimos preparar el chat de prueba')
+				})
+				.finally(() => { this.preparando_prueba = false })
+		},
+		iniciar_recorrido_de_prueba(chat) {
+			const campo = '[data-tour="whatsapp.escribir_como_cliente"] textarea'
+			const explicacion_modo = chat.ai_mode === 'automatic'
+				? 'Está en Automático. La IA genera la respuesta y la envía sola.'
+				: 'Podés volver a Automático para que la IA genere y envíe la respuesta sola.'
+			this.recorrido_activo = iniciar_tour({
+				id: 'prueba-del-agente-whatsapp',
+				pasos: [
+					{
+						ancla: 'whatsapp.chat_de_prueba',
+						titulo: 'Abrí el chat de prueba',
+						texto: 'Tocá este chat. Acá podés conversar con tu agente usando tu catálogo.',
+						avanza: 'aparece',
+						selector_al_aparecer: campo,
+					},
+					{
+						selector: campo,
+						titulo: 'Escribí como si fueras un cliente',
+						texto: 'Preguntá, por ejemplo, cuánto cuesta un artículo. Apretá Enter para enviar el mensaje de prueba.',
+						avanza: 'evento',
+						evento: 'whatsapp:mensaje-de-prueba-enviado:' + chat.id,
+						selector_al_cerrar: campo,
+						foco: true,
+					},
+					{
+						ancla: 'whatsapp.toggle_ia',
+						titulo: 'Elegí cómo responde la IA',
+						texto: explicacion_modo + ' Probá Semiautomático para editar, aprobar o descartar cada respuesta antes del envío.',
+					},
+				],
+			}, {
+				router: this.$router,
+				store: this.$store,
+				root: this.$root,
+				decorar_popover: popover => {
+					if (this.$refs.robot && popover.title) {
+						popover.title.prepend(this.$refs.robot.$el)
+					}
+				},
+				al_terminar: () => {
+					this.recorrido_activo = false
+					if (this.$refs.robot_guardado && this.$refs.robot) {
+						this.$refs.robot_guardado.appendChild(this.$refs.robot.$el)
+					}
+				},
+			})
+			const query = Object.assign({}, this.$route.query)
+			delete query.probar_agente
+			this.$router.replace({query}).catch(() => {})
+		},
+		cerrar_lightbox() {
+			this.$store.commit('whatsapp_chat/setLightboxUrl', null)
 		},
 	},
 }
 </script>
 <style lang="sass">
 .whatsapp-module
-	// 🔴 `100vh` y no `calc(100vh - 50px)`. Los 50px no correspondían a nada: el nav de este
-	// layout es un riel vertical fijo (`NavVertical.vue`, `position: fixed`, ancho fijo) y no
-	// consume alto, y `App.vue` no tiene ninguna barra superior fija que reste ese espacio. El
-	// resultado con la resta era un hueco vacío de 50px debajo del módulo, en escritorio y en
-	// teléfono. Mismo número mágico —sin arreglar acá, fuera de alcance de esta misión— en
-	// `components/online/components/messages/Index.vue`.
 	height: 100vh
+	height: 100dvh
 	margin-bottom: 0 !important
-	// Escritorio y tablet (≥768px, ver CLAUDE.md — regla de los tres anchos): un tercio para la
-	// bandeja, dos tercios para el tablero, los dos a la altura completa del módulo. El sidebar
-	// de conversación se abre encima con `position: fixed` (ver el docblock arriba) y tapa parte
-	// del tablero cuando está abierto; la bandeja queda siempre visible al lado.
 	&__chats,
-	&__tablero
+	&__panel
 		height: 100%
+		min-width: 0
 		padding: 0
-	// Teléfono (<768px): un tercio de una pantalla de ~375px no alcanza para leer un chat, así
-	// que ahí las dos columnas se apilan (Bootstrap ya las pone a `cols="12"` una debajo de la
-	// otra) — el tablero arriba, compacto, y la bandeja completa abajo. No se oculta ninguna de
-	// las dos: el resumen tiene que verse igual, y `height: 100%` en un `flex-direction: column`
-	// de Bootstrap infla cada columna a la altura del módulo entero, así que se corrige a `auto`.
-	@media screen and (max-width: 767px)
-		height: auto
-		min-height: 100vh
-		// EL `order` PONE EL TABLERO ARRIBA EN TELEFONO Y NO ES COSMETICO: en el template
-		// `__chats` va ANTES que `__tablero` en el DOM (asi queda a la izquierda en
-		// desktop/tablet, donde no hay order que lo mueva). Sin esto, en telefono las
-		// columnas se apilan en el mismo orden del DOM -bandeja arriba, tablero abajo-, que
-		// es lo contrario de lo que dice el parrafo de arriba.
-		&__tablero
-			order: 1
-		&__chats
-			order: 2
-		&__chats,
-		&__tablero
-			height: auto
+	&__panel
+		overflow: auto
+		background: var(--color-bg)
+	@media (max-width: 767px)
+		height: calc(100vh - var(--wa-alto-menu-movil))
+		height: calc(100dvh - var(--wa-alto-menu-movil))
+		&:not(&--chat)
+			flex-wrap: nowrap
+			flex-direction: column
+			& > .whatsapp-module__chats
+				flex: 1 1 auto
+				min-height: 230px
+			& > .whatsapp-module__panel
+				order: -1
+				flex: 0 1 auto
+				max-height: 46%
+		&--chat &__chats
+			display: none
+		&--chat .whatsapp-header__btn-texto
+			display: none
+html:has(.whatsapp-module--chat)
+	overflow-y: hidden
+html:has(.whatsapp-module),
+.whatsapp-module__panel,
+.whatsapp-module .whatsapp-messages-container,
+.whatsapp-module .whatsapp-chats-list__body
+	scrollbar-width: thin
+	scrollbar-color: color-mix(in srgb, var(--wa-texto) 32%, transparent) transparent
+#app:has(.asistente-ia-fab) .whatsapp-module--chat .whatsapp-composer
+	padding-inline-end: 76px
+.whatsapp-tour-robot
+	width: 34px
+	height: 34px
+	margin-right: 7px
+	vertical-align: middle
 </style>
