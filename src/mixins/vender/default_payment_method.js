@@ -14,6 +14,11 @@ const METODO_DE_PAGO_EFECTIVO = 3
 
 export default {
 	mixins: [computed],
+    computed: {
+        exigir_eleccion_medio_pago() {
+            return !!(this.owner && this.owner.vender_exigir_eleccion_medio_pago)
+        },
+    },
     data() {
         return {
             intentos_volver_a_llamar_default_payment_method: 0,
@@ -22,7 +27,7 @@ export default {
 	methods: {
 
         /**
-         * Asigna el método de pago por defecto del owner o el fallback (METODO_DE_PAGO_EFECTIVO, el Efectivo).
+         * Aplica la configuración del comercio para iniciar el cobro de la venta.
          * @param {boolean} force_reset true: reemplaza el método actual (tras venta o reset explícito).
          *                            false: solo asigna si aún no hay método (id 0), p. ej. al entrar a Vender.
          */
@@ -36,9 +41,7 @@ export default {
                 los 2, 4, 6, 8 y 10 segundos, y la venta que se esta editando se aplica a los 500
                 ms. Todos los reintentos caen despues. Un guard en el llamador no los frena.
 
-                force_reset en true es una accion explicita -guardar una venta, limpiar, o el
-                usuario tocando el checkbox de omitir cuenta corriente-, y ahi si tiene que
-                aplicar, tambien en edicion.
+                force_reset en true se usa al limpiar el formulario para empezar otra venta.
 
                 Ojo con por que no alcanza el guard de abajo: una venta a cuenta corriente tiene
                 current_acount_payment_method_id en 0, que es falsy, o sea que justo el estado que
@@ -51,27 +54,32 @@ export default {
             if (!force_reset && this.current_acount_payment_method_id) {
                 return
             }
-            if (this.authenticated) {
-                if (this.owner.default_current_acount_payment_method_id) {
-                    this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.owner.default_current_acount_payment_method_id)
-                } else {
-                    if (force_reset || !this.current_acount_payment_method_id) {
-                        this.$store.commit('vender/setCurrentAcountPaymentMethodId', METODO_DE_PAGO_EFECTIVO)
-                    }
-                }
-            } else {
-                this.volver_a_llamar_default_payment_method(force_reset)
+            if (!this.authenticated || !this.owner) {
+                this.volver_a_llamar_default_payment_method()
+                return
             }
+
+            if (this.exigir_eleccion_medio_pago) {
+                if (force_reset) {
+                    this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
+                }
+                return
+            }
+
+            const metodo = this.owner.default_current_acount_payment_method_id || METODO_DE_PAGO_EFECTIVO
+            this.$store.commit('vender/setCurrentAcountPaymentMethodId', metodo)
         },
         /**
-         * Reintenta asignar el método por defecto cuando auth aún no está lista.
-         * @param {boolean} force_reset Mismo criterio que setDefaultPaymentMethod.
+         * Reintenta al completar la autenticación, respetando la selección que haya desde entonces.
          */
-        volver_a_llamar_default_payment_method(force_reset = false) {
+        volver_a_llamar_default_payment_method() {
             if (this.intentos_volver_a_llamar_default_payment_method < 5) {
                 setTimeout(() => {
+                    if (this._isDestroyed) {
+                        return
+                    }
                     this.intentos_volver_a_llamar_default_payment_method++
-                    this.setDefaultPaymentMethod(force_reset)
+                    this.setDefaultPaymentMethod()
                 }, 2000)
             }
         },
@@ -91,6 +99,10 @@ export default {
             }
         },
         habilitar_metodo_de_pago() {
+            // Sacar el cliente puede volver la venta a contado. Conservá el medio de esta venta.
+            if (this.exigir_eleccion_medio_pago) {
+                return
+            }
             this.$store.commit('vender/setCurrentAcountPaymentMethodId', METODO_DE_PAGO_EFECTIVO)
         },
 	}

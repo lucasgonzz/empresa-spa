@@ -19,7 +19,7 @@ export default {
 				return []
 			}
 			return this.$store.getters['price_type/listas'].slice().sort((a, b) => {
-				return (Number(b.position) || 0) - (Number(a.position) || 0) || a.id - b.id
+				return (Number(b.position) || 0) - (Number(a.position) || 0) || b.id - a.id
 			})
 		},
 		puede_crear_lista() {

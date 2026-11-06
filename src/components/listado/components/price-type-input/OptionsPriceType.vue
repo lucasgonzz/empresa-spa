@@ -17,19 +17,20 @@
 		     un tema completamente distinto. -->
 		<div v-if="mostrar_interruptor" class="price-type-card__interruptor">
 			<b-form-checkbox
+			switch
 			variant="success"
 			:value="1"
 			:unchecked-value="0"
-			v-model="article_price_type.pivot.setear_precio_final"
-			size="sm">
+			:checked="Number(article_price_type.pivot.setear_precio_final) === 1 ? 1 : 0"
+			@change="article_price_type.pivot.setear_precio_final = $event">
 				Setear precio final
 			</b-form-checkbox>
 			<div class="price-type-card__interruptor-ayuda">
-				<template v-if="article_price_type.pivot.setear_precio_final">
-					Cargas el precio y el sistema calcula el margen
+				<template v-if="Number(article_price_type.pivot.setear_precio_final) === 1">
+					Cargá el precio y el sistema calcula el margen.
 				</template>
 				<template v-else>
-					Cargas el margen y el sistema calcula el precio
+					Cargá el margen y el sistema calcula el precio.
 				</template>
 			</div>
 		</div>
@@ -40,9 +41,9 @@
 		     veia en ninguna lista sin recargos, aunque el dato existiera. -->
 		<div class="price-type-card__datos">
 			<div
-			v-if="price_type_store.price_type_surchages.length"
+		v-if="(price_type_store.price_type_surchages || []).length"
 			class="price-type-card__dato">
-				<span class="price-type-card__dato-label">Con recargos</span>
+			<span class="price-type-card__dato-label">Después de recargos</span>
 				{{ price(article_price_type.pivot.precio_luego_de_recargos) }}
 			</div>
 
