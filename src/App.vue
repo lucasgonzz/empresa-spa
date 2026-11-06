@@ -137,6 +137,7 @@
             para autorizar el panel. Ver store/demo.js y el estado inicial de PanelDemo.
         -->
         <panel-demo v-if="$store.getters['demo/panel_visible']"></panel-demo>
+        <panel-prueba v-else-if="prueba_chat_usuario_id" :key="prueba_chat_usuario_id"></panel-prueba>
 
         <!--
             El v-if esconde la vista entera mientras hay bloqueo de app instalada: el login no se
@@ -238,8 +239,15 @@ export default {
         ProcesosModal: () => import('@/components/common/procesos-en-segundo-plano/Modal'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
+        PanelPrueba: () => import('@/components/prueba/PanelAsistente'),
     },
     computed: {
+        prueba_chat_usuario_id() {
+            const usuario = this.$store.state.auth.user
+            if (this.$route.name === 'demoIngreso') return null
+            return this.authenticated && !this.version_bloqueada && !this.$store.state.prueba.vencida
+                && usuario && usuario.puede_usar_chat_prueba === true ? usuario.id : null
+        },
         implementacion_usuario_id() {
             return !this.version_bloqueada && puede_ver_implementacion(this.$store.state.auth)
                 ? this.$store.state.auth.user.id : null

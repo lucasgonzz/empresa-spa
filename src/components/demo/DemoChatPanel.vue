@@ -1,21 +1,21 @@
 <template>
 	<div class="demo-ai" :class="{ 'demo-ai--cerrado': colapsado }" :style="reserva_launcher">
-		<button v-if="colapsado" class="demo-ai__launcher" type="button" aria-label="Abrir asistente de la demo" @click="$emit('alternar')">
-			<span class="demo-ai__orb" aria-hidden="true">✦</span><span>Tu guía de demo <small>Seguí explorando</small></span><i class="bi bi-arrow-up-right"></i>
+		<button v-if="colapsado" class="demo-ai__launcher" type="button" :aria-label="'Abrir ' + nombre_asistente" @click="$emit('alternar')">
+			<span class="demo-ai__orb" aria-hidden="true">✦</span><span>{{ prueba ? 'Tu asistente de la prueba' : 'Tu guía de demo' }} <small>Seguí explorando</small></span><i class="bi bi-arrow-up-right"></i>
 		</button>
-		<aside v-show="!colapsado" class="demo-ai__panel" aria-label="Asistente de la demo">
+		<aside v-show="!colapsado" class="demo-ai__panel" :aria-label="prueba ? 'Asistente de la prueba' : 'Asistente de la demo'">
 			<header class="demo-ai__header">
 				<span class="demo-ai__orb" aria-hidden="true">✦</span>
-				<div><h2>Tu asistente de la demo</h2><p>Explorá, preguntá y probá</p><a v-if="tienda_url" class="demo-ai__tienda" :href="tienda_url" target="_blank" rel="noopener noreferrer" data-demo-tienda @click="pausar">Tu tienda <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+				<div><h2>Tu {{ nombre_asistente }}</h2><p>Explorá, preguntá y probá</p><a v-if="tienda_url" class="demo-ai__tienda" :href="tienda_url" target="_blank" rel="noopener noreferrer" data-demo-tienda @click="pausar">Tu tienda <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
 				<button type="button" aria-label="Minimizar asistente" @click="minimizar"><i class="bi bi-dash-lg"></i></button>
 			</header>
-			<div ref="hilo" class="demo-ai__hilo" role="log" aria-live="polite" aria-label="Conversación de la demo">
-				<div v-if="cargando && !mensajes.length" class="demo-ai__inicio"><span class="demo-ai__orb">✦</span><p>Preparando tu recorrido</p></div>
+			<div ref="hilo" class="demo-ai__hilo" role="log" aria-live="polite" :aria-label="prueba ? 'Conversación de la prueba' : 'Conversación de la demo'">
+				<div v-if="cargando && !mensajes.length" class="demo-ai__inicio"><span class="demo-ai__orb">✦</span><p>{{ prueba ? 'Conectando con tu asistente' : 'Preparando tu recorrido' }}</p></div>
 				<button v-if="guia_pausada" type="button" class="demo-ai__seccion" @click="retomar_guia">Retomar guía de Vender</button>
 				<article v-for="mensaje in mensajes" :key="mensaje.id" :data-demo-mensaje="mensaje.id" class="demo-ai__mensaje" :class="{ 'demo-ai__mensaje--lead': mensaje.rol === 'lead' }">
 					<small>{{ mensaje.rol === 'lead' ? 'Vos' : 'Asistente' }}</small>
 					<p v-if="mensaje.contenido">{{ mensaje.contenido }}</p>
-					<section v-for="video in mensaje.videos || []" :key="video.clave" class="demo-ai__video" :class="{ 'demo-ai__video--hecho': video.completado }">
+					<section v-for="video in (prueba ? [] : mensaje.videos || [])" :key="video.clave" class="demo-ai__video" :class="{ 'demo-ai__video--hecho': video.completado }">
 						<div class="demo-ai__video-heading"><span>{{ video.origen === 'recurso' ? 'Centro de recursos' : 'Tu recorrido' }}</span><i v-if="video.completado" class="bi bi-check-circle-fill" aria-label="Video completado"></i></div>
 						<h3>{{ video.titulo }}</h3>
 						<button v-if="video_abierto !== mensaje.id + ':' + video.clave" class="demo-ai__ver" type="button" @click="abrir_video(mensaje, video)"><i class="bi bi-play-fill"></i>{{ video.completado ? 'Volver a ver' : 'Ver video' }}</button>
@@ -28,19 +28,20 @@
 				<div v-if="pensando" class="demo-ai__pensando" role="status"><span class="demo-ai__constelacion" aria-hidden="true"><i></i><i></i><i></i></span><span>{{ estado === 'listo' ? 'Preparando tu respuesta' : 'Pensando' }}<small>{{ estado === 'esperando' ? 'Te leo. Podés seguir escribiendo.' : 'Buscando cómo ayudarte' }}</small></span></div>
 			</div>
 			<footer class="demo-ai__footer">
-				<p v-if="error" class="demo-ai__error" role="alert">{{ error }} <button type="button" @click="reintentar">Reintentar</button></p>
+				<p v-if="prueba && !disponible && !cargando && !error" class="demo-ai__error" role="status">El asistente no está disponible en este momento. <button type="button" @click="reintentar">Reintentar</button></p>
+				<p v-else-if="error" class="demo-ai__error" role="alert">{{ error }} <button type="button" @click="reintentar">Reintentar</button></p>
 				<p v-else-if="estado === 'error'" class="demo-ai__error" role="alert">No pude preparar la respuesta. Probá enviando tu consulta de nuevo.</p>
 				<form class="demo-ai__composer" @submit.prevent="enviar">
-					<textarea ref="entrada" v-model="texto" rows="2" maxlength="4000" placeholder="¿Qué querés probar?" aria-label="Preguntale al asistente de la demo" @keydown.enter.exact.prevent="enviar"></textarea>
-					<button type="submit" :disabled="!texto.trim() || enviando" aria-label="Enviar mensaje"><i class="bi bi-arrow-up"></i></button>
+					<textarea ref="entrada" v-model="texto" rows="2" maxlength="4000" placeholder="¿Qué querés probar?" :aria-label="'Preguntale al ' + nombre_asistente" @keydown.enter.exact.prevent="enviar"></textarea>
+					<button type="submit" :disabled="!texto.trim() || enviando || (prueba && !disponible)" aria-label="Enviar mensaje"><i class="bi bi-arrow-up"></i></button>
 				</form>
 				<small class="demo-ai__ayuda">Preguntá lo que necesites. Vamos a tu ritmo.</small>
 			</footer>
 		</aside>
-		<div ref="guia_guardada" hidden>
+		<div v-if="!prueba" ref="guia_guardada" hidden>
 			<demo-guia-robot ref="guia" v-model="texto_guia" :texto="guia_texto" :aviso="guia_aviso" :pensando="Boolean(solicitud_guia)" :enviando="enviando" @enviar="enviar_desde_guia" @cerrar="cerrar_desde_guia" @pausar="pausar_guia"></demo-guia-robot>
 		</div>
-		<selector-videos-demo ref="selector" :catalogo="catalogo" :seleccionando="seleccionando" :error="error_seleccion" @seleccionar="seleccionar_video" @cerrado="selector_cerrado"></selector-videos-demo>
+		<selector-videos-demo v-if="!prueba" ref="selector" :catalogo="catalogo" :seleccionando="seleccionando" :error="error_seleccion" @seleccionar="seleccionar_video" @cerrado="selector_cerrado"></selector-videos-demo>
 	</div>
 </template>
 <script>
@@ -57,15 +58,17 @@ const CAMPOS_DE_VENDER = '#article-bar-code, #search-article, #service_name, #ar
 
 export default {
 	components: { TarjetaClip, SelectorVideosDemo, DemoGuiaRobot },
-	props: { colapsado: { type: Boolean, default: false } },
+	props: { colapsado: { type: Boolean, default: false }, prueba: { type: Boolean, default: false } },
 	data() {
 		return {
 			mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, foco_seleccion: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0,
 			texto_guia: '', guia_texto: '', guia_aviso: '', guia_activa: null, guia_pausada: null,
-			solicitud_guia: null, envio_desde_guia: false,
+			solicitud_guia: null, envio_desde_guia: false, disponible: false,
 		}
 	},
 	computed: {
+		nombre_asistente() { return this.prueba ? 'asistente de la prueba' : 'asistente de la demo' },
+		ruta_chat() { return this.prueba ? '/api/prueba/chat' : '/api/demo/chat' },
 		reserva_base() {
 			// Comparte la reserva de Vender y deja lugar al asistente personal y al soporte.
 			let vender = this.$store.state.vender
@@ -107,7 +110,9 @@ export default {
 		this.iniciar()
 		this.observar_ubicacion_launcher()
 		let self = this
-		this.temporizador = setInterval(function () { self.refrescar() }, 3000)
+		this.temporizador = setInterval(function () {
+			if (!self.prueba || self.pensando || Date.now() >= self._refrescar_prueba_en) self.refrescar()
+		}, 3000)
 	},
 	beforeDestroy() {
 		document.body.classList.remove('demo-chat-abierto')
@@ -208,24 +213,42 @@ export default {
 		// El panel vive entre módulos: sus pedidos no pertenecen a la pantalla que se abandona.
 		iniciar() {
 			let self = this
-			this.$axios.post('/api/demo/chat/iniciar', {}, { skip_navigation_cancel: true }).then(function (res) { self.aplicar(res.data); self.error = '' }).catch(function (e) { self.fallar(e) }).then(function () { self.cargando = false })
+			if (this.prueba) {
+				this.cargando = true
+				this.error = ''
+				this._refrescar_prueba_en = Date.now() + 30000
+			}
+			this.$axios.post(this.ruta_chat + '/iniciar', {}, { skip_navigation_cancel: true }).then(function (res) { self.aplicar_respuesta(res); self.error = '' }).catch(function (e) { self.fallar(e) }).then(function () { self.cargando = false })
 		},
 		refrescar() {
 			this.programar_ubicacion_launcher()
 			if (this.consultando || this.destruido) return
 			let self = this
 			this.consultando = true
-			this.$axios.get('/api/demo/chat', { skip_navigation_cancel: true }).then(function (res) {
-				self.aplicar(res.data)
+			if (this.prueba) this._refrescar_prueba_en = Date.now() + 30000
+			this.$axios.get(this.ruta_chat, { skip_navigation_cancel: true }).then(function (res) {
+				self.aplicar_respuesta(res)
 				if (!self.pendiente_envio) self.error = ''
 				Object.keys(self.pendientes_video).forEach(function (clave) { self.enviar_progreso(clave) })
 			}).catch(function (e) { self.fallar(e) }).then(function () { self.consultando = false })
 		},
+		aplicar_respuesta(res) {
+			if (this.prueba && res.status === 204) {
+				this.$emit('sin-acceso')
+				return false
+			}
+			return this.aplicar(res.data)
+		},
 		aplicar(snapshot) {
-			if (this.destruido) return
-			if (!snapshot || snapshot.disponible === false) { this.$emit('no-disponible'); return }
+			if (this.destruido) return false
+			if (!snapshot || snapshot.disponible === false) {
+				this.disponible = false
+				this.$emit('no-disponible')
+				return false
+			}
+			this.disponible = true
 			let revision = Number(snapshot.conversacion && snapshot.conversacion.revision) || 0
-			if (revision < this.revision) return
+			if (revision < this.revision) return true
 			let nuevos = Array.isArray(snapshot.mensajes) ? snapshot.mensajes : []
 			let anterior = this.mensajes.length ? this.mensajes[this.mensajes.length - 1].id : null
 			this.revision = revision
@@ -233,12 +256,15 @@ export default {
 			// Una API anterior no anuncia el selector: el chat y su progreso siguen disponibles.
 			this.catalogo = Array.isArray(snapshot.catalogo) ? snapshot.catalogo : []
 			this.mensajes = nuevos
-			this.aplicar_guia(nuevos)
-			let self = this
-			nuevos.forEach(function (mensaje) { (mensaje.videos || []).forEach(function (video) {
-				if (video.origen === 'demo' && video.completado && self.$store.state.demo.clips_vistos.indexOf(video.clip_id) === -1) self.$emit('terminado', self.clip_de(video))
-			}) })
+			if (!this.prueba) {
+				this.aplicar_guia(nuevos)
+				let self = this
+				nuevos.forEach(function (mensaje) { (mensaje.videos || []).forEach(function (video) {
+					if (video.origen === 'demo' && video.completado && self.$store.state.demo.clips_vistos.indexOf(video.clip_id) === -1) self.$emit('terminado', self.clip_de(video))
+				}) })
+			}
 			if (nuevos.length && nuevos[nuevos.length - 1].id !== anterior) this.al_final()
+			return true
 		},
 		enviar() {
 			this.enviar_consulta(this.texto, false)
@@ -248,14 +274,14 @@ export default {
 		},
 		enviar_consulta(texto, desde_guia) {
 			const contenido = texto.trim()
-			if (!contenido || this.enviando) return
+			if (!contenido || this.enviando || (this.prueba && !this.disponible)) return
 			this.guia_pausada = null
 			if (!this.pendiente_envio || this.pendiente_envio.contenido !== contenido || this.envio_desde_guia !== desde_guia) {
 				this.pendiente_envio = { contenido: contenido, cliente_uuid: this.uuid() }
 				this.envio_desde_guia = desde_guia
 			}
 			const envio = this.pendiente_envio
-			if (this.en_vender && (!desde_guia || this.guia_activa)) {
+			if (!this.prueba && this.en_vender && (!desde_guia || this.guia_activa)) {
 				envio.guia = { version: 1, pantalla: 'vender' }
 				if (this.guia_activa && this.guia_activa.paso) envio.guia.paso = this.guia_activa.paso
 				if (!this.solicitud_guia || this.solicitud_guia.uuid !== envio.cliente_uuid) {
@@ -272,11 +298,12 @@ export default {
 			this.error = ''
 			this.guia_aviso = ''
 			this.al_final()
-			this.$axios.post('/api/demo/chat/mensajes', envio, { skip_navigation_cancel: true }).then(function (res) {
+			this.$axios.post(this.ruta_chat + '/mensajes', envio, { skip_navigation_cancel: true }).then(function (res) {
 				if (self.solicitud_guia && self.solicitud_guia.uuid === envio.cliente_uuid) {
 					self.solicitud_guia.revision = Number(res.data && res.data.conversacion && res.data.conversacion.revision) || 0
 				}
-				self.aplicar(res.data)
+				const aplicada = self.aplicar_respuesta(res)
+				if (self.prueba && !aplicada) return
 				const campo = desde_guia ? 'texto_guia' : 'texto'
 				if (self[campo].trim() === contenido) self[campo] = ''
 				self.pendiente_envio = null
@@ -379,7 +406,7 @@ export default {
 			this.error = 'Se cortó la conexión. Tu mensaje queda acá para reintentarlo.'
 		},
 		reintentar() {
-			if (!this.pendiente_envio) this.iniciar()
+			if (!this.pendiente_envio || (this.prueba && !this.disponible)) this.iniciar()
 			else if (this.envio_desde_guia) this.enviar_desde_guia()
 			else this.enviar()
 		},
@@ -499,7 +526,7 @@ export default {
 	> .driver-popover-title, > .driver-popover-description, > .driver-popover-close-btn, > .driver-popover-footer
 		display: none !important
 
-// El acceso al asistente del negocio vuelve al minimizar la guía de la demo.
+// El botón del asistente del negocio vuelve al minimizar el panel lateral.
 body.demo-chat-abierto .asistente-ia-fab
 	visibility: hidden
 	pointer-events: none
