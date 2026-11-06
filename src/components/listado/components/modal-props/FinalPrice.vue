@@ -7,10 +7,13 @@
 	-->
 	<div
 	data-tour="listado.campo_precio_final"
-	class="cont-final-price">
+	class="cont-final-price"
+	:class="{ 'cont-final-price--tarjeta price-type-card__encabezado': en_tarjeta }">
 		<b-button
+		v-if="!en_tarjeta || article.id"
 		data-tour="listado.boton_explicacion_precio"
-		class="btn-explicacion m-r-10"
+		class="btn-explicacion"
+		:class="en_tarjeta ? 'price-type-card__info' : 'm-r-10'"
 		@click="info"
 		variant="outline-secondary"
 		title="Ver cómo se calculó este precio"
@@ -18,13 +21,16 @@
 			<i class="bi bi-question-lg"></i>
 		</b-button>
 		<p
-		class="text-success">
+		:class="en_tarjeta ? 'price-type-card__precio' : 'text-success'">
 			{{ propertyText(article, prop, false, !prop.from_pre_view) }}
 		</p>
 	</div>
 </template>
 <script>
 export default {
+	props: {
+		en_tarjeta: Boolean,
+	},
 	computed: {
 		article() {
 			return this.$store.state.article.model
@@ -109,8 +115,15 @@ export default {
 	justify-content: flex-start
 	align-items: center
 
-	p
+	p.text-success
 		font-size: 2.5em
 		margin: 0
 		font-weight: bold
+
+.cont-final-price--tarjeta
+	margin-bottom: 8px
+
+	p
+		order: -1
+		margin: 0
 </style>
