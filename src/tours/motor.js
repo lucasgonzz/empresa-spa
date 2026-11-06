@@ -1094,13 +1094,14 @@ function mostrar_paso(i) {
 	}
 
 	const paso = corrida.pasos[i]
+	const corrida_del_paso = corrida
 
 	corrida.preparando = i
 	corrida.avanzando = true
 
 	preparar_paso(paso, corrida.contexto).then(function (elemento) {
 		/* El lead pudo haber cortado el tour mientras se preparaba este paso. */
-		if (!corrida || corrida.preparando !== i) {
+		if (corrida !== corrida_del_paso || corrida.preparando !== i) {
 			return
 		}
 
@@ -1158,7 +1159,7 @@ function mostrar_paso(i) {
 		recorrido.highlight({
 			element: elemento,
 			popover: {
-				description: paso.texto,
+				description: corrida.contexto.renderizar_guia ? '' : paso.texto,
 				side: paso.lado || lado_sugerido(elemento),
 				align: paso.alineacion || 'start',
 				/* El progreso se arma a mano porque el motor muestra de a un paso: driver.js no
@@ -1286,8 +1287,9 @@ function enfocar_campo_del_paso(paso, elemento) {
  * @returns {void}
  */
 function reubicar_cartel(i, elemento) {
+	const corrida_del_paso = corrida
 	function reubicar() {
-		if (!corrida || !recorrido || corrida.indice !== i) {
+		if (corrida !== corrida_del_paso || !recorrido || corrida.indice !== i) {
 			return
 		}
 
@@ -1418,7 +1420,11 @@ function menu_de(elemento) {
  * @returns {void}
  */
 function enganchar_refresco(elemento) {
+	const activa = corrida
+	const indice = corrida.indice
+	const es_guia = Boolean(corrida.contexto.renderizar_guia)
 	let pedido = false
+	let reloj_resize = null
 
 	function volver_a_medir() {
 		if (pedido || !corrida || !recorrido) {
@@ -1430,14 +1436,30 @@ function enganchar_refresco(elemento) {
 		window.requestAnimationFrame(function () {
 			pedido = false
 
-			if (corrida && recorrido) {
+			if (corrida === activa && corrida.indice === indice && recorrido) {
 				recorrido.refresh()
 			}
 		})
 	}
+	function al_redimensionar() {
+		volver_a_medir()
+		if (!es_guia) return
+		clearTimeout(reloj_resize)
+		reloj_resize = setTimeout(function () {
+			if (corrida !== activa || corrida.indice !== indice || !recorrido || corrida.avanzando) return
+			const paso = corrida.pasos[indice]
+			const encontrado = buscar_visible(selector_de(paso))
+			if (!encontrado || subir_a_ancestro(encontrado, paso.ancestro) !== elemento) {
+				mostrar_paso(indice)
+				return
+			}
+			acomodar_scroll(paso, elemento)
+			recorrido.refresh()
+		}, 160)
+	}
 
 	document.addEventListener('scroll', volver_a_medir, true)
-	window.addEventListener('resize', volver_a_medir)
+	window.addEventListener('resize', al_redimensionar)
 
 	/* El elemento también se mueve sin que nadie scrollee: la tabla recalcula anchos de columna al
 	 * llegar los datos, y el modal cambia de alto al abrirse una solapa. */
@@ -1453,7 +1475,8 @@ function enganchar_refresco(elemento) {
 
 	sueltas_de_refresco = function () {
 		document.removeEventListener('scroll', volver_a_medir, true)
-		window.removeEventListener('resize', volver_a_medir)
+		window.removeEventListener('resize', al_redimensionar)
+		clearTimeout(reloj_resize)
 
 		if (observador) {
 			observador.disconnect()
@@ -1788,6 +1811,16 @@ function cambia_de_ruta(i) {
  * @returns {void}
  */
 function enganchar_avance(paso, i, elemento) {
+	if (paso.avanza === 'evento') {
+		enganchar_avance_por_evento(paso, i)
+		return
+	}
+
+	if (paso.avanza === 'escritura' || paso.avanza === 'enter') {
+		enganchar_avance_por_entrada(paso, i, elemento)
+		return
+	}
+
 	if (!espera_un_gesto(paso, i)) {
 		/* Lo dispara el botón del cartel, que cae en `onNextClick`. Nada que enganchar. */
 		return
@@ -1803,7 +1836,44 @@ function enganchar_avance(paso, i, elemento) {
 		return
 	}
 
-	enganchar_avance_por_aparicion(i)
+	enganchar_avance_por_aparicion(paso, i)
+}
+
+function enganchar_avance_por_evento(paso, i) {
+	const activa = corrida
+	function al_elegir() {
+		if (corrida === activa && corrida.indice === i) avanzar_a(i + 1)
+	}
+	document.addEventListener(paso.evento, al_elegir)
+	const reloj = setInterval(function () {
+		if (corrida === activa && corrida.indice === i && !buscar_visible(paso.selector_al_cerrar)) cortar_tour()
+	}, INTERVALO_SONDEO)
+	limpiezas.push(function () {
+		document.removeEventListener(paso.evento, al_elegir)
+		clearInterval(reloj)
+	})
+}
+
+function enganchar_avance_por_entrada(paso, i, elemento) {
+	const activa = corrida
+	const evento = paso.avanza === 'enter' ? 'keydown' : 'input'
+	const selector = selector_de(paso)
+	function al_entrar(e) {
+		const campo = e.target
+		if (corrida !== activa || corrida.indice !== i || !campo.matches(selector) || !campo.value.trim()) return
+		if (evento === 'keydown' && (e.key !== 'Enter' || e.isComposing || e.repeat)) return
+		avanzar_a(i + 1)
+	}
+	if (evento === 'input' && elemento.value && elemento.value.trim()) {
+		// Al retomar, el criterio que el lead ya escribió sigue en el buscador.
+		const reloj = setTimeout(function () {
+			if (corrida === activa && corrida.indice === i) avanzar_a(i + 1)
+		}, 0)
+		limpiezas.push(function () { clearTimeout(reloj) })
+		return
+	}
+	document.addEventListener(evento, al_entrar, true)
+	limpiezas.push(function () { document.removeEventListener(evento, al_entrar, true) })
 }
 
 /**
@@ -2137,10 +2207,12 @@ function enganchar_avance_por_carga(campo, selector, i) {
  * @param {Number} i
  * @returns {void}
  */
-function enganchar_avance_por_aparicion(i) {
+function enganchar_avance_por_aparicion(paso, i) {
+	const activa = corrida
 	const siguiente = corrida.pasos[i + 1]
+	const selector = paso.selector_al_aparecer || (siguiente && selector_de(siguiente))
 
-	if (!siguiente) {
+	if (!selector) {
 		return
 	}
 
@@ -2157,15 +2229,15 @@ function enganchar_avance_por_aparicion(i) {
 	 * Cuando el elemento ya está, el gesto no se puede detectar por aparición: se pasa a botón, que
 	 * al menos deja al lead decidir cuándo terminó.
 	 */
-	if (buscar_visible(selector_de(siguiente))) {
+	if (buscar_visible(selector)) {
 		console.warn('Tour ' + corrida.clip_id + ': el paso ' + (i + 2) + ' ya está a la vista, así que el paso ' + (i + 1) + ' avanza con el botón')
 		corrida.forzar_boton = i
 		recorrido.refresh()
 		return
 	}
 
-	esperar_elemento(selector_de(siguiente), siguiente.techo_ms || TECHO_ESPERA_GESTO).then(function (elemento) {
-		if (!corrida || corrida.indice !== i) {
+	esperar_elemento(selector, (siguiente && siguiente.techo_ms) || TECHO_ESPERA_GESTO).then(function (elemento) {
+		if (corrida !== activa || corrida.indice !== i) {
 			return
 		}
 
@@ -2245,6 +2317,7 @@ function cerrar_corrida(motivo) {
 	const avisar = corrida.contexto && typeof corrida.contexto.al_terminar === 'function'
 		? corrida.contexto.al_terminar
 		: null
+	const es_guia = corrida.contexto && Boolean(corrida.contexto.renderizar_guia)
 
 	const resultado = {
 		clip_id: corrida.clip_id || null,
@@ -2258,6 +2331,10 @@ function cerrar_corrida(motivo) {
 	limpiar()
 
 	if (!avisar) {
+		return
+	}
+	if (es_guia) {
+		avisar(resultado)
 		return
 	}
 
@@ -2629,7 +2706,7 @@ export function iniciar_tour(clip, contexto) {
 
 	recorrido = driver({
 		allowClose: true,
-		popoverClass: 'tour-demo',
+		popoverClass: contexto.renderizar_guia ? 'tour-demo tour-demo--guia' : 'tour-demo',
 		smoothScroll: true,
 		/**
 		 * 🔴 Sin animación de transición, y no es una preferencia estética.
@@ -2675,6 +2752,13 @@ export function iniciar_tour(clip, contexto) {
 		 */
 		onPopoverRender: function (popover) {
 			if (!corrida) {
+				return
+			}
+			if (contexto.renderizar_guia) {
+				popover.wrapper.removeAttribute('aria-labelledby')
+				popover.wrapper.removeAttribute('aria-describedby')
+				popover.wrapper.setAttribute('aria-label', 'Guía de Vender')
+				contexto.renderizar_guia(popover.wrapper, corrida.pasos[corrida.indice], corrida.indice)
 				return
 			}
 
@@ -2735,6 +2819,10 @@ export function iniciar_tour(clip, contexto) {
 		 * sola.
 		 */
 		onDestroyStarted: function () {
+			if (contexto.renderizar_guia) {
+				cortar_tour()
+				return
+			}
 			pedir_confirmacion_de_cierre()
 		},
 	})

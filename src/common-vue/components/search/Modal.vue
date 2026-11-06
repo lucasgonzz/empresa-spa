@@ -5,6 +5,7 @@ size="xl"
 hide-footer
 :id="modal_id"
 :data-tour="ancla_tour"
+:ignore-enforce-focus-selector="ancla_tour ? '.demo-guia-robot' : null"
 @show="onModalShow"
 @hidden="onModalHidden">
 	<div
@@ -102,6 +103,7 @@ hide-footer
 				</div>
 
 				<table-component
+				:data-tour="ancla_tour && busqueda_realizada && !loading && results.length ? 'vender.resultados_buscador_articulos' : null"
 				:properties="properties"
 				:selected_index="selected_index"
 				select_mode="single"
@@ -1736,6 +1738,9 @@ export default {
 			}
 
 			this.$emit('setSelected', model, this.results)
+			if (this.ancla_tour && this.modal_visible && model) {
+				document.dispatchEvent(new Event('vender:articulo-elegido-en-buscador'))
+			}
 
 			if (this.limpiar_resultados_de_busqueda) {
 

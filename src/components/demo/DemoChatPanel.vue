@@ -11,6 +11,7 @@
 			</header>
 			<div ref="hilo" class="demo-ai__hilo" role="log" aria-live="polite" aria-label="Conversación de la demo">
 				<div v-if="cargando && !mensajes.length" class="demo-ai__inicio"><span class="demo-ai__orb">✦</span><p>Preparando tu recorrido</p></div>
+				<button v-if="guia_pausada" type="button" class="demo-ai__seccion" @click="retomar_guia">Retomar guía de Vender</button>
 				<article v-for="mensaje in mensajes" :key="mensaje.id" :data-demo-mensaje="mensaje.id" class="demo-ai__mensaje" :class="{ 'demo-ai__mensaje--lead': mensaje.rol === 'lead' }">
 					<small>{{ mensaje.rol === 'lead' ? 'Vos' : 'Asistente' }}</small>
 					<p v-if="mensaje.contenido">{{ mensaje.contenido }}</p>
@@ -36,23 +37,33 @@
 				<small class="demo-ai__ayuda">Preguntá lo que necesites. Vamos a tu ritmo.</small>
 			</footer>
 		</aside>
+		<div ref="guia_guardada" hidden>
+			<demo-guia-robot ref="guia" v-model="texto_guia" :texto="guia_texto" :aviso="guia_aviso" :pensando="Boolean(solicitud_guia)" :enviando="enviando" @enviar="enviar_desde_guia" @cerrar="cerrar_desde_guia" @pausar="pausar_guia"></demo-guia-robot>
+		</div>
 		<selector-videos-demo ref="selector" :catalogo="catalogo" :seleccionando="seleccionando" :error="error_seleccion" @seleccionar="seleccionar_video" @cerrado="selector_cerrado"></selector-videos-demo>
 	</div>
 </template>
 <script>
 import TarjetaClip from '@/components/demo/TarjetaClip'
 import SelectorVideosDemo from '@/components/demo/SelectorVideosDemo'
+import DemoGuiaRobot from '@/components/demo/DemoGuiaRobot'
 import { tour_habilitado } from '@/tours/habilitados'
+import { iniciar_tour, cortar_tour } from '@/tours/motor'
+import { ajustar_guia_a_vender, pasos_de_guia } from '@/tours/guia-vender'
 
 // Campos de carga de artículos (en VENDER: código de barras, buscador, servicio y cantidad) que el launcher no puede tapar.
 // Los ids también existen en otras pantallas de carga (Ingresar, buscadores): ahí también se esquivan, y no hace daño.
 const CAMPOS_DE_VENDER = '#article-bar-code, #search-article, #service_name, #article-amount'
 
 export default {
-	components: { TarjetaClip, SelectorVideosDemo },
+	components: { TarjetaClip, SelectorVideosDemo, DemoGuiaRobot },
 	props: { colapsado: { type: Boolean, default: false } },
 	data() {
-		return { mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, foco_seleccion: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0 }
+		return {
+			mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, foco_seleccion: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0,
+			texto_guia: '', guia_texto: '', guia_aviso: '', guia_activa: null, guia_pausada: null,
+			solicitud_guia: null, envio_desde_guia: false,
+		}
 	},
 	computed: {
 		reserva_base() {
@@ -80,11 +91,16 @@ export default {
 		},
 		estado() { return this.esperando_local ? 'esperando' : this.conversacion.estado },
 		pensando() { return ['esperando', 'pensando', 'listo'].indexOf(this.estado) !== -1 },
+		en_vender() { return this.$route.name === 'vender' && this.$route.params.view === 'remito' },
 	},
 	watch: {
 		colapsado() { this.actualizar_espacio(); this.programar_ubicacion_launcher() },
 		estado_editores_whatsapp() { this.programar_ubicacion_launcher() },
-		'$route.fullPath'() { this.programar_ubicacion_launcher() },
+		'$route.fullPath'() {
+			this.guia_pausada = null
+			this.cerrar_guia()
+			this.programar_ubicacion_launcher()
+		},
 	},
 	mounted() {
 		this.actualizar_espacio()
@@ -96,6 +112,7 @@ export default {
 	beforeDestroy() {
 		document.body.classList.remove('demo-chat-abierto')
 		this.destruido = true
+		this.cerrar_guia()
 		clearInterval(this.temporizador)
 		this.limpiar_ubicacion_launcher()
 		this.pausar()
@@ -216,6 +233,7 @@ export default {
 			// Una API anterior no anuncia el selector: el chat y su progreso siguen disponibles.
 			this.catalogo = Array.isArray(snapshot.catalogo) ? snapshot.catalogo : []
 			this.mensajes = nuevos
+			this.aplicar_guia(nuevos)
 			let self = this
 			nuevos.forEach(function (mensaje) { (mensaje.videos || []).forEach(function (video) {
 				if (video.origen === 'demo' && video.completado && self.$store.state.demo.clips_vistos.indexOf(video.clip_id) === -1) self.$emit('terminado', self.clip_de(video))
@@ -223,19 +241,134 @@ export default {
 			if (nuevos.length && nuevos[nuevos.length - 1].id !== anterior) this.al_final()
 		},
 		enviar() {
-			if (!this.texto.trim() || this.enviando) return
-			let contenido = this.texto.trim()
-			if (!this.pendiente_envio || this.pendiente_envio.contenido !== contenido) this.pendiente_envio = { contenido: contenido, cliente_uuid: this.uuid() }
+			this.enviar_consulta(this.texto, false)
+		},
+		enviar_desde_guia() {
+			this.enviar_consulta(this.texto_guia, true)
+		},
+		enviar_consulta(texto, desde_guia) {
+			const contenido = texto.trim()
+			if (!contenido || this.enviando) return
+			this.guia_pausada = null
+			if (!this.pendiente_envio || this.pendiente_envio.contenido !== contenido || this.envio_desde_guia !== desde_guia) {
+				this.pendiente_envio = { contenido: contenido, cliente_uuid: this.uuid() }
+				this.envio_desde_guia = desde_guia
+			}
+			const envio = this.pendiente_envio
+			if (this.en_vender && (!desde_guia || this.guia_activa)) {
+				envio.guia = { version: 1, pantalla: 'vender' }
+				if (this.guia_activa && this.guia_activa.paso) envio.guia.paso = this.guia_activa.paso
+				if (!this.solicitud_guia || this.solicitud_guia.uuid !== envio.cliente_uuid) {
+					const ultimo = this.mensajes[this.mensajes.length - 1]
+					this.solicitud_guia = { uuid: envio.cliente_uuid, desde: ultimo ? ultimo.id : 0, revision: null }
+				}
+			} else {
+				delete envio.guia
+				this.solicitud_guia = null
+			}
 			let self = this
 			this.enviando = true
 			this.esperando_local = true
 			this.error = ''
+			this.guia_aviso = ''
 			this.al_final()
-			this.$axios.post('/api/demo/chat/mensajes', this.pendiente_envio, { skip_navigation_cancel: true }).then(function (res) {
+			this.$axios.post('/api/demo/chat/mensajes', envio, { skip_navigation_cancel: true }).then(function (res) {
+				if (self.solicitud_guia && self.solicitud_guia.uuid === envio.cliente_uuid) {
+					self.solicitud_guia.revision = Number(res.data && res.data.conversacion && res.data.conversacion.revision) || 0
+				}
 				self.aplicar(res.data)
-				if (self.texto.trim() === contenido) self.texto = ''
+				const campo = desde_guia ? 'texto_guia' : 'texto'
+				if (self[campo].trim() === contenido) self[campo] = ''
 				self.pendiente_envio = null
-			}).catch(function (e) { self.fallar(e) }).then(function () { self.enviando = false; self.esperando_local = false })
+			}).catch(function (e) {
+				self.fallar(e)
+				if (self.solicitud_guia && self.solicitud_guia.uuid === envio.cliente_uuid) self.solicitud_guia = null
+				if (desde_guia && self.guia_activa) self.guia_aviso = self.error
+			}).then(function () { self.enviando = false; self.esperando_local = false })
+		},
+		aplicar_guia(mensajes) {
+			const solicitud = this.solicitud_guia
+			if (!solicitud || solicitud.revision === null || this.revision < solicitud.revision || !this.en_vender) return
+			const respuesta = mensajes.find(function (mensaje) {
+				return mensaje.rol === 'asistente' && mensaje.guia && mensaje.guia.version === 1 && mensaje.guia.solicitud_uuid === solicitud.uuid
+			})
+			if (respuesta) {
+				this.solicitud_guia = null
+				if (respuesta.guia.accion === 'cerrar') {
+					this.cerrar_guia()
+					this.mostrar_chat()
+				} else if (respuesta.guia.accion === 'iniciar') {
+					const pasos = pasos_de_guia(respuesta.guia.pasos)
+					if (pasos.length) this.iniciar_guia(pasos)
+					else this.guia_aviso = respuesta.contenido
+				}
+				return
+			}
+			if (['esperando', 'pensando', 'listo'].indexOf(this.conversacion.estado) !== -1) return
+			this.solicitud_guia = null
+			if (!this.guia_activa) return
+			const ultima = mensajes.slice().reverse().find(function (mensaje) {
+				return mensaje.rol === 'asistente' && mensaje.id > solicitud.desde
+			})
+			this.guia_aviso = ultima ? ultima.contenido : 'No pude actualizar la guía. Podés probar de nuevo.'
+		},
+		iniciar_guia(pasos) {
+			this.guia_pausada = null
+			this.guia_aviso = ''
+			const ajustados = ajustar_guia_a_vender(pasos)
+			if (!ajustados.length) {
+				this.cerrar_guia()
+				this.mostrar_chat()
+				return
+			}
+			const guia = { pasos: ajustados, paso: null, indice: 0, iniciada: false }
+			this.guia_activa = guia
+			if (!this.colapsado) this.minimizar()
+			this.$nextTick(() => {
+				if (this.guia_activa !== guia || !this.en_vender) return
+				guia.iniciada = iniciar_tour({ id: 'guia-vender', pasos: guia.pasos }, {
+					router: this.$router,
+					root: this.$root,
+					renderizar_guia: (viñeta, paso, indice) => {
+						guia.paso = paso.id || 'codigo_barras'
+						guia.indice = indice
+						this.guia_texto = paso.texto
+						viñeta.appendChild(this.$refs.guia.$el)
+					},
+					al_terminar: () => {
+						if (this.guia_activa !== guia) return
+						this.guia_activa = null
+						this.solicitud_guia = null
+						this.guardar_vineta()
+					},
+				})
+			})
+		},
+		guardar_vineta() {
+			if (this.$refs.guia && this.$refs.guia_guardada) this.$refs.guia_guardada.appendChild(this.$refs.guia.$el)
+		},
+		cerrar_guia() {
+			const guia = this.guia_activa
+			this.guia_activa = null
+			this.solicitud_guia = null
+			if (guia && guia.iniciada) cortar_tour()
+			this.guardar_vineta()
+		},
+		mostrar_chat() {
+			if (this.colapsado) this.$emit('alternar')
+		},
+		cerrar_desde_guia() {
+			this.cerrar_guia()
+			this.mostrar_chat()
+		},
+		pausar_guia() {
+			if (!this.guia_activa) return
+			this.guia_pausada = this.guia_activa.pasos.slice(this.guia_activa.indice).filter(function (paso) { return paso.id })
+			this.cerrar_guia()
+			this.mostrar_chat()
+		},
+		retomar_guia() {
+			if (this.guia_pausada && this.guia_pausada.length && this.en_vender) this.iniciar_guia(this.guia_pausada)
 		},
 		uuid() {
 			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) { let r = Math.floor(Math.random() * 16); return (c === 'x' ? r : (r & 3) | 8).toString(16) })
@@ -245,7 +378,11 @@ export default {
 			if (error.response && [404, 405].indexOf(error.response.status) !== -1) { this.$emit('no-disponible'); return }
 			this.error = 'Se cortó la conexión. Tu mensaje queda acá para reintentarlo.'
 		},
-		reintentar() { if (this.pendiente_envio) this.enviar(); else this.iniciar() },
+		reintentar() {
+			if (!this.pendiente_envio) this.iniciar()
+			else if (this.envio_desde_guia) this.enviar_desde_guia()
+			else this.enviar()
+		},
 		al_final() {
 			let self = this
 			this.$nextTick(function () { if (self.$refs.hilo) self.$refs.hilo.scrollTop = self.$refs.hilo.scrollHeight })
@@ -357,6 +494,11 @@ export default {
 }
 </script>
 <style lang="sass">
+.tour-demo--guia
+	max-width: min(300px, calc(100vw - 24px))
+	> .driver-popover-title, > .driver-popover-description, > .driver-popover-close-btn, > .driver-popover-footer
+		display: none !important
+
 // El acceso al asistente del negocio vuelve al minimizar la guía de la demo.
 body.demo-chat-abierto .asistente-ia-fab
 	visibility: hidden
