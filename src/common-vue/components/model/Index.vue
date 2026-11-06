@@ -35,6 +35,7 @@
 			:model="model"></btn-pdf>
 
 			<model-form
+			ref="formulario"
 			@save="save"
 			@has_many_deleted="has_many_deleted"
 			@has_many_saved="has_many_saved"
@@ -88,31 +89,6 @@
 
 			</model-form>
 
-			<div
-			v-if="false">
-			<!-- <div
-			v-if="show_limpiar_formulario"> -->
-				<b-form-checkbox
-				:value="1"
-				:uncheked-value="0"
-				v-model="clear_model">
-					Limpiar formulario
-				</b-form-checkbox>
-				<div
-				class="p-l-20"
-				v-if="!clear_model">
-					<h5
-					class="m-t-15">
-						Se mantendran las siguientes propiedades:
-					</h5>
-					<p
-					class="m-b-0"
-					v-for="prop in props_to_keep_after_create">
-						{{ prop.text }}
-					</p>
-				</div>
-			</div>
-
 			<template v-slot:modal-footer>
 				<slot 
 				v-if="!from_has_many"
@@ -136,7 +112,7 @@
 							barra de bloques soldados. Y sobre todo dejaba pegadas dos acciones de
 							sentido opuesto -una destructiva y una confirmatoria-, que es justo la
 							geometria que hace facil errarle al clic. Ahora Eliminar queda a la
-							izquierda y Guardar y cerrar se va a la derecha con margin-left: auto.
+							izquierda y las acciones de guardado a la derecha.
 						-->
 						<div class="model-modal-footer">
 						<btn-delete
@@ -151,18 +127,29 @@
 						:dusk="'btn_eliminar_'+model_name"
 						:modal="'delete-'+model_name"></btn-delete>
 
-						<btn-loader
-						:block="false"
-						class="model-modal-footer__guardar"
-						v-if="!papelera && can_save"
-						@clicked="save"
-						:dusk="'btn_guardar_'+model_name"
-						:data-testid="'btn-guardar-'+model_name"
-						:data-tour="ancla_tour_guardar"
-						:prop_to_send_on_emit="{close: true}"
-						:loader="loading"
-						:disabled="model_name == 'provider_order' && compra_guardado_en_curso"
-						text="Guardar y cerrar"></btn-loader>
+						<div v-if="!papelera && can_save" class="model-modal-footer__acciones">
+							<btn-loader
+							:block="false"
+							class="model-modal-footer__guardar-abierto"
+							variant="outline-primary"
+							@clicked="save"
+							:data-testid="'btn-guardar-abierto-'+model_name"
+							:prop_to_send_on_emit="{close: false}"
+							:loader="loading && guardado_sin_cerrar"
+							:disabled="guardado_en_curso || loading || (model_name == 'provider_order' && compra_guardado_en_curso)"
+							text="Guardar"></btn-loader>
+							<btn-loader
+							:block="false"
+							class="model-modal-footer__guardar"
+							@clicked="save"
+							:dusk="'btn_guardar_'+model_name"
+							:data-testid="'btn-guardar-'+model_name"
+							:data-tour="ancla_tour_guardar"
+							:prop_to_send_on_emit="{close: true}"
+							:loader="loading && !guardado_sin_cerrar"
+							:disabled="guardado_en_curso || loading || (model_name == 'provider_order' && compra_guardado_en_curso)"
+							text="Guardar y cerrar"></btn-loader>
+						</div>
 
 						<!-- Restaurar usa el mismo chasis del footer pero conserva su verde: no lleva
 						     la clase __guardar, que es la que fuerza el azul de la accion primaria. -->
@@ -335,7 +322,8 @@ export default {
 	},
 	data() {
 		return {
-			clear_model: 1,
+			guardado_sin_cerrar: false,
+			guardado_en_curso: false,
 			restaurando: false,
 			compra_guardado_en_curso: false,
 			compra_envio_iniciado: false,
@@ -382,9 +370,6 @@ export default {
 			return ancla_de(ANCLA_BOTON_GUARDAR, this.model_name)
 		},
 
-		show_limpiar_formulario() {
-			return this.props_to_keep_after_create.length
-		},
 		loading: {
 			set(value) {
 				this.$store.commit('auth/setLoading', value)
@@ -454,11 +439,7 @@ export default {
 			}
 			return this.create_spanish(this.model_name)
 		},
-		props_to_keep_after_create() {
-			return this.properties.filter(prop => {
-				return prop.keep_after_create 
-			})
-		}
+
 	},
 	mounted() {
 		/*
@@ -509,16 +490,7 @@ export default {
 		guardar_de_nuevo_con(extra_props) {
 			this.extra_props_del_proximo_guardado = extra_props || {}
 
-			/*
-				🔴 El `{close: true}` NO es opcional. `save(info)` no tiene default y su `.then()`
-				llama a `closeModal(info, ...)`, que arranca con `if (info.close)`: con `info` en
-				undefined tira un TypeError DESPUES de que el guardado salio bien, el error cae en
-				el `.catch()` encadenado del mismo PUT y el usuario termina viendo "No se pudo
-				guardar" con el modal trabado sobre una operacion que funciono.
-
-				Es el mismo objeto que manda el unico otro llamador (`@save` de ModelForm).
-			*/
-			this.save({ close: true })
+			this.save({ close: !this.guardado_sin_cerrar })
 		},
 		has_many_deleted() {
 			this.$emit('has_many_deleted')
@@ -598,11 +570,12 @@ export default {
 			// alert('emitiendo model_deleted desde Index')
 			this.$emit('modelDeleted')
 		},
-		save(info) {
+		save(info = { close: true }) {
 			let self = this
 			const es_compra = this.model_name == 'provider_order'
+			if (this.guardado_en_curso || this.loading) return Promise.resolve()
 			if (es_compra) {
-				if (this.compra_guardado_en_curso || this.loading) {
+				if (this.compra_guardado_en_curso) {
 					return Promise.resolve()
 				}
 				// El loading global puede apagarse por un pedido accesorio que falla. El POST de
@@ -611,6 +584,8 @@ export default {
 				this.compra_envio_iniciado = false
 				this.compra_confirmada = false
 			}
+			this.guardado_sin_cerrar = info.close === false
+			this.guardado_en_curso = true
 			return Promise.resolve().then(() => self.check()).then(isValid => {
 			// this.setPropsValues()}
 			console.log('se mando check')
@@ -683,7 +658,7 @@ export default {
 								this.has_many_parent_model[this.has_many_prop.key].splice(index, 1, res.data.model)
 							} else {
 								this.has_many_parent_model[this.has_many_prop.key].push(res.data.model)
-								this.setModel(this.has_many_parent_model, this.has_many_parent_model_name)
+								this.setModel(this.has_many_parent_model, this.has_many_parent_model_name, [], info.close, info.close)
 							}
 						} else {
 							if (this.model_name == 'user') {
@@ -697,9 +672,11 @@ export default {
 								// console.log(res.data.model)
 							}
 						}
-						this.closeModal(info, res.data.model)
+						this.actualizar_posiciones_de_listas(res.data, model_to_send)
+						this.finalizar_guardado(info, res.data.model, modelo_enviado)
 						// false: es una actualizacion, no un alta (ver callActions).
 						this.callActions(res.data.model, false)
+						this.guardado_sin_cerrar = false
 					})
 					.catch(err => {
 						this.extra_props_del_proximo_guardado = {}
@@ -725,6 +702,7 @@ export default {
 							this.setSaveErrorFromApi(err)
 						}
 						this.atender_error_de_compra(err, es_compra)
+						this.recargar_listas_si_cambio(err)
 					})
 				} else {
 					return this.$api.post(route, model_to_send, config_del_envio)
@@ -769,16 +747,17 @@ export default {
 										// console.log('se agrego el id '+created_model.temporal_id)
 									}
 								} 
-								this.setModel(this.has_many_parent_model, this.has_many_parent_model_name)
+							this.setModel(this.has_many_parent_model, this.has_many_parent_model_name, [], info.close, info.close)
 
 							} else {
 								this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
 							}
 						}	
-						this.closeModal(info, res.data.model)
+						this.actualizar_posiciones_de_listas(res.data, model_to_send)
+						this.finalizar_guardado(info, created_model, modelo_enviado)
 						// true: es un alta (ver callActions).
 						this.callActions(created_model, true)
-						this.clearModel(info)
+						this.guardado_sin_cerrar = false
 					})
 					.catch(err => {
 						this.extra_props_del_proximo_guardado = {}
@@ -801,6 +780,7 @@ export default {
 							this.setSaveErrorFromApi(err)
 						}
 						this.atender_error_de_compra(err, es_compra)
+						this.recargar_listas_si_cambio(err)
 					})
 				}
 			} else {
@@ -812,6 +792,8 @@ export default {
 				self.extra_props_del_proximo_guardado = {}
 				self.setSaveErrorFromApi(err)
 				self.atender_error_de_compra(err, es_compra)
+			}).finally(() => {
+				this.guardado_en_curso = false
 			})
 		},
 		iniciar_espera_de_compra(es_compra) {
@@ -866,54 +848,30 @@ export default {
 
 			return this.routeString(this.model_name)
 		},
-		/**
-		 * Desde el 10/8/2026 el footer de este modal tiene un solo boton de guardar ("Guardar y
-		 * cerrar"), que manda close: true. O sea que la rama de info.close === false ya no la
-		 * alcanza NINGUN llamador del footer, y lo mismo vale para el clearModel() que cuelga de
-		 * ella. No se borran: save() tambien se invoca desde el @save de ModelForm y este es un
-		 * componente generico que usa todo el sistema, asi que sacar esa rama es una limpieza
-		 * estructural con su propia decision detras. Queda escrito para que nadie la de por viva
-		 * ni la "limpie" sin entender por que quedo.
-		 */
-		closeModal(info, model) {
+		finalizar_guardado(info, model, modelo_enviado) {
 			if (info.close) {
 				setTimeout(() => {
-					this.$bvModal.hide(this.model_name)
+					this.$bvModal.hide(this.modal_id || this.model_name)
 				}, 100)
-			} else {
-
-				console.log('se va a poner este model:')
-				console.log(this.model)
-
-				console.log('res model:')
-				console.log(model)
-
-				this.setModel(model, this.model_name)
-
-				// setTimeout(() => {
-				// 	this.$bvModal.hide(this.model_name)
-
-				// 	setTimeout(() => {
-				// 		this.$bvModal.show(this.model_name)
-				// 	}, 100)
-
-				// }, 100)
+			} else if (model && model.id && !this.model_prop && this.model === modelo_enviado) {
+				// El alta pasa a edición con el ID devuelto, sin reabrir el modal.
+				const formulario = JSON.parse(JSON.stringify(model))
+				const properties = this.preparar_propiedades_del_modelo(formulario, this.model_name)
+				this.$store.commit(this.model_name+'/setModel', { model: formulario, properties })
 			}
 		},
-		clearModel(info) {
-			if (!info.close) {
-				let properties_to_override = []
-				if (!this.clear_model) {
-					this.props_to_keep_after_create.forEach(prop => {
-						properties_to_override.push({
-							key: prop.key,
-							value: this.model[prop.key],
-						})
-					})
-					// console.log('propiedades para mantener')
-					// console.log(properties_to_override)
-				} 
-				this.setModel(null, this.model_name, properties_to_override, false)
+		actualizar_posiciones_de_listas(data, model_to_send) {
+			if (this.model_name !== 'price_type' || !model_to_send.orden_listas) return
+			if (Array.isArray(data.posiciones_listas)) {
+				this.$store.commit('price_type/setPosiciones', data.posiciones_listas)
+			} else {
+				this.$store.dispatch('price_type/getModels')
+			}
+		},
+		recargar_listas_si_cambio(err) {
+			if (this.model_name === 'price_type' && err.response?.data?.errors?.orden_listas) {
+				this.$refs.formulario?.set_selected_group_title('General')
+				this.$store.dispatch('price_type/getModels')
 			}
 		},
 		getModelToSend() {
@@ -1265,6 +1223,7 @@ html.dark-mode .modal-content
 // nadie se entere.
 .model-modal-footer
 	display: flex
+	flex-wrap: wrap
 	align-items: center
 	gap: 10px
 	width: 100%
@@ -1311,10 +1270,17 @@ html.dark-mode .modal-content
 		border-color: var(--btn-peligro-borde)
 		color: var(--btn-peligro-texto)
 
-	// Guardar y cerrar: la unica accion con peso visual, y empujada a la derecha para que no
-	// quede pegada a la destructiva.
-	.model-modal-footer__guardar
+	.model-modal-footer__acciones
+		display: flex
+		gap: 8px
 		margin-left: auto
+
+	.model-modal-footer__guardar-abierto.btn
+		border-color: var(--color-primary)
+
+	@media (max-width: 575px)
+		.btn
+			padding: 0 10px
 
 	.model-modal-footer__guardar.btn,
 	.model-modal-footer__guardar.btn:focus,

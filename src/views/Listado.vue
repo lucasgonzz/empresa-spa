@@ -52,8 +52,8 @@
 	model_name="price_type"
 	:show_btn_pdf="false"
 	:show_btn_delete="false"
+	:prop_to_send_on_save="$store.state.price_type.model.id ? null : articulo_para_lista_nueva"
 	check_permissions>
-		<template #model_modal_title>Nueva lista de precios</template>
 	</model-index>
 
 	<view-component
@@ -152,6 +152,7 @@
 				v-if="puede_crear_lista"
 				class="article-price-list-cards__nueva">
 					<b-button
+					class="article-price-list-cards__boton"
 					variant="outline-primary"
 					@click="crear_lista">
 						<i class="bi bi-plus-lg" aria-hidden="true"></i>
@@ -208,6 +209,11 @@ import payment_method_discounts_addresses_columns from '@/mixins/listado/payment
 import actualizar_lista_de_articulos from '@/mixins/listado/actualizar_lista_de_articulos'
 
 export default {
+	data() {
+		return {
+			articulo_para_lista_nueva: null,
+		}
+	},
 	mixins: [payment_method_discounts_addresses_columns, actualizar_lista_de_articulos],
 	name: 'Lisado',
 	components: {
@@ -337,11 +343,11 @@ export default {
 	},
 	methods: {
 		crear_lista() {
-			// La lista nueva queda al final y la prioridad actual se conserva como valor inicial.
-			let ultima = this.listas_de_la_ficha[this.listas_de_la_ficha.length - 1]
-			this.setModel(null, 'price_type', [
-				{ key: 'position', value: (Number(ultima.position) || 0) - 1 },
-			])
+			const articulo = this.$store.state.article.model
+			this.articulo_para_lista_nueva = articulo.id
+				? { key: 'articulo_abierto_id', value: articulo.id }
+				: null
+			this.setModel(null, 'price_type')
 		},
 		addressMovement() {
 			console.log('addressMovement')
@@ -443,8 +449,8 @@ export default {
 <style lang="sass">
 .article-price-list-cards
 	display: grid
-	grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr))
-	gap: 12px
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr))
+	gap: 16px
 
 .article-price-list-cards__nueva
 	display: flex
@@ -453,5 +459,12 @@ export default {
 	min-height: 120px
 	padding: 12px
 	border: 2px dashed var(--color-border-secondary, #ced4da)
-	border-radius: 8px
+	border-radius: 14px
+
+	.article-price-list-cards__boton
+		border-radius: 10px
+		min-height: 38px
+		padding: 0 18px
+		font-size: .875rem
+		font-weight: 600
 </style>

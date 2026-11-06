@@ -36,27 +36,24 @@
 
 		<div class="price-type-card__campos">
 
-			<!-- El campo que manda lleva --manda y el otro --derivado: asi la relacion entre los dos
-			     se ve, en vez de depender solo del gris del disabled. -->
 			<b-input-group
-			v-if="can('article.percentage_gain')"
-			class="price-type-card__campo"
-			:class="indicar_percentage ? 'price-type-card__campo--manda' : 'price-type-card__campo--derivado'"
+			v-if="!indicar_final_price && can('article.percentage_gain')"
+			class="price-type-card__campo price-type-card__campo--manda"
 			prepend="%">
 				<b-form-input
 				type="number"
-				:disabled="!indicar_percentage"
+				aria-label="Margen de ganancia"
 				v-model="article_price_type.pivot.percentage"
-				placeholder="Porcentaje"></b-form-input>
+				placeholder="Margen de ganancia"></b-form-input>
 			</b-input-group>
 
 			<b-input-group
-			class="price-type-card__campo"
-			:class="indicar_final_price ? 'price-type-card__campo--manda' : 'price-type-card__campo--derivado'"
+			v-if="indicar_final_price"
+			class="price-type-card__campo price-type-card__campo--manda"
 			prepend="$">
 				<b-form-input
-				:disabled="!indicar_final_price"
 				type="number"
+				aria-label="Precio final"
 				v-model="article_price_type.pivot.final_price"
 				placeholder="Precio final"></b-form-input>
 			</b-input-group>
@@ -75,17 +72,8 @@ export default {
 		article() {
 			return this.$store.state.article.model
 		},
-		indicar_percentage() {
-			if (this.article_price_type.pivot.setear_precio_final) {
-				return false
-			}
-			return true
-		},
 		indicar_final_price() {
-			if (this.article_price_type.pivot.setear_precio_final) {
-				return true
-			}
-			return false
+			return Number(this.article_price_type.pivot.setear_precio_final) === 1
 		},
 		/**
 		 * El porcentaje del pivot puede venir como string, null, o con muchos decimales (cuando el

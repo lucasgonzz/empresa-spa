@@ -16,7 +16,7 @@
 				:data-testid="testid(item)"
 				:data-tour="item.data_tour || null"
 				@click="select(item)"
-				:class="isActive(item)">
+				:class="[isActive(item), { 'item--principal': Number.isFinite(item.priority) }]">
 					{{ itemName(item) }}
 					<b-badge
 					variant="danger"
@@ -527,6 +527,11 @@ export default {
 		background-color: transparent
 		white-space: nowrap
 		transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease
+
+		&--principal:not(.active)
+			color: var(--color-primary, #0d6efd)
+			background-color: var(--bg-nav-hover, #e7f1ff)
+			font-weight: 600
 
 		&:hover:not(.active)
 			color: var(--color-primary, #0d6efd)

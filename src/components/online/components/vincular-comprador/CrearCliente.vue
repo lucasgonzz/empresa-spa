@@ -57,8 +57,8 @@ const ESPERA_DEL_STORE_MS = 80
 /**
  * Cliente nuevo desde el modal de vincular (misión vincular-comprador-desde-pedidos, 24/9/2026).
  *
- * No hace el vínculo: cuando el cliente se guardó, oculta su modal y avisa `cliente-creado` con el
- * cliente que devolvió la API. Quien tiene el comprador y sabe vincular (./Index.vue) hace el
+ * Cuando se crea el cliente, avisa `cliente-creado` con el modelo que devolvió la API.
+ * Quien tiene el comprador y sabe vincular (./Index.vue) hace el
  * resto, y así hay un solo camino de vinculación para "elegí uno existente" y "creá uno nuevo".
  */
 export default {
@@ -152,18 +152,15 @@ export default {
 			return partes.join(', ')
 		},
 		/**
-		 * El formulario guardó el cliente: se oculta el modal y se avisa al orquestador.
-		 *
-		 * 🔴 El modal se oculta ACÁ, a mano. `closeModal()` de `model/Index.vue` cierra por
-		 * `model_name` (`$bvModal.hide('client')`) y NO por `modal_id`: con un id propio, el
-		 * "Guardar y cerrar" cerraría un modal que no existe y este quedaría abierto.
+		 * Un alta inicia el vínculo. Si se usa Guardar, el editor sigue abierto y los
+		 * siguientes guardados actualizan el mismo cliente sin repetir el vínculo.
 		 *
 		 * @param {Object} cliente Cliente creado, tal como lo devolvió `POST client`.
+		 * @param {Object} info Datos del guardado del formulario.
 		 * @returns {void}
 		 */
-		al_guardar(cliente) {
-			this.$bvModal.hide(ID_MODAL)
-			this.$emit('cliente-creado', cliente)
+		al_guardar(cliente, info) {
+			if (info.es_nuevo) this.$emit('cliente-creado', cliente)
 		},
 	},
 }

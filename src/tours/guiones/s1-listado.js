@@ -297,7 +297,7 @@ export default {
 			},
 			{
 				ancla: 'listado.campo_precio_manual',
-				texto: 'Mirá: el precio manual quedó bloqueado. Mientras haya margen, el precio lo calcula el sistema.',
+				texto: 'Mientras uses el margen, el sistema calcula el precio. Para cargarlo a mano, activá «Setear precio final».',
 				avanza: 'siguiente',
 			},
 			{
