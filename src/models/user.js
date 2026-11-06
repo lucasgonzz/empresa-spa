@@ -350,7 +350,17 @@ export default {
 			store: 'current_acount_payment_method',
 			descriptions:
 			[
-			 	'Si se elige, despues de cada venta el valor del metodo de pago se seteara con este valor',
+				'Vender propone este método al iniciar una venta cuando «Elegir el medio de pago en cada venta» está desactivado.',
+			],
+		},
+		{
+			text: 'Elegir el medio de pago en cada venta',
+			key: 'vender_exigir_eleccion_medio_pago',
+			type: 'checkbox',
+			v_if_function: 'is_owner_v_if_function',
+			descriptions: [
+				'Las ventas nuevas empiezan con «Seleccione método de pago». Para guardar una venta de contado, elegí cómo se cobró.',
+				'Al desactivar esta opción, Vender vuelve a usar el método de pago por defecto configurado.',
 			],
 		},
 		{

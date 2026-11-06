@@ -178,6 +178,7 @@ export default {
 			if (
 				this.$store.getters['vender/previus_sales/editando_venta_previa']
 				|| this.$store.state.vender.budget
+				|| (!this.payment_method_id && this.owner && this.owner.vender_exigir_eleccion_medio_pago)
 			) {
 				return
 			}

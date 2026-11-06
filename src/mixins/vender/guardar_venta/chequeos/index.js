@@ -55,11 +55,15 @@ export default {
 				return false
 			}
 
+			if (this.exigir_medio_de_pago_en_venta_nueva && !this.check_payment_methods()) {
+				return false
+			}
+
 			if (!this.check_cajas()) {
 				return false
 			}
 
-			if (!this.check_payment_methods()) {
+			if (!this.exigir_medio_de_pago_en_venta_nueva && !this.check_payment_methods()) {
 				return false
 			}
 
