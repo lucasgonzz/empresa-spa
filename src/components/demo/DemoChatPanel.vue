@@ -521,6 +521,8 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/components/demo/_estetica-asistente'
+
 .tour-demo--guia
 	max-width: min(300px, calc(100vw - 24px))
 	> .driver-popover-title, > .driver-popover-description, > .driver-popover-close-btn, > .driver-popover-footer
@@ -561,7 +563,7 @@ body.demo-chat-abierto .asistente-ia-fab
 	height: 100%
 	padding: 1px
 	border-radius: 24px
-	background: linear-gradient(135deg, #76d8ff, #7969ec, #ed8bc5, #76d8ff)
+	background: $asistente-degrade
 	background-size: 300% 300%
 	animation: demo-ai-onda 9s ease infinite
 	box-shadow: 0 24px 70px #090d2852, 0 0 26px #7969ec20
@@ -571,7 +573,7 @@ body.demo-chat-abierto .asistente-ia-fab
 	align-items: center
 	gap: 12px
 	padding: 20px 18px 17px
-	background: #151b2e
+	background: $asistente-cabecera
 	border-radius: 23px 23px 0 0
 	h2
 		font-size: 16px
@@ -600,22 +602,12 @@ body.demo-chat-abierto .asistente-ia-fab
 	&:hover, &:focus
 		color: #fff
 .demo-ai__orb
-	display: inline-flex
-	align-items: center
-	justify-content: center
-	flex-shrink: 0
-	width: 40px
-	height: 40px
-	border-radius: 14px
-	color: white
-	font-size: 26px
-	background: linear-gradient(140deg, #69c8ee, #8377e9 55%, #e59abf)
-	box-shadow: 0 0 24px #9793ff35
+	+asistente-orb
 .demo-ai__hilo
 	flex: 1
 	min-height: 0
 	padding: 20px 16px
-	background: #111729
+	background: $asistente-hilo
 	overflow-y: auto
 	overscroll-behavior: contain
 	scrollbar-width: thin
@@ -646,7 +638,7 @@ body.demo-chat-abierto .asistente-ia-fab
 		margin-left: 34px
 		padding: 11px 15px
 		border-radius: 17px 17px 3px 17px
-		background: #2a3351
+		background: $asistente-burbuja
 .demo-ai__video
 	margin-top: 12px
 	padding: 14px
@@ -718,7 +710,7 @@ body.demo-chat-abierto .asistente-ia-fab
 	&:hover
 		background: #ffffff12
 .demo-ai__footer
-	background: #151b2e
+	background: $asistente-cabecera
 	padding: 14px
 	border-radius: 0 0 23px 23px
 .demo-ai__composer
@@ -729,7 +721,7 @@ body.demo-chat-abierto .asistente-ia-fab
 	padding: 10px
 	border-radius: 16px
 	border: 1px solid transparent
-	background: linear-gradient(#202941, #202941) padding-box, linear-gradient(120deg, #76d8ff, #a49dff, #ed8bc5, #76d8ff) border-box
+	background: linear-gradient($asistente-compositor, $asistente-compositor) padding-box, linear-gradient(120deg, #76d8ff, #a49dff, #ed8bc5, #76d8ff) border-box
 	background-size: 100% 100%, 300% 300%
 	animation: demo-ai-onda 7s ease infinite
 	box-shadow: inset 0 0 14px #a49dff09, 0 0 16px #83bdff0e
