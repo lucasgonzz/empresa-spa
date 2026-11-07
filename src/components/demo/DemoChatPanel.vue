@@ -15,7 +15,12 @@
 				<article v-for="mensaje in mensajes" :key="mensaje.id" :data-demo-mensaje="mensaje.id" class="demo-ai__mensaje" :class="{ 'demo-ai__mensaje--lead': mensaje.rol === 'lead' }">
 					<small>{{ mensaje.rol === 'lead' ? 'Vos' : 'Asistente' }}</small>
 					<p v-if="mensaje.contenido">{{ mensaje.contenido }}</p>
-					<section v-for="video in (prueba ? [] : mensaje.videos || [])" :key="video.clave" class="demo-ai__video" :class="{ 'demo-ai__video--hecho': video.completado }">
+					<section v-for="video in videos_del_mensaje(mensaje)" :key="video.clave" class="demo-ai__video" :class="{ 'demo-ai__video--hecho': video.completado }">
+						<template v-if="prueba">
+							<div class="demo-ai__video-heading">Tu prueba</div><h3>{{ video.titulo }}</h3>
+							<button class="demo-ai__ver" type="button" @click="abrir_video_prueba(video)"><i class="bi bi-play-fill" aria-hidden="true"></i>Ver video</button>
+						</template>
+						<template v-else>
 						<div class="demo-ai__video-heading"><span>{{ video.origen === 'recurso' ? 'Centro de recursos' : 'Tu recorrido' }}</span><i v-if="video.completado" class="bi bi-check-circle-fill" aria-label="Video completado"></i></div>
 						<h3>{{ video.titulo }}</h3>
 						<button v-if="video_abierto !== mensaje.id + ':' + video.clave" class="demo-ai__ver" type="button" @click="abrir_video(mensaje, video)"><i class="bi bi-play-fill"></i>{{ video.completado ? 'Volver a ver' : 'Ver video' }}</button>
@@ -23,11 +28,13 @@
 						<div class="demo-ai__avance" role="progressbar" :aria-valuenow="video.porcentaje || 0" aria-valuemin="0" aria-valuemax="100" :aria-label="'Progreso de ' + video.titulo"><span :style="{ width: (video.porcentaje || 0) + '%' }"></span></div>
 						<div class="demo-ai__video-pie"><span>{{ video.porcentaje || 0 }}% visto<span v-if="video.completado"> · Listo</span></span><button v-if="!video.completado && !video.omitido" type="button" @click="omitir(video)">Saltear</button><span v-else-if="video.omitido">Para después</span></div>
 						<button v-if="ubicacion_video(video)" type="button" class="demo-ai__seccion" aria-haspopup="dialog" @click="abrir_selector(video)">{{ ubicacion_video(video) }} <i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+						</template>
 					</section>
 				</article>
 				<div v-if="pensando" class="demo-ai__pensando" role="status"><span class="demo-ai__constelacion" aria-hidden="true"><i></i><i></i><i></i></span><span>{{ estado === 'listo' ? 'Preparando tu respuesta' : 'Pensando' }}<small>{{ estado === 'esperando' ? 'Te leo. Podés seguir escribiendo.' : 'Buscando cómo ayudarte' }}</small></span></div>
 			</div>
 			<footer class="demo-ai__footer">
+				<videos-prueba v-if="prueba" ref="videos_prueba" :catalogo="catalogo"></videos-prueba>
 				<p v-if="prueba && !disponible && !cargando && !error" class="demo-ai__error" role="status">El asistente no está disponible en este momento. <button type="button" @click="reintentar">Reintentar</button></p>
 				<p v-else-if="error" class="demo-ai__error" role="alert">{{ error }} <button type="button" @click="reintentar">Reintentar</button></p>
 				<p v-else-if="estado === 'error'" class="demo-ai__error" role="alert">No pude preparar la respuesta. Probá enviando tu consulta de nuevo.</p>
@@ -48,6 +55,8 @@
 import TarjetaClip from '@/components/demo/TarjetaClip'
 import SelectorVideosDemo from '@/components/demo/SelectorVideosDemo'
 import DemoGuiaRobot from '@/components/demo/DemoGuiaRobot'
+import VideosPrueba from '@/components/prueba/VideosPrueba'
+import { catalogo_de_prueba, adjuntos_de_prueba } from '@/components/prueba/videos'
 import { tour_habilitado } from '@/tours/habilitados'
 import { iniciar_tour, cortar_tour } from '@/tours/motor'
 import { ajustar_guia_a_vender, pasos_de_guia } from '@/tours/guia-vender'
@@ -57,13 +66,13 @@ import { ajustar_guia_a_vender, pasos_de_guia } from '@/tours/guia-vender'
 const CAMPOS_DE_VENDER = '#article-bar-code, #search-article, #service_name, #article-amount'
 
 export default {
-	components: { TarjetaClip, SelectorVideosDemo, DemoGuiaRobot },
+	components: { TarjetaClip, SelectorVideosDemo, DemoGuiaRobot, VideosPrueba },
 	props: { colapsado: { type: Boolean, default: false }, prueba: { type: Boolean, default: false } },
 	data() {
 		return {
 			mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, foco_seleccion: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0,
 			texto_guia: '', guia_texto: '', guia_aviso: '', guia_activa: null, guia_pausada: null,
-			solicitud_guia: null, envio_desde_guia: false, disponible: false,
+			solicitud_guia: null, envio_desde_guia: false, disponible: false, revision_acceso_prueba: 0,
 		}
 	},
 	computed: {
@@ -97,9 +106,10 @@ export default {
 		en_vender() { return this.$route.name === 'vender' && this.$route.params.view === 'remito' },
 	},
 	watch: {
-		colapsado() { this.programar_ubicacion_launcher() },
+		colapsado() { if (this.prueba && this.colapsado) this.pausar(); this.programar_ubicacion_launcher() },
 		estado_editores_whatsapp() { this.programar_ubicacion_launcher() },
 		'$route.fullPath'() {
+			if (this.prueba) this.pausar()
 			this.guia_pausada = null
 			this.cerrar_guia()
 			this.programar_ubicacion_launcher()
@@ -210,27 +220,31 @@ export default {
 		// El panel vive entre módulos: sus pedidos no pertenecen a la pantalla que se abandona.
 		iniciar() {
 			let self = this
+			const acceso = this.revision_acceso_prueba
 			if (this.prueba) {
 				this.cargando = true
 				this.error = ''
 				this._refrescar_prueba_en = Date.now() + 30000
 			}
-			this.$axios.post(this.ruta_chat + '/iniciar', {}, { skip_navigation_cancel: true }).then(function (res) { self.aplicar_respuesta(res); self.error = '' }).catch(function (e) { self.fallar(e) }).then(function () { self.cargando = false })
+			this.$axios.post(this.ruta_chat + '/iniciar', {}, { skip_navigation_cancel: true }).then(function (res) { self.aplicar_respuesta(res, acceso); self.error = '' }).catch(function (e) { self.fallar(e, acceso) }).then(function () { self.cargando = false })
 		},
 		refrescar() {
 			this.programar_ubicacion_launcher()
 			if (this.consultando || this.destruido) return
 			let self = this
 			this.consultando = true
+			const acceso = this.revision_acceso_prueba
 			if (this.prueba) this._refrescar_prueba_en = Date.now() + 30000
 			this.$axios.get(this.ruta_chat, { skip_navigation_cancel: true }).then(function (res) {
-				self.aplicar_respuesta(res)
+				self.aplicar_respuesta(res, acceso)
 				if (!self.pendiente_envio) self.error = ''
 				Object.keys(self.pendientes_video).forEach(function (clave) { self.enviar_progreso(clave) })
-			}).catch(function (e) { self.fallar(e) }).then(function () { self.consultando = false })
+			}).catch(function (e) { self.fallar(e, acceso) }).then(function () { self.consultando = false })
 		},
-		aplicar_respuesta(res) {
+		aplicar_respuesta(res, acceso) {
+			if (this.prueba && acceso !== undefined && acceso !== this.revision_acceso_prueba) return false
 			if (this.prueba && res.status === 204) {
+				this.invalidar_videos_prueba()
 				this.$emit('sin-acceso')
 				return false
 			}
@@ -240,6 +254,7 @@ export default {
 			if (this.destruido) return false
 			if (!snapshot || snapshot.disponible === false) {
 				this.disponible = false
+				if (this.prueba) this.invalidar_videos_prueba()
 				this.$emit('no-disponible')
 				return false
 			}
@@ -251,7 +266,7 @@ export default {
 			this.revision = revision
 			this.conversacion = snapshot.conversacion || {}
 			// Una API anterior no anuncia el selector: el chat y su progreso siguen disponibles.
-			this.catalogo = Array.isArray(snapshot.catalogo) ? snapshot.catalogo : []
+			this.catalogo = this.prueba ? catalogo_de_prueba(snapshot.catalogo) : (Array.isArray(snapshot.catalogo) ? snapshot.catalogo : [])
 			this.mensajes = nuevos
 			if (!this.prueba) {
 				this.aplicar_guia(nuevos)
@@ -278,6 +293,7 @@ export default {
 				this.envio_desde_guia = desde_guia
 			}
 			const envio = this.pendiente_envio
+			const acceso = this.revision_acceso_prueba
 			if (!this.prueba && this.en_vender && (!desde_guia || this.guia_activa)) {
 				envio.guia = { version: 1, pantalla: 'vender' }
 				if (this.guia_activa && this.guia_activa.paso) envio.guia.paso = this.guia_activa.paso
@@ -299,13 +315,13 @@ export default {
 				if (self.solicitud_guia && self.solicitud_guia.uuid === envio.cliente_uuid) {
 					self.solicitud_guia.revision = Number(res.data && res.data.conversacion && res.data.conversacion.revision) || 0
 				}
-				const aplicada = self.aplicar_respuesta(res)
+				const aplicada = self.aplicar_respuesta(res, acceso)
 				if (self.prueba && !aplicada) return
 				const campo = desde_guia ? 'texto_guia' : 'texto'
 				if (self[campo].trim() === contenido) self[campo] = ''
 				self.pendiente_envio = null
 			}).catch(function (e) {
-				self.fallar(e)
+				self.fallar(e, acceso)
 				if (self.solicitud_guia && self.solicitud_guia.uuid === envio.cliente_uuid) self.solicitud_guia = null
 				if (desde_guia && self.guia_activa) self.guia_aviso = self.error
 			}).then(function () { self.enviando = false; self.esperando_local = false })
@@ -337,6 +353,7 @@ export default {
 			this.guia_aviso = ultima ? ultima.contenido : 'No pude actualizar la guía. Podés probar de nuevo.'
 		},
 		iniciar_guia(pasos) {
+			if (this.prueba) return
 			this.guia_pausada = null
 			this.guia_aviso = ''
 			const ajustados = ajustar_guia_a_vender(pasos)
@@ -397,8 +414,15 @@ export default {
 		uuid() {
 			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) { let r = Math.floor(Math.random() * 16); return (c === 'x' ? r : (r & 3) | 8).toString(16) })
 		},
-		fallar(error) {
-			if (this.destruido) return
+		invalidar_videos_prueba() {
+			this.revision_acceso_prueba++
+			this.disponible = false
+			this.pausar()
+			this.catalogo = []
+		},
+		fallar(error, acceso) {
+			if (this.destruido || (this.prueba && acceso !== undefined && acceso !== this.revision_acceso_prueba)) return
+			if (this.prueba && error.response && [401, 403, 404, 405].indexOf(error.response.status) !== -1) this.invalidar_videos_prueba()
 			if (error.response && [404, 405].indexOf(error.response.status) !== -1) { this.$emit('no-disponible'); return }
 			this.error = 'Se cortó la conexión. Tu mensaje queda acá para reintentarlo.'
 		},
@@ -410,6 +434,12 @@ export default {
 		al_final() {
 			let self = this
 			this.$nextTick(function () { if (self.$refs.hilo) self.$refs.hilo.scrollTop = self.$refs.hilo.scrollHeight })
+		},
+		videos_del_mensaje(mensaje) {
+			return this.prueba ? adjuntos_de_prueba(mensaje, this.catalogo) : (mensaje.videos || [])
+		},
+		abrir_video_prueba(video) {
+			if (this.prueba && this.$refs.videos_prueba) this.$refs.videos_prueba.abrir(video)
 		},
 		clip_de(video) {
 			let encontrado = null
@@ -423,6 +453,7 @@ export default {
 			return actual && actual.seccion && actual.posicion > 0 && actual.cantidad > 0 ? actual.seccion + ' · ' + actual.posicion + ' de ' + actual.cantidad : ''
 		},
 		abrir_selector(video) {
+			if (this.prueba) return
 			let actual = this.catalogo.find(item => item.clave === video.clave)
 			if (!actual) return
 			this.pausar()
@@ -448,6 +479,7 @@ export default {
 			})
 		},
 		seleccionar_video(video) {
+			if (this.prueba) return
 			if (this.seleccionando) return
 			// El mismo intento conserva UUID ante una respuesta perdida; no duplica la tarjeta.
 			if (!this.seleccion_pendiente || this.seleccion_pendiente.clave !== video.clave) this.seleccion_pendiente = { clave: video.clave, cliente_uuid: this.uuid() }
@@ -467,14 +499,16 @@ export default {
 			}).then(function () { self.seleccionando = '' })
 		},
 		abrir_video(mensaje, video) {
+			if (this.prueba) return
 			this.pausar()
 			this.video_abierto = mensaje.id + ':' + video.clave
 			if (video.origen === 'demo') this.$store.dispatch('demo/reportar', { nombre: 'clip.abierto', clip_id: video.clip_id })
 		},
-		pausar() { (this.$refs.tarjeta_chat || []).forEach(function (tarjeta) { tarjeta.pausar() }) },
+		pausar() { if (this.$refs.videos_prueba) this.$refs.videos_prueba.cerrar(); (this.$refs.tarjeta_chat || []).forEach(function (tarjeta) { tarjeta.pausar() }) },
 		minimizar() { this.pausar(); this.$emit('alternar') },
-		probar(video) { this.pausar(); this.$emit('probar', this.clip_de(video)) },
+		probar(video) { if (this.prueba) return; this.pausar(); this.$emit('probar', this.clip_de(video)) },
 		registrar_segundos(video, datos) {
+			if (this.prueba) return
 			let cola = this.pendientes_video[video.clave] || []
 			let segundos = datos.segundos_vistos.slice()
 			if (!segundos.length && datos.terminado !== true) return
@@ -487,6 +521,7 @@ export default {
 			this.enviar_progreso(video.clave)
 		},
 		enviar_progreso(clave) {
+			if (this.prueba) return
 			if (this.enviando_video[clave]) return
 			let cola = this.pendientes_video[clave]
 			if (!cola || !cola.length) return
@@ -510,6 +545,7 @@ export default {
 			return encontrado
 		},
 		omitir(video) {
+			if (this.prueba) return
 			this.pausar()
 			let self = this
 			this.$axios.post('/api/demo/chat/videos/omitir', { clave: video.clave }, { skip_navigation_cancel: true }).then(function (res) { self.aplicar(res.data) }).catch(function (e) { self.fallar(e) })

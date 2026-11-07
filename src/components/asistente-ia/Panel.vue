@@ -123,6 +123,7 @@
 					</button>
 				</header>
 				<slot name="guia"></slot>
+				<catalogo-videos-prueba></catalogo-videos-prueba>
 				<div v-if="aviso_traslado" class="asistente-ia-panel__aviso-traslado">
 					<span role="status">{{ aviso_traslado }}</span>
 					<button type="button" :disabled="traslado_en_curso" @click="cargar_bandeja(true)">Reintentar</button>
@@ -170,6 +171,7 @@ import PanelResizer from '@/components/asistente-ia/PanelResizer'
 import PantallaVacia from '@/components/asistente-ia/PantallaVacia'
 import Icono from '@/components/asistente-ia/Icono'
 import VenderResizer from '@/components/vender/components/VenderResizer'
+import CatalogoVideosPrueba from '@/components/prueba/CatalogoVideosPrueba'
 
 // Límites del ancho de la sidebar en px (D38).
 const SIDEBAR_MIN = 180
@@ -195,6 +197,7 @@ export default {
 		},
 	},
 	components: {
+		CatalogoVideosPrueba,
 		ConversationList,
 		Conversation,
 		Composer,
