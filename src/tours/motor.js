@@ -932,6 +932,12 @@ function limpiar() {
  * @returns {void}
  */
 function avisar_sin_pasos() {
+	const aviso = corrida && corrida.contexto && corrida.contexto.al_faltar_pasos
+	if (typeof aviso === 'function') {
+		aviso()
+		return
+	}
+
 	const raiz = corrida && corrida.contexto ? corrida.contexto.root : null
 	const avanzo_a_mano = Boolean(corrida && corrida.avanzo_a_mano)
 

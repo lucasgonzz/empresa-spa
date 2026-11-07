@@ -11,5 +11,13 @@ export default {
 	data() {
 		return { colapsado: false, habilitado: true }
 	},
+	watch: {
+		'$store.state.ai_chat.panel_abierto'(abierto) {
+			if (abierto) this.colapsado = true
+		},
+		colapsado(colapsado) {
+			if (!colapsado) this.$store.commit('ai_chat/setPanelAbierto', false)
+		},
+	},
 }
 </script>

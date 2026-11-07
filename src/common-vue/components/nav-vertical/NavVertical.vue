@@ -8,6 +8,7 @@
 			{{ routeText(selected_route) }}
 		</span>
 		<aviso-de-implementacion v-if="!show_nav_mobile"></aviso-de-implementacion>
+		<slot name="nav_top_mobile"></slot>
 		<button
 		type="button"
 		data-menu-implementacion-movil

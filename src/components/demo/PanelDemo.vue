@@ -329,6 +329,14 @@ const INTERVALO_HEARTBEAT = 300000
  * haciendo la acción de verdad en el sistema. Eso no es un defecto y no hay que "arreglarlo".
  */
 export default {
+	watch: {
+		'$store.state.ai_chat.panel_abierto'(abierto) {
+			if (abierto && !this.colapsado) this.alternar_colapso()
+		},
+		colapsado(colapsado) {
+			if (!colapsado) this.$store.commit('ai_chat/setPanelAbierto', false)
+		},
+	},
 	components: {
 		TarjetaClip,
 		DemoChatPanel,

@@ -3,6 +3,12 @@
         <update-features></update-features>
 		
 		<nav-vertical>
+			<template #nav_top>
+				<acceso-asistente class="d-none d-md-flex"></acceso-asistente>
+			</template>
+			<template #nav_top_mobile>
+				<acceso-asistente movil></acceso-asistente>
+			</template>
 			<!-- <template #nav_bottom>
 				<btn-version-estable></btn-version-estable>
 			</template> -->
@@ -15,6 +21,7 @@
 <script>
 export default {
 	components: {
+		AccesoAsistente: () => import('@/components/asistente-ia/Acceso'),
 		NavComponent: () => import('@/common-vue/components/nav/Index'),
 		NavVertical: () => import('@/common-vue/components/nav-vertical/Index'),
 		BtnVersionEstable: () => import('@/components/nav/BtnVersionEstable'),

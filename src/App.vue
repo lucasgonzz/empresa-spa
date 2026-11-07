@@ -16,7 +16,7 @@
         <avisos-de-implementacion v-if="implementacion_usuario_id" :key="implementacion_usuario_id"></avisos-de-implementacion>
         <btn-scroll-top></btn-scroll-top>
         <support-chat-floating-button></support-chat-floating-button>
-        <asistente-ia-floating-button></asistente-ia-floating-button>
+        <asistente-ia-anfitrion></asistente-ia-anfitrion>
         <!--
             Anfitrión del sidebar de WhatsApp. Va acá arriba, y no adentro del módulo, porque
             desde este refactor la conversación se abre también desde Clientes, Pedidos y
@@ -165,7 +165,7 @@ import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
 import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
 import SupportChatFloatingButton from '@/common-vue/components/support-chat/FloatingButton'
-import AsistenteIaFloatingButton from '@/components/asistente-ia/FloatingButton'
+import AsistenteIaAnfitrion from '@/components/asistente-ia/Anfitrion'
 import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
 import TiendaMensajesSidebarHost from '@/components/online/components/mensajes/SidebarHost'
 import DescripcionDeControl from '@/common-vue/components/ayuda/DescripcionDeControl'
@@ -215,7 +215,7 @@ export default {
         NavComponent,
         BtnScrollTop,
         SupportChatFloatingButton,
-        AsistenteIaFloatingButton,
+        AsistenteIaAnfitrion,
         WhatsappSidebarHost,
         TiendaMensajesSidebarHost,
         DescripcionDeControl,

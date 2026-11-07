@@ -97,7 +97,7 @@ export default {
 		en_vender() { return this.$route.name === 'vender' && this.$route.params.view === 'remito' },
 	},
 	watch: {
-		colapsado() { this.actualizar_espacio(); this.programar_ubicacion_launcher() },
+		colapsado() { this.programar_ubicacion_launcher() },
 		estado_editores_whatsapp() { this.programar_ubicacion_launcher() },
 		'$route.fullPath'() {
 			this.guia_pausada = null
@@ -106,7 +106,6 @@ export default {
 		},
 	},
 	mounted() {
-		this.actualizar_espacio()
 		this.iniciar()
 		this.observar_ubicacion_launcher()
 		let self = this
@@ -115,7 +114,6 @@ export default {
 		}, 3000)
 	},
 	beforeDestroy() {
-		document.body.classList.remove('demo-chat-abierto')
 		this.destruido = true
 		this.cerrar_guia()
 		clearInterval(this.temporizador)
@@ -209,7 +207,6 @@ export default {
 			}
 			return subio ? reserva : 0
 		},
-		actualizar_espacio() { document.body.classList.toggle('demo-chat-abierto', !this.colapsado) },
 		// El panel vive entre módulos: sus pedidos no pertenecen a la pantalla que se abandona.
 		iniciar() {
 			let self = this
@@ -528,10 +525,6 @@ export default {
 	> .driver-popover-title, > .driver-popover-description, > .driver-popover-close-btn, > .driver-popover-footer
 		display: none !important
 
-// El botón del asistente del negocio vuelve al minimizar el panel lateral.
-body.demo-chat-abierto .asistente-ia-fab
-	visibility: hidden
-	pointer-events: none
 .demo-ai
 	--demo-ink: #e8edf8
 	--demo-muted: #a3aec6
