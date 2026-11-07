@@ -240,8 +240,6 @@ html:has(.whatsapp-module),
 .whatsapp-module .whatsapp-chats-list__body
 	scrollbar-width: thin
 	scrollbar-color: color-mix(in srgb, var(--wa-texto) 32%, transparent) transparent
-#app:has(.asistente-ia-fab) .whatsapp-module--chat .whatsapp-composer
-	padding-inline-end: 76px
 .whatsapp-tour-robot
 	width: 34px
 	height: 34px
