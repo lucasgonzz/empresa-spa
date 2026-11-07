@@ -9,7 +9,7 @@ import DemoChatPanel from '@/components/demo/DemoChatPanel'
 export default {
 	components: { DemoChatPanel },
 	data() {
-		return { colapsado: false, habilitado: true }
+		return { colapsado: this.$store.state.ai_chat.panel_abierto, habilitado: true }
 	},
 	watch: {
 		'$store.state.ai_chat.panel_abierto'(abierto) {

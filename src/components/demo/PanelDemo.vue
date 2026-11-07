@@ -345,7 +345,7 @@ export default {
 		return {
 			chat_disponible: true,
 			// El ingreso por token presenta el chat; al recargar conserva sólo el acceso compacto.
-			colapsado: !this.$store.state.demo.es_demo && this.$route.name !== 'demoIngreso',
+			colapsado: this.$store.state.ai_chat.panel_abierto || (!this.$store.state.demo.es_demo && this.$route.name !== 'demoIngreso'),
 			// El tirador late para invitar a volver, después de que "Probar" colapsó el panel.
 			llamando_la_atencion: false,
 			// Id del clip cuya tarjeta está desplegada. Uno solo a la vez.
