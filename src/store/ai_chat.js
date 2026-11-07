@@ -477,6 +477,7 @@ export default {
 		// Id de la conversación abierta en el panel. null = conversación nueva sin crear
 		// todavía (se crea recién al enviar el primer mensaje, como en Claude).
 		selected_conversation_id: null,
+		revision_seleccion: 0,
 
 		// Mensajes de la conversación abierta, en orden cronológico ascendente para renderizar.
 		messages: [],
@@ -622,6 +623,7 @@ export default {
 		},
 		setSelectedConversationId(state, id) {
 			state.selected_conversation_id = id
+			state.revision_seleccion++
 		},
 		setMessages(state, value) {
 			state.messages = value || []
@@ -915,11 +917,16 @@ export default {
 						// (reapertura del panel, F5, reconexión), la espera se re-arma:
 						// sin esto el pendiente dependería solo del evento de Echo.
 						if (chronological_chunk.length) {
-							let ultimo = chronological_chunk[chronological_chunk.length - 1]
-							if (ultimo.rol == 'assistant' && ultimo.estado == 'pendiente' && espera.message_id != ultimo.id) {
+							const es_pendiente = mensaje => mensaje.rol == 'assistant' && mensaje.estado == 'pendiente'
+							const es_chat_trasladado = state.conversations.some(hilo => hilo.id == conversation_id && hilo.origen === 'prueba_trasladada')
+							// Una respuesta vieja puede llegar después del turno personal en curso.
+							const pendiente = es_chat_trasladado
+								? chronological_chunk.find(es_pendiente)
+								: chronological_chunk[chronological_chunk.length - 1]
+							if (pendiente && es_pendiente(pendiente) && espera.message_id != pendiente.id) {
 								dispatch('esperarRespuesta', {
 									conversation_id: conversation_id,
-									message_id: ultimo.id,
+									message_id: pendiente.id,
 								})
 							}
 						}
