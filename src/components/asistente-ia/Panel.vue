@@ -25,9 +25,12 @@
 	@click.self="al_click_overlay">
 		<div
 		id="asistente-ia-panel"
+		ref="panel"
 		class="asistente-ia-panel"
 		:role="es_lateral ? 'region' : 'dialog'"
+		:aria-modal="es_lateral ? null : 'true'"
 		aria-label="Asistente"
+		tabindex="-1"
 		:style="panel_inline_style">
 			<!-- Manijas para estirar el modal entero desde los dos bordes. No existen en
 			móvil, igual que el divisor de la sidebar: ahí el panel ocupa el ancho de la
@@ -48,6 +51,7 @@
 			redimensionable; bajo 768px se esconde y aparece como cajón (D38). -->
 			<div
 			v-show="!es_lateral && (!es_movil || sidebar_movil_abierta)"
+			ref="lista_conversaciones"
 			class="asistente-ia-panel__sidebar"
 			:class="{ 'asistente-ia-panel__sidebar--abierta': sidebar_movil_abierta }"
 			:style="sidebar_inline_style">
@@ -77,6 +81,7 @@
 				<header class="asistente-ia-panel__header">
 					<button
 					v-if="es_movil && !es_lateral"
+					ref="abrir_conversaciones"
 					type="button"
 					class="asistente-ia-panel__boton"
 					title="Conversaciones"
@@ -174,6 +179,8 @@ const SIDEBAR_DEFAULT = 260
 const PANEL_MIN = 720
 const PANEL_MAX = 1600
 const PANEL_DEFAULT = 984
+
+const SELECTOR_ENFOCABLE = 'a[href], button, input, select, textarea, [contenteditable=true], [tabindex]'
 
 export default {
 	props: {
@@ -312,18 +319,34 @@ export default {
 			})
 	},
 	mounted() {
-		const self = this
-		window.addEventListener('resize', self.on_window_resize)
-		document.addEventListener('keydown', self.on_document_keydown)
+		this.foco_antes_de_abrir = document.activeElement
+		window.addEventListener('resize', this.on_window_resize)
+		document.addEventListener('keydown', this.on_document_keydown)
+		this.enfocar_vista_completa()
 	},
 	beforeDestroy() {
-		const self = this
-		window.removeEventListener('resize', self.on_window_resize)
-		document.removeEventListener('keydown', self.on_document_keydown)
+		window.removeEventListener('resize', this.on_window_resize)
+		document.removeEventListener('keydown', this.on_document_keydown)
+		const foco = this.foco_antes_de_abrir
+		if (foco && this.$refs.panel.contains(document.activeElement)) {
+			this.$nextTick(() => {
+				if (document.activeElement === document.body && foco.isConnected && !this.hay_interfaz_encima()) {
+					foco.focus({ preventScroll: true })
+				}
+			})
+		}
 	},
 	watch: {
 		modo() {
 			this.sidebar_movil_abierta = false
+			this.$nextTick(this.enfocar_vista_completa)
+		},
+		sidebar_movil_abierta(abierta) {
+			this.$nextTick(() => {
+				if (!this.es_movil || this.es_lateral || this.hay_interfaz_encima()) return
+				const destino = abierta ? this.$refs.lista_conversaciones.querySelector('button:not(:disabled)') : this.$refs.abrir_conversaciones
+				if (destino) destino.focus({ preventScroll: true })
+			})
 		},
 		/**
 		 * Cada cambio de conversación abierta carga su primera página. Con null
@@ -449,12 +472,44 @@ export default {
 		on_window_resize() {
 			this.viewport_width = window.innerWidth
 		},
-		/**
-		 * Escape cierra el panel, igual que el botón de la cabecera.
-		 */
+		hay_interfaz_encima() {
+			return document.body.classList.contains('modal-open')
+				|| Boolean(document.querySelector('.modal.show, .popover.show, .driver-popover, .driver-active, .asistente-ia-guia-activa'))
+		},
+		enfocar_vista_completa() {
+			const panel = this.$refs.panel
+			if (!this.es_lateral && panel && !panel.contains(document.activeElement) && !this.hay_interfaz_encima()) {
+				panel.focus({ preventScroll: true })
+			}
+		},
 		on_document_keydown(event) {
+			if (event.defaultPrevented || (event.key !== 'Escape' && event.key !== 'Tab') || this.hay_interfaz_encima()) return
+			const panel = this.$refs.panel
+			const foco = document.activeElement
+			const dentro = panel.contains(foco)
+			const cajon_abierto = this.es_movil && this.sidebar_movil_abierta
 			if (event.key === 'Escape') {
+				if (this.es_lateral && !dentro) return
+				event.preventDefault()
+				if (cajon_abierto) {
+					this.sidebar_movil_abierta = false
+					return
+				}
 				this.cerrar()
+				return
+			}
+			if (this.es_lateral) return
+
+			// Los elementos del cajón móvil quedan fuera del orden de Tab mientras está cerrado.
+			const ambito = cajon_abierto ? this.$refs.lista_conversaciones : panel
+			const controles = Array.from(ambito.querySelectorAll(SELECTOR_ENFOCABLE)).filter((el) => {
+				return el.tabIndex >= 0 && !el.matches(':disabled') && el.getClientRects().length && getComputedStyle(el).visibility === 'visible'
+			})
+			const destino = event.shiftKey ? controles[controles.length - 1] : controles[0]
+			const limite = event.shiftKey ? controles[0] : controles[controles.length - 1]
+			if (!ambito.contains(foco) || foco === panel || foco === limite || !destino) {
+				event.preventDefault()
+				(destino || panel).focus()
 			}
 		},
 		/**
