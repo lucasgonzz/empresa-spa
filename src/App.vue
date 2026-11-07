@@ -246,7 +246,8 @@ export default {
             const usuario = this.$store.state.auth.user
             if (this.$route.name === 'demoIngreso') return null
             return this.authenticated && !this.version_bloqueada && !this.$store.state.prueba.vencida
-                && usuario && usuario.puede_usar_chat_prueba === true ? usuario.id : null
+                && usuario && usuario.puede_usar_chat_prueba === true
+                && usuario.puede_unificar_chat_prueba !== true ? usuario.id : null
         },
         implementacion_usuario_id() {
             return !this.version_bloqueada && puede_ver_implementacion(this.$store.state.auth)

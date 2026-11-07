@@ -75,6 +75,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		bloqueado: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -100,7 +104,7 @@ export default {
 			return this.hay_respuesta_en_curso || this.sending
 		},
 		puede_enviar() {
-			return !this.hay_respuesta_en_curso && !this.sending && this.texto.trim() != ''
+			return !this.bloqueado && !this.ocupado && this.texto.trim() != ''
 		},
 		placeholder() {
 			return this.vacia ? 'Preguntá lo que quieras' : 'Escribí tu mensaje'

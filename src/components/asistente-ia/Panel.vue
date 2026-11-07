@@ -123,6 +123,10 @@
 					</button>
 				</header>
 				<slot name="guia"></slot>
+				<div v-if="aviso_traslado" class="asistente-ia-panel__aviso-traslado">
+					<span role="status">{{ aviso_traslado }}</span>
+					<button type="button" :disabled="traslado_en_curso" @click="cargar_bandeja(true)">Reintentar</button>
+				</div>
 
 				<!-- Con la conversación en blanco, en escritorio y tablet, el saludo y el
 				compositor quedan centrados y las sugerencias abajo (como ChatGPT e ia-spa,
@@ -135,6 +139,7 @@
 					:esperando_bandeja="!bandeja_cargada"></conversation>
 					<composer
 					ref="composer"
+					:bloqueado="traslado_en_curso && !selected_conversation_id"
 					:vacia="vacia">
 						<template v-slot:arriba>
 							<pantalla-vacia
@@ -219,6 +224,10 @@ export default {
 			// del centro a abajo en cada apertura. Mientras tanto la conversación muestra su
 			// "cargando" (ver la prop esperando_bandeja de Conversation.vue).
 			bandeja_cargada: false,
+			traslado_en_curso: false,
+			aviso_traslado: '',
+			panel_vigente: true,
+			revision_seleccion_automatica: null,
 		}
 	},
 	computed: {
@@ -290,8 +299,6 @@ export default {
 		},
 	},
 	created() {
-		let self = this
-
 		this.hidratar_ancho_sidebar()
 		this.hidratar_ancho_panel()
 
@@ -299,24 +306,7 @@ export default {
 		// tiene el endpoint, queda null y el footer no se muestra (degradación limpia).
 		this.$store.dispatch('ai_chat/fetchMiConsumo')
 
-		// Al abrir el panel: la bandeja siempre se refresca, y se cae a la última
-		// conversación con actividad salvo que ya hubiera una elegida (D44) — por
-		// ejemplo la que dejó seteada abrir_chat_ia() desde la notificación (D22).
-		this.$store.dispatch('ai_chat/getConversations')
-			.then(() => {
-				self.bandeja_cargada = true
-				if (self.selected_conversation_id) {
-					self.$store.dispatch('ai_chat/getMessages', {
-						conversation_id: self.selected_conversation_id,
-						page: 1,
-					})
-				} else if (self.conversations.length) {
-					// El watch de selected_conversation_id dispara la carga de mensajes.
-					self.$store.commit('ai_chat/setSelectedConversationId', self.conversations[0].id)
-				} else {
-					self.$store.commit('ai_chat/setMessages', [])
-				}
-			})
+		this.cargar_bandeja()
 	},
 	mounted() {
 		this.foco_antes_de_abrir = document.activeElement
@@ -325,6 +315,7 @@ export default {
 		this.enfocar_vista_completa()
 	},
 	beforeDestroy() {
+		this.panel_vigente = false
 		window.removeEventListener('resize', this.on_window_resize)
 		document.removeEventListener('keydown', this.on_document_keydown)
 		const foco = this.foco_antes_de_abrir
@@ -369,6 +360,59 @@ export default {
 		},
 	},
 	methods: {
+		cargar_bandeja(reintento = false) {
+			let self = this
+			const usuario = this.user
+			const revision_seleccion = this.$store.state.ai_chat.revision_seleccion
+			const sigue_vigente = () => self.panel_vigente && usuario && self.user && self.user.id === usuario.id
+			const trasladar = usuario && usuario.puede_unificar_chat_prueba === true
+
+			this.traslado_en_curso = trasladar
+			const recuperacion = trasladar ? this.recuperar_chat_prueba() : Promise.resolve(null)
+			recuperacion.then(id_trasladado => {
+				if (!sigue_vigente()) return
+				return self.$store.dispatch('ai_chat/getConversations').then(() => {
+					if (!sigue_vigente()) return
+					self.bandeja_cargada = true
+					self.traslado_en_curso = false
+					const seleccion_paso = revision_seleccion === self.$store.state.ai_chat.revision_seleccion
+					const anterior = self.conversations.find(hilo => hilo.id === id_trasladado)
+					const reemplazar_automatica = reintento && anterior && seleccion_paso
+						&& revision_seleccion === self.revision_seleccion_automatica
+					const id_actual = self.selected_conversation_id
+					if (id_actual && !reemplazar_automatica) {
+						if (!reintento || id_actual === id_trasladado) {
+							self.$store.dispatch('ai_chat/getMessages', { conversation_id: id_actual, page: 1 })
+						}
+						return
+					}
+					// Una elección hecha durante la espera tiene prioridad, incluso «Nueva conversación».
+					if (trasladar && !seleccion_paso) return
+					const hilo = anterior || self.conversations[0]
+					if (hilo) {
+						self.$store.commit('ai_chat/setSelectedConversationId', hilo.id)
+						self.revision_seleccion_automatica = anterior ? null : self.$store.state.ai_chat.revision_seleccion
+					} else {
+						self.$store.commit('ai_chat/setMessages', [])
+					}
+				})
+			})
+		},
+		recuperar_chat_prueba() {
+			let self = this
+			const fallo = () => {
+				self.aviso_traslado = 'No pudimos recuperar tu conversación de la prueba.'
+				return null
+			}
+			return this.$axios.post('/api/prueba/chat/trasladar', {}, {
+				skip_navigation_cancel: true,
+				timeout: 12000,
+			}).then(res => {
+				if (!res.data || res.data.disponible !== true) return fallo()
+				self.aviso_traslado = res.data.pendiente ? 'Todavía falta una respuesta de tu conversación de la prueba.' : ''
+				return res.data.conversacion_id
+			}).catch(fallo)
+		},
 		/**
 		 * Ancho inicial de la sidebar: el elegido en esta sesión (store), o el
 		 * persistido por persona que viajó en GET api/user, o el default (D38).
@@ -649,6 +693,20 @@ export default {
 	// allá; el anillo de foco de un .btn de bootstrap (`.btn:focus`, 0,2,0) sigue ganando.
 	button
 		box-shadow: none
+
+	&__aviso-traslado
+		padding: 6px 16px
+		background: var(--ia-bg-barra)
+		color: var(--ia-texto-2)
+		font-size: 13px
+
+		button
+			margin-left: 6px
+			padding: 0
+			border: 0
+			background: none
+			color: var(--ia-primario)
+			text-decoration: underline
 
 	// Barras de desplazamiento discretas, las de ia-spa.
 	*
