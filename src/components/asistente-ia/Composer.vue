@@ -79,6 +79,7 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		preparar_envio: Function,
 	},
 	data() {
 		return {
@@ -210,12 +211,13 @@ export default {
 			if (!contenido || !this.puede_enviar) {
 				return
 			}
-			// El globo optimista sube al toque (D41): el input se limpia ya mismo.
-			this.texto = ''
 			this.sending = true
-			this.enfocar()
-			this.$store.dispatch('ai_chat/sendMessage', {
-				contenido: contenido,
+			const preparar = this.preparar_envio ? this.preparar_envio() : Promise.resolve({})
+			preparar.then(opciones => {
+				if (!opciones || self._isDestroyed) return
+				if (self.texto.trim() === contenido) self.texto = ''
+				self.enfocar()
+				return self.$store.dispatch('ai_chat/sendMessage', Object.assign({ contenido: contenido }, opciones))
 			})
 				.then(() => {
 					self.sending = false
@@ -227,10 +229,12 @@ export default {
 						// El servidor ya está generando una respuesta en esta conversación
 						// (R2: doble clic o una pestaña vieja). Se repone el texto para no
 						// perder lo escrito.
-						self.texto = contenido
+						if (!self.texto) self.texto = contenido
 						self.$toast.error('Esperá la respuesta del asistente antes de mandar otro mensaje.')
 						return
 					}
+					if (!self.texto) self.texto = contenido
+					self.$toast.error('No pudimos preparar el envío. Volvé a intentar.')
 					console.log(err)
 				})
 		},

@@ -370,7 +370,7 @@ export default {
 		 * Construye URL de adjunto usando path almacenado.
 		 */
 		attachment_url(attachment) {
-			return env('VUE_APP_API_URL') + '/storage/' + attachment.path
+			return attachment.public_url || (env('VUE_APP_API_URL') + '/storage/' + attachment.path)
 		},
 		/**
 		 * Abre el visor de imagen en la misma página.

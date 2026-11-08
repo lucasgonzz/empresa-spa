@@ -88,11 +88,13 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		preparar_envio: Function,
 	},
 	data() {
 		return {
 			/** Texto pendiente de envío. */
 			body: '',
+			confirmando: false,
 			/** Archivo multimedia adjunto pendiente (File). */
 			attachment: null,
 			/** Modal de marcas sobre imagen visible. */
@@ -326,7 +328,7 @@ export default {
 		 * Emite payload al componente padre y resetea campos locales.
 		 */
 		emit_send() {
-			if (!this.body && !this.attachment) {
+			if (!this.can_send || this.confirmando || this.recording || (!this.body.trim() && !this.attachment)) {
 				return
 			}
 			let kind = 'text'
@@ -336,14 +338,23 @@ export default {
 			if (this.attachment && this.attachment.type.indexOf('image') == 0) {
 				kind = 'image'
 			}
-			this.$emit('send', {
+			const payload = {
 				body: this.body,
 				kind: kind,
 				attachment: this.attachment,
+			}
+			this.confirmando = true
+			const preparar = this.preparar_envio ? this.preparar_envio() : Promise.resolve({})
+			preparar.then(opciones => {
+				if (!opciones || this._isDestroyed) return
+				this.$emit('send', Object.assign(payload, opciones))
+				if (this.body === payload.body) this.body = ''
+				if (this.attachment === payload.attachment) this.remove_attachment()
+			}).catch(() => {
+				this.$toast.error('No pudimos preparar el envío. Volvé a intentar.')
+			}).finally(() => {
+				this.confirmando = false
 			})
-			this.body = ''
-			this.attachment = null
-			this.$refs.file_input.value = ''
 		},
 	},
 }

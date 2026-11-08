@@ -42,7 +42,8 @@ export default {
 		 * en common-vue/mixins/nav.js para el menú.
 		 */
 		mostrador_es_el_dueno() {
-			return !!(this.is_owner || (this.user && this.user.admin_access))
+			const usuario = this.user
+			return !!(usuario && !usuario.es_sesion_soporte && !usuario.es_acceso_maestro && (this.is_owner || usuario.admin_access))
 		},
 		puede_entrar_al_mostrador() {
 			return this.mostrador_tiene_extension && this.mostrador_es_el_dueno

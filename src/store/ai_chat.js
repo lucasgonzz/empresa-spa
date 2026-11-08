@@ -477,6 +477,8 @@ export default {
 		// Id de la conversación abierta en el panel. null = conversación nueva sin crear
 		// todavía (se crea recién al enviar el primer mensaje, como en Claude).
 		selected_conversation_id: null,
+		agente: 'asistente',
+		revision_sesion: 0,
 		revision_seleccion: 0,
 
 		// Mensajes de la conversación abierta, en orden cronológico ascendente para renderizar.
@@ -589,6 +591,18 @@ export default {
 	mutations: {
 		setPanelAbierto(state, value) {
 			state.panel_abierto = value
+		},
+		setAgente(state, value) {
+			state.agente = value
+		},
+		renovarSesion(state) {
+			state.revision_sesion++
+			state.loading_conversations = false
+			state.loading_messages = false
+			state.loading_more_messages = false
+			state.seleccion_sin_recarga = false
+			state.fichas_de_articulos = {}
+			state.mencion_cuenta_corriente = null
 		},
 		setConversations(state, value) {
 			state.conversations = value || []
@@ -806,16 +820,19 @@ export default {
 		/**
 		 * Carga la bandeja de conversaciones de la persona.
 		 */
-		getConversations({ commit }) {
+		getConversations({ commit, state }) {
+			const revision = state.revision_sesion
 			commit('setLoadingConversations', true)
 			commit('setErrorConversations', '')
-			return axios.get('/api/ai-conversations')
+			return axios.get('/api/ai-conversations', { skip_navigation_cancel: true })
 				.then(res => {
+					if (state.revision_sesion !== revision) return
 					commit('setLoadingConversations', false)
 					commit('setConversations', res.data.models)
 					return res.data.models
 				})
 				.catch(err => {
+					if (state.revision_sesion !== revision) return
 					commit('setLoadingConversations', false)
 					/*
 						🔴 Este .catch se tragaba el fallo con un console.log y nada más, así que
@@ -885,6 +902,7 @@ export default {
 		 * @param {Object} payload { conversation_id, page }
 		 */
 		getMessages({ commit, state, dispatch }, payload) {
+			const revision = state.revision_sesion
 			let conversation_id = payload.conversation_id
 			let page = payload.page || 1
 			if (page == 1) {
@@ -893,11 +911,13 @@ export default {
 				commit('setLoadingMoreMessages', true)
 			}
 			return axios.get('/api/ai-conversations/' + conversation_id + '/messages', {
+				skip_navigation_cancel: true,
 				params: {
 					page: page,
 				},
 			})
 				.then(res => {
+					if (state.revision_sesion !== revision) return
 					// Respuesta tardía de OTRA conversación (scrolleás la A, clickeás la B,
 					// la página de A llega después): se apaga solo el loading que esta
 					// petición prendió y no se toca nada más — sin el guard, la página de A
@@ -974,6 +994,7 @@ export default {
 				contenido: contenido,
 				estado: 'listo',
 				estado_local: 'enviando',
+				traspasar_a_sistema: payload.traspasar_a_sistema,
 				created_at: new Date().toISOString(),
 			})
 
@@ -997,6 +1018,8 @@ export default {
 						// pintarlas: sin la clave el API responde de solo lectura (que es lo que
 						// les pasa a las pestañas con la SPA vieja), y un API viejo la ignora.
 						acciones: true,
+						agentes_version: payload.agentes_version,
+						traspasar_a_sistema: payload.traspasar_a_sistema,
 					}, {
 						// `skip_navigation_cancel`: AsistenteIaFloatingButton es global (App.vue);
 						// cambiar de pantalla después de mandar no tiene que cancelar el envío
@@ -1025,6 +1048,7 @@ export default {
 							commit('upsertConversation', {
 								id: conversation_id,
 								last_message_at: new Date().toISOString(),
+								...(res.data.sistema_exclusivo_at ? { sistema_exclusivo_at: res.data.sistema_exclusivo_at } : {}),
 							})
 							// Arranca el polling de respaldo del broadcast (D46).
 							dispatch('esperarRespuesta', {
@@ -1058,7 +1082,11 @@ export default {
 		 */
 		retryMessage({ commit, dispatch }, message) {
 			commit('removeLocalMessage', message.local_id)
-			return dispatch('sendMessage', { contenido: message.contenido })
+			return dispatch('sendMessage', {
+				contenido: message.contenido,
+				agentes_version: message.traspasar_a_sistema ? 1 : undefined,
+				traspasar_a_sistema: message.traspasar_a_sistema,
+			})
 		},
 		/**
 		 * Confirma una tarjeta de carga: el API registra lo que dice la tarjeta, autenticado
@@ -1757,15 +1785,19 @@ export default {
 		 *
 		 * @returns {Promise}
 		 */
-		fetchMiConsumo({ commit }) {
+		fetchMiConsumo({ commit, state }) {
+			const revision = state.revision_sesion
 			return axios.get('/api/mi-consumo-ia', {
 				skip_global_error_event: true,
+				skip_navigation_cancel: true,
 			})
 				.then(res => {
+					if (state.revision_sesion !== revision) return
 					commit('setMiConsumo', res.data)
 					return res.data
 				})
 				.catch(err => {
+					if (state.revision_sesion !== revision) return
 					commit('setMiConsumo', null)
 					console.log(err)
 				})
