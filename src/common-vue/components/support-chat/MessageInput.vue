@@ -1,5 +1,5 @@
 <template>
-	<div class="support-message-input-bar">
+	<div class="support-message-input-bar" :class="{ 'support-message-input-bar--agentes asistente-ia-composer': en_agentes }">
 		<!-- Editor de anotaciones sobre imagen (pegado o adjunto) antes de enviar -->
 		<image-annotation-editor
 			:show.sync="image_editor_visible"
@@ -7,81 +7,131 @@
 			@confirm="on_image_annotation_confirm"
 			@cancel="on_image_annotation_cancel" />
 
-		<!-- Indicador de adjunto pendiente: nombre del archivo y botón para cancelarlo -->
-		<div v-if="attachment" class="support-input-attachment-preview">
-			<span class="support-input-attachment-icon">
-				{{ attachment_is_audio ? '🎤' : attachment_is_image ? '🖼' : '📎' }}
-			</span>
-			<span class="support-input-attachment-name text-truncate">{{ attachment.name }}</span>
-			<button
-				v-if="attachment_is_image"
-				type="button"
-				class="btn btn-sm btn-link support-input-attachment-edit"
-				title="Volver a marcar la imagen"
-				@click="open_image_editor_for_attachment">
-				Editar
-			</button>
-			<button
-				type="button"
-				class="btn btn-sm btn-link support-input-attachment-remove"
-				title="Quitar adjunto"
-				@click="remove_attachment">
-				✕
-			</button>
-		</div>
-		<!-- Aviso: contexto no seguro (empresa.local), permiso denegado u API no disponible -->
-		<div v-if="mic_error" class="support-input-mic-error">
-			{{ mic_error_message }}
-		</div>
-		<div class="d-flex align-items-center w-100" data-tour="soporte.escribir">
-			<input
-				ref="text_input"
-				class="form-control mr-2"
-				type="text"
-				placeholder="Escribí un mensaje..."
-				:disabled="!can_send"
-				v-model="body"
-				@paste="on_paste"
-				@keydown.enter.prevent="emit_send" />
+		<div :class="{ 'asistente-ia-composer__columna': en_agentes }">
+			<!-- Indicador de adjunto pendiente: nombre del archivo y botón para cancelarlo -->
+			<div v-if="attachment" class="support-input-attachment-preview">
+				<i v-if="en_agentes" :class="attachment_is_audio ? 'bi bi-mic' : 'bi bi-paperclip'" aria-hidden="true"></i>
+				<span v-else class="support-input-attachment-icon" aria-hidden="true">
+					{{ attachment_is_audio ? '🎤' : attachment_is_image ? '🖼' : '📎' }}
+				</span>
+				<span class="support-input-attachment-name text-truncate">{{ attachment.name }}</span>
+				<button
+					v-if="attachment_is_image"
+					type="button"
+					class="btn btn-sm btn-link support-input-attachment-edit"
+					title="Volver a marcar la imagen"
+					@click="open_image_editor_for_attachment">
+					Editar
+				</button>
+				<button
+					type="button"
+					class="btn btn-sm btn-link support-input-attachment-remove"
+					aria-label="Quitar adjunto"
+					title="Quitar adjunto"
+					@click="remove_attachment">
+					✕
+				</button>
+			</div>
+			<!-- Aviso: contexto no seguro (empresa.local), permiso denegado u API no disponible -->
+			<div v-if="mic_error" class="support-input-mic-error">
+				{{ mic_error_message }}
+			</div>
 			<input
 				ref="file_input"
 				class="d-none"
 				type="file"
 				accept="audio/*,image/*"
 				@change="on_file_change" />
-			<!-- Botón de grabación: rojo mientras graba con texto de duración -->
-			<button
-				:class="['btn mr-2', recording ? 'btn-danger' : 'btn-outline-secondary']"
-				type="button"
-				:disabled="!can_send"
-				:title="recording ? 'Detener grabación' : 'Grabar audio'"
-				@click="toggle_recording">
-				{{ recording ? ('⏹ ' + recording_time_label) : '🎤' }}
-			</button>
-			<button
-				class="btn btn-outline-secondary mr-2"
-				type="button"
-				:disabled="!can_send || recording"
-				@click="open_file_input">
-				Adjuntar
-			</button>
-			<button
-				class="btn btn-success"
-				type="button"
-				:disabled="!can_send || recording"
-				@click="emit_send">
-				Enviar
-			</button>
+			<p v-if="en_agentes && recording" class="support-input-recording" role="status">
+				Grabando audio <span aria-hidden="true">{{ recording_time_label }}</span>
+			</p>
+			<form
+				v-if="en_agentes"
+				class="asistente-ia-composer__caja"
+				data-tour="soporte.escribir"
+				aria-label="Escribir a Soporte"
+				@submit.prevent="enviar_desde_agentes">
+				<textarea
+					ref="text_input"
+					v-model="body"
+					class="asistente-ia-composer__texto"
+					rows="1"
+					placeholder="Escribí tu consulta"
+					aria-label="Mensaje para Soporte"
+					enterkeyhint="send"
+					:disabled="!can_send"
+					@paste="on_paste"
+					@keydown.enter="enviar_con_enter"></textarea>
+				<button
+					type="button"
+					class="support-input-composer-action"
+					aria-label="Adjuntar archivo"
+					title="Adjuntar archivo"
+					:disabled="!can_send || recording || solicitando_microfono || confirmando"
+					@click="open_file_input">
+					<i class="bi bi-paperclip" aria-hidden="true"></i>
+				</button>
+				<button
+					type="button"
+					class="support-input-composer-action"
+					:class="{ 'support-input-composer-action--recording': recording }"
+					:aria-label="recording ? 'Detener grabación' : 'Grabar audio'"
+					:title="recording ? 'Detener grabación' : 'Grabar audio'"
+					:disabled="!recording && (!can_send || solicitando_microfono || confirmando)"
+					@click="toggle_recording">
+					<icono v-if="recording" nombre="detener" :tamano="20"></icono>
+					<i v-else class="bi bi-mic" aria-hidden="true"></i>
+				</button>
+				<button type="submit" class="asistente-ia-composer__enviar" aria-label="Enviar" title="Enviar" :disabled="!puede_enviar_desde_agentes">
+					<icono nombre="enviar" :tamano="20"></icono>
+				</button>
+			</form>
+			<div v-else class="d-flex align-items-center w-100" data-tour="soporte.escribir">
+				<input
+					ref="text_input"
+					class="form-control mr-2"
+					type="text"
+					placeholder="Escribí un mensaje..."
+					:disabled="!can_send"
+					v-model="body"
+					@paste="on_paste"
+					@keydown.enter.prevent="emit_send" />
+				<!-- Botón de grabación: rojo mientras graba con texto de duración -->
+				<button
+					:class="['btn mr-2', recording ? 'btn-danger' : 'btn-outline-secondary']"
+					type="button"
+					:disabled="!can_send"
+					:title="recording ? 'Detener grabación' : 'Grabar audio'"
+					@click="toggle_recording">
+					{{ recording ? ('⏹ ' + recording_time_label) : '🎤' }}
+				</button>
+				<button
+					class="btn btn-outline-secondary mr-2"
+					type="button"
+					:disabled="!can_send || recording"
+					@click="open_file_input">
+					Adjuntar
+				</button>
+				<button
+					class="btn btn-success"
+					type="button"
+					:disabled="!can_send || recording"
+					@click="emit_send">
+					Enviar
+				</button>
+			</div>
 		</div>
 	</div>
 </template>
 
 <script>
 import ImageAnnotationEditor from '@/common-vue/components/support-chat/ImageAnnotationEditor.vue'
+import Icono from '@/components/asistente-ia/Icono'
 
 export default {
 	components: {
 		ImageAnnotationEditor,
+		Icono,
 	},
 	props: {
 		can_send: {
@@ -90,6 +140,7 @@ export default {
 		},
 		preparar_envio: Function,
 		clave_borrador: { type: String, default: 'nuevo' },
+		en_agentes: Boolean,
 	},
 	data() {
 		return {
@@ -125,6 +176,10 @@ export default {
 		attachment: {
 			get() { return this.borrador.attachment || null },
 			set(valor) { this.editar_borrador(this.clave_borrador, { attachment: valor }) },
+		},
+		puede_enviar_desde_agentes() {
+			return this.can_send && !this.confirmando && !this.recording && !this.solicitando_microfono
+				&& Boolean(this.body.trim() || this.attachment)
 		},
 		/**
 		 * Indica si el adjunto pendiente es audio (para el ícono del preview).
@@ -163,11 +218,43 @@ export default {
 			)
 		},
 	},
+	watch: {
+		body() {
+			if (this.en_agentes) this.$nextTick(this.ajustar_altura)
+		},
+	},
+	mounted() {
+		if (!this.en_agentes) return
+		this.ajustar_altura()
+		if (typeof ResizeObserver === 'undefined') return
+		this._observador_ancho = new ResizeObserver(([entrada]) => {
+			const ancho = entrada.contentRect.width
+			if (ancho === this._ancho_texto) return
+			this._ancho_texto = ancho
+			this.ajustar_altura()
+		})
+		this._observador_ancho.observe(this.$refs.text_input)
+	},
 	beforeDestroy() {
+		if (this._observador_ancho) this._observador_ancho.disconnect()
 		clearInterval(this.recording_timer_id)
 		if (this.media_recorder && this.media_recorder.state !== 'inactive') this.media_recorder.stop()
 	},
 	methods: {
+		ajustar_altura() {
+			const campo = this.$refs.text_input
+			if (!campo) return
+			campo.style.height = 'auto'
+			campo.style.height = campo.scrollHeight + 'px'
+		},
+		enviar_con_enter(evento) {
+			if (evento.shiftKey || evento.isComposing) return
+			evento.preventDefault()
+			this.enviar_desde_agentes()
+		},
+		enviar_desde_agentes() {
+			if (this.puede_enviar_desde_agentes) this.emit_send()
+		},
 		editar_borrador(clave, cambios) {
 			const borrador = Object.assign({}, this.borradores[clave], cambios)
 			if (borrador.body || borrador.attachment) this.$set(this.borradores, clave, borrador)
@@ -391,7 +478,7 @@ export default {
 </script>
 
 <style scoped>
-.support-message-input-bar {
+.support-message-input-bar:not(.support-message-input-bar--agentes) {
 	border-top: 1px solid var(--color-border, #e6e6e6);
 	padding: 10px;
 }
@@ -454,5 +541,39 @@ export default {
 	font-size: 12px;
 	color: var(--btn-peligro-texto, #c53030);
 }
+</style>
+
+<style lang="sass" scoped>
+@import '@/components/asistente-ia/_mixins'
+
+.support-message-input-bar--agentes
+	.asistente-ia-composer__caja:focus-within
+		outline: 2px solid var(--ia-foco)
+		outline-offset: 2px
+	.asistente-ia-composer__texto
+		max-height: min(12rem, 35vh)
+		overflow-y: auto
+	.support-input-attachment-preview
+		background: var(--ia-bg-compositor)
+		color: var(--ia-texto)
+		border-color: var(--ia-borde)
+		border-radius: 10px
+	.support-input-attachment-edit, .support-input-attachment-remove
+		color: var(--ia-primario)
+	.support-input-composer-action
+		+asistente-ia-boton-icono(36px, 11px)
+		font-size: 18px
+		&:disabled
+			opacity: .45
+			cursor: default
+		&--recording, &--recording:hover:not(:disabled)
+			background: var(--ia-peligro-tinte)
+			color: var(--ia-peligro)
+	.support-input-recording
+		margin: 0 0 6px
+		color: var(--ia-peligro)
+		font-size: .8rem
+		text-align: right
+		font-variant-numeric: tabular-nums
 </style>
 

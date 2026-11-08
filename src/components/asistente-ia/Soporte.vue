@@ -47,7 +47,7 @@
 			new_ticket_hint="Esta conversación está cerrada. Podés iniciar una nueva consulta."
 			@retry-message="reintentar"
 			@start-new-ticket="seleccionar(null)"></conversation>
-			<message-input :can_send="puede_enviar" :clave_borrador="clave_borrador" :preparar_envio="preparar_envio" @send="enviar"></message-input>
+			<message-input en_agentes :can_send="puede_enviar" :clave_borrador="clave_borrador" :preparar_envio="preparar_envio" @send="enviar"></message-input>
 		</div>
 	</div>
 </template>
@@ -182,29 +182,16 @@ export default {
 	.support-conversation-title
 		background: var(--ia-bg-barra)
 		color: var(--ia-texto)
-	.support-conversation-body, .support-message-input-bar
+	.support-conversation-body
 		background: var(--ia-bg)
 	.support-message .support-message-bubble
 		background: var(--ia-bg-elevado)
 		color: var(--ia-texto)
+		> div:first-child
+			white-space: pre-wrap
+			overflow-wrap: anywhere
 	.support-message.mine .support-message-bubble
 		background: var(--ia-bg-burbuja)
-	.support-message-input-bar
-		width: 100%
-		max-width: 52rem
-		margin: 0 auto
-		.form-control, .btn-outline-secondary
-			border-color: var(--ia-borde-fuerte)
-			background: var(--ia-bg-compositor)
-			color: var(--ia-texto)
-		.form-control
-			min-width: 0
-			&::placeholder
-				color: var(--ia-texto-3)
-		.btn-success
-			background: var(--ia-boton-enviar)
-			color: var(--ia-boton-enviar-texto)
-			border-color: transparent
 	.support-message-audio
 		max-width: 100%
 </style>
