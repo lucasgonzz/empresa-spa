@@ -8,8 +8,8 @@
 					:selected_ticket_id="selected_ticket_id"
 					@select="select_ticket" />
 			</div>
-			<div class="support-chat-main">
-				<div class="support-chat-main-header">
+			<div class="support-chat-main" data-tour="soporte.conversacion">
+				<div class="support-chat-main-header" data-tour="soporte.encabezado">
 					<strong>Soporte</strong>
 					<button class="btn btn-sm btn-warning" @click="$emit('close')">Esconder</button>
 				</div>

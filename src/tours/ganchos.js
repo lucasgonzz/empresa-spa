@@ -127,6 +127,12 @@ function esperar_modal(contexto, paso) {
 	guion lo usaba, y "la etapa 1" ya no es un lugar fijo.
 */
 export default {
+	abrir_buscador_articulos: function (contexto) {
+		return llevar_al_campo_de_vender(contexto, 'buscador_de_articulos')
+	},
+	abrir_codigo_de_barras: function (contexto) {
+		return llevar_al_campo_de_vender(contexto, 'codigo_de_barras')
+	},
 	/** El selector de cliente de Vender. */
 	abrir_etapa_1_cliente: function (contexto) {
 		return llevar_al_campo_de_vender(contexto, 'cliente')
