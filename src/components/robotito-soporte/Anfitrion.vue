@@ -65,6 +65,7 @@ export default {
 	mounted() {
 		if (!this.usuario_id) return
 		this.refrescar()
+		this._consulta = setInterval(this.refrescar, 45000)
 		window.addEventListener('online', this.refrescar)
 		window.addEventListener('focus', this.refrescar)
 		document.addEventListener('visibilitychange', this.refrescar)
@@ -98,7 +99,6 @@ export default {
 				if (sin_confirmar && !pendientes.some(guia => guia.uuid === sin_confirmar.uuid)) pendientes.unshift(sin_confirmar)
 				self.pendientes = pendientes
 				self.escuchar()
-				if (!self._consulta) self._consulta = setInterval(self.refrescar, 45000)
 			}).catch(function (error) {
 				if (self._detenido || self._carga !== carga) return
 				const estado = error.response && error.response.status
