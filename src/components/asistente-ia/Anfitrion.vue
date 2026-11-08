@@ -73,7 +73,8 @@ export default {
 		puede_soporte() { return !!this.hasExtencion('support_chat') },
 		identidad_de_sesion() {
 			if (!this.authenticated || !this.user) return null
-			return [this.user.id, !!this.user.es_sesion_soporte, !!this.user.es_acceso_maestro].join(':')
+			return [this.user.id, !!this.user.es_sesion_soporte, !!this.user.es_acceso_maestro,
+				this.user.asistente_personal_autorizado === true].join(':')
 		},
 		identidad_de_soporte() { return this.puede_soporte ? this.identidad_de_sesion : null },
 		agente() { return this.$store.state.ai_chat.agente },
@@ -130,6 +131,7 @@ export default {
 			this.$store.commit('support_message/setMessagesLoading', false)
 			this.$store.commit('mostrador/setReportes', null)
 			this.$store.commit('mostrador/setLoading', false)
+			this.suscribir_canal_del_chat()
 		},
 		'user.id'() {
 			this.suscribir_canal_del_chat()
@@ -220,7 +222,8 @@ export default {
 			if (!this.Echo) {
 				return
 			}
-			const canal = (this.should_show && this.puede_entrar_al_mostrador && this.user && this.user.id)
+			// El login maestro usa polling: cada lectura vuelve a comprobar que la clave siga vigente.
+			const canal = (this.should_show && this.puede_entrar_al_mostrador && this.user && !this.user.es_acceso_maestro && this.user.id)
 				? 'chat.user.' + this.user.id
 				: null
 			// Guarda de doble suscripción: watch de user.id y de should_show pueden

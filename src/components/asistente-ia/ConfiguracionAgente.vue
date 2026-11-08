@@ -138,7 +138,7 @@
 				modal `base + índice` (1041 con el CSS de Bootstrap, modal-manager.js), así que el
 				cuadro de confirmación quedaría DETRÁS del modal que lo disparó, sin poder clickearlo.
 			-->
-			<div class="config-agente__pregunta">
+			<div v-if="puede_configurar_mcp" class="config-agente__pregunta">
 				<h6 class="config-agente__titulo-pregunta">Conectá tu asistente a Claude y a otras apps</h6>
 				<div
 				ref="conexion"
@@ -433,6 +433,10 @@ export default {
 		}
 	},
 	computed: {
+		puede_configurar_mcp() {
+			const usuario = this.$store.state.auth.user
+			return !!(usuario && !usuario.es_acceso_maestro)
+		},
 		config_store() {
 			return this.$store.state.ai_chat.asistente_config
 		},
@@ -551,7 +555,9 @@ export default {
 				})
 			// La conexión MCP: se olvida cualquier clave de una apertura anterior y se pide fresca.
 			this.olvidar_clave()
-			this.cargar_conexion()
+			if (this.puede_configurar_mcp) {
+				this.cargar_conexion()
+			}
 		},
 		/**
 		 * Al cerrar (por Guardar, Cancelar, la X o Escape) la clave se olvida: el API la devolvió
