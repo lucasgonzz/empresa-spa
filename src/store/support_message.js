@@ -11,6 +11,11 @@ function generar_uuid_del_mensaje() {
 	return hex.replace(/^(........)(....)(....)(....)(............)$/, '$1-$2-$3-$4-$5')
 }
 
+function identidad_de_sesion({ auth, ai_chat }) {
+	const usuario = auth.user
+	return usuario ? [usuario.id, !!usuario.es_sesion_soporte, !!usuario.es_acceso_maestro, ai_chat && ai_chat.revision_sesion].join(':') : null
+}
+
 export default {
 	namespaced: true,
 	/**
@@ -210,8 +215,8 @@ export default {
 		loadTicketMessages({ commit, dispatch, state, rootState }, ticket) {
 			const agentes = ticket && typeof ticket === 'object' && ticket.agentes
 			const ticket_id = agentes ? ticket.id : ticket
-			const usuario = rootState.auth.user
-			const vigente = () => state.active_ticket_id === ticket_id && rootState.auth.user === usuario
+			const identidad = identidad_de_sesion(rootState)
+			const vigente = () => state.active_ticket_id === ticket_id && identidad_de_sesion(rootState) === identidad
 			commit('setActiveTicketId', ticket_id)
 			commit('setModels', [])
 			if (ticket_id == null) {
@@ -259,7 +264,7 @@ export default {
 			const kind_val = payload.kind || 'text'
 			const opt_ticket = payload.ticket_id === undefined ? state.active_ticket_id : payload.ticket_id
 			const mensaje_uuid = payload.agentes_version && (payload.mensaje_uuid || generar_uuid_del_mensaje())
-			const usuario = rootState.auth.user
+			const identidad = identidad_de_sesion(rootState)
 			if (state.active_ticket_id === opt_ticket) commit('pushPendingMessage', {
 				_client_pending: client_key,
 				support_ticket_id: opt_ticket,
@@ -295,8 +300,8 @@ export default {
 			return axios
 				.post('/api/support-message', form_data, { skip_navigation_cancel: true })
 				.then(response => {
+					if (identidad_de_sesion(rootState) !== identidad) return null
 					commit('setSending', false)
-					if (rootState.auth.user !== usuario) return null
 					if (response.data && response.data.model) {
 						if (state.active_ticket_id === opt_ticket) commit('replacePendingWithModel', { client_key: client_key, model: response.data.model })
 						dispatch('support_ticket/applyTicketFromMessage', response.data.model, { root: true })
@@ -305,6 +310,7 @@ export default {
 					return null
 				})
 				.catch(error => {
+					if (identidad_de_sesion(rootState) !== identidad) return
 					commit('setSending', false)
 					commit('markPendingDeliveryError', {
 						client_key: client_key,
@@ -336,11 +342,11 @@ export default {
 		 */
 		retryRemoteSync({ commit, dispatch, rootState }, message_or_id) {
 			const id = typeof message_or_id === 'object' ? message_or_id.id : message_or_id
-			const usuario = rootState.auth.user
+			const identidad = identidad_de_sesion(rootState)
 			return axios
 				.post('/api/support-message/' + id + '/retry-remote-sync')
 				.then(function (res) {
-					if (rootState.auth.user === usuario && res.data && res.data.model) {
+					if (identidad_de_sesion(rootState) === identidad && res.data && res.data.model) {
 						commit('patchMessage', res.data.model)
 						dispatch('support_ticket/applyTicketFromMessage', res.data.model, { root: true })
 					}

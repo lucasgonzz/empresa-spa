@@ -126,6 +126,8 @@ export default {
 			this.$store.commit('support_ticket/setModels', [])
 			this.$store.commit('support_message/setActiveTicketId', null)
 			this.$store.commit('support_message/setModels', [])
+			this.$store.commit('support_message/setSending', false)
+			this.$store.commit('support_message/setMessagesLoading', false)
 			this.$store.commit('mostrador/setReportes', null)
 			this.$store.commit('mostrador/setLoading', false)
 		},

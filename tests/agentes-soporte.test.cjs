@@ -80,6 +80,23 @@ test('el reintento de sincronización no modifica la bandeja de la sesión sigui
 	assert.equal(ctx.state.models[0].body, 'Consulta de la sesión actual')
 })
 
+test('una confirmación del usuario anterior no altera el envío activo de la sesión siguiente', async () => {
+	const respuestas = []
+	const ctx = soporte_con({ post() { return new Promise(resolve => { respuestas.push(resolve) }) } })
+	const anterior = ctx.dispatch('sendMessage', { body: 'Consulta anterior' })
+	ctx.rootState.auth.user = { id: 15 }
+	ctx.commit('setModels', [])
+	const actual = ctx.dispatch('sendMessage', { body: 'Consulta actual' })
+	respuestas[0]({ data: { model: { id: 18, body: 'Consulta anterior' } } })
+	await anterior
+	assert.equal(ctx.state.sending, true)
+	assert.equal(ctx.state.models[0].body, 'Consulta actual')
+	respuestas[1]({ data: { model: { id: 19, body: 'Consulta actual' } } })
+	await actual
+	assert.equal(ctx.state.sending, false)
+	assert.deepEqual(ctx.state.models, [{ id: 19, body: 'Consulta actual' }])
+})
+
 test('solo una sesión propia con capacidad nueva escucha el canal privado, y al cerrar sesión deja ambos canales', () => {
 	const mixin = cargar('mixins/broadcast.js', { '@/mixins/online': { __esModule: true, default: {} } }).default
 	const suscripciones = []
