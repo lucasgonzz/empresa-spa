@@ -88,13 +88,14 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		preparar_envio: Function,
+		clave_borrador: { type: String, default: 'nuevo' },
 	},
 	data() {
 		return {
-			/** Texto pendiente de envío. */
-			body: '',
-			/** Archivo multimedia adjunto pendiente (File). */
-			attachment: null,
+			borradores: {},
+			confirmando: false,
+			solicitando_microfono: false,
 			/** Modal de marcas sobre imagen visible. */
 			image_editor_visible: false,
 			/** Imagen en edición antes de confirmar adjunto. */
@@ -116,6 +117,15 @@ export default {
 		}
 	},
 	computed: {
+		borrador() { return this.borradores[this.clave_borrador] || {} },
+		body: {
+			get() { return this.borrador.body || '' },
+			set(valor) { this.editar_borrador(this.clave_borrador, { body: valor }) },
+		},
+		attachment: {
+			get() { return this.borrador.attachment || null },
+			set(valor) { this.editar_borrador(this.clave_borrador, { attachment: valor }) },
+		},
 		/**
 		 * Indica si el adjunto pendiente es audio (para el ícono del preview).
 		 * @returns {boolean}
@@ -153,7 +163,16 @@ export default {
 			)
 		},
 	},
+	beforeDestroy() {
+		clearInterval(this.recording_timer_id)
+		if (this.media_recorder && this.media_recorder.state !== 'inactive') this.media_recorder.stop()
+	},
 	methods: {
+		editar_borrador(clave, cambios) {
+			const borrador = Object.assign({}, this.borradores[clave], cambios)
+			if (borrador.body || borrador.attachment) this.$set(this.borradores, clave, borrador)
+			else this.$delete(this.borradores, clave)
+		},
 		/**
 		 * Enfoca el campo de texto del mensaje si existe y no está deshabilitado.
 		 * Lo usa el panel de soporte al abrirse para que el usuario pueda escribir al instante.
@@ -194,6 +213,7 @@ export default {
 				return
 			}
 			this.image_editor_source_file = file
+			this._borrador_de_imagen = this.clave_borrador
 			this.image_editor_visible = true
 		},
 
@@ -212,7 +232,7 @@ export default {
 		 * @param {File} annotated_file
 		 */
 		on_image_annotation_confirm(annotated_file) {
-			this.attachment = annotated_file
+			this.editar_borrador(this._borrador_de_imagen, { attachment: annotated_file })
 			this.image_editor_source_file = null
 		},
 
@@ -271,6 +291,7 @@ export default {
 		 */
 		toggle_recording() {
 			const self = this
+			if (this.solicitando_microfono) return
 			if (this.recording) {
 				this.media_recorder.stop()
 				return
@@ -283,8 +304,14 @@ export default {
 				this.mic_error_message = this.build_mic_unavailable_message()
 				return
 			}
+			const clave = this.clave_borrador
+			this.solicitando_microfono = true
 			navigator.mediaDevices.getUserMedia({ audio: true })
 			.then(function (stream) {
+				if (self._isDestroyed) {
+					stream.getTracks().forEach(track => track.stop())
+					return
+				}
 				self.audio_chunks = []
 				self.media_recorder = new MediaRecorder(stream)
 				self.media_recorder.ondataavailable = function (audio_event) {
@@ -299,7 +326,9 @@ export default {
 					self.recording_seconds = 0
 
 					let audio_blob = new Blob(self.audio_chunks, { type: 'audio/webm' })
-					self.attachment = new File([audio_blob], 'audio_' + Date.now() + '.webm', { type: 'audio/webm' })
+					if (!self._isDestroyed) self.editar_borrador(clave, {
+						attachment: new File([audio_blob], 'audio_' + Date.now() + '.webm', { type: 'audio/webm' }),
+					})
 					self.recording = false
 					stream.getTracks().forEach(function (track) {
 						track.stop()
@@ -320,13 +349,13 @@ export default {
 				self.mic_error = true
 				self.mic_error_message =
 					'Sin acceso al micrófono. Verificá los permisos del navegador o usá Adjuntar.'
-			})
+			}).finally(() => { self.solicitando_microfono = false })
 		},
 		/**
 		 * Emite payload al componente padre y resetea campos locales.
 		 */
 		emit_send() {
-			if (!this.body && !this.attachment) {
+			if (!this.can_send || this.confirmando || this.recording || (!this.body.trim() && !this.attachment)) {
 				return
 			}
 			let kind = 'text'
@@ -336,14 +365,26 @@ export default {
 			if (this.attachment && this.attachment.type.indexOf('image') == 0) {
 				kind = 'image'
 			}
-			this.$emit('send', {
+			const payload = {
 				body: this.body,
 				kind: kind,
 				attachment: this.attachment,
+			}
+			const clave = this.clave_borrador
+			this.confirmando = true
+			const preparar = this.preparar_envio ? this.preparar_envio() : Promise.resolve({})
+			preparar.then(opciones => {
+				if (!opciones || this._isDestroyed || this.clave_borrador !== clave) return
+				this.$emit('send', Object.assign(payload, opciones))
+				this.editar_borrador(clave, {
+					body: this.body === payload.body ? '' : this.body,
+					attachment: this.attachment === payload.attachment ? null : this.attachment,
+				})
+			}).catch(() => {
+				this.$toast.error('No pudimos preparar el envío. Volvé a intentar.')
+			}).finally(() => {
+				this.confirmando = false
 			})
-			this.body = ''
-			this.attachment = null
-			this.$refs.file_input.value = ''
 		},
 	},
 }

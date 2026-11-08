@@ -6,7 +6,7 @@
 			<template #default="tour">
 				<nav-vertical>
 					<template #nav_top>
-						<acceso-asistente class="d-none d-md-flex"></acceso-asistente>
+						<acceso-agentes></acceso-agentes>
 					</template>
 					<template #nav_tour>
 						<aviso-robotito
@@ -28,7 +28,7 @@
 						@visible="tour.visible(tour.pendiente.uuid)"
 						@iniciar="tour.iniciar(tour.pendiente)"
 						@descartar="tour.descartar(tour.pendiente)"></aviso-robotito>
-						<acceso-asistente movil></acceso-asistente>
+						<acceso-agentes movil></acceso-agentes>
 					</template>
 					<!-- <template #nav_bottom>
 						<btn-version-estable></btn-version-estable>
@@ -48,7 +48,7 @@ export default {
 	components: {
 		RobotitoSoporte,
 		AvisoRobotito: () => import('@/components/robotito-soporte/Aviso'),
-		AccesoAsistente: () => import('@/components/asistente-ia/Acceso'),
+		AccesoAgentes: () => import('@/components/asistente-ia/Acceso'),
 		NavComponent: () => import('@/common-vue/components/nav/Index'),
 		NavVertical: () => import('@/common-vue/components/nav-vertical/Index'),
 		BtnVersionEstable: () => import('@/components/nav/BtnVersionEstable'),

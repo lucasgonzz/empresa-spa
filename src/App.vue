@@ -15,8 +15,6 @@
         <nav-component></nav-component>
         <avisos-de-implementacion v-if="implementacion_usuario_id" :key="implementacion_usuario_id"></avisos-de-implementacion>
         <btn-scroll-top></btn-scroll-top>
-        <support-chat-floating-button></support-chat-floating-button>
-        <asistente-ia-anfitrion></asistente-ia-anfitrion>
         <!--
             Anfitrión del sidebar de WhatsApp. Va acá arriba, y no adentro del módulo, porque
             desde este refactor la conversación se abre también desde Clientes, Pedidos y
@@ -136,8 +134,8 @@
             sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
             para autorizar el panel. Ver store/demo.js y el estado inicial de PanelDemo.
         -->
-        <panel-demo v-if="$store.getters['demo/panel_visible']"></panel-demo>
-        <panel-prueba v-else-if="prueba_chat_usuario_id" :key="prueba_chat_usuario_id"></panel-prueba>
+        <panel-demo v-if="$store.getters['demo/panel_visible']" v-show="$route.name !== 'agentes'"></panel-demo>
+        <panel-prueba v-else-if="prueba_chat_usuario_id" v-show="$route.name !== 'agentes'" :key="prueba_chat_usuario_id"></panel-prueba>
 
         <!--
             El v-if esconde la vista entera mientras hay bloqueo de app instalada: el login no se
@@ -154,6 +152,7 @@
                 Para un cliente real no muestra nada.
             -->
             <prueba-primer-ingreso-modal v-if="authenticated"></prueba-primer-ingreso-modal>
+            <asistente-ia-anfitrion></asistente-ia-anfitrion>
             <router-view/>
 
         </b-container>
@@ -164,7 +163,6 @@ import ErrorModal from '@/common-vue/components/error/Index'
 import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
 import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
-import SupportChatFloatingButton from '@/common-vue/components/support-chat/FloatingButton'
 import AsistenteIaAnfitrion from '@/components/asistente-ia/Anfitrion'
 import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
 import TiendaMensajesSidebarHost from '@/components/online/components/mensajes/SidebarHost'
@@ -214,7 +212,6 @@ export default {
         LogoLoading, 
         NavComponent,
         BtnScrollTop,
-        SupportChatFloatingButton,
         AsistenteIaAnfitrion,
         WhatsappSidebarHost,
         TiendaMensajesSidebarHost,

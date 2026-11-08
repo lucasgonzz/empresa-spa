@@ -5,8 +5,8 @@ const TUTORIALES = '[data-nav-tutoriales]'
 
 const GUIONES = {
 	crear_ticket: [
-		{ ancla: 'soporte.abrir', avanza: 'aparece', foco: false, texto: 'Tocá el botón flotante de Soporte para abrir la conversación.' },
-		{ ancla: 'soporte.conversacion', foco: false, texto: 'Si ves Iniciar nuevo ticket, tocá ese botón. Si ya tenés un ticket abierto, podés seguir escribiendo en él.' },
+		{ ancla: 'soporte.abrir', avanza: 'aparece', foco: false, texto: 'Tocá Agentes para abrir Soporte.' },
+		{ ancla: 'soporte.conversacion', foco: false, texto: 'Acá podés iniciar una consulta o seguir una conversación desde el historial.' },
 		{ ancla: 'soporte.escribir', texto: 'Escribí tu consulta y tocá Enviar. Si todavía no hay un ticket abierto, el primer mensaje lo crea.' },
 	],
 	buscar_articulo_nombre: [

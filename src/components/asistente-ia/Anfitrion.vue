@@ -1,8 +1,15 @@
 <template>
 	<div v-if="should_show" :class="{ 'asistente-ia-guia-activa': guia_activa }">
-		<asistente-ia-panel v-if="panel_abierto" :modo="modo" @cambiar-modo="modo = $event">
+		<asistente-ia-panel
+		v-if="abierto"
+		:key="identidad_de_sesion"
+		:modo="en_modulo ? 'modulo' : 'lateral'"
+		:puede_asistente="puede_entrar_al_mostrador"
+		:puede_soporte="puede_soporte"
+		@expandir="abrir_modulo"
+		@cerrar="cerrar">
 			<template #guia>
-				<guia-de-venta v-if="en_vender" @vista-lateral="modo = 'lateral'" @activa="guia_activa = $event"></guia-de-venta>
+				<guia-de-venta v-if="en_vender" @activa="guia_activa = $event"></guia-de-venta>
 			</template>
 		</asistente-ia-panel>
 
@@ -20,15 +27,16 @@
 		Los dos son livianos mientras no se usan: la tarjeta es un `b-popover` que no
 		existe hasta el primer hover, y el modal de cuenta corriente no baja su chunk
 		hasta el primer clic. -->
-		<ficha-articulo-popover></ficha-articulo-popover>
-		<cuenta-corriente-de-mencion></cuenta-corriente-de-mencion>
+		<ficha-articulo-popover v-if="puede_entrar_al_mostrador"></ficha-articulo-popover>
+		<cuenta-corriente-de-mencion v-if="puede_entrar_al_mostrador"></cuenta-corriente-de-mencion>
 
 		<!-- El modal de configuración del agente (S3), montado UNA sola vez acá por el mismo
 		motivo que el de cuenta corriente: los dos accesos (el engranaje de la sidebar y el
 		botón del mostrador) lo abren por id, y con una sola instancia no hay dos <b-modal>
 		con el mismo id peleándose. -->
-		<configuracion-agente></configuracion-agente>
+		<configuracion-agente v-if="puede_entrar_al_mostrador && (!abierto || agente === 'asistente' || $route.name === 'ia')"></configuracion-agente>
 	</div>
+	<p v-else-if="en_modulo && mostrador_extensiones_cargadas" class="my-4 text-center">Tu cuenta no tiene acceso a Agentes.</p>
 </template>
 
 <script>
@@ -37,6 +45,8 @@ import FichaArticuloPopover from '@/components/asistente-ia/FichaArticuloPopover
 import CuentaCorrienteDeMencion from '@/components/asistente-ia/CuentaCorrienteDeMencion'
 import GuiaDeVenta from '@/components/asistente-ia/GuiaDeVenta'
 import mostrador_acceso from '@/mixins/mostrador_acceso'
+
+const CONTROLES = 'a, button, label, input, textarea, select, summary, [contenteditable], [tabindex], [role="button"], [role="link"], [draggable=true]'
 
 export default {
 	mixins: [mostrador_acceso],
@@ -49,7 +59,7 @@ export default {
 	},
 	data() {
 		return {
-			modo: 'lateral',
+			ultima_ruta: null,
 			guia_activa: false,
 			ai_chat_echo_channel: null,
 			reconexion_del_chat_enganchada: false,
@@ -58,37 +68,142 @@ export default {
 	},
 	computed: {
 		should_show() {
-			return this.authenticated && this.puede_entrar_al_mostrador
+			return !!(this.authenticated && this.user && (this.puede_entrar_al_mostrador || this.puede_soporte))
 		},
+		puede_soporte() { return !!this.hasExtencion('support_chat') },
+		identidad_de_sesion() {
+			if (!this.authenticated || !this.user) return null
+			return [this.user.id, !!this.user.es_sesion_soporte, !!this.user.es_acceso_maestro].join(':')
+		},
+		identidad_de_soporte() { return this.puede_soporte ? this.identidad_de_sesion : null },
+		agente() { return this.$store.state.ai_chat.agente },
+		en_modulo() { return this.$route.name === 'agentes' },
+		abierto() { return this.en_modulo || this.panel_abierto },
 		panel_abierto() {
 			return this.$store.state.ai_chat.panel_abierto
 		},
 		en_vender() {
-			return !this.$store.getters['demo/activa'] && this.$route.name === 'vender'
+			return this.agente === 'asistente' && !this.$store.getters['demo/activa'] && this.$route.name === 'vender'
 				&& (!this.$route.params.view || this.$route.params.view === 'remito')
 		},
 	},
 	mounted() {
 		this.suscribir_canal_del_chat()
+		this.$root.$on('agentes:abrir', this.abrir_desde_navegacion)
 		document.addEventListener('keydown', this.atajo_del_asistente)
+		document.addEventListener('pointerdown', this.iniciar_pulsacion, true)
+		document.addEventListener('pointermove', this.mover_pulsacion, true)
+		document.addEventListener('pointerup', this.cancelar_pulsacion, true)
+		document.addEventListener('pointercancel', this.cancelar_pulsacion, true)
+		document.addEventListener('dragstart', this.cancelar_pulsacion, true)
+		window.addEventListener('blur', this.cancelar_pulsacion)
 	},
 	beforeDestroy() {
+		this.cancelar_pulsacion()
+		this.$root.$off('agentes:abrir', this.abrir_desde_navegacion)
 		document.removeEventListener('keydown', this.atajo_del_asistente)
+		document.removeEventListener('pointerdown', this.iniciar_pulsacion, true)
+		document.removeEventListener('pointermove', this.mover_pulsacion, true)
+		document.removeEventListener('pointerup', this.cancelar_pulsacion, true)
+		document.removeEventListener('pointercancel', this.cancelar_pulsacion, true)
+		document.removeEventListener('dragstart', this.cancelar_pulsacion, true)
+		window.removeEventListener('blur', this.cancelar_pulsacion)
 		if (this.ai_chat_echo_channel && this.Echo) {
 			this.Echo.leave(this.ai_chat_echo_channel)
 		}
 	},
 	watch: {
-		'user.id'() { this.suscribir_canal_del_chat() },
+		identidad_de_sesion(actual, anterior) {
+			if (!anterior || actual === anterior) return
+			this.$store.dispatch('ai_chat/cancelarEsperaDeRespuesta')
+			this.$store.commit('ai_chat/renovarSesion')
+			this.$store.commit('ai_chat/setPanelAbierto', false)
+			this.$store.commit('ai_chat/setAgente', 'asistente')
+			this.$store.commit('ai_chat/setSelectedConversationId', null)
+			this.$store.commit('ai_chat/setConversations', [])
+			this.$store.commit('ai_chat/setMessages', [])
+			this.$store.commit('ai_chat/setMiConsumo', null)
+			this.$store.commit('support_ticket/setModels', [])
+			this.$store.commit('support_message/setActiveTicketId', null)
+			this.$store.commit('support_message/setModels', [])
+			this.$store.commit('support_message/setSending', false)
+			this.$store.commit('support_message/setMessagesLoading', false)
+			this.$store.commit('mostrador/setReportes', null)
+			this.$store.commit('mostrador/setLoading', false)
+		},
+		'user.id'() {
+			this.suscribir_canal_del_chat()
+		},
 		should_show() { this.suscribir_canal_del_chat() },
+		puede_entrar_al_mostrador() { this.suscribir_canal_del_chat() },
+		identidad_de_soporte: {
+			immediate: true,
+			handler(identidad) {
+				if (identidad) this.$store.dispatch('support_ticket/getAgentes')
+			},
+		},
+		$route(destino, origen) {
+			this.cancelar_pulsacion()
+			if (destino.name === 'agentes' && origen.name && origen.name !== 'login' && origen.name !== 'agentes') {
+				this.ultima_ruta = origen.fullPath
+			}
+		},
 	},
 	methods: {
+		abrir_desde_navegacion(modo) {
+			if (!this.should_show) return
+			if (!this.abierto) {
+				const en_guia_soporte = this.puede_soporte && document.querySelector('.driver-popover.tour-soporte')
+				this.$store.commit('ai_chat/setAgente', this.puede_entrar_al_mostrador && !en_guia_soporte ? 'asistente' : 'soporte')
+				this.$store.commit('ai_chat/setSelectedConversationId', null)
+				this.$store.commit('ai_chat/setMessages', [])
+				this.$store.commit('support_message/setActiveTicketId', null)
+				this.$store.commit('support_message/setModels', [])
+			}
+			if (modo === 'modulo') {
+				this.abrir_modulo()
+				return
+			}
+			this.$store.commit('ai_chat/setPanelAbierto', true)
+			if (this.en_modulo) this.volver_al_sistema()
+		},
+		abrir_modulo() {
+			if (this.en_modulo) return
+			this.$router.push({ name: 'agentes' }).then(() => this.$store.commit('ai_chat/setPanelAbierto', false)).catch(() => {})
+		},
+		volver_al_sistema() {
+			this.$router.push(this.ultima_ruta || { name: 'reportes', params: { view: 'estado-de-resultados' } }).catch(() => {})
+		},
+		cerrar() {
+			this.$store.commit('ai_chat/setPanelAbierto', false)
+			if (this.en_modulo) this.volver_al_sistema()
+		},
+		iniciar_pulsacion(evento) {
+			this.cancelar_pulsacion()
+			if (!this.should_show || this.abierto || evento.pointerType !== 'mouse' || evento.button !== 0 || evento.altKey || evento.metaKey || evento.ctrlKey || evento.shiftKey) return
+			if (!evento.target.closest || !evento.target.closest('#app') || evento.target.closest(CONTROLES + ', .modal, .driver-popover')) return
+			this._pulsacion = { x: evento.clientX, y: evento.clientY }
+			this._pulsacion_temporizador = setTimeout(() => {
+				this.cancelar_pulsacion()
+				if (!this.should_show || this.abierto || window.getSelection().toString() || document.querySelector('.modal.show, .driver-active')) return
+				this.abrir_desde_navegacion('lateral')
+			}, 1000)
+		},
+		mover_pulsacion(evento) {
+			const inicio = this._pulsacion
+			if (inicio && (evento.buttons !== 1 || Math.hypot(evento.clientX - inicio.x, evento.clientY - inicio.y) > 6)) this.cancelar_pulsacion()
+		},
+		cancelar_pulsacion() {
+			clearTimeout(this._pulsacion_temporizador)
+			this._pulsacion = null
+		},
 		atajo_del_asistente(evento) {
 			if (!this.should_show || !this.$el || evento.defaultPrevented || evento.repeat || evento.isComposing || !evento.altKey || !evento.shiftKey || evento.ctrlKey || evento.metaKey || evento.code !== 'KeyA') return
 			if (evento.target.closest && evento.target.closest('input, textarea, select, [contenteditable=true]')) return
 			if (document.querySelector('.modal.show, .driver-popover')) return
 			evento.preventDefault()
-			this.$store.commit('ai_chat/setPanelAbierto', !this.panel_abierto)
+			if (this.abierto) this.cerrar()
+			else this.abrir_desde_navegacion('lateral')
 		},
 		/**
 		 * Se suscribe al canal PRIVADO por persona `chat.user.{auth_user_id}` (D8/D45).
@@ -105,7 +220,7 @@ export default {
 			if (!this.Echo) {
 				return
 			}
-			const canal = (this.should_show && this.user && this.user.id)
+			const canal = (this.should_show && this.puede_entrar_al_mostrador && this.user && this.user.id)
 				? 'chat.user.' + this.user.id
 				: null
 			// Guarda de doble suscripción: watch de user.id y de should_show pueden
@@ -153,7 +268,7 @@ export default {
 						// Si el REST falla, el polling de respaldo sigue en carrera.
 						console.log(err)
 					})
-			} else if (chat_state.panel_abierto) {
+			} else if (this.abierto) {
 				this.$store.dispatch('ai_chat/getConversations')
 			}
 		},

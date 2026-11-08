@@ -79,10 +79,12 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		preparar_envio: Function,
+		clave_borrador: { type: String, default: 'nuevo' },
 	},
 	data() {
 		return {
-			texto: '',
+			borradores: {},
 			// true durante el POST: cubre el hueco entre el click y el 201 (recién
 			// ahí existe el assistant pendiente que bloquea por hay_respuesta_en_curso).
 			sending: false,
@@ -91,6 +93,10 @@ export default {
 		}
 	},
 	computed: {
+		texto: {
+			get() { return this.borradores[this.clave_borrador] || '' },
+			set(valor) { this.$set(this.borradores, this.clave_borrador, valor) },
+		},
 		hay_respuesta_en_curso() {
 			return this.$store.getters['ai_chat/hay_respuesta_en_curso']
 		},
@@ -207,15 +213,17 @@ export default {
 		send() {
 			let self = this
 			let contenido = this.texto.trim()
+			const clave = this.clave_borrador
 			if (!contenido || !this.puede_enviar) {
 				return
 			}
-			// El globo optimista sube al toque (D41): el input se limpia ya mismo.
-			this.texto = ''
 			this.sending = true
-			this.enfocar()
-			this.$store.dispatch('ai_chat/sendMessage', {
-				contenido: contenido,
+			const preparar = this.preparar_envio ? this.preparar_envio() : Promise.resolve({})
+			preparar.then(opciones => {
+				if (!opciones || self._isDestroyed) return
+				if ((self.borradores[clave] || '').trim() === contenido) self.$delete(self.borradores, clave)
+				self.enfocar()
+				return self.$store.dispatch('ai_chat/sendMessage', Object.assign({ contenido: contenido }, opciones))
 			})
 				.then(() => {
 					self.sending = false
@@ -227,10 +235,16 @@ export default {
 						// El servidor ya está generando una respuesta en esta conversación
 						// (R2: doble clic o una pestaña vieja). Se repone el texto para no
 						// perder lo escrito.
-						self.texto = contenido
+						if (!self.borradores[clave]) self.$set(self.borradores, clave, contenido)
 						self.$toast.error('Esperá la respuesta del asistente antes de mandar otro mensaje.')
 						return
 					}
+					if (!self.borradores[clave]) self.$set(self.borradores, clave, contenido)
+					if (data && data.code === 'confirmar_traspaso_a_sistema') {
+						self.$toast.error('Esta conversación empezó en WhatsApp. Volvé a enviar para confirmar el traspaso.')
+						return
+					}
+					self.$toast.error('No pudimos preparar el envío. Volvé a intentar.')
 					console.log(err)
 				})
 		},

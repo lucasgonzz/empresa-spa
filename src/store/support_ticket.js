@@ -44,6 +44,21 @@ export default __base_store({
 		},
 	},
 	actions: {
+		getAgentes({ commit, state, rootState }) {
+			commit('incrementar_descarga_de_models_token')
+			const token = state.descarga_de_models_token
+			const usuario = rootState.auth.user
+			const vigente = () => state.descarga_de_models_token === token && rootState.auth.user === usuario
+			commit('setLoading', true)
+			return axios.get('/api/support-ticket', { params: { agentes: 1 }, skip_navigation_cancel: true })
+				.then(res => {
+					if (vigente()) commit('setModels', res.data.models)
+				})
+				.catch(error => console.log(error))
+				.finally(() => {
+					if (state.descarga_de_models_token === token) commit('setLoading', false)
+				})
+		},
 		/**
 		 * Actualiza la lista lateral a partir de un SupportMessage (con relación ticket cargada vía Pusher/HTTP).
 		 */

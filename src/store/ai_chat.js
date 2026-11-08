@@ -477,6 +477,8 @@ export default {
 		// Id de la conversación abierta en el panel. null = conversación nueva sin crear
 		// todavía (se crea recién al enviar el primer mensaje, como en Claude).
 		selected_conversation_id: null,
+		agente: 'asistente',
+		revision_sesion: 0,
 		revision_seleccion: 0,
 
 		// Mensajes de la conversación abierta, en orden cronológico ascendente para renderizar.
@@ -590,6 +592,18 @@ export default {
 		setPanelAbierto(state, value) {
 			state.panel_abierto = value
 		},
+		setAgente(state, value) {
+			state.agente = value
+		},
+		renovarSesion(state) {
+			state.revision_sesion++
+			state.loading_conversations = false
+			state.loading_messages = false
+			state.loading_more_messages = false
+			state.seleccion_sin_recarga = false
+			state.fichas_de_articulos = {}
+			state.mencion_cuenta_corriente = null
+		},
 		setConversations(state, value) {
 			state.conversations = value || []
 		},
@@ -624,6 +638,8 @@ export default {
 		setSelectedConversationId(state, id) {
 			state.selected_conversation_id = id
 			state.revision_seleccion++
+			state.loading_messages = false
+			state.loading_more_messages = false
 		},
 		setMessages(state, value) {
 			state.messages = value || []
@@ -806,16 +822,19 @@ export default {
 		/**
 		 * Carga la bandeja de conversaciones de la persona.
 		 */
-		getConversations({ commit }) {
+		getConversations({ commit, state }) {
+			const revision = state.revision_sesion
 			commit('setLoadingConversations', true)
 			commit('setErrorConversations', '')
-			return axios.get('/api/ai-conversations')
+			return axios.get('/api/ai-conversations', { skip_navigation_cancel: true })
 				.then(res => {
+					if (state.revision_sesion !== revision) return
 					commit('setLoadingConversations', false)
 					commit('setConversations', res.data.models)
 					return res.data.models
 				})
 				.catch(err => {
+					if (state.revision_sesion !== revision) return
 					commit('setLoadingConversations', false)
 					/*
 						🔴 Este .catch se tragaba el fallo con un console.log y nada más, así que
@@ -845,14 +864,19 @@ export default {
 		 *
 		 * @returns {Promise} resuelve con la conversación creada.
 		 */
-		createConversation({ commit }) {
-			return axios.post('/api/ai-conversations')
+		createConversation({ commit, state }) {
+			const revision_sesion = state.revision_sesion
+			const revision_seleccion = state.revision_seleccion
+			return axios.post('/api/ai-conversations', null, { skip_navigation_cancel: true })
 				.then(res => {
+					if (state.revision_sesion !== revision_sesion) return null
 					commit('upsertConversation', res.data.model)
 					// La selección no dispara recarga: la conversación recién nace y el
 					// globo optimista del primer mensaje ya está en pantalla.
-					commit('setSeleccionSinRecarga', true)
-					commit('setSelectedConversationId', res.data.model.id)
+					if (state.revision_seleccion === revision_seleccion) {
+						commit('setSeleccionSinRecarga', true)
+						commit('setSelectedConversationId', res.data.model.id)
+					}
 					return res.data.model
 				})
 		},
@@ -885,6 +909,8 @@ export default {
 		 * @param {Object} payload { conversation_id, page }
 		 */
 		getMessages({ commit, state, dispatch }, payload) {
+			const revision = state.revision_sesion
+			const seleccion = state.revision_seleccion
 			let conversation_id = payload.conversation_id
 			let page = payload.page || 1
 			if (page == 1) {
@@ -893,19 +919,14 @@ export default {
 				commit('setLoadingMoreMessages', true)
 			}
 			return axios.get('/api/ai-conversations/' + conversation_id + '/messages', {
+				skip_navigation_cancel: true,
 				params: {
 					page: page,
 				},
 			})
 				.then(res => {
-					// Respuesta tardía de OTRA conversación (scrolleás la A, clickeás la B,
-					// la página de A llega después): se apaga solo el loading que esta
-					// petición prendió y no se toca nada más — sin el guard, la página de A
-					// se mezclaba (prepend) o pisaba (page 1) los mensajes de B en pantalla.
-					if (conversation_id != state.selected_conversation_id) {
-						commit(page == 1 ? 'setLoadingMessages' : 'setLoadingMoreMessages', false)
-						return
-					}
+					// Una lectura de otro hilo no toca los mensajes ni el indicador de carga vigente.
+					if (state.revision_sesion !== revision || state.revision_seleccion !== seleccion || conversation_id != state.selected_conversation_id) return
 					let paginator = res.data.models
 					// El backend devuelve DESC (más nuevo primero); para renderizar de arriba
 					// a abajo se necesita orden ascendente, así que se invierte cada página.
@@ -938,13 +959,7 @@ export default {
 					commit('setMessagesLastPage', paginator.last_page)
 				})
 				.catch(err => {
-					// Mismo guard que el .then: si la conversación pedida ya no es la
-					// abierta, esta falla es de una petición descartada — apagar los dos
-					// flags acá pisaría el loading de la conversación vigente.
-					if (conversation_id != state.selected_conversation_id) {
-						commit(page == 1 ? 'setLoadingMessages' : 'setLoadingMoreMessages', false)
-						return
-					}
+					if (state.revision_sesion !== revision || state.revision_seleccion !== seleccion || conversation_id != state.selected_conversation_id) return
 					commit('setLoadingMessages', false)
 					commit('setLoadingMoreMessages', false)
 					console.log(err)
@@ -964,6 +979,7 @@ export default {
 		 */
 		sendMessage({ commit, state, dispatch }, payload) {
 			let contenido = payload.contenido
+			const revision = state.revision_sesion
 
 			proximo_local_id = proximo_local_id + 1
 			let local_id = 'local-' + proximo_local_id
@@ -974,6 +990,7 @@ export default {
 				contenido: contenido,
 				estado: 'listo',
 				estado_local: 'enviando',
+				traspasar_a_sistema: payload.traspasar_a_sistema,
 				created_at: new Date().toISOString(),
 			})
 
@@ -984,12 +1001,13 @@ export default {
 			} else {
 				conversacion_lista = dispatch('createConversation')
 					.then(conversation => {
-						return conversation.id
+						return conversation && conversation.id
 					})
 			}
 
 			return conversacion_lista
 				.then(conversation_id => {
+					if (!conversation_id || state.revision_sesion !== revision) return
 					return axios.post('/api/ai-conversations/' + conversation_id + '/messages', {
 						contenido: contenido,
 						// Habilita las tarjetas de carga para ESTA respuesta (§2.1 del plan de
@@ -997,6 +1015,8 @@ export default {
 						// pintarlas: sin la clave el API responde de solo lectura (que es lo que
 						// les pasa a las pestañas con la SPA vieja), y un API viejo la ignora.
 						acciones: true,
+						agentes_version: payload.agentes_version,
+						traspasar_a_sistema: payload.traspasar_a_sistema,
 					}, {
 						// `skip_navigation_cancel`: AsistenteIaFloatingButton es global (App.vue);
 						// cambiar de pantalla después de mandar no tiene que cancelar el envío
@@ -1004,16 +1024,22 @@ export default {
 						skip_navigation_cancel: true,
 					})
 						.then(res => {
+							if (state.revision_sesion !== revision) return
+							commit('upsertConversation', {
+								id: conversation_id,
+								last_message_at: new Date().toISOString(),
+								...(res.data.sistema_exclusivo_at ? { sistema_exclusivo_at: res.data.sistema_exclusivo_at } : {}),
+							})
+							if (state.selected_conversation_id != conversation_id) return res.data
 							// Conserva el local_id para que el :key del globo no cambie: si
 							// cambiara, Vue re-montaría el nodo y la animación de entrada
 							// parpadearía en la transición enviando -> enviado.
-							commit('replaceLocalMessage', {
+							const enviado = Object.assign({}, res.data.user_message, {
+								estado_local: 'enviado',
 								local_id: local_id,
-								message: Object.assign({}, res.data.user_message, {
-									estado_local: 'enviado',
-									local_id: local_id,
-								}),
 							})
+							commit('replaceLocalMessage', { local_id: local_id, message: enviado })
+							commit('appendMessageIfMissing', enviado)
 							// "IfMissing" porque desde que fetchMessage agrega lo que no está
 							// (19/9/2026), el broadcast del assistant 'listo' puede ganarle a
 							// esta respuesta si el hosting la demora más de lo que tarda el
@@ -1021,11 +1047,6 @@ export default {
 							// globos, uno 'pendiente' para siempre (patchMessage parchea el
 							// primero por id) y Confirmar deshabilitado en todas las tarjetas.
 							commit('appendMessageIfMissing', res.data.assistant_message)
-							// La conversación subió al tope de la bandeja.
-							commit('upsertConversation', {
-								id: conversation_id,
-								last_message_at: new Date().toISOString(),
-							})
 							// Arranca el polling de respaldo del broadcast (D46).
 							dispatch('esperarRespuesta', {
 								conversation_id: conversation_id,
@@ -1035,7 +1056,12 @@ export default {
 						})
 				})
 				.catch(err => {
+					if (state.revision_sesion !== revision) return
 					let data = err.response && err.response.data
+					if (err.response && err.response.status == 409 && data && data.code === 'confirmar_traspaso_a_sistema') {
+						commit('removeLocalMessage', local_id)
+						return dispatch('getConversations').then(() => { throw err })
+					}
 					if (err.response && err.response.status == 409 && data && data.code == 'respuesta_en_curso') {
 						// Ya hay una respuesta generándose: el globo optimista se saca y el
 						// composer (que re-lanza) repone el texto para no perder lo escrito.
@@ -1058,7 +1084,11 @@ export default {
 		 */
 		retryMessage({ commit, dispatch }, message) {
 			commit('removeLocalMessage', message.local_id)
-			return dispatch('sendMessage', { contenido: message.contenido })
+			return dispatch('sendMessage', {
+				contenido: message.contenido,
+				agentes_version: message.traspasar_a_sistema ? 1 : undefined,
+				traspasar_a_sistema: message.traspasar_a_sistema,
+			})
 		},
 		/**
 		 * Confirma una tarjeta de carga: el API registra lo que dice la tarjeta, autenticado
@@ -1757,15 +1787,19 @@ export default {
 		 *
 		 * @returns {Promise}
 		 */
-		fetchMiConsumo({ commit }) {
+		fetchMiConsumo({ commit, state }) {
+			const revision = state.revision_sesion
 			return axios.get('/api/mi-consumo-ia', {
 				skip_global_error_event: true,
+				skip_navigation_cancel: true,
 			})
 				.then(res => {
+					if (state.revision_sesion !== revision) return
 					commit('setMiConsumo', res.data)
 					return res.data
 				})
 				.catch(err => {
+					if (state.revision_sesion !== revision) return
 					commit('setMiConsumo', null)
 					console.log(err)
 				})
