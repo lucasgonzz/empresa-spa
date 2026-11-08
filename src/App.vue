@@ -134,8 +134,8 @@
             sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
             para autorizar el panel. Ver store/demo.js y el estado inicial de PanelDemo.
         -->
-        <panel-demo v-if="$store.getters['demo/panel_visible']"></panel-demo>
-        <panel-prueba v-else-if="prueba_chat_usuario_id" :key="prueba_chat_usuario_id"></panel-prueba>
+        <panel-demo v-if="$store.getters['demo/panel_visible']" v-show="$route.name !== 'agentes'"></panel-demo>
+        <panel-prueba v-else-if="prueba_chat_usuario_id" v-show="$route.name !== 'agentes'" :key="prueba_chat_usuario_id"></panel-prueba>
 
         <!--
             El v-if esconde la vista entera mientras hay bloqueo de app instalada: el login no se

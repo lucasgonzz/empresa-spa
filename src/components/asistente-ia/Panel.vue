@@ -91,6 +91,7 @@
 						<composer
 						ref="composer"
 						:bloqueado="traslado_en_curso && !selected_conversation_id"
+						:clave_borrador="clave_borrador"
 						:preparar_envio="preparar_envio_personal"
 						:vacia="vacia">
 							<template #arriba>
@@ -197,6 +198,10 @@ export default {
 		reporte_id() {
 			const hilo = this.selected_conversation
 			return this.reporte_nuevo || (hilo && hilo.origen === 'mostrador_reporte' ? hilo.referencia_id : null)
+		},
+		clave_borrador() {
+			if (this.reporte_id) return 'reporte:' + this.reporte_id
+			return this.selected_conversation_id == null ? 'nuevo' : 'hilo:' + this.selected_conversation_id
 		},
 		conversations() {
 			return this.$store.state.ai_chat.conversations

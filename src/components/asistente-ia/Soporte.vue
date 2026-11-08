@@ -47,7 +47,7 @@
 			new_ticket_hint="Esta conversación está cerrada. Podés iniciar una nueva consulta."
 			@retry-message="reintentar"
 			@start-new-ticket="seleccionar(null)"></conversation>
-			<message-input :can_send="puede_enviar" :preparar_envio="preparar_envio" @send="enviar"></message-input>
+			<message-input :can_send="puede_enviar" :clave_borrador="clave_borrador" :preparar_envio="preparar_envio" @send="enviar"></message-input>
 		</div>
 	</div>
 </template>
@@ -65,6 +65,7 @@ export default {
 		tickets() { return this.$store.state.support_ticket.models },
 		loading() { return this.$store.state.support_ticket.loading },
 		seleccionado_id() { return this.$store.state.support_message.active_ticket_id },
+		clave_borrador() { return this.seleccionado_id == null ? 'nuevo' : 'ticket:' + this.seleccionado_id },
 		seleccionado() { return this.tickets.find(ticket => ticket.id == this.seleccionado_id) },
 		messages() { return this.$store.state.support_message.models },
 		messages_loading() { return this.$store.state.support_message.messages_loading },

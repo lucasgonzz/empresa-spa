@@ -75,6 +75,7 @@ export default {
 			if (!this.authenticated || !this.user) return null
 			return [this.user.id, !!this.user.es_sesion_soporte, !!this.user.es_acceso_maestro].join(':')
 		},
+		identidad_de_soporte() { return this.puede_soporte ? this.identidad_de_sesion : null },
 		agente() { return this.$store.state.ai_chat.agente },
 		en_modulo() { return this.$route.name === 'agentes' },
 		abierto() { return this.en_modulo || this.panel_abierto },
@@ -88,7 +89,6 @@ export default {
 	},
 	mounted() {
 		this.suscribir_canal_del_chat()
-		this.cargar_badge_soporte()
 		this.$root.$on('agentes:abrir', this.abrir_desde_navegacion)
 		document.addEventListener('keydown', this.atajo_del_asistente)
 		document.addEventListener('pointerdown', this.iniciar_pulsacion, true)
@@ -131,11 +131,15 @@ export default {
 		},
 		'user.id'() {
 			this.suscribir_canal_del_chat()
-			this.cargar_badge_soporte()
 		},
 		should_show() { this.suscribir_canal_del_chat() },
 		puede_entrar_al_mostrador() { this.suscribir_canal_del_chat() },
-		puede_soporte() { this.cargar_badge_soporte() },
+		identidad_de_soporte: {
+			immediate: true,
+			handler(identidad) {
+				if (identidad) this.$store.dispatch('support_ticket/getAgentes')
+			},
+		},
 		$route(destino, origen) {
 			this.cancelar_pulsacion()
 			if (destino.name === 'agentes' && origen.name && origen.name !== 'login' && origen.name !== 'agentes') {
@@ -144,9 +148,6 @@ export default {
 		},
 	},
 	methods: {
-		cargar_badge_soporte() {
-			if (this.authenticated && this.puede_soporte) this.$store.dispatch('support_ticket/getModels')
-		},
 		abrir_desde_navegacion(modo) {
 			if (!this.should_show) return
 			if (!this.abierto) {

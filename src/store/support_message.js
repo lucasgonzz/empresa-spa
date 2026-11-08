@@ -334,12 +334,13 @@ export default {
 		/**
 		 * Reintenta sincronización hacia admin-api para un mensaje ya guardado (no recibido en central).
 		 */
-		retryRemoteSync({ commit, dispatch }, message_or_id) {
+		retryRemoteSync({ commit, dispatch, rootState }, message_or_id) {
 			const id = typeof message_or_id === 'object' ? message_or_id.id : message_or_id
+			const usuario = rootState.auth.user
 			return axios
 				.post('/api/support-message/' + id + '/retry-remote-sync')
 				.then(function (res) {
-					if (res.data && res.data.model) {
+					if (rootState.auth.user === usuario && res.data && res.data.model) {
 						commit('patchMessage', res.data.model)
 						dispatch('support_ticket/applyTicketFromMessage', res.data.model, { root: true })
 					}

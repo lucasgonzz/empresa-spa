@@ -158,10 +158,10 @@ export default {
 				había. Si la clave viene (true o false), manda la que viene; y si es otro usuario (se
 				cerró sesión y entró otro), no se arrastra nada.
 			*/
-			if (user && state.user && user.id === state.user.id
-				&& typeof user.es_acceso_maestro === 'undefined'
-				&& typeof state.user.es_acceso_maestro !== 'undefined') {
-				user.es_acceso_maestro = state.user.es_acceso_maestro
+			if (user && state.user && user.id === state.user.id) {
+				['es_acceso_maestro', 'es_sesion_soporte', 'soporte_agentes_privado'].forEach(clave => {
+					if (typeof user[clave] === 'undefined' && typeof state.user[clave] !== 'undefined') user[clave] = state.user[clave]
+				})
 			}
 			/*
 				Espacio de los canales en vivo (misión pusher-canales-por-sistema, 19/10/2026): se
