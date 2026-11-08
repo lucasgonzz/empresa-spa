@@ -3,6 +3,10 @@ const assert = require('node:assert/strict')
 const { cargar } = require('./helpers/cargar_modulo_esm.cjs')
 
 const { pasos_de_soporte } = cargar('tours/soporte.js')
+const anfitrion = cargar('components/robotito-soporte/Anfitrion.vue', {
+	'./Pregunta': {},
+	'./Valoracion': {},
+}).default
 
 test('solo interpreta guiones conocidos y mantiene el número de pasos del contrato', () => {
 	assert.equal(pasos_de_soporte({ tema: 'crear_ticket' }).length, 3)
@@ -33,4 +37,49 @@ test('con el chat abierto el primer paso señala el encabezado sin perder la cue
 	assert.equal(pasos[1].texto, guia.textos[1])
 	assert.equal(pasos[2].texto, guia.textos[2])
 	assert.equal(pasos_de_soporte(guia, false)[0].ancla, 'soporte.abrir')
+})
+
+function pregunta_con_error(error) {
+	const corrida = { guia: { uuid: 'guia' }, paso: 2, pregunta_registrada: false, fin_pendiente: null }
+	const avisos = []
+	const eventos = []
+	const vm = Object.assign(anfitrion.data(), anfitrion.methods, {
+		activa: corrida,
+		pregunta: '¿Cómo abro el ticket?',
+		vaciar_eventos: () => Promise.resolve(),
+		post: () => Promise.reject(error),
+		evento: (...datos) => eventos.push(datos),
+		$nextTick: () => {},
+		$refs: {},
+		$toast: { info: texto => avisos.push(texto) },
+	})
+	vm._motor = { cortar_tour: () => vm.terminar(corrida, { motivo: 'cortado' }) }
+	return { vm, corrida, avisos, eventos }
+}
+
+test('si Empresa confirma la pregunta guardada, libera el tour sin reportar abandono', async (t) => {
+	const documento = global.document
+	global.document = { body: { classList: { remove: () => {} } } }
+	t.after(() => { global.document = documento })
+	const { vm, corrida, avisos, eventos } = pregunta_con_error({
+		response: { status: 502, data: { ok: false, message: 'La pregunta quedó guardada y todavía no llegó a Soporte.' } },
+	})
+	await vm.enviar_pregunta()
+	assert.equal(corrida.pregunta_registrada, true)
+	assert.equal(vm.activa, null)
+	assert.equal(vm.error_pregunta, '')
+	assert.match(avisos[0], /quedó guardada/)
+	assert.deepEqual(eventos, [])
+})
+
+test('si se pierde la respuesta, conserva la misma repregunta para reintentar', async () => {
+	const { vm, corrida, avisos, eventos } = pregunta_con_error({ code: 'ECONNABORTED' })
+	await vm.enviar_pregunta()
+	assert.equal(vm.activa, corrida)
+	assert.equal(corrida.pregunta_registrada, false)
+	assert.equal(vm.pregunta, '¿Cómo abro el ticket?')
+	assert.equal(vm.pregunta_bloqueada, true)
+	assert.match(vm.error_pregunta, /Volvé a intentar/)
+	assert.deepEqual(avisos, [])
+	assert.deepEqual(eventos, [])
 })

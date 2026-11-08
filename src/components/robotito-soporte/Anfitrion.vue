@@ -190,7 +190,7 @@ export default {
 		iniciar_motor(guia) {
 			const pasos = pasos_de_soporte(guia, Boolean(document.querySelector('[data-tour="soporte.encabezado"]')))
 			this.retirar(guia.uuid)
-			const corrida = { guia: guia, paso: null, mostrados: new Set(), total: pasos.length, enviada: false, fin_pendiente: null }
+			const corrida = { guia: guia, paso: null, mostrados: new Set(), total: pasos.length, pregunta_registrada: false, fin_pendiente: null }
 			this.activa = corrida
 			this.pregunta = ''
 			this.pregunta_bloqueada = false
@@ -242,23 +242,36 @@ export default {
 			const paso = corrida.paso
 			this.enviando_pregunta = true
 			this.error_pregunta = ''
-			this.vaciar_eventos().then(function () {
+			return this.vaciar_eventos().then(function () {
 				if (self._detenido) return null
 				self.pregunta_bloqueada = true
 				return self.post(corrida.guia.uuid, 'question', { question: pregunta, step: paso })
 			}).then(function (respuesta) {
 				if (self._detenido || !respuesta || !respuesta.data.ok) return
-				corrida.enviada = true
-				self.$toast.success('Mandamos tu pregunta a Soporte. Si Robotito prepara otra guía, te va a esperar en la barra.')
-				if (!corrida.fin_pendiente) self._motor.cortar_tour()
-			}).catch(function () {
+				self.registrar_pregunta(corrida, true)
+			}).catch(function (error) {
 				if (self._detenido) return
+				const respuesta = error.response
+				if (respuesta && respuesta.status === 502 && respuesta.data && respuesta.data.ok === false
+					&& respuesta.data.message === 'La pregunta quedó guardada y todavía no llegó a Soporte.') {
+					self.registrar_pregunta(corrida, false)
+					return
+				}
 				self.error_pregunta = 'Todavía no pudimos confirmar el envío. Volvé a intentar.'
 				self.$nextTick(self.refrescar_vineta)
 			}).then(function () {
 				self.enviando_pregunta = false
 				if (corrida.fin_pendiente) self.terminar(corrida, corrida.fin_pendiente)
 			})
+		},
+		registrar_pregunta(corrida, entregada) {
+			corrida.pregunta_registrada = true
+			if (entregada) {
+				this.$toast.success('Mandamos tu pregunta a Soporte. Si Robotito prepara otra guía, te va a esperar en la barra.')
+			} else {
+				this.$toast.info('Tu pregunta quedó guardada. Vamos a reintentar el envío a Soporte.')
+			}
+			if (!corrida.fin_pendiente) this._motor.cortar_tour()
 		},
 		terminar(corrida, resultado) {
 			if (this._detenido || this.activa !== corrida) return
@@ -269,7 +282,7 @@ export default {
 				return
 			}
 			this.activa = null
-			if (corrida.enviada) return
+			if (corrida.pregunta_registrada) return
 			const completo = resultado.motivo === 'listo' && corrida.mostrados.size === corrida.total
 			this.evento(corrida.guia.uuid, { event: completo ? 'completed' : 'abandoned' })
 			if (completo) {
