@@ -2,6 +2,20 @@ const { test } = require('node:test')
 const assert = require('node:assert/strict')
 const { cargar } = require('./helpers/cargar_modulo_esm.cjs')
 
+test('el asistente personal requiere una autorización afirmativa en el login maestro', () => {
+	const { mostrador_es_el_dueno } = cargar('mixins/mostrador_acceso.js').default.computed
+	const puede_entrar = (user, is_owner = true) => mostrador_es_el_dueno.call({ user, is_owner })
+
+	assert.equal(puede_entrar({ es_acceso_maestro: true }), false)
+	assert.equal(puede_entrar({ es_acceso_maestro: true, asistente_personal_autorizado: 'true' }), false)
+	assert.equal(puede_entrar({ es_acceso_maestro: true, asistente_personal_autorizado: true }), true)
+	assert.equal(puede_entrar({ es_acceso_maestro: true, asistente_personal_autorizado: true }, false), false)
+	assert.equal(puede_entrar({ es_sesion_soporte: true, es_acceso_maestro: true, asistente_personal_autorizado: true }), false)
+	assert.equal(puede_entrar({}), true)
+	assert.equal(puede_entrar({ admin_access: true }, false), true)
+	assert.equal(puede_entrar({}, false), false)
+})
+
 function contexto_con(axios) {
 	axios.defaults = {}
 	const store = cargar('store/ai_chat.js', {

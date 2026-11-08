@@ -159,7 +159,7 @@ export default {
 				cerró sesión y entró otro), no se arrastra nada.
 			*/
 			if (user && state.user && user.id === state.user.id) {
-				['es_acceso_maestro', 'es_sesion_soporte', 'soporte_agentes_privado'].forEach(clave => {
+				['es_acceso_maestro', 'es_sesion_soporte', 'asistente_personal_autorizado', 'soporte_agentes_privado'].forEach(clave => {
 					if (typeof user[clave] === 'undefined' && typeof state.user[clave] !== 'undefined') user[clave] = state.user[clave]
 				})
 			}
