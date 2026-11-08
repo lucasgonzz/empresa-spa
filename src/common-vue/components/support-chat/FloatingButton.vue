@@ -2,6 +2,7 @@
 	<div v-if="should_show">
 		<button
 			class="support-chat-floating-button"
+			data-tour="soporte.abrir"
 			type="button"
 			:style="floating_button_inline_style"
 			@click="toggle_chat"

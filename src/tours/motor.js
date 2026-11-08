@@ -1165,7 +1165,7 @@ function mostrar_paso(i) {
 		recorrido.highlight({
 			element: elemento,
 			popover: {
-				description: corrida.contexto.renderizar_guia ? '' : paso.texto,
+				description: corrida.contexto.renderizar_guia || corrida.contexto.texto_plano ? '' : paso.texto,
 				side: paso.lado || lado_sugerido(elemento),
 				align: paso.alineacion || 'start',
 				/* El progreso se arma a mano porque el motor muestra de a un paso: driver.js no
@@ -1178,6 +1178,10 @@ function mostrar_paso(i) {
 				doneBtnText: 'Listo',
 			},
 		})
+
+		if (corrida.contexto.al_mostrar_paso) {
+			corrida.contexto.al_mostrar_paso(i + 1)
+		}
 
 		enganchar_refresco(elemento)
 		reubicar_cartel(i, elemento)
@@ -2712,7 +2716,7 @@ export function iniciar_tour(clip, contexto) {
 
 	recorrido = driver({
 		allowClose: true,
-		popoverClass: contexto.renderizar_guia ? 'tour-demo tour-demo--guia' : 'tour-demo',
+		popoverClass: contexto.renderizar_guia ? 'tour-demo tour-demo--guia' : (contexto.clase_popover || 'tour-demo'),
 		smoothScroll: true,
 		/**
 		 * 🔴 Sin animación de transición, y no es una preferencia estética.
@@ -2775,8 +2779,14 @@ export function iniciar_tour(clip, contexto) {
 			if (popover.previousButton) {
 				popover.previousButton.style.display = corrida.indice > 0 ? '' : 'none'
 			}
+			if (contexto.texto_plano) {
+				popover.description.textContent = corrida.pasos[corrida.indice].texto
+				popover.description.style.display = ''
+			}
 			if (contexto.decorar_popover) {
-				contexto.decorar_popover(popover)
+				contexto.decorar_popover(popover, function () {
+					if (corrida && corrida.contexto === contexto && recorrido) recorrido.refresh()
+				})
 			}
 		},
 		/**

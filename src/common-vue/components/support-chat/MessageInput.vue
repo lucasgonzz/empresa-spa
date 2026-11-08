@@ -33,7 +33,7 @@
 		<div v-if="mic_error" class="support-input-mic-error">
 			{{ mic_error_message }}
 		</div>
-		<div class="d-flex align-items-center w-100">
+		<div class="d-flex align-items-center w-100" data-tour="soporte.escribir">
 			<input
 				ref="text_input"
 				class="form-control mr-2"

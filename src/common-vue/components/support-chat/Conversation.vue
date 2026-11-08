@@ -25,7 +25,12 @@
 							has_delivery_error(message) ? 'support-message-bubble--error' : '',
 						]"
 						:title="message_sent_at_tooltip(message)">
-					<div v-if="message.body">{{ message.body }}</div>
+					<div v-if="message.body">
+						<template v-for="(parte, i) in partes_del_mensaje(message.body)">
+							<a v-if="i % 2" :key="i" :href="parte" target="_blank" rel="noopener noreferrer">{{ parte }}</a>
+							<span v-else :key="i">{{ parte }}</span>
+						</template>
+					</div>
 					<!-- Renderizado diferenciado según tipo de adjunto -->
 					<template v-if="message.attachments && message.attachments.length">
 						<!-- Reproducción inline para mensajes de audio -->
@@ -130,6 +135,8 @@
 import ImageLightbox from '@/common-vue/components/support-chat/ImageLightbox.vue'
 import { env } from '@/runtime_config'
 
+const VIDEO_DEL_CENTRO = /(https:\/\/recursos\.comerciocity\.com\/\?v=[a-z]+\d+(?:\.\d+)+)\b/gi
+
 /**
  * Emite `retry-message` cuando el usuario reintenta un envío fallido.
  * Emite `start-new-ticket` cuando el usuario abre un hilo nuevo desde la barra contextual.
@@ -208,6 +215,9 @@ export default {
 		},
 	},
 	methods: {
+		partes_del_mensaje(texto) {
+			return String(texto).split(VIDEO_DEL_CENTRO)
+		},
 		/**
 		 * Clave única por fila en la lista: incluye índice para no chocar si el API
 		 * o el store dejan dos mensajes con el mismo id (Vue exige keys distintas).
