@@ -62,7 +62,7 @@ test('si Empresa confirma la pregunta guardada, libera el tour sin reportar aban
 	global.document = { body: { classList: { remove: () => {} } } }
 	t.after(() => { global.document = documento })
 	const { vm, corrida, avisos, eventos } = pregunta_con_error({
-		response: { status: 502, data: { ok: false, message: 'La pregunta quedó guardada y todavía no llegó a Soporte.' } },
+		response: { status: 502, data: { ok: false, code: 'question_saved' } },
 	})
 	await vm.enviar_pregunta()
 	assert.equal(corrida.pregunta_registrada, true)

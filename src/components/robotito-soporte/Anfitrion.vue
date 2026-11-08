@@ -253,7 +253,7 @@ export default {
 				if (self._detenido) return
 				const respuesta = error.response
 				if (respuesta && respuesta.status === 502 && respuesta.data && respuesta.data.ok === false
-					&& respuesta.data.message === 'La pregunta quedó guardada y todavía no llegó a Soporte.') {
+					&& respuesta.data.code === 'question_saved') {
 					self.registrar_pregunta(corrida, false)
 					return
 				}
