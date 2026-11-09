@@ -16,6 +16,7 @@
 	etapa 1 cuando llegaron los diseños de Vender, mision diseno-vender-configurable, 28/9/2026).
 */
 import { EVENTO_ENFOCAR_ELEMENTO } from '@/mixins/vender/diseno_de_vender'
+import { EVENTO_ABRIR_MENU_IMPORTACION, EVENTO_BUSCAR_IMPORTACION } from './importacion-soporte'
 
 /** Apertura de la etapa que tiene el campo (con el diseño predeterminado, la 1) + su `scrollIntoView` suave. Medido. */
 const ESPERA_CAMPO_DE_VENDER = 450
@@ -127,6 +128,12 @@ function esperar_modal(contexto, paso) {
 	guion lo usaba, y "la etapa 1" ya no es un lugar fijo.
 */
 export default {
+	abrir_menu_importacion: function (contexto) {
+		if (contexto.root) contexto.root.$emit(EVENTO_ABRIR_MENU_IMPORTACION)
+	},
+	buscar_importacion: function (contexto, paso) {
+		if (contexto.root) contexto.root.$emit(EVENTO_BUSCAR_IMPORTACION, paso.import_history_id)
+	},
 	abrir_buscador_articulos: function (contexto) {
 		return llevar_al_campo_de_vender(contexto, 'buscador_de_articulos')
 	},

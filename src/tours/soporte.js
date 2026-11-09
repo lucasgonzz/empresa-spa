@@ -1,4 +1,7 @@
+import { TEMA_REVERTIR_IMPORTACION, ancla_revertir_importacion } from './importacion-soporte'
+
 const VENDER = { name: 'vender', params: { view: 'remito' } }
+const LISTADO = { name: 'article' }
 const CAMPO_BUSQUEDA = '#search-article-search-modal-input'
 const RESULTADOS = '[data-tour="vender.resultados_buscador_articulos"], [data-tour="vender.busqueda_sin_resultados"]'
 const TUTORIALES = '[data-nav-tutoriales]'
@@ -21,6 +24,11 @@ const GUIONES = {
 		{ selector: TUTORIALES, foco: false, texto: 'Desde Tutoriales podés acceder a los videos que explican cómo usar el sistema.' },
 		{ selector: TUTORIALES, avanza: 'clic', foco: false, texto: 'Tocá Tutoriales para abrir el Centro de Recursos en otra pestaña. Ahí buscá por el nombre de la tarea que querés aprender.' },
 	],
+	[TEMA_REVERTIR_IMPORTACION]: [
+		{ selector: '#dropdown_article .dropdown-toggle-split', ruta: LISTADO, avanza: 'clic', foco: false, texto: 'En Listado, tocá la flechita de Crear para abrir el menú.' },
+		{ ancla: 'listado.opcion_historial_importaciones', ruta: LISTADO, antes: 'abrir_menu_importacion', avanza: 'clic', foco: false, texto: 'Tocá Historial de importaciones dentro de Importación.' },
+		{ ruta: LISTADO, antes: 'buscar_importacion', avanza: 'clic', foco: false, texto: 'Este es el botón de la importación que consultaste. Si lo tocás, revisá los datos en la ventana de confirmación.' },
+	],
 }
 
 export function tema_de_soporte_conocido(tema) {
@@ -36,6 +44,12 @@ export function pasos_de_soporte(guia, soporte_abierto) {
 	})
 	if (guia.tema === 'crear_ticket' && soporte_abierto) {
 		pasos[0] = { ancla: 'soporte.encabezado', foco: false, texto: 'Ya tenés abierto Soporte. Tocá Siguiente para ver cómo iniciar un ticket.' }
+	}
+	if (guia.tema === TEMA_REVERTIR_IMPORTACION) {
+		const id = guia.import_history_id
+		if (!Number.isSafeInteger(id) || id < 1) return []
+		pasos[2].ancla = ancla_revertir_importacion(id)
+		pasos[2].import_history_id = id
 	}
 	return pasos
 }

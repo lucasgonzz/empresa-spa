@@ -13,7 +13,7 @@
 			@enviar="enviar_pregunta"></pregunta>
 		</div>
 		<valoracion
-		v-if="para_valorar"
+		v-if="para_valorar && !confirmacion_importacion_abierta"
 		:titulo="para_valorar.titulo"
 		:guardando="guardando_valoracion"
 		:error="error_valoracion"
@@ -26,6 +26,7 @@
 import Pregunta from './Pregunta'
 import Valoracion from './Valoracion'
 import { pasos_de_soporte, tema_de_soporte_conocido } from '@/tours/soporte'
+import { TEMA_REVERTIR_IMPORTACION } from '@/tours/importacion-soporte'
 
 const RUTA = '/api/support-tour/'
 const OPCIONES_HTTP = { skip_navigation_cancel: true, skip_global_error_event: true, timeout: 12000 }
@@ -47,6 +48,7 @@ export default {
 			enviando_pregunta: false,
 			error_pregunta: '',
 			para_valorar: null,
+			confirmacion_importacion_abierta: false,
 			guardando_valoracion: false,
 			error_valoracion: '',
 		}
@@ -64,6 +66,8 @@ export default {
 	},
 	mounted() {
 		if (!this.usuario_id) return
+		this.$root.$on('bv::modal::show', this.modal_mostrado)
+		this.$root.$on('bv::modal::hidden', this.modal_cerrado)
 		this.refrescar()
 		this._consulta = setInterval(this.refrescar, 45000)
 		window.addEventListener('online', this.refrescar)
@@ -72,6 +76,8 @@ export default {
 	},
 	beforeDestroy() {
 		this._detenido = true
+		this.$root.$off('bv::modal::show', this.modal_mostrado)
+		this.$root.$off('bv::modal::hidden', this.modal_cerrado)
 		window.removeEventListener('online', this.refrescar)
 		window.removeEventListener('focus', this.refrescar)
 		document.removeEventListener('visibilitychange', this.refrescar)
@@ -83,6 +89,12 @@ export default {
 		document.body.classList.remove(CLASE_TUTORIALES, CLASE_SIN_CHAT)
 	},
 	methods: {
+		modal_mostrado(evento, id) {
+			if (id === 'confirm-rollback-import') this.confirmacion_importacion_abierta = true
+		},
+		modal_cerrado(evento, id) {
+			if (id === 'confirm-rollback-import') this.confirmacion_importacion_abierta = false
+		},
 		refrescar() {
 			if (!document.hidden) this.cargar()
 			this.vaciar_eventos().catch(() => {})
@@ -205,6 +217,7 @@ export default {
 					router: self.$router,
 					texto_plano: true,
 					clase_popover: 'tour-soporte',
+					reacomodar_en_resize: guia.tema === TEMA_REVERTIR_IMPORTACION,
 					al_faltar_pasos: () => {},
 					al_mostrar_paso: paso => self.mostrar_paso(corrida, paso),
 					decorar_popover: self.poner_pregunta,
@@ -289,7 +302,9 @@ export default {
 				this.error_valoracion = ''
 				this.para_valorar = corrida.guia
 			} else if (resultado.motivo === 'listo' || !corrida.mostrados.size) {
-				this.$toast.error('Algunos pasos del recorrido no están disponibles en esta pantalla.')
+				this.$toast.error(corrida.guia.tema === TEMA_REVERTIR_IMPORTACION && !corrida.mostrados.has(3)
+					? 'No pudimos ubicar el botón de esa importación. Podés retomar la consulta con Soporte.'
+					: 'Algunos pasos del recorrido no están disponibles en esta pantalla.')
 			}
 		},
 		descartar(guia) {
