@@ -159,7 +159,7 @@ export default {
 			this.clear_close_timeout()
 			let that = this
 			this.close_timeout = setTimeout(function () {
-				that.close_submenu()
+				if (!that.$refs.submenu_menu.querySelector('.driver-active-element')) that.close_submenu()
 			}, 120)
 		},
 		/**

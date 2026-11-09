@@ -7,6 +7,10 @@ const anfitrion = cargar('components/robotito-soporte/Anfitrion.vue', {
 	'./Pregunta': {},
 	'./Valoracion': {},
 }).default
+const historial = cargar('common-vue/components/import/ImportHistory.vue', {
+	moment: {},
+	'@/runtime_config': {},
+}).default
 
 test('solo interpreta guiones conocidos y mantiene el número de pasos del contrato', () => {
 	assert.equal(pasos_de_soporte({ tema: 'crear_ticket' }).length, 3)
@@ -28,6 +32,43 @@ test('el texto personalizado no controla el ancla, el gancho ni la navegación',
 	assert.equal(paso.antes, 'abrir_buscador_articulos')
 	assert.equal(paso.ruta.name, 'vender')
 	assert.equal(paso.texto, 'Abrí el buscador para encontrar el artículo')
+})
+
+test('la guía de importación señala solo el botón del ID verificado', () => {
+	const guia = {
+		tema: 'revertir_importacion_articulos',
+		import_history_id: 1059,
+		textos: ['Flechita de Crear', 'Historial', 'Importación que consultaste'],
+	}
+	const pasos = pasos_de_soporte(guia)
+	assert.equal(pasos.length, 3)
+	assert.equal(pasos[0].ruta.name, 'article')
+	assert.equal(pasos[1].ancla, 'listado.opcion_historial_importaciones')
+	assert.equal(pasos[2].ancla, 'listado.revertir_importacion.1059')
+	assert.equal(pasos[2].texto, guia.textos[2])
+	for (const id of [null, 0, 1.5, '1059', '1"] [data-tour="otro', Number.MAX_SAFE_INTEGER + 1]) {
+		assert.deepEqual(pasos_de_soporte({ ...guia, import_history_id: id }), [])
+	}
+})
+
+test('el botón se vuelve ancla solo cuando la página confirma esa importación y sigue siendo reversible', () => {
+	const ancla = historial.methods.ancla_del_tour.bind({ importacion_del_tour_cargada: 1059 })
+	assert.equal(ancla({ id: 1059, can_revert: true }), 'listado.revertir_importacion.1059')
+	assert.equal(ancla({ id: 1060, can_revert: true }), null)
+	assert.equal(ancla({ id: 1059, can_revert: false }), null)
+	assert.equal(ancla({ id: 1059 }), null)
+})
+
+test('avanzar desde la viñeta también abre el historial y pide el ID exacto', () => {
+	const llamadas = []
+	const vm = Object.assign({}, historial.methods, {
+		$bvModal: { show: id => llamadas.push(['abrir', id]) },
+		getModels: id => llamadas.push(['buscar', id]),
+	})
+	vm.buscar_importacion_del_tour(1059)
+	vm.historial_abierto()
+	assert.deepEqual(llamadas, [['abrir', 'import-history'], ['buscar', 1059]])
+	assert.equal(vm._importacion_a_buscar_al_abrir, null)
 })
 
 test('con el chat abierto el primer paso señala el encabezado sin perder la cuenta', () => {

@@ -12,7 +12,9 @@
 	size="lg"
 	title="Historial de importaciones"
 	id="import-history"
-	@show="abrirHistorial">
+	ignore-enforce-focus-selector=".driver-popover.tour-soporte"
+	@hide="historial_cerrado"
+	@show="historial_abierto">
 
 		<div 
 		v-if="loading"
@@ -39,7 +41,7 @@
 			<b-button
 			variant="primary"
 			:disabled="loading"
-			@click="getModels">
+			@click="getModels()">
 				<i class="bi bi-arrow-repeat m-r-5"></i>
 				Reintentar
 			</b-button>
@@ -172,12 +174,14 @@
 				size="sm"
 				variant="outline-danger"
 				:title="models[data.index].rollback_error"
+				:data-tour="ancla_del_tour(models[data.index])"
 				@click="pedir_confirmacion_rollback(models[data.index])">
 					Reintentar
 				</b-button>
 				<b-button
 				v-else-if="puede_revertir(models[data.index])"
 				variant="danger"
+				:data-tour="ancla_del_tour(models[data.index])"
 				@click="pedir_confirmacion_rollback(models[data.index])">
 					Revertir
 				</b-button>
@@ -460,6 +464,7 @@
 <script>
 import moment from 'moment'
 import { env } from '@/runtime_config'
+import { EVENTO_BUSCAR_IMPORTACION, ancla_revertir_importacion } from '@/tours/importacion-soporte'
 export default {
 	components: {
 		// ArticulosCreados: () => import('@/common-vue/components/import/ArticulosCreados'),
@@ -482,7 +487,10 @@ export default {
 		 * abrirHistorial() NUNCA pasa por aca cuando current_page ya vale 1 -- ver su
 		 * comentario -- asi que reabrir el modal en la pagina 1 no dispara un pedido de mas.
 		 */
-		current_page() {
+		current_page(pagina) {
+			const pagina_del_tour = this._pagina_del_tour
+			this._pagina_del_tour = null
+			if (pagina === pagina_del_tour) return
 			this.getModels()
 		}
 	},
@@ -492,6 +500,7 @@ export default {
 			// Texto del error de carga del historial. Vacio = no hubo error (ver el template).
 			error_al_cargar: '',
 			models: [],
+			importacion_del_tour_cargada: null,
 			// Pagina actual del historial (1-indexado, como espera <b-pagination>). Se resetea
 			// a 1 en cada apertura del modal -- ver abrirHistorial() -- asi que reabrirlo en la
 			// pagina en que quedo la vez anterior no es el comportamiento buscado.
@@ -973,7 +982,41 @@ export default {
 				'que tenían antes. Esta acción no se puede deshacer.'
 		},
 	},
+	mounted() {
+		if (this.model_name === 'article') this.$root.$on(EVENTO_BUSCAR_IMPORTACION, this.buscar_importacion_del_tour)
+	},
+	beforeDestroy() {
+		this.$root.$off(EVENTO_BUSCAR_IMPORTACION, this.buscar_importacion_del_tour)
+	},
 	methods: {
+		historial_abierto() {
+			this._historial_visible = true
+			const objetivo = this._importacion_a_buscar_al_abrir
+			this._importacion_a_buscar_al_abrir = null
+			if (objetivo) {
+				this.getModels(objetivo)
+			} else {
+				this.abrirHistorial()
+			}
+		},
+		historial_cerrado() {
+			this._historial_visible = false
+			this.importacion_del_tour_cargada = null
+		},
+		buscar_importacion_del_tour(id) {
+			if (!Number.isSafeInteger(id) || id < 1) return
+			if (this._historial_visible) {
+				this.getModels(id)
+			} else {
+				this._importacion_a_buscar_al_abrir = id
+				this.$bvModal.show('import-history')
+			}
+		},
+		ancla_del_tour(modelo) {
+			return this.importacion_del_tour_cargada === modelo.id && modelo.can_revert === true
+				? ancla_revertir_importacion(modelo.id)
+				: null
+		},
 		chunks(model) {
 			this.import_history_show_lotes = model
 			this.$bvModal.show('chunks')
@@ -1413,7 +1456,7 @@ export default {
 				this.current_page = 1
 			}
 		},
-		getModels() {
+		getModels(importacion_del_tour) {
 			// El catalogo liviano de proveedores, que es lo que resuelve la columna Proveedor de la
 			// tabla (ver getProvider). getOptions tiene su propia guarda: si ya se pidio en esta
 			// sesion no repite la descarga.
@@ -1421,12 +1464,16 @@ export default {
 
 			this.loading = true
 			this.error_al_cargar = ''
+			this.importacion_del_tour_cargada = null
 
 			// Token de ESTA llamada puntual (ver el comentario de peticion_actual en data()).
 			this.peticion_actual += 1
 			let mi_peticion = this.peticion_actual
 
-			this.$api.get('import-history/'+this.model_name+'?page='+this.current_page)
+			const consulta = importacion_del_tour
+				? 'import_history_id=' + importacion_del_tour
+				: 'page=' + this.current_page
+			this.$api.get('import-history/' + this.model_name + '?' + consulta)
 			.then(res => {
 				console.log(res)
 				// Ya salio una llamada mas nueva mientras esta esperaba respuesta (cambio de
@@ -1446,6 +1493,15 @@ export default {
 				let pagination = res.data.pagination || {}
 				this.last_page = pagination.last_page || 1
 				this.total = pagination.total || 0
+				if (importacion_del_tour && this._historial_visible
+					&& this.models.some(modelo => modelo.id === importacion_del_tour && modelo.can_revert === true)) {
+					this.importacion_del_tour_cargada = importacion_del_tour
+					const pagina = pagination.current_page
+					if (Number.isInteger(pagina) && pagina !== this.current_page) {
+						this._pagina_del_tour = pagina
+						this.current_page = pagina
+					}
+				}
 				// No se pisa this.current_page con pagination.current_page: ya es el valor que
 				// nosotros mandamos en el pedido, y reasignarlo ademas dispararia el watch de
 				// current_page y encadenaria un pedido de mas.
@@ -1458,6 +1514,11 @@ export default {
 				}
 				this.loading = false
 				console.log(err)
+				if (importacion_del_tour && err.response && err.response.status === 404) {
+					// El historial general sigue abierto aunque el destino de la guía haya cambiado.
+					this.getModels()
+					return
+				}
 				/*
 				 * 🔴 Sin esto la pantalla mentía: el .catch apagaba el loading y se callaba, y
 				 * como `models` quedaba vacío se dibujaba "Aún no hay importaciones". El usuario

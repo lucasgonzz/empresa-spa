@@ -1432,7 +1432,7 @@ function menu_de(elemento) {
 function enganchar_refresco(elemento) {
 	const activa = corrida
 	const indice = corrida.indice
-	const es_guia = Boolean(corrida.contexto.renderizar_guia)
+	const reacomodar_en_resize = Boolean(corrida.contexto.renderizar_guia || corrida.contexto.reacomodar_en_resize)
 	let pedido = false
 	let reloj_resize = null
 
@@ -1453,7 +1453,7 @@ function enganchar_refresco(elemento) {
 	}
 	function al_redimensionar() {
 		volver_a_medir()
-		if (!es_guia) return
+		if (!reacomodar_en_resize) return
 		clearTimeout(reloj_resize)
 		reloj_resize = setTimeout(function () {
 			if (corrida !== activa || corrida.indice !== indice || !recorrido || corrida.avanzando) return

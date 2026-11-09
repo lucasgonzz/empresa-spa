@@ -75,6 +75,7 @@
 
 		split
 
+		ref="crear"
 		:id="'dropdown_'+model_name"
 		:data-tour="model_name === 'article' ? 'listado.boton_crear_articulo' : null"
 
@@ -90,6 +91,7 @@
 
 		v-if="can_create || has_permission_create_dropdown"
 
+		@hide="mantener_menu_del_tour"
 		@click="call_set_model">
 
 			<template 
@@ -135,6 +137,7 @@
 
 			<excel-dropdown-submenu
 			v-if="show_import_submenu"
+			ref="importacion"
 			icon="bi bi-box-arrow-in-down"
 			:data_tour="model_name === 'article' ? 'listado.submenu_importacion' : null"
 			label="Importación">
@@ -189,6 +192,7 @@
 <script>
 import ExcelDropdownSubmenu from '@/common-vue/components/horizontal-nav/ExcelDropdownSubmenu'
 import ExcelDropdownOptionItem from '@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'
+import { EVENTO_ABRIR_MENU_IMPORTACION } from '@/tours/importacion-soporte'
 
 export default {
 
@@ -264,7 +268,36 @@ export default {
 		}
 	},
 
+	mounted() {
+		if (this.model_name === 'article') this.$root.$on(EVENTO_ABRIR_MENU_IMPORTACION, this.abrir_menu_importacion_del_tour)
+	},
+	beforeDestroy() {
+		this.$root.$off(EVENTO_ABRIR_MENU_IMPORTACION, this.abrir_menu_importacion_del_tour)
+	},
 	methods: {
+		mantener_menu_del_tour(evento) {
+			// El foco de la viñeta no equivale a salir del menú que está señalando.
+			const foco = document.activeElement
+			if (this.model_name === 'article'
+				&& foco && foco.closest('.driver-popover.tour-soporte')
+				&& this.$el.querySelector('[data-tour="listado.opcion_historial_importaciones"].driver-active-element')) {
+				evento.preventDefault()
+			}
+		},
+		abrir_menu_importacion_del_tour() {
+			const crear = this.$refs.crear
+			if (!crear || !this.$refs.importacion) return
+			this.$bvModal.hide('import-history')
+			const abrir_importacion = () => {
+				if (this.$refs.importacion) this.$refs.importacion.open_submenu()
+			}
+			if (crear.visible) {
+				abrir_importacion()
+			} else {
+				crear.$once('shown', abrir_importacion)
+				crear.show()
+			}
+		},
 
 		/**
 		 * Encola una nueva exportación Excel del modelo actual.
