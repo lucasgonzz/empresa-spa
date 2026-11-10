@@ -60,6 +60,15 @@ export default {
 			return this.activa || this.para_valorar ? null : this.pendientes[0] || null
 		},
 	},
+	watch: {
+		'$route.name'(ruta, anterior) {
+			// Al salir de Listado el modal se puede desmontar sin emitir hidden.
+			if (anterior === 'article' && ruta !== anterior && this.modal_prioritario) {
+				this.modal_prioritario = null
+				this.para_valorar = null
+			}
+		},
+	},
 	created() {
 		this._eventos = []
 		this._vistos = new Set()

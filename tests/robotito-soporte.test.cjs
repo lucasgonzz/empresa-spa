@@ -75,6 +75,18 @@ test('la valoración espera a que la persona salga del historial de exportacione
 	assert.equal(vm.modal_prioritario, null)
 })
 
+test('salir de Listado libera el aviso aunque el historial se desmonte sin hidden', () => {
+	const vm = Object.assign(anfitrion.data(), {
+		modal_prioritario: 'export-history',
+		para_valorar: { uuid: 'terminada' },
+		pendientes: [{ uuid: 'nueva' }],
+	})
+	anfitrion.watch['$route.name'].call(vm, 'sale', 'article')
+	assert.equal(vm.modal_prioritario, null)
+	assert.equal(vm.para_valorar, null)
+	assert.equal(anfitrion.computed.pendiente.call(vm).uuid, 'nueva')
+})
+
 test('los pasos dinámicos aceptan rutas conocidas, indicaciones y destinos exactos', () => {
 	const tema = 'guia_dinamica'
 	const texto = '<b>Esto se dibuja como texto.</b>'
