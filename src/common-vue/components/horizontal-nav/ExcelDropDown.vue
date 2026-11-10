@@ -121,15 +121,19 @@
 
 			<excel-dropdown-submenu
 			v-if="show_export_submenu"
+			ref="exportacion"
 			icon="bi bi-box-arrow-up"
+			:data_tour="model_name === 'article' ? 'listado.submenu_exportacion' : null"
 			label="Exportación">
 				<excel-dropdown-option-item
 				icon="bi bi-box-arrow-up"
+				:data_tour="model_name === 'article' ? 'listado.opcion_nueva_exportacion' : null"
 				@click="exportModels">
 					Nueva exportación
 				</excel-dropdown-option-item>
 				<excel-dropdown-option-item
 				icon="bi bi-clock-history"
+				:data_tour="model_name === 'article' ? 'listado.opcion_historial_exportaciones' : null"
 				@click="open_export_history">
 					Historial de exportaciones
 				</excel-dropdown-option-item>
@@ -192,7 +196,7 @@
 <script>
 import ExcelDropdownSubmenu from '@/common-vue/components/horizontal-nav/ExcelDropdownSubmenu'
 import ExcelDropdownOptionItem from '@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'
-import { EVENTO_ABRIR_MENU_IMPORTACION } from '@/tours/importacion-soporte'
+import { EVENTO_ABRIR_MENU_LISTADO } from '@/tours/importacion-soporte'
 
 export default {
 
@@ -269,10 +273,10 @@ export default {
 	},
 
 	mounted() {
-		if (this.model_name === 'article') this.$root.$on(EVENTO_ABRIR_MENU_IMPORTACION, this.abrir_menu_importacion_del_tour)
+		if (this.model_name === 'article') this.$root.$on(EVENTO_ABRIR_MENU_LISTADO, this.abrir_menu_del_tour)
 	},
 	beforeDestroy() {
-		this.$root.$off(EVENTO_ABRIR_MENU_IMPORTACION, this.abrir_menu_importacion_del_tour)
+		this.$root.$off(EVENTO_ABRIR_MENU_LISTADO, this.abrir_menu_del_tour)
 	},
 	methods: {
 		mantener_menu_del_tour(evento) {
@@ -280,21 +284,22 @@ export default {
 			const foco = document.activeElement
 			if (this.model_name === 'article'
 				&& foco && foco.closest('.driver-popover.tour-soporte')
-				&& this.$el.querySelector('[data-tour="listado.opcion_historial_importaciones"].driver-active-element')) {
+				&& this.$el.querySelector('.excel-create-dropdown-menu .driver-active-element[data-tour]')) {
 				evento.preventDefault()
 			}
 		},
-		abrir_menu_importacion_del_tour() {
+		abrir_menu_del_tour(seccion, abrir_submenu) {
 			const crear = this.$refs.crear
-			if (!crear || !this.$refs.importacion) return
-			this.$bvModal.hide('import-history')
-			const abrir_importacion = () => {
-				if (this.$refs.importacion) this.$refs.importacion.open_submenu()
+			const submenu = this.$refs[seccion]
+			if (!crear || !submenu) return
+			this.$bvModal.hide(seccion === 'importacion' ? 'import-history' : 'export-history')
+			const abrir = () => {
+				if (abrir_submenu && this.$refs[seccion] === submenu) submenu.open_submenu()
 			}
 			if (crear.visible) {
-				abrir_importacion()
+				abrir()
 			} else {
-				crear.$once('shown', abrir_importacion)
+				if (abrir_submenu) crear.$once('shown', abrir)
 				crear.show()
 			}
 		},

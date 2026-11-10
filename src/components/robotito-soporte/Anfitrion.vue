@@ -13,7 +13,7 @@
 			@enviar="enviar_pregunta"></pregunta>
 		</div>
 		<valoracion
-		v-if="para_valorar && !confirmacion_importacion_abierta"
+		v-if="para_valorar && !modal_prioritario"
 		:titulo="para_valorar.titulo"
 		:guardando="guardando_valoracion"
 		:error="error_valoracion"
@@ -33,6 +33,7 @@ const RUTA = '/api/support-tour/'
 const OPCIONES_HTTP = { skip_navigation_cancel: true, skip_global_error_event: true, timeout: 12000 }
 const CLASE_TUTORIALES = 'robotito-tour-tutoriales'
 const CLASE_SIN_CHAT = 'robotito-tour-en-pantalla'
+const MODALES_ANTES_DE_VALORAR = ['confirm-rollback-import', 'export-history']
 
 export default {
 	components: { Pregunta, Valoracion },
@@ -49,7 +50,7 @@ export default {
 			enviando_pregunta: false,
 			error_pregunta: '',
 			para_valorar: null,
-			confirmacion_importacion_abierta: false,
+			modal_prioritario: null,
 			guardando_valoracion: false,
 			error_valoracion: '',
 		}
@@ -57,6 +58,15 @@ export default {
 	computed: {
 		pendiente() {
 			return this.activa || this.para_valorar ? null : this.pendientes[0] || null
+		},
+	},
+	watch: {
+		'$route.name'(ruta, anterior) {
+			// Al salir de Listado el modal se puede desmontar sin emitir hidden.
+			if (anterior === 'article' && ruta !== anterior && this.modal_prioritario) {
+				this.modal_prioritario = null
+				this.para_valorar = null
+			}
 		},
 	},
 	created() {
@@ -91,10 +101,10 @@ export default {
 	},
 	methods: {
 		modal_mostrado(evento, id) {
-			if (id === 'confirm-rollback-import') this.confirmacion_importacion_abierta = true
+			if (MODALES_ANTES_DE_VALORAR.includes(id)) this.modal_prioritario = id
 		},
 		modal_cerrado(evento, id) {
-			if (id === 'confirm-rollback-import') this.confirmacion_importacion_abierta = false
+			if (id === this.modal_prioritario) this.modal_prioritario = null
 		},
 		refrescar() {
 			if (!document.hidden) this.cargar()
