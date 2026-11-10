@@ -246,42 +246,12 @@
 				</p>
 			</b-alert>
 
-			<!--
-				Columnas cuyo nombre no se pudo recuperar del encabezado ni siquiera después
-				de propagar las celdas fusionadas. Se muestran con la LETRA de Excel, que es
-				lo que el usuario ve en su planilla; el backend las manda como índices.
-			-->
-			<b-alert
-			v-if="letras_de_columnas_sin_nombre.length > 0"
-			show
-			variant="warning"
-			class="m-b-15">
-				<i class="icon-alert-triangle m-r-5"></i>
-				<span v-if="letras_de_columnas_sin_nombre.length === 1">
-					La columna <strong>{{ letras_de_columnas_sin_nombre[0] }}</strong> no tiene nombre en el encabezado.
-				</span>
-				<span v-else>
-					Las columnas <strong>{{ letras_de_columnas_sin_nombre.join(', ') }}</strong> no tienen nombre en el encabezado.
-				</span>
-				Revisá el mapeo antes de importar.
-			</b-alert>
-
 		<!-- Sección de proveedor inferido (solo para artículos) -->
 		<div
 		v-if="model === 'article'"
 		class="m-b-20">
 
 			<p class="font-weight-bold m-b-5">Proveedor detectado</p>
-
-			<!-- Alerta si la confianza del proveedor es baja -->
-			<b-alert
-			v-if="provider_confidence === 'bajo'"
-			show
-			variant="warning"
-			class="m-b-10">
-				<i class="icon-alert-triangle m-r-5"></i>
-				Confianza baja — verificá el proveedor antes de continuar.
-			</b-alert>
 
 			<b-form-group
 			:description="provider_confidence_label">
@@ -352,36 +322,6 @@
 				{{ texto_encabezados_repetidos }}
 			</p>
 
-			<!-- Notas de asistencia globales de Claude (consejos generales sobre el archivo) -->
-			<div
-			v-if="assistant_notes.length > 0"
-			class="assistant-notes-container m-b-15">
-				<div
-				v-for="(note, idx) in assistant_notes"
-				:key="'an-' + idx"
-				class="assistant-note">
-					<span class="assistant-note-icon">💡</span>
-					<span class="assistant-note-text">{{ note }}</span>
-				</div>
-			</div>
-
-			<b-alert
-			v-if="column_mapping_interpretation_alerts.length > 0"
-			show
-			variant="info"
-			class="m-b-15">
-				<p class="font-weight-bold m-b-5 m-t-0">
-					<i class="icon-info m-r-5"></i>
-					Interpretaciones de la IA
-				</p>
-				<p
-				v-for="(alert_text, alert_index) in column_mapping_interpretation_alerts"
-				:key="'interpretation-alert-' + alert_index"
-				class="small m-b-5 m-t-0">
-					{{ alert_text }}
-				</p>
-			</b-alert>
-
 			<!--
 				Una sola tabla, con las columnas en el mismo orden que el Excel: nombre, propiedad,
 				interruptor de ignorar y los primeros artículos. El color va en la columna entera para
@@ -389,7 +329,7 @@
 			-->
 			<div
 			v-if="columnas_de_la_tabla_de_mapeo.length > 0"
-			class="ai-import-preview-table-wrapper">
+			class="ai-import-preview-table-wrapper m-b-15">
 				<table class="ai-import-preview-table ai-import-tabla-mapeo">
 					<thead>
 						<tr>
@@ -477,6 +417,56 @@
 			class="text-warning d-block m-t-5">
 				{{ cantidad_de_columnas_por_elegir === 1 ? 'Falta elegir la propiedad de 1 columna: si no la elegís, no se importa.' : 'Falta elegir la propiedad de ' + cantidad_de_columnas_por_elegir + ' columnas: si no las elegís, no se importan.' }}
 			</small>
+
+			<!--
+				Columnas cuyo nombre no se pudo recuperar del encabezado ni siquiera después
+				de propagar las celdas fusionadas. Se muestran con la LETRA de Excel, que es
+				lo que el usuario ve en su planilla; el backend las manda como índices.
+			-->
+			<b-alert
+			v-if="letras_de_columnas_sin_nombre.length > 0"
+			show
+			variant="warning"
+			class="m-b-15">
+				<i class="icon-alert-triangle m-r-5"></i>
+				<span v-if="letras_de_columnas_sin_nombre.length === 1">
+					La columna <strong>{{ letras_de_columnas_sin_nombre[0] }}</strong> no tiene nombre en el encabezado.
+				</span>
+				<span v-else>
+					Las columnas <strong>{{ letras_de_columnas_sin_nombre.join(', ') }}</strong> no tienen nombre en el encabezado.
+				</span>
+				Revisá el mapeo antes de importar.
+			</b-alert>
+
+			<!-- Notas de asistencia globales de Claude (consejos generales sobre el archivo) -->
+			<div
+			v-if="assistant_notes.length > 0"
+			class="assistant-notes-container m-b-15">
+				<div
+				v-for="(note, idx) in assistant_notes"
+				:key="'an-' + idx"
+				class="assistant-note">
+					<span class="assistant-note-icon">💡</span>
+					<span class="assistant-note-text">{{ note }}</span>
+				</div>
+			</div>
+
+			<b-alert
+			v-if="column_mapping_interpretation_alerts.length > 0"
+			show
+			variant="info"
+			class="m-b-15">
+				<p class="font-weight-bold m-b-5 m-t-0">
+					<i class="icon-info m-r-5"></i>
+					Interpretaciones de la IA
+				</p>
+				<p
+				v-for="(alert_text, alert_index) in column_mapping_interpretation_alerts"
+				:key="'interpretation-alert-' + alert_index"
+				class="small m-b-5 m-t-0">
+					{{ alert_text }}
+				</p>
+			</b-alert>
 
 			<!--
 				🔴 Error del paso 2, persistente. Hasta acá los dos .catch de confirmar_paso_2
@@ -4479,7 +4469,7 @@ export default {
 				this.finish_row_original = this.finish_row
 				this.has_header_row = true
 			}
-			this.column_mapping       = this.normalize_column_mapping(resultado.column_mapping)
+			this.column_mapping       = this.completar_columnas_omitidas(this.normalize_column_mapping(resultado.column_mapping), resultado)
 			this.selected_provider_id = resultado.provider_id
 			this.provider_confidence  = resultado.provider_confidence
 
@@ -4577,6 +4567,10 @@ export default {
 		 */
 		confirmar_paso_2() {
 			let self = this
+
+			/* El usuario pudo corregir la columna en la tabla: el índice sale del mapeo de ahora. */
+			let columna_de_codigo = self.column_mapping.find(item => item.system_property === 'codigo_de_proveedor')
+			self.provider_code_column_index = columna_de_codigo ? columna_de_codigo.excel_column_index : null
 
 			/*
 			 * La recomendación del paso 3 es de artículos (códigos de barras, códigos de
@@ -4821,8 +4815,20 @@ export default {
 			 */
 			this.formatos_numericos = resultado.formatos_numericos || null
 
-			/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
-			if (this.duplicate_stats) {
+			/*
+			 * El paso 3 se dibuja con lo recalculado sobre el mapeo confirmado. Si la API todavía
+			 * no manda estas claves, queda lo del análisis y solo se pisan los conteos de siempre.
+			 */
+			if (resultado.cadena_identificacion) {
+				this.placeholders          = resultado.placeholders || []
+				this.cadena_identificacion = resultado.cadena_identificacion
+				this.nombres_duplicados    = resultado.nombres_duplicados || null
+				this.desempate_por_nombre  = resultado.desempate_por_nombre || null
+			}
+
+			if (resultado.duplicate_stats) {
+				this.duplicate_stats = resultado.duplicate_stats
+			} else if (this.duplicate_stats) {
 				this.duplicate_stats = {
 					...this.duplicate_stats,
 					provider_codes_existentes_mismo_proveedor:   resultado.provider_codes_existentes_mismo_proveedor,
@@ -5334,11 +5340,17 @@ export default {
 				flags.actualizar_articulos_de_otro_proveedor = 1
 			}
 
-			if (this.politica_colision === 'actualizar_todos') {
+			/*
+			 * Sin códigos repetidos la pregunta no se muestra, así que el valor es fijo: una
+			 * recomendación de la IA o una elección vieja no pueden viajar sin que nadie las vea.
+			 */
+			let politica_colision = this.hay_codigos_de_proveedor_repetidos ? this.politica_colision : 'actualizar_todos'
+
+			if (politica_colision === 'actualizar_todos') {
 				flags.permitir_provider_code_repetido = 1
 				flags.permitir_provider_code_repetido_en_multi_providers = 1
 
-			} else if (this.politica_colision === 'crear_nuevo') {
+			} else if (politica_colision === 'crear_nuevo') {
 				flags.actualizar_por_provider_code = 0
 			}
 			/*
@@ -5704,6 +5716,38 @@ export default {
 		/*
 		 * Asegura tipos consistentes en cada ítem del mapeo recibido del análisis.
 		 */
+		/*
+		 * La tabla del paso 2 replica las columnas del Excel. Si la IA omitió alguna, se agrega
+		 * ignorada, para que no se corra de lugar lo que viene a la derecha.
+		 */
+		completar_columnas_omitidas(mapeo, resultado) {
+			let encabezado = resultado.encabezado_detectado
+			let columnas   = encabezado && Array.isArray(encabezado.columnas) ? encabezado.columnas : []
+			let filas      = Array.isArray(resultado.preview_rows) ? resultado.preview_rows : []
+			let presentes  = {}
+
+			mapeo.forEach(item => { presentes[item.excel_column_index] = true })
+
+			let tiene_texto = valor => valor !== null && valor !== undefined && String(valor).trim() !== ''
+			let omitidas    = []
+
+			columnas.forEach((titulo, indice) => {
+				if (presentes[indice] || (!tiene_texto(titulo) && !filas.some(fila => fila && tiene_texto(fila[indice])))) {
+					return
+				}
+
+				omitidas.push({
+					excel_column:        tiene_texto(titulo) ? String(titulo) : '',
+					system_property:     null,
+					confidence:          0,
+					interpretation_note: null,
+					excel_column_index:  indice,
+				})
+			})
+
+			return mapeo.concat(this.normalize_column_mapping(omitidas))
+		},
+
 		normalize_column_mapping(column_mapping) {
 			if (!Array.isArray(column_mapping)) {
 				return []
@@ -5816,7 +5860,10 @@ export default {
 		 */
 		clase_de_columna_de_mapeo(item) {
 			if (this.columna_ignorada(item)) {
-				return 'ai-import-tabla-mapeo__columna--ignorada'
+				/* Una columna que la IA dejó afuera con una nota también hay que encontrarla rápido. */
+				return this.column_has_interpretation_note(item)
+					? 'ai-import-tabla-mapeo__columna--ignorada ai-import-tabla-mapeo__columna--amarilla'
+					: 'ai-import-tabla-mapeo__columna--ignorada'
 			}
 
 			if (this.column_has_mapeo_guardado(item)) {
@@ -6194,7 +6241,8 @@ export default {
 			this.aplicar_contexto_analisis(analisis.contexto)
 			this.aplicar_resultado_analisis(analisis.resultado)
 
-			if (contexto.provider_id) {
+			/* null es una elección: el usuario dejó «Sin proveedor» y no vuelve el inferido. */
+			if (contexto.provider_id !== undefined) {
 				this.selected_provider_id = contexto.provider_id
 			}
 			if (contexto.provider_code_column_index !== null && contexto.provider_code_column_index !== undefined) {
@@ -6639,6 +6687,12 @@ export default {
 .ai-import-tabla-mapeo
 	th, td
 		min-width: 180px
+
+	select.custom-select
+		height: 34px
+		padding-top: 4px
+		padding-bottom: 4px
+		font-size: 13px
 
 	thead th
 		vertical-align: top
