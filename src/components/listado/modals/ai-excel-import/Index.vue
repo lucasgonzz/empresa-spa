@@ -2978,6 +2978,9 @@ export default {
 			} else {
 				this.finish_row = ''
 				this.finish_row_original = ''
+				this._archivo_en_memoria = null
+				this._buffer_en_memoria = null
+				this._archivo_procesado = null
 			}
 		},
 
@@ -3107,7 +3110,94 @@ export default {
 				return
 			}
 
-			this.process_excel_file(selected_file)
+			/*
+			 * Ya es la copia en memoria que armamos nosotros: el v-model y el @input de
+			 * b-form-file vuelven a avisar el mismo File, y no hay que procesarlo dos veces.
+			 */
+			if (selected_file === this._archivo_en_memoria) {
+				if (selected_file !== this._archivo_procesado) {
+					this._archivo_procesado = selected_file
+					this.process_excel_file(selected_file, this._buffer_en_memoria)
+				}
+				return
+			}
+
+			this.pasar_archivo_a_memoria(selected_file)
+		},
+
+		/*
+		 * Lee el archivo elegido completo a memoria y lo reemplaza por un File en memoria.
+		 * Chrome cancela la subida (ERR_UPLOAD_FILE_CHANGED) si el archivo del disco cambió
+		 * o lo tiene tomado Excel entre que se eligió y se envía: con la copia en memoria el
+		 * POST ya no depende del disco. El buffer se reutiliza para detectar la última fila.
+		 */
+		pasar_archivo_a_memoria(selected_file) {
+			let self = this
+
+			/* @input y el watcher de `file` avisan los dos: se lee una sola vez. */
+			if (self._leyendo_a_memoria === selected_file) {
+				return
+			}
+
+			self._leyendo_a_memoria = selected_file
+			self.error_message = ''
+			self.file_processing = true
+
+			self.leer_archivo_a_buffer(selected_file)
+			.then(function(buffer) {
+				if (self._leyendo_a_memoria !== selected_file) return
+
+				self._leyendo_a_memoria = null
+
+				let archivo_memoria = new File([buffer], selected_file.name, {
+					type: selected_file.type,
+					lastModified: selected_file.lastModified,
+				})
+
+				self._archivo_en_memoria = archivo_memoria
+				self._buffer_en_memoria = buffer
+				self._archivo_procesado = archivo_memoria
+
+				/* Dispara el watcher de `file`, que vuelve a entrar a onFileChange y se corta arriba. */
+				self.file = archivo_memoria
+
+				self.process_excel_file(archivo_memoria, buffer)
+			})
+			.catch(function(err) {
+				if (self._leyendo_a_memoria !== selected_file) return
+
+				console.error('Error al leer el archivo elegido:', err)
+				self._leyendo_a_memoria = null
+				self._archivo_en_memoria = null
+				self._buffer_en_memoria = null
+				self._archivo_procesado = null
+				self.file_processing = false
+				self.file = null
+				self.error_message = 'No pudimos leer el archivo. Si lo tenés abierto en otro programa, guardalo y cerralo, o hacé una copia y elegí la copia.'
+			})
+		},
+
+		/*
+		 * Devuelve una promesa con el ArrayBuffer del archivo (arrayBuffer() o FileReader).
+		 */
+		leer_archivo_a_buffer(file) {
+			if (typeof file.arrayBuffer === 'function') {
+				return file.arrayBuffer()
+			}
+
+			return new Promise(function(resolve, reject) {
+				let reader = new FileReader()
+
+				reader.onload = function(e) {
+					resolve(e.target.result)
+				}
+
+				reader.onerror = function() {
+					reject(new Error('FileReader error'))
+				}
+
+				reader.readAsArrayBuffer(file)
+			})
 		},
 
 		/*
@@ -3132,7 +3222,7 @@ export default {
 		/*
 		 * Lee el Excel en el navegador y calcula finish_row (retorna promesa).
 		 */
-		process_excel_file(file) {
+		process_excel_file(file, buffer_ya_leido) {
 			let self = this
 
 			self.file_processing = true
@@ -3206,6 +3296,12 @@ export default {
 					self.file_processing = false
 					self.excel_rows_read_error = 'Error al leer el archivo en el navegador.'
 					reject(new Error('FileReader error'))
+				}
+
+				/* Si el archivo ya se leyó a memoria al elegirlo, no se lee dos veces. */
+				if (buffer_ya_leido) {
+					reader.onload({ target: { result: buffer_ya_leido } })
+					return
 				}
 
 				reader.readAsArrayBuffer(file)
