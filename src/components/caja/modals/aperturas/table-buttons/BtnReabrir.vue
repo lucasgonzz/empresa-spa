@@ -1,6 +1,7 @@
 <template>
 	<btn-accion
 	v-if="se_puede_reabrir"
+	data-tour="caja.reabrir_apertura"
 	icono="bi bi-arrow-counterclockwise"
 	texto="Reabrir"
 	tono="abrir"

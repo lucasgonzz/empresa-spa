@@ -1,5 +1,6 @@
 <template>
 	<btn-accion
+	data-tour="caja.historial_aperturas"
 	icono="bi bi-clock-history"
 	texto="Aperturas"
 	@clicked="show_aperturas"></btn-accion>
