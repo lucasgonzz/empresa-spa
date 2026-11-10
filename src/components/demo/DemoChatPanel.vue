@@ -1,14 +1,6 @@
 <template>
-	<div class="demo-ai" :class="{ 'demo-ai--cerrado': colapsado }" :style="reserva_launcher">
-		<button v-if="colapsado" class="demo-ai__launcher" type="button" :aria-label="'Abrir ' + nombre_asistente" @click="$emit('alternar')">
-			<span class="demo-ai__orb" aria-hidden="true">✦</span><span>{{ prueba ? 'Tu asistente de la prueba' : 'Tu guía de demo' }} <small>Seguí explorando</small></span><i class="bi bi-arrow-up-right"></i>
-		</button>
-		<aside v-show="!colapsado" class="demo-ai__panel" :aria-label="prueba ? 'Asistente de la prueba' : 'Asistente de la demo'">
-			<header class="demo-ai__header">
-				<span class="demo-ai__orb" aria-hidden="true">✦</span>
-				<div><h2>Tu {{ nombre_asistente }}</h2><p>Explorá, preguntá y probá</p><a v-if="tienda_url" class="demo-ai__tienda" :href="tienda_url" target="_blank" rel="noopener noreferrer" data-demo-tienda @click="pausar">Tu tienda <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
-				<button type="button" aria-label="Minimizar asistente" @click="minimizar"><i class="bi bi-dash-lg"></i></button>
-			</header>
+	<div class="demo-ai">
+		<aside v-show="!colapsado || en_modulo" class="demo-ai__panel" :aria-label="prueba ? 'Asistente de la prueba' : 'Asistente de la demo'">
 			<div ref="hilo" class="demo-ai__hilo" role="log" aria-live="polite" :aria-label="prueba ? 'Conversación de la prueba' : 'Conversación de la demo'">
 				<div v-if="cargando && !mensajes.length" class="demo-ai__inicio"><span class="demo-ai__orb">✦</span><p>{{ prueba ? 'Conectando con tu asistente' : 'Preparando tu recorrido' }}</p></div>
 				<button v-if="guia_pausada" type="button" class="demo-ai__seccion" @click="retomar_guia">Retomar guía de Vender</button>
@@ -52,16 +44,14 @@ import { tour_habilitado } from '@/tours/habilitados'
 import { iniciar_tour, cortar_tour } from '@/tours/motor'
 import { ajustar_guia_a_vender, pasos_de_guia } from '@/tours/guia-vender'
 
-// Campos de carga de artículos (en VENDER: código de barras, buscador, servicio y cantidad) que el launcher no puede tapar.
-// Los ids también existen en otras pantallas de carga (Ingresar, buscadores): ahí también se esquivan, y no hace daño.
-const CAMPOS_DE_VENDER = '#article-bar-code, #search-article, #service_name, #article-amount'
+const LUGAR_EN_AGENTES = 'agentes-guia-lugar'
 
 export default {
 	components: { TarjetaClip, SelectorVideosDemo, DemoGuiaRobot },
 	props: { colapsado: { type: Boolean, default: false }, prueba: { type: Boolean, default: false } },
 	data() {
 		return {
-			mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, foco_seleccion: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1, reserva_compositor: 0,
+			mensajes: [], catalogo: [], conversacion: {}, texto: '', error: '', error_seleccion: '', seleccionando: '', seleccion_pendiente: null, foco_seleccion: null, cargando: true, enviando: false, esperando_local: false, video_abierto: null, temporizador: null, consultando: false, destruido: false, pendiente_envio: null, pendientes_video: {}, enviando_video: {}, revision: -1,
 			texto_guia: '', guia_texto: '', guia_aviso: '', guia_activa: null, guia_pausada: null,
 			solicitud_guia: null, envio_desde_guia: false, disponible: false,
 		}
@@ -69,45 +59,45 @@ export default {
 	computed: {
 		nombre_asistente() { return this.prueba ? 'asistente de la prueba' : 'asistente de la demo' },
 		ruta_chat() { return this.prueba ? '/api/prueba/chat' : '/api/demo/chat' },
-		reserva_base() {
-			// Comparte la reserva de Vender y deja lugar al asistente personal y al soporte.
-			let vender = this.$store.state.vender
-			let barra = Math.max(0, Number(vender && vender.actions_bar_height_px) || 0)
-			let soporte = this.hasExtencion('support_chat') ? 76 : 0
-			return barra + soporte + 96
-		},
-		reserva_launcher() {
-			return { '--demo-launcher-base': Math.max(this.reserva_base, this.reserva_compositor) + 'px' }
-		},
-		estado_editores_whatsapp() {
-			let chat = this.$store.state.whatsapp_chat || {}
-			return [chat.sidebar_abierto, chat.selected_chat_id, chat.loading_messages, (chat.messages || []).length].join(':')
-		},
-		tienda_url() {
-			let usuario = this.$store.state.auth.user
-			let dueno = usuario && (usuario.owner || usuario)
-			if (!dueno || typeof dueno.online !== 'string') return null
-			try {
-				let url = new URL(dueno.online.trim())
-				return ['http:', 'https:'].indexOf(url.protocol) !== -1 && !url.username && !url.password ? url.href : null
-			} catch (e) { return null }
+		en_modulo() { return this.$route.name === 'agentes' },
+		guia_a_la_vista() {
+			let chat = this.$store.state.ai_chat
+			return chat.agente === 'guia' && (chat.panel_abierto || this.en_modulo)
 		},
 		estado() { return this.esperando_local ? 'esperando' : this.conversacion.estado },
 		pensando() { return ['esperando', 'pensando', 'listo'].indexOf(this.estado) !== -1 },
 		en_vender() { return this.$route.name === 'vender' && this.$route.params.view === 'remito' },
 	},
 	watch: {
-		colapsado() { this.programar_ubicacion_launcher() },
-		estado_editores_whatsapp() { this.programar_ubicacion_launcher() },
+		// El lateral abre y cierra la guía: acá se le avisa al padre para que `colapsado` no quede viejo.
+		guia_a_la_vista(visible) {
+			if (!visible) this.pausar()
+			if (visible === this.colapsado) this.$emit('alternar')
+		},
+		colapsado(colapsado) {
+			if (!colapsado) {
+				if (!this.guia_a_la_vista) this.abrir_en_agentes()
+				this.al_final()
+			} else if (this.guia_a_la_vista && !this.en_modulo) {
+				this.$store.commit('ai_chat/setPanelAbierto', false)
+			}
+		},
 		'$route.fullPath'() {
 			this.guia_pausada = null
 			this.cerrar_guia()
-			this.programar_ubicacion_launcher()
 		},
 	},
+	created() {
+		this.$store.commit('ai_chat/setGuia', { prueba: this.prueba })
+	},
 	mounted() {
+		this._origen = this.$el.parentNode
+		this.acomodar_en_agentes()
+		this.$root.$on('agentes:guia-lugar', this.acomodar_en_agentes)
+		this.$root.$on('agentes:guia-lugar-sale', this.soltar_lugar)
+		this.$root.$on('agentes:guia-pausar', this.pausar)
+		if (!this.colapsado) this.abrir_en_agentes()
 		this.iniciar()
-		this.observar_ubicacion_launcher()
 		let self = this
 		this.temporizador = setInterval(function () {
 			if (!self.prueba || self.pensando || Date.now() >= self._refrescar_prueba_en) self.refrescar()
@@ -117,95 +107,48 @@ export default {
 		this.destruido = true
 		this.cerrar_guia()
 		clearInterval(this.temporizador)
-		this.limpiar_ubicacion_launcher()
 		this.pausar()
+		this.$root.$off('agentes:guia-lugar', this.acomodar_en_agentes)
+		this.$root.$off('agentes:guia-lugar-sale', this.soltar_lugar)
+		this.$root.$off('agentes:guia-pausar', this.pausar)
+		if (this.guia_a_la_vista && !this.en_modulo) this.$store.commit('ai_chat/setPanelAbierto', false)
+		if (this.$store.state.ai_chat.agente === 'guia') this.$store.commit('ai_chat/setAgente', 'asistente')
+		this.$store.commit('ai_chat/setGuia', null)
+		// Vue no saca un hijo que movimos a mano cuando desarma a su padre: quedaría huérfano en el lateral.
+		const lugar = this.$el.parentNode
+		if (lugar && lugar.id === LUGAR_EN_AGENTES) lugar.removeChild(this.$el)
 	},
 	methods: {
-		observar_ubicacion_launcher() {
-			let self = this
-			this._mover_launcher = function () { self.programar_ubicacion_launcher() }
-			this._editores_launcher = []
-			this._observados_launcher = []
-			this._scroll_launcher = []
-			if (window.ResizeObserver) this._resize_launcher = new ResizeObserver(this._mover_launcher)
-			window.addEventListener('resize', this._mover_launcher)
-			// Capture: la pantalla de Vender scrollea en un contenedor propio y el scroll no burbujea.
-			window.addEventListener('scroll', this._mover_launcher, { passive: true, capture: true })
-			if (window.visualViewport) window.visualViewport.addEventListener('resize', this._mover_launcher)
-			this.programar_ubicacion_launcher()
+		/**
+		 * Se dibuja adentro del lateral de Agentes moviendo el $el, en lugar de montarse allá
+		 * (misión agentes-entrada-unica, 10/11/2026), igual que `guardar_vineta` hace con la viñeta.
+		 *
+		 * 🔴 El lateral es `v-if="abierto"`: si este componente viviera adentro, se destruiría al
+		 * cerrarlo y se cortarían el polling, el progreso del video y la guía de Vender.
+		 */
+		acomodar_en_agentes() {
+			const lugar = document.getElementById(LUGAR_EN_AGENTES)
+			if (lugar && this.$el.parentNode !== lugar) lugar.appendChild(this.$el)
 		},
-		limpiar_ubicacion_launcher() {
-			window.removeEventListener('resize', this._mover_launcher)
-			window.removeEventListener('scroll', this._mover_launcher, { capture: true })
-			if (window.visualViewport) window.visualViewport.removeEventListener('resize', this._mover_launcher)
-			if (this._resize_launcher) this._resize_launcher.disconnect()
-			;(this._scroll_launcher || []).forEach(e => e.removeEventListener('scroll', this._mover_launcher))
-			cancelAnimationFrame(this._frame_launcher)
+		soltar_lugar(elemento) {
+			if (elemento && this.$el.parentNode === elemento) this.devolver_a_origen()
 		},
-		programar_ubicacion_launcher() {
-			if (this.destruido || this._frame_launcher) return
-			let self = this
-			this.$nextTick(function () {
-				if (self.destruido || self._frame_launcher) return
-				self._frame_launcher = requestAnimationFrame(function () { self._frame_launcher = null; self.medir_compositores() })
-			})
+		devolver_a_origen() {
+			if (this._origen && this.$el.parentNode !== this._origen) this._origen.appendChild(this.$el)
 		},
-		medir_compositores() {
-			if (!this.colapsado) return
-			// Reserva explícita del editor real y del editor de simulación; no busca controles globales.
-			let editores = Array.from(document.querySelectorAll('.whatsapp-composer, .whatsapp-simulated-composer'))
-			// Campos de carga de Vender: se observan igual, pero solo reservan si el launcher los tapa de verdad.
-			let campos = Array.from(document.querySelectorAll(CAMPOS_DE_VENDER))
-			let observados = editores.concat(campos)
-			if (observados.length !== this._observados_launcher.length || observados.some((e, i) => e !== this._observados_launcher[i])) {
-				if (this._resize_launcher) { this._resize_launcher.disconnect(); observados.forEach(e => this._resize_launcher.observe(e)) }
-				this._observados_launcher = observados
-			}
-			if (editores.length !== this._editores_launcher.length || editores.some((e, i) => e !== this._editores_launcher[i])) {
-				this._editores_launcher = editores
-				this._scroll_launcher.forEach(e => e.removeEventListener('scroll', this._mover_launcher))
-				this._scroll_launcher = Array.from(document.querySelectorAll('.whatsapp-messages-container'))
-				this._scroll_launcher.forEach(e => e.addEventListener('scroll', this._mover_launcher, { passive: true }))
-			}
-			let top = innerHeight
-			editores.forEach(function (e) {
-				let r = e.getBoundingClientRect()
-				if (r.width && r.height && r.bottom > 0 && r.top < innerHeight && getComputedStyle(e).visibility !== 'hidden') top = Math.min(top, r.top)
-			})
-			let reserva_editores = Math.max(0, innerHeight - top + 12)
-			this.reserva_compositor = Math.max(reserva_editores, this.reserva_sobre_campos(campos, reserva_editores))
+		abrir_en_agentes() {
+			this.$store.commit('ai_chat/setAgente', 'guia')
+			// En el módulo ya está a la vista; prender el lateral lo dejaría abierto al salir de ahí.
+			if (!this.en_modulo) this.$store.commit('ai_chat/setPanelAbierto', true)
 		},
 		/**
-		 * Cuánto hay que subir el launcher para no tapar un campo de carga de Vender (misión
-		 * prueba-defectos-asistente-y-vender, 4/11/2026: a 1366x850 la tarjeta quedaba justo encima de
-		 * «Cantidad» y no se le podía hacer clic).
-		 *
-		 * Solo cuentan los campos que chocan de verdad con el launcher, en horizontal y en vertical: el
-		 * resto de la pantalla no se toca. Si al subirlo choca con otro campo (en teléfono la fila se apila),
-		 * sigue subiendo hasta quedar libre o hasta el tope que ya pone el CSS.
-		 *
-		 * @param {Element[]} campos Los campos de CAMPOS_DE_VENDER presentes en pantalla.
-		 * @param {number} reserva_editores Lo que ya sube el launcher por el editor de WhatsApp (parte de ahí si es mayor).
-		 * @returns {number} La reserva en px, o 0 si no hay choque.
+		 * 🔴 Antes de avisar, el $el vuelve a su lugar. PanelDemo responde cambiando el `v-if` por el
+		 * panel de respaldo, y Vue lo inserta tomando este $el de referencia: si sigue en otro padre,
+		 * el respaldo no se inserta nunca. En la prueba nadie reemplaza el chat, y se queda donde está.
 		 */
-		reserva_sobre_campos(campos, reserva_editores) {
-			let boton = this.$el && this.$el.querySelector ? this.$el.querySelector('.demo-ai__launcher') : null
-			if (!boton || !campos.length) return 0
-			let caja = boton.getBoundingClientRect()
-			if (!caja.width || !caja.height) return 0
-			let rectas = campos.filter(function (e) { return getComputedStyle(e).visibility !== 'hidden' }).map(function (e) { return e.getBoundingClientRect() }).filter(function (r) { return r.width && r.height && r.bottom > 0 && r.top < innerHeight })
-			let tope = Math.max(0, innerHeight - 144)
-			let reserva = Math.min(Math.max(this.reserva_base, reserva_editores || 0), tope)
-			let subio = false
-			for (let i = 0; i <= rectas.length; i++) {
-				let abajo = innerHeight - reserva
-				let arriba = abajo - caja.height
-				let choques = rectas.filter(function (r) { return r.left < caja.right && r.right > caja.left && r.top < abajo && r.bottom > arriba })
-				if (!choques.length || reserva >= tope) break
-				reserva = Math.min(tope, innerHeight - Math.min.apply(null, choques.map(function (r) { return r.top })) + 12)
-				subio = true
-			}
-			return subio ? reserva : 0
+		avisar_no_disponible() {
+			if (!this.prueba) this.devolver_a_origen()
+			this.$emit('no-disponible')
 		},
 		// El panel vive entre módulos: sus pedidos no pertenecen a la pantalla que se abandona.
 		iniciar() {
@@ -218,7 +161,6 @@ export default {
 			this.$axios.post(this.ruta_chat + '/iniciar', {}, { skip_navigation_cancel: true }).then(function (res) { self.aplicar_respuesta(res); self.error = '' }).catch(function (e) { self.fallar(e) }).then(function () { self.cargando = false })
 		},
 		refrescar() {
-			this.programar_ubicacion_launcher()
 			if (this.consultando || this.destruido) return
 			let self = this
 			this.consultando = true
@@ -240,7 +182,7 @@ export default {
 			if (this.destruido) return false
 			if (!snapshot || snapshot.disponible === false) {
 				this.disponible = false
-				this.$emit('no-disponible')
+				this.avisar_no_disponible()
 				return false
 			}
 			this.disponible = true
@@ -399,7 +341,7 @@ export default {
 		},
 		fallar(error) {
 			if (this.destruido) return
-			if (error.response && [404, 405].indexOf(error.response.status) !== -1) { this.$emit('no-disponible'); return }
+			if (error.response && [404, 405].indexOf(error.response.status) !== -1) { this.avisar_no_disponible(); return }
 			this.error = 'Se cortó la conexión. Tu mensaje queda acá para reintentarlo.'
 		},
 		reintentar() {
@@ -473,7 +415,12 @@ export default {
 		},
 		pausar() { (this.$refs.tarjeta_chat || []).forEach(function (tarjeta) { tarjeta.pausar() }) },
 		minimizar() { this.pausar(); this.$emit('alternar') },
-		probar(video) { this.pausar(); this.$emit('probar', this.clip_de(video)) },
+		probar(video) {
+			this.pausar()
+			// Un tour navega solo; sin tour, el módulo ocuparía la pantalla que se quiere probar.
+			if (this.en_modulo && !this.tiene_tour(video)) this.$root.$emit('agentes:cerrar')
+			this.$emit('probar', this.clip_de(video))
+		},
 		registrar_segundos(video, datos) {
 			let cola = this.pendientes_video[video.clave] || []
 			let segundos = datos.segundos_vistos.slice()
@@ -528,20 +475,17 @@ export default {
 .demo-ai
 	--demo-ink: #e8edf8
 	--demo-muted: #a3aec6
-	position: fixed
-	z-index: 1040
-	right: 18px
-	top: 76px
-	bottom: 18px
-	width: 420px
-	max-width: calc(100vw - 24px)
+	// Fuera del lateral no se dibuja: ahí solo espera a que se abra con su estado intacto.
+	display: none
+	flex: 1
+	flex-direction: column
+	min-height: 0
+	width: 100%
 	color: var(--demo-ink)
 	font-family: inherit
 	text-align: left
-	&--cerrado
-		top: auto
-		bottom: min(var(--demo-launcher-base), calc(100vh - 144px))
-		width: auto
+	.agentes-guia-lugar &
+		display: flex
 	button, textarea
 		font: inherit
 	button
@@ -553,47 +497,9 @@ export default {
 	position: relative
 	display: flex
 	flex-direction: column
-	height: 100%
-	padding: 1px
-	border-radius: 24px
-	background: $asistente-degrade
-	background-size: 300% 300%
-	animation: demo-ai-onda 9s ease infinite
-	box-shadow: 0 24px 70px #090d2852, 0 0 26px #7969ec20
+	flex: 1
+	min-height: 0
 	overflow: hidden
-.demo-ai__header
-	display: flex
-	align-items: center
-	gap: 12px
-	padding: 20px 18px 17px
-	background: $asistente-cabecera
-	border-radius: 23px 23px 0 0
-	h2
-		font-size: 16px
-		font-weight: 700
-		margin: 0 0 4px
-		color: #fff
-	p
-		margin: 0
-		font-size: 12px
-		color: var(--demo-muted)
-	button
-		margin-left: auto
-		border: 0
-		background: #ffffff0d
-		color: #dae4ff
-		border-radius: 10px
-		width: 34px
-		height: 34px
-.demo-ai__tienda
-	display: inline-flex
-	align-items: center
-	gap: 4px
-	margin-top: 5px
-	font-size: 12px
-	color: #b7c9ff
-	&:hover, &:focus
-		color: #fff
 .demo-ai__orb
 	+asistente-orb
 .demo-ai__hilo
@@ -705,7 +611,6 @@ export default {
 .demo-ai__footer
 	background: $asistente-cabecera
 	padding: 14px
-	border-radius: 0 0 23px 23px
 .demo-ai__composer
 	position: relative
 	display: flex
@@ -789,23 +694,6 @@ export default {
 			right: 1px
 			top: 21px
 			background: #93e0db
-.demo-ai__launcher
-	display: flex
-	max-width: 100%
-	align-items: center
-	gap: 12px
-	border: 1px solid #a8b1ff
-	border-radius: 19px
-	padding: 11px 16px 11px 11px
-	background: #151b2e
-	color: #f5f7ff
-	box-shadow: 0 9px 30px #171d384d, 0 0 24px #9a8ce52e
-	text-align: left
-	font-size: 14px
-	small
-		display: block
-		color: #bac6df
-		font-size: 10px
 @keyframes demo-ai-onda
 	0%, 100%
 		background-position: 0% 50%
@@ -822,37 +710,10 @@ export default {
 	100%
 		transform: scale(1)
 @media (max-width: 600px)
-	.demo-ai
-		right: 8px
-		top: 64px
-		bottom: 8px
-		width: calc(100vw - 16px)
-		max-width: none
-		&--cerrado
-			top: auto
-			bottom: min(var(--demo-launcher-base), calc(100vh - 144px))
-			width: auto
-	.demo-ai__header
-		padding: 15px 12px
 	.demo-ai__hilo
 		padding: 16px 12px
-@media (max-height: 420px)
-	.demo-ai__launcher
-		width: 48px
-		height: 48px
-		padding: 8px
-		justify-content: center
-		> span:not(.demo-ai__orb), > i
-			display: none
-		.demo-ai__orb
-			width: 32px
-			height: 32px
-	.demo-ai.demo-ai--cerrado
-		// En horizontal la pila puede no entrar: deja libre la columna de los FAB.
-		right: 96px
-		max-width: calc(100vw - 112px)
 @media (prefers-reduced-motion: reduce)
-	.demo-ai__panel, .demo-ai__composer, .demo-ai__constelacion, .demo-ai__video-heading i
+	.demo-ai__composer, .demo-ai__constelacion, .demo-ai__video-heading i
 		animation: none !important
 	.demo-ai__avance span
 		transition: none
