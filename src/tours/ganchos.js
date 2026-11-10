@@ -152,6 +152,13 @@ export default {
 	mostrar_total_de_venta: function (contexto) {
 		return llevar_al_campo_de_vender(contexto, 'resumen', { enfocar: false })
 	},
+	mostrar_boton_de_reparto: function (contexto) {
+		if (contexto.root) contexto.root.$bvModal.hide('payment-method-modal')
+		return llevar_al_campo_de_vender(contexto, 'metodo_de_pago', { enfocar: false })
+	},
+	mostrar_cajas: function (contexto) {
+		if (contexto.root) contexto.root.$bvModal.hide('aperturas-caja')
+	},
 	/** El selector de cliente de Vender. */
 	abrir_etapa_1_cliente: function (contexto) {
 		return llevar_al_campo_de_vender(contexto, 'cliente')

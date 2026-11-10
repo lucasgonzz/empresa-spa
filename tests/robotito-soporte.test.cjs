@@ -5,6 +5,7 @@ const { cargar } = require('./helpers/cargar_modulo_esm.cjs')
 const { pasos_de_soporte } = cargar('tours/soporte.js')
 const nav = cargar('components/nav/Index.vue', { '@/components/robotito-soporte/Anfitrion': {} }).default
 const anfitrion = cargar('components/robotito-soporte/Anfitrion.vue', {
+	'./CabeceraTarjeta': {},
 	'./Pregunta': {},
 	'./Valoracion': {},
 }).default
@@ -64,6 +65,34 @@ test('las exportaciones de Listado señalan su menú y sus dos controles reales'
 	assert.equal(historial.ancla, 'listado.opcion_historial_exportaciones')
 	assert.equal(nueva.antes, 'abrir_menu_exportacion')
 	assert.equal(nueva.avanza, 'clic')
+})
+
+test('la guía de pagos deja que el usuario abra el reparto y señala el formulario sin guardar', () => {
+	const [boton, reparto] = pasos_de_soporte({ tema: 'guia_dinamica', pasos: [
+		{ clave: 'vender.metodos_pago', texto: 'Tocá el +.' },
+		{ clave: 'vender.reparto_pago', texto: 'Distribuí el importe.' },
+	] })
+	assert.equal(boton.selector, '[data-tour="vender.boton_cobrar"]:not(:disabled)')
+	assert.equal(boton.antes, 'mostrar_boton_de_reparto')
+	assert.equal(boton.avanza, 'clic')
+	assert.equal(reparto.ancla, 'vender.reparto_pago')
+	assert.equal(reparto.antes, undefined)
+	assert.equal(reparto.avanza, undefined)
+})
+
+test('la guía de caja avanza con el historial elegido y explica cuándo aparece Reabrir', () => {
+	const [historial, reabrir] = pasos_de_soporte({ tema: 'guia_dinamica', pasos: [
+		{ clave: 'caja.historial_aperturas', texto: 'Elegí Aperturas en tu caja.' },
+		{ clave: 'caja.reabrir_apertura', texto: 'Mirá el botón Reabrir.' },
+	] })
+	assert.deepEqual(historial.ruta, { name: 'caja' })
+	assert.match(historial.selector, /^\.cont-table:has/)
+	assert.equal(historial.selector_avance, '[data-tour="caja.historial_aperturas"]')
+	assert.equal(historial.avanza, 'clic')
+	assert.equal(reabrir.selector, '#aperturas-caja [data-tour="caja.reabrir_apertura"]:not(:disabled)')
+	assert.equal(reabrir.antes, undefined)
+	assert.equal(reabrir.avanza, undefined)
+	assert.match(reabrir.si_falta, /caja cerrada/)
 })
 
 test('la valoración espera a que la persona salga del historial de exportaciones', () => {

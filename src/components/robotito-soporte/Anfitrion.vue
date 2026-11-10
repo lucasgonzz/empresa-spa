@@ -1,7 +1,12 @@
 <template>
 	<div>
 		<slot :pendiente="pendiente" :ocupado="ocupado" :iniciar="iniciar" :descartar="descartar" :visible="marcar_visible"></slot>
-		<div ref="pregunta_guardada" hidden>
+		<div ref="contenido_guardado" hidden>
+			<cabecera-tarjeta
+			v-if="activa"
+			ref="cabecera"
+			:paso="activa.paso || 1"
+			:total="activa.total"></cabecera-tarjeta>
 			<pregunta
 			v-if="activa && hasExtencion('support_chat')"
 			ref="pregunta"
@@ -23,6 +28,7 @@
 </template>
 
 <script>
+import CabeceraTarjeta from './CabeceraTarjeta'
 import Pregunta from './Pregunta'
 import Valoracion from './Valoracion'
 import { pasos_de_soporte, tema_de_soporte_conocido } from '@/tours/soporte'
@@ -36,7 +42,7 @@ const CLASE_SIN_CHAT = 'robotito-tour-en-pantalla'
 const MODALES_ANTES_DE_VALORAR = ['confirm-rollback-import', 'export-history']
 
 export default {
-	components: { Pregunta, Valoracion },
+	components: { CabeceraTarjeta, Pregunta, Valoracion },
 	props: {
 		usuario_id: { type: [Number, String], default: null },
 	},
@@ -95,7 +101,7 @@ export default {
 		if (this._canal && this.Echo) this.Echo.leave(this._canal)
 		clearTimeout(this._reintento)
 		clearInterval(this._consulta)
-		this.guardar_pregunta()
+		this.guardar_contenido_tarjeta()
 		if (this.activa && this._motor) this._motor.cortar_tour()
 		document.body.classList.remove(CLASE_TUTORIALES, CLASE_SIN_CHAT)
 	},
@@ -235,10 +241,10 @@ export default {
 					router: self.$router,
 					texto_plano: true,
 					clase_popover: 'tour-soporte',
-					reacomodar_en_resize: [TEMA_REVERTIR_IMPORTACION, TEMA_GUIA_DINAMICA].includes(guia.tema),
+					reacomodar_en_resize: true,
 					al_faltar_pasos: () => {},
 					al_mostrar_paso: paso => self.mostrar_paso(corrida, paso),
-					decorar_popover: self.poner_pregunta,
+					decorar_popover: self.decorar_tarjeta,
 					al_terminar: resultado => self.terminar(corrida, resultado),
 				})
 				if (!iniciada) self.terminar(corrida, { motivo: 'cortado' })
@@ -250,20 +256,27 @@ export default {
 			corrida.mostrados.add(paso)
 			this.evento(corrida.guia.uuid, { event: 'step', step: paso })
 		},
-		poner_pregunta(popover, refrescar) {
+		decorar_tarjeta(popover, refrescar) {
+			const cabecera = this.$refs.cabecera
 			const pregunta = this.$refs.pregunta
-			if (!pregunta) return
-			popover.wrapper.appendChild(pregunta.$el)
+			if (cabecera) popover.wrapper.insertBefore(cabecera.$el, popover.title)
+			if (pregunta) popover.wrapper.insertBefore(pregunta.$el, popover.footer)
+			popover.title.textContent = this.activa.guia.titulo
+			popover.closeButton.setAttribute('aria-label', 'Cerrar recorrido')
+			// El botón conserva su lugar en la tarjeta aunque el primer paso no tenga anterior.
+			popover.previousButton.disabled = popover.previousButton.style.display === 'none'
+			popover.previousButton.style.display = ''
 			this._refrescar_vineta = refrescar
 		},
 		refrescar_vineta() {
 			if (this._refrescar_vineta) this._refrescar_vineta()
 		},
-		guardar_pregunta() {
+		guardar_contenido_tarjeta() {
 			this._refrescar_vineta = null
-			if (this.$refs.pregunta && this.$refs.pregunta_guardada) {
-				this.$refs.pregunta_guardada.appendChild(this.$refs.pregunta.$el)
-			}
+			const contenedor = this.$refs.contenido_guardado
+			if (!contenedor) return
+			if (this.$refs.cabecera) contenedor.appendChild(this.$refs.cabecera.$el)
+			if (this.$refs.pregunta) contenedor.appendChild(this.$refs.pregunta.$el)
 		},
 		enviar_pregunta() {
 			const corrida = this.activa
@@ -298,7 +311,7 @@ export default {
 		registrar_pregunta(corrida, entregada) {
 			corrida.pregunta_registrada = true
 			if (entregada) {
-				this.$toast.success('Mandamos tu pregunta a Soporte. Si Robotito prepara otra guía, te va a esperar en la barra.')
+				this.$toast.success('Mandamos tu pregunta a Soporte. Si hay una guía actualizada, Robotito te va a avisar en la barra.')
 			} else {
 				this.$toast.info('Tu pregunta quedó guardada. Vamos a reintentar el envío a Soporte.')
 			}
@@ -306,7 +319,7 @@ export default {
 		},
 		terminar(corrida, resultado) {
 			if (this._detenido || this.activa !== corrida) return
-			this.guardar_pregunta()
+			this.guardar_contenido_tarjeta()
 			document.body.classList.remove(CLASE_TUTORIALES, CLASE_SIN_CHAT)
 			if (this.enviando_pregunta) {
 				corrida.fin_pendiente = resultado
@@ -354,13 +367,8 @@ export default {
 </script>
 
 <style lang="sass">
+@import './tarjeta'
+
 .robotito-tour-en-pantalla #app .support-chat-overlay
 	display: none
-
-.driver-popover.tour-soporte
-	max-width: min(340px, calc(100vw - 24px))
-	max-height: calc(100vh - 32px)
-	overflow-wrap: anywhere
-	.driver-popover-description
-		white-space: pre-line
 </style>

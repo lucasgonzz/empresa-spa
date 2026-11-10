@@ -1110,7 +1110,7 @@ function mostrar_paso(i) {
 		return
 	}
 
-	const paso = corrida.pasos[i]
+	let paso = corrida.pasos[i]
 	const corrida_del_paso = corrida
 
 	corrida.preparando = i
@@ -1123,6 +1123,13 @@ function mostrar_paso(i) {
 		}
 
 		corrida.avanzando = false
+
+		// Si el control depende del estado del comercio, explicamos la condición en el mismo paso.
+		// La indicación no habilita clics ni busca otro control como sustituto.
+		if (!elemento && paso.si_falta) {
+			paso = { indicacion: true, texto: paso.si_falta }
+			elemento = true
+		}
 
 		if (!elemento) {
 			/* 🔴 Saltear, nunca colgarse. Un elemento que no aparece es lo NORMAL en varios pasos:
@@ -1149,6 +1156,7 @@ function mostrar_paso(i) {
 		}
 
 		corrida.indice = i
+		corrida.texto_paso_visible = paso.texto
 		corrida.mostrados++
 		corrida.salteados_seguidos = 0
 
@@ -1917,7 +1925,7 @@ function enganchar_avance_por_entrada(paso, i, elemento) {
  * @returns {void}
  */
 function enganchar_avance_por_clic(paso, i, resaltado) {
-	const selector = selector_de(paso)
+	const selector = paso.selector_avance || selector_de(paso)
 
 	if (!selector) {
 		return
@@ -1934,7 +1942,7 @@ function enganchar_avance_por_clic(paso, i, resaltado) {
 	 * Con un campo adentro, entonces, el avance espera a que el dato esté cargado (`change`, que en
 	 * un input dispara al salir del campo con el valor cambiado), no a que lo toquen.
 	 */
-	const campo = campo_de_carga(resaltado || buscar_visible(selector))
+	const campo = !paso.selector_avance && campo_de_carga(resaltado || buscar_visible(selector))
 
 	if (campo) {
 		enganchar_avance_por_carga(campo, selector, i)
@@ -1953,8 +1961,9 @@ function enganchar_avance_por_clic(paso, i, resaltado) {
 		/* Se acepta el clic si cayó adentro del nodo resaltado O si matchea el selector del paso.
 		 * Las dos formas hacen falta: la primera cubre los pasos que resaltan un ancestro (ver
 		 * `subir_a_ancestro`), y la segunda los nodos que se re-renderizaron entre que se los
-		 * resaltó y que el lead los tocó. */
-		const cayo_adentro = resaltado && typeof resaltado.contains === 'function' && resaltado.contains(evento.target)
+		 * resaltó y que el lead los tocó. Si el paso señala varios controles, el selector de
+		 * avance manda: por ejemplo, en Tesorería solo avanza el botón Aperturas. */
+		const cayo_adentro = !paso.selector_avance && resaltado && typeof resaltado.contains === 'function' && resaltado.contains(evento.target)
 
 		if (!cayo_adentro && !evento.target.closest(selector)) {
 			return
@@ -2794,7 +2803,7 @@ export function iniciar_tour(clip, contexto) {
 				popover.previousButton.style.display = corrida.indice > 0 ? '' : 'none'
 			}
 			if (contexto.texto_plano) {
-				popover.description.textContent = corrida.pasos[corrida.indice].texto
+				popover.description.textContent = corrida.texto_paso_visible
 				popover.description.style.display = ''
 			}
 			if (contexto.decorar_popover) {

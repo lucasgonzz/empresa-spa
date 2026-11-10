@@ -5,7 +5,9 @@ const LISTADO = { name: 'article' }
 const VENDER = { name: 'vender' }
 const VENTAS = { name: 'sale', params: { view: 'todas', sub_view: 'todos' } }
 const COMPRAS = { name: 'provider', params: { view: 'compras' } }
+const TESORERIA = { name: 'caja' }
 const REVERTIR_IMPORTACION = 'listado.revertir_importacion'
+const BOTON_APERTURAS = '[data-tour="caja.historial_aperturas"]'
 
 // Cada clave describe una acción de pantalla que el motor ya sabe realizar. El plan no trae código de interfaz.
 const PANTALLAS = {
@@ -14,7 +16,7 @@ const PANTALLAS = {
 	'vista.ventas': VENTAS,
 	'vista.compras': COMPRAS,
 	'vista.reportes': { name: 'reportes', params: { view: 'estado-de-resultados' } },
-	'vista.tesoreria': { name: 'caja' },
+	'vista.tesoreria': TESORERIA,
 	'vista.gastos': { name: 'expense' },
 	'vista.cheques': { name: 'cheque', params: { sub_view: 'recibido', sub_sub_view: 'pendientes' } },
 	'vista.agenda': { name: 'pending', params: { view: 'por-realizar' } },
@@ -46,6 +48,35 @@ const CONTROLES = {
 	'vender.codigo_barras': { ancla: 'vender.campo_codigo_barras', ruta: VENDER, antes: 'abrir_codigo_de_barras', avanza: 'enter', foco: true, esperar_montaje: '[data-tour="vender.campo_codigo_barras"]' },
 	'vender.recargos': { ancla: 'vender.interruptores_recargos', ruta: VENDER, antes: 'abrir_recargos_de_venta', esperar_montaje: '[data-tour="vender.interruptores_recargos"]' },
 	'vender.total': { ancla: 'vender.total', ruta: VENDER, antes: 'mostrar_total_de_venta', esperar_montaje: '[data-tour="vender.total"]' },
+	'vender.metodos_pago': {
+		selector: '[data-tour="vender.boton_cobrar"]:not(:disabled)',
+		ruta: VENDER,
+		antes: 'mostrar_boton_de_reparto',
+		esperar_montaje: '[data-tour="vender.boton_cobrar"]',
+		techo_ms: 4000,
+		avanza: 'clic',
+		si_falta: 'El botón + está disponible para ventas de contado. Si estás haciendo un presupuesto o vendiendo a cuenta corriente, vas a elegir cómo cobrar en el flujo correspondiente.',
+	},
+	'vender.reparto_pago': {
+		ancla: 'vender.reparto_pago',
+		ruta: VENDER,
+		techo_ms: 4000,
+		si_falta: 'Para ver el reparto, volvé al paso anterior y tocá el + al lado del método de pago.',
+	},
+	'caja.historial_aperturas': {
+		// La persona elige la caja. Si hay varias filas, señalar un solo botón forzaría esa elección.
+		selector: '.cont-table:has(' + BOTON_APERTURAS + ')',
+		selector_avance: BOTON_APERTURAS,
+		ruta: TESORERIA,
+		antes: 'mostrar_cajas',
+		avanza: 'clic',
+	},
+	'caja.reabrir_apertura': {
+		selector: '#aperturas-caja [data-tour="caja.reabrir_apertura"]:not(:disabled)',
+		ruta: TESORERIA,
+		techo_ms: 4000,
+		si_falta: 'Abrí el historial de una caja cerrada. Reabrir solo aparece en su apertura más reciente, en la primera página.',
+	},
 	'soporte.abrir': { ancla: 'soporte.abrir', avanza: 'aparece' },
 	'soporte.conversacion': { ancla: 'soporte.conversacion' },
 	'soporte.escribir': { ancla: 'soporte.escribir', foco: true },
