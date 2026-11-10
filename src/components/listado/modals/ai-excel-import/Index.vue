@@ -4643,6 +4643,8 @@ export default {
 				 * una SPA vieja no paga una llamada a la IA que no va a mostrar.
 				 */
 				chequear_relaciones:        true,
+				/* Que el paso 3 salga del mapeo de esta tabla, no del que propuso la IA. */
+				recalcular_identificacion:  true,
 			}, { timeout: 120000 })
 			.then(function(res) {
 
