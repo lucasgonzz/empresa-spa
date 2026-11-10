@@ -4,6 +4,35 @@ import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = env('VUE_APP_API_URL')
 
+function marca_de_mensaje(fecha) {
+	return Date.parse(fecha) || 0
+}
+
+function fecha_mas_reciente(anterior, nueva) {
+	return marca_de_mensaje(nueva) > marca_de_mensaje(anterior) ? nueva : anterior
+}
+
+function fecha_del_ultimo_mensaje(ticket) {
+	if (ticket.last_message_at) return ticket.last_message_at
+	let ultima = null
+	for (const mensaje of ticket.messages || []) {
+		ultima = fecha_mas_reciente(ultima, mensaje.created_at)
+	}
+	return ultima
+}
+
+function por_ultimo_mensaje(a, b) {
+	return marca_de_mensaje(fecha_del_ultimo_mensaje(b)) - marca_de_mensaje(fecha_del_ultimo_mensaje(a)) || b.id - a.id
+}
+
+function conservar_fecha_y_numero(anterior, ticket) {
+	if (!anterior) return ticket
+	return Object.assign({}, ticket, {
+		last_message_at: fecha_mas_reciente(fecha_del_ultimo_mensaje(anterior), fecha_del_ultimo_mensaje(ticket)),
+		admin_ticket_id: ticket.admin_ticket_id || anterior.admin_ticket_id,
+	})
+}
+
 export default __base_store({
 	/**
 	 * Estado principal del módulo de tickets de soporte.
@@ -13,34 +42,28 @@ export default __base_store({
 		use_per_page: false,
 	},
 	mutations: {
+		setModels(state, tickets) {
+			const anteriores = new Map(state.models.map(ticket => [String(ticket.id), ticket]))
+			state.models = (tickets || [])
+				.map(ticket => conservar_fecha_y_numero(anteriores.get(String(ticket.id)), ticket))
+				.sort(por_ultimo_mensaje)
+		},
 		/**
 		 * Inserta o actualiza un ticket en la bandeja a partir de datos realtime o respuesta de API.
-		 * Ordena por updated_at descendente para acercar lo último a lo primero.
+		 * Solo un mensaje nuevo puede cambiar la posición de un ticket conocido.
 		 */
 		upsertFromBroadcast(state, ticket) {
 			if (!ticket || !ticket.id) {
 				return
 			}
-			const tid = ticket.id
-			let idx = -1
-			let i = 0
-			for (i = 0; i < state.models.length; i = i + 1) {
-				if (state.models[i].id == tid) {
-					idx = i
-					break
-				}
-			}
+			const idx = state.models.findIndex(modelo => modelo.id == ticket.id)
 			if (idx >= 0) {
-				state.models.splice(idx, 1, Object.assign({}, state.models[idx], ticket))
+				const anterior = state.models[idx]
+				state.models.splice(idx, 1, Object.assign({}, anterior, conservar_fecha_y_numero(anterior, ticket)))
 			} else {
 				state.models.push(ticket)
 			}
-			const sorted = state.models.slice().sort(function (a, b) {
-				const da = a.updated_at ? new Date(a.updated_at).getTime() : 0
-				const db = b.updated_at ? new Date(b.updated_at).getTime() : 0
-				return db - da
-			})
-			state.models = sorted
+			state.models.sort(por_ultimo_mensaje)
 		},
 	},
 	actions: {
@@ -66,7 +89,9 @@ export default __base_store({
 			if (!message || !message.ticket) {
 				return
 			}
-			commit('upsertFromBroadcast', message.ticket)
+			const ticket = message.ticket
+			const last_message_at = fecha_mas_reciente(fecha_del_ultimo_mensaje(ticket), message.created_at)
+			commit('upsertFromBroadcast', Object.assign({}, ticket, { last_message_at }))
 		},
 		/**
 		 * Cierra o reabre un ticket desde la UI de soporte.

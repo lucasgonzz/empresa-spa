@@ -282,8 +282,6 @@ export default {
 			form_data.append('kind', kind_val)
 			if (opt_ticket) {
 				form_data.append('support_ticket_id', opt_ticket)
-			} else if (payload.agentes_version) {
-				form_data.append('nueva_conversacion', 1)
 			}
 			if (payload.agentes_version) form_data.append('agentes_version', payload.agentes_version)
 			if (mensaje_uuid) form_data.append('mensaje_uuid', mensaje_uuid)
