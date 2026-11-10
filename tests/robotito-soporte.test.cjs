@@ -206,6 +206,8 @@ function pregunta_con_error(error) {
 		pregunta: '¿Cómo abro el ticket?',
 		vaciar_eventos: () => Promise.resolve(),
 		post: () => Promise.reject(error),
+		cargar: () => {},
+		aceptar_guia: guia => avisos.push(guia.uuid),
 		evento: (...datos) => eventos.push(datos),
 		$nextTick: () => {},
 		$refs: {},
@@ -215,18 +217,45 @@ function pregunta_con_error(error) {
 	return { vm, corrida, avisos, eventos }
 }
 
-test('si Empresa confirma la pregunta guardada, libera el tour sin reportar abandono', async (t) => {
+test('si Empresa guarda la pregunta, espera y abre solo el recorrido que responde a esa guía', async (t) => {
 	const documento = global.document
 	global.document = { body: { classList: { remove: () => {} } } }
 	t.after(() => { global.document = documento })
 	const { vm, corrida, avisos, eventos } = pregunta_con_error({
 		response: { status: 502, data: { ok: false, code: 'question_saved' } },
 	})
+	t.after(() => vm.limpiar_espera())
 	await vm.enviar_pregunta()
 	assert.equal(corrida.pregunta_registrada, true)
-	assert.equal(vm.activa, null)
+	assert.equal(vm.activa, corrida)
 	assert.equal(vm.error_pregunta, '')
-	assert.match(avisos[0], /quedó guardada/)
+	assert.match(vm.esperando_guia, /quedó guardada/)
+	vm.pendientes = [{ uuid: 'otra' }, { uuid: 'de-otro-tour', previous_uuid: 'otro' }]
+	vm.reformular_si_llego()
+	assert.equal(vm.activa, corrida)
+	vm.pendientes.push({ uuid: 'nueva', previous_uuid: 'guia' })
+	vm.reformular_si_llego()
+	assert.equal(vm.activa, null)
+	assert.equal(vm.esperando_guia, '')
+	assert.deepEqual(avisos, ['nueva'])
+	assert.deepEqual(eventos, [])
+})
+
+test('cerrar la guía mientras espera conserva el aviso pendiente y cancela el inicio automático', async (t) => {
+	const documento = global.document
+	global.document = { body: { classList: { remove: () => {} } } }
+	t.after(() => { global.document = documento })
+	const { vm, corrida, avisos, eventos } = pregunta_con_error(null)
+	vm.post = () => Promise.resolve({ data: { ok: true } })
+	t.after(() => vm.limpiar_espera())
+	await vm.enviar_pregunta()
+	assert.equal(vm.activa, corrida)
+	assert.match(vm.esperando_guia, /preparando los pasos/)
+	vm._motor.cortar_tour()
+	vm.pendientes = [{ uuid: 'nueva', previous_uuid: 'guia' }]
+	vm.reformular_si_llego()
+	assert.equal(anfitrion.computed.pendiente.call(vm).uuid, 'nueva')
+	assert.deepEqual(avisos, [])
 	assert.deepEqual(eventos, [])
 })
 

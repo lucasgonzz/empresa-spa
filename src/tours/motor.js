@@ -1031,7 +1031,7 @@ function guion_de(clip) {
  * @returns {void}
  */
 function avanzar_a(i) {
-	if (!corrida || corrida.avanzando) {
+	if (!corrida || corrida.avanzando || (corrida.contexto.pausado && corrida.contexto.pausado())) {
 		return
 	}
 
@@ -1116,13 +1116,29 @@ function mostrar_paso(i) {
 	corrida.preparando = i
 	corrida.avanzando = true
 
+	const vigente = () => corrida === corrida_del_paso && corrida.preparando === i
+	let tapado = false
 	preparar_paso(paso, corrida.contexto).then(function (elemento) {
+		if (!vigente() || !elemento || paso.indicacion || !corrida.contexto.despejar_paso) return elemento
+		return corrida.contexto.despejar_paso(elemento, vigente).then(function (libre) {
+			if (!vigente()) return null
+			tapado = !libre
+			if (tapado) return null
+			acomodar_scroll(paso, elemento)
+			return asentar_layout(elemento)
+		})
+	}).then(function (elemento) {
 		/* El lead pudo haber cortado el tour mientras se preparaba este paso. */
-		if (corrida !== corrida_del_paso || corrida.preparando !== i) {
+		if (!vigente()) {
 			return
 		}
 
 		corrida.avanzando = false
+
+		if (tapado) {
+			paso = { indicacion: true, texto: paso.texto + ' Hay una ventana que tapa el control. Para usarla, cerrá primero este recorrido.' }
+			elemento = true
+		}
 
 		// Si el control depende del estado del comercio, explicamos la condición en el mismo paso.
 		// La indicación no habilita clics ni busca otro control como sustituto.
@@ -1485,7 +1501,16 @@ function enganchar_refresco(elemento) {
 				return
 			}
 			acomodar_scroll(paso, elemento)
-			recorrido.refresh()
+			const vigente = () => corrida === activa && corrida.indice === indice && recorrido && !corrida.avanzando
+			if (!corrida.contexto.despejar_paso) {
+				recorrido.refresh()
+				return
+			}
+			corrida.contexto.despejar_paso(elemento, vigente).then(function (libre) {
+				if (!vigente()) return
+				if (libre) recorrido.refresh()
+				else mostrar_paso(indice)
+			})
 		}, 160)
 	}
 
@@ -2833,6 +2858,7 @@ export function iniciar_tour(clip, contexto) {
 			destruir_recorrido()
 		},
 		onNextClick: function () {
+			if (contexto.pausado && contexto.pausado()) return
 			/* Antes de mover el índice: si este paso esperaba un gesto y el lead lo salteó con el
 			 * botón, queda anotado para que un corte posterior no le eche la culpa a los datos. */
 			marcar_avance_a_mano()

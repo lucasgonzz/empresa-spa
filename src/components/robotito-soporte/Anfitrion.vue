@@ -12,6 +12,7 @@
 			ref="pregunta"
 			v-model="pregunta"
 			:error="error_pregunta"
+			:espera="esperando_guia"
 			:bloqueada="pregunta_bloqueada"
 			:enviando="enviando_pregunta"
 			@cambio="refrescar_vineta"
@@ -34,12 +35,19 @@ import Valoracion from './Valoracion'
 import { pasos_de_soporte, tema_de_soporte_conocido } from '@/tours/soporte'
 import { TEMA_GUIA_DINAMICA } from '@/tours/soporte-dinamico'
 import { TEMA_REVERTIR_IMPORTACION } from '@/tours/importacion-soporte'
+import { despejar_paso } from '@/tours/capas-de-soporte'
 
 const RUTA = '/api/support-tour/'
 const OPCIONES_HTTP = { skip_navigation_cancel: true, skip_global_error_event: true, timeout: 12000 }
 const CLASE_TUTORIALES = 'robotito-tour-tutoriales'
-const CLASE_SIN_CHAT = 'robotito-tour-en-pantalla'
-const MODALES_ANTES_DE_VALORAR = ['confirm-rollback-import', 'export-history']
+const ESPERA_GUIA_MS = 240000
+const CONSULTA_GUIA_MS = 5000
+const MODALES_ANTES_DE_VALORAR = {
+	'confirm-rollback-import': 'article',
+	'export-history': 'article',
+	surchage: 'abm',
+	discount: 'abm',
+}
 
 export default {
 	components: { CabeceraTarjeta, Pregunta, Valoracion },
@@ -54,6 +62,7 @@ export default {
 			pregunta: '',
 			pregunta_bloqueada: false,
 			enviando_pregunta: false,
+			esperando_guia: '',
 			error_pregunta: '',
 			para_valorar: null,
 			modal_prioritario: null,
@@ -68,8 +77,8 @@ export default {
 	},
 	watch: {
 		'$route.name'(ruta, anterior) {
-			// Al salir de Listado el modal se puede desmontar sin emitir hidden.
-			if (anterior === 'article' && ruta !== anterior && this.modal_prioritario) {
+			// Al cambiar de pantalla el modal se puede desmontar sin emitir hidden.
+			if (MODALES_ANTES_DE_VALORAR[this.modal_prioritario] === anterior && ruta !== anterior) {
 				this.modal_prioritario = null
 				this.para_valorar = null
 			}
@@ -101,13 +110,14 @@ export default {
 		if (this._canal && this.Echo) this.Echo.leave(this._canal)
 		clearTimeout(this._reintento)
 		clearInterval(this._consulta)
+		this.limpiar_espera()
 		this.guardar_contenido_tarjeta()
 		if (this.activa && this._motor) this._motor.cortar_tour()
-		document.body.classList.remove(CLASE_TUTORIALES, CLASE_SIN_CHAT)
+		document.body.classList.remove(CLASE_TUTORIALES)
 	},
 	methods: {
 		modal_mostrado(evento, id) {
-			if (MODALES_ANTES_DE_VALORAR.includes(id)) this.modal_prioritario = id
+			if (Object.prototype.hasOwnProperty.call(MODALES_ANTES_DE_VALORAR, id)) this.modal_prioritario = id
 		},
 		modal_cerrado(evento, id) {
 			if (id === this.modal_prioritario) this.modal_prioritario = null
@@ -128,6 +138,7 @@ export default {
 				if (sin_confirmar && !pendientes.some(guia => guia.uuid === sin_confirmar.uuid)) pendientes.unshift(sin_confirmar)
 				self.pendientes = pendientes
 				self.escuchar()
+				self.reformular_si_llego()
 			}).catch(function (error) {
 				if (self._detenido || self._carga !== carga) return
 				const estado = error.response && error.response.status
@@ -192,6 +203,9 @@ export default {
 		},
 		iniciar(guia) {
 			if (this.ocupado || !this.pendiente || this.pendiente.uuid !== guia.uuid) return
+			return this.aceptar_guia(guia)
+		},
+		aceptar_guia(guia) {
 			const es_recargo = guia.tema === TEMA_GUIA_DINAMICA && Array.isArray(guia.pasos)
 				&& guia.pasos.some(paso => paso && paso.clave === 'vender.recargos')
 			if ((es_recargo || guia.tema.indexOf('buscar_articulo_') === 0)
@@ -206,7 +220,7 @@ export default {
 			const self = this
 			this.ocupado = true
 			this.marcar_visible(guia.uuid)
-			import('@/tours/motor').then(function (motor) {
+			return (this._motor ? Promise.resolve(this._motor) : import('@/tours/motor')).then(function (motor) {
 				if (self._detenido) return null
 				self._motor = motor
 				// Si se pierde la respuesta, pending ya puede omitirla. El mismo UUID sigue disponible para reintentar.
@@ -232,7 +246,6 @@ export default {
 			this.pregunta_bloqueada = false
 			this.error_pregunta = ''
 			if (guia.tema === 'centro_recursos' || claves.includes('tutoriales.abrir')) document.body.classList.add(CLASE_TUTORIALES)
-			if (guia.tema !== 'crear_ticket' && !claves.some(clave => clave.indexOf('soporte.') === 0)) document.body.classList.add(CLASE_SIN_CHAT)
 			const self = this
 			this.$nextTick(function () {
 				if (self._detenido) return
@@ -242,6 +255,8 @@ export default {
 					texto_plano: true,
 					clase_popover: 'tour-soporte',
 					reacomodar_en_resize: true,
+					despejar_paso: (elemento, vigente) => despejar_paso(elemento, self, vigente),
+					pausado: () => self.enviando_pregunta || Boolean(self.esperando_guia),
 					al_faltar_pasos: () => {},
 					al_mostrar_paso: paso => self.mostrar_paso(corrida, paso),
 					decorar_popover: self.decorar_tarjeta,
@@ -281,7 +296,7 @@ export default {
 		enviar_pregunta() {
 			const corrida = this.activa
 			const pregunta = this.pregunta.trim()
-			if (!corrida || !pregunta || this.enviando_pregunta) return
+			if (!corrida || !pregunta || this.enviando_pregunta || this.esperando_guia) return
 			const self = this
 			const paso = corrida.paso
 			this.enviando_pregunta = true
@@ -310,22 +325,45 @@ export default {
 		},
 		registrar_pregunta(corrida, entregada) {
 			corrida.pregunta_registrada = true
-			if (entregada) {
-				this.$toast.success('Mandamos tu pregunta a Soporte. Si hay una guía actualizada, Robotito te va a avisar en la barra.')
-			} else {
-				this.$toast.info('Tu pregunta quedó guardada. Vamos a reintentar el envío a Soporte.')
-			}
-			if (!corrida.fin_pendiente) this._motor.cortar_tour()
+			if (corrida.fin_pendiente || this.activa !== corrida) return
+			this.esperando_guia = entregada ? 'Robotito está preparando los pasos para tu pregunta.'
+				: 'Tu pregunta quedó guardada. Vamos a reintentar el envío para preparar la guía.'
+			this.$nextTick(this.refrescar_vineta)
+			this._consulta_guia = setInterval(this.cargar, CONSULTA_GUIA_MS)
+			this._plazo_guia = setTimeout(() => {
+				if (this.activa !== corrida || corrida.reemplazo) return
+				this.$toast.info('Robotito todavía está preparando tu guía. Cuando esté lista, va a aparecer en la barra.')
+				this._motor.cortar_tour()
+			}, ESPERA_GUIA_MS)
+			this.cargar()
+		},
+		reformular_si_llego() {
+			const corrida = this.activa
+			if (document.hidden || !corrida || !this.esperando_guia || corrida.fin_pendiente || corrida.reemplazo) return
+			const guia = this.pendientes.find(pendiente => pendiente.previous_uuid === corrida.guia.uuid)
+			if (!guia) return
+			corrida.reemplazo = guia
+			this._motor.cortar_tour()
+		},
+		limpiar_espera() {
+			clearInterval(this._consulta_guia)
+			clearTimeout(this._plazo_guia)
+			this.esperando_guia = ''
 		},
 		terminar(corrida, resultado) {
 			if (this._detenido || this.activa !== corrida) return
 			this.guardar_contenido_tarjeta()
-			document.body.classList.remove(CLASE_TUTORIALES, CLASE_SIN_CHAT)
+			document.body.classList.remove(CLASE_TUTORIALES)
 			if (this.enviando_pregunta) {
 				corrida.fin_pendiente = resultado
 				return
 			}
+			this.limpiar_espera()
 			this.activa = null
+			if (corrida.reemplazo) {
+				this.aceptar_guia(corrida.reemplazo)
+				return
+			}
 			if (corrida.pregunta_registrada) return
 			const completo = resultado.motivo === 'listo' && corrida.mostrados.size === corrida.total
 			this.evento(corrida.guia.uuid, { event: completo ? 'completed' : 'abandoned' })
@@ -369,6 +407,6 @@ export default {
 <style lang="sass">
 @import './tarjeta'
 
-.robotito-tour-en-pantalla #app .support-chat-overlay
-	display: none
+.tour-soporte:has(.robotito-pregunta__espera) .driver-popover-navigation-btns
+	visibility: hidden
 </style>
