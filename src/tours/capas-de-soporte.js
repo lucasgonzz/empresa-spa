@@ -39,7 +39,9 @@ function capa_que_tapa(objetivo) {
 }
 
 function cerrar(capa, vm) {
-	if (capa.matches('.asistente-ia-overlay--lateral')) {
+	if (capa.querySelector('[data-robotito-borrador]')) {
+		vm.ocultar_capa_con_borrador(capa)
+	} else if (capa.matches('.asistente-ia-overlay--lateral')) {
 		vm.$root.$emit('agentes:cerrar')
 	} else if (capa.matches('.whatsapp-sidebar')) {
 		vm.$store.commit('whatsapp_chat/setSidebarAbierto', false)

@@ -859,6 +859,7 @@ function asentar_layout(elemento) {
  * @returns {Promise<Element|null>}
  */
 function preparar_paso(paso, contexto) {
+	if (contexto.preparar_capas) contexto.preparar_capas(paso)
 	if (paso.indicacion) {
 		return ir_a(contexto.router, paso.ruta).then(function () {
 			if (!paso.ruta) return true
@@ -1494,6 +1495,7 @@ function enganchar_refresco(elemento) {
 		clearTimeout(reloj_resize)
 		reloj_resize = setTimeout(function () {
 			if (corrida !== activa || corrida.indice !== indice || !recorrido || corrida.avanzando) return
+			if (corrida.contexto.pausado && corrida.contexto.pausado()) return
 			const paso = corrida.pasos[indice]
 			const encontrado = buscar_visible(selector_de(paso))
 			if (!encontrado || subir_a_ancestro(encontrado, paso.ancestro) !== elemento) {
@@ -2020,7 +2022,7 @@ function enganchar_avance_por_clic(paso, i, resaltado) {
 		 * antes de que el clic haya hecho lo suyo y el paso siguiente mide un DOM viejo. */
 		setTimeout(function () {
 			if (corrida && corrida.indice === i) {
-				mostrar_paso(i + 1)
+				avanzar_a(i + 1)
 			}
 		}, 80)
 	}
@@ -2066,7 +2068,7 @@ function esperar_menu_desplegado(selector, resaltado, i) {
 
 		if (menu_abierto()) {
 			clearInterval(reloj)
-			mostrar_paso(i + 1)
+			avanzar_a(i + 1)
 			return
 		}
 
@@ -2075,7 +2077,7 @@ function esperar_menu_desplegado(selector, resaltado, i) {
 		if (transcurrido >= TECHO_MENU_ABIERTO) {
 			clearInterval(reloj)
 			console.warn('Tour ' + corrida.clip_id + ': el desplegable del paso ' + (i + 1) + ' no llegó a abrirse en ' + TECHO_MENU_ABIERTO + ' ms; se avanza igual')
-			mostrar_paso(i + 1)
+			avanzar_a(i + 1)
 		}
 	}, INTERVALO_SONDEO)
 
@@ -2118,7 +2120,7 @@ function enganchar_avance_por_desaparicion(paso, i) {
 
 		if (!buscar_visible(selector)) {
 			clearInterval(reloj)
-			mostrar_paso(i + 1)
+			avanzar_a(i + 1)
 			return
 		}
 
@@ -2242,7 +2244,7 @@ function enganchar_avance_por_carga(campo, selector, i) {
 
 		setTimeout(function () {
 			if (corrida && corrida.indice === i) {
-				mostrar_paso(i + 1)
+				avanzar_a(i + 1)
 			}
 		}, 120)
 	}
@@ -2311,7 +2313,7 @@ function enganchar_avance_por_aparicion(paso, i) {
 			return
 		}
 
-		mostrar_paso(i + 1)
+		avanzar_a(i + 1)
 	})
 }
 

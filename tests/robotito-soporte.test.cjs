@@ -202,6 +202,7 @@ function pregunta_con_error(error) {
 	const avisos = []
 	const eventos = []
 	const vm = Object.assign(anfitrion.data(), anfitrion.methods, {
+		_capas_ocultas: new Set(),
 		activa: corrida,
 		pregunta: '¿Cómo abro el ticket?',
 		vaciar_eventos: () => Promise.resolve(),
@@ -257,6 +258,24 @@ test('cerrar la guía mientras espera conserva el aviso pendiente y cancela el i
 	assert.equal(anfitrion.computed.pendiente.call(vm).uuid, 'nueva')
 	assert.deepEqual(avisos, [])
 	assert.deepEqual(eventos, [])
+})
+
+test('un sondeo lento no descarta la guía que ya viene en camino', async () => {
+	const peticiones = []
+	const vm = Object.assign(anfitrion.data(), anfitrion.methods, {
+		_retirados: new Set(),
+		$axios: { get: () => new Promise(resolver => peticiones.push(resolver)) },
+		escuchar: () => {},
+		reformular_si_llego: () => {},
+	})
+	const consulta = vm.cargar()
+	vm.cargar()
+	assert.equal(peticiones.length, 1)
+	peticiones[0]({ data: { model: [{ uuid: 'nueva', tema: 'guia_dinamica' }] } })
+	await consulta
+	assert.equal(vm.pendientes[0].uuid, 'nueva')
+	assert.equal(peticiones.length, 2)
+	peticiones[1]({ data: { model: [] } })
 })
 
 test('si se pierde la respuesta, conserva la misma repregunta para reintentar', async () => {

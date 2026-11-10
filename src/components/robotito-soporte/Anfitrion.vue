@@ -40,6 +40,7 @@ import { despejar_paso } from '@/tours/capas-de-soporte'
 const RUTA = '/api/support-tour/'
 const OPCIONES_HTTP = { skip_navigation_cancel: true, skip_global_error_event: true, timeout: 12000 }
 const CLASE_TUTORIALES = 'robotito-tour-tutoriales'
+const CLASE_CAPA_OCULTA = 'robotito-capa-con-borrador'
 const ESPERA_GUIA_MS = 240000
 const CONSULTA_GUIA_MS = 5000
 const MODALES_ANTES_DE_VALORAR = {
@@ -88,7 +89,7 @@ export default {
 		this._eventos = []
 		this._vistos = new Set()
 		this._retirados = new Set()
-		this._carga = 0
+		this._capas_ocultas = new Set()
 	},
 	mounted() {
 		if (!this.usuario_id) return
@@ -111,6 +112,7 @@ export default {
 		clearTimeout(this._reintento)
 		clearInterval(this._consulta)
 		this.limpiar_espera()
+		this.restaurar_capas()
 		this.guardar_contenido_tarjeta()
 		if (this.activa && this._motor) this._motor.cortar_tour()
 		document.body.classList.remove(CLASE_TUTORIALES)
@@ -128,10 +130,14 @@ export default {
 		},
 		cargar() {
 			if (this._detenido || this._sin_api) return
+			if (this._carga_en_curso) {
+				this._recargar = true
+				return
+			}
 			const self = this
-			const carga = ++this._carga
-			this.$axios.get(RUTA + 'pending', OPCIONES_HTTP).then(function ({ data }) {
-				if (self._detenido || self._carga !== carga || !data || !Array.isArray(data.model)) return
+			this._carga_en_curso = true
+			return this.$axios.get(RUTA + 'pending', OPCIONES_HTTP).then(function ({ data }) {
+				if (self._detenido || !data || !Array.isArray(data.model)) return
 				const pendientes = data.model.filter(guia => guia && typeof guia.uuid === 'string'
 					&& tema_de_soporte_conocido(guia.tema) && !self._retirados.has(guia.uuid))
 				const sin_confirmar = self._aceptacion_por_confirmar
@@ -140,12 +146,18 @@ export default {
 				self.escuchar()
 				self.reformular_si_llego()
 			}).catch(function (error) {
-				if (self._detenido || self._carga !== carga) return
+				if (self._detenido) return
 				const estado = error.response && error.response.status
 				if (estado === 404 || estado === 403) {
 					self.pendientes = []
 					self._sin_api = true
 					clearInterval(self._consulta)
+				}
+			}).then(function () {
+				self._carga_en_curso = false
+				if (self._recargar) {
+					self._recargar = false
+					self.cargar()
 				}
 			})
 		},
@@ -255,6 +267,9 @@ export default {
 					texto_plano: true,
 					clase_popover: 'tour-soporte',
 					reacomodar_en_resize: true,
+					preparar_capas: paso => {
+						if (paso.ancla && paso.ancla.indexOf('soporte.') === 0) self.restaurar_capas()
+					},
 					despejar_paso: (elemento, vigente) => despejar_paso(elemento, self, vigente),
 					pausado: () => self.enviando_pregunta || Boolean(self.esperando_guia),
 					al_faltar_pasos: () => {},
@@ -332,7 +347,7 @@ export default {
 			this._consulta_guia = setInterval(this.cargar, CONSULTA_GUIA_MS)
 			this._plazo_guia = setTimeout(() => {
 				if (this.activa !== corrida || corrida.reemplazo) return
-				this.$toast.info('Robotito todavía está preparando tu guía. Cuando esté lista, va a aparecer en la barra.')
+				this.$toast.info('Robotito todavía no pudo abrir tu guía. Si queda lista más tarde, va a aparecer en la barra.')
 				this._motor.cortar_tour()
 			}, ESPERA_GUIA_MS)
 			this.cargar()
@@ -350,6 +365,14 @@ export default {
 			clearTimeout(this._plazo_guia)
 			this.esperando_guia = ''
 		},
+		ocultar_capa_con_borrador(capa) {
+			capa.classList.add(CLASE_CAPA_OCULTA)
+			this._capas_ocultas.add(capa)
+		},
+		restaurar_capas() {
+			this._capas_ocultas.forEach(capa => capa.classList.remove(CLASE_CAPA_OCULTA))
+			this._capas_ocultas.clear()
+		},
 		terminar(corrida, resultado) {
 			if (this._detenido || this.activa !== corrida) return
 			this.guardar_contenido_tarjeta()
@@ -359,6 +382,7 @@ export default {
 				return
 			}
 			this.limpiar_espera()
+			this.restaurar_capas()
 			this.activa = null
 			if (corrida.reemplazo) {
 				this.aceptar_guia(corrida.reemplazo)
@@ -407,6 +431,13 @@ export default {
 <style lang="sass">
 @import './tarjeta'
 
+.robotito-capa-con-borrador
+	display: none !important
+
 .tour-soporte:has(.robotito-pregunta__espera) .driver-popover-navigation-btns
 	visibility: hidden
+
+.driver-active:has(.tour-soporte .robotito-pregunta__espera) .driver-active-element,
+.driver-active:has(.tour-soporte .robotito-pregunta__espera) .driver-active-element *
+	pointer-events: none
 </style>
