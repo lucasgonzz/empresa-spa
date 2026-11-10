@@ -45,7 +45,8 @@
 			:numero_ticket_admin="seleccionado && seleccionado.admin_ticket_id"
 			:loading="messages_loading"
 			:show_new_ticket_bar="!!(seleccionado && seleccionado.status !== 'open')"
-			new_ticket_hint="Esta conversación está cerrada. Podés iniciar una nueva consulta."
+			:new_ticket_hint="ticket_abierto ? 'Esta conversación está cerrada. Podés seguir en tu conversación abierta.' : 'Esta conversación está cerrada. Podés iniciar una nueva consulta.'"
+			:new_ticket_label="ticket_abierto ? 'Continuar conversación' : undefined"
 			@retry-message="reintentar"
 			@start-new-ticket="iniciar_consulta"></conversation>
 			<message-input en_agentes :can_send="puede_enviar" :clave_borrador="clave_borrador" :preparar_envio="preparar_envio" @send="enviar"></message-input>

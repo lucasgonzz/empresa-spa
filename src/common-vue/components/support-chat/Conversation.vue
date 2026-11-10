@@ -115,7 +115,7 @@
 					type="button"
 					class="btn btn-primary btn-sm support-conversation-new-ticket-btn"
 					@click="$emit('start-new-ticket')">
-					Iniciar nuevo ticket
+					{{ new_ticket_label }}
 				</button>
 			</div>
 			<div
@@ -179,6 +179,10 @@ export default {
 		new_ticket_hint: {
 			type: String,
 			default: '',
+		},
+		new_ticket_label: {
+			type: String,
+			default: 'Iniciar nuevo ticket',
 		},
 	},
 	data() {
