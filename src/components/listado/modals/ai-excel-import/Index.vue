@@ -1,7 +1,7 @@
 <template>
 	<b-modal
 	:id="modal_id"
-	size="lg"
+	:size="step === 2 ? 'xl' : 'lg'"
 	hide-footer
 	:title="modal_title"
 	@show="on_show"
@@ -334,15 +334,22 @@
 		<hr
 		v-if="model === 'article'">
 
-			<!-- Tabla de mapeo de columnas -->
-			<p class="font-weight-bold m-b-10">Mapeo de columnas</p>
+			<p class="font-weight-bold m-b-5">Mapeo de columnas</p>
 
 			<p class="text-muted small m-b-15">
-				Revisá que cada columna del Excel esté asignada a la propiedad correcta.
-				<span class="text-warning">Las filas en amarillo tienen baja confianza.</span>
-				<span class="ai-import-mapping-legend-interpretation"> Las filas en celeste son interpretaciones de la IA que conviene validar.</span>
-				<span class="ai-import-mapping-legend-ignored"> Las filas en violeta se ignoran en la importación.</span>
-				<span class="ai-import-mapping-legend-interpretation"> Las columnas marcadas «Guardado» vienen de la configuración que confirmaste la última vez para este proveedor.</span>
+				Revisá que cada columna tenga la propiedad correcta.
+				<span class="ai-import-tabla-mapeo__leyenda ai-import-tabla-mapeo__columna--amarilla">Amarillo</span>
+				interpretación de la IA que conviene validar.
+				<span class="ai-import-tabla-mapeo__leyenda ai-import-tabla-mapeo__columna--roja">Rojo</span>
+				confianza baja.
+			</p>
+
+			<!-- Filas que repiten el encabezado adentro de la planilla: no se cuentan ni se importan. -->
+			<p
+			v-if="texto_encabezados_repetidos"
+			data-testid="ai-import-encabezados-repetidos"
+			class="text-muted small m-b-15">
+				{{ texto_encabezados_repetidos }}
 			</p>
 
 			<!-- Notas de asistencia globales de Claude (consejos generales sobre el archivo) -->
@@ -375,148 +382,101 @@
 				</p>
 			</b-alert>
 
-			<div class="ai-import-mapping-table">
-
-				<!-- Cabecera -->
-				<div class="ai-import-mapping-row ai-import-mapping-row--header">
-					<span>Columna en Excel</span>
-					<span>Propiedad del sistema</span>
-					<span class="text-center">Confianza</span>
-				</div>
-
-				<!-- Fila por cada columna detectada -->
-				<div
-				v-for="(item, index) in column_mapping"
-				:key="index"
-				class="ai-import-mapping-block"
-				:class="mapping_row_highlight_class(item)">
-
-					<div class="ai-import-mapping-row">
-
-						<!-- Letra y nombre de la columna en el Excel -->
-						<span
-						class="ai-import-mapping-excel-col"
-						:title="excel_column_full_label(item, index)">
-							<span class="ai-import-mapping-excel-letter">
-								{{ excel_column_letter_label(item, index) }}
-							</span>
-							<span class="ai-import-mapping-excel-header">
-								{{ item.excel_column }}
-							</span>
-
-							<!--
-								Marca de columna ambigua: este encabezado cubre más de una columna
-								y la propiedad se repartió por orden. Se marca acá, y no con un
-								color de fila más, porque la leyenda de arriba ya tiene tres
-								colores y un cuarto no se lee: a la tercera alerta sin motivo, el
-								usuario deja de leerlas todas. El icono se explica solo al pasar
-								el mouse y no compite con el resaltado de confianza baja.
-							-->
-							<i
-							v-if="columna_es_ambigua(item, index)"
-							class="icon-alert-triangle ai-import-mapping-ambiguous-flag"
-							title="Este nombre de encabezado cubre más de una columna. Revisá que la propiedad asignada sea la correcta."></i>
-						</span>
-
-						<!-- Select de propiedad del sistema -->
-						<b-form-select
-						v-model="item.system_property"
-						:data-testid="'ai-import-mapeo-' + index"
-						:options="system_property_options"
-						size="sm">
-						</b-form-select>
-
-						<!-- Nivel de confianza del mapeo sugerido por IA -->
-						<span class="ai-import-mapping-confidence text-center">
-							<span
-							class="ai-import-mapping-confidence-value"
-							:class="column_confidence_text_class(item.confidence)"
-							:title="column_confidence_title(item.confidence)">
-								{{ format_column_confidence(item.confidence) }}
-							</span>
-							<!--
-								"Guardado" va primero: una columna que el usuario ya confirmó (o corrigió)
-								la última vez para este proveedor no es una columna a "Revisar", por más
-								baja que haya sido la confianza de la IA esta vez.
-							-->
-							<small
-							v-if="column_has_mapeo_guardado(item)"
-							class="ai-import-mapping-confidence-hint text-info"
-							:title="'Viene de la configuración que confirmaste la última vez para ' + (item.mapeo_guardado.proveedor || 'este proveedor')">
-								Guardado
-							</small>
-							<small
-							v-else-if="column_confidence_is_low(item.confidence)"
-							class="ai-import-mapping-confidence-hint text-warning">
-								Revisar
-							</small>
-							<small
-							v-else-if="column_has_interpretation_note(item)"
-							class="ai-import-mapping-confidence-hint text-info">
-								Validar
-							</small>
-						</span>
-
-					</div>
-
-					<p
-					v-if="column_has_interpretation_note(item)"
-					class="ai-import-mapping-interpretation-note small m-b-0">
-						<i class="icon-info m-r-5"></i>
-						{{ item.interpretation_note }}
-					</p>
-
-					<!-- Qué dejó el usuario en esta columna la última vez que importó de este proveedor. -->
-					<p
-					v-if="column_has_mapeo_guardado(item)"
-					:data-testid="'ai-import-mapeo-guardado-' + index"
-					class="ai-import-mapping-interpretation-note small m-b-0">
-						<i class="icon-info m-r-5"></i>
-						{{ texto_de_mapeo_guardado(item) }}
-					</p>
-
-				</div>
-
-			</div>
-
-			<!-- Preview de artículos: tabla reactiva con los primeros 5 registros del Excel -->
+			<!--
+				Una sola tabla, con las columnas en el mismo orden que el Excel: nombre, propiedad,
+				interruptor de ignorar y los primeros artículos. El color va en la columna entera para
+				que lo dudoso se encuentre de un vistazo.
+			-->
 			<div
-			v-if="preview_columns.length > 0 && preview_rows.length > 0"
-			class="m-t-20">
-				<p class="font-weight-bold m-b-8 small">
-					Vista previa - primeros {{ preview_rows.length }} artículos del Excel
-				</p>
+			v-if="columnas_de_la_tabla_de_mapeo.length > 0"
+			class="ai-import-preview-table-wrapper">
+				<table class="ai-import-preview-table ai-import-tabla-mapeo">
+					<thead>
+						<tr>
+							<th
+							v-for="columna in columnas_de_la_tabla_de_mapeo"
+							:key="'nombre-' + columna.index"
+							:class="clase_de_columna_de_mapeo(columna.item)"
+							:title="titulo_de_columna_de_mapeo(columna.item, columna.index)">
+								<span class="ai-import-tabla-mapeo__letra">{{ excel_column_letter_label(columna.item, columna.index) }}</span>
+								<span class="ai-import-tabla-mapeo__nombre">{{ columna.item.excel_column || 'Sin nombre' }}</span>
 
-				<div class="ai-import-preview-table-wrapper">
-					<table class="ai-import-preview-table">
-						<thead>
-							<tr>
-								<th
-								v-for="(col, idx) in preview_columns"
-								:key="'ph-' + idx">
-									{{ col.label }}
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr
-							v-for="(row, rowIdx) in preview_rows"
-							:key="'pr-' + rowIdx">
-								<td
-								v-for="(col, colIdx) in preview_columns"
-								:key="'pc-' + rowIdx + '-' + colIdx">
-									{{ row[col.excel_column_index] || '-' }}
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
+								<!-- Este encabezado cubre más de una columna y la propiedad se repartió por orden. -->
+								<i
+								v-if="columna_es_ambigua(columna.item, columna.index)"
+								class="icon-alert-triangle ai-import-tabla-mapeo__marca-ambigua"
+								title="Este nombre de encabezado cubre más de una columna. Revisá que la propiedad asignada sea la correcta."></i>
 
-				<small class="text-muted d-block m-t-5">
-					Las columnas marcadas como "Ignorar columna" no aparecen en esta preview.
-				</small>
+								<i
+								v-if="column_has_interpretation_note(columna.item)"
+								class="icon-info m-l-5"
+								:title="columna.item.interpretation_note"></i>
 
+								<!-- Lo que dejó el usuario en esta columna la última vez que importó de este proveedor. -->
+								<small
+								v-if="column_has_mapeo_guardado(columna.item)"
+								:data-testid="'ai-import-mapeo-guardado-' + columna.index"
+								class="ai-import-tabla-mapeo__guardado"
+								:title="texto_de_mapeo_guardado(columna.item)">
+									Guardado
+								</small>
+							</th>
+						</tr>
+
+						<tr>
+							<th
+							v-for="columna in columnas_de_la_tabla_de_mapeo"
+							:key="'propiedad-' + columna.index"
+							:class="clase_de_columna_de_mapeo(columna.item)">
+								<b-form-select
+								v-model="columna.item.system_property"
+								:data-testid="'ai-import-mapeo-' + columna.index"
+								:options="opciones_de_propiedad_de_columna(columna.item)"
+								:disabled="columna_ignorada(columna.item)"
+								size="sm"
+								@change="al_cambiar_propiedad_de_columna(columna.item, $event)">
+								</b-form-select>
+							</th>
+						</tr>
+
+						<tr>
+							<th
+							v-for="columna in columnas_de_la_tabla_de_mapeo"
+							:key="'ignorar-' + columna.index"
+							:class="clase_de_columna_de_mapeo(columna.item)">
+								<b-form-checkbox
+								switch
+								:data-testid="'ai-import-ignorar-' + columna.index"
+								:checked="columna_ignorada(columna.item)"
+								@change="cambiar_ignorar_columna(columna.item, $event)">
+									Ignorar columna
+								</b-form-checkbox>
+							</th>
+						</tr>
+					</thead>
+
+					<tbody>
+						<tr
+						v-for="(fila, fila_index) in preview_rows"
+						:key="'fila-' + fila_index">
+							<td
+							v-for="columna in columnas_de_la_tabla_de_mapeo"
+							:key="'celda-' + fila_index + '-' + columna.index"
+							:class="clase_de_columna_de_mapeo(columna.item)"
+							:title="valor_de_celda_de_vista_previa(fila, columna.item)">
+								{{ valor_de_celda_de_vista_previa(fila, columna.item) }}
+							</td>
+						</tr>
+					</tbody>
+				</table>
 			</div>
+
+			<!-- Una columna que quedó sin propiedad no se importa, aunque el interruptor esté apagado. -->
+			<small
+			v-if="cantidad_de_columnas_por_elegir > 0"
+			class="text-warning d-block m-t-5">
+				{{ cantidad_de_columnas_por_elegir === 1 ? 'Falta elegir la propiedad de 1 columna: si no la elegís, no se importa.' : 'Falta elegir la propiedad de ' + cantidad_de_columnas_por_elegir + ' columnas: si no las elegís, no se importan.' }}
+			</small>
 
 			<!--
 				🔴 Error del paso 2, persistente. Hasta acá los dos .catch de confirmar_paso_2
@@ -1773,6 +1733,19 @@ export default {
 			preview_rows: [],
 
 			/*
+			 * Estado auxiliar del interruptor "Ignorar columna", por excel_column_index. Vive afuera de
+			 * column_mapping a propósito: ese array viaja a la API y ahí system_property null ES
+			 * "ignorada". propiedades_antes_de_ignorar guarda qué tenía la columna para restaurarlo al
+			 * apagar el interruptor; columnas_por_elegir marca las que quedaron con el interruptor
+			 * apagado y sin propiedad, esperando que el usuario elija una.
+			 */
+			propiedades_antes_de_ignorar: {},
+			columnas_por_elegir: {},
+
+			/* Filas que repiten el encabezado adentro de la planilla: { filas, ejemplos, valores }. Opcional. */
+			encabezados_repetidos: null,
+
+			/*
 			 * Tamaño de lote con el que corre la importación en el backend (ARTICLE_EXCEL_CHUNK_SIZE),
 			 * informado por el análisis (clave tamanio_de_lote). Sólo para el texto del paso 4; un
 			 * resultado que no la trae (análisis viejo) deja el default de 1000.
@@ -2943,15 +2916,54 @@ export default {
 		 * Excluye las columnas marcadas como "Ignorar columna" (system_property === null).
 		 * Cada elemento: { label: string, excel_column_index: number }
 		 */
-		preview_columns() {
+		/*
+		 * Columnas de la tabla del paso 2, en el orden del Excel. Lleva el índice original del array
+		 * porque los data-testid y el v-model siguen hablando de ese ítem.
+		 */
+		columnas_de_la_tabla_de_mapeo() {
 			if (!this.column_mapping || this.column_mapping.length === 0) return []
 
 			return this.column_mapping
-				.filter(item => item.system_property !== null && item.system_property !== '')
-				.map(item => ({
-					label: this.get_property_label(item.system_property),
-					excel_column_index: item.excel_column_index,
-				}))
+				.map((item, index) => ({ item: item, index: index }))
+				.sort((a, b) => a.item.excel_column_index - b.item.excel_column_index)
+		},
+
+		/*
+		 * Cuántas columnas tienen el interruptor apagado y todavía no tienen propiedad.
+		 */
+		cantidad_de_columnas_por_elegir() {
+			return this.column_mapping.filter(item => {
+				return this.column_mapping_is_ignored(item) && !this.columna_ignorada(item)
+			}).length
+		},
+
+		/*
+		 * Renglón del paso 2 con las filas que repiten el encabezado. Vacío con un análisis viejo,
+		 * que no trae la clave, o si no hay ninguna.
+		 */
+		texto_encabezados_repetidos() {
+			let datos = this.encabezados_repetidos
+			let filas = datos ? (Number(datos.filas) || 0) : 0
+
+			if (filas <= 0) {
+				return ''
+			}
+
+			if (filas === 1) {
+				let unica = Array.isArray(datos.ejemplos) ? datos.ejemplos[0] : null
+				return 'Ignoramos 1 fila que repite el encabezado' + (unica ? ' (la fila ' + unica + ')' : '') + '.'
+			}
+
+			let ejemplos = Array.isArray(datos.ejemplos) ? datos.ejemplos.slice(0, 3) : []
+			let detalle  = ''
+
+			if (ejemplos.length === 1) {
+				detalle = ' (por ejemplo, la fila ' + ejemplos[0] + ')'
+			} else if (ejemplos.length > 1) {
+				detalle = ' (por ejemplo, las filas ' + ejemplos.slice(0, -1).join(', ') + ' y ' + ejemplos[ejemplos.length - 1] + ')'
+			}
+
+			return 'Ignoramos ' + this.numero_es(filas) + ' filas que repiten el encabezado' + detalle + '.'
 		},
 
 	},
@@ -4365,6 +4377,10 @@ export default {
 			/* Análisis nuevo: si había una configuración guardada ofrecida, era de otro archivo. */
 			this.mapeo_guardado_pendiente = null
 			this.preview_rows    = resultado.preview_rows || []
+			this.encabezados_repetidos = resultado.encabezados_repetidos || null
+			/* Análisis nuevo: lo que recordaba el interruptor era de otro mapeo. */
+			this.propiedades_antes_de_ignorar = {}
+			this.columnas_por_elegir = {}
 			this.tamanio_de_lote = parseInt(resultado.tamanio_de_lote) > 0 ? parseInt(resultado.tamanio_de_lote) : 1000
 
 			/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
@@ -4967,6 +4983,7 @@ export default {
 				}
 
 				item.system_property = this.normalize_system_property_key(guardada.system_property)
+				this.$delete(this.columnas_por_elegir, item.excel_column_index)
 				item.mapeo_guardado  = {
 					system_property: item.system_property,
 					origen:          guardada.origen === 'corregido_por_el_usuario' ? 'corregido_por_el_usuario' : 'confirmado',
@@ -5671,48 +5688,110 @@ export default {
 		},
 
 		/*
-		 * Porcentaje redondeado para la columna Confianza (0%–100%).
+		 * Color de la columna entera en la tabla del paso 2. El orden importa: una ignorada o una que
+		 * el usuario ya confirmó la última vez no piden revisión, por más baja que sea la confianza.
 		 */
-		format_column_confidence(confidence) {
-			let value = parseFloat(confidence)
-			if (isNaN(value)) {
-				return '—'
+		clase_de_columna_de_mapeo(item) {
+			if (this.columna_ignorada(item)) {
+				return 'ai-import-tabla-mapeo__columna--ignorada'
 			}
 
-			return Math.round(value * 100) + '%'
-		},
+			if (this.column_has_mapeo_guardado(item)) {
+				return ''
+			}
 
-		/*
-		 * Clases de resaltado por fila: ignorada (violeta) tiene prioridad sobre baja confianza (amarillo).
-		 */
-		mapping_row_highlight_class(item) {
-			if (this.column_mapping_is_ignored(item)) {
-				return {
-					'ai-import-mapping-block--ignored': true,
-				}
+			if (this.column_confidence_is_low(item.confidence)) {
+				return 'ai-import-tabla-mapeo__columna--roja'
 			}
 
 			if (this.column_has_interpretation_note(item)) {
-				return {
-					'ai-import-mapping-block--interpretation': true,
-				}
+				return 'ai-import-tabla-mapeo__columna--amarilla'
 			}
 
-			/*
-			 * Columna que viene de la configuración guardada del proveedor: nunca en amarillo (el
-			 * usuario ya la confirmó una vez), y en celeste sólo si la última vez la corrigió a
-			 * mano, que es la que vale la pena mirar porque difiere de lo que la IA diría sola.
-			 * Se reusa el celeste de las interpretaciones: un cuarto color no se lee.
-			 */
-			if (this.column_has_mapeo_guardado(item)) {
-				return {
-					'ai-import-mapping-block--interpretation': item.mapeo_guardado.origen === 'corregido_por_el_usuario',
-				}
+			return ''
+		},
+
+		/*
+		 * Tooltip del encabezado: letra, nombre y, si la hay, la nota de la IA.
+		 */
+		titulo_de_columna_de_mapeo(item, index) {
+			let titulo = this.excel_column_full_label(item, index)
+
+			if (this.column_has_interpretation_note(item)) {
+				titulo += ' — ' + item.interpretation_note
 			}
 
-			return {
-				'ai-import-mapping-block--warning': this.column_confidence_is_low(item.confidence),
+			return titulo
+		},
+
+		/*
+		 * Valor de una celda de la vista previa, por la posición real de la columna en el Excel.
+		 */
+		valor_de_celda_de_vista_previa(fila, item) {
+			let valor = fila[item.excel_column_index]
+
+			return (valor === null || valor === undefined || valor === '') ? '-' : valor
+		},
+
+		/*
+		 * True si la columna está ignorada de verdad: sin propiedad y sin estar esperando que el
+		 * usuario elija una.
+		 */
+		columna_ignorada(item) {
+			return this.column_mapping_is_ignored(item) && !this.columnas_por_elegir[item.excel_column_index]
+		},
+
+		/*
+		 * Opciones del select de una columna. La opción vacía es la misma de siempre, pero con el
+		 * interruptor apagado no significa "ignorar": le pide al usuario que elija.
+		 */
+		opciones_de_propiedad_de_columna(item) {
+			if (this.columna_ignorada(item)) {
+				return this.system_property_options
 			}
+
+			return this.system_property_options.map(opcion => {
+				return opcion.value === null ? { value: null, text: 'Elegí una propiedad' } : opcion
+			})
+		},
+
+		/*
+		 * Interruptor "Ignorar columna". Prenderlo deja system_property en null, que es lo que la API
+		 * entiende por ignorada; apagarlo restaura lo que tenía o, si no tenía nada, pide elegir.
+		 */
+		cambiar_ignorar_columna(item, ignorar) {
+			let clave = item.excel_column_index
+
+			if (ignorar) {
+				if (!this.column_mapping_is_ignored(item)) {
+					this.$set(this.propiedades_antes_de_ignorar, clave, item.system_property)
+				}
+				item.system_property = null
+				this.$delete(this.columnas_por_elegir, clave)
+				return
+			}
+
+			let anterior = this.propiedades_antes_de_ignorar[clave]
+
+			if (anterior) {
+				item.system_property = anterior
+				return
+			}
+
+			this.$set(this.columnas_por_elegir, clave, true)
+		},
+
+		/*
+		 * Con el select habilitado, volver a la opción vacía deja la columna esperando una elección:
+		 * ignorarla se hace solamente con el interruptor.
+		 */
+		al_cambiar_propiedad_de_columna(item, valor) {
+			if (valor === null || valor === '') {
+				this.$set(this.columnas_por_elegir, item.excel_column_index, true)
+				return
+			}
+
+			this.$delete(this.columnas_por_elegir, item.excel_column_index)
 		},
 
 		/*
@@ -5734,7 +5813,7 @@ export default {
 		},
 
 		/*
-		 * Confianza baja: menos del 70% (fila resaltada en amarillo).
+		 * Confianza baja: menos del 70% (columna resaltada en rojo).
 		 */
 		column_confidence_is_low(confidence) {
 			let value = parseFloat(confidence)
@@ -5743,46 +5822,6 @@ export default {
 			}
 
 			return value < 0.7
-		},
-
-		/*
-		 * Clase de color según el nivel de confianza del mapeo.
-		 */
-		column_confidence_text_class(confidence) {
-			let value = parseFloat(confidence)
-			if (isNaN(value)) {
-				return 'text-muted'
-			}
-
-			if (value >= 0.7) {
-				return 'text-success'
-			}
-
-			if (value >= 0.4) {
-				return 'text-warning'
-			}
-
-			return 'text-danger'
-		},
-
-		/*
-		 * Descripción para el atributo title del porcentaje de confianza.
-		 */
-		column_confidence_title(confidence) {
-			let value = parseFloat(confidence)
-			if (isNaN(value)) {
-				return 'Sin dato de confianza'
-			}
-
-			if (value >= 0.7) {
-				return 'Confianza alta'
-			}
-
-			if (value >= 0.4) {
-				return 'Confianza media — conviene revisar'
-			}
-
-			return 'Confianza baja — revisar el mapeo'
 		},
 
 		/*
@@ -6356,6 +6395,9 @@ export default {
 			this.desempatar_por_nombre       = false
 			this.desempate_por_nombre        = null
 			this.preview_rows                = []
+			this.encabezados_repetidos       = null
+			this.propiedades_antes_de_ignorar = {}
+			this.columnas_por_elegir         = {}
 			this.assistant_notes             = []
 			this.placeholders                = []
 			this.cadena_identificacion       = null
@@ -6465,108 +6507,57 @@ export default {
 	line-height: 1.4
 
 /* Tabla de mapeo de columnas */
-.ai-import-mapping-table
-	border: 1px solid var(--color-border, rgba(0,0,0,.1))
-	border-radius: 8px
-	overflow: hidden
+/* Tabla única del paso 2: mapeo y vista previa con las columnas en el orden del Excel */
+.ai-import-tabla-mapeo
+	th, td
+		min-width: 180px
 
-.ai-import-mapping-block
-	border-bottom: 1px solid var(--color-border-secondary, rgba(0,0,0,.06))
+	thead th
+		vertical-align: top
 
-	&:last-child
-		border-bottom: none
+	.custom-control-label
+		font-weight: 400
 
-	&--warning
-		background: rgba(255, 193, 7, 0.14)
+	&__letra
+		display: inline-block
+		min-width: 22px
+		margin-right: 6px
+		padding: 0 5px
+		border-radius: 4px
+		background: rgba(0, 0, 0, 0.08)
+		font-size: 11px
+		text-align: center
 
-	&--interpretation
-		background: rgba(0, 123, 255, 0.1)
-		border-left: 4px solid #17a2b8
-		padding-left: 8px
+	&__nombre
+		white-space: normal
 
-	&--ignored
-		background: rgba(111, 66, 193, 0.16)
-		border-left: 4px solid #6f42c1
-		padding-left: 8px
+	&__marca-ambigua
+		margin-left: 5px
+		color: #dc3545
 
-		.ai-import-mapping-excel-header
-			color: var(--color-text-purple-strong, #5a32a3)
-			font-style: italic
+	&__guardado
+		display: block
+		margin-top: 3px
+		color: #17a2b8
 
-		.ai-import-mapping-confidence-value
-			opacity: 0.75
-
-.ai-import-mapping-row
-	display: grid
-	grid-template-columns: 1fr 1.4fr 100px
-	align-items: center
-	gap: 10px
-	padding: 8px 12px
-
-	&--header
-		background: var(--bg-section, #f8f9fa)
+	&__leyenda
+		display: inline-block
+		padding: 0 6px
+		border-radius: 4px
 		font-weight: 600
-		font-size: 13px
-		color: var(--color-text-primary, #495057)
-		border-bottom: 1px solid var(--color-border-secondary, rgba(0,0,0,.06))
 
-.ai-import-mapping-interpretation-note
-	padding: 0 12px 8px 12px
-	color: var(--color-text-info-strong, #0c5460)
+	&__columna--amarilla
+		background: rgba(255, 193, 7, 0.28)
 
-.ai-import-mapping-legend-interpretation
-	color: var(--color-text-info-strong, #17a2b8)
-	font-weight: 600
+	&__columna--roja
+		background: rgba(220, 53, 69, 0.22)
 
-.ai-import-mapping-legend-ignored
-	color: var(--color-text-purple-strong, #6f42c1)
-	font-weight: 600
+	td.ai-import-tabla-mapeo__columna--ignorada
+		opacity: 0.45
 
-.ai-import-mapping-excel-col
-	display: flex
-	align-items: baseline
-	gap: 8px
-	min-width: 0
-	font-size: 13px
-	color: var(--color-text-primary, #343a40)
-
-.ai-import-mapping-excel-letter
-	flex-shrink: 0
-	font-weight: 700
-	color: var(--color-primary, #007bff)
-	font-size: 12px
-	min-width: 1.5em
-
-.ai-import-mapping-excel-header
-	font-weight: 500
-	white-space: nowrap
-	overflow: hidden
-	text-overflow: ellipsis
-
-/* Marca de columna ambigua al lado de la letra: chica, ámbar, sin fondo ni borde. */
-/* No tiene que competir con el resaltado de fila; sólo indicar cuál revisar. */
-.ai-import-mapping-ambiguous-flag
-	flex-shrink: 0
-	align-self: center
-	font-size: 12px
-	line-height: 1
-	color: var(--color-text-warning-strong, #b28704)
-	cursor: help
-
-.ai-import-mapping-confidence
-	display: flex
-	flex-direction: column
-	align-items: center
-	gap: 2px
-
-.ai-import-mapping-confidence-value
-	font-weight: 600
-	font-size: 13px
-	line-height: 1.2
-
-.ai-import-mapping-confidence-hint
-	font-size: 11px
-	line-height: 1
+	th.ai-import-tabla-mapeo__columna--ignorada .ai-import-tabla-mapeo__nombre
+		opacity: 0.55
+		font-style: italic
 
 /* Bloque informativo de archivo cargado en el paso 1 */
 .ai-import-file-info
