@@ -49,13 +49,23 @@ export default {
 
 	'ai-import-mapeo-*': {
 		titulo: 'Propiedad del sistema para esta columna',
-		que_hace: 'Dice qué dato del artículo se carga con esta columna del Excel. "Ignorar columna" la deja afuera.',
+		que_hace: 'Dice qué dato del artículo se carga con esta columna del Excel. Para dejarla afuera está el interruptor "Ignorar columna", justo debajo.',
 		repercute: [
 			'Con dos o más sucursales aparece el grupo "Stock por depósito": el número de esa columna pasa a ser el stock final de ESA sucursal. Con una sola sucursal se usa "Stock actual", que queda en esa sucursal.',
 			'Con listas de precios aparece el grupo "Listas de precio": $ final, % de margen y "setear precio final" de cada lista.',
 			'Con la tienda online, cada lista que muestra en la tienda solo los artículos habilitados suma "Visible en tienda: <lista>": un Sí habilita el artículo para los clientes de esa lista y un No lo deja sin habilitar. Una celda vacía, o con algo que no sea un Sí o un No, no cambia lo que el artículo ya tenía.',
 		],
 		nota_interna: 'Los valores de sucursal viajan como address_{id}_amount/min/max y los de lista como price_type_{id}_final_price/_percentage/_setear/_visible_en_tienda (build_columns los traduce a las claves planas de ProcessRow; visible_en_tienda va como visible_en_tienda_<nombre de la lista normalizado>, mision catalogo-por-lista-tienda 5/10/2026). La opcion de visible_en_tienda solo se ofrece con la extension online y la lista con catalogo_restringido_en_tienda = 1. Si se mapean a la vez "Stock actual" y columnas de sucursal, el global se ignora sin aviso (ProcessRow::obtener_stock, líneas 3006-3035).',
+	},
+
+	'ai-import-ignorar-*': {
+		titulo: 'Ignorar columna',
+		que_hace: 'Deja esta columna del Excel afuera de la importación.',
+		repercute: [
+			'Prendido: la columna no se importa y su select queda deshabilitado.',
+			'Apagado: vuelve la propiedad que tenía. Si no tenía ninguna, hay que elegirla: una columna sin propiedad no se importa.',
+		],
+		nota_interna: 'Prenderlo deja system_property en null, que es lo que la API entiende por ignorada. Lo que recuerda el interruptor vive afuera de column_mapping (propiedades_antes_de_ignorar y columnas_por_elegir), por excel_column_index.',
 	},
 
 	'ai-import-mapeo-guardado-*': {
@@ -90,6 +100,14 @@ export default {
 		],
 	},
 
+	'ai-import-ver-detalles-identificacion': {
+		titulo: 'Ver detalles de la identificación',
+		que_hace: 'Muestra cuántas filas se identifican con cada propiedad y en qué orden se prueban.',
+		repercute: [
+			'Es solo informativo: no cambia nada de la importación.',
+		],
+	},
+
 	'ai-import-politica-intra-*': {
 		titulo: 'Filas repetidas dentro del archivo',
 		que_hace: 'Decide qué son las filas que comparten código de proveedor en este mismo Excel.',
@@ -98,6 +116,7 @@ export default {
 			'"Productos distintos": cada fila crea su propio artículo aunque compartan el código.',
 			'Es una decisión sobre ESTE archivo y es independiente de lo que se elija para los códigos que ya existen en el sistema: las dos preguntas se responden por separado.',
 		],
+		requiere: 'Se pregunta solo si hay códigos de proveedor repetidos en el Excel.',
 		nota_interna: 'Viaja como filas_repetidas_del_archivo = ultima_gana | productos_distintos. Solo gobierna el escalón provider_code: un código de barras repetido en el archivo se mergea SIEMPRE con última-gana. Hasta el 2/9/2026 esta elección quedaba ANULADA si además se elegía "Actualizar todos" (permitir_provider_code_repetido=1): ProcessRow::esta_repetido() apagaba con ese flag su escalón provider_code, que decide sobre el archivo y no sobre la base, y no fusionaba nada. Arreglado ese día (misión fix-ultima-gana-con-actualizar-todos); lo custodian RepetidosConPermitirRepetidoTest en empresa-api y el test 4a de exploracion-importacion-codigos.spec.js.',
 	},
 
@@ -109,6 +128,7 @@ export default {
 			'"Saltear y avisarme": esas filas no tocan nada y quedan reportadas en el historial.',
 			'"No identificar por código": se crean artículos nuevos aunque el código exista (así aparecen los duplicados a propósito).',
 		],
+		requiere: 'Se pregunta solo si hay códigos de proveedor repetidos en el Excel. Sin la pregunta se aplica lo que recomendó el análisis.',
 		nota_interna: 'derive_flags_from_choice (Index.vue ~4157) traduce a los flags viejos: actualizar_todos prende permitir_provider_code_repetido + en_multi_providers; crear_nuevo apaga actualizar_por_provider_code; saltear_y_reportar deja la combinación que produce AmbiguousMatch. actualizar_proveedor queda SIEMPRE en 0 en este flujo (no hay forma de reasignar proveedor desde el modal de IA; el clásico de compras sí lo permitía).',
 	},
 
@@ -119,6 +139,7 @@ export default {
 			'"Ignorar": los del otro proveedor no se tocan y se crean artículos nuevos para el proveedor elegido.',
 			'"Actualizar": las filas pisan los artículos del otro proveedor (para corregir importaciones que entraron con el proveedor equivocado).',
 		],
+		requiere: 'Se pregunta solo si hay códigos de proveedor repetidos en el Excel. Sin la pregunta, los artículos de otro proveedor no se tocan.',
 	},
 
 	/*
