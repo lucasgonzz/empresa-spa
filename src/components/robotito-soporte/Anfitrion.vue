@@ -25,7 +25,8 @@
 <script>
 import Pregunta from './Pregunta'
 import Valoracion from './Valoracion'
-import { pasos_de_soporte, tema_de_soporte_conocido, TEMA_APLICAR_RECARGO_VENTA } from '@/tours/soporte'
+import { pasos_de_soporte, tema_de_soporte_conocido } from '@/tours/soporte'
+import { TEMA_GUIA_DINAMICA } from '@/tours/soporte-dinamico'
 import { TEMA_REVERTIR_IMPORTACION } from '@/tours/importacion-soporte'
 
 const RUTA = '/api/support-tour/'
@@ -175,7 +176,8 @@ export default {
 		},
 		iniciar(guia) {
 			if (this.ocupado || !this.pendiente || this.pendiente.uuid !== guia.uuid) return
-			const es_recargo = guia.tema === TEMA_APLICAR_RECARGO_VENTA
+			const es_recargo = guia.tema === TEMA_GUIA_DINAMICA && Array.isArray(guia.pasos)
+				&& guia.pasos.some(paso => paso && paso.clave === 'vender.recargos')
 			if ((es_recargo || guia.tema.indexOf('buscar_articulo_') === 0)
 				&& (!this.can('sale.store') || !this.hasExtencion('comerciocity_interno'))) {
 				this.$toast.error('Tu usuario necesita acceso a Vender para hacer este recorrido.')
@@ -206,14 +208,15 @@ export default {
 		},
 		iniciar_motor(guia) {
 			const pasos = pasos_de_soporte(guia, Boolean(document.querySelector('[data-tour="soporte.encabezado"]')))
+			const claves = guia.tema === TEMA_GUIA_DINAMICA && pasos.length ? guia.pasos.map(paso => paso.clave) : []
 			this.retirar(guia.uuid)
 			const corrida = { guia: guia, paso: null, mostrados: new Set(), total: pasos.length, pregunta_registrada: false, fin_pendiente: null }
 			this.activa = corrida
 			this.pregunta = ''
 			this.pregunta_bloqueada = false
 			this.error_pregunta = ''
-			if (guia.tema === 'centro_recursos') document.body.classList.add(CLASE_TUTORIALES)
-			if (guia.tema !== 'crear_ticket') document.body.classList.add(CLASE_SIN_CHAT)
+			if (guia.tema === 'centro_recursos' || claves.includes('tutoriales.abrir')) document.body.classList.add(CLASE_TUTORIALES)
+			if (guia.tema !== 'crear_ticket' && !claves.some(clave => clave.indexOf('soporte.') === 0)) document.body.classList.add(CLASE_SIN_CHAT)
 			const self = this
 			this.$nextTick(function () {
 				if (self._detenido) return
@@ -222,7 +225,7 @@ export default {
 					router: self.$router,
 					texto_plano: true,
 					clase_popover: 'tour-soporte',
-					reacomodar_en_resize: [TEMA_REVERTIR_IMPORTACION, TEMA_APLICAR_RECARGO_VENTA].includes(guia.tema),
+					reacomodar_en_resize: [TEMA_REVERTIR_IMPORTACION, TEMA_GUIA_DINAMICA].includes(guia.tema),
 					al_faltar_pasos: () => {},
 					al_mostrar_paso: paso => self.mostrar_paso(corrida, paso),
 					decorar_popover: self.poner_pregunta,
@@ -306,11 +309,9 @@ export default {
 			if (completo) {
 				this.error_valoracion = ''
 				this.para_valorar = corrida.guia
-			} else if (resultado.motivo === 'listo' || !corrida.mostrados.size) {
+			} else if (resultado.motivo === 'listo' || resultado.incompleto || !corrida.mostrados.size) {
 				if (corrida.guia.tema === TEMA_REVERTIR_IMPORTACION && !corrida.mostrados.has(3)) {
 					this.$toast.error('No pudimos ubicar el botón de esa importación. Podés retomar la consulta con Soporte.')
-				} else if (corrida.guia.tema === TEMA_APLICAR_RECARGO_VENTA && !corrida.mostrados.has(1)) {
-					this.$toast.error('No pudimos mostrar recargos disponibles en esta venta. Podés retomar la consulta con Soporte.')
 				} else {
 					this.$toast.error('Algunos pasos del recorrido no están disponibles en esta pantalla.')
 				}

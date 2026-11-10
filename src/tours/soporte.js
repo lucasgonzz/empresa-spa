@@ -1,11 +1,11 @@
 import { TEMA_REVERTIR_IMPORTACION, ancla_revertir_importacion } from './importacion-soporte'
+import { pasos_dinamicos, TEMA_GUIA_DINAMICA } from './soporte-dinamico'
 
 const VENDER = { name: 'vender', params: { view: 'remito' } }
 const LISTADO = { name: 'article' }
 const CAMPO_BUSQUEDA = '#search-article-search-modal-input'
 const RESULTADOS = '[data-tour="vender.resultados_buscador_articulos"], [data-tour="vender.busqueda_sin_resultados"]'
 const TUTORIALES = '[data-nav-tutoriales]'
-export const TEMA_APLICAR_RECARGO_VENTA = 'aplicar_recargo_venta'
 
 const GUIONES = {
 	crear_ticket: [
@@ -21,10 +21,6 @@ const GUIONES = {
 	buscar_articulo_codigo: [
 		{ ancla: 'vender.campo_codigo_barras', ruta: VENDER, antes: 'abrir_codigo_de_barras', avanza: 'enter', texto: 'Escaneá el código o escribilo y presioná Enter. Si hay una coincidencia, el artículo se agrega a la venta en curso.' },
 	],
-	[TEMA_APLICAR_RECARGO_VENTA]: [
-		{ ancla: 'vender.interruptores_recargos', ruta: { name: 'vender' }, antes: 'abrir_recargos_de_venta', foco: false, requerido: true, texto: 'En Recargos, prendé el interruptor del recargo que quieras aplicar a esta venta. Tocá Siguiente para revisar el total.' },
-		{ ancla: 'vender.total', ruta: { name: 'vender' }, antes: 'mostrar_total_de_venta', foco: false, texto: 'Acá ves el total de la venta con los recargos seleccionados. Revisalo antes de guardar.' },
-	],
 	centro_recursos: [
 		{ selector: TUTORIALES, foco: false, texto: 'Desde Tutoriales podés acceder a los videos que explican cómo usar el sistema.' },
 		{ selector: TUTORIALES, avanza: 'clic', foco: false, texto: 'Tocá Tutoriales para abrir el Centro de Recursos en otra pestaña. Ahí buscá por el nombre de la tarea que querés aprender.' },
@@ -37,11 +33,12 @@ const GUIONES = {
 }
 
 export function tema_de_soporte_conocido(tema) {
-	return Object.prototype.hasOwnProperty.call(GUIONES, tema)
+	return tema === TEMA_GUIA_DINAMICA || Object.prototype.hasOwnProperty.call(GUIONES, tema)
 }
 
 export function pasos_de_soporte(guia, soporte_abierto) {
 	if (!guia || !tema_de_soporte_conocido(guia.tema)) return []
+	if (guia.tema === TEMA_GUIA_DINAMICA) return pasos_dinamicos(guia.pasos, soporte_abierto)
 
 	const pasos = GUIONES[guia.tema].map(function (paso, i) {
 		const texto = Array.isArray(guia.textos) && guia.textos[i]

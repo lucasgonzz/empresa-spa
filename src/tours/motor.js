@@ -315,11 +315,11 @@ function se_puede_senalar(elemento) {
  * @param {Number} techo
  * @returns {Promise<Element|null>}
  */
-function esperar_elemento(selector, techo) {
+function esperar_elemento(selector, techo, buscar = buscar_visible) {
 	const limite = typeof techo === 'number' ? techo : TECHO_ESPERA_ELEMENTO
 
 	return new Promise(function (resolver) {
-		const ya_esta = buscar_visible(selector)
+		const ya_esta = buscar(selector)
 
 		if (ya_esta) {
 			resolver(ya_esta)
@@ -329,7 +329,7 @@ function esperar_elemento(selector, techo) {
 		let transcurrido = 0
 
 		const reloj = setInterval(function () {
-			const elemento = buscar_visible(selector)
+			const elemento = buscar(selector)
 
 			if (elemento) {
 				clearInterval(reloj)
@@ -859,15 +859,26 @@ function asentar_layout(elemento) {
  * @returns {Promise<Element|null>}
  */
 function preparar_paso(paso, contexto) {
+	if (paso.indicacion) {
+		return ir_a(contexto.router, paso.ruta).then(function () {
+			if (!paso.ruta) return true
+			const actual = contexto.router && contexto.router.currentRoute
+			return Boolean(actual && actual.name === paso.ruta.name && mismos_params(actual.params, paso.ruta.params))
+		})
+	}
 	return ir_a(contexto.router, paso.ruta)
 		.then(function () {
+			if (paso.esperar_montaje) {
+				// El campo puede existir dentro de una etapa aún plegada. El gancho la abre después.
+				return esperar_elemento(paso.esperar_montaje, techo_de(paso), selector => document.querySelector(selector))
+			}
+			return true
+		})
+		.then(function (montado) {
+			if (!montado) return null
 			return correr_gancho(paso, contexto)
-		})
-		.then(function () {
-			return esperar_ms(paso.espera_ms || 0)
-		})
-		.then(function () {
-			return esperar_elemento(selector_de(paso), techo_de(paso))
+				.then(() => esperar_ms(paso.espera_ms || 0))
+				.then(() => esperar_elemento(selector_de(paso), techo_de(paso)))
 		})
 		.then(function (encontrado) {
 			if (!encontrado) {
@@ -1163,10 +1174,10 @@ function mostrar_paso(i) {
 		soltar_refresco()
 
 		recorrido.highlight({
-			element: elemento,
+			element: paso.indicacion ? undefined : elemento,
 			popover: {
 				description: corrida.contexto.renderizar_guia || corrida.contexto.texto_plano ? '' : paso.texto,
-				side: paso.lado || lado_sugerido(elemento),
+				side: paso.indicacion ? 'over' : paso.lado || lado_sugerido(elemento),
 				align: paso.alineacion || 'start',
 				/* El progreso se arma a mano porque el motor muestra de a un paso: driver.js no
 				 * sabe cuántos son en total, y el total real no se conoce hasta el final (los
@@ -1183,10 +1194,12 @@ function mostrar_paso(i) {
 			corrida.contexto.al_mostrar_paso(i + 1)
 		}
 
-		enganchar_refresco(elemento)
-		reubicar_cartel(i, elemento)
-		enfocar_campo_del_paso(paso, elemento)
-		enganchar_avance(paso, i, elemento)
+		if (!paso.indicacion) {
+			enganchar_refresco(elemento)
+			reubicar_cartel(i, elemento)
+			enfocar_campo_del_paso(paso, elemento)
+			enganchar_avance(paso, i, elemento)
+		}
 	})
 }
 
@@ -2333,6 +2346,7 @@ function cerrar_corrida(motivo) {
 		clip_id: corrida.clip_id || null,
 		motivo: motivo === 'listo' ? 'listo' : 'cortado',
 		completo: completo,
+		incompleto: Boolean(corrida.corto_por_salteos),
 		mostrados: corrida.mostrados,
 		pasos: corrida.pasos.length,
 	}

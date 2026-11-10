@@ -17,12 +17,17 @@ test('solo interpreta guiones conocidos y mantiene el número de pasos del contr
 	assert.equal(pasos_de_soporte({ tema: 'buscar_articulo_nombre' }).length, 3)
 	assert.equal(pasos_de_soporte({ tema: 'buscar_articulo_codigo' }).length, 1)
 	assert.equal(pasos_de_soporte({ tema: 'centro_recursos' }).length, 2)
-	assert.equal(pasos_de_soporte({ tema: 'aplicar_recargo_venta' }).length, 2)
 	assert.equal(pasos_de_soporte({ tema: 'constructor' }).length, 0)
 })
 
 test('la guía de recargos requiere los interruptores y señala después el total de la venta', () => {
-	const [recargos, total] = pasos_de_soporte({ tema: 'aplicar_recargo_venta' })
+	const [recargos, total] = pasos_de_soporte({
+		tema: 'guia_dinamica',
+		pasos: [
+			{ clave: 'vender.recargos', texto: 'Prendé el interruptor.' },
+			{ clave: 'vender.total', texto: 'Revisá el total.' },
+		],
+	})
 	assert.equal(recargos.ancla, 'vender.interruptores_recargos')
 	assert.equal(recargos.antes, 'abrir_recargos_de_venta')
 	assert.equal(recargos.requerido, true)
@@ -31,6 +36,27 @@ test('la guía de recargos requiere los interruptores y señala después el tota
 	assert.equal(total.ancla, 'vender.total')
 	assert.equal(total.antes, 'mostrar_total_de_venta')
 	assert.deepEqual(total.ruta, recargos.ruta)
+})
+
+test('los pasos dinámicos aceptan rutas conocidas, indicaciones y destinos exactos', () => {
+	const tema = 'guia_dinamica'
+	const texto = '<b>Esto se dibuja como texto.</b>'
+	const pasos = pasos_de_soporte({ tema, pasos: [
+		{ clave: 'vista.ventas', texto },
+		{ clave: 'listado.revertir_importacion', texto, destino: 1059 },
+		{ clave: 'indicacion', texto },
+	] })
+	assert.equal(pasos[0].ruta.name, 'sale')
+	assert.equal(pasos[0].indicacion, true)
+	assert.equal(pasos[1].ancla, 'listado.revertir_importacion.1059')
+	assert.equal(pasos[2].texto, texto)
+	assert.equal(pasos[2].indicacion, true)
+	for (const invalido of [
+		{ clave: 'indicacion', texto, selector: 'body' },
+		{ clave: 'indicacion', texto, destino: 1 },
+		{ clave: 'listado.revertir_importacion', texto, destino: '1059' },
+		{ clave: 'constructor', texto },
+	]) assert.deepEqual(pasos_de_soporte({ tema, pasos: [{ clave: 'indicacion', texto }, invalido] }), [])
 })
 
 test('el texto personalizado no controla el ancla, el gancho ni la navegación', () => {
