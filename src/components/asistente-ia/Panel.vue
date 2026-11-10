@@ -4,11 +4,14 @@
 	:class="{ 'asistente-ia-overlay--lateral': es_lateral, 'agentes-modulo': !es_lateral, 'support-chat-overlay': soporte_activo }"
 	aria-label="Agentes">
 		<div id="asistente-ia-panel" ref="panel" class="asistente-ia-panel" tabindex="-1">
-			<header class="agentes-cabecera" :data-tour="soporte_activo ? 'soporte.encabezado' : null">
+			<header
+			class="agentes-cabecera"
+			:class="{ 'agentes-cabecera--ampliada': cabecera_ampliada, 'agentes-cabecera--dos-filas': cabecera_en_dos_filas }"
+			:data-tour="soporte_activo ? 'soporte.encabezado' : null">
 				<div class="agentes-cabecera__marca">
 					<span class="asistente-ia-panel__orb" aria-hidden="true">✦</span>
 					<button
-					v-if="lista_es_cajon"
+					v-if="lista_es_cajon && !guia_activa"
 					type="button"
 					class="asistente-ia-panel__boton"
 					aria-label="Conversaciones"
@@ -18,7 +21,10 @@
 					</button>
 				</div>
 				<div class="agentes-selector" role="group" aria-label="Elegí un agente">
-					<button v-if="puede_asistente" type="button" :aria-pressed="String(!soporte_activo)" @click="cambiar_agente('asistente')">
+					<button v-if="puede_guia" type="button" :aria-pressed="String(guia_activa)" @click="cambiar_agente('guia')">
+						Tu guía
+					</button>
+					<button v-if="puede_asistente" type="button" :aria-pressed="String(agente_activo === 'asistente')" @click="cambiar_agente('asistente')">
 						Asistente personal
 					</button>
 					<button v-if="puede_soporte" type="button" :aria-pressed="String(soporte_activo)" @click="cambiar_agente('soporte')">
@@ -26,6 +32,14 @@
 					</button>
 				</div>
 				<div class="agentes-cabecera__acciones">
+					<a
+					v-if="tienda_url"
+					class="agentes-cabecera__tienda"
+					:href="tienda_url"
+					target="_blank"
+					rel="noopener noreferrer"
+					data-demo-tienda
+					@click="$root.$emit('agentes:guia-pausar')">Tu tienda <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
 					<button
 					v-if="es_lateral"
 					class="asistente-ia-panel__boton"
@@ -46,15 +60,15 @@
 				</div>
 			</header>
 			<div class="agentes-canal">
-				<span>{{ soporte_activo ? 'Conversaciones supervisadas por el equipo de Soporte de ComercioCity.' : 'Esta conversación es privada entre vos y tu asistente personal.' }}</span>
+				<span>{{ texto_canal }}</span>
 				<a v-if="telefono" :href="'https://wa.me/' + telefono" target="_blank" rel="noopener noreferrer">
 					<icono nombre="whatsapp" :tamano="14"></icono>
 					+{{ telefono }}
 				</a>
 			</div>
-			<div v-if="personal_visitado && puede_asistente" v-show="!soporte_activo" class="agentes-espacio">
+			<div v-if="personal_visitado && puede_asistente" v-show="agente_activo === 'asistente'" class="agentes-espacio">
 				<aside
-				v-if="!soporte_activo && (!lista_es_cajon || sidebar_movil_abierta)"
+				v-if="agente_activo === 'asistente' && (!lista_es_cajon || sidebar_movil_abierta)"
 				class="asistente-ia-panel__sidebar"
 				:class="{ 'agentes-lista--cajon': lista_es_cajon }"
 				:style="sidebar_inline_style">
@@ -109,6 +123,8 @@
 			:lista_abierta="sidebar_movil_abierta"
 			:sidebar_style="sidebar_inline_style"
 			@cerrar-lista="sidebar_movil_abierta = false"></soporte>
+			<!-- 🔴 Sin hijos de Vue, siempre: DemoChatPanel mete acá su $el con appendChild (ver acomodar_en_agentes). -->
+			<div id="agentes-guia-lugar" ref="lugar_guia" v-show="guia_activa" class="agentes-guia-lugar"></div>
 			<button
 			v-if="lista_es_cajon && sidebar_movil_abierta"
 			type="button"
@@ -129,6 +145,7 @@ import { confirmar_traspaso } from '@/components/asistente-ia/traspaso'
 import PantallaVacia from '@/components/asistente-ia/PantallaVacia'
 import Icono from '@/components/asistente-ia/Icono'
 import VenderResizer from '@/components/vender/components/VenderResizer'
+import { url_de_tienda } from '@/store/ai_chat'
 
 // Límites del ancho de la sidebar en px (D38).
 const SIDEBAR_MIN = 180
@@ -139,6 +156,7 @@ export default {
 	props: {
 		puede_asistente: Boolean,
 		puede_soporte: Boolean,
+		puede_guia: Boolean,
 		modo: {
 			type: String,
 			default: 'lateral',
@@ -186,11 +204,42 @@ export default {
 		es_lateral() {
 			return this.modo === 'lateral'
 		},
-		soporte_activo() {
-			return this.puede_soporte && (!this.puede_asistente || this.$store.state.ai_chat.agente === 'soporte')
+		/**
+		 * El agente que se está mostrando, ya resuelto contra lo que la cuenta puede usar.
+		 *
+		 * @returns {String} 'guia' | 'soporte' | 'asistente'
+		 */
+		agente_activo() {
+			const agente = this.$store.state.ai_chat.agente
+			// Una cuenta que solo tiene la guía (un empleado de demo o de prueba) cae siempre en ella:
+			// si no, el lateral quedaba vacío con el 'asistente' por defecto del store.
+			if (this.puede_guia && (agente === 'guia' || (!this.puede_asistente && !this.puede_soporte))) return 'guia'
+			if (this.puede_soporte && (!this.puede_asistente || agente === 'soporte')) return 'soporte'
+			return 'asistente'
+		},
+		guia_activa() { return this.agente_activo === 'guia' },
+		soporte_activo() { return this.agente_activo === 'soporte' },
+		tienda_url() { return url_de_tienda(this.owner && this.owner.online) },
+		/**
+		 * La cabecera solo cambia su reparto si tiene algo más que mostrar: una cuenta sin tienda
+		 * ni guía tiene que seguir viéndose exactamente como antes de esta misión.
+		 *
+		 * @returns {Boolean}
+		 */
+		cabecera_ampliada() { return this.puede_guia || !!this.tienda_url },
+		cabecera_en_dos_filas() {
+			return this.cabecera_ampliada && (this.es_movil || (this.es_lateral && this.viewport_width < 1000))
+		},
+		texto_canal() {
+			if (this.guia_activa) {
+				const guia = this.$store.state.ai_chat.guia
+				return guia && guia.prueba ? 'Tu asistente de la prueba: preguntá lo que necesites, a tu ritmo.' : 'Tu asistente de la demo: explorá, preguntá y probá.'
+			}
+			return this.soporte_activo ? 'Conversaciones supervisadas por el equipo de Soporte de ComercioCity.' : 'Esta conversación es privada entre vos y tu asistente personal.'
 		},
 		lista_es_cajon() { return this.es_movil || (this.es_lateral && this.viewport_width < 1000) },
 		telefono() {
+			if (this.guia_activa) return ''
 			const valor = this.canales[this.soporte_activo ? 'soporte' : 'asistente']
 			const numero = typeof valor === 'string' ? valor.replace(/\D/g, '') : ''
 			return numero.length >= 8 && numero.length <= 15 ? numero : ''
@@ -241,7 +290,7 @@ export default {
 	},
 	created() {
 		this.hidratar_ancho_sidebar()
-		this.preparar_agente(this.soporte_activo)
+		this.preparar_agente(this.agente_activo)
 		this.$axios.get('/api/agentes/canales', { skip_global_error_event: true, skip_navigation_cancel: true })
 			.then(res => { this.canales = res.data || {} })
 			.catch(() => {})
@@ -250,13 +299,19 @@ export default {
 		this.foco_antes_de_abrir = document.activeElement
 		window.addEventListener('resize', this.on_window_resize)
 		document.addEventListener('keydown', this.on_document_keydown)
+		this.$root.$emit('agentes:guia-lugar')
 	},
 	beforeDestroy() {
+		// Se mira el foco ANTES de sacar la guía: si estaba en su textarea, al sacarla cae al body
+		// y ya no se sabría que había que devolverlo.
+		const tenia_el_foco = !!(this.$refs.panel && this.$refs.panel.contains(document.activeElement))
+		// Antes de que Vue desarme el lateral: la conversación de la guía tiene que sobrevivirle.
+		this.$root.$emit('agentes:guia-lugar-sale', this.$refs.lugar_guia)
 		this.panel_vigente = false
 		window.removeEventListener('resize', this.on_window_resize)
 		document.removeEventListener('keydown', this.on_document_keydown)
 		const foco = this.foco_antes_de_abrir
-		if (foco && this.$refs.panel && this.$refs.panel.contains(document.activeElement)) {
+		if (foco && tenia_el_foco) {
 			this.$nextTick(() => {
 				if (document.activeElement === document.body && foco.isConnected && !this.hay_interfaz_encima()) {
 					foco.focus({ preventScroll: true })
@@ -266,9 +321,20 @@ export default {
 	},
 	watch: {
 		modo() { this.sidebar_movil_abierta = false },
-		soporte_activo(valor) {
+		agente_activo(valor) {
 			this.sidebar_movil_abierta = false
 			this.preparar_agente(valor)
+		},
+		/**
+		 * La guía (DemoChatPanel) decide si se muestra mirando `ai_chat.agente` del store, no este
+		 * computed. Si el agente resuelto es la guía y el store dice otra cosa (F5 en /agentes, o una
+		 * cuenta que solo tiene la guía), se alinea el store para que la guía no quede escondida.
+		 */
+		guia_activa: {
+			immediate: true,
+			handler(activa) {
+				if (activa && this.$store.state.ai_chat.agente !== 'guia') this.$store.commit('ai_chat/setAgente', 'guia')
+			},
 		},
 		reporte_id: {
 			immediate: true,
@@ -413,9 +479,10 @@ export default {
 		cambiar_agente(agente) {
 			this.$store.commit('ai_chat/setAgente', agente)
 		},
-		preparar_agente(soporte) {
-			if (soporte) this.soporte_visitado = true
-			else if (!this.personal_visitado && this.puede_asistente) {
+		preparar_agente(agente) {
+			if (agente === 'soporte') this.soporte_visitado = true
+			// La guía trae su propia conversación: no carga la bandeja ni el consumo del personal.
+			else if (agente === 'asistente' && !this.personal_visitado && this.puede_asistente) {
 				this.personal_visitado = true
 				this.$store.dispatch('ai_chat/fetchMiConsumo')
 				this.cargar_bandeja()
@@ -455,16 +522,16 @@ export default {
 			const opciones = { agentes_version: 1 }
 			const whatsapp = hilo && (hilo.origen_canal || hilo.origen) === 'whatsapp' && !hilo.sistema_exclusivo_at
 			if (whatsapp) {
-				return confirmar_traspaso(this).then(confirmado => confirmado && this.selected_conversation_id === hilo.id && !this.soporte_activo
+				return confirmar_traspaso(this).then(confirmado => confirmado && this.selected_conversation_id === hilo.id && this.agente_activo === 'asistente'
 					? Object.assign(opciones, { traspasar_a_sistema: 1 }) : null)
 			}
 			if (!this.reporte_nuevo) return Promise.resolve(opciones)
 			const id = this.reporte_nuevo
 			const revision = this.$store.state.ai_chat.revision_seleccion
 			return this.$store.dispatch('mostrador/crearConversacion', { id: id, seleccion_vigente: () => {
-				return this.panel_vigente && !this.soporte_activo && this.reporte_nuevo === id && this.$store.state.ai_chat.revision_seleccion === revision
+				return this.panel_vigente && this.agente_activo === 'asistente' && this.reporte_nuevo === id && this.$store.state.ai_chat.revision_seleccion === revision
 			} }).then(conversacion => {
-				if (!conversacion || !this.panel_vigente || this.soporte_activo || this.reporte_nuevo !== id || this.selected_conversation_id !== conversacion.id) return null
+				if (!conversacion || !this.panel_vigente || this.agente_activo !== 'asistente' || this.reporte_nuevo !== id || this.selected_conversation_id !== conversacion.id) return null
 				this.reporte_nuevo = null
 				return this.preparar_envio_personal()
 			})
@@ -525,10 +592,43 @@ export default {
 		gap: 5px
 	&__acciones
 		justify-content: flex-end
+	&__tienda
+		display: inline-flex
+		align-items: center
+		gap: 4px
+		padding: 0 6px
+		color: #b7c9ff
+		font-size: .8rem
+		font-weight: 600
+		white-space: nowrap
+		&:hover, &:focus
+			color: #fff
 	.asistente-ia-panel__orb
 		width: 30px
 		height: 30px
 		font-size: .9rem
+	&--ampliada
+		grid-template-columns: auto minmax(0, 1fr) auto
+		.agentes-selector
+			justify-self: center
+	// Con tres pestañas y «Tu tienda» no entra todo en un renglón: arriba marca y acciones, abajo el selector.
+	&--dos-filas
+		grid-template-columns: minmax(0, 1fr) auto
+		.agentes-cabecera__acciones
+			grid-column: 2
+			grid-row: 1
+		.agentes-selector
+			grid-column: 1 / -1
+			grid-row: 2
+			justify-self: stretch
+			button
+				flex: 1 1 auto
+
+.agentes-guia-lugar
+	flex: 1
+	display: flex
+	flex-direction: column
+	min-height: 0
 
 .agentes-selector
 	display: flex

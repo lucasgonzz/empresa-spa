@@ -130,8 +130,8 @@
             falsa en la misión 51.
 
             El servidor debe confirmar que la sesión autenticada es una demo. El chat es ahora
-            el único acceso a los videos, así que una recarga conserva su launcher compacto;
-            sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
+            el único acceso a los videos: una recarga lo deja cerrado y se abre desde «Agentes»,
+            en la barra; sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
             para autorizar el panel. Ver store/demo.js y el estado inicial de PanelDemo.
         -->
         <panel-demo v-if="$store.getters['demo/panel_visible']" v-show="$route.name !== 'agentes'"></panel-demo>

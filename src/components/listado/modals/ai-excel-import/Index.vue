@@ -1,7 +1,7 @@
 <template>
 	<b-modal
 	:id="modal_id"
-	size="lg"
+	:size="step === 2 ? 'xl' : 'lg'"
 	hide-footer
 	:title="modal_title"
 	@show="on_show"
@@ -246,42 +246,12 @@
 				</p>
 			</b-alert>
 
-			<!--
-				Columnas cuyo nombre no se pudo recuperar del encabezado ni siquiera después
-				de propagar las celdas fusionadas. Se muestran con la LETRA de Excel, que es
-				lo que el usuario ve en su planilla; el backend las manda como índices.
-			-->
-			<b-alert
-			v-if="letras_de_columnas_sin_nombre.length > 0"
-			show
-			variant="warning"
-			class="m-b-15">
-				<i class="icon-alert-triangle m-r-5"></i>
-				<span v-if="letras_de_columnas_sin_nombre.length === 1">
-					La columna <strong>{{ letras_de_columnas_sin_nombre[0] }}</strong> no tiene nombre en el encabezado.
-				</span>
-				<span v-else>
-					Las columnas <strong>{{ letras_de_columnas_sin_nombre.join(', ') }}</strong> no tienen nombre en el encabezado.
-				</span>
-				Revisá el mapeo antes de importar.
-			</b-alert>
-
 		<!-- Sección de proveedor inferido (solo para artículos) -->
 		<div
 		v-if="model === 'article'"
 		class="m-b-20">
 
 			<p class="font-weight-bold m-b-5">Proveedor detectado</p>
-
-			<!-- Alerta si la confianza del proveedor es baja -->
-			<b-alert
-			v-if="provider_confidence === 'bajo'"
-			show
-			variant="warning"
-			class="m-b-10">
-				<i class="icon-alert-triangle m-r-5"></i>
-				Confianza baja — verificá el proveedor antes de continuar.
-			</b-alert>
 
 			<b-form-group
 			:description="provider_confidence_label">
@@ -334,16 +304,139 @@
 		<hr
 		v-if="model === 'article'">
 
-			<!-- Tabla de mapeo de columnas -->
-			<p class="font-weight-bold m-b-10">Mapeo de columnas</p>
+			<p class="font-weight-bold m-b-5">Mapeo de columnas</p>
 
 			<p class="text-muted small m-b-15">
-				Revisá que cada columna del Excel esté asignada a la propiedad correcta.
-				<span class="text-warning">Las filas en amarillo tienen baja confianza.</span>
-				<span class="ai-import-mapping-legend-interpretation"> Las filas en celeste son interpretaciones de la IA que conviene validar.</span>
-				<span class="ai-import-mapping-legend-ignored"> Las filas en violeta se ignoran en la importación.</span>
-				<span class="ai-import-mapping-legend-interpretation"> Las columnas marcadas «Guardado» vienen de la configuración que confirmaste la última vez para este proveedor.</span>
+				Revisá que cada columna tenga la propiedad correcta.
+				<span class="ai-import-tabla-mapeo__leyenda ai-import-tabla-mapeo__columna--amarilla">Amarillo</span>
+				interpretación de la IA que conviene validar.
+				<span class="ai-import-tabla-mapeo__leyenda ai-import-tabla-mapeo__columna--roja">Rojo</span>
+				confianza baja.
 			</p>
+
+			<!-- Filas que repiten el encabezado adentro de la planilla: no se cuentan ni se importan. -->
+			<p
+			v-if="texto_encabezados_repetidos"
+			data-testid="ai-import-encabezados-repetidos"
+			class="text-muted small m-b-15">
+				{{ texto_encabezados_repetidos }}
+			</p>
+
+			<!--
+				Una sola tabla, con las columnas en el mismo orden que el Excel: nombre, propiedad,
+				interruptor de ignorar y los primeros artículos. El color va en la columna entera para
+				que lo dudoso se encuentre de un vistazo.
+			-->
+			<div
+			v-if="columnas_de_la_tabla_de_mapeo.length > 0"
+			class="ai-import-preview-table-wrapper m-b-15">
+				<table class="ai-import-preview-table ai-import-tabla-mapeo">
+					<thead>
+						<tr>
+							<th
+							v-for="columna in columnas_de_la_tabla_de_mapeo"
+							:key="'nombre-' + columna.index"
+							:class="clase_de_columna_de_mapeo(columna.item)"
+							:title="titulo_de_columna_de_mapeo(columna.item, columna.index)">
+								<span class="ai-import-tabla-mapeo__letra">{{ excel_column_letter_label(columna.item, columna.index) }}</span>
+								<span class="ai-import-tabla-mapeo__nombre">{{ columna.item.excel_column || 'Sin nombre' }}</span>
+
+								<!-- Este encabezado cubre más de una columna y la propiedad se repartió por orden. -->
+								<i
+								v-if="columna_es_ambigua(columna.item, columna.index)"
+								class="icon-alert-triangle ai-import-tabla-mapeo__marca-ambigua"
+								title="Este nombre de encabezado cubre más de una columna. Revisá que la propiedad asignada sea la correcta."></i>
+
+								<i
+								v-if="column_has_interpretation_note(columna.item)"
+								class="icon-info m-l-5"
+								:title="columna.item.interpretation_note"></i>
+
+								<!-- Lo que dejó el usuario en esta columna la última vez que importó de este proveedor. -->
+								<small
+								v-if="column_has_mapeo_guardado(columna.item)"
+								:data-testid="'ai-import-mapeo-guardado-' + columna.index"
+								class="ai-import-tabla-mapeo__guardado"
+								:title="texto_de_mapeo_guardado(columna.item)">
+									Guardado
+								</small>
+							</th>
+						</tr>
+
+						<tr>
+							<th
+							v-for="columna in columnas_de_la_tabla_de_mapeo"
+							:key="'propiedad-' + columna.index"
+							:class="clase_de_columna_de_mapeo(columna.item)">
+								<b-form-select
+								v-model="columna.item.system_property"
+								:data-testid="'ai-import-mapeo-' + columna.index"
+								:options="opciones_de_propiedad_de_columna(columna.item)"
+								:disabled="columna_ignorada(columna.item)"
+								size="sm"
+								@change="al_cambiar_propiedad_de_columna(columna.item, $event)">
+								</b-form-select>
+							</th>
+						</tr>
+
+						<tr>
+							<th
+							v-for="columna in columnas_de_la_tabla_de_mapeo"
+							:key="'ignorar-' + columna.index"
+							:class="clase_de_columna_de_mapeo(columna.item)">
+								<b-form-checkbox
+								switch
+								:data-testid="'ai-import-ignorar-' + columna.index"
+								:checked="columna_ignorada(columna.item)"
+								@change="cambiar_ignorar_columna(columna.item, $event)">
+									Ignorar columna
+								</b-form-checkbox>
+							</th>
+						</tr>
+					</thead>
+
+					<tbody>
+						<tr
+						v-for="(fila, fila_index) in preview_rows"
+						:key="'fila-' + fila_index">
+							<td
+							v-for="columna in columnas_de_la_tabla_de_mapeo"
+							:key="'celda-' + fila_index + '-' + columna.index"
+							:class="clase_de_columna_de_mapeo(columna.item)"
+							:title="valor_de_celda_de_vista_previa(fila, columna.item)">
+								{{ valor_de_celda_de_vista_previa(fila, columna.item) }}
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<!-- Una columna que quedó sin propiedad no se importa, aunque el interruptor esté apagado. -->
+			<small
+			v-if="cantidad_de_columnas_por_elegir > 0"
+			class="text-warning d-block m-t-5">
+				{{ cantidad_de_columnas_por_elegir === 1 ? 'Falta elegir la propiedad de 1 columna: si no la elegís, no se importa.' : 'Falta elegir la propiedad de ' + cantidad_de_columnas_por_elegir + ' columnas: si no las elegís, no se importan.' }}
+			</small>
+
+			<!--
+				Columnas cuyo nombre no se pudo recuperar del encabezado ni siquiera después
+				de propagar las celdas fusionadas. Se muestran con la LETRA de Excel, que es
+				lo que el usuario ve en su planilla; el backend las manda como índices.
+			-->
+			<b-alert
+			v-if="letras_de_columnas_sin_nombre.length > 0"
+			show
+			variant="warning"
+			class="m-b-15">
+				<i class="icon-alert-triangle m-r-5"></i>
+				<span v-if="letras_de_columnas_sin_nombre.length === 1">
+					La columna <strong>{{ letras_de_columnas_sin_nombre[0] }}</strong> no tiene nombre en el encabezado.
+				</span>
+				<span v-else>
+					Las columnas <strong>{{ letras_de_columnas_sin_nombre.join(', ') }}</strong> no tienen nombre en el encabezado.
+				</span>
+				Revisá el mapeo antes de importar.
+			</b-alert>
 
 			<!-- Notas de asistencia globales de Claude (consejos generales sobre el archivo) -->
 			<div
@@ -374,149 +467,6 @@
 					{{ alert_text }}
 				</p>
 			</b-alert>
-
-			<div class="ai-import-mapping-table">
-
-				<!-- Cabecera -->
-				<div class="ai-import-mapping-row ai-import-mapping-row--header">
-					<span>Columna en Excel</span>
-					<span>Propiedad del sistema</span>
-					<span class="text-center">Confianza</span>
-				</div>
-
-				<!-- Fila por cada columna detectada -->
-				<div
-				v-for="(item, index) in column_mapping"
-				:key="index"
-				class="ai-import-mapping-block"
-				:class="mapping_row_highlight_class(item)">
-
-					<div class="ai-import-mapping-row">
-
-						<!-- Letra y nombre de la columna en el Excel -->
-						<span
-						class="ai-import-mapping-excel-col"
-						:title="excel_column_full_label(item, index)">
-							<span class="ai-import-mapping-excel-letter">
-								{{ excel_column_letter_label(item, index) }}
-							</span>
-							<span class="ai-import-mapping-excel-header">
-								{{ item.excel_column }}
-							</span>
-
-							<!--
-								Marca de columna ambigua: este encabezado cubre más de una columna
-								y la propiedad se repartió por orden. Se marca acá, y no con un
-								color de fila más, porque la leyenda de arriba ya tiene tres
-								colores y un cuarto no se lee: a la tercera alerta sin motivo, el
-								usuario deja de leerlas todas. El icono se explica solo al pasar
-								el mouse y no compite con el resaltado de confianza baja.
-							-->
-							<i
-							v-if="columna_es_ambigua(item, index)"
-							class="icon-alert-triangle ai-import-mapping-ambiguous-flag"
-							title="Este nombre de encabezado cubre más de una columna. Revisá que la propiedad asignada sea la correcta."></i>
-						</span>
-
-						<!-- Select de propiedad del sistema -->
-						<b-form-select
-						v-model="item.system_property"
-						:data-testid="'ai-import-mapeo-' + index"
-						:options="system_property_options"
-						size="sm">
-						</b-form-select>
-
-						<!-- Nivel de confianza del mapeo sugerido por IA -->
-						<span class="ai-import-mapping-confidence text-center">
-							<span
-							class="ai-import-mapping-confidence-value"
-							:class="column_confidence_text_class(item.confidence)"
-							:title="column_confidence_title(item.confidence)">
-								{{ format_column_confidence(item.confidence) }}
-							</span>
-							<!--
-								"Guardado" va primero: una columna que el usuario ya confirmó (o corrigió)
-								la última vez para este proveedor no es una columna a "Revisar", por más
-								baja que haya sido la confianza de la IA esta vez.
-							-->
-							<small
-							v-if="column_has_mapeo_guardado(item)"
-							class="ai-import-mapping-confidence-hint text-info"
-							:title="'Viene de la configuración que confirmaste la última vez para ' + (item.mapeo_guardado.proveedor || 'este proveedor')">
-								Guardado
-							</small>
-							<small
-							v-else-if="column_confidence_is_low(item.confidence)"
-							class="ai-import-mapping-confidence-hint text-warning">
-								Revisar
-							</small>
-							<small
-							v-else-if="column_has_interpretation_note(item)"
-							class="ai-import-mapping-confidence-hint text-info">
-								Validar
-							</small>
-						</span>
-
-					</div>
-
-					<p
-					v-if="column_has_interpretation_note(item)"
-					class="ai-import-mapping-interpretation-note small m-b-0">
-						<i class="icon-info m-r-5"></i>
-						{{ item.interpretation_note }}
-					</p>
-
-					<!-- Qué dejó el usuario en esta columna la última vez que importó de este proveedor. -->
-					<p
-					v-if="column_has_mapeo_guardado(item)"
-					:data-testid="'ai-import-mapeo-guardado-' + index"
-					class="ai-import-mapping-interpretation-note small m-b-0">
-						<i class="icon-info m-r-5"></i>
-						{{ texto_de_mapeo_guardado(item) }}
-					</p>
-
-				</div>
-
-			</div>
-
-			<!-- Preview de artículos: tabla reactiva con los primeros 5 registros del Excel -->
-			<div
-			v-if="preview_columns.length > 0 && preview_rows.length > 0"
-			class="m-t-20">
-				<p class="font-weight-bold m-b-8 small">
-					Vista previa - primeros {{ preview_rows.length }} artículos del Excel
-				</p>
-
-				<div class="ai-import-preview-table-wrapper">
-					<table class="ai-import-preview-table">
-						<thead>
-							<tr>
-								<th
-								v-for="(col, idx) in preview_columns"
-								:key="'ph-' + idx">
-									{{ col.label }}
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr
-							v-for="(row, rowIdx) in preview_rows"
-							:key="'pr-' + rowIdx">
-								<td
-								v-for="(col, colIdx) in preview_columns"
-								:key="'pc-' + rowIdx + '-' + colIdx">
-									{{ row[col.excel_column_index] || '-' }}
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-
-				<small class="text-muted d-block m-t-5">
-					Las columnas marcadas como "Ignorar columna" no aparecen en esta preview.
-				</small>
-
-			</div>
 
 			<!--
 				🔴 Error del paso 2, persistente. Hasta acá los dos .catch de confirmar_paso_2
@@ -653,7 +603,7 @@
 			<!-- Muestra con qué columna se va a identificar cada fila, en el mismo orden -->
 			<!-- de prioridad que usa el matching real del importador.                    -->
 			<!-- ====================================================================== -->
-			<div v-if="cadena_identificacion" class="ai-import-identification-chain m-b-20">
+			<div v-if="cadena_identificacion" class="m-b-20">
 
 				<!-- Grupo 284, prompt 04: no se pudo calcular la cadena (sin columnas identificadoras
 				mapeadas, o error de lectura del archivo). Antes esto simplemente no dibujaba nada y
@@ -670,7 +620,28 @@
 					</template>
 				</b-alert>
 
-				<div v-else>
+				<div
+				v-if="cadena_identificacion.disponible !== false"
+				class="ai-import-identificacion-resumen">
+					<span
+					v-if="identificacion_dominante"
+					data-testid="ai-import-resumen-identificacion">
+						{{ identificacion_dominante.porcentaje }} de las filas se van a identificar con la columna
+						<strong>{{ identificacion_dominante.columna }}</strong>.
+					</span>
+					<b-button
+					variant="link"
+					size="sm"
+					class="ai-import-identificacion-resumen__boton"
+					data-testid="ai-import-ver-detalles-identificacion"
+					@click="ver_detalle_identificacion = !ver_detalle_identificacion">
+						{{ ver_detalle_identificacion ? 'Ocultar detalles' : 'Ver detalles' }}
+					</b-button>
+				</div>
+
+				<div
+				v-if="cadena_identificacion.disponible !== false && ver_detalle_identificacion"
+				class="ai-import-identification-chain m-t-10">
 
 					<p class="font-weight-bold m-b-8">
 						Como se van a identificar los articulos
@@ -780,10 +751,13 @@
 				anterior y elegí el proveedor de nuevo antes de decidir qué hacer con las coincidencias.
 			</b-alert>
 
-			<!-- Tabla de códigos de proveedor repetidos -->
-			<div v-if="provider_codes_detail.length > 0" class="m-b-15">
+			<!-- Tablas de valores repetidos, una por cada propiedad que identifica y trae repetidos. -->
+			<div
+			v-for="tabla in tablas_de_repetidos"
+			:key="'repetidos-' + tabla.clave"
+			class="m-b-15">
 
-				<p class="font-weight-bold m-b-8 small">Códigos de proveedor repetidos</p>
+				<p class="font-weight-bold m-b-8 small">{{ tabla.titulo }}</p>
 
 				<div class="ai-import-duplicates-table">
 					<div class="ai-import-duplicates-table__header">
@@ -792,8 +766,8 @@
 						<span>Filas en el Excel</span>
 					</div>
 					<div
-					v-for="(item, idx) in provider_codes_detail"
-					:key="'pc-' + idx"
+					v-for="(item, idx) in tabla.detalle"
+					:key="tabla.clave + '-' + idx"
 					class="ai-import-duplicates-table__row">
 						<span>{{ item.codigo }}</span>
 						<span class="text-center">
@@ -803,43 +777,11 @@
 					</div>
 				</div>
 
-				<!-- Aviso de truncado cuando hay más duplicados que los mostrados -->
+				<!-- Aviso de truncado cuando hay más repetidos que los mostrados -->
 				<small
-				v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > provider_codes_detail.length"
+				v-if="tabla.total > tabla.detalle.length"
 				class="text-muted d-block m-t-5">
-					y {{ numero_es(duplicate_stats.provider_codes_duplicados_intra_archivo - provider_codes_detail.length) }} más...
-				</small>
-
-			</div>
-
-			<!-- Tabla de códigos de barras repetidos -->
-			<div v-if="bar_codes_detail.length > 0" class="m-b-15">
-
-				<p class="font-weight-bold m-b-8 small">Códigos de barras repetidos</p>
-
-				<div class="ai-import-duplicates-table">
-					<div class="ai-import-duplicates-table__header">
-						<span>Código</span>
-						<span class="text-center">Repeticiones</span>
-						<span>Filas en el Excel</span>
-					</div>
-					<div
-					v-for="(item, idx) in bar_codes_detail"
-					:key="'bc-' + idx"
-					class="ai-import-duplicates-table__row">
-						<span>{{ item.codigo }}</span>
-						<span class="text-center">
-							<span class="ai-import-duplicates-badge">{{ item.veces }}</span>
-						</span>
-						<span class="text-muted">{{ item.filas.join(', ') }}</span>
-					</div>
-				</div>
-
-				<!-- Aviso de truncado cuando hay más duplicados que los mostrados -->
-				<small
-				v-if="duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > bar_codes_detail.length"
-				class="text-muted d-block m-t-5">
-					y {{ numero_es(duplicate_stats.bar_codes_duplicados_intra_archivo - bar_codes_detail.length) }} más...
+					y {{ numero_es(tabla.total - tabla.detalle.length) }} más...
 				</small>
 
 			</div>
@@ -1117,7 +1059,7 @@
 			</b-alert>
 
 			<!-- Card de recomendación de Claude IA -->
-			<div v-if="recomendacion_configuracion" class="ai-import-recomendacion-card m-b-20">
+			<div v-if="recomendacion_configuracion && hay_codigos_de_proveedor_repetidos" class="ai-import-recomendacion-card m-b-20">
 
 				<p class="font-weight-bold m-b-8">
 					<i class="icon-cpu m-r-5"></i>Recomendación de la IA
@@ -1130,7 +1072,7 @@
 
 		<!-- Decisión nueva: politica_intra_archivo — repetidos del código de proveedor DENTRO del propio Excel (prompt 06, grupo 265) -->
 		<b-form-group
-		v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
+		v-if="hay_codigos_de_proveedor_repetidos"
 		label-class="ai-import-decision-title">
 			<template #label>
 				Este archivo tiene {{ numero_es(duplicate_stats.provider_codes_duplicados_intra_archivo) }}
@@ -1162,19 +1104,17 @@
 			desempate-por-nombre-codigo-repetido, 9/9/2026).
 
 			Va pegada a politica_intra_archivo porque la pregunta nace del mismo problema —un
-			código de proveedor que no alcanza para saber de qué artículo se está hablando—, pero
-			🔴 NO comparte su condición de visibilidad: politica_intra_archivo sólo mira el
-			archivo, y el desempate también tiene que ofrecerse cuando los repetidos están en la
-			base (ver mostrar_desempate_por_nombre()). El caso real es el proveedor que codifica
-			igual el producto suelto y su pack (FA-NN "SILICONA NEUTRA 280 ML NEGRO" y FA-NN
-			"... X 15 BULTOS COMBINABLES"): el código no desempata, el nombre sí.
+			código de proveedor que no alcanza para saber de qué artículo se está hablando—. Decisión
+			de Lucas (10/11/2026): igual que las otras tres, se pregunta sólo si hay códigos de
+			proveedor repetidos en el Excel (hay_codigos_de_proveedor_repetidos). Sin la pregunta,
+			el desempate viaja apagado.
 
 			🔴 El default es false y con el default el comportamiento es idéntico al de hoy. No lo
 			cambies "porque parece mejor": la opción existe justamente porque no siempre sirve, y el
 			aviso de arriba es lo que le dice al usuario si en SU archivo va a servir.
 		-->
 		<b-form-group
-		v-if="mostrar_desempate_por_nombre"
+		v-if="hay_codigos_de_proveedor_repetidos"
 		label-class="ai-import-decision-title">
 			<template #label>
 				Cuando el código de proveedor coincide con más de un artículo, ¿desempatamos por el nombre?
@@ -1207,12 +1147,13 @@
 		no existe como pregunta; la jerarquía es fija y este es el único escalón donde la decisión
 		tiene efecto real). -->
 		<!--
-			🔴 Este bloque es un PASO del clip 1.8 y no un detalle: el botón "Continuar" de abajo
-			está `:disabled` hasta que se elige una de estas opciones, así que un tour que salte de
-			la tabla de duplicados al botón deja al lead frente a un botón muerto y sin explicación.
+			🔴 Este bloque es un PASO del clip 1.8 y no un detalle: cuando se muestra, el botón
+			"Continuar" de abajo está `:disabled` hasta que se elige una de estas opciones. Si el Excel
+			no tiene códigos repetidos el bloque no existe, el botón no se traba y el motor del tour
+			saltea el paso.
 		-->
 		<b-form-group
-		v-if="filas_identificadas_por_provider_code > 0"
+		v-if="hay_codigos_de_proveedor_repetidos && filas_identificadas_por_provider_code > 0"
 		data-tour="listado.politica_codigos_repetidos"
 		label="Si el código de proveedor coincide con artículos que ya existen en el sistema, ¿qué hacer?"
 		label-class="ai-import-decision-title">
@@ -1246,7 +1187,7 @@
 
 		<!-- Decisión 3: política para códigos de proveedor existentes en otros proveedores -->
 		<b-form-group
-		v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
+		v-if="hay_codigos_de_proveedor_repetidos && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
 		label="El código de proveedor ya existe en otros proveedores. ¿Qué hacer con esos artículos?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_otro_proveedor" value="ignorar" data-testid="ai-import-politica-otro-ignorar" class="m-b-5">
@@ -1292,14 +1233,16 @@
 				</b-button>
 				<!--
 					Las dos condiciones de :disabled son de las políticas de códigos de ARTÍCULOS: en
-					clientes y proveedores no se muestran, así que no pueden trabar el botón.
+					clientes y proveedores no se muestran, así que no pueden trabar el botón. Y sin códigos
+					repetidos tampoco: una pregunta que no se ve no puede dejar el botón apagado.
 				-->
 				<b-button
 				variant="primary"
 				data-tour="listado.boton_continuar_importacion"
 				data-testid="ai-import-btn-continuar"
-				:disabled="model === 'article' && ((filas_identificadas_por_provider_code > 0 && !politica_colision)
-					|| (duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor))"
+				:disabled="model === 'article' && hay_codigos_de_proveedor_repetidos
+					&& ((filas_identificadas_por_provider_code > 0 && !politica_colision)
+					|| (duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor))"
 				@click="step = 4">
 					Continuar
 				</b-button>
@@ -1387,15 +1330,18 @@
 				:unchecked-value="0">
 					Los costos de esta planilla son BRUTOS (ya tienen el IVA adentro)
 				</b-form-checkbox>
-				<small class="text-muted d-block m-t-5">
-					El costo del artículo se guarda siempre NETO, sin IVA.
-					<span v-if="costos_de_la_planilla_son_brutos">
-						Como está activada, el costo de cada fila del Excel se toma como BRUTO: ya tiene el IVA adentro y el sistema se lo saca con la alícuota de ese artículo para guardar el neto. Un artículo Exento, No Gravado o al 0% no tiene IVA para sacarle: su costo se importa tal cual.
-					</span>
-					<span v-else>
-						Como está desactivada, el costo de cada fila del Excel se toma como NETO y se importa tal cual, sin tocarlo. Es como venía funcionando la importación hasta ahora.
-					</span>
-				</small>
+				<div class="ai-import-costos-tarjetas m-t-10">
+					<div
+					class="ai-import-costos-tarjeta"
+					:class="{ 'ai-import-costos-tarjeta--vigente': !costos_de_la_planilla_son_brutos }">
+						<strong>Desactivada:</strong> el sistema guarda el costo de los artículos tal cual está en el Excel.
+					</div>
+					<div
+					class="ai-import-costos-tarjeta"
+					:class="{ 'ai-import-costos-tarjeta--vigente': costos_de_la_planilla_son_brutos }">
+						<strong>Activada:</strong> el sistema le quita la alícuota de IVA a esos costos para guardar el costo neto.
+					</div>
+				</div>
 			</b-form-group>
 
 			<!--
@@ -1771,6 +1717,22 @@ export default {
 
 			/* Filas de muestra del Excel (máx. 5) para la preview del paso 2. */
 			preview_rows: [],
+
+			/*
+			 * Estado auxiliar del interruptor "Ignorar columna", por excel_column_index. Vive afuera de
+			 * column_mapping a propósito: ese array viaja a la API y ahí system_property null ES
+			 * "ignorada". propiedades_antes_de_ignorar guarda qué tenía la columna para restaurarlo al
+			 * apagar el interruptor; columnas_por_elegir marca las que quedaron con el interruptor
+			 * apagado y sin propiedad, esperando que el usuario elija una.
+			 */
+			propiedades_antes_de_ignorar: {},
+			columnas_por_elegir: {},
+
+			/* Filas que repiten el encabezado adentro de la planilla: { filas, ejemplos, valores }. Opcional. */
+			encabezados_repetidos: null,
+
+			/* Paso 3: si se ve la tarjeta completa de cómo se identifican los artículos. */
+			ver_detalle_identificacion: false,
 
 			/*
 			 * Tamaño de lote con el que corre la importación en el backend (ARTICLE_EXCEL_CHUNK_SIZE),
@@ -2280,6 +2242,50 @@ export default {
 		 * Cada elemento: { codigo, veces, filas }.
 		 * Vacío si no hay datos o si la columna no estaba mapeada.
 		 */
+		skus_detail() {
+			if (
+				!this.duplicate_stats
+				|| !Array.isArray(this.duplicate_stats.detalle_skus_duplicados)
+			) {
+				return []
+			}
+
+			return this.duplicate_stats.detalle_skus_duplicados
+		},
+
+		/*
+		 * Tablas de valores repetidos del paso 3, una por propiedad identificadora y solo las que
+		 * traen datos. El sku es opcional: un análisis hecho antes de esta versión no lo manda.
+		 */
+		tablas_de_repetidos() {
+			if (!this.duplicate_stats) {
+				return []
+			}
+
+			let stats = this.duplicate_stats
+
+			return [
+				{
+					clave:   'provider-code',
+					titulo:  'Códigos de proveedor repetidos',
+					detalle: this.provider_codes_detail,
+					total:   Number(stats.provider_codes_duplicados_intra_archivo) || 0,
+				},
+				{
+					clave:   'bar-code',
+					titulo:  'Códigos de barras repetidos',
+					detalle: this.bar_codes_detail,
+					total:   Number(stats.bar_codes_duplicados_intra_archivo) || 0,
+				},
+				{
+					clave:   'sku',
+					titulo:  'SKU repetidos',
+					detalle: this.skus_detail,
+					total:   Number(stats.skus_duplicados_intra_archivo) || 0,
+				},
+			].filter(tabla => tabla.detalle.length > 0)
+		},
+
 		bar_codes_detail() {
 			if (
 				!this.duplicate_stats
@@ -2581,56 +2587,48 @@ export default {
 		},
 
 		/*
-		 * Misión desempate-por-nombre-codigo-repetido (9/9/2026): cuándo se le ofrece al usuario
-		 * la pregunta del desempate por nombre.
+		 * Si el mismo código de proveedor aparece en más de una fila del Excel, ya sin contar los
+		 * encabezados repetidos. Decisión de Lucas (10/11/2026): gobierna las cuatro preguntas de
+		 * código de proveedor, la tarjeta de recomendación y el :disabled de Continuar.
 		 *
-		 * 🔴 Esta condición era `provider_codes_duplicados_intra_archivo > 0`, o sea: sólo cuando
-		 * el código se repite DENTRO del archivo que se está subiendo. Ese es el caso menos
-		 * frecuente. El habitual es el otro: el proveedor manda una sola fila por código (este mes
-		 * sólo el pack) contra una base que ya tiene los dos artículos con ese código. Ahí el
-		 * contador intra-archivo da 0, la pregunta no se renderizaba, y esa única fila seguía
-		 * escribiendo en los dos artículos — que es exactamente el defecto que la opción vino a
-		 * resolver. El backend ya soportaba ese caso; lo que fallaba era que la pantalla nunca lo
-		 * ofrecía.
-		 *
-		 * ⚠️ `provider_codes_existentes_mismo_proveedor` NO dice "repetidos en la base": dice
-		 * cuántos códigos del archivo tienen AL MENOS UN artículo de ese proveedor. El cruce
-		 * (ExcelDuplicateStats::crossCheckProviderCodes()) agrupa por código y sólo se guarda un
-		 * booleano por proveedor, así que el conteo de códigos con MÁS DE UN artículo en la base
-		 * NO existe hoy en duplicate_stats. Se usa igual porque es un superconjunto exacto:
-		 * siempre que haya códigos repetidos en la base este número es > 0. Y ofrecerlo de más es
-		 * inocuo: el desempate del backend vive adentro del bloque de dos o más candidatos de
-		 * ArticleIndexCache::find_with_index(), así que con un solo artículo por código la opción
-		 * no cambia absolutamente nada. Preferimos una opción de más —que no hace nada— antes que
-		 * esconderla justo en el caso que la motivó.
+		 * Sin códigos repetidos no se pregunta nada: la coincidencia queda en «actualizar todos», sin importar lo que recomendó el
+		 * análisis, los artículos de otro proveedor no se tocan y el desempate va apagado (ver
+		 * derive_flags_from_choice() y el payload de importar()).
 		 */
-		mostrar_desempate_por_nombre() {
-			if (!this.duplicate_stats) {
-				return false
+		hay_codigos_de_proveedor_repetidos() {
+			return !!this.duplicate_stats
+				&& Number(this.duplicate_stats.provider_codes_duplicados_intra_archivo) > 0
+		},
+
+		/*
+		 * Propiedad con la que se identifican más filas, para el renglón del paso 3. Porcentaje con
+		 * floor: decir 100% cuando falta una fila sería mentir. Null si no hay nada que informar.
+		 */
+		identificacion_dominante() {
+			let total = this.cadena_identificacion ? (Number(this.cadena_identificacion.total_filas) || 0) : 0
+
+			if (total <= 0) {
+				return null
 			}
 
-			/* Repetidos dentro del propio archivo: el caso original. */
-			if (this.duplicate_stats.provider_codes_duplicados_intra_archivo > 0) {
-				return true
+			let dominante = null
+
+			this.pasos_cadena_identificacion.forEach(function(paso) {
+				if (paso.filas > 0 && (!dominante || paso.filas > dominante.filas)) {
+					dominante = paso
+				}
+			})
+
+			if (!dominante) {
+				return null
 			}
 
-			/* Códigos del archivo que ya tienen artículos de ESTE proveedor en la base. */
-			if (this.duplicate_stats.provider_codes_existentes_mismo_proveedor > 0) {
-				return true
-			}
+			let porcentaje = Math.floor(dominante.filas * 100 / total)
 
-			/*
-			 * Sin proveedor elegido, el cruce contra la base cuenta TODO como "otros proveedores"
-			 * (crossCheckProviderCodes() sólo marca "mismo" cuando hay provider_id > 0), mientras
-			 * que el matching real de find_with_index() en ese caso trata a todos los candidatos
-			 * como propios. Si no miráramos este contador acá, "Sin proveedor" volvería a esconder
-			 * la pregunta justo en el escenario que la necesita.
-			 */
-			if (!this.has_selected_provider && this.duplicate_stats.provider_codes_existentes_otros_proveedores > 0) {
-				return true
+			return {
+				porcentaje: porcentaje < 1 ? 'Menos del 1%' : 'El ' + porcentaje + '%',
+				columna:    dominante.campo === 'name' ? 'Nombre' : dominante.label,
 			}
-
-			return false
 		},
 
 		/*
@@ -2651,26 +2649,12 @@ export default {
 				return ''
 			}
 
+			/*
+			 * La pregunta sólo se muestra con códigos repetidos en el archivo. Si el resumen dice que
+			 * no aplica, los dos conteos discreparon (salen de pasadas distintas): ante la duda, callarse.
+			 */
 			if (!stats.aplica) {
-				/*
-				 * El resumen del backend mira SÓLO las repeticiones dentro del archivo, así que
-				 * cuando la pregunta se muestra porque los repetidos están en la base (ver
-				 * mostrar_desempate_por_nombre()) no tiene nada que decir. En vez de dejar la
-				 * pregunta pelada, se dice lo único que se sabe con certeza, sin prometer nada:
-				 * en este archivo no hay códigos repetidos, y si los hay están del otro lado.
-				 *
-				 * ⚠️ El chequeo contra duplicate_stats no es decorativo: los dos conteos salen de
-				 * pasadas distintas del archivo y pueden discrepar. Si el bloque de arriba dice
-				 * "este archivo tiene 6 códigos repetidos", este aviso NO puede decir lo
-				 * contrario dos renglones más abajo — ante la duda, callarse.
-				 */
-				if (this.duplicate_stats && this.duplicate_stats.provider_codes_duplicados_intra_archivo > 0) {
-					return ''
-				}
-
-				return 'En este archivo no hay códigos de proveedor repetidos. Igual puede haber '
-					+ 'artículos ya cargados que compartan el código: si es así, el nombre es lo '
-					+ 'único que los distingue.'
+				return ''
 			}
 
 			/*
@@ -2943,15 +2927,54 @@ export default {
 		 * Excluye las columnas marcadas como "Ignorar columna" (system_property === null).
 		 * Cada elemento: { label: string, excel_column_index: number }
 		 */
-		preview_columns() {
+		/*
+		 * Columnas de la tabla del paso 2, en el orden del Excel. Lleva el índice original del array
+		 * porque los data-testid y el v-model siguen hablando de ese ítem.
+		 */
+		columnas_de_la_tabla_de_mapeo() {
 			if (!this.column_mapping || this.column_mapping.length === 0) return []
 
 			return this.column_mapping
-				.filter(item => item.system_property !== null && item.system_property !== '')
-				.map(item => ({
-					label: this.get_property_label(item.system_property),
-					excel_column_index: item.excel_column_index,
-				}))
+				.map((item, index) => ({ item: item, index: index }))
+				.sort((a, b) => a.item.excel_column_index - b.item.excel_column_index)
+		},
+
+		/*
+		 * Cuántas columnas tienen el interruptor apagado y todavía no tienen propiedad.
+		 */
+		cantidad_de_columnas_por_elegir() {
+			return this.column_mapping.filter(item => {
+				return this.column_mapping_is_ignored(item) && !this.columna_ignorada(item)
+			}).length
+		},
+
+		/*
+		 * Renglón del paso 2 con las filas que repiten el encabezado. Vacío con un análisis viejo,
+		 * que no trae la clave, o si no hay ninguna.
+		 */
+		texto_encabezados_repetidos() {
+			let datos = this.encabezados_repetidos
+			let filas = datos ? (Number(datos.filas) || 0) : 0
+
+			if (filas <= 0) {
+				return ''
+			}
+
+			if (filas === 1) {
+				let unica = Array.isArray(datos.ejemplos) ? datos.ejemplos[0] : null
+				return 'Ignoramos 1 fila que repite el encabezado' + (unica ? ' (la fila ' + unica + ')' : '') + '.'
+			}
+
+			let ejemplos = Array.isArray(datos.ejemplos) ? datos.ejemplos.slice(0, 3) : []
+			let detalle  = ''
+
+			if (ejemplos.length === 1) {
+				detalle = ' (por ejemplo, la fila ' + ejemplos[0] + ')'
+			} else if (ejemplos.length > 1) {
+				detalle = ' (por ejemplo, las filas ' + ejemplos.slice(0, -1).join(', ') + ' y ' + ejemplos[ejemplos.length - 1] + ')'
+			}
+
+			return 'Ignoramos ' + this.numero_es(filas) + ' filas que repiten el encabezado' + detalle + '.'
 		},
 
 	},
@@ -2977,6 +3000,11 @@ export default {
 			} else {
 				this.finish_row = ''
 				this.finish_row_original = ''
+				this._archivo_en_memoria = null
+				this._buffer_en_memoria = null
+				this._archivo_procesado = null
+				/* Descarta una lectura en curso: su .then/.catch ya no debe tocar nada. */
+				this._leyendo_a_memoria = null
 			}
 		},
 
@@ -3106,7 +3134,94 @@ export default {
 				return
 			}
 
-			this.process_excel_file(selected_file)
+			/*
+			 * Ya es la copia en memoria que armamos nosotros: el v-model y el @input de
+			 * b-form-file vuelven a avisar el mismo File, y no hay que procesarlo dos veces.
+			 */
+			if (selected_file === this._archivo_en_memoria) {
+				if (selected_file !== this._archivo_procesado) {
+					this._archivo_procesado = selected_file
+					this.process_excel_file(selected_file)
+				}
+				return
+			}
+
+			this.pasar_archivo_a_memoria(selected_file)
+		},
+
+		/*
+		 * Lee el archivo elegido completo a memoria y lo reemplaza por un File en memoria.
+		 * Chrome cancela la subida (ERR_UPLOAD_FILE_CHANGED) si el archivo del disco cambió
+		 * o lo tiene tomado Excel entre que se eligió y se envía: con la copia en memoria el
+		 * POST ya no depende del disco. El buffer se reutiliza para detectar la última fila.
+		 */
+		pasar_archivo_a_memoria(selected_file) {
+			let self = this
+
+			/* @input y el watcher de `file` avisan los dos: se lee una sola vez. */
+			if (self._leyendo_a_memoria === selected_file) {
+				return
+			}
+
+			self._leyendo_a_memoria = selected_file
+			self.error_message = ''
+			self.file_processing = true
+
+			self.leer_archivo_a_buffer(selected_file)
+			.then(function(buffer) {
+				if (self._leyendo_a_memoria !== selected_file) return
+
+				self._leyendo_a_memoria = null
+
+				let archivo_memoria = new File([buffer], selected_file.name, {
+					type: selected_file.type,
+					lastModified: selected_file.lastModified,
+				})
+
+				self._archivo_en_memoria = archivo_memoria
+				self._archivo_procesado = archivo_memoria
+
+				/* Dispara el watcher de `file`, que vuelve a entrar a onFileChange y se corta arriba. */
+				self.file = archivo_memoria
+
+				/* El buffer solo vive en esta función: no se retiene en el componente (ni para PDF). */
+				self.process_excel_file(archivo_memoria, self.es_archivo_pdf(archivo_memoria) ? null : buffer)
+			})
+			.catch(function(err) {
+				if (self._leyendo_a_memoria !== selected_file) return
+
+				console.error('Error al leer el archivo elegido:', err)
+				self._leyendo_a_memoria = null
+				self._archivo_en_memoria = null
+				self._buffer_en_memoria = null
+				self._archivo_procesado = null
+				self.file_processing = false
+				self.file = null
+				self.error_message = 'No pudimos leer el archivo. Si lo tenés abierto en otro programa, guardalo y cerralo, o hacé una copia y elegí la copia.'
+			})
+		},
+
+		/*
+		 * Devuelve una promesa con el ArrayBuffer del archivo (arrayBuffer() o FileReader).
+		 */
+		leer_archivo_a_buffer(file) {
+			if (typeof file.arrayBuffer === 'function') {
+				return file.arrayBuffer()
+			}
+
+			return new Promise(function(resolve, reject) {
+				let reader = new FileReader()
+
+				reader.onload = function(e) {
+					resolve(e.target.result)
+				}
+
+				reader.onerror = function() {
+					reject(new Error('FileReader error'))
+				}
+
+				reader.readAsArrayBuffer(file)
+			})
 		},
 
 		/*
@@ -3131,7 +3246,7 @@ export default {
 		/*
 		 * Lee el Excel en el navegador y calcula finish_row (retorna promesa).
 		 */
-		process_excel_file(file) {
+		process_excel_file(file, buffer_ya_leido) {
 			let self = this
 
 			self.file_processing = true
@@ -3205,6 +3320,12 @@ export default {
 					self.file_processing = false
 					self.excel_rows_read_error = 'Error al leer el archivo en el navegador.'
 					reject(new Error('FileReader error'))
+				}
+
+				/* Si el archivo ya se leyó a memoria al elegirlo, no se lee dos veces. */
+				if (buffer_ya_leido) {
+					reader.onload({ target: { result: buffer_ya_leido } })
+					return
 				}
 
 				reader.readAsArrayBuffer(file)
@@ -4296,7 +4417,7 @@ export default {
 					 * cosas distintas para el usuario: en un caso revisa su conexión, en el otro
 					 * el archivo. El archivo ni siquiera llegó a subirse.
 					 */
-					message = 'No pudimos subir el archivo. Revisá tu conexión y volvé a intentar.'
+					message = 'No pudimos subir el archivo. Puede ser que tengas el Excel abierto o lo hayas guardado de nuevo después de elegirlo (volvé a elegirlo con Explorar), que se haya cortado tu conexión o que el archivo sea muy pesado. Volvé a intentar en unos segundos.'
 				}
 
 				self.error_message = message
@@ -4348,7 +4469,7 @@ export default {
 				this.finish_row_original = this.finish_row
 				this.has_header_row = true
 			}
-			this.column_mapping       = this.normalize_column_mapping(resultado.column_mapping)
+			this.column_mapping       = this.completar_columnas_omitidas(this.normalize_column_mapping(resultado.column_mapping), resultado)
 			this.selected_provider_id = resultado.provider_id
 			this.provider_confidence  = resultado.provider_confidence
 
@@ -4365,6 +4486,10 @@ export default {
 			/* Análisis nuevo: si había una configuración guardada ofrecida, era de otro archivo. */
 			this.mapeo_guardado_pendiente = null
 			this.preview_rows    = resultado.preview_rows || []
+			this.encabezados_repetidos = resultado.encabezados_repetidos || null
+			/* Análisis nuevo: lo que recordaba el interruptor era de otro mapeo. */
+			this.propiedades_antes_de_ignorar = {}
+			this.columnas_por_elegir = {}
 			this.tamanio_de_lote = parseInt(resultado.tamanio_de_lote) > 0 ? parseInt(resultado.tamanio_de_lote) : 1000
 
 			/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
@@ -4443,6 +4568,10 @@ export default {
 		confirmar_paso_2() {
 			let self = this
 
+			/* El usuario pudo corregir la columna en la tabla: el índice sale del mapeo de ahora. */
+			let columna_de_codigo = self.column_mapping.find(item => item.system_property === 'codigo_de_proveedor')
+			self.provider_code_column_index = columna_de_codigo ? columna_de_codigo.excel_column_index : null
+
 			/*
 			 * La recomendación del paso 3 es de artículos (códigos de barras, códigos de
 			 * proveedor, formatos de costo y precio). Para clientes y proveedores no hay nada
@@ -4514,6 +4643,8 @@ export default {
 				 * una SPA vieja no paga una llamada a la IA que no va a mostrar.
 				 */
 				chequear_relaciones:        true,
+				/* Que el paso 3 salga del mapeo de esta tabla, no del que propuso la IA. */
+				recalcular_identificacion:  true,
 			}, { timeout: 120000 })
 			.then(function(res) {
 
@@ -4686,8 +4817,20 @@ export default {
 			 */
 			this.formatos_numericos = resultado.formatos_numericos || null
 
-			/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
-			if (this.duplicate_stats) {
+			/*
+			 * El paso 3 se dibuja con lo recalculado sobre el mapeo confirmado. Si la API todavía
+			 * no manda estas claves, queda lo del análisis y solo se pisan los conteos de siempre.
+			 */
+			if (resultado.cadena_identificacion) {
+				this.placeholders          = resultado.placeholders || []
+				this.cadena_identificacion = resultado.cadena_identificacion
+				this.nombres_duplicados    = resultado.nombres_duplicados || null
+				this.desempate_por_nombre  = resultado.desempate_por_nombre || null
+			}
+
+			if (resultado.duplicate_stats) {
+				this.duplicate_stats = resultado.duplicate_stats
+			} else if (this.duplicate_stats) {
 				this.duplicate_stats = {
 					...this.duplicate_stats,
 					provider_codes_existentes_mismo_proveedor:   resultado.provider_codes_existentes_mismo_proveedor,
@@ -4967,6 +5110,7 @@ export default {
 				}
 
 				item.system_property = this.normalize_system_property_key(guardada.system_property)
+				this.$delete(this.columnas_por_elegir, item.excel_column_index)
 				item.mapeo_guardado  = {
 					system_property: item.system_property,
 					origen:          guardada.origen === 'corregido_por_el_usuario' ? 'corregido_por_el_usuario' : 'confirmado',
@@ -5189,16 +5333,26 @@ export default {
 				actualizar_proveedor: 0,
 			}
 
-			/* La política politica_otro_proveedor controla si se actualizan artículos de otros proveedores. */
-			if (this.politica_otro_proveedor === 'actualizar') {
+			/*
+			 * La política politica_otro_proveedor controla si se actualizan artículos de otros
+			 * proveedores. Sin códigos repetidos la pregunta no se muestra y no pueden tocarse: una
+			 * elección vieja, de antes de corregir el mapeo, no puede seguir viajando escondida.
+			 */
+			if (this.hay_codigos_de_proveedor_repetidos && this.politica_otro_proveedor === 'actualizar') {
 				flags.actualizar_articulos_de_otro_proveedor = 1
 			}
 
-			if (this.politica_colision === 'actualizar_todos') {
+			/*
+			 * Sin códigos repetidos la pregunta no se muestra, así que el valor es fijo: una
+			 * recomendación de la IA o una elección vieja no pueden viajar sin que nadie las vea.
+			 */
+			let politica_colision = this.hay_codigos_de_proveedor_repetidos ? this.politica_colision : 'actualizar_todos'
+
+			if (politica_colision === 'actualizar_todos') {
 				flags.permitir_provider_code_repetido = 1
 				flags.permitir_provider_code_repetido_en_multi_providers = 1
 
-			} else if (this.politica_colision === 'crear_nuevo') {
+			} else if (politica_colision === 'crear_nuevo') {
 				flags.actualizar_por_provider_code = 0
 			}
 			/*
@@ -5323,7 +5477,7 @@ export default {
 				 * v-model de un b-form-radio puede quedar en undefined si el bloque nunca se
 				 * mostró, y `undefined` en JSON se pierde en vez de viajar como false.
 				 */
-				desempatar_por_nombre:                              this.desempatar_por_nombre === true,
+				desempatar_por_nombre:                              this.hay_codigos_de_proveedor_repetidos && this.desempatar_por_nombre === true,
 				/*
 				 * Misión importacion-relaciones-parecidas (8/10/2026): lo que el usuario decidió en
 				 * la lista de nombres parecidos del paso 3, para los tres modelos —
@@ -5564,6 +5718,38 @@ export default {
 		/*
 		 * Asegura tipos consistentes en cada ítem del mapeo recibido del análisis.
 		 */
+		/*
+		 * La tabla del paso 2 replica las columnas del Excel. Si la IA omitió alguna, se agrega
+		 * ignorada, para que no se corra de lugar lo que viene a la derecha.
+		 */
+		completar_columnas_omitidas(mapeo, resultado) {
+			let encabezado = resultado.encabezado_detectado
+			let columnas   = encabezado && Array.isArray(encabezado.columnas) ? encabezado.columnas : []
+			let filas      = Array.isArray(resultado.preview_rows) ? resultado.preview_rows : []
+			let presentes  = {}
+
+			mapeo.forEach(item => { presentes[item.excel_column_index] = true })
+
+			let tiene_texto = valor => valor !== null && valor !== undefined && String(valor).trim() !== ''
+			let omitidas    = []
+
+			columnas.forEach((titulo, indice) => {
+				if (presentes[indice] || (!tiene_texto(titulo) && !filas.some(fila => fila && tiene_texto(fila[indice])))) {
+					return
+				}
+
+				omitidas.push({
+					excel_column:        tiene_texto(titulo) ? String(titulo) : '',
+					system_property:     null,
+					confidence:          0,
+					interpretation_note: null,
+					excel_column_index:  indice,
+				})
+			})
+
+			return mapeo.concat(this.normalize_column_mapping(omitidas))
+		},
+
 		normalize_column_mapping(column_mapping) {
 			if (!Array.isArray(column_mapping)) {
 				return []
@@ -5671,48 +5857,113 @@ export default {
 		},
 
 		/*
-		 * Porcentaje redondeado para la columna Confianza (0%–100%).
+		 * Color de la columna entera en la tabla del paso 2. El orden importa: una ignorada o una que
+		 * el usuario ya confirmó la última vez no piden revisión, por más baja que sea la confianza.
 		 */
-		format_column_confidence(confidence) {
-			let value = parseFloat(confidence)
-			if (isNaN(value)) {
-				return '—'
+		clase_de_columna_de_mapeo(item) {
+			if (this.columna_ignorada(item)) {
+				/* Una columna que la IA dejó afuera con una nota también hay que encontrarla rápido. */
+				return this.column_has_interpretation_note(item)
+					? 'ai-import-tabla-mapeo__columna--ignorada ai-import-tabla-mapeo__columna--amarilla'
+					: 'ai-import-tabla-mapeo__columna--ignorada'
 			}
 
-			return Math.round(value * 100) + '%'
-		},
+			if (this.column_has_mapeo_guardado(item)) {
+				return ''
+			}
 
-		/*
-		 * Clases de resaltado por fila: ignorada (violeta) tiene prioridad sobre baja confianza (amarillo).
-		 */
-		mapping_row_highlight_class(item) {
-			if (this.column_mapping_is_ignored(item)) {
-				return {
-					'ai-import-mapping-block--ignored': true,
-				}
+			if (this.column_confidence_is_low(item.confidence)) {
+				return 'ai-import-tabla-mapeo__columna--roja'
 			}
 
 			if (this.column_has_interpretation_note(item)) {
-				return {
-					'ai-import-mapping-block--interpretation': true,
-				}
+				return 'ai-import-tabla-mapeo__columna--amarilla'
 			}
 
-			/*
-			 * Columna que viene de la configuración guardada del proveedor: nunca en amarillo (el
-			 * usuario ya la confirmó una vez), y en celeste sólo si la última vez la corrigió a
-			 * mano, que es la que vale la pena mirar porque difiere de lo que la IA diría sola.
-			 * Se reusa el celeste de las interpretaciones: un cuarto color no se lee.
-			 */
-			if (this.column_has_mapeo_guardado(item)) {
-				return {
-					'ai-import-mapping-block--interpretation': item.mapeo_guardado.origen === 'corregido_por_el_usuario',
-				}
+			return ''
+		},
+
+		/*
+		 * Tooltip del encabezado: letra, nombre y, si la hay, la nota de la IA.
+		 */
+		titulo_de_columna_de_mapeo(item, index) {
+			let titulo = this.excel_column_full_label(item, index)
+
+			if (this.column_has_interpretation_note(item)) {
+				titulo += ' — ' + item.interpretation_note
 			}
 
-			return {
-				'ai-import-mapping-block--warning': this.column_confidence_is_low(item.confidence),
+			return titulo
+		},
+
+		/*
+		 * Valor de una celda de la vista previa, por la posición real de la columna en el Excel.
+		 */
+		valor_de_celda_de_vista_previa(fila, item) {
+			let valor = fila[item.excel_column_index]
+
+			return (valor === null || valor === undefined || valor === '') ? '-' : valor
+		},
+
+		/*
+		 * True si la columna está ignorada de verdad: sin propiedad y sin estar esperando que el
+		 * usuario elija una.
+		 */
+		columna_ignorada(item) {
+			return this.column_mapping_is_ignored(item) && !this.columnas_por_elegir[item.excel_column_index]
+		},
+
+		/*
+		 * Opciones del select de una columna. La opción vacía es la misma de siempre, pero con el
+		 * interruptor apagado no significa "ignorar": le pide al usuario que elija.
+		 */
+		opciones_de_propiedad_de_columna(item) {
+			if (this.columna_ignorada(item)) {
+				return this.system_property_options
 			}
+
+			return this.system_property_options.map(opcion => {
+				return opcion.value === null ? { value: null, text: 'Elegí una propiedad' } : opcion
+			})
+		},
+
+		/*
+		 * Interruptor "Ignorar columna". Prenderlo deja system_property en null, que es lo que la API
+		 * entiende por ignorada; apagarlo restaura lo que tenía o, si no tenía nada, pide elegir.
+		 */
+		cambiar_ignorar_columna(item, ignorar) {
+			let clave = item.excel_column_index
+
+			if (ignorar) {
+				if (!this.column_mapping_is_ignored(item)) {
+					this.$set(this.propiedades_antes_de_ignorar, clave, item.system_property)
+				}
+				item.system_property = null
+				this.$delete(this.columnas_por_elegir, clave)
+				return
+			}
+
+			let anterior = this.propiedades_antes_de_ignorar[clave]
+
+			if (anterior) {
+				item.system_property = anterior
+				return
+			}
+
+			this.$set(this.columnas_por_elegir, clave, true)
+		},
+
+		/*
+		 * Con el select habilitado, volver a la opción vacía deja la columna esperando una elección:
+		 * ignorarla se hace solamente con el interruptor.
+		 */
+		al_cambiar_propiedad_de_columna(item, valor) {
+			if (valor === null || valor === '') {
+				this.$set(this.columnas_por_elegir, item.excel_column_index, true)
+				return
+			}
+
+			this.$delete(this.columnas_por_elegir, item.excel_column_index)
 		},
 
 		/*
@@ -5734,7 +5985,7 @@ export default {
 		},
 
 		/*
-		 * Confianza baja: menos del 70% (fila resaltada en amarillo).
+		 * Confianza baja: menos del 70% (columna resaltada en rojo).
 		 */
 		column_confidence_is_low(confidence) {
 			let value = parseFloat(confidence)
@@ -5743,46 +5994,6 @@ export default {
 			}
 
 			return value < 0.7
-		},
-
-		/*
-		 * Clase de color según el nivel de confianza del mapeo.
-		 */
-		column_confidence_text_class(confidence) {
-			let value = parseFloat(confidence)
-			if (isNaN(value)) {
-				return 'text-muted'
-			}
-
-			if (value >= 0.7) {
-				return 'text-success'
-			}
-
-			if (value >= 0.4) {
-				return 'text-warning'
-			}
-
-			return 'text-danger'
-		},
-
-		/*
-		 * Descripción para el atributo title del porcentaje de confianza.
-		 */
-		column_confidence_title(confidence) {
-			let value = parseFloat(confidence)
-			if (isNaN(value)) {
-				return 'Sin dato de confianza'
-			}
-
-			if (value >= 0.7) {
-				return 'Confianza alta'
-			}
-
-			if (value >= 0.4) {
-				return 'Confianza media — conviene revisar'
-			}
-
-			return 'Confianza baja — revisar el mapeo'
 		},
 
 		/*
@@ -6032,7 +6243,8 @@ export default {
 			this.aplicar_contexto_analisis(analisis.contexto)
 			this.aplicar_resultado_analisis(analisis.resultado)
 
-			if (contexto.provider_id) {
+			/* null es una elección: el usuario dejó «Sin proveedor» y no vuelve el inferido. */
+			if (contexto.provider_id !== undefined) {
 				this.selected_provider_id = contexto.provider_id
 			}
 			if (contexto.provider_code_column_index !== null && contexto.provider_code_column_index !== undefined) {
@@ -6310,6 +6522,10 @@ export default {
 			this.recomendacion_uuid = null
 			this.step          = 1
 			this.file          = null
+			/* Si había una lectura a memoria en curso, se descarta: no debe rellenar un modal ya cerrado. */
+			this._leyendo_a_memoria  = null
+			this._archivo_en_memoria = null
+			this._archivo_procesado  = null
 			this.filas_del_pdf = null
 			this.file_processing = false
 			this.start_row     = 2
@@ -6356,6 +6572,10 @@ export default {
 			this.desempatar_por_nombre       = false
 			this.desempate_por_nombre        = null
 			this.preview_rows                = []
+			this.encabezados_repetidos       = null
+			this.ver_detalle_identificacion  = false
+			this.propiedades_antes_de_ignorar = {}
+			this.columnas_por_elegir         = {}
 			this.assistant_notes             = []
 			this.placeholders                = []
 			this.cadena_identificacion       = null
@@ -6465,108 +6685,63 @@ export default {
 	line-height: 1.4
 
 /* Tabla de mapeo de columnas */
-.ai-import-mapping-table
-	border: 1px solid var(--color-border, rgba(0,0,0,.1))
-	border-radius: 8px
-	overflow: hidden
+/* Tabla única del paso 2: mapeo y vista previa con las columnas en el orden del Excel */
+.ai-import-tabla-mapeo
+	th, td
+		min-width: 180px
 
-.ai-import-mapping-block
-	border-bottom: 1px solid var(--color-border-secondary, rgba(0,0,0,.06))
-
-	&:last-child
-		border-bottom: none
-
-	&--warning
-		background: rgba(255, 193, 7, 0.14)
-
-	&--interpretation
-		background: rgba(0, 123, 255, 0.1)
-		border-left: 4px solid #17a2b8
-		padding-left: 8px
-
-	&--ignored
-		background: rgba(111, 66, 193, 0.16)
-		border-left: 4px solid #6f42c1
-		padding-left: 8px
-
-		.ai-import-mapping-excel-header
-			color: var(--color-text-purple-strong, #5a32a3)
-			font-style: italic
-
-		.ai-import-mapping-confidence-value
-			opacity: 0.75
-
-.ai-import-mapping-row
-	display: grid
-	grid-template-columns: 1fr 1.4fr 100px
-	align-items: center
-	gap: 10px
-	padding: 8px 12px
-
-	&--header
-		background: var(--bg-section, #f8f9fa)
-		font-weight: 600
+	select.custom-select
+		height: 34px
+		padding-top: 4px
+		padding-bottom: 4px
 		font-size: 13px
-		color: var(--color-text-primary, #495057)
-		border-bottom: 1px solid var(--color-border-secondary, rgba(0,0,0,.06))
 
-.ai-import-mapping-interpretation-note
-	padding: 0 12px 8px 12px
-	color: var(--color-text-info-strong, #0c5460)
+	thead th
+		vertical-align: top
 
-.ai-import-mapping-legend-interpretation
-	color: var(--color-text-info-strong, #17a2b8)
-	font-weight: 600
+	.custom-control-label
+		font-weight: 400
 
-.ai-import-mapping-legend-ignored
-	color: var(--color-text-purple-strong, #6f42c1)
-	font-weight: 600
+	&__letra
+		display: inline-block
+		min-width: 22px
+		margin-right: 6px
+		padding: 0 5px
+		border-radius: 4px
+		background: rgba(0, 0, 0, 0.08)
+		font-size: 11px
+		text-align: center
 
-.ai-import-mapping-excel-col
-	display: flex
-	align-items: baseline
-	gap: 8px
-	min-width: 0
-	font-size: 13px
-	color: var(--color-text-primary, #343a40)
+	&__nombre
+		white-space: normal
 
-.ai-import-mapping-excel-letter
-	flex-shrink: 0
-	font-weight: 700
-	color: var(--color-primary, #007bff)
-	font-size: 12px
-	min-width: 1.5em
+	&__marca-ambigua
+		margin-left: 5px
+		color: #dc3545
 
-.ai-import-mapping-excel-header
-	font-weight: 500
-	white-space: nowrap
-	overflow: hidden
-	text-overflow: ellipsis
+	&__guardado
+		display: block
+		margin-top: 3px
+		color: #17a2b8
 
-/* Marca de columna ambigua al lado de la letra: chica, ámbar, sin fondo ni borde. */
-/* No tiene que competir con el resaltado de fila; sólo indicar cuál revisar. */
-.ai-import-mapping-ambiguous-flag
-	flex-shrink: 0
-	align-self: center
-	font-size: 12px
-	line-height: 1
-	color: var(--color-text-warning-strong, #b28704)
-	cursor: help
+	&__leyenda
+		display: inline-block
+		padding: 0 6px
+		border-radius: 4px
+		font-weight: 600
 
-.ai-import-mapping-confidence
-	display: flex
-	flex-direction: column
-	align-items: center
-	gap: 2px
+	&__columna--amarilla
+		background: rgba(255, 193, 7, 0.28)
 
-.ai-import-mapping-confidence-value
-	font-weight: 600
-	font-size: 13px
-	line-height: 1.2
+	&__columna--roja
+		background: rgba(220, 53, 69, 0.22)
 
-.ai-import-mapping-confidence-hint
-	font-size: 11px
-	line-height: 1
+	td.ai-import-tabla-mapeo__columna--ignorada
+		opacity: 0.45
+
+	th.ai-import-tabla-mapeo__columna--ignorada .ai-import-tabla-mapeo__nombre
+		opacity: 0.55
+		font-style: italic
 
 /* Bloque informativo de archivo cargado en el paso 1 */
 .ai-import-file-info
@@ -6608,6 +6783,36 @@ export default {
 	font-weight: 600
 	font-size: 13px
 	color: #343a40
+
+/* Renglón único del paso 3 con la propiedad que identifica a la mayoría de las filas */
+.ai-import-identificacion-resumen
+	display: flex
+	flex-wrap: wrap
+	align-items: center
+	gap: 4px 10px
+	font-size: 14px
+
+	&__boton
+		padding: 0
+
+/* Tarjetas del check de costos brutos: se apilan en teléfono */
+.ai-import-costos-tarjetas
+	display: grid
+	grid-template-columns: 1fr 1fr
+	gap: 10px
+
+	@media (max-width: 575px)
+		grid-template-columns: 1fr
+
+.ai-import-costos-tarjeta
+	padding: 10px 12px
+	border: 1px solid var(--color-border, rgba(0, 0, 0, 0.1))
+	border-radius: 8px
+	font-size: 13px
+
+	&--vigente
+		border-color: #007bff
+		background: rgba(0, 123, 255, 0.08)
 
 /* Chips de resumen del archivo en el paso 3 */
 .ai-import-summary-chips
