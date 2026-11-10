@@ -128,7 +128,7 @@ export default {
 			'"Saltear y avisarme": esas filas no tocan nada y quedan reportadas en el historial.',
 			'"No identificar por código": se crean artículos nuevos aunque el código exista (así aparecen los duplicados a propósito).',
 		],
-		requiere: 'Se pregunta solo si hay códigos de proveedor repetidos en el Excel. Sin la pregunta se aplica lo que recomendó el análisis.',
+		requiere: 'Se pregunta solo si hay códigos de proveedor repetidos en el Excel. Sin la pregunta se actualizan todos los artículos que tengan ese código.',
 		nota_interna: 'derive_flags_from_choice (Index.vue ~4157) traduce a los flags viejos: actualizar_todos prende permitir_provider_code_repetido + en_multi_providers; crear_nuevo apaga actualizar_por_provider_code; saltear_y_reportar deja la combinación que produce AmbiguousMatch. actualizar_proveedor queda SIEMPRE en 0 en este flujo (no hay forma de reasignar proveedor desde el modal de IA; el clásico de compras sí lo permitía).',
 	},
 

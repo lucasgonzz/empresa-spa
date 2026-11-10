@@ -2591,7 +2591,7 @@ export default {
 		 * encabezados repetidos. Decisión de Lucas (10/11/2026): gobierna las cuatro preguntas de
 		 * código de proveedor, la tarjeta de recomendación y el :disabled de Continuar.
 		 *
-		 * Sin códigos repetidos no se pregunta nada: politica_colision queda en lo que recomendó el
+		 * Sin códigos repetidos no se pregunta nada: la coincidencia queda en «actualizar todos», sin importar lo que recomendó el
 		 * análisis, los artículos de otro proveedor no se tocan y el desempate va apagado (ver
 		 * derive_flags_from_choice() y el payload de importar()).
 		 */
