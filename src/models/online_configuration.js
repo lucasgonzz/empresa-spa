@@ -253,7 +253,14 @@ export default {
 			text: 'Mostrar articulos sin Stock en la Tienda',
 			key: 'show_articles_without_stock',
 			type: 'checkbox',
-			description: 'En caso de que un articulo tenga stock = 0 (no aplica para los articulos con stock sin especificar), se mostrara un aviso de "Producto agotado" y no se dejara agregar al carrito'
+			description: 'Muestra como agotados los artículos con stock cero. Si habilitás los pedidos de artículos sin stock, los artículos que se pueden pedir se muestran con el aviso «Consultar».',
+		},
+		{
+			text: 'Permitir pedidos de artículos sin stock',
+			key: 'permitir_pedidos_sin_stock',
+			type: 'checkbox',
+			v_if_function: 'mostrar_permitir_pedidos_sin_stock',
+			description: 'Los artículos publicados con stock cero aparecen como «Consultar». Si el pedido incluye alguno, se envía sin cobro para que revises la disponibilidad antes de confirmarlo. Para usar esta opción, dejá apagado «Ignorar el stock en la Tienda».',
 		},
 		{
 			text: 'Cuando el stock este sin especificar, es igual a 0',
