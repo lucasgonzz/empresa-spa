@@ -4297,7 +4297,7 @@ export default {
 					 * cosas distintas para el usuario: en un caso revisa su conexión, en el otro
 					 * el archivo. El archivo ni siquiera llegó a subirse.
 					 */
-					message = 'No pudimos subir el archivo. Revisá tu conexión y volvé a intentar.'
+					message = 'No pudimos subir el archivo. Puede ser que: el Excel esté abierto o lo hayas guardado de nuevo después de elegirlo (volvé a elegirlo con Explorar), se haya cortado tu conexión a internet, o el archivo sea muy pesado (probá con uno más chico o sin hojas/filas vacías). Volvé a intentar en unos segundos.'
 				}
 
 				self.error_message = message
