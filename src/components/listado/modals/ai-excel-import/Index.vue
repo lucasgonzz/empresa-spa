@@ -2981,6 +2981,8 @@ export default {
 				this._archivo_en_memoria = null
 				this._buffer_en_memoria = null
 				this._archivo_procesado = null
+				/* Descarta una lectura en curso: su .then/.catch ya no debe tocar nada. */
+				this._leyendo_a_memoria = null
 			}
 		},
 
@@ -3117,7 +3119,7 @@ export default {
 			if (selected_file === this._archivo_en_memoria) {
 				if (selected_file !== this._archivo_procesado) {
 					this._archivo_procesado = selected_file
-					this.process_excel_file(selected_file, this._buffer_en_memoria)
+					this.process_excel_file(selected_file)
 				}
 				return
 			}
@@ -3155,13 +3157,13 @@ export default {
 				})
 
 				self._archivo_en_memoria = archivo_memoria
-				self._buffer_en_memoria = buffer
 				self._archivo_procesado = archivo_memoria
 
 				/* Dispara el watcher de `file`, que vuelve a entrar a onFileChange y se corta arriba. */
 				self.file = archivo_memoria
 
-				self.process_excel_file(archivo_memoria, buffer)
+				/* El buffer solo vive en esta función: no se retiene en el componente (ni para PDF). */
+				self.process_excel_file(archivo_memoria, self.es_archivo_pdf(archivo_memoria) ? null : buffer)
 			})
 			.catch(function(err) {
 				if (self._leyendo_a_memoria !== selected_file) return
@@ -4393,7 +4395,7 @@ export default {
 					 * cosas distintas para el usuario: en un caso revisa su conexión, en el otro
 					 * el archivo. El archivo ni siquiera llegó a subirse.
 					 */
-					message = 'No pudimos subir el archivo. Puede ser que: el Excel esté abierto o lo hayas guardado de nuevo después de elegirlo (volvé a elegirlo con Explorar), se haya cortado tu conexión a internet, o el archivo sea muy pesado (probá con uno más chico o sin hojas/filas vacías). Volvé a intentar en unos segundos.'
+					message = 'No pudimos subir el archivo. Puede ser que tengas el Excel abierto o lo hayas guardado de nuevo después de elegirlo (volvé a elegirlo con Explorar), que se haya cortado tu conexión o que el archivo sea muy pesado. Volvé a intentar en unos segundos.'
 				}
 
 				self.error_message = message
@@ -6407,6 +6409,10 @@ export default {
 			this.recomendacion_uuid = null
 			this.step          = 1
 			this.file          = null
+			/* Si había una lectura a memoria en curso, se descarta: no debe rellenar un modal ya cerrado. */
+			this._leyendo_a_memoria  = null
+			this._archivo_en_memoria = null
+			this._archivo_procesado  = null
 			this.filas_del_pdf = null
 			this.file_processing = false
 			this.start_row     = 2
