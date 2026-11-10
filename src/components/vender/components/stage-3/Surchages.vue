@@ -44,41 +44,46 @@
 					</p>
 				</div>
 
-				<!-- Recargos vinculados al cliente desde su ficha (mismo grupo que en Discounts.vue) -->
 				<div
-				v-if="client_surchages.length"
-				class="vender-rate-panel__section">
-					<span class="vender-rate-panel__section-label">
-						Del cliente {{ client.name }}
-					</span>
-					<div class="vender-client-block__checkbox-list">
-						<toggle-de-ajuste-de-venta
-						v-for="surchage in client_surchages"
-						:key="surchage.id"
-						:ajuste="surchage"
-						tipo="recargo"
-						id_prefix="surchage_"
-						:disabled="desactivar_recargos"
-						v-model="sale_surchages"></toggle-de-ajuste-de-venta>
+				v-if="client_surchages.length || (puede_usar_discount_surchages && otros_surchages.length)"
+				class="vender-rate-panel__secciones"
+				:data-tour="recargos_guiables ? 'vender.interruptores_recargos' : null">
+					<!-- Recargos vinculados al cliente desde su ficha (mismo grupo que en Discounts.vue) -->
+					<div
+					v-if="client_surchages.length"
+					class="vender-rate-panel__section">
+						<span class="vender-rate-panel__section-label">
+							Del cliente {{ client.name }}
+						</span>
+						<div class="vender-client-block__checkbox-list">
+							<toggle-de-ajuste-de-venta
+							v-for="surchage in client_surchages"
+							:key="surchage.id"
+							:ajuste="surchage"
+							tipo="recargo"
+							id_prefix="surchage_"
+							:disabled="desactivar_recargos"
+							v-model="sale_surchages"></toggle-de-ajuste-de-venta>
+						</div>
 					</div>
-				</div>
 
-				<!-- Listado de recargos disponibles -->
-				<div
-				v-if="puede_usar_discount_surchages && otros_surchages.length"
-				class="vender-rate-panel__section">
-					<span class="vender-rate-panel__section-label">
-						Disponibles
-					</span>
-					<div class="vender-client-block__checkbox-list">
-						<toggle-de-ajuste-de-venta
-						v-for="surchage in otros_surchages"
-						:key="surchage.id"
-						:ajuste="surchage"
-						tipo="recargo"
-						id_prefix="surchage_"
-						:disabled="desactivar_recargos"
-						v-model="sale_surchages"></toggle-de-ajuste-de-venta>
+					<!-- Listado de recargos disponibles -->
+					<div
+					v-if="puede_usar_discount_surchages && otros_surchages.length"
+					class="vender-rate-panel__section">
+						<span class="vender-rate-panel__section-label">
+							Disponibles
+						</span>
+						<div class="vender-client-block__checkbox-list">
+							<toggle-de-ajuste-de-venta
+							v-for="surchage in otros_surchages"
+							:key="surchage.id"
+							:ajuste="surchage"
+							tipo="recargo"
+							id_prefix="surchage_"
+							:disabled="desactivar_recargos"
+							v-model="sale_surchages"></toggle-de-ajuste-de-venta>
+						</div>
 					</div>
 				</div>
 
@@ -150,6 +155,10 @@ export default {
 		ToggleDeAjusteDeVenta,
 	},
 	computed: {
+		recargos_guiables() {
+			return this.puede_usar_discount_surchages && !this.desactivar_recargos
+				&& this.surchages.some(recargo => !recargo.deleted_at)
+		},
 		/**
 		 * Bloquea los recargos (elegirlos, sacarlos, "recargos en servicios" y la opción de
 		 * aplicarlos a los precios) SOLO en un comprobante LEGADO: una venta o un presupuesto

@@ -1127,7 +1127,7 @@ function mostrar_paso(i) {
 
 			/* Tres seguidos: la pantalla que este tour da por hecha no está. Se corta acá en vez de
 			 * seguir salteando de a uno hasta el final, que es lo que dejaba al lead esperando. */
-			if (corrida.salteados_seguidos >= TOPE_SALTEOS_SEGUIDOS) {
+			if (paso.requerido || corrida.salteados_seguidos >= TOPE_SALTEOS_SEGUIDOS) {
 				corrida.corto_por_salteos = true
 				mostrar_paso(corrida.pasos.length)
 				return

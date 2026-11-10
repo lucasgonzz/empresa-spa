@@ -5,6 +5,7 @@ const LISTADO = { name: 'article' }
 const CAMPO_BUSQUEDA = '#search-article-search-modal-input'
 const RESULTADOS = '[data-tour="vender.resultados_buscador_articulos"], [data-tour="vender.busqueda_sin_resultados"]'
 const TUTORIALES = '[data-nav-tutoriales]'
+export const TEMA_APLICAR_RECARGO_VENTA = 'aplicar_recargo_venta'
 
 const GUIONES = {
 	crear_ticket: [
@@ -19,6 +20,10 @@ const GUIONES = {
 	],
 	buscar_articulo_codigo: [
 		{ ancla: 'vender.campo_codigo_barras', ruta: VENDER, antes: 'abrir_codigo_de_barras', avanza: 'enter', texto: 'Escaneá el código o escribilo y presioná Enter. Si hay una coincidencia, el artículo se agrega a la venta en curso.' },
+	],
+	[TEMA_APLICAR_RECARGO_VENTA]: [
+		{ ancla: 'vender.interruptores_recargos', ruta: { name: 'vender' }, antes: 'abrir_recargos_de_venta', foco: false, requerido: true, texto: 'En Recargos, prendé el interruptor del recargo que quieras aplicar a esta venta. Tocá Siguiente para revisar el total.' },
+		{ ancla: 'vender.total', ruta: { name: 'vender' }, antes: 'mostrar_total_de_venta', foco: false, texto: 'Acá ves el total de la venta con los recargos seleccionados. Revisalo antes de guardar.' },
 	],
 	centro_recursos: [
 		{ selector: TUTORIALES, foco: false, texto: 'Desde Tutoriales podés acceder a los videos que explican cómo usar el sistema.' },
