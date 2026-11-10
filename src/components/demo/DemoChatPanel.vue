@@ -71,6 +71,10 @@ export default {
 	},
 	watch: {
 		// El lateral abre y cierra la guía: acá se le avisa al padre para que `colapsado` no quede viejo.
+		// 🔴 Este watcher tiene que quedar declarado ANTES que `plegada_a_la_vista`, y `alternar` tiene
+		// que seguir siendo sincrónico en PanelDemo y PanelAsistente: al abrir desde la barra con la guía
+		// plegada cambian los dos juntos, y así el padre baja `colapsado=false` antes de que se evalúe
+		// `plegada_a_la_vista`. Al revés, el lateral se abriría y se cerraría en el mismo tick.
 		guia_a_la_vista(visible) {
 			if (!visible) this.pausar()
 			if (visible === this.colapsado) this.$emit('alternar')
