@@ -53,12 +53,14 @@ const CONTROLES = {
 		ruta: VENDER,
 		antes: 'mostrar_boton_de_reparto',
 		esperar_montaje: '[data-tour="vender.boton_cobrar"]',
+		techo_ms: 4000,
 		avanza: 'clic',
 		si_falta: 'El botón + está disponible para ventas de contado. Si estás haciendo un presupuesto o vendiendo a cuenta corriente, vas a elegir cómo cobrar en el flujo correspondiente.',
 	},
 	'vender.reparto_pago': {
 		ancla: 'vender.reparto_pago',
 		ruta: VENDER,
+		techo_ms: 4000,
 		si_falta: 'Para ver el reparto, volvé al paso anterior y tocá el + al lado del método de pago.',
 	},
 	'caja.historial_aperturas': {
@@ -72,6 +74,7 @@ const CONTROLES = {
 	'caja.reabrir_apertura': {
 		selector: '#aperturas-caja [data-tour="caja.reabrir_apertura"]:not(:disabled)',
 		ruta: TESORERIA,
+		techo_ms: 4000,
 		si_falta: 'Abrí el historial de una caja cerrada. Reabrir solo aparece en su apertura más reciente, en la primera página.',
 	},
 	'soporte.abrir': { ancla: 'soporte.abrir', avanza: 'aparece' },
