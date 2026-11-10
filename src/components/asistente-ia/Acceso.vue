@@ -1,6 +1,6 @@
 <template>
 	<button
-	v-if="authenticated && (puede_entrar_al_mostrador || puede_soporte)"
+	v-if="authenticated && (puede_entrar_al_mostrador || puede_soporte || puede_guia)"
 	type="button"
 	class="acceso-asistente"
 	:class="{ 'acceso-asistente--movil': movil, 'acceso-asistente--activo': $route.name === 'agentes' }"
@@ -30,6 +30,7 @@ export default {
 	computed: {
 		panel_abierto() { return this.$store.state.ai_chat.panel_abierto },
 		puede_soporte() { return this.hasExtencion('support_chat') },
+		puede_guia() { return !!this.$store.state.ai_chat.guia },
 		sin_leer() {
 			return this.puede_soporte ? this.$store.state.support_ticket.models.reduce((total, ticket) => total + (Number(ticket.unread_messages_count) || 0), 0) : 0
 		},

@@ -6,6 +6,7 @@
 		:modo="en_modulo ? 'modulo' : 'lateral'"
 		:puede_asistente="puede_entrar_al_mostrador"
 		:puede_soporte="puede_soporte"
+		:puede_guia="puede_guia"
 		@expandir="abrir_modulo"
 		@cerrar="cerrar">
 			<template #guia>
@@ -68,9 +69,10 @@ export default {
 	},
 	computed: {
 		should_show() {
-			return !!(this.authenticated && this.user && (this.puede_entrar_al_mostrador || this.puede_soporte))
+			return !!(this.authenticated && this.user && (this.puede_entrar_al_mostrador || this.puede_soporte || this.puede_guia))
 		},
 		puede_soporte() { return !!this.hasExtencion('support_chat') },
+		puede_guia() { return !!this.$store.state.ai_chat.guia },
 		identidad_de_sesion() {
 			if (!this.authenticated || !this.user) return null
 			return [this.user.id, !!this.user.es_sesion_soporte, !!this.user.es_acceso_maestro,
@@ -91,6 +93,7 @@ export default {
 	mounted() {
 		this.suscribir_canal_del_chat()
 		this.$root.$on('agentes:abrir', this.abrir_desde_navegacion)
+		this.$root.$on('agentes:cerrar', this.cerrar)
 		document.addEventListener('keydown', this.atajo_del_asistente)
 		document.addEventListener('pointerdown', this.iniciar_pulsacion, true)
 		document.addEventListener('pointermove', this.mover_pulsacion, true)
@@ -102,6 +105,7 @@ export default {
 	beforeDestroy() {
 		this.cancelar_pulsacion()
 		this.$root.$off('agentes:abrir', this.abrir_desde_navegacion)
+		this.$root.$off('agentes:cerrar', this.cerrar)
 		document.removeEventListener('keydown', this.atajo_del_asistente)
 		document.removeEventListener('pointerdown', this.iniciar_pulsacion, true)
 		document.removeEventListener('pointermove', this.mover_pulsacion, true)
@@ -156,7 +160,9 @@ export default {
 			if (!this.should_show) return
 			if (!this.abierto) {
 				const en_guia_soporte = this.puede_soporte && document.querySelector('.driver-popover.tour-soporte')
-				this.$store.commit('ai_chat/setAgente', this.puede_entrar_al_mostrador && !en_guia_soporte ? 'asistente' : 'soporte')
+				const agente_comun = this.puede_entrar_al_mostrador && !en_guia_soporte ? 'asistente' : 'soporte'
+				// En demo y prueba no unificada, la barra cae en la guía que sugiere los videos.
+				this.$store.commit('ai_chat/setAgente', this.puede_guia && !en_guia_soporte ? 'guia' : agente_comun)
 				this.$store.commit('ai_chat/setSelectedConversationId', null)
 				this.$store.commit('ai_chat/setMessages', [])
 				this.$store.commit('support_message/setActiveTicketId', null)
