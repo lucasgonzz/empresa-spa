@@ -613,7 +613,7 @@
 			<!-- Muestra con qué columna se va a identificar cada fila, en el mismo orden -->
 			<!-- de prioridad que usa el matching real del importador.                    -->
 			<!-- ====================================================================== -->
-			<div v-if="cadena_identificacion" class="ai-import-identification-chain m-b-20">
+			<div v-if="cadena_identificacion" class="m-b-20">
 
 				<!-- Grupo 284, prompt 04: no se pudo calcular la cadena (sin columnas identificadoras
 				mapeadas, o error de lectura del archivo). Antes esto simplemente no dibujaba nada y
@@ -630,7 +630,28 @@
 					</template>
 				</b-alert>
 
-				<div v-else>
+				<div
+				v-if="cadena_identificacion.disponible !== false"
+				class="ai-import-identificacion-resumen">
+					<span
+					v-if="identificacion_dominante"
+					data-testid="ai-import-resumen-identificacion">
+						{{ identificacion_dominante.porcentaje }} de las filas se van a identificar con la columna
+						<strong>{{ identificacion_dominante.columna }}</strong>.
+					</span>
+					<b-button
+					variant="link"
+					size="sm"
+					class="ai-import-identificacion-resumen__boton"
+					data-testid="ai-import-ver-detalles-identificacion"
+					@click="ver_detalle_identificacion = !ver_detalle_identificacion">
+						{{ ver_detalle_identificacion ? 'Ocultar detalles' : 'Ver detalles' }}
+					</b-button>
+				</div>
+
+				<div
+				v-if="cadena_identificacion.disponible !== false && ver_detalle_identificacion"
+				class="ai-import-identification-chain m-t-10">
 
 					<p class="font-weight-bold m-b-8">
 						Como se van a identificar los articulos
@@ -740,10 +761,13 @@
 				anterior y elegí el proveedor de nuevo antes de decidir qué hacer con las coincidencias.
 			</b-alert>
 
-			<!-- Tabla de códigos de proveedor repetidos -->
-			<div v-if="provider_codes_detail.length > 0" class="m-b-15">
+			<!-- Tablas de valores repetidos, una por cada propiedad que identifica y trae repetidos. -->
+			<div
+			v-for="tabla in tablas_de_repetidos"
+			:key="'repetidos-' + tabla.clave"
+			class="m-b-15">
 
-				<p class="font-weight-bold m-b-8 small">Códigos de proveedor repetidos</p>
+				<p class="font-weight-bold m-b-8 small">{{ tabla.titulo }}</p>
 
 				<div class="ai-import-duplicates-table">
 					<div class="ai-import-duplicates-table__header">
@@ -752,8 +776,8 @@
 						<span>Filas en el Excel</span>
 					</div>
 					<div
-					v-for="(item, idx) in provider_codes_detail"
-					:key="'pc-' + idx"
+					v-for="(item, idx) in tabla.detalle"
+					:key="tabla.clave + '-' + idx"
 					class="ai-import-duplicates-table__row">
 						<span>{{ item.codigo }}</span>
 						<span class="text-center">
@@ -763,43 +787,11 @@
 					</div>
 				</div>
 
-				<!-- Aviso de truncado cuando hay más duplicados que los mostrados -->
+				<!-- Aviso de truncado cuando hay más repetidos que los mostrados -->
 				<small
-				v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > provider_codes_detail.length"
+				v-if="tabla.total > tabla.detalle.length"
 				class="text-muted d-block m-t-5">
-					y {{ numero_es(duplicate_stats.provider_codes_duplicados_intra_archivo - provider_codes_detail.length) }} más...
-				</small>
-
-			</div>
-
-			<!-- Tabla de códigos de barras repetidos -->
-			<div v-if="bar_codes_detail.length > 0" class="m-b-15">
-
-				<p class="font-weight-bold m-b-8 small">Códigos de barras repetidos</p>
-
-				<div class="ai-import-duplicates-table">
-					<div class="ai-import-duplicates-table__header">
-						<span>Código</span>
-						<span class="text-center">Repeticiones</span>
-						<span>Filas en el Excel</span>
-					</div>
-					<div
-					v-for="(item, idx) in bar_codes_detail"
-					:key="'bc-' + idx"
-					class="ai-import-duplicates-table__row">
-						<span>{{ item.codigo }}</span>
-						<span class="text-center">
-							<span class="ai-import-duplicates-badge">{{ item.veces }}</span>
-						</span>
-						<span class="text-muted">{{ item.filas.join(', ') }}</span>
-					</div>
-				</div>
-
-				<!-- Aviso de truncado cuando hay más duplicados que los mostrados -->
-				<small
-				v-if="duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > bar_codes_detail.length"
-				class="text-muted d-block m-t-5">
-					y {{ numero_es(duplicate_stats.bar_codes_duplicados_intra_archivo - bar_codes_detail.length) }} más...
+					y {{ numero_es(tabla.total - tabla.detalle.length) }} más...
 				</small>
 
 			</div>
@@ -1077,7 +1069,7 @@
 			</b-alert>
 
 			<!-- Card de recomendación de Claude IA -->
-			<div v-if="recomendacion_configuracion" class="ai-import-recomendacion-card m-b-20">
+			<div v-if="recomendacion_configuracion && hay_codigos_de_proveedor_repetidos" class="ai-import-recomendacion-card m-b-20">
 
 				<p class="font-weight-bold m-b-8">
 					<i class="icon-cpu m-r-5"></i>Recomendación de la IA
@@ -1090,7 +1082,7 @@
 
 		<!-- Decisión nueva: politica_intra_archivo — repetidos del código de proveedor DENTRO del propio Excel (prompt 06, grupo 265) -->
 		<b-form-group
-		v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
+		v-if="hay_codigos_de_proveedor_repetidos"
 		label-class="ai-import-decision-title">
 			<template #label>
 				Este archivo tiene {{ numero_es(duplicate_stats.provider_codes_duplicados_intra_archivo) }}
@@ -1122,19 +1114,17 @@
 			desempate-por-nombre-codigo-repetido, 9/9/2026).
 
 			Va pegada a politica_intra_archivo porque la pregunta nace del mismo problema —un
-			código de proveedor que no alcanza para saber de qué artículo se está hablando—, pero
-			🔴 NO comparte su condición de visibilidad: politica_intra_archivo sólo mira el
-			archivo, y el desempate también tiene que ofrecerse cuando los repetidos están en la
-			base (ver mostrar_desempate_por_nombre()). El caso real es el proveedor que codifica
-			igual el producto suelto y su pack (FA-NN "SILICONA NEUTRA 280 ML NEGRO" y FA-NN
-			"... X 15 BULTOS COMBINABLES"): el código no desempata, el nombre sí.
+			código de proveedor que no alcanza para saber de qué artículo se está hablando—. Decisión
+			de Lucas (10/11/2026): igual que las otras tres, se pregunta sólo si hay códigos de
+			proveedor repetidos en el Excel (hay_codigos_de_proveedor_repetidos). Sin la pregunta,
+			el desempate viaja apagado.
 
 			🔴 El default es false y con el default el comportamiento es idéntico al de hoy. No lo
 			cambies "porque parece mejor": la opción existe justamente porque no siempre sirve, y el
 			aviso de arriba es lo que le dice al usuario si en SU archivo va a servir.
 		-->
 		<b-form-group
-		v-if="mostrar_desempate_por_nombre"
+		v-if="hay_codigos_de_proveedor_repetidos"
 		label-class="ai-import-decision-title">
 			<template #label>
 				Cuando el código de proveedor coincide con más de un artículo, ¿desempatamos por el nombre?
@@ -1167,12 +1157,13 @@
 		no existe como pregunta; la jerarquía es fija y este es el único escalón donde la decisión
 		tiene efecto real). -->
 		<!--
-			🔴 Este bloque es un PASO del clip 1.8 y no un detalle: el botón "Continuar" de abajo
-			está `:disabled` hasta que se elige una de estas opciones, así que un tour que salte de
-			la tabla de duplicados al botón deja al lead frente a un botón muerto y sin explicación.
+			🔴 Este bloque es un PASO del clip 1.8 y no un detalle: cuando se muestra, el botón
+			"Continuar" de abajo está `:disabled` hasta que se elige una de estas opciones. Si el Excel
+			no tiene códigos repetidos el bloque no existe, el botón no se traba y el motor del tour
+			saltea el paso.
 		-->
 		<b-form-group
-		v-if="filas_identificadas_por_provider_code > 0"
+		v-if="hay_codigos_de_proveedor_repetidos && filas_identificadas_por_provider_code > 0"
 		data-tour="listado.politica_codigos_repetidos"
 		label="Si el código de proveedor coincide con artículos que ya existen en el sistema, ¿qué hacer?"
 		label-class="ai-import-decision-title">
@@ -1206,7 +1197,7 @@
 
 		<!-- Decisión 3: política para códigos de proveedor existentes en otros proveedores -->
 		<b-form-group
-		v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
+		v-if="hay_codigos_de_proveedor_repetidos && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
 		label="El código de proveedor ya existe en otros proveedores. ¿Qué hacer con esos artículos?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_otro_proveedor" value="ignorar" data-testid="ai-import-politica-otro-ignorar" class="m-b-5">
@@ -1252,14 +1243,16 @@
 				</b-button>
 				<!--
 					Las dos condiciones de :disabled son de las políticas de códigos de ARTÍCULOS: en
-					clientes y proveedores no se muestran, así que no pueden trabar el botón.
+					clientes y proveedores no se muestran, así que no pueden trabar el botón. Y sin códigos
+					repetidos tampoco: una pregunta que no se ve no puede dejar el botón apagado.
 				-->
 				<b-button
 				variant="primary"
 				data-tour="listado.boton_continuar_importacion"
 				data-testid="ai-import-btn-continuar"
-				:disabled="model === 'article' && ((filas_identificadas_por_provider_code > 0 && !politica_colision)
-					|| (duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor))"
+				:disabled="model === 'article' && hay_codigos_de_proveedor_repetidos
+					&& ((filas_identificadas_por_provider_code > 0 && !politica_colision)
+					|| (duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor))"
 				@click="step = 4">
 					Continuar
 				</b-button>
@@ -1347,15 +1340,18 @@
 				:unchecked-value="0">
 					Los costos de esta planilla son BRUTOS (ya tienen el IVA adentro)
 				</b-form-checkbox>
-				<small class="text-muted d-block m-t-5">
-					El costo del artículo se guarda siempre NETO, sin IVA.
-					<span v-if="costos_de_la_planilla_son_brutos">
-						Como está activada, el costo de cada fila del Excel se toma como BRUTO: ya tiene el IVA adentro y el sistema se lo saca con la alícuota de ese artículo para guardar el neto. Un artículo Exento, No Gravado o al 0% no tiene IVA para sacarle: su costo se importa tal cual.
-					</span>
-					<span v-else>
-						Como está desactivada, el costo de cada fila del Excel se toma como NETO y se importa tal cual, sin tocarlo. Es como venía funcionando la importación hasta ahora.
-					</span>
-				</small>
+				<div class="ai-import-costos-tarjetas m-t-10">
+					<div
+					class="ai-import-costos-tarjeta"
+					:class="{ 'ai-import-costos-tarjeta--vigente': !costos_de_la_planilla_son_brutos }">
+						<strong>Desactivada:</strong> el sistema guarda el costo de los artículos tal cual está en el Excel.
+					</div>
+					<div
+					class="ai-import-costos-tarjeta"
+					:class="{ 'ai-import-costos-tarjeta--vigente': costos_de_la_planilla_son_brutos }">
+						<strong>Activada:</strong> el sistema le quita la alícuota de IVA a esos costos para guardar el costo neto.
+					</div>
+				</div>
 			</b-form-group>
 
 			<!--
@@ -1744,6 +1740,9 @@ export default {
 
 			/* Filas que repiten el encabezado adentro de la planilla: { filas, ejemplos, valores }. Opcional. */
 			encabezados_repetidos: null,
+
+			/* Paso 3: si se ve la tarjeta completa de cómo se identifican los artículos. */
+			ver_detalle_identificacion: false,
 
 			/*
 			 * Tamaño de lote con el que corre la importación en el backend (ARTICLE_EXCEL_CHUNK_SIZE),
@@ -2253,6 +2252,50 @@ export default {
 		 * Cada elemento: { codigo, veces, filas }.
 		 * Vacío si no hay datos o si la columna no estaba mapeada.
 		 */
+		skus_detail() {
+			if (
+				!this.duplicate_stats
+				|| !Array.isArray(this.duplicate_stats.detalle_skus_duplicados)
+			) {
+				return []
+			}
+
+			return this.duplicate_stats.detalle_skus_duplicados
+		},
+
+		/*
+		 * Tablas de valores repetidos del paso 3, una por propiedad identificadora y solo las que
+		 * traen datos. El sku es opcional: un análisis hecho antes de esta versión no lo manda.
+		 */
+		tablas_de_repetidos() {
+			if (!this.duplicate_stats) {
+				return []
+			}
+
+			let stats = this.duplicate_stats
+
+			return [
+				{
+					clave:   'provider-code',
+					titulo:  'Códigos de proveedor repetidos',
+					detalle: this.provider_codes_detail,
+					total:   Number(stats.provider_codes_duplicados_intra_archivo) || 0,
+				},
+				{
+					clave:   'bar-code',
+					titulo:  'Códigos de barras repetidos',
+					detalle: this.bar_codes_detail,
+					total:   Number(stats.bar_codes_duplicados_intra_archivo) || 0,
+				},
+				{
+					clave:   'sku',
+					titulo:  'SKU repetidos',
+					detalle: this.skus_detail,
+					total:   Number(stats.skus_duplicados_intra_archivo) || 0,
+				},
+			].filter(tabla => tabla.detalle.length > 0)
+		},
+
 		bar_codes_detail() {
 			if (
 				!this.duplicate_stats
@@ -2554,56 +2597,48 @@ export default {
 		},
 
 		/*
-		 * Misión desempate-por-nombre-codigo-repetido (9/9/2026): cuándo se le ofrece al usuario
-		 * la pregunta del desempate por nombre.
+		 * Si el mismo código de proveedor aparece en más de una fila del Excel, ya sin contar los
+		 * encabezados repetidos. Decisión de Lucas (10/11/2026): gobierna las cuatro preguntas de
+		 * código de proveedor, la tarjeta de recomendación y el :disabled de Continuar.
 		 *
-		 * 🔴 Esta condición era `provider_codes_duplicados_intra_archivo > 0`, o sea: sólo cuando
-		 * el código se repite DENTRO del archivo que se está subiendo. Ese es el caso menos
-		 * frecuente. El habitual es el otro: el proveedor manda una sola fila por código (este mes
-		 * sólo el pack) contra una base que ya tiene los dos artículos con ese código. Ahí el
-		 * contador intra-archivo da 0, la pregunta no se renderizaba, y esa única fila seguía
-		 * escribiendo en los dos artículos — que es exactamente el defecto que la opción vino a
-		 * resolver. El backend ya soportaba ese caso; lo que fallaba era que la pantalla nunca lo
-		 * ofrecía.
-		 *
-		 * ⚠️ `provider_codes_existentes_mismo_proveedor` NO dice "repetidos en la base": dice
-		 * cuántos códigos del archivo tienen AL MENOS UN artículo de ese proveedor. El cruce
-		 * (ExcelDuplicateStats::crossCheckProviderCodes()) agrupa por código y sólo se guarda un
-		 * booleano por proveedor, así que el conteo de códigos con MÁS DE UN artículo en la base
-		 * NO existe hoy en duplicate_stats. Se usa igual porque es un superconjunto exacto:
-		 * siempre que haya códigos repetidos en la base este número es > 0. Y ofrecerlo de más es
-		 * inocuo: el desempate del backend vive adentro del bloque de dos o más candidatos de
-		 * ArticleIndexCache::find_with_index(), así que con un solo artículo por código la opción
-		 * no cambia absolutamente nada. Preferimos una opción de más —que no hace nada— antes que
-		 * esconderla justo en el caso que la motivó.
+		 * Sin códigos repetidos no se pregunta nada: politica_colision queda en lo que recomendó el
+		 * análisis, los artículos de otro proveedor no se tocan y el desempate va apagado (ver
+		 * derive_flags_from_choice() y el payload de importar()).
 		 */
-		mostrar_desempate_por_nombre() {
-			if (!this.duplicate_stats) {
-				return false
+		hay_codigos_de_proveedor_repetidos() {
+			return !!this.duplicate_stats
+				&& Number(this.duplicate_stats.provider_codes_duplicados_intra_archivo) > 0
+		},
+
+		/*
+		 * Propiedad con la que se identifican más filas, para el renglón del paso 3. Porcentaje con
+		 * floor: decir 100% cuando falta una fila sería mentir. Null si no hay nada que informar.
+		 */
+		identificacion_dominante() {
+			let total = this.cadena_identificacion ? (Number(this.cadena_identificacion.total_filas) || 0) : 0
+
+			if (total <= 0) {
+				return null
 			}
 
-			/* Repetidos dentro del propio archivo: el caso original. */
-			if (this.duplicate_stats.provider_codes_duplicados_intra_archivo > 0) {
-				return true
+			let dominante = null
+
+			this.pasos_cadena_identificacion.forEach(function(paso) {
+				if (paso.filas > 0 && (!dominante || paso.filas > dominante.filas)) {
+					dominante = paso
+				}
+			})
+
+			if (!dominante) {
+				return null
 			}
 
-			/* Códigos del archivo que ya tienen artículos de ESTE proveedor en la base. */
-			if (this.duplicate_stats.provider_codes_existentes_mismo_proveedor > 0) {
-				return true
-			}
+			let porcentaje = Math.floor(dominante.filas * 100 / total)
 
-			/*
-			 * Sin proveedor elegido, el cruce contra la base cuenta TODO como "otros proveedores"
-			 * (crossCheckProviderCodes() sólo marca "mismo" cuando hay provider_id > 0), mientras
-			 * que el matching real de find_with_index() en ese caso trata a todos los candidatos
-			 * como propios. Si no miráramos este contador acá, "Sin proveedor" volvería a esconder
-			 * la pregunta justo en el escenario que la necesita.
-			 */
-			if (!this.has_selected_provider && this.duplicate_stats.provider_codes_existentes_otros_proveedores > 0) {
-				return true
+			return {
+				porcentaje: porcentaje < 1 ? 'Menos del 1%' : 'El ' + porcentaje + '%',
+				columna:    dominante.campo === 'name' ? 'Nombre' : dominante.label,
 			}
-
-			return false
 		},
 
 		/*
@@ -2624,26 +2659,12 @@ export default {
 				return ''
 			}
 
+			/*
+			 * La pregunta sólo se muestra con códigos repetidos en el archivo. Si el resumen dice que
+			 * no aplica, los dos conteos discreparon (salen de pasadas distintas): ante la duda, callarse.
+			 */
 			if (!stats.aplica) {
-				/*
-				 * El resumen del backend mira SÓLO las repeticiones dentro del archivo, así que
-				 * cuando la pregunta se muestra porque los repetidos están en la base (ver
-				 * mostrar_desempate_por_nombre()) no tiene nada que decir. En vez de dejar la
-				 * pregunta pelada, se dice lo único que se sabe con certeza, sin prometer nada:
-				 * en este archivo no hay códigos repetidos, y si los hay están del otro lado.
-				 *
-				 * ⚠️ El chequeo contra duplicate_stats no es decorativo: los dos conteos salen de
-				 * pasadas distintas del archivo y pueden discrepar. Si el bloque de arriba dice
-				 * "este archivo tiene 6 códigos repetidos", este aviso NO puede decir lo
-				 * contrario dos renglones más abajo — ante la duda, callarse.
-				 */
-				if (this.duplicate_stats && this.duplicate_stats.provider_codes_duplicados_intra_archivo > 0) {
-					return ''
-				}
-
-				return 'En este archivo no hay códigos de proveedor repetidos. Igual puede haber '
-					+ 'artículos ya cargados que compartan el código: si es así, el nombre es lo '
-					+ 'único que los distingue.'
+				return ''
 			}
 
 			/*
@@ -5206,8 +5227,12 @@ export default {
 				actualizar_proveedor: 0,
 			}
 
-			/* La política politica_otro_proveedor controla si se actualizan artículos de otros proveedores. */
-			if (this.politica_otro_proveedor === 'actualizar') {
+			/*
+			 * La política politica_otro_proveedor controla si se actualizan artículos de otros
+			 * proveedores. Sin códigos repetidos la pregunta no se muestra y no pueden tocarse: una
+			 * elección vieja, de antes de corregir el mapeo, no puede seguir viajando escondida.
+			 */
+			if (this.hay_codigos_de_proveedor_repetidos && this.politica_otro_proveedor === 'actualizar') {
 				flags.actualizar_articulos_de_otro_proveedor = 1
 			}
 
@@ -5340,7 +5365,7 @@ export default {
 				 * v-model de un b-form-radio puede quedar en undefined si el bloque nunca se
 				 * mostró, y `undefined` en JSON se pierde en vez de viajar como false.
 				 */
-				desempatar_por_nombre:                              this.desempatar_por_nombre === true,
+				desempatar_por_nombre:                              this.hay_codigos_de_proveedor_repetidos && this.desempatar_por_nombre === true,
 				/*
 				 * Misión importacion-relaciones-parecidas (8/10/2026): lo que el usuario decidió en
 				 * la lista de nombres parecidos del paso 3, para los tres modelos —
@@ -6396,6 +6421,7 @@ export default {
 			this.desempate_por_nombre        = null
 			this.preview_rows                = []
 			this.encabezados_repetidos       = null
+			this.ver_detalle_identificacion  = false
 			this.propiedades_antes_de_ignorar = {}
 			this.columnas_por_elegir         = {}
 			this.assistant_notes             = []
@@ -6599,6 +6625,36 @@ export default {
 	font-weight: 600
 	font-size: 13px
 	color: #343a40
+
+/* Renglón único del paso 3 con la propiedad que identifica a la mayoría de las filas */
+.ai-import-identificacion-resumen
+	display: flex
+	flex-wrap: wrap
+	align-items: center
+	gap: 4px 10px
+	font-size: 14px
+
+	&__boton
+		padding: 0
+
+/* Tarjetas del check de costos brutos: se apilan en teléfono */
+.ai-import-costos-tarjetas
+	display: grid
+	grid-template-columns: 1fr 1fr
+	gap: 10px
+
+	@media (max-width: 575px)
+		grid-template-columns: 1fr
+
+.ai-import-costos-tarjeta
+	padding: 10px 12px
+	border: 1px solid var(--color-border, rgba(0, 0, 0, 0.1))
+	border-radius: 8px
+	font-size: 13px
+
+	&--vigente
+		border-color: #007bff
+		background: rgba(0, 123, 255, 0.08)
 
 /* Chips de resumen del archivo en el paso 3 */
 .ai-import-summary-chips
