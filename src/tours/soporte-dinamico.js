@@ -9,6 +9,32 @@ const TESORERIA = { name: 'caja' }
 const REVERTIR_IMPORTACION = 'listado.revertir_importacion'
 const BOTON_APERTURAS = '[data-tour="caja.historial_aperturas"]'
 
+function controles_de_porcentaje_abm(modelo, solapa) {
+	const ruta = { name: 'abm', params: { view: 'precios', sub_view: solapa } }
+	const listado = '[data-modelo-abm="' + modelo + '"]'
+	const porcentaje = '[data-modelo-en-edicion="' + modelo + '"] #' + modelo + '.show #' + modelo + '-percentage:not(:disabled)'
+
+	return {
+		editar: {
+			// La persona elige qué registro editar en la tabla o en las tarjetas.
+			selector: listado + ' .cont-table:has([data-testid^="' + modelo + '-row-"]), '
+				+ listado + ' .cont-cards:has(.card-component.apretable)',
+			ruta: ruta,
+			avanza: 'aparece',
+			selector_al_aparecer: porcentaje,
+			si_falta: 'Elegí un registro de ' + solapa + ' en ABM → Precios. Si hay un filtro activo, podés quitarlo cuando termines la guía.',
+		},
+		porcentaje: {
+			selector: porcentaje,
+			ruta: ruta,
+			si_falta: 'Abrí el registro que querés editar para ver Porcentaje. El cambio se aplica cuando guardás el formulario.',
+		},
+	}
+}
+
+const RECARGOS_ABM = controles_de_porcentaje_abm('surchage', 'recargos')
+const DESCUENTOS_ABM = controles_de_porcentaje_abm('discount', 'descuentos')
+
 // Cada clave describe una acción de pantalla que el motor ya sabe realizar. El plan no trae código de interfaz.
 const PANTALLAS = {
 	'vista.listado': LISTADO,
@@ -48,6 +74,10 @@ const CONTROLES = {
 	'vender.codigo_barras': { ancla: 'vender.campo_codigo_barras', ruta: VENDER, antes: 'abrir_codigo_de_barras', avanza: 'enter', foco: true, esperar_montaje: '[data-tour="vender.campo_codigo_barras"]' },
 	'vender.recargos': { ancla: 'vender.interruptores_recargos', ruta: VENDER, antes: 'abrir_recargos_de_venta', esperar_montaje: '[data-tour="vender.interruptores_recargos"]' },
 	'vender.total': { ancla: 'vender.total', ruta: VENDER, antes: 'mostrar_total_de_venta', esperar_montaje: '[data-tour="vender.total"]' },
+	'abm.editar_recargo': RECARGOS_ABM.editar,
+	'abm.porcentaje_recargo': RECARGOS_ABM.porcentaje,
+	'abm.editar_descuento': DESCUENTOS_ABM.editar,
+	'abm.porcentaje_descuento': DESCUENTOS_ABM.porcentaje,
 	'vender.metodos_pago': {
 		selector: '[data-tour="vender.boton_cobrar"]:not(:disabled)',
 		ruta: VENDER,
