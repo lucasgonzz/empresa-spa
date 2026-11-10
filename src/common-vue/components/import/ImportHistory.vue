@@ -1,5 +1,5 @@
 <template>
-<div>
+<div :data-tour="model_name === 'article' ? 'listado.historial_montado' : null">
 
 	<!-- <articulos-creados
 	:articles="articulos_creados"></articulos-creados> -->

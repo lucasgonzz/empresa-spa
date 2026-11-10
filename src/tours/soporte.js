@@ -1,4 +1,5 @@
 import { TEMA_REVERTIR_IMPORTACION, ancla_revertir_importacion } from './importacion-soporte'
+import { pasos_dinamicos, TEMA_GUIA_DINAMICA } from './soporte-dinamico'
 
 const VENDER = { name: 'vender', params: { view: 'remito' } }
 const LISTADO = { name: 'article' }
@@ -32,11 +33,12 @@ const GUIONES = {
 }
 
 export function tema_de_soporte_conocido(tema) {
-	return Object.prototype.hasOwnProperty.call(GUIONES, tema)
+	return tema === TEMA_GUIA_DINAMICA || Object.prototype.hasOwnProperty.call(GUIONES, tema)
 }
 
 export function pasos_de_soporte(guia, soporte_abierto) {
 	if (!guia || !tema_de_soporte_conocido(guia.tema)) return []
+	if (guia.tema === TEMA_GUIA_DINAMICA) return pasos_dinamicos(guia.pasos, soporte_abierto)
 
 	const pasos = GUIONES[guia.tema].map(function (paso, i) {
 		const texto = Array.isArray(guia.textos) && guia.textos[i]

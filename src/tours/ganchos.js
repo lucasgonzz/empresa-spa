@@ -63,12 +63,12 @@ function esperar(ms) {
  * @param {String} key key del catálogo ('cliente', 'metodo_de_pago', 'facturacion', 'lista_de_precios')
  * @returns {Promise}
  */
-function llevar_al_campo_de_vender(contexto, key) {
+function llevar_al_campo_de_vender(contexto, key, opciones) {
 	if (!contexto || !contexto.root) {
 		return Promise.resolve()
 	}
 
-	contexto.root.$emit(EVENTO_ENFOCAR_ELEMENTO, key, {})
+	contexto.root.$emit(EVENTO_ENFOCAR_ELEMENTO, key, opciones || {})
 
 	return esperar(key === 'metodo_de_pago' ? ESPERA_METODO_DE_PAGO : ESPERA_CAMPO_DE_VENDER)
 }
@@ -139,6 +139,12 @@ export default {
 	},
 	abrir_codigo_de_barras: function (contexto) {
 		return llevar_al_campo_de_vender(contexto, 'codigo_de_barras')
+	},
+	abrir_recargos_de_venta: function (contexto) {
+		return llevar_al_campo_de_vender(contexto, 'recargos', { enfocar: false })
+	},
+	mostrar_total_de_venta: function (contexto) {
+		return llevar_al_campo_de_vender(contexto, 'resumen', { enfocar: false })
 	},
 	/** El selector de cliente de Vender. */
 	abrir_etapa_1_cliente: function (contexto) {
