@@ -1,7 +1,8 @@
 <template>
 	<div class="support-conversation">
 		<div v-if="selected_ticket" class="support-conversation-title">
-			{{ selected_ticket.name || ('Ticket #' + selected_ticket.id) }}
+			{{ selected_ticket.name || ('Ticket #' + (numero_ticket_admin || selected_ticket.id)) }}
+			<span v-if="selected_ticket.name && numero_ticket_admin"> · Ticket #{{ numero_ticket_admin }}</span>
 		</div>
 		<div class="support-conversation-body" ref="conversation_body">
 			<div
@@ -152,6 +153,7 @@ export default {
 			type: Array,
 			default: () => [],
 		},
+		numero_ticket_admin: Number,
 		selected_ticket: {
 			type: Object,
 			default: null,

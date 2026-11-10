@@ -20,12 +20,12 @@
 							<icono v-if="ticket.origen === 'whatsapp'" nombre="whatsapp" :tamano="14"></icono>
 							<i v-else class="bi bi-pc-display" aria-hidden="true"></i>
 						</span>
-						<span class="agentes-soporte__titulo">{{ ticket.name || 'Conversación ' + ticket.id }}</span>
+						<span class="agentes-soporte__titulo" :title="ticket.admin_ticket_id ? 'Ticket #' + ticket.admin_ticket_id : null">{{ ticket.name || 'Conversación ' + (ticket.admin_ticket_id || ticket.id) }}</span>
 						<span v-if="ticket.unread_messages_count" class="agentes-soporte__badge" :title="ticket.unread_messages_count + ' mensajes sin leer'">{{ ticket.unread_messages_count }}</span>
 					</button>
 				</nav>
-				<button type="button" class="agentes-soporte__nuevo" @click="seleccionar(null)">
-					<icono nombre="nuevo" :tamano="18"></icono> Nueva conversación
+				<button type="button" class="agentes-soporte__nuevo" @click="iniciar_consulta">
+					<icono nombre="nuevo" :tamano="18"></icono> {{ ticket_abierto ? 'Continuar conversación' : 'Nueva conversación' }}
 				</button>
 			</div>
 		</aside>
@@ -42,11 +42,12 @@
 			v-else
 			:messages="messages"
 			:selected_ticket="seleccionado"
+			:numero_ticket_admin="seleccionado && seleccionado.admin_ticket_id"
 			:loading="messages_loading"
 			:show_new_ticket_bar="!!(seleccionado && seleccionado.status !== 'open')"
 			new_ticket_hint="Esta conversación está cerrada. Podés iniciar una nueva consulta."
 			@retry-message="reintentar"
-			@start-new-ticket="seleccionar(null)"></conversation>
+			@start-new-ticket="iniciar_consulta"></conversation>
 			<message-input en_agentes :can_send="puede_enviar" :clave_borrador="clave_borrador" :preparar_envio="preparar_envio" @send="enviar"></message-input>
 		</div>
 	</div>
@@ -67,6 +68,12 @@ export default {
 		seleccionado_id() { return this.$store.state.support_message.active_ticket_id },
 		clave_borrador() { return this.seleccionado_id == null ? 'nuevo' : 'ticket:' + this.seleccionado_id },
 		seleccionado() { return this.tickets.find(ticket => ticket.id == this.seleccionado_id) },
+		ticket_abierto() {
+			return this.tickets.reduce((abierto, ticket) => {
+				if (ticket.status === 'open' && ticket.origen !== 'whatsapp' && (!abierto || ticket.id > abierto.id)) return ticket
+				return abierto
+			}, null)
+		},
 		messages() { return this.$store.state.support_message.models },
 		messages_loading() { return this.$store.state.support_message.messages_loading },
 		enviando() { return this.$store.state.support_message.sending },
@@ -81,6 +88,9 @@ export default {
 		},
 	},
 	methods: {
+		iniciar_consulta() {
+			return this.seleccionar(this.ticket_abierto ? this.ticket_abierto.id : null)
+		},
 		seleccionar(id) {
 			if (this.enviando) return
 			this.$emit('cerrar-lista')

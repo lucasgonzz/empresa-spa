@@ -43,7 +43,7 @@ test('al perder la respuesta, reintenta una consulta nueva con el mismo UUID y s
 	ctx.commit('setModels', [])
 	await ctx.dispatch('retrySendMessage', pendiente)
 	assert.match(envios[0].mensaje_uuid, /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/)
-	assert.equal(envios[0].nueva_conversacion, '1')
+	assert.equal(envios[0].nueva_conversacion, undefined)
 	assert.equal(envios[0].support_ticket_id, undefined)
 	assert.deepEqual(envios[0], envios[1])
 	assert.equal(ctx.state.active_ticket_id, 22)
@@ -67,6 +67,48 @@ test('la apertura de otro hilo ignora una respuesta vieja y los mensajes en vivo
 	await primero
 	ctx.commit('addModel', { id: 21, support_ticket_id: 10, sender_type: 'admin' })
 	assert.deepEqual(ctx.state.models, [mensaje_actual])
+})
+
+test('la bandeja usa el último mensaje en las cargas y eventos, incluso con respuestas legadas', async () => {
+	const primero = '2026-11-09T11:00:00Z'
+	const segundo = '2026-11-09T12:00:00Z'
+	const tercero = '2026-11-09T13:00:00Z'
+	const lectura = '2026-11-10T12:00:00Z'
+	const models = [
+		{ id: 5, opened_at: lectura, updated_at: lectura },
+		{ id: 4, updated_at: lectura, messages: [{ created_at: primero, updated_at: lectura }] },
+		{ id: 3, admin_ticket_id: 82, last_message_at: segundo },
+	]
+	const store = cargar('store/support_ticket.js', {
+		'@/store/__base_store': { __esModule: true, default: opciones => opciones },
+		'@/runtime_config': { env: () => 'http://api.test' },
+		axios: { __esModule: true, default: { defaults: {}, get: () => Promise.resolve({ data: { models } }) } },
+	}).default
+	const state = { models: [], descarga_de_models_token: 0 }
+	const ctx = {
+		state,
+		rootState: { auth: { user: { id: 12 } } },
+		commit(nombre, valor) {
+			if (nombre === 'incrementar_descarga_de_models_token') state.descarga_de_models_token += 1
+			if (store.mutations[nombre]) store.mutations[nombre](state, valor)
+		},
+	}
+	const ids = () => state.models.map(ticket => ticket.id)
+	await store.actions.getAgentes(ctx)
+	assert.deepEqual(ids(), [3, 4, 5])
+
+	ctx.commit('upsertFromBroadcast', { id: 4, updated_at: lectura, unread_messages_count: 0, status: 'closed' })
+	store.actions.applyTicketFromMessage(ctx, { created_at: primero, read_at: lectura, ticket: { id: 4 } })
+	assert.deepEqual(ids(), [3, 4, 5])
+	assert.equal(state.models[1].unread_messages_count, 0)
+
+	store.actions.applyTicketFromMessage(ctx, { created_at: tercero, ticket: { id: 4 } })
+	store.actions.applyTicketFromMessage(ctx, { created_at: primero, read_at: lectura, ticket: { id: 4 } })
+	ctx.commit('upsertFromBroadcast', { id: 3, admin_ticket_id: null })
+	await store.actions.getAgentes(ctx)
+	assert.deepEqual(ids(), [4, 3, 5])
+	assert.equal(state.models[0].last_message_at, tercero)
+	assert.equal(state.models[1].admin_ticket_id, 82)
 })
 
 test('el reintento de sincronización no modifica la bandeja de la sesión siguiente', async () => {
