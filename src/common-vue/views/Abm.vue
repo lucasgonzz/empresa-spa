@@ -50,6 +50,7 @@
 			-->
 			<view-component
 			v-else
+			:data-modelo-abm="selected_model"
 			show_filter_modal
 			:check_permissions="false"
 			:show_btn_save="!abm_ocultar_guardar_y_eliminar"

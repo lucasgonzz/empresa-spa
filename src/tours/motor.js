@@ -859,6 +859,7 @@ function asentar_layout(elemento) {
  * @returns {Promise<Element|null>}
  */
 function preparar_paso(paso, contexto) {
+	if (contexto.preparar_capas) contexto.preparar_capas(paso)
 	if (paso.indicacion) {
 		return ir_a(contexto.router, paso.ruta).then(function () {
 			if (!paso.ruta) return true
@@ -1031,7 +1032,7 @@ function guion_de(clip) {
  * @returns {void}
  */
 function avanzar_a(i) {
-	if (!corrida || corrida.avanzando) {
+	if (!corrida || corrida.avanzando || (corrida.contexto.pausado && corrida.contexto.pausado())) {
 		return
 	}
 
@@ -1116,13 +1117,29 @@ function mostrar_paso(i) {
 	corrida.preparando = i
 	corrida.avanzando = true
 
+	const vigente = () => corrida === corrida_del_paso && corrida.preparando === i
+	let tapado = false
 	preparar_paso(paso, corrida.contexto).then(function (elemento) {
+		if (!vigente() || !elemento || paso.indicacion || !corrida.contexto.despejar_paso) return elemento
+		return corrida.contexto.despejar_paso(elemento, vigente).then(function (libre) {
+			if (!vigente()) return null
+			tapado = !libre
+			if (tapado) return null
+			acomodar_scroll(paso, elemento)
+			return asentar_layout(elemento)
+		})
+	}).then(function (elemento) {
 		/* El lead pudo haber cortado el tour mientras se preparaba este paso. */
-		if (corrida !== corrida_del_paso || corrida.preparando !== i) {
+		if (!vigente()) {
 			return
 		}
 
 		corrida.avanzando = false
+
+		if (tapado) {
+			paso = { indicacion: true, texto: paso.texto + ' Hay una ventana que tapa el control. Para usarla, cerrá primero este recorrido.' }
+			elemento = true
+		}
 
 		// Si el control depende del estado del comercio, explicamos la condición en el mismo paso.
 		// La indicación no habilita clics ni busca otro control como sustituto.
@@ -1478,6 +1495,7 @@ function enganchar_refresco(elemento) {
 		clearTimeout(reloj_resize)
 		reloj_resize = setTimeout(function () {
 			if (corrida !== activa || corrida.indice !== indice || !recorrido || corrida.avanzando) return
+			if (corrida.contexto.pausado && corrida.contexto.pausado()) return
 			const paso = corrida.pasos[indice]
 			const encontrado = buscar_visible(selector_de(paso))
 			if (!encontrado || subir_a_ancestro(encontrado, paso.ancestro) !== elemento) {
@@ -1485,7 +1503,16 @@ function enganchar_refresco(elemento) {
 				return
 			}
 			acomodar_scroll(paso, elemento)
-			recorrido.refresh()
+			const vigente = () => corrida === activa && corrida.indice === indice && recorrido && !corrida.avanzando
+			if (!corrida.contexto.despejar_paso) {
+				recorrido.refresh()
+				return
+			}
+			corrida.contexto.despejar_paso(elemento, vigente).then(function (libre) {
+				if (!vigente()) return
+				if (libre) recorrido.refresh()
+				else mostrar_paso(indice)
+			})
 		}, 160)
 	}
 
@@ -1995,7 +2022,7 @@ function enganchar_avance_por_clic(paso, i, resaltado) {
 		 * antes de que el clic haya hecho lo suyo y el paso siguiente mide un DOM viejo. */
 		setTimeout(function () {
 			if (corrida && corrida.indice === i) {
-				mostrar_paso(i + 1)
+				avanzar_a(i + 1)
 			}
 		}, 80)
 	}
@@ -2041,7 +2068,7 @@ function esperar_menu_desplegado(selector, resaltado, i) {
 
 		if (menu_abierto()) {
 			clearInterval(reloj)
-			mostrar_paso(i + 1)
+			avanzar_a(i + 1)
 			return
 		}
 
@@ -2050,7 +2077,7 @@ function esperar_menu_desplegado(selector, resaltado, i) {
 		if (transcurrido >= TECHO_MENU_ABIERTO) {
 			clearInterval(reloj)
 			console.warn('Tour ' + corrida.clip_id + ': el desplegable del paso ' + (i + 1) + ' no llegó a abrirse en ' + TECHO_MENU_ABIERTO + ' ms; se avanza igual')
-			mostrar_paso(i + 1)
+			avanzar_a(i + 1)
 		}
 	}, INTERVALO_SONDEO)
 
@@ -2093,7 +2120,7 @@ function enganchar_avance_por_desaparicion(paso, i) {
 
 		if (!buscar_visible(selector)) {
 			clearInterval(reloj)
-			mostrar_paso(i + 1)
+			avanzar_a(i + 1)
 			return
 		}
 
@@ -2217,7 +2244,7 @@ function enganchar_avance_por_carga(campo, selector, i) {
 
 		setTimeout(function () {
 			if (corrida && corrida.indice === i) {
-				mostrar_paso(i + 1)
+				avanzar_a(i + 1)
 			}
 		}, 120)
 	}
@@ -2286,7 +2313,7 @@ function enganchar_avance_por_aparicion(paso, i) {
 			return
 		}
 
-		mostrar_paso(i + 1)
+		avanzar_a(i + 1)
 	})
 }
 
@@ -2833,6 +2860,7 @@ export function iniciar_tour(clip, contexto) {
 			destruir_recorrido()
 		},
 		onNextClick: function () {
+			if (contexto.pausado && contexto.pausado()) return
 			/* Antes de mover el índice: si este paso esperaba un gesto y el lead lo salteó con el
 			 * botón, queda anotado para que un corte posterior no le eche la culpa a los datos. */
 			marcar_avance_a_mano()

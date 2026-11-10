@@ -1,5 +1,7 @@
 <template>
-	<div class="support-message-input-bar" :class="{ 'support-message-input-bar--agentes asistente-ia-composer': en_agentes }">
+	<div class="support-message-input-bar"
+	:class="{ 'support-message-input-bar--agentes asistente-ia-composer': en_agentes }"
+	:data-robotito-borrador="tiene_borrador_en_curso ? 'true' : null">
 		<!-- Editor de anotaciones sobre imagen (pegado o adjunto) antes de enviar -->
 		<image-annotation-editor
 			:show.sync="image_editor_visible"
@@ -168,6 +170,11 @@ export default {
 		}
 	},
 	computed: {
+		tiene_borrador_en_curso() {
+			return this.confirmando || this.recording || this.solicitando_microfono || this.image_editor_visible
+				|| this.$store?.state.support_message?.sending
+				|| Object.values(this.borradores).some(borrador => (borrador.body || '').trim() || borrador.attachment)
+		},
 		borrador() { return this.borradores[this.clave_borrador] || {} },
 		body: {
 			get() { return this.borrador.body || '' },

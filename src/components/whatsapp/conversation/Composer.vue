@@ -1,7 +1,8 @@
 <template>
 	<div
 	v-if="chat"
-	class="whatsapp-composer">
+	class="whatsapp-composer"
+	:data-robotito-borrador="tiene_borrador_en_curso ? 'true' : null">
 		<!-- Chat en simulación: el backend FRENA todo envío de texto hacia WhatsApp mientras el
 		último entrante sea simulado. Sin este aviso el operador escribía, apretaba enviar, la
 		fila se guardaba y no salía nada: fallaba en silencio.
@@ -230,6 +231,12 @@ export default {
 		}
 	},
 	computed: {
+		tiene_borrador_en_curso() {
+			const pendiente = this.borrador
+			return Boolean(this.text.trim() || this.epigrafe.trim() || this.adjunto || this.audio_recording
+				|| this.sending || this.enviando_adjunto
+				|| (pendiente && pendiente.chat_id == this.chat_id && (pendiente.texto || '').trim()))
+		},
 		// El getter del store hace exactamente esto y ya existía; este computed estaba copiado
 		// byte por byte también en conversation/Index.vue y en Header.vue.
 		chat() {

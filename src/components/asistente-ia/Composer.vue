@@ -7,7 +7,7 @@
 	Enter envía y Shift+Enter hace un salto de línea (D40), como siempre. Mientras el asistente
 	responde, el botón queda como el «detener» apagado de ia-spa y Enter no hace nada (el texto
 	queda escrito). -->
-	<div class="asistente-ia-composer">
+	<div class="asistente-ia-composer" :data-robotito-borrador="tiene_borrador_en_curso ? 'true' : null">
 		<div class="asistente-ia-composer__columna">
 			<!-- Lo que el panel quiera poner arriba de la píldora: en el teléfono, las sugerencias
 			de la conversación en blanco (ver Panel.vue). -->
@@ -93,6 +93,9 @@ export default {
 		}
 	},
 	computed: {
+		tiene_borrador_en_curso() {
+			return this.sending || Object.values(this.borradores).some(texto => texto.trim())
+		},
 		texto: {
 			get() { return this.borradores[this.clave_borrador] || '' },
 			set(valor) { this.$set(this.borradores, this.clave_borrador, valor) },

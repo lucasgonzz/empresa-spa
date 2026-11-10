@@ -1,7 +1,8 @@
 <template>
 	<section class="robotito-pregunta">
+		<div v-if="espera" class="robotito-pregunta__espera" role="status">{{ espera }}</div>
 		<button
-		v-if="!abierta"
+		v-else-if="!abierta"
 		ref="abrir"
 		type="button"
 		class="robotito-pregunta__abrir"
@@ -34,6 +35,7 @@ export default {
 	props: {
 		value: { type: String, default: '' },
 		error: { type: String, default: '' },
+		espera: { type: String, default: '' },
 		bloqueada: Boolean,
 		enviando: Boolean,
 	},
