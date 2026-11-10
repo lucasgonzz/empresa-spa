@@ -717,8 +717,7 @@
 					show
 					variant="warning"
 					class="m-t-10 m-b-0">
-						{{ numero_es(filas_sin_identificador) }} filas no tienen ningún código utilizable y se van a crear
-						como artículos nuevos sin posibilidad de actualizarse en futuras importaciones.
+						{{ numero_es(filas_sin_identificador) }} filas no tienen código ni nombre, así que no se van a importar.
 					</b-alert>
 
 				</div>
