@@ -188,6 +188,42 @@ function resolver_accion(commit, payload, verbo) {
 export const MODAL_CUENTA_CORRIENTE_DEL_CHAT = 'asistente-ia-current-acounts'
 
 /**
+ * Forma que tiene que tener una dirección escrita sin esquema para tomarla como dominio
+ * (`mitienda.com.ar`, con puerto o ruta opcionales). Excluye a propósito ':' y '@' fuera del puerto:
+ * así `javascript:algo` o `usuario:clave@sitio.com` nunca llegan a recibir un `https://` adelante.
+ */
+const PARECE_DOMINIO = /^([^\s/:@?#.]+\.)+[^\s/:@?#.\d]{2,}(:\d{1,5})?([/?#]\S*)?$/
+
+/**
+ * La dirección a la que puede llevar «Tu tienda», o null si con `online` no se puede armar una segura
+ * (misión agentes-entrada-unica, 10/11/2026). Sin dirección válida el botón no se dibuja.
+ *
+ * `online` lo carga el dueño a mano y termina en un `href`: solo se acepta http(s) y sin credenciales.
+ * Vive acá y no en Panel.vue para poder probarla sin montar el panel.
+ *
+ * @param {*} online El campo `online` del dueño.
+ * @returns {String|null}
+ */
+export function url_de_tienda(online) {
+	if (typeof online !== 'string') {
+		return null
+	}
+	let direccion = online.trim()
+	if (direccion.indexOf('://') === -1) {
+		if (!PARECE_DOMINIO.test(direccion)) {
+			return null
+		}
+		direccion = 'https://' + direccion
+	}
+	try {
+		const url = new URL(direccion)
+		return ['http:', 'https:'].indexOf(url.protocol) !== -1 && !url.username && !url.password ? url.href : null
+	} catch (e) {
+		return null
+	}
+}
+
+/**
  * true si hay un modal de cuenta corriente abierto. Lo usa refrescarPantallaDeLaAccion.
  *
  * 🔴 No alcanza con que el store current_acount tenga from_model y from_credit_account:
@@ -477,7 +513,11 @@ export default {
 		// Id de la conversación abierta en el panel. null = conversación nueva sin crear
 		// todavía (se crea recién al enviar el primer mensaje, como en Claude).
 		selected_conversation_id: null,
+		// Agente elegido en el lateral: 'asistente' | 'soporte' | 'guia' (la conversación de los videos).
 		agente: 'asistente',
+		// null, o { prueba: Boolean } mientras DemoChatPanel está montado: quien tenía el botón flotante
+		// tiene la pestaña «Tu guía», sin repetir acá la regla de quién puede usarla.
+		guia: null,
 		revision_sesion: 0,
 		revision_seleccion: 0,
 
@@ -594,6 +634,9 @@ export default {
 		},
 		setAgente(state, value) {
 			state.agente = value
+		},
+		setGuia(state, value) {
+			state.guia = value || null
 		},
 		renovarSesion(state) {
 			state.revision_sesion++
