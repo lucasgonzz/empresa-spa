@@ -158,8 +158,11 @@ export default {
 	methods: {
 		abrir_desde_navegacion(modo) {
 			if (!this.should_show) return
+			const en_guia_soporte = this.puede_soporte && document.querySelector('.driver-popover.tour-soporte')
+			// Con el lateral ya abierto (la prueba lo abre en la guía al entrar), la guía de Robotito
+			// para crear un ticket igual necesita llegar a Soporte: si no, su paso queda esperando.
+			if (this.abierto && en_guia_soporte) this.$store.commit('ai_chat/setAgente', 'soporte')
 			if (!this.abierto) {
-				const en_guia_soporte = this.puede_soporte && document.querySelector('.driver-popover.tour-soporte')
 				const agente_comun = this.puede_entrar_al_mostrador && !en_guia_soporte ? 'asistente' : 'soporte'
 				// En demo y prueba no unificada, la barra cae en la guía que sugiere los videos.
 				this.$store.commit('ai_chat/setAgente', this.puede_guia && !en_guia_soporte ? 'guia' : agente_comun)

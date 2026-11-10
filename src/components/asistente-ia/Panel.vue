@@ -211,7 +211,9 @@ export default {
 		 */
 		agente_activo() {
 			const agente = this.$store.state.ai_chat.agente
-			if (this.puede_guia && agente === 'guia') return 'guia'
+			// Una cuenta que solo tiene la guía (un empleado de demo o de prueba) cae siempre en ella:
+			// si no, el lateral quedaba vacío con el 'asistente' por defecto del store.
+			if (this.puede_guia && (agente === 'guia' || (!this.puede_asistente && !this.puede_soporte))) return 'guia'
 			if (this.puede_soporte && (!this.puede_asistente || agente === 'soporte')) return 'soporte'
 			return 'asistente'
 		},
@@ -300,13 +302,16 @@ export default {
 		this.$root.$emit('agentes:guia-lugar')
 	},
 	beforeDestroy() {
+		// Se mira el foco ANTES de sacar la guía: si estaba en su textarea, al sacarla cae al body
+		// y ya no se sabría que había que devolverlo.
+		const tenia_el_foco = !!(this.$refs.panel && this.$refs.panel.contains(document.activeElement))
 		// Antes de que Vue desarme el lateral: la conversación de la guía tiene que sobrevivirle.
 		this.$root.$emit('agentes:guia-lugar-sale', this.$refs.lugar_guia)
 		this.panel_vigente = false
 		window.removeEventListener('resize', this.on_window_resize)
 		document.removeEventListener('keydown', this.on_document_keydown)
 		const foco = this.foco_antes_de_abrir
-		if (foco && this.$refs.panel && this.$refs.panel.contains(document.activeElement)) {
+		if (foco && tenia_el_foco) {
 			this.$nextTick(() => {
 				if (document.activeElement === document.body && foco.isConnected && !this.hay_interfaz_encima()) {
 					foco.focus({ preventScroll: true })
@@ -319,6 +324,17 @@ export default {
 		agente_activo(valor) {
 			this.sidebar_movil_abierta = false
 			this.preparar_agente(valor)
+		},
+		/**
+		 * La guía (DemoChatPanel) decide si se muestra mirando `ai_chat.agente` del store, no este
+		 * computed. Si el agente resuelto es la guía y el store dice otra cosa (F5 en /agentes, o una
+		 * cuenta que solo tiene la guía), se alinea el store para que la guía no quede escondida.
+		 */
+		guia_activa: {
+			immediate: true,
+			handler(activa) {
+				if (activa && this.$store.state.ai_chat.agente !== 'guia') this.$store.commit('ai_chat/setAgente', 'guia')
+			},
 		},
 		reporte_id: {
 			immediate: true,

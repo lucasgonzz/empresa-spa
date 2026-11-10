@@ -64,6 +64,7 @@ export default {
 			let chat = this.$store.state.ai_chat
 			return chat.agente === 'guia' && (chat.panel_abierto || this.en_modulo)
 		},
+		plegada_a_la_vista() { return this.colapsado && this.guia_a_la_vista && !this.en_modulo },
 		estado() { return this.esperando_local ? 'esperando' : this.conversacion.estado },
 		pensando() { return ['esperando', 'pensando', 'listo'].indexOf(this.estado) !== -1 },
 		en_vender() { return this.$route.name === 'vender' && this.$route.params.view === 'remito' },
@@ -78,9 +79,16 @@ export default {
 			if (!colapsado) {
 				if (!this.guia_a_la_vista) this.abrir_en_agentes()
 				this.al_final()
-			} else if (this.guia_a_la_vista && !this.en_modulo) {
-				this.$store.commit('ai_chat/setPanelAbierto', false)
 			}
+		},
+		/**
+		 * Plegada pero con el lateral mostrándola: se cierra el lateral. Es un watcher aparte, y no
+		 * una rama del de `colapsado`, porque también se llega saliendo del módulo: «Probar» adentro
+		 * de /agentes pliega sin cerrar (el tour saca de ahí solo) y, si quedaba `panel_abierto`,
+		 * al irse aparecía el lateral en «Tu guía» con el panel vacío.
+		 */
+		plegada_a_la_vista(plegada) {
+			if (plegada) this.$store.commit('ai_chat/setPanelAbierto', false)
 		},
 		'$route.fullPath'() {
 			this.guia_pausada = null
@@ -88,7 +96,10 @@ export default {
 		},
 	},
 	created() {
-		this.$store.commit('ai_chat/setGuia', { prueba: this.prueba })
+		// Se guarda el objeto propio para limpiar solo lo que puso ESTA instancia: al cambiar el :key de
+		// App.vue, Vue crea la nueva antes de destruir la vieja, y la vieja le borraba la guía a la nueva.
+		this._guia_registrada = { prueba: this.prueba }
+		this.$store.commit('ai_chat/setGuia', this._guia_registrada)
 	},
 	mounted() {
 		this._origen = this.$el.parentNode
@@ -111,9 +122,11 @@ export default {
 		this.$root.$off('agentes:guia-lugar', this.acomodar_en_agentes)
 		this.$root.$off('agentes:guia-lugar-sale', this.soltar_lugar)
 		this.$root.$off('agentes:guia-pausar', this.pausar)
-		if (this.guia_a_la_vista && !this.en_modulo) this.$store.commit('ai_chat/setPanelAbierto', false)
-		if (this.$store.state.ai_chat.agente === 'guia') this.$store.commit('ai_chat/setAgente', 'asistente')
-		this.$store.commit('ai_chat/setGuia', null)
+		if (this.$store.state.ai_chat.guia === this._guia_registrada) {
+			if (this.guia_a_la_vista && !this.en_modulo) this.$store.commit('ai_chat/setPanelAbierto', false)
+			if (this.$store.state.ai_chat.agente === 'guia') this.$store.commit('ai_chat/setAgente', 'asistente')
+			this.$store.commit('ai_chat/setGuia', null)
+		}
 		// Vue no saca un hijo que movimos a mano cuando desarma a su padre: quedaría huérfano en el lateral.
 		const lugar = this.$el.parentNode
 		if (lugar && lugar.id === LUGAR_EN_AGENTES) lugar.removeChild(this.$el)

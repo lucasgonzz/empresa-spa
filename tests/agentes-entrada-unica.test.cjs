@@ -165,6 +165,14 @@ test('tienda: sin esquema, si parece un dominio se le antepone https', () => {
 	assert.equal(url_de_tienda('mitienda.com.ar'), 'https://mitienda.com.ar/')
 	assert.equal(url_de_tienda('mitienda.com.ar:8080/tienda'), 'https://mitienda.com.ar:8080/tienda')
 	assert.equal(url_de_tienda('www.mi-tienda.com'), 'https://www.mi-tienda.com/')
+	assert.equal(url_de_tienda(' mitienda.com.ar '), 'https://mitienda.com.ar/')
+	assert.equal(url_de_tienda('mitienda.com.ar/'), 'https://mitienda.com.ar/')
+})
+
+test('tienda: sin esquema y sin dominio de verdad no da botón', () => {
+	;['//evil.com', 'localhost', '192.168.0.1'].forEach(valor => {
+		assert.equal(url_de_tienda(valor), null, valor)
+	})
 })
 
 test('tienda: basura y esquemas peligrosos no dan botón', () => {
@@ -317,17 +325,24 @@ test('el lateral sincroniza a quien sigue teniendo el estado de colapsado', () =
 })
 
 test('Probar cierra el lateral para dejar el sistema libre, pero no saca del módulo', () => {
+	// El cierre lo dispara `plegada_a_la_vista`: plegada, con el lateral mostrándola y fuera del módulo.
+	// `instancia()` ya expone los computed como getters vivos.
+	const plegada = (vm) => vm.plegada_a_la_vista
 	const en_sistema = chat_de_guia({ $store: { state: { ai_chat: { agente: 'guia', panel_abierto: true } }, commit() {} } })
 	const commits = []
 	en_sistema.$store.commit = (mutacion, valor) => commits.push([mutacion, valor])
-	DemoChatPanel.watch.colapsado.call(en_sistema, true)
+	assert.equal(plegada(en_sistema), true)
+	DemoChatPanel.watch.plegada_a_la_vista.call(en_sistema, true)
 	assert.deepEqual(commits, [['ai_chat/setPanelAbierto', false]])
 
 	const en_modulo = chat_de_guia({ $route: { name: 'agentes' }, $store: { state: { ai_chat: { agente: 'guia', panel_abierto: false } }, commit() {} } })
-	const commits_modulo = []
-	en_modulo.$store.commit = (mutacion, valor) => commits_modulo.push([mutacion, valor])
-	DemoChatPanel.watch.colapsado.call(en_modulo, true)
-	assert.deepEqual(commits_modulo, [])
+	assert.equal(plegada(en_modulo), false)
+
+	// Probar adentro del módulo con el lateral prendido de antes: al salir de /agentes se cierra.
+	const saliendo = chat_de_guia({ $route: { name: 'agentes' }, $store: { state: { ai_chat: { agente: 'guia', panel_abierto: true } }, commit() {} } })
+	assert.equal(plegada(saliendo), false)
+	saliendo.$route = { name: 'listado' }
+	assert.equal(plegada(saliendo), true)
 })
 
 test('abrir la guía en el módulo no deja prendido el lateral para cuando se salga', () => {
