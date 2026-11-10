@@ -3,6 +3,7 @@ const assert = require('node:assert/strict')
 const { cargar } = require('./helpers/cargar_modulo_esm.cjs')
 
 const { pasos_de_soporte } = cargar('tours/soporte.js')
+const nav = cargar('components/nav/Index.vue', { '@/components/robotito-soporte/Anfitrion': {} }).default
 const anfitrion = cargar('components/robotito-soporte/Anfitrion.vue', {
 	'./Pregunta': {},
 	'./Valoracion': {},
@@ -11,6 +12,20 @@ const historial = cargar('common-vue/components/import/ImportHistory.vue', {
 	moment: {},
 	'@/runtime_config': {},
 }).default
+
+test('la navegación confía en la capacidad de sesión propia y conserva los cortes técnicos', () => {
+	const usuario = flags => ({ id: 11, ...flags })
+	const robotito = (user, es_demo = false, auth = {}) => nav.computed.usuario_robotito.call({
+		$store: { state: { auth: { authenticated: true, user, ...auth }, demo: { es_demo } } },
+	})
+	assert.equal(robotito(usuario({ robotito_soporte_habilitado: true, es_sesion_demo: true }), true), 11)
+	assert.equal(robotito(usuario({ robotito_soporte_habilitado: false })), null)
+	assert.equal(robotito(usuario({ robotito_soporte_habilitado: true, es_sesion_soporte: true })), null)
+	assert.equal(robotito(usuario({ robotito_soporte_habilitado: true, es_acceso_maestro: true })), null)
+	assert.equal(robotito(usuario({ robotito_soporte_habilitado: true }), false, { sesion_sin_conexion: {} }), null)
+	assert.equal(robotito(usuario({ es_sesion_demo: true }), true), null)
+	assert.equal(robotito(usuario({})), 11)
+})
 
 test('solo interpreta guiones conocidos y mantiene el número de pasos del contrato', () => {
 	assert.equal(pasos_de_soporte({ tema: 'crear_ticket' }).length, 3)
@@ -36,6 +51,28 @@ test('la guía de recargos requiere los interruptores y señala después el tota
 	assert.equal(total.ancla, 'vender.total')
 	assert.equal(total.antes, 'mostrar_total_de_venta')
 	assert.deepEqual(total.ruta, recargos.ruta)
+})
+
+test('las exportaciones de Listado señalan su menú y sus dos controles reales', () => {
+	const [menu, nueva, historial] = pasos_de_soporte({ tema: 'guia_dinamica', pasos: [
+		{ clave: 'listado.submenu_exportacion', texto: 'Abrí Exportación.' },
+		{ clave: 'listado.opcion_nueva_exportacion', texto: 'Tocá Nueva exportación.' },
+		{ clave: 'listado.opcion_historial_exportaciones', texto: 'Tocá Historial de exportaciones.' },
+	] })
+	assert.equal(menu.ancla, 'listado.submenu_exportacion')
+	assert.equal(nueva.ancla, 'listado.opcion_nueva_exportacion')
+	assert.equal(historial.ancla, 'listado.opcion_historial_exportaciones')
+	assert.equal(nueva.antes, 'abrir_menu_exportacion')
+	assert.equal(nueva.avanza, 'clic')
+})
+
+test('la valoración espera a que la persona salga del historial de exportaciones', () => {
+	const vm = anfitrion.data()
+	anfitrion.methods.modal_mostrado.call(vm, null, 'export-history')
+	anfitrion.methods.modal_cerrado.call(vm, null, 'import-history')
+	assert.equal(vm.modal_prioritario, 'export-history')
+	anfitrion.methods.modal_cerrado.call(vm, null, 'export-history')
+	assert.equal(vm.modal_prioritario, null)
 })
 
 test('los pasos dinámicos aceptan rutas conocidas, indicaciones y destinos exactos', () => {
