@@ -11,37 +11,31 @@
  * `agentes_version: 1`), así que el contrato con empresa-api y el admin no cambia (C4).
  */
 
-/** Prefijo de la marca de «ya enviado» en el almacenamiento del navegador, por mensaje del asistente. */
+/** Prefijo de la marca de «ya enviado» en el almacenamiento del navegador, por uuid de la oferta. */
 const CLAVE_ENVIADO = 'agentes_soporte_enviado:'
-
-/**
- * Los primeros 24 caracteres del `mensaje_uuid` de una oferta. Son fijos (versión 4 y variante 8, para
- * que pase la regla `uuid` de empresa-api) y los últimos 12 son el id del mensaje del asistente en hex.
- */
-const PREFIJO_DEL_UUID = '5e9a1d00-50fe-4a00-8000-'
 
 /** Los envíos en curso de esta pestaña: dos clics rápidos no mandan la pregunta dos veces. */
 const en_curso = {}
 
+/** El formato de la regla `uuid` de Laravel, que es la que valida empresa-api. */
+const FORMATO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /**
- * El `mensaje_uuid` de la oferta de un mensaje del asistente: SIEMPRE el mismo para el mismo mensaje.
+ * El `mensaje_uuid` de una oferta: el `uuid` que trae el adjunto, o null si no trae uno válido.
  *
- * 🔴 Es lo que hace único el envío, y no la marca del navegador. empresa-api deduplica por ese campo
- * (SupportMessageController::store → mensaje_reintentado(), sobre `support_messages.uuid`, que es
- * UNIQUE): si el POST llegó y se perdió la respuesta, si el lead reintenta desde el globo de Soporte
- * (retrySendMessage reusa el uuid) o si vuelve a tocar el botón en otro dispositivo, el servidor
- * devuelve el mensaje que ya existe en vez de crear otro. Con un uuid nuevo por clic, la pregunta
- * llegaba dos veces.
+ * 🔴 Es lo que hace único el envío, y no la marca del navegador. Lo genera empresa-api al crear la oferta
+ * (HerramientaDeOfrecerSoporte, Str::uuid()), así que es el mismo en cualquier dispositivo y en cada
+ * reintento: SupportMessageController::store → mensaje_reintentado() deduplica por él
+ * (`support_messages.uuid`, UNIQUE) y devuelve el mensaje que ya existe. Nunca se deriva del id del
+ * mensaje: el admin guarda ese uuid UNIQUE entre TODOS los clientes y los ids se repiten entre
+ * instancias. Sin uuid (una respuesta de una API anterior) no hay envío: el botón no se muestra.
  *
- * Los ids de ai_messages son únicos en la base de la instancia, igual que support_messages.uuid.
- *
- * @param {Number|String} message_id
- * @returns {String|null} null si el id no es un entero positivo.
+ * @param {Object|null} oferta El adjunto `{ tipo: 'soporte', texto, uuid }`.
+ * @returns {String|null}
  */
-export function uuid_de_la_oferta(message_id) {
-	const id = Number(message_id)
-	if (!Number.isInteger(id) || id < 1 || id > 0xffffffffffff) return null
-	return PREFIJO_DEL_UUID + ('000000000000' + id.toString(16)).slice(-12)
+export function uuid_de_la_oferta(oferta) {
+	const uuid = oferta && typeof oferta.uuid === 'string' ? oferta.uuid.trim() : ''
+	return FORMATO_UUID.test(uuid) ? uuid.toLowerCase() : null
 }
 
 /**
@@ -68,21 +62,21 @@ export function ticket_para_seguir(tickets) {
  * true si la oferta de ese mensaje ya se mandó desde este navegador. Es solo una comodidad de la
  * interfaz (el envío único lo garantiza el uuid). El almacenamiento puede no estar (modo privado).
  *
- * @param {Number|String} message_id
+ * @param {String} uuid El de la oferta (uuid_de_la_oferta).
  * @returns {Boolean}
  */
-export function ya_enviado(message_id) {
-	if (message_id == null) return false
+export function ya_enviado(uuid) {
+	if (!uuid) return false
 	try {
-		return window.localStorage.getItem(CLAVE_ENVIADO + message_id) === '1'
+		return window.localStorage.getItem(CLAVE_ENVIADO + uuid) === '1'
 	} catch (e) {
 		return false
 	}
 }
 
-function marcar_enviado(message_id) {
+function marcar_enviado(uuid) {
 	try {
-		window.localStorage.setItem(CLAVE_ENVIADO + message_id, '1')
+		window.localStorage.setItem(CLAVE_ENVIADO + uuid, '1')
 	} catch (e) {
 		// Sin almacenamiento el botón igual queda «Enviado a Soporte» mientras siga en pantalla.
 	}
@@ -92,18 +86,17 @@ function marcar_enviado(message_id) {
  * Abre la pestaña Soporte y manda la pregunta como mensaje del lead.
  *
  * @param {Object} componente El que tocó el botón: da `$store`.
- * @param {Number|String} message_id El mensaje del asistente que trajo la oferta (envío único).
- * @param {String} texto La pregunta.
+ * @param {Object} oferta El adjunto `{ tipo: 'soporte', texto, uuid }`.
  * @returns {Promise<String>} 'enviado' | 'cancelado' | 'error'
  */
-export function seguir_con_soporte(componente, message_id, texto) {
+export function seguir_con_soporte(componente, oferta) {
 	const store = componente.$store
-	const contenido = typeof texto === 'string' ? texto.trim() : ''
-	const mensaje_uuid = uuid_de_la_oferta(message_id)
+	const contenido = oferta && typeof oferta.texto === 'string' ? oferta.texto.trim() : ''
+	const mensaje_uuid = uuid_de_la_oferta(oferta)
 	if (!contenido || !mensaje_uuid) return Promise.resolve('error')
-	if (ya_enviado(message_id)) return Promise.resolve('enviado')
-	if (en_curso[message_id] || store.state.support_message.sending) return Promise.resolve('cancelado')
-	en_curso[message_id] = true
+	if (ya_enviado(mensaje_uuid)) return Promise.resolve('enviado')
+	if (en_curso[mensaje_uuid] || store.state.support_message.sending) return Promise.resolve('cancelado')
+	en_curso[mensaje_uuid] = true
 
 	store.commit('ai_chat/setAgente', 'soporte')
 
@@ -130,7 +123,7 @@ export function seguir_con_soporte(componente, message_id, texto) {
 				})
 				.then(function (modelo) {
 					if (!modelo) return 'error'
-					marcar_enviado(message_id)
+					marcar_enviado(mensaje_uuid)
 					// Sin conversación abierta, el envío creó una: se la deja elegida, como Soporte.vue::enviar.
 					if (id == null && modelo.support_ticket_id) {
 						store.dispatch('support_message/loadTicketMessages', { id: modelo.support_ticket_id, agentes: true })
@@ -140,7 +133,7 @@ export function seguir_con_soporte(componente, message_id, texto) {
 		})
 		.catch(function () { return 'error' })
 		.then(function (resultado) {
-			delete en_curso[message_id]
+			delete en_curso[mensaje_uuid]
 			return resultado
 		})
 }

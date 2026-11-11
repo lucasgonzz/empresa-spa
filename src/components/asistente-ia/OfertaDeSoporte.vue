@@ -24,25 +24,21 @@
 </template>
 
 <script>
-import { seguir_con_soporte, ya_enviado } from '@/components/asistente-ia/seguir_con_soporte'
+import { seguir_con_soporte, uuid_de_la_oferta, ya_enviado } from '@/components/asistente-ia/seguir_con_soporte'
 
 export default {
 	props: {
-		// El id del mensaje del asistente que trajo la oferta: es la clave del envío único.
-		message_id: {
-			type: [Number, String],
-			required: true,
-		},
-		// La pregunta del lead, tal como la armó el asistente.
-		texto: {
-			type: String,
+		// El adjunto `{ tipo: 'soporte', texto, uuid }`: su uuid es la clave del envío único (lo genera
+		// empresa-api). mensaje/agente/Index.vue no monta el botón si no trae uno válido.
+		oferta: {
+			type: Object,
 			required: true,
 		},
 	},
 	data() {
 		return {
 			// 'listo' | 'enviando' | 'enviado' | 'error'
-			estado: ya_enviado(this.message_id) ? 'enviado' : 'listo',
+			estado: ya_enviado(uuid_de_la_oferta(this.oferta)) ? 'enviado' : 'listo',
 		}
 	},
 	computed: {
@@ -52,14 +48,14 @@ export default {
 			return 'Seguir con Soporte'
 		},
 		id_error() {
-			return 'asistente-ia-soporte-error-' + this.message_id
+			return 'asistente-ia-soporte-error-' + uuid_de_la_oferta(this.oferta)
 		},
 	},
 	methods: {
 		seguir() {
 			if (this.estado === 'enviando' || this.estado === 'enviado') return
 			this.estado = 'enviando'
-			return seguir_con_soporte(this, this.message_id, this.texto).then(resultado => {
+			return seguir_con_soporte(this, this.oferta).then(resultado => {
 				this.estado = resultado === 'cancelado' ? 'listo' : resultado
 			})
 		},

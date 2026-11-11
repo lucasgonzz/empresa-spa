@@ -53,6 +53,16 @@ function store_con(tickets, opciones) {
 	}
 }
 
+/**
+ * Una oferta como la guarda empresa-api, con un uuid propio por número.
+ *
+ * @param {Number} n
+ * @param {String} [texto]
+ */
+function una_oferta(n, texto) {
+	return { tipo: 'soporte', url: null, texto: texto || 'Hola', articulo_id: null, uuid: '3f2b8c1e-7d4a-4c6b-9e21-' + ('000000000000' + n).slice(-12) }
+}
+
 function envios(store) {
 	return store.registro.dispatches.filter(par => par[0] === 'support_message/sendMessage').map(par => par[1])
 }
@@ -84,13 +94,21 @@ test('S1: DemoChatPanel quedó solo para la demo, con su guía, sus videos y el 
 	assert.doesNotMatch(fuente('components/asistente-ia/Panel.vue'), /Tu asistente de la prueba|guia\.prueba/)
 })
 
-test('S2: el uuid del envío sale del id del mensaje: siempre el mismo y válido para la regla uuid', () => {
-	const uuid = soporte.uuid_de_la_oferta(501)
-	assert.equal(uuid, '5e9a1d00-50fe-4a00-8000-0000000001f5')
-	assert.equal(soporte.uuid_de_la_oferta('501'), uuid)
-	assert.notEqual(soporte.uuid_de_la_oferta(502), uuid)
-	assert.match(uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
-	;[null, 0, -3, 1.5, 'abc'].forEach(id => assert.equal(soporte.uuid_de_la_oferta(id), null, String(id)))
+test('S2: el uuid del envío es el del adjunto, nunca uno derivado del id del mensaje', () => {
+	assert.equal(soporte.uuid_de_la_oferta(una_oferta(1)), '3f2b8c1e-7d4a-4c6b-9e21-000000000001')
+	assert.equal(soporte.uuid_de_la_oferta({ uuid: ' 3F2B8C1E-7D4A-4C6B-9E21-000000000001 ' }), '3f2b8c1e-7d4a-4c6b-9e21-000000000001')
+	;[null, {}, { uuid: '' }, { uuid: 'no-es-un-uuid' }, { uuid: 501 }].forEach(valor => assert.equal(soporte.uuid_de_la_oferta(valor), null, JSON.stringify(valor)))
+	assert.doesNotMatch(fuente('components/asistente-ia/seguir_con_soporte.js'), /5e9a1d00|toString\(16\)/, 'No queda el uuid derivado del id.')
+})
+
+test('S2: sin uuid (una API anterior) no hay envío', () => {
+	const store = store_con([])
+	const sin_uuid = { tipo: 'soporte', texto: 'Hola' }
+	return soporte.seguir_con_soporte({ $store: store }, sin_uuid).then(resultado => {
+		assert.equal(resultado, 'error')
+		assert.equal(store.registro.dispatches.length, 0)
+		assert.equal(store.registro.commits.length, 0)
+	})
 })
 
 test('S2: va a la conversación abierta del sistema, nunca a la de WhatsApp, y ninguna si no hay', () => {
@@ -107,27 +125,28 @@ test('S2: va a la conversación abierta del sistema, nunca a la de WhatsApp, y n
 test('S2: abre Soporte y manda la pregunta por el envío del compositor, con el uuid del mensaje', () => {
 	const store = store_con([{ id: 3, status: 'open', origen: 'sistema' }])
 	const componente = { $store: store }
-	return soporte.seguir_con_soporte(componente, 501, '  ¿Cómo cargo una compra?  ').then(resultado => {
+	const la_oferta = una_oferta(501, '  ¿Cómo cargo una compra?  ')
+	return soporte.seguir_con_soporte(componente, la_oferta).then(resultado => {
 		assert.equal(resultado, 'enviado')
 		assert.deepEqual(store.registro.commits[0], ['ai_chat/setAgente', 'soporte'])
-		assert.deepEqual(envios(store), [{ body: '¿Cómo cargo una compra?', kind: 'text', agentes_version: 1, mensaje_uuid: soporte.uuid_de_la_oferta(501), ticket_id: 3 }])
-		assert.equal(soporte.ya_enviado(501), true)
-		return soporte.seguir_con_soporte(componente, 501, '¿Cómo cargo una compra?')
+		assert.deepEqual(envios(store), [{ body: '¿Cómo cargo una compra?', kind: 'text', agentes_version: 1, mensaje_uuid: la_oferta.uuid, ticket_id: 3 }])
+		assert.equal(soporte.ya_enviado(la_oferta.uuid), true)
+		return soporte.seguir_con_soporte(componente, la_oferta)
 	}).then(segunda => {
 		assert.equal(segunda, 'enviado')
 		assert.equal(envios(store).length, 1, 'El segundo clic no manda nada.')
 	})
 })
 
-test('S2: dos envíos del mismo mensaje (otro dispositivo, sin la marca local) llevan el mismo uuid', () => {
+test('S2: el mismo mensaje en dos dispositivos (sin la marca local) manda el mismo uuid, porque viene del adjunto', () => {
 	const primero = store_con([])
 	const segundo = store_con([{ id: 7, status: 'open', origen: 'sistema' }])
-	return soporte.seguir_con_soporte({ $store: primero }, 510, 'Hola').then(() => {
-		delete guardado['agentes_soporte_enviado:510']
-		return soporte.seguir_con_soporte({ $store: segundo }, 510, 'Hola')
+	return soporte.seguir_con_soporte({ $store: primero }, una_oferta(510)).then(() => {
+		Object.keys(guardado).forEach(clave => { delete guardado[clave] })
+		return soporte.seguir_con_soporte({ $store: segundo }, JSON.parse(JSON.stringify(una_oferta(510))))
 	}).then(() => {
 		assert.equal(envios(primero)[0].mensaje_uuid, envios(segundo)[0].mensaje_uuid)
-		assert.equal(envios(primero)[0].mensaje_uuid, soporte.uuid_de_la_oferta(510))
+		assert.equal(envios(primero)[0].mensaje_uuid, una_oferta(510).uuid)
 	})
 })
 
@@ -135,8 +154,8 @@ test('S2: dos clics seguidos mandan un solo mensaje y, sin conversación abierta
 	const store = store_con([])
 	const componente = { $store: store }
 	return Promise.all([
-		soporte.seguir_con_soporte(componente, 502, 'Hola'),
-		soporte.seguir_con_soporte(componente, 502, 'Hola'),
+		soporte.seguir_con_soporte(componente, una_oferta(502)),
+		soporte.seguir_con_soporte(componente, una_oferta(502)),
 	]).then(resultados => {
 		assert.deepEqual(resultados.slice().sort(), ['cancelado', 'enviado'])
 		assert.equal(envios(store).length, 1)
@@ -147,7 +166,7 @@ test('S2: dos clics seguidos mandan un solo mensaje y, sin conversación abierta
 
 test('S2: con un ticket de WhatsApp abierto no hay traspaso: abre una conversación del sistema', () => {
 	const store = store_con([{ id: 9, status: 'open', origen: 'whatsapp' }])
-	return soporte.seguir_con_soporte({ $store: store }, 503, 'Hola').then(resultado => {
+	return soporte.seguir_con_soporte({ $store: store }, una_oferta(503)).then(resultado => {
 		assert.equal(resultado, 'enviado')
 		assert.equal(envios(store).length, 1)
 		assert.equal(envios(store)[0].ticket_id, null, 'No sigue en el ticket de WhatsApp.')
@@ -157,17 +176,17 @@ test('S2: con un ticket de WhatsApp abierto no hay traspaso: abre una conversaci
 
 test('S2: si la bandeja no cargó, no manda nada y se puede reintentar', () => {
 	const store = store_con([], { cargo: false })
-	return soporte.seguir_con_soporte({ $store: store }, 505, 'Hola').then(resultado => {
+	return soporte.seguir_con_soporte({ $store: store }, una_oferta(505)).then(resultado => {
 		assert.equal(resultado, 'error')
 		assert.equal(envios(store).length, 0)
 		assert.equal(store.registro.dispatches.some(par => par[0] === 'support_message/loadTicketMessages'), false, 'No abre una conversación a ciegas.')
-		assert.equal(soporte.ya_enviado(505), false)
+		assert.equal(soporte.ya_enviado(una_oferta(505).uuid), false)
 		store.dispatch = (accion, valor) => {
 			store.registro.dispatches.push([accion, valor])
 			if (accion === 'support_message/sendMessage') return Promise.resolve({ id: 1, support_ticket_id: 7 })
 			return Promise.resolve(true)
 		}
-		return soporte.seguir_con_soporte({ $store: store }, 505, 'Hola')
+		return soporte.seguir_con_soporte({ $store: store }, una_oferta(505))
 	}).then(resultado => {
 		assert.equal(resultado, 'enviado')
 		assert.equal(envios(store).length, 1)
@@ -193,9 +212,9 @@ test('S2: getAgentes resuelve true si llegó la bandeja y false si falló', () =
 
 test('S2: si el envío falla, no queda marcado como enviado', () => {
 	const store = store_con([], { modelo: null })
-	return soporte.seguir_con_soporte({ $store: store }, 504, 'Hola').then(resultado => {
+	return soporte.seguir_con_soporte({ $store: store }, una_oferta(504)).then(resultado => {
 		assert.equal(resultado, 'error')
-		assert.equal(soporte.ya_enviado(504), false)
+		assert.equal(soporte.ya_enviado(una_oferta(504).uuid), false)
 	})
 })
 
@@ -210,16 +229,18 @@ test('S2: el mensaje del agente dibuja el botón solo con un adjunto soporte, y 
 		'@/components/asistente-ia/valoracion': { valoracion_de: () => null },
 		'@/components/asistente-ia/identidad': { logo_del_negocio: () => '' },
 		'@/components/asistente-ia/portapapeles': { copiar_al_portapapeles: () => Promise.resolve() },
+		'@/components/asistente-ia/seguir_con_soporte': soporte,
 	}).default
 	const oferta = (adjuntos, extra) => {
 		const vm = Object.assign({ hasExtencion: slug => slug === 'support_chat', message: { id: 8, adjuntos } }, extra)
 		vm.adjuntos_visibles = Agente.computed.adjuntos_visibles.call(vm)
 		return Agente.computed.oferta_de_soporte.call(vm)
 	}
-	const de_soporte = { tipo: 'soporte', url: null, texto: '¿Cómo cargo una compra?', articulo_id: null }
+	const de_soporte = una_oferta(8, '¿Cómo cargo una compra?')
 	assert.equal(oferta([{ tipo: 'imagen', url: 'https://fotos.test/a.jpg' }, de_soporte]), de_soporte)
 	assert.equal(oferta([{ tipo: 'video_raro', texto: 'x' }, null, { tipo: 'soporte', texto: '  ' }]), null)
 	assert.equal(oferta([de_soporte], { hasExtencion: () => false }), null, 'Sin Soporte no hay botón.')
+	assert.equal(oferta([{ tipo: 'soporte', url: null, texto: 'Hola', articulo_id: null }]), null, 'Sin uuid (API anterior) no hay botón.')
 	assert.equal(oferta([de_soporte], { message: { id: null, adjuntos: [de_soporte] } }), null)
 	assert.equal(oferta(undefined), null)
 
@@ -231,9 +252,10 @@ test('S2: el mensaje del agente dibuja el botón solo con un adjunto soporte, y 
 
 test('S2: el botón pasa a «Enviado a Soporte» y no se vuelve a tocar', () => {
 	const Oferta = cargar('components/asistente-ia/OfertaDeSoporte.vue', {
-		'@/components/asistente-ia/seguir_con_soporte': { ya_enviado: () => false, seguir_con_soporte: () => Promise.resolve('enviado') },
+		'@/components/asistente-ia/seguir_con_soporte': { ya_enviado: () => false, uuid_de_la_oferta: soporte.uuid_de_la_oferta, seguir_con_soporte: () => Promise.resolve('enviado') },
 	}).default
-	const vm = Object.assign({}, Oferta.methods, Oferta.data.call({ message_id: 1 }), { message_id: 1, texto: 'Hola' })
+	const la_oferta = { tipo: 'soporte', texto: 'Hola', uuid: '3f2b8c1e-7d4a-4c6b-9e21-000000000001' }
+	const vm = Object.assign({}, Oferta.methods, Oferta.data.call({ oferta: la_oferta }), { oferta: la_oferta })
 	assert.equal(Oferta.computed.etiqueta.call(vm), 'Seguir con Soporte')
 	return vm.seguir().then(() => {
 		assert.equal(vm.estado, 'enviado')

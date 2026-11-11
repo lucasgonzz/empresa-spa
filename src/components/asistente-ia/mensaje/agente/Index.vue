@@ -69,8 +69,7 @@
 			el adjunto `tipo: 'soporte'`. AdjuntosDeMensaje la ignora (solo pinta imágenes). -->
 			<oferta-de-soporte
 			v-if="oferta_de_soporte"
-			:message_id="message.id"
-			:texto="oferta_de_soporte.texto"></oferta-de-soporte>
+			:oferta="oferta_de_soporte"></oferta-de-soporte>
 
 			<!-- Tarjetas de carga que propuso el asistente (misión asistente-ia-acciones,
 			15/9/2026): una por acción, debajo del texto. Las 'descartada' no se pintan (son de
@@ -135,6 +134,7 @@ import { segmentar_mensaje } from '@/components/asistente-ia/formato'
 import { valoracion_de } from '@/components/asistente-ia/valoracion'
 import { logo_del_negocio } from '@/components/asistente-ia/identidad'
 import { copiar_al_portapapeles } from '@/components/asistente-ia/portapapeles'
+import { uuid_de_la_oferta } from '@/components/asistente-ia/seguir_con_soporte'
 
 /**
  * Texto del `title` (y de lo que lee un lector de pantalla) de cada tipo de mención. El de
@@ -328,15 +328,16 @@ export default {
 		},
 		/**
 		 * La oferta de Soporte del mensaje (`{ tipo: 'soporte', texto }`, misión
-		 * prueba-ayuda-unificada-en-soporte), o null. Solo una, solo de una respuesta guardada (el id es
-		 * la clave del envío único) y solo si la cuenta tiene Soporte: sin la pestaña no hay a dónde ir.
+		 * prueba-ayuda-unificada-en-soporte), o null. Solo una, solo de una respuesta guardada, solo con un
+		 * `uuid` válido (es la clave del envío único: sin él, una respuesta de una API anterior, no hay
+		 * botón) y solo si la cuenta tiene Soporte: sin la pestaña no hay a dónde ir.
 		 *
 		 * @returns {Object|null}
 		 */
 		oferta_de_soporte() {
 			if (!this.message.id || !this.hasExtencion('support_chat')) return null
 			const oferta = this.adjuntos_visibles.find(adjunto => adjunto && adjunto.tipo === 'soporte'
-				&& typeof adjunto.texto === 'string' && adjunto.texto.trim() !== '')
+				&& typeof adjunto.texto === 'string' && adjunto.texto.trim() !== '' && uuid_de_la_oferta(adjunto) !== null)
 			return oferta || null
 		},
 		/**
