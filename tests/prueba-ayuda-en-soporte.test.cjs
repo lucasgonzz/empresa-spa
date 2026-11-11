@@ -28,11 +28,7 @@ global.window.localStorage = {
 	setItem: (clave, valor) => { guardado[clave] = String(valor) },
 }
 
-let confirmaciones = 0
-let respuesta_confirmacion = true
-const soporte = cargar('components/asistente-ia/seguir_con_soporte.js', {
-	'@/components/asistente-ia/traspaso': { confirmar_traspaso: () => { confirmaciones += 1; return Promise.resolve(respuesta_confirmacion) } },
-})
+const soporte = cargar('components/asistente-ia/seguir_con_soporte.js')
 
 /**
  * Un store con los tickets dados que registra commits y dispatches.
@@ -43,6 +39,7 @@ const soporte = cargar('components/asistente-ia/seguir_con_soporte.js', {
 function store_con(tickets, opciones) {
 	const registro = { commits: [], dispatches: [] }
 	const modelo = opciones && Object.prototype.hasOwnProperty.call(opciones, 'modelo') ? opciones.modelo : { id: 99, support_ticket_id: 7 }
+	const cargo = opciones && Object.prototype.hasOwnProperty.call(opciones, 'cargo') ? opciones.cargo : true
 	return {
 		registro,
 		state: { support_ticket: { models: tickets }, support_message: { sending: false } },
@@ -50,6 +47,7 @@ function store_con(tickets, opciones) {
 		dispatch: (accion, valor) => {
 			registro.dispatches.push([accion, valor])
 			if (accion === 'support_message/sendMessage') return Promise.resolve(modelo)
+			if (accion === 'support_ticket/getAgentes') return Promise.resolve(cargo)
 			return Promise.resolve()
 		},
 	}
@@ -86,27 +84,33 @@ test('S1: DemoChatPanel quedó solo para la demo, con su guía, sus videos y el 
 	assert.doesNotMatch(fuente('components/asistente-ia/Panel.vue'), /Tu asistente de la prueba|guia\.prueba/)
 })
 
-test('S2: elige la conversación abierta del sistema antes que la de WhatsApp, y ninguna si no hay abiertas', () => {
+test('S2: el uuid del envío sale del id del mensaje: siempre el mismo y válido para la regla uuid', () => {
+	const uuid = soporte.uuid_de_la_oferta(501)
+	assert.equal(uuid, '5e9a1d00-50fe-4a00-8000-0000000001f5')
+	assert.equal(soporte.uuid_de_la_oferta('501'), uuid)
+	assert.notEqual(soporte.uuid_de_la_oferta(502), uuid)
+	assert.match(uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+	;[null, 0, -3, 1.5, 'abc'].forEach(id => assert.equal(soporte.uuid_de_la_oferta(id), null, String(id)))
+})
+
+test('S2: va a la conversación abierta del sistema, nunca a la de WhatsApp, y ninguna si no hay', () => {
 	const sistema = { id: 3, status: 'open', origen: 'sistema' }
 	const whatsapp = { id: 9, status: 'open', origen: 'whatsapp' }
 	assert.equal(soporte.ticket_para_seguir([whatsapp, sistema, { id: 12, status: 'closed', origen: 'sistema' }]), sistema)
-	assert.equal(soporte.ticket_para_seguir([whatsapp, { id: 4, status: 'open', origen: 'whatsapp' }]), whatsapp)
+	assert.equal(soporte.ticket_para_seguir([whatsapp, { id: 4, status: 'open', origen: 'whatsapp', sistema_exclusivo_at: '2026-11-10' }]), null)
 	assert.equal(soporte.ticket_para_seguir([{ id: 1, status: 'closed' }]), null)
 	assert.equal(soporte.ticket_para_seguir(undefined), null)
-	assert.equal(soporte.necesita_traspaso(whatsapp), true)
-	assert.equal(soporte.necesita_traspaso(Object.assign({}, whatsapp, { sistema_exclusivo_at: '2026-11-10' })), false)
-	assert.equal(soporte.necesita_traspaso(sistema), false)
+	assert.equal(soporte.necesita_traspaso, undefined, 'El botón no tiene rama de traspaso.')
+	assert.doesNotMatch(fuente('components/asistente-ia/seguir_con_soporte.js'), /confirmar_traspaso\(|traspasar_a_sistema:/)
 })
 
-test('S2: abre Soporte y manda la pregunta una sola vez por el envío del compositor, sin confirmar en el sistema', () => {
-	confirmaciones = 0
+test('S2: abre Soporte y manda la pregunta por el envío del compositor, con el uuid del mensaje', () => {
 	const store = store_con([{ id: 3, status: 'open', origen: 'sistema' }])
 	const componente = { $store: store }
 	return soporte.seguir_con_soporte(componente, 501, '  ¿Cómo cargo una compra?  ').then(resultado => {
 		assert.equal(resultado, 'enviado')
 		assert.deepEqual(store.registro.commits[0], ['ai_chat/setAgente', 'soporte'])
-		assert.deepEqual(envios(store), [{ body: '¿Cómo cargo una compra?', kind: 'text', agentes_version: 1, ticket_id: 3 }])
-		assert.equal(confirmaciones, 0)
+		assert.deepEqual(envios(store), [{ body: '¿Cómo cargo una compra?', kind: 'text', agentes_version: 1, mensaje_uuid: soporte.uuid_de_la_oferta(501), ticket_id: 3 }])
 		assert.equal(soporte.ya_enviado(501), true)
 		return soporte.seguir_con_soporte(componente, 501, '¿Cómo cargo una compra?')
 	}).then(segunda => {
@@ -115,7 +119,19 @@ test('S2: abre Soporte y manda la pregunta una sola vez por el envío del compos
 	})
 })
 
-test('S2: dos clics seguidos mandan un solo mensaje', () => {
+test('S2: dos envíos del mismo mensaje (otro dispositivo, sin la marca local) llevan el mismo uuid', () => {
+	const primero = store_con([])
+	const segundo = store_con([{ id: 7, status: 'open', origen: 'sistema' }])
+	return soporte.seguir_con_soporte({ $store: primero }, 510, 'Hola').then(() => {
+		delete guardado['agentes_soporte_enviado:510']
+		return soporte.seguir_con_soporte({ $store: segundo }, 510, 'Hola')
+	}).then(() => {
+		assert.equal(envios(primero)[0].mensaje_uuid, envios(segundo)[0].mensaje_uuid)
+		assert.equal(envios(primero)[0].mensaje_uuid, soporte.uuid_de_la_oferta(510))
+	})
+})
+
+test('S2: dos clics seguidos mandan un solo mensaje y, sin conversación abierta, abre una nueva', () => {
 	const store = store_con([])
 	const componente = { $store: store }
 	return Promise.all([
@@ -124,27 +140,54 @@ test('S2: dos clics seguidos mandan un solo mensaje', () => {
 	]).then(resultados => {
 		assert.deepEqual(resultados.slice().sort(), ['cancelado', 'enviado'])
 		assert.equal(envios(store).length, 1)
-		// Sin conversación abierta, abre una nueva y la deja elegida.
 		assert.equal(envios(store)[0].ticket_id, null)
 		assert.deepEqual(store.registro.dispatches[store.registro.dispatches.length - 1], ['support_message/loadTicketMessages', { id: 7, agentes: true }])
 	})
 })
 
-test('S2: en una conversación de WhatsApp pide confirmación; cancelada, no manda y se puede volver a tocar', () => {
-	confirmaciones = 0
-	respuesta_confirmacion = false
+test('S2: con un ticket de WhatsApp abierto no hay traspaso: abre una conversación del sistema', () => {
 	const store = store_con([{ id: 9, status: 'open', origen: 'whatsapp' }])
 	return soporte.seguir_con_soporte({ $store: store }, 503, 'Hola').then(resultado => {
-		assert.equal(resultado, 'cancelado')
-		assert.equal(confirmaciones, 1)
+		assert.equal(resultado, 'enviado')
+		assert.equal(envios(store).length, 1)
+		assert.equal(envios(store)[0].ticket_id, null, 'No sigue en el ticket de WhatsApp.')
+		assert.equal('traspasar_a_sistema' in envios(store)[0], false)
+	})
+})
+
+test('S2: si la bandeja no cargó, no manda nada y se puede reintentar', () => {
+	const store = store_con([], { cargo: false })
+	return soporte.seguir_con_soporte({ $store: store }, 505, 'Hola').then(resultado => {
+		assert.equal(resultado, 'error')
 		assert.equal(envios(store).length, 0)
-		assert.equal(soporte.ya_enviado(503), false)
-		respuesta_confirmacion = true
-		return soporte.seguir_con_soporte({ $store: store }, 503, 'Hola')
+		assert.equal(store.registro.dispatches.some(par => par[0] === 'support_message/loadTicketMessages'), false, 'No abre una conversación a ciegas.')
+		assert.equal(soporte.ya_enviado(505), false)
+		store.dispatch = (accion, valor) => {
+			store.registro.dispatches.push([accion, valor])
+			if (accion === 'support_message/sendMessage') return Promise.resolve({ id: 1, support_ticket_id: 7 })
+			return Promise.resolve(true)
+		}
+		return soporte.seguir_con_soporte({ $store: store }, 505, 'Hola')
 	}).then(resultado => {
 		assert.equal(resultado, 'enviado')
-		assert.equal(envios(store)[0].traspasar_a_sistema, 1)
-		assert.equal(envios(store)[0].ticket_id, 9)
+		assert.equal(envios(store).length, 1)
+	})
+})
+
+test('S2: getAgentes resuelve true si llegó la bandeja y false si falló', () => {
+	const armar = respuesta => cargar('store/support_ticket.js', {
+		'@/store/__base_store': { __esModule: true, default: opciones => opciones },
+		'@/runtime_config': { env: () => 'http://api.test' },
+		axios: { __esModule: true, default: { defaults: {}, get: () => respuesta } },
+	}).default
+	const ctx = () => ({ commit: () => {}, state: { descarga_de_models_token: 0 }, rootState: { auth: { user: {} } } })
+	const bien = armar(Promise.resolve({ data: { models: [] } }))
+	const mal = armar(Promise.reject(new Error('sin red')))
+	const log = console.log
+	console.log = () => {}
+	return Promise.all([bien.actions.getAgentes(ctx()), mal.actions.getAgentes(ctx())]).then(valores => {
+		console.log = log
+		assert.deepEqual(valores, [true, false])
 	})
 })
 
