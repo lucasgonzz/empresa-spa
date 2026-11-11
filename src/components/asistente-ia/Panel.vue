@@ -211,7 +211,7 @@ export default {
 		 */
 		agente_activo() {
 			const agente = this.$store.state.ai_chat.agente
-			// Una cuenta que solo tiene la guía (un empleado de demo o de prueba) cae siempre en ella:
+			// Una cuenta que solo tiene la guía (un empleado de la demo) cae siempre en ella:
 			// si no, el lateral quedaba vacío con el 'asistente' por defecto del store.
 			if (this.puede_guia && (agente === 'guia' || (!this.puede_asistente && !this.puede_soporte))) return 'guia'
 			if (this.puede_soporte && (!this.puede_asistente || agente === 'soporte')) return 'soporte'
@@ -231,10 +231,8 @@ export default {
 			return this.cabecera_ampliada && (this.es_movil || (this.es_lateral && this.viewport_width < 1000))
 		},
 		texto_canal() {
-			if (this.guia_activa) {
-				const guia = this.$store.state.ai_chat.guia
-				return guia && guia.prueba ? 'Tu asistente de la prueba: preguntá lo que necesites, a tu ritmo.' : 'Tu asistente de la demo: explorá, preguntá y probá.'
-			}
+			// «Tu guía» existe solo en la demo (misión prueba-ayuda-unificada-en-soporte: la prueba la perdió).
+			if (this.guia_activa) return 'Tu asistente de la demo: explorá, preguntá y probá.'
 			return this.soporte_activo ? 'Conversaciones supervisadas por el equipo de Soporte de ComercioCity.' : 'Esta conversación es privada entre vos y tu asistente personal.'
 		},
 		lista_es_cajon() { return this.es_movil || (this.es_lateral && this.viewport_width < 1000) },

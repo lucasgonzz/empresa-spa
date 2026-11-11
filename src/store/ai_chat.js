@@ -515,8 +515,9 @@ export default {
 		selected_conversation_id: null,
 		// Agente elegido en el lateral: 'asistente' | 'soporte' | 'guia' (la conversación de los videos).
 		agente: 'asistente',
-		// null, o { prueba: Boolean } mientras DemoChatPanel está montado: quien tenía el botón flotante
-		// tiene la pestaña «Tu guía», sin repetir acá la regla de quién puede usarla.
+		// null, o un objeto propio de DemoChatPanel mientras está montado: quien tenía el botón flotante
+		// tiene la pestaña «Tu guía», sin repetir acá la regla de quién puede usarla. Desde la misión
+		// prueba-ayuda-unificada-en-soporte (10/11/2026) solo la demo lo monta: la prueba no tiene guía.
 		guia: null,
 		revision_sesion: 0,
 		revision_seleccion: 0,
