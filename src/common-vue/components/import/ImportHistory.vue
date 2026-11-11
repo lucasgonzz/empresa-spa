@@ -1372,9 +1372,18 @@ export default {
 			.then(function(res) {
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
-				self.$toast.success('Enviado, te avisaremos cuando termine')
+				self.$toast.success('La reversión se está haciendo en segundo plano. Podés seguirla en Procesos en segundo plano; te avisamos cuando termine.')
 				self.$set(model, 'rollback_status', 'encolado')
 				self.$set(model, 'can_revert', false)
+				/*
+				 * El backend ya registró la reversión como proceso en segundo plano ("En espera"). El
+				 * aviso en vivo (Pusher) la agrega solo, pero se pide la lista igual para que aparezca
+				 * en la píldora y en el historial aunque ese aviso se pierda. Este componente lo
+				 * comparten otros SPA: el store background_processes es solo del de empresa.
+				 */
+				if (self.$store.state.background_processes) {
+					self.$store.dispatch('background_processes/getModels')
+				}
 			})
 			.catch(function(err) {
 				self.$store.commit('auth/setLoading', false)
