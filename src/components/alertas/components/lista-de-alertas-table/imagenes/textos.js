@@ -29,6 +29,9 @@ export const ORIGENES = {
 	// 11/11/2026). No se buscan en Google ni las mira la IA: las que cruzan exacto por código de
 	// barras o de proveedor se asignan solas y las dudosas quedan en "A revisar" para el dueño.
 	proveedor_web: 'Web del proveedor',
+	// Lo mismo con las fotos que soporte sacó del catálogo en PDF que mandó el dueño: la `fuente` es
+	// `adjunto-<id>.pdf` y no hay página web a la que llevar.
+	proveedor_pdf: 'Catálogo PDF del proveedor',
 }
 
 /**
@@ -217,14 +220,47 @@ export function es_de_catalogo(asignacion) {
 
 /**
  * True si las fotos de la asignación las trajo soporte de la página web de un proveedor (origen
- * `proveedor_web`). En esas no hubo búsquedas en Google ni validaciones con IA: las pantallas no
- * tienen que decir "Google Imágenes" ni "0 búsquedas" como si se hubiera buscado.
+ * `proveedor_web`).
  *
  * @param {Object} asignacion RunPayload.
  * @returns {Boolean}
  */
 export function es_de_proveedor_web(asignacion) {
 	return !!asignacion && asignacion.origen === 'proveedor_web'
+}
+
+/**
+ * True si las fotos de la asignación las sacó soporte del catálogo en PDF de un proveedor (origen
+ * `proveedor_pdf`).
+ *
+ * @param {Object} asignacion RunPayload.
+ * @returns {Boolean}
+ */
+export function es_de_proveedor_pdf(asignacion) {
+	return !!asignacion && asignacion.origen === 'proveedor_pdf'
+}
+
+/**
+ * True si las fotos las trajo soporte de un proveedor (su web o su catálogo en PDF). En esas no hubo
+ * búsquedas en Google ni validaciones con IA: las pantallas no tienen que decir "Google Imágenes"
+ * ni "0 búsquedas" como si se hubiera buscado.
+ *
+ * @param {Object} asignacion RunPayload.
+ * @returns {Boolean}
+ */
+export function es_de_un_proveedor(asignacion) {
+	return es_de_proveedor_web(asignacion) || es_de_proveedor_pdf(asignacion)
+}
+
+/**
+ * True si una fuente es la de un catálogo en PDF (`adjunto-<id>.pdf`): es un nombre interno del
+ * adjunto del ticket, no un sitio, y no se muestra como tal.
+ *
+ * @param {String} fuente
+ * @returns {Boolean}
+ */
+export function es_fuente_pdf(fuente) {
+	return /^adjunto-\d+\.pdf$/i.test(String(fuente || '').trim())
 }
 
 /**
@@ -248,33 +284,39 @@ export function dominio_de(texto) {
 
 /**
  * El sitio del proveedor de una asignación de la web del proveedor, para mostrar ("ferreteria.com.ar").
- * La API lo manda en `fuente` (dominio o URL). '' si no vino: la pantalla dice entonces solo "Web
- * del proveedor".
+ * La API lo manda en `fuente` (dominio o URL). '' si no vino, y también si la fuente es la de un
+ * catálogo en PDF (`adjunto-<id>.pdf`): no es un sitio.
  *
  * @param {Object} asignacion RunPayload.
  * @returns {String}
  */
 export function fuente_de(asignacion) {
-	if (!asignacion) {
+	if (!asignacion || es_fuente_pdf(asignacion.fuente)) {
 		return ''
 	}
 	return dominio_de(asignacion.fuente)
 }
 
 /**
- * Lo que se sabe del origen de la imagen de un item de la web del proveedor: el sitio y la página
- * del producto donde estaba. Lee `url_origen` / `fuente` (lo que guarda la carga desde soporte en
- * `imagen_meta`) y, si no vinieron, `pagina` / `dominio`, que son los nombres de siempre del
- * contrato. `pagina` solo si es un link web (ver url_segura): va a un href.
+ * Lo que se sabe del origen de la imagen de un item: el sitio y la página donde estaba. Lee
+ * `url_origen` / `fuente` (lo que guarda la carga desde soporte en `imagen_meta`) y, si no
+ * vinieron, `pagina` / `dominio`, que son los nombres de siempre del contrato. `pagina` solo si es
+ * un link web (ver url_segura): va a un href.
+ *
+ * Una foto del catálogo en PDF trae como dominio `adjunto-<id>.pdf` y ninguna página: se nombra
+ * "catálogo en PDF" y va sin link.
  *
  * @param {Object|null} imagen `imagen` de un ItemPayload.
- * @returns {Object} { dominio, pagina }
+ * @returns {Object} { dominio, pagina, es_pdf }
  */
 export function origen_de_la_imagen(imagen) {
 	let datos = imagen && typeof imagen === 'object' ? imagen : {}
+	if (es_fuente_pdf(datos.fuente) || es_fuente_pdf(datos.dominio)) {
+		return { dominio: 'catálogo en PDF', pagina: null, es_pdf: true }
+	}
 	let pagina = url_segura(datos.url_origen) || url_segura(datos.pagina)
 	let dominio = dominio_de(datos.fuente) || dominio_de(datos.dominio) || dominio_de(pagina)
-	return { dominio: dominio, pagina: pagina }
+	return { dominio: dominio, pagina: pagina, es_pdf: false }
 }
 
 /**
@@ -368,9 +410,9 @@ export function texto_de_busquedas(asignacion) {
 	if (!asignacion) {
 		return ''
 	}
-	// Las de la web del proveedor no buscan: un "0" en la columna parecería una búsqueda que no
-	// encontró nada.
-	if (es_de_proveedor_web(asignacion)) {
+	// Las de la web o del PDF del proveedor no buscan: un "0" en la columna parecería una búsqueda
+	// que no encontró nada.
+	if (es_de_un_proveedor(asignacion)) {
 		return 'No aplica'
 	}
 	let total = entero_es(asignacion.busquedas)
