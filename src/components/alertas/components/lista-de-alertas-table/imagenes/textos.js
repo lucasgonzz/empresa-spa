@@ -47,9 +47,10 @@ export const ESTADOS = {
 export const CRITERIOS = {
 	codigo_de_barras: 'Código de barras',
 	nombre: 'Nombre',
-	// Solo en las de la web del proveedor: el código del proveedor del artículo coincidió con el de
-	// la página. Sin esta entrada se humanizaría sin acento ("Codigo proveedor").
-	codigo_proveedor: 'Código de proveedor',
+	// Solo en las de la web del proveedor: el código del proveedor del artículo (o uno del pivot)
+	// coincidió literal con el de la página (ImagenesDeProveedorWeb::criterio_exacto en la API). Sin
+	// esta entrada se humanizaría sin acento ("Codigo de proveedor").
+	codigo_de_proveedor: 'Código de proveedor',
 }
 
 /**

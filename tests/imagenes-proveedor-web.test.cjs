@@ -76,20 +76,24 @@ function asignacion(extra) {
 function item_web(extra) {
 	return Object.assign({
 		id: 31, article_id: 501, article_name: 'Llave francesa 10"', article_bar_code: '7791234567890', article_provider_code: 'LF-10',
-		status: 'a_revisar', motivo: 'coincidencia_dudosa', motivo_detalle: null, criterio_usado: 'nombre', busquedas: 0,
-		validaciones_ia: 0, imagen_url: 'http://empresa.local/storage/imgcand_x.webp',
+		// Lo que guarda ImagenesDeProveedorWeb (empresa-api) en una dudosa: motivo confianza_media, sin
+		// criterio, y en imagen_meta dominio = fuente, pagina = url_origen = la página del producto.
+		status: 'a_revisar', motivo: 'confianza_media', criterio_usado: null, busquedas: 0, validaciones_ia: 0,
+		motivo_detalle: 'Esta foto es de la web del proveedor (ferreteria-ejemplo.com.ar), pero la coincidencia con el artículo no es exacta: revisala antes de aprobarla.',
+		imagen_url: 'http://empresa.local/storage/imgcand_x.webp',
 		imagen: {
-			ancho: 800, alto: 800, fondo_blanco: null, fondo_blanco_ratio: null, dominio: null, pagina: null,
-			url_origen: 'https://www.ferreteria-ejemplo.com.ar/producto/llave-francesa-10', fuente: 'ferreteria-ejemplo.com.ar',
+			ancho: 800, alto: 800, fondo_blanco: null, fondo_blanco_ratio: null, dominio: 'ferreteria-ejemplo.com.ar',
+			pagina: 'https://www.ferreteria-ejemplo.com.ar/producto/llave-francesa-10',
+			url_origen: 'https://www.ferreteria-ejemplo.com.ar/producto/llave-francesa-10', tipo_coincidencia: 'dudosa',
 			ia: { veredicto: 'sin_evaluar', confianza: null, problemas: [], motivo: null },
 		},
-		avisos: [], diagnostico: [], alternativas: [],
+		avisos: ['Coincidencia por nombre o código parecido en la web del proveedor'], diagnostico: [], alternativas: [],
 	}, extra || {})
 }
 
 test('ORIGENES nombra la web del proveedor', () => {
 	assert.equal(textos.texto_de(textos.ORIGENES, 'proveedor_web'), 'Web del proveedor')
-	assert.equal(textos.texto_de(textos.CRITERIOS, 'codigo_proveedor'), 'Código de proveedor')
+	assert.equal(textos.texto_de(textos.CRITERIOS, 'codigo_de_proveedor'), 'Código de proveedor')
 	assert.equal(textos.es_de_proveedor_web(asignacion()), true)
 	assert.equal(textos.es_de_proveedor_web(asignacion({ origen: 'seleccion' })), false)
 	assert.equal(textos.es_de_proveedor_web(null), false)
@@ -106,7 +110,7 @@ test('dominio_de deja el sitio, venga como dominio o como URL', () => {
 })
 
 test('origen_de_la_imagen: url_origen primero, pagina de respaldo, y nunca un link que no sea web', () => {
-	assert.deepEqual(textos.origen_de_la_imagen(item_web().imagen), {
+	assert.deepEqual(textos.origen_de_la_imagen(Object.assign({}, item_web().imagen, { dominio: null, pagina: null, fuente: 'www.ferreteria-ejemplo.com.ar' })), {
 		dominio: 'ferreteria-ejemplo.com.ar',
 		pagina: 'https://www.ferreteria-ejemplo.com.ar/producto/llave-francesa-10',
 	})
@@ -163,6 +167,19 @@ test('fila a revisar de la web del proveedor: link a la página del producto, si
 	assert.match(todo, /800 × 800 px · ferreteria-ejemplo\.com\.ar/)
 	assert.ok(!/La IA/.test(todo), 'no tiene que hablar de la IA: ' + todo)
 	assert.ok(!/búsqueda/i.test(todo), 'no tiene que hablar de búsquedas: ' + todo)
+	assert.match(todo, /Coincidencia por nombre o código parecido en la web del proveedor/)
+})
+
+test('fila a revisar de la web del proveedor sin url_origen en el payload: link a pagina, texto neutro', () => {
+	// Si la API no pasa url_origen al ItemPayload, la fila no sabe que es de la web: igual lleva a la
+	// página del producto (pagina) con el texto de siempre, que no es falso.
+	const imagen = Object.assign({}, item_web().imagen)
+	delete imagen.url_origen
+	delete imagen.tipo_coincidencia
+	const arbol = instanciar(FilaARevisar, { item: item_web({ imagen: imagen }) })._render()
+	const link = por_testid(arbol, 'imagenes-pagina-31')
+	assert.equal(link.data.attrs.href, 'https://www.ferreteria-ejemplo.com.ar/producto/llave-francesa-10')
+	assert.match(texto_de(link), /Ver dónde se encontró/)
 })
 
 test('fila a revisar de Google: el link y la IA de siempre', () => {

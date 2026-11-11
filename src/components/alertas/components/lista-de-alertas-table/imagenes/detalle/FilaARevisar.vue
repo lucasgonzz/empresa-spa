@@ -338,8 +338,9 @@ export default {
 		},
 		/**
 		 * true si la propuesta es una foto que soporte trajo de la página web de un proveedor: la
-		 * carga guarda `url_origen` / `fuente` en lugar de lo que deja el buscador. Esa foto no la
-		 * miró la IA, así que no se dice "La IA: sin evaluar" como si faltara algo.
+		 * carga (ImagenesDeProveedorWeb en la API) guarda en imagen_meta `url_origen` y
+		 * `tipo_coincidencia`, que el buscador no deja nunca. Esa foto no la miró la IA ni se buscó,
+		 * así que no se dice "La IA: sin evaluar" ni "Sin búsquedas" como si faltara algo.
 		 *
 		 * @returns {Boolean}
 		 */
@@ -348,7 +349,7 @@ export default {
 				return false
 			}
 			let imagen = this.imagen
-			return !!(imagen.url_origen || imagen.fuente || imagen.origen === 'proveedor_web')
+			return !!(imagen.url_origen || imagen.tipo_coincidencia || imagen.fuente)
 		},
 		/** { dominio, pagina } de la imagen que se ve (ver origen_de_la_imagen en textos.js). */
 		origen_de_la_imagen() {
