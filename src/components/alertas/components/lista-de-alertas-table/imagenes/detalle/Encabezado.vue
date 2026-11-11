@@ -67,17 +67,25 @@ data-testid="imagenes-detalle-encabezado"
 			validaciones con IA van aparte y mas chicas: no son busquedas, pero tambien cuestan.
 		-->
 		<!--
-			Las de la web del proveedor (mision importaciones-de-martin) no buscan ni usan la IA: en
-			lugar de "0 busquedas" va de que sitio se trajeron las fotos y como se decidio cada una.
-			La fuente sale de la API como texto plano (nunca v-html).
+			Las de la web o del catalogo en PDF del proveedor (mision importaciones-de-martin) no
+			buscan ni usan la IA: en lugar de "0 busquedas" va de donde salieron las fotos y como se
+			decidio cada una. La fuente sale de la API como texto plano (nunca v-html); la de un PDF
+			(adjunto-<id>.pdf) es un nombre interno y no se muestra.
 		-->
 		<div
-		v-if="es_de_proveedor_web"
+		v-if="es_de_un_proveedor"
 		class="img-det-enc__busquedas img-det-enc__fuente"
 		data-testid="imagenes-detalle-fuente"
+		:data-origen="asignacion.origen"
 		:data-fuente="fuente || null">
-			<span class="img-det-enc__busquedas-etiqueta">Fotos traídas de</span>
-			<span class="img-det-enc__fuente-sitio">{{ fuente || 'la web del proveedor' }}</span>
+			<template v-if="es_de_proveedor_pdf">
+				<span class="img-det-enc__busquedas-etiqueta">Fotos sacadas del</span>
+				<span class="img-det-enc__fuente-sitio">catálogo en PDF que mandaste</span>
+			</template>
+			<template v-else>
+				<span class="img-det-enc__busquedas-etiqueta">Fotos traídas de</span>
+				<span class="img-det-enc__fuente-sitio">{{ fuente || 'la web del proveedor' }}</span>
+			</template>
 			<span class="img-det-enc__busquedas-detalle">
 				Las que coincidieron por código de barras o de proveedor se asignaron solas; las dudosas quedan en «A revisar» para que las apruebes.
 			</span>
@@ -116,13 +124,13 @@ data-testid="imagenes-detalle-encabezado"
 			</div>
 			<!--
 				En las de la web del proveedor va el sitio (si la API lo mando: sin el, repetir "Web del
-				proveedor" al lado del Origen no suma nada).
+				proveedor" al lado del Origen no suma nada). En las del PDF no va nada: no se busco.
 			-->
 			<div
-			v-if="!es_de_proveedor_web || fuente"
+			v-if="!es_de_un_proveedor || (es_de_proveedor_web && fuente)"
 			class="img-det-enc__dato">
-				<dt>{{ es_de_proveedor_web ? 'Sitio' : 'Buscado en' }}</dt>
-				<dd>{{ es_de_proveedor_web ? fuente : proveedor }}</dd>
+				<dt>{{ es_de_un_proveedor ? 'Sitio' : 'Buscado en' }}</dt>
+				<dd>{{ es_de_un_proveedor ? fuente : proveedor }}</dd>
 			</div>
 			<div
 			v-if="asignacion.lanzada_por"
@@ -158,6 +166,8 @@ import {
 	esta_activa,
 	es_de_catalogo,
 	es_de_proveedor_web,
+	es_de_proveedor_pdf,
+	es_de_un_proveedor,
 	fuente_de,
 	motivo_de_estado,
 	entero_es,
@@ -242,6 +252,14 @@ export default {
 		/** true si las fotos se trajeron de la web de un proveedor (ver es_de_proveedor_web en textos.js). */
 		es_de_proveedor_web() {
 			return es_de_proveedor_web(this.asignacion)
+		},
+		/** true si las fotos se sacaron del catálogo en PDF de un proveedor. */
+		es_de_proveedor_pdf() {
+			return es_de_proveedor_pdf(this.asignacion)
+		},
+		/** true para las dos: web o PDF del proveedor (sin búsquedas ni IA). */
+		es_de_un_proveedor() {
+			return es_de_un_proveedor(this.asignacion)
 		},
 		/** "ferreteria.com.ar", o '' si la API no mandó la fuente. */
 		fuente() {

@@ -46,9 +46,9 @@ class="img-det-fila img-det-fila--revisar"
 				{{ item.article_provider_code }}
 			</span>
 			<span v-if="criterio">{{ criterio }}</span>
-			<!-- La de la web del proveedor no se busco: "Sin busquedas" sonaria a que falto algo. -->
+			<!-- La de la web o del PDF del proveedor no se busco: "Sin busquedas" sonaria a que falto algo. -->
 			<span
-			v-if="!de_la_web_del_proveedor"
+			v-if="!de_un_proveedor"
 			:data-busquedas="item.busquedas">{{ busquedas }}</span>
 		</div>
 
@@ -86,7 +86,7 @@ class="img-det-fila img-det-fila--revisar"
 		:data-testid="'imagenes-pagina-' + item.id"
 		target="_blank"
 		rel="noopener noreferrer">
-			{{ de_la_web_del_proveedor ? 'Ver en la web del proveedor' : 'Ver dónde se encontró' }}
+			{{ de_un_proveedor ? 'Ver en la web del proveedor' : 'Ver dónde se encontró' }}
 			<i
 			class="bi bi-box-arrow-up-right"
 			aria-hidden="true"></i>
@@ -337,14 +337,15 @@ export default {
 			return this.item.imagen && typeof this.item.imagen === 'object' ? this.item.imagen : {}
 		},
 		/**
-		 * true si la propuesta es una foto que soporte trajo de la página web de un proveedor: la
-		 * carga (ImagenesDeProveedorWeb en la API) guarda en imagen_meta `url_origen` y
-		 * `tipo_coincidencia`, que el buscador no deja nunca. Esa foto no la miró la IA ni se buscó,
-		 * así que no se dice "La IA: sin evaluar" ni "Sin búsquedas" como si faltara algo.
+		 * true si la propuesta es una foto que soporte trajo de la web o del catálogo en PDF de un
+		 * proveedor: la carga (ImagenesDeProveedorWeb en la API) guarda en imagen_meta
+		 * `tipo_coincidencia` (y `url_origen` en las de la web), que el buscador no deja nunca. Esa
+		 * foto no la miró la IA ni se buscó, así que no se dice "La IA: sin evaluar" ni "Sin
+		 * búsquedas" como si faltara algo. Una del PDF no tiene página: va sin link (ver pagina).
 		 *
 		 * @returns {Boolean}
 		 */
-		de_la_web_del_proveedor() {
+		de_un_proveedor() {
 			if (this.elegida) {
 				return false
 			}
@@ -413,7 +414,7 @@ export default {
 			if (this.elegida) {
 				return this.elegida.motivo || ''
 			}
-			if (this.de_la_web_del_proveedor) {
+			if (this.de_un_proveedor) {
 				return ''
 			}
 			let ia = this.imagen.ia
