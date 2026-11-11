@@ -46,7 +46,10 @@ class="img-det-fila img-det-fila--revisar"
 				{{ item.article_provider_code }}
 			</span>
 			<span v-if="criterio">{{ criterio }}</span>
-			<span :data-busquedas="item.busquedas">{{ busquedas }}</span>
+			<!-- La de la web del proveedor no se busco: "Sin busquedas" sonaria a que falto algo. -->
+			<span
+			v-if="!de_la_web_del_proveedor"
+			:data-busquedas="item.busquedas">{{ busquedas }}</span>
 		</div>
 
 		<!-- Por que quedo para revisar: todos los avisos que aplican (contrato §5.2). -->
@@ -72,13 +75,18 @@ class="img-det-fila img-det-fila--revisar"
 			{{ texto_de_la_ia }}
 		</p>
 
+		<!--
+			Una de la web del proveedor (mision importaciones-de-martin) lleva a la pagina del
+			producto en ese sitio; las de Google, a la pagina donde aparecio la imagen.
+		-->
 		<a
 		v-if="pagina"
 		class="img-det-fila__link"
 		:href="pagina"
+		:data-testid="'imagenes-pagina-' + item.id"
 		target="_blank"
 		rel="noopener noreferrer">
-			Ver dónde se encontró
+			{{ de_la_web_del_proveedor ? 'Ver en la web del proveedor' : 'Ver dónde se encontró' }}
 			<i
 			class="bi bi-box-arrow-up-right"
 			aria-hidden="true"></i>
@@ -216,6 +224,7 @@ import {
 	texto_de,
 	busquedas_del_articulo,
 	url_segura,
+	origen_de_la_imagen,
 } from '@/components/alertas/components/lista-de-alertas-table/imagenes/textos'
 
 /**
@@ -328,6 +337,24 @@ export default {
 			return this.item.imagen && typeof this.item.imagen === 'object' ? this.item.imagen : {}
 		},
 		/**
+		 * true si la propuesta es una foto que soporte trajo de la página web de un proveedor: la
+		 * carga guarda `url_origen` / `fuente` en lugar de lo que deja el buscador. Esa foto no la
+		 * miró la IA, así que no se dice "La IA: sin evaluar" como si faltara algo.
+		 *
+		 * @returns {Boolean}
+		 */
+		de_la_web_del_proveedor() {
+			if (this.elegida) {
+				return false
+			}
+			let imagen = this.imagen
+			return !!(imagen.url_origen || imagen.fuente || imagen.origen === 'proveedor_web')
+		},
+		/** { dominio, pagina } de la imagen que se ve (ver origen_de_la_imagen en textos.js). */
+		origen_de_la_imagen() {
+			return origen_de_la_imagen(this.imagen)
+		},
+		/**
 		 * Los avisos que manda la API (ya en texto). Si no vino ninguno, el motivo principal
 		 * traducido: una fila de "a revisar" sin decir por qué no ayuda a decidir.
 		 *
@@ -369,8 +396,8 @@ export default {
 			if (this.imagen.fondo_blanco === true) {
 				partes.push('fondo blanco')
 			}
-			if (this.imagen.dominio) {
-				partes.push(this.imagen.dominio)
+			if (this.origen_de_la_imagen.dominio) {
+				partes.push(this.origen_de_la_imagen.dominio)
 			}
 			return partes.join(' · ')
 		},
@@ -384,6 +411,9 @@ export default {
 			// De la elegida a mano lo único que hay es el motivo con el que el sistema la dejó de lado.
 			if (this.elegida) {
 				return this.elegida.motivo || ''
+			}
+			if (this.de_la_web_del_proveedor) {
+				return ''
 			}
 			let ia = this.imagen.ia
 			if (!ia || typeof ia !== 'object') {
@@ -412,7 +442,7 @@ export default {
 		 * resultado de búsqueda de terceros y va a un href.
 		 */
 		pagina() {
-			return url_segura(this.imagen.pagina)
+			return this.origen_de_la_imagen.pagina
 		},
 	},
 	watch: {

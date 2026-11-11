@@ -66,7 +66,28 @@ data-testid="imagenes-detalle-encabezado"
 			promedio por articulo y cuantas fueron por codigo de barras y cuantas por nombre. Las
 			validaciones con IA van aparte y mas chicas: no son busquedas, pero tambien cuestan.
 		-->
+		<!--
+			Las de la web del proveedor (mision importaciones-de-martin) no buscan ni usan la IA: en
+			lugar de "0 busquedas" va de que sitio se trajeron las fotos y como se decidio cada una.
+			La fuente sale de la API como texto plano (nunca v-html).
+		-->
 		<div
+		v-if="es_de_proveedor_web"
+		class="img-det-enc__busquedas img-det-enc__fuente"
+		data-testid="imagenes-detalle-fuente"
+		:data-fuente="fuente || null">
+			<span class="img-det-enc__busquedas-etiqueta">Fotos traídas de</span>
+			<span class="img-det-enc__fuente-sitio">{{ fuente || 'la web del proveedor' }}</span>
+			<span class="img-det-enc__busquedas-detalle">
+				Las que coincidieron por código de barras o de proveedor se asignaron solas; las dudosas quedan en «A revisar» para que las apruebes.
+			</span>
+			<span class="img-det-enc__busquedas-ia">
+				Sin búsquedas en Google ni validaciones con IA
+			</span>
+		</div>
+
+		<div
+		v-else
 		class="img-det-enc__busquedas"
 		data-testid="imagenes-detalle-busquedas"
 		:data-busquedas="asignacion.busquedas">
@@ -94,8 +115,8 @@ data-testid="imagenes-detalle-encabezado"
 				<dd>{{ entero(asignacion.total_articulos) }}</dd>
 			</div>
 			<div class="img-det-enc__dato">
-				<dt>Buscado en</dt>
-				<dd>{{ proveedor }}</dd>
+				<dt>{{ es_de_proveedor_web ? 'Sitio' : 'Buscado en' }}</dt>
+				<dd>{{ es_de_proveedor_web ? (fuente || 'Web del proveedor') : proveedor }}</dd>
 			</div>
 			<div
 			v-if="asignacion.lanzada_por"
@@ -130,6 +151,8 @@ import {
 	texto_de,
 	esta_activa,
 	es_de_catalogo,
+	es_de_proveedor_web,
+	fuente_de,
 	motivo_de_estado,
 	entero_es,
 	promedio_es,
@@ -209,6 +232,14 @@ export default {
 			return this.asignacion.status === 'detenida'
 				|| this.asignacion.status === 'fallida'
 				|| !!this.asignacion.trabada
+		},
+		/** true si las fotos se trajeron de la web de un proveedor (ver es_de_proveedor_web en textos.js). */
+		es_de_proveedor_web() {
+			return es_de_proveedor_web(this.asignacion)
+		},
+		/** "ferreteria.com.ar", o '' si la API no mandó la fuente. */
+		fuente() {
+			return fuente_de(this.asignacion)
 		},
 		origen() {
 			return texto_de(ORIGENES, this.asignacion.origen)
@@ -340,6 +371,15 @@ export default {
 	line-height: 1.4
 	color: var(--color-text-secondary, #6c757d)
 	font-variant-numeric: tabular-nums
+
+// El sitio del proveedor ocupa el lugar del numero grande: un dominio largo corta en cualquier
+// punto en vez de romper el ancho de la caja.
+.img-det-enc__fuente-sitio
+	font-size: 1.35rem
+	font-weight: 700
+	line-height: 1.2
+	color: var(--color-text-primary, #212529)
+	overflow-wrap: anywhere
 
 .img-det-enc__busquedas-ia
 	margin-top: 2px
