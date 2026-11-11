@@ -134,8 +134,12 @@
             en la barra; sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
             para autorizar el panel. Ver store/demo.js y el estado inicial de PanelDemo.
         -->
+        <!--
+            La prueba gratuita ya no monta su propio chat (misión prueba-ayuda-unificada-en-soporte,
+            10/11/2026): toda la guía la da Soporte, así que en una prueba ya no hay «Tu guía». Sin
+            asistente unificado el lead ve solo Soporte; con él, Asistente personal y Soporte.
+        -->
         <panel-demo v-if="$store.getters['demo/panel_visible']" v-show="$route.name !== 'agentes'"></panel-demo>
-        <panel-prueba v-else-if="prueba_chat_usuario_id" v-show="$route.name !== 'agentes'" :key="prueba_chat_usuario_id"></panel-prueba>
 
         <!--
             El v-if esconde la vista entera mientras hay bloqueo de app instalada: el login no se
@@ -236,16 +240,8 @@ export default {
         ProcesosModal: () => import('@/components/common/procesos-en-segundo-plano/Modal'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
-        PanelPrueba: () => import('@/components/prueba/PanelAsistente'),
     },
     computed: {
-        prueba_chat_usuario_id() {
-            const usuario = this.$store.state.auth.user
-            if (this.$route.name === 'demoIngreso') return null
-            return this.authenticated && !this.version_bloqueada && !this.$store.state.prueba.vencida
-                && usuario && usuario.puede_usar_chat_prueba === true
-                && usuario.puede_unificar_chat_prueba !== true ? usuario.id : null
-        },
         implementacion_usuario_id() {
             return !this.version_bloqueada && puede_ver_implementacion(this.$store.state.auth)
                 ? this.$store.state.auth.user.id : null

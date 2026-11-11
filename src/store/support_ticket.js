@@ -67,6 +67,11 @@ export default __base_store({
 		},
 	},
 	actions: {
+		/**
+		 * Resuelve true si la bandeja llegó y false si el pedido falló (misión
+		 * prueba-ayuda-unificada-en-soporte: «Seguir con Soporte» no abre una conversación a ciegas).
+		 * Los que ya la llamaban ignoran el valor.
+		 */
 		getAgentes({ commit, state, rootState }) {
 			commit('incrementar_descarga_de_models_token')
 			const token = state.descarga_de_models_token
@@ -76,8 +81,12 @@ export default __base_store({
 			return axios.get('/api/support-ticket', { params: { agentes: 1 }, skip_navigation_cancel: true })
 				.then(res => {
 					if (vigente()) commit('setModels', res.data.models)
+					return true
 				})
-				.catch(error => console.log(error))
+				.catch(error => {
+					console.log(error)
+					return false
+				})
 				.finally(() => {
 					if (state.descarga_de_models_token === token) commit('setLoading', false)
 				})

@@ -109,7 +109,6 @@ function lateral(extra) {
 function chat_de_guia(extra) {
 	const registro = { commits: [], emitidos: [], raiz_on: [], raiz_off: [], raiz_emit: [] }
 	const vm = instancia(DemoChatPanel, Object.assign({
-		prueba: false,
 		colapsado: true,
 		destruido: false,
 		$route: { name: 'vender' },
@@ -221,7 +220,7 @@ test('con tienda o guía: dos filas solo donde no entra en una', () => {
 })
 
 test('agente_activo respeta lo que la cuenta puede usar', () => {
-	const con_agente = (agente, extra) => lateral(Object.assign({ $store: { state: { ai_chat: { agente, guia: { prueba: false } } } } }, extra)).agente_activo
+	const con_agente = (agente, extra) => lateral(Object.assign({ $store: { state: { ai_chat: { agente, guia: {} } } } }, extra)).agente_activo
 	assert.equal(con_agente('guia', { puede_guia: true }), 'guia')
 	assert.equal(con_agente('guia', { puede_guia: false }), 'asistente')
 	assert.equal(con_agente('soporte', { puede_guia: true }), 'soporte')
@@ -230,12 +229,12 @@ test('agente_activo respeta lo que la cuenta puede usar', () => {
 })
 
 test('en la guía: texto propio, sin teléfono y sin cargar la bandeja personal', () => {
-	const con_guia = prueba => lateral({ puede_guia: true, $store: { state: { ai_chat: { agente: 'guia', guia: { prueba } } } } })
-	assert.equal(con_guia(false).texto_canal, 'Tu asistente de la demo: explorá, preguntá y probá.')
-	assert.equal(con_guia(true).texto_canal, 'Tu asistente de la prueba: preguntá lo que necesites, a tu ritmo.')
-	assert.equal(con_guia(false).telefono, '')
+	// Desde la misión prueba-ayuda-unificada-en-soporte (10/11/2026) «Tu guía» es solo de la demo.
+	const con_guia = () => lateral({ puede_guia: true, $store: { state: { ai_chat: { agente: 'guia', guia: {} } } } })
+	assert.equal(con_guia().texto_canal, 'Tu asistente de la demo: explorá, preguntá y probá.')
+	assert.equal(con_guia().telefono, '')
 
-	const vm = con_guia(false)
+	const vm = con_guia()
 	let pedidos = 0
 	vm.personal_visitado = false
 	vm.cargar_bandeja = () => { pedidos++ }
@@ -294,7 +293,7 @@ test('la barra abre en la guía donde antes estaba el flotante', () => {
 })
 
 test('Anfitrion y Acceso suman la guía sin duplicar la regla', () => {
-	assert.equal(Anfitrion.computed.puede_guia.call({ $store: { state: { ai_chat: { guia: { prueba: true } } } } }), true)
+	assert.equal(Anfitrion.computed.puede_guia.call({ $store: { state: { ai_chat: { guia: {} } } } }), true)
 	assert.equal(Anfitrion.computed.puede_guia.call({ $store: { state: { ai_chat: { guia: null } } } }), false)
 	assert.match(fuente('components/asistente-ia/Acceso.vue'), /puede_entrar_al_mostrador \|\| puede_soporte \|\| puede_guia/)
 })
@@ -385,16 +384,6 @@ test('si la demo se queda sin chat, el $el vuelve antes de que PanelDemo inserte
 	assert.deepEqual(vm.registro.emitidos, [['no-disponible', undefined]])
 })
 
-test('en la prueba nadie reemplaza el chat: se queda en el lateral mostrando su error', () => {
-	const origen = nodo('origen')
-	const lugar = nodo('agentes-guia-lugar')
-	const el = nodo('chat')
-	el.parentNode = lugar
-	const vm = chat_de_guia({ $el: el, _origen: origen, prueba: true })
-	vm.avisar_no_disponible()
-	assert.equal(el.parentNode, lugar)
-})
-
 test('al destruirse deja todo limpio y no queda huérfano en el lateral', () => {
 	const lugar = nodo('agentes-guia-lugar')
 	const el = nodo('chat')
@@ -418,12 +407,8 @@ test('al destruirse deja todo limpio y no queda huérfano en el lateral', () => 
 	assert.deepEqual(vm.registro.raiz_off.map(par => par[0]).sort(), ['agentes:guia-lugar', 'agentes:guia-lugar-sale', 'agentes:guia-pausar'])
 })
 
-test('el chat de la prueba tiene un div propio que recibe el v-show de App.vue', () => {
-	const sfc = compiler.parseComponent(fuente('components/prueba/PanelAsistente.vue'))
-	const { ast } = compiler.compile(sfc.template.content, { whitespace: 'condense' })
-	assert.equal(ast.tag, 'div')
-	assert.equal(ast.children[0].tag, 'demo-chat-panel')
-})
+// El chat propio de la prueba (prueba/PanelAsistente.vue, con su div para el v-show de App.vue) se
+// borró en la misión prueba-ayuda-unificada-en-soporte: lo cubre tests/prueba-ayuda-en-soporte.test.cjs.
 
 test('todo $root.$on de la misión tiene su $off', () => {
 	;['components/demo/DemoChatPanel.vue', 'components/asistente-ia/Anfitrion.vue'].forEach(ruta => {
