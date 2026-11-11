@@ -28,7 +28,12 @@
 						:title="message_sent_at_tooltip(message)">
 					<div v-if="message.body">
 						<template v-for="(parte, i) in partes_del_mensaje(message.body)">
-							<a v-if="i % 2" :key="i" :href="parte" target="_blank" rel="noopener noreferrer">{{ parte }}</a>
+							<!-- Los videos de la prueba gratuita (misión prueba-ayuda-unificada-en-soporte, S3) se
+							ven acá mismo; los del centro de recursos siguen siendo un enlace a su página. -->
+							<video v-if="i % 2 && es_video_de_la_prueba(parte)" :key="i" :src="parte" class="support-message-video" controls preload="metadata">
+								<a :href="parte" target="_blank" rel="noopener noreferrer">{{ parte }}</a>
+							</video>
+							<a v-else-if="i % 2" :key="i" :href="parte" target="_blank" rel="noopener noreferrer">{{ parte }}</a>
 							<span v-else :key="i">{{ parte }}</span>
 						</template>
 					</div>
@@ -136,7 +141,18 @@
 import ImageLightbox from '@/common-vue/components/support-chat/ImageLightbox.vue'
 import { env } from '@/runtime_config'
 
-const VIDEO_DEL_CENTRO = /(https:\/\/recursos\.comerciocity\.com\/\?v=[a-z]+\d+(?:\.\d+)+)\b/gi
+/*
+ * Los enlaces que se separan del texto de un mensaje: un video del centro de recursos o uno de la
+ * prueba gratuita. UN solo grupo de captura a propósito: `split` deja el texto en las posiciones pares
+ * y los enlaces en las impares, y es lo que lee el template.
+ *
+ * Los de la prueba (misión prueba-ayuda-unificada-en-soporte, S3, 10/11/2026) los manda el admin y
+ * Martín en el ticket de Soporte, y se muestran como video. La regex queda acotada al prefijo exacto
+ * `https://videos.comerciocity.store/landing-prueba/` y a un `.mp4` sin query: cualquier otra URL sigue
+ * siendo texto, y nunca se embebe algo que no sea de ese bucket.
+ */
+const VIDEO_DE_LA_PRUEBA = /^https:\/\/videos\.comerciocity\.store\/landing-prueba\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*\.mp4$/
+const VIDEO_DEL_CENTRO = /(https:\/\/recursos\.comerciocity\.com\/\?v=[a-z]+\d+(?:\.\d+)+\b|https:\/\/videos\.comerciocity\.store\/landing-prueba\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*\.mp4(?![A-Za-z0-9_\/?#-]))/gi
 
 /**
  * Emite `retry-message` cuando el usuario reintenta un envío fallido.
@@ -223,6 +239,15 @@ export default {
 	methods: {
 		partes_del_mensaje(texto) {
 			return String(texto).split(VIDEO_DEL_CENTRO)
+		},
+		/**
+		 * true si el enlace es un video de la prueba gratuita (se embebe); false si es del centro.
+		 *
+		 * @param {string} enlace Una de las partes impares de partes_del_mensaje().
+		 * @returns {boolean}
+		 */
+		es_video_de_la_prueba(enlace) {
+			return VIDEO_DE_LA_PRUEBA.test(String(enlace))
 		},
 		/**
 		 * Clave única por fila en la lista: incluye índice para no chocar si el API
@@ -611,6 +636,17 @@ export default {
 	width: 100%;
 	height: 36px;
 	margin-top: 2px;
+}
+
+/* Video de la prueba gratuita adentro del globo: ocupa el ancho del globo, con el tope de las miniaturas. */
+.support-message-video {
+	display: block;
+	width: 100%;
+	max-width: 320px;
+	max-height: 240px;
+	margin: 6px 0 2px;
+	border-radius: 6px;
+	background: #000;
 }
 
 /* Botón sin estilo que envuelve la miniatura */
