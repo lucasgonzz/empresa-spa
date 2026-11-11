@@ -114,9 +114,15 @@ data-testid="imagenes-detalle-encabezado"
 				<dt>Artículos</dt>
 				<dd>{{ entero(asignacion.total_articulos) }}</dd>
 			</div>
-			<div class="img-det-enc__dato">
+			<!--
+				En las de la web del proveedor va el sitio (si la API lo mando: sin el, repetir "Web del
+				proveedor" al lado del Origen no suma nada).
+			-->
+			<div
+			v-if="!es_de_proveedor_web || fuente"
+			class="img-det-enc__dato">
 				<dt>{{ es_de_proveedor_web ? 'Sitio' : 'Buscado en' }}</dt>
-				<dd>{{ es_de_proveedor_web ? (fuente || 'Web del proveedor') : proveedor }}</dd>
+				<dd>{{ es_de_proveedor_web ? fuente : proveedor }}</dd>
 			</div>
 			<div
 			v-if="asignacion.lanzada_por"

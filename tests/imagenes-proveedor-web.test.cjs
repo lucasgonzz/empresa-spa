@@ -146,7 +146,7 @@ test('encabezado de la web del proveedor: el sitio en lugar de Google y de las b
 test('encabezado de la web del proveedor sin fuente: no inventa un sitio', () => {
 	const arbol = instanciar(Encabezado, { asignacion: asignacion({ fuente: null }) })._render()
 	assert.match(texto_de(por_testid(arbol, 'imagenes-detalle-fuente')), /Fotos traídas de la web del proveedor/)
-	assert.match(texto_de(arbol), /Sitio Web del proveedor/)
+	assert.ok(!/Sitio/.test(texto_de(arbol)), 'sin fuente no va la fila Sitio')
 })
 
 test('encabezado de una de Google: igual que siempre', () => {
