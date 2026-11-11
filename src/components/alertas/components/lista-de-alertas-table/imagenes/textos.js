@@ -25,6 +25,10 @@ export const ORIGENES = {
 	catalogo: 'Todo el catálogo',
 	seleccion: 'Selección del listado',
 	asistente: 'Pedido al asistente',
+	// Fotos que soporte trajo de la página web de un proveedor (misión importaciones-de-martin,
+	// 11/11/2026). No se buscan en Google ni las mira la IA: las que cruzan exacto por código de
+	// barras o de proveedor se asignan solas y las dudosas quedan en "A revisar" para el dueño.
+	proveedor_web: 'Web del proveedor',
 }
 
 /**
@@ -43,6 +47,9 @@ export const ESTADOS = {
 export const CRITERIOS = {
 	codigo_de_barras: 'Código de barras',
 	nombre: 'Nombre',
+	// Solo en las de la web del proveedor: el código del proveedor del artículo coincidió con el de
+	// la página. Sin esta entrada se humanizaría sin acento ("Codigo proveedor").
+	codigo_proveedor: 'Código de proveedor',
 }
 
 /**
@@ -208,6 +215,68 @@ export function es_de_catalogo(asignacion) {
 }
 
 /**
+ * True si las fotos de la asignación las trajo soporte de la página web de un proveedor (origen
+ * `proveedor_web`). En esas no hubo búsquedas en Google ni validaciones con IA: las pantallas no
+ * tienen que decir "Google Imágenes" ni "0 búsquedas" como si se hubiera buscado.
+ *
+ * @param {Object} asignacion RunPayload.
+ * @returns {Boolean}
+ */
+export function es_de_proveedor_web(asignacion) {
+	return !!asignacion && asignacion.origen === 'proveedor_web'
+}
+
+/**
+ * Deja solo el dominio de un texto que puede venir como dominio ("ferreteria.com.ar") o como
+ * URL entera ("https://www.ferreteria.com.ar/productos/..."). Sin el "www.": es como lo nombra
+ * el comerciante. '' si no hay nada.
+ *
+ * @param {String} texto
+ * @returns {String}
+ */
+export function dominio_de(texto) {
+	let limpio = String(texto || '').trim()
+	if (!limpio) {
+		return ''
+	}
+	limpio = limpio.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
+	limpio = limpio.split(/[/?#]/)[0]
+	limpio = limpio.replace(/^www\./i, '')
+	return limpio.toLowerCase()
+}
+
+/**
+ * El sitio del proveedor de una asignación de la web del proveedor, para mostrar ("ferreteria.com.ar").
+ * La API lo manda en `fuente` (dominio o URL). '' si no vino: la pantalla dice entonces solo "Web
+ * del proveedor".
+ *
+ * @param {Object} asignacion RunPayload.
+ * @returns {String}
+ */
+export function fuente_de(asignacion) {
+	if (!asignacion) {
+		return ''
+	}
+	return dominio_de(asignacion.fuente)
+}
+
+/**
+ * Lo que se sabe del origen de la imagen de un item de la web del proveedor: el sitio y la página
+ * del producto donde estaba. Lee `url_origen` / `fuente` (lo que guarda la carga desde soporte en
+ * `imagen_meta`) y, si no vinieron, `pagina` / `dominio`, que son los nombres de siempre del
+ * contrato. `pagina` solo si es un link web (ver url_segura): va a un href.
+ *
+ * @param {Object|null} imagen `imagen` de un ItemPayload.
+ * @returns {Object} { dominio, pagina }
+ */
+export function origen_de_la_imagen(imagen) {
+	let datos = imagen && typeof imagen === 'object' ? imagen : {}
+	let pagina = url_segura(datos.url_origen) || url_segura(datos.pagina)
+	let dominio = dominio_de(datos.fuente) || dominio_de(datos.dominio) || dominio_de(pagina)
+	return { dominio: dominio, pagina: pagina }
+}
+
+/**
  * El motivo del estado de una asignación tal como se muestra: en el encabezado del detalle y en
  * el title del chip de estado de la tabla.
  *
@@ -297,6 +366,11 @@ export function promedio_es(valor) {
 export function texto_de_busquedas(asignacion) {
 	if (!asignacion) {
 		return ''
+	}
+	// Las de la web del proveedor no buscan: un "0" en la columna parecería una búsqueda que no
+	// encontró nada.
+	if (es_de_proveedor_web(asignacion)) {
+		return 'No aplica'
 	}
 	let total = entero_es(asignacion.busquedas)
 	let promedio = promedio_es(asignacion.busquedas_por_articulo)
