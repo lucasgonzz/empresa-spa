@@ -184,6 +184,8 @@ export default {
 				if (state.models[idx]._client_pending === client_key) {
 					const merged = Object.assign({}, state.models[idx], {
 						_delivery_error: error_code,
+						// El motivo que dio la API al rechazarlo (422), si lo dio: lo muestra la burbuja.
+						_delivery_error_message: payload.error_message || null,
 					})
 					state.models.splice(idx, 1, merged)
 					return
@@ -310,9 +312,13 @@ export default {
 				.catch(error => {
 					if (identidad_de_sesion(rootState) !== identidad) return
 					commit('setSending', false)
+					const respuesta = error && error.response
 					commit('markPendingDeliveryError', {
 						client_key: client_key,
 						error_code: 'not_sent',
+						error_message: respuesta && respuesta.status === 422 && respuesta.data && typeof respuesta.data.message === 'string'
+							? respuesta.data.message
+							: null,
 					})
 					console.log(error)
 				})
