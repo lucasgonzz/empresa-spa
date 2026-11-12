@@ -35,8 +35,12 @@
 			</div>
 			<div v-if="!seleccionado_id && !messages.length" class="agentes-soporte__bienvenida">
 				<span class="asistente-ia-panel__orb" aria-hidden="true">✦</span>
-				<h2>¿En qué te podemos ayudar?</h2>
-				<p>Escribí tu consulta o elegí una conversación del historial.</p>
+				<!-- En la prueba, mientras llega la lista: su conversación con Soporte se abre sola. -->
+				<p v-if="esperando_la_prueba" role="status">Cargando tus conversaciones…</p>
+				<template v-else>
+					<h2>¿En qué te podemos ayudar?</h2>
+					<p>Escribí tu consulta o elegí una conversación del historial.</p>
+				</template>
 			</div>
 			<conversation
 			v-else
@@ -49,7 +53,7 @@
 			:new_ticket_label="ticket_abierto ? 'Continuar conversación' : undefined"
 			@retry-message="reintentar"
 			@start-new-ticket="iniciar_consulta"></conversation>
-			<message-input en_agentes :can_send="puede_enviar" :clave_borrador="clave_borrador" :preparar_envio="preparar_envio" @send="enviar"></message-input>
+			<message-input ref="compositor" en_agentes :can_send="puede_enviar" :clave_borrador="clave_borrador" :preparar_envio="preparar_envio" @send="enviar"></message-input>
 		</div>
 	</div>
 </template>
@@ -59,11 +63,21 @@ import Conversation from '@/common-vue/components/support-chat/Conversation'
 import MessageInput from '@/common-vue/components/support-chat/MessageInput'
 import Icono from '@/components/asistente-ia/Icono'
 import { confirmar_traspaso } from '@/components/asistente-ia/traspaso'
+import { abre_sola_la_conversacion, conversacion_de_la_prueba } from '@/components/asistente-ia/prueba_en_soporte'
 
 export default {
 	components: { Conversation, MessageInput, Icono },
 	props: { activo: Boolean, lista_es_cajon: Boolean, lista_abierta: Boolean, sidebar_style: Object },
+	data() {
+		return {
+			// true cuando ya se decidió si abrir sola la conversación de la prueba (una vez por apertura del panel).
+			prueba_resuelta: false,
+		}
+	},
 	computed: {
+		// Prueba vigente Y sesión del propio negocio: en una de soporte firmado o de acceso maestro no se abre nada sola.
+		en_prueba() { return abre_sola_la_conversacion(this.$store.state.auth.user) },
+		esperando_la_prueba() { return this.activo && this.en_prueba && !this.prueba_resuelta && this.loading },
 		tickets() { return this.$store.state.support_ticket.models },
 		loading() { return this.$store.state.support_ticket.loading },
 		seleccionado_id() { return this.$store.state.support_message.active_ticket_id },
@@ -87,8 +101,40 @@ export default {
 				if (valor) this.$store.dispatch('support_ticket/getAgentes')
 			},
 		},
+		// La lista terminó de llegar, o cambió: con la prueba vigente se abre sola su conversación.
+		loading(cargando) {
+			if (!cargando) this.abrir_conversacion_de_la_prueba()
+		},
+		tickets() { this.abrir_conversacion_de_la_prueba() },
 	},
 	methods: {
+		/**
+		 * Con la prueba gratuita vigente, Soporte no arranca en la pantalla vacía: abre sola la conversación
+		 * de la prueba, donde están la bienvenida y los videos (misión prueba-e2e-campana-imperio,
+		 * 11/11/2026). Cuál es lo decide `conversacion_de_la_prueba()`.
+		 *
+		 * Se decide UNA vez por apertura del panel, con la lista ya cargada, y solo si no hay nada que
+		 * pisar: ninguna conversación elegida (la pudo elegir «Seguir con Soporte»), ningún mensaje a la
+		 * vista, ningún envío en curso, nada escrito en el compositor y ninguna guía de Robotito señalando
+		 * esta pantalla. Después, «Nueva conversación» y el historial funcionan como siempre.
+		 *
+		 * Si todavía no hay ninguna conversación abierta no se da por decidido: la bienvenida puede llegar
+		 * unos segundos después del primer ingreso, y se abre cuando aparece en la lista.
+		 *
+		 * Solo ABRE la conversación. Si es de WhatsApp, escribirle sigue pidiendo la confirmación de
+		 * siempre (preparar_envio): acá no se traslada nada de canal.
+		 */
+		abrir_conversacion_de_la_prueba() {
+			if (this.prueba_resuelta || !this.activo || this._isDestroyed || !this.en_prueba || this.loading) return
+			const compositor = this.$refs.compositor
+			const ocupada = this.seleccionado_id != null || this.messages.length > 0 || this.enviando || this.messages_loading
+				|| Boolean(compositor && compositor.tiene_borrador_en_curso)
+				|| Boolean(typeof document !== 'undefined' && document.querySelector('.driver-popover.tour-soporte'))
+			const ticket = ocupada ? null : conversacion_de_la_prueba(this.tickets)
+			if (!ocupada && !ticket) return
+			this.prueba_resuelta = true
+			if (ticket) this.seleccionar(ticket.id)
+		},
 		iniciar_consulta() {
 			return this.seleccionar(this.ticket_abierto ? this.ticket_abierto.id : null)
 		},
@@ -101,7 +147,7 @@ export default {
 			const ticket = this.seleccionado
 			const opciones = { agentes_version: 1 }
 			if (!ticket || ticket.origen !== 'whatsapp' || ticket.sistema_exclusivo_at) return Promise.resolve(opciones)
-			return confirmar_traspaso(this).then(confirmado => confirmado && this.activo && this.seleccionado_id === ticket.id
+			return confirmar_traspaso(this, 'soporte').then(confirmado => confirmado && this.activo && this.seleccionado_id === ticket.id
 				? Object.assign(opciones, { traspasar_a_sistema: 1 }) : null)
 		},
 		enviar(payload) {

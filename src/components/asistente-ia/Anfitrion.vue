@@ -46,6 +46,7 @@ import FichaArticuloPopover from '@/components/asistente-ia/FichaArticuloPopover
 import CuentaCorrienteDeMencion from '@/components/asistente-ia/CuentaCorrienteDeMencion'
 import GuiaDeVenta from '@/components/asistente-ia/GuiaDeVenta'
 import mostrador_acceso from '@/mixins/mostrador_acceso'
+import { abre_en_soporte } from '@/components/asistente-ia/prueba_en_soporte'
 
 const CONTROLES = 'a, button, label, input, textarea, select, summary, [contenteditable], [tabindex], [role="button"], [role="link"], [draggable=true]'
 
@@ -73,6 +74,14 @@ export default {
 		},
 		puede_soporte() { return !!this.hasExtencion('support_chat') },
 		puede_guia() { return !!this.$store.state.ai_chat.guia },
+		/**
+		 * Con la prueba gratuita vigente, Agentes abre en Soporte: ahí están la bienvenida, los videos y
+		 * quien lo acompaña en la prueba (misión prueba-e2e-campana-imperio, 11/11/2026). Vencida la
+		 * prueba, o contratado el sistema, vuelve a abrir en el Asistente personal como cualquier cliente.
+		 *
+		 * @returns {Boolean}
+		 */
+		abre_en_soporte() { return abre_en_soporte(this.user, this.puede_soporte) },
 		identidad_de_sesion() {
 			if (!this.authenticated || !this.user) return null
 			return [this.user.id, !!this.user.es_sesion_soporte, !!this.user.es_acceso_maestro,
@@ -123,7 +132,7 @@ export default {
 			this.$store.dispatch('ai_chat/cancelarEsperaDeRespuesta')
 			this.$store.commit('ai_chat/renovarSesion')
 			this.$store.commit('ai_chat/setPanelAbierto', false)
-			this.$store.commit('ai_chat/setAgente', 'asistente')
+			this.$store.commit('ai_chat/setAgente', this.abre_en_soporte ? 'soporte' : 'asistente')
 			this.$store.commit('ai_chat/setSelectedConversationId', null)
 			this.$store.commit('ai_chat/setConversations', [])
 			this.$store.commit('ai_chat/setMessages', [])
@@ -142,6 +151,22 @@ export default {
 		},
 		should_show() { this.suscribir_canal_del_chat() },
 		puede_entrar_al_mostrador() { this.suscribir_canal_del_chat() },
+		/**
+		 * El agente con el que arranca la sesión de una prueba vigente. Cubre el ingreso directo a
+		 * /agentes (F5, un enlace): ese camino no pasa por abrir_desde_navegacion() y se quedaba con el
+		 * 'asistente' por defecto del store.
+		 *
+		 * Corre UNA vez por sesión, cuando llegan el usuario y sus extensiones (el valor pasa a true): no
+		 * vuelve a pisar lo que la persona elija después en el selector, porque un refresco del usuario
+		 * deja el valor en true y el watcher no se dispara. Si en ese momento ya está parada en «Tu guía»
+		 * (la demo), no se la saca de ahí.
+		 */
+		abre_en_soporte: {
+			immediate: true,
+			handler(abre) {
+				if (abre && this.$store.state.ai_chat.agente === 'asistente') this.$store.commit('ai_chat/setAgente', 'soporte')
+			},
+		},
 		identidad_de_soporte: {
 			immediate: true,
 			handler(identidad) {
@@ -163,7 +188,8 @@ export default {
 			// para crear un ticket igual necesita llegar a Soporte: si no, su paso queda esperando.
 			if (this.abierto && en_guia_soporte) this.$store.commit('ai_chat/setAgente', 'soporte')
 			if (!this.abierto) {
-				const agente_comun = this.puede_entrar_al_mostrador && !en_guia_soporte ? 'asistente' : 'soporte'
+				// En la prueba vigente la barra abre en Soporte; fuera de ella, lo de siempre.
+				const agente_comun = this.puede_entrar_al_mostrador && !en_guia_soporte && !this.abre_en_soporte ? 'asistente' : 'soporte'
 				// En demo y prueba no unificada, la barra cae en la guía que sugiere los videos.
 				this.$store.commit('ai_chat/setAgente', this.puede_guia && !en_guia_soporte ? 'guia' : agente_comun)
 				this.$store.commit('ai_chat/setSelectedConversationId', null)

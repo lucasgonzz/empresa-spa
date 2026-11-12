@@ -60,14 +60,26 @@
 								class="support-message-image"
 								alt="Imagen adjunta" />
 						</button>
-						<!-- Fallback genérico para otros tipos de adjunto -->
+						<!-- Un documento (Excel, PDF) u otro archivo: se descarga, con su nombre a la vista -->
 						<a
 							v-else
+							class="support-message-file"
 							target="_blank"
+							rel="noopener noreferrer"
+							:download="nombre_del_adjunto(message.attachments[0])"
+							:title="'Descargar ' + nombre_del_adjunto(message.attachments[0])"
 							:href="attachment_url(message.attachments[0])">
-							Adjunto
+							<i class="bi bi-paperclip" aria-hidden="true"></i>
+							<span>{{ nombre_del_adjunto(message.attachments[0]) }}</span>
 						</a>
 					</template>
+					<!-- Mientras se envía todavía no hay adjunto guardado: se muestra el nombre del archivo -->
+					<span
+						v-else-if="message._client_pending && message._retry_attachment && message.kind === 'text'"
+						class="support-message-file">
+						<i class="bi bi-paperclip" aria-hidden="true"></i>
+						<span>{{ message._retry_attachment.name }}</span>
+					</span>
 					</div>
 					<div
 						v-if="is_mine(message) && has_delivery_error(message)"
@@ -139,6 +151,7 @@
 
 <script>
 import ImageLightbox from '@/common-vue/components/support-chat/ImageLightbox.vue'
+import { nombre_del_adjunto } from '@/common-vue/components/support-chat/adjuntos'
 import { env } from '@/runtime_config'
 
 /*
@@ -329,7 +342,8 @@ export default {
 		 */
 		delivery_error_label(message) {
 			if (message._delivery_error === 'not_sent') {
-				return 'No enviado'
+				// Si la API explicó por qué lo rechazó (un adjunto demasiado pesado), se muestra eso.
+				return message._delivery_error_message || 'No enviado'
 			}
 			if (message.remote_delivery_status === 'not_received') {
 				return 'No recibido en soporte central'
@@ -402,6 +416,15 @@ export default {
 		 */
 		attachment_url(attachment) {
 			return attachment.public_url || (env('VUE_APP_API_URL') + '/storage/' + attachment.path)
+		},
+		/**
+		 * Nombre visible de un adjunto que no es audio ni imagen.
+		 *
+		 * @param {Object} attachment Fila de `message.attachments`.
+		 * @returns {string}
+		 */
+		nombre_del_adjunto(attachment) {
+			return nombre_del_adjunto(attachment)
 		},
 		/**
 		 * Abre el visor de imagen en la misma página.
@@ -647,6 +670,21 @@ export default {
 	margin: 6px 0 2px;
 	border-radius: 6px;
 	background: #000;
+}
+
+/* Documento adjunto (Excel, PDF): clip + nombre, que corta en cualquier lado si el nombre es largo */
+.support-message-file {
+	display: inline-flex;
+	align-items: flex-start;
+	gap: 6px;
+	max-width: 100%;
+	margin-top: 2px;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.support-message-file > i {
+	flex-shrink: 0;
 }
 
 /* Botón sin estilo que envuelve la miniatura */

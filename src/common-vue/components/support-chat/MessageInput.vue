@@ -38,11 +38,16 @@
 			<div v-if="mic_error" class="support-input-mic-error">
 				{{ mic_error_message }}
 			</div>
+			<!-- Aviso: el archivo elegido no se puede adjuntar (un documento de más de 10 MB) -->
+			<div v-if="attachment_error" class="support-input-mic-error" role="alert">
+				{{ attachment_error }}
+			</div>
+			<!-- Audios, imágenes y, desde la misión prueba-e2e-campana-imperio, Excel y PDF -->
 			<input
 				ref="file_input"
 				class="d-none"
 				type="file"
-				accept="audio/*,image/*"
+				:accept="acepta"
 				@change="on_file_change" />
 			<p v-if="en_agentes && recording" class="support-input-recording" role="status">
 				Grabando audio <span aria-hidden="true">{{ recording_time_label }}</span>
@@ -129,6 +134,7 @@
 <script>
 import ImageAnnotationEditor from '@/common-vue/components/support-chat/ImageAnnotationEditor.vue'
 import Icono from '@/components/asistente-ia/Icono'
+import { ACEPTA, rechazo_del_adjunto } from '@/common-vue/components/support-chat/adjuntos'
 
 export default {
 	components: {
@@ -167,6 +173,8 @@ export default {
 			recording_seconds: 0,
 			/** ID del interval que incrementa recording_seconds cada 1 s. */
 			recording_timer_id: null,
+			/** Por qué no se adjuntó el último archivo elegido ('' si no hay nada que avisar). */
+			attachment_error: '',
 		}
 	},
 	computed: {
@@ -175,6 +183,8 @@ export default {
 				|| this.$store?.state.support_message?.sending
 				|| Object.values(this.borradores).some(borrador => (borrador.body || '').trim() || borrador.attachment)
 		},
+		/** El `accept` del selector de archivos. */
+		acepta() { return ACEPTA },
 		borrador() { return this.borradores[this.clave_borrador] || {} },
 		body: {
 			get() { return this.borrador.body || '' },
@@ -337,7 +347,7 @@ export default {
 			this.image_editor_source_file = null
 		},
 		/**
-		 * Abre selector nativo para adjuntar audio o imagen.
+		 * Abre selector nativo para adjuntar un audio, una imagen o un documento (Excel, PDF).
 		 */
 		open_file_input() {
 			this.$refs.file_input.click()
@@ -351,7 +361,13 @@ export default {
 				return
 			}
 			let file = files[0]
-			/* Solo las imágenes pasan por el editor; audio y otros van directo al adjunto. */
+			/* Un documento demasiado pesado no se adjunta: se avisa acá, antes de intentar mandarlo. */
+			this.attachment_error = rechazo_del_adjunto(file) || ''
+			if (this.attachment_error) {
+				event.target.value = ''
+				return
+			}
+			/* Solo las imágenes pasan por el editor; audio, documentos y otros van directo al adjunto. */
 			if (file.type.indexOf('image/') === 0) {
 				this.open_image_editor(file)
 			} else {
@@ -363,6 +379,7 @@ export default {
 		 * Elimina el adjunto pendiente y resetea el input de archivo.
 		 */
 		remove_attachment() {
+			this.attachment_error = ''
 			this.attachment = null
 			this.$refs.file_input.value = ''
 		},
