@@ -22,7 +22,7 @@ test('la navegación confía en la capacidad de sesión propia y conserva los co
 	assert.equal(robotito(usuario({ robotito_soporte_habilitado: true, es_sesion_demo: true }), true), 11)
 	assert.equal(robotito(usuario({ robotito_soporte_habilitado: false })), null)
 	assert.equal(robotito(usuario({ robotito_soporte_habilitado: true, es_sesion_soporte: true })), null)
-	assert.equal(robotito(usuario({ robotito_soporte_habilitado: true, es_acceso_maestro: true })), null)
+	assert.equal(robotito(usuario({ robotito_soporte_habilitado: true, es_acceso_maestro: true })), 11)
 	assert.equal(robotito(usuario({ robotito_soporte_habilitado: true }), false, { sesion_sin_conexion: {} }), null)
 	assert.equal(robotito(usuario({ es_sesion_demo: true }), true), null)
 	assert.equal(robotito(usuario({})), 11)

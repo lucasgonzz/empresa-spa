@@ -62,7 +62,7 @@ export default {
 			const auth = this.$store.state.auth
 			const usuario = auth.user
 			return auth.authenticated && usuario && !auth.version_bloqueada && !auth.sesion_sin_conexion
-				&& !usuario.es_sesion_soporte && !usuario.es_acceso_maestro
+				&& !usuario.es_sesion_soporte
 				&& (usuario.robotito_soporte_habilitado === true
 					|| (usuario.robotito_soporte_habilitado === undefined && !usuario.es_sesion_demo && !this.$store.state.demo.es_demo))
 				? usuario.id : null
