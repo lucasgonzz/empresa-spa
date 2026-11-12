@@ -11,7 +11,7 @@
 			Si modificaste algún campo de correo, guardá primero y después probá.
 		</p>
 
-		<b-form-row>
+		<b-form-row class="mx-0">
 			<b-col
 			md="6"
 			class="m-b-10">
