@@ -292,7 +292,8 @@ export default {
                     let model_name = this.from_model_name
                     let model_id = this.from_model.id
                     let credit_account_id = this.from_credit_account.id
-                    this.loadModel(model_name, model_id)
+                    // Sin el «Cliente actualizado»: el aviso de esto ya es «Pago registrado».
+                    this.loadModel(model_name, model_id, '/', false)
                     .then(() => {
                         this.refrescar_saldo_de_la_cuenta(model_name, model_id, credit_account_id)
                     })

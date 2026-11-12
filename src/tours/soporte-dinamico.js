@@ -69,6 +69,59 @@ function controles_de_porcentaje_abm(modelo, solapa) {
 const RECARGOS_ABM = controles_de_porcentaje_abm('surchage', 'recargos')
 const DESCUENTOS_ABM = controles_de_porcentaje_abm('discount', 'descuentos')
 
+/**
+ * Controles de la ficha del artículo, para guiar «cambiarle el precio a un producto» (12/11/2026).
+ *
+ * Usan los mismos identificadores que los guiones fijos de `guiones/s1-listado.js` (clips 1.1 y 1.4):
+ * el `data-testid` de las filas, la pestaña `nav-item-Precio` y las anclas de la solapa Precio. La
+ * ficha es el `b-modal` con id `article` de `model/Index.vue`; todo lo de adentro se busca dentro de
+ * `#article.show` para no agarrar la pestaña homónima de otra pantalla, y `despejar_paso` no cierra
+ * un modal que contiene el control del paso. Ese modal ignora el foco de `.driver-popover.tour-soporte`
+ * (como los de recargos y descuentos) para que la tarjeta de Robotito siga usable mientras está abierto.
+ */
+const FICHA_ARTICULO = '#article.show'
+const FICHA_ARTICULO_EN_EDICION = '[data-modelo-en-edicion="article"] ' + FICHA_ARTICULO + ' .modal-content'
+const SI_FALTA_FICHA = 'Abrí el artículo con un clic en su fila del Listado para ver su ficha.'
+const FICHA_DE_ARTICULO = {
+	// La persona elige qué artículo abrir en la tabla o en las tarjetas, igual que en el ABM.
+	abrir: {
+		selector: '#listado .cont-table:has([data-testid^="article-row-"]), #listado .cont-cards:has(.card-component.apretable)',
+		ruta: LISTADO,
+		avanza: 'aparece',
+		selector_al_aparecer: FICHA_ARTICULO_EN_EDICION,
+		si_falta: 'Buscá el artículo en el Listado. Cuando aparezca, abrilo con un clic en su fila.',
+	},
+	pestana_precio: {
+		selector: FICHA_ARTICULO + ' [data-testid="nav-item-Precio"]',
+		ruta: LISTADO,
+		avanza: 'clic',
+		lado: 'top',
+		si_falta: SI_FALTA_FICHA,
+	},
+	// Con listas de precio es el interruptor «Setear precio final»; sin listas, el campo Precio manual.
+	// Avanza con Siguiente: el campo puede estar bloqueado por el margen y entonces no hay gesto que esperar.
+	setear_precio_final: {
+		ancla: 'listado.campo_precio_manual',
+		ruta: LISTADO,
+		espera_ms: 300,
+		si_falta: SI_FALTA_FICHA + ' Después andá a la pestaña Precio.',
+	},
+	precio_final: {
+		ancla: 'listado.campo_precio_final',
+		ruta: LISTADO,
+		espera_ms: 300,
+		si_falta: SI_FALTA_FICHA + ' Después andá a la pestaña Precio.',
+	},
+	// Avanza cuando el botón se va: guardar es una llamada HTTP y con `clic` el paso siguiente se
+	// mostraría con la ficha todavía abierta (ver el paso homólogo del clip 1.4).
+	guardar: {
+		ancla: 'listado.boton_guardar_articulo',
+		ruta: LISTADO,
+		avanza: 'desaparece',
+		si_falta: 'Guardá la ficha del artículo con «Guardar y cerrar».',
+	},
+}
+
 // Cada clave describe una acción de pantalla que el motor ya sabe realizar. El plan no trae código de interfaz.
 const PANTALLAS = {
 	'vista.listado': LISTADO,
@@ -93,6 +146,12 @@ const CONTROLES = {
 	'tutoriales.abrir': { selector: '[data-nav-tutoriales]', avanza: 'clic' },
 	'listado.filtro': { ancla: 'listado.boton_filtrar', ruta: LISTADO, avanza: 'clic' },
 	'listado.nuevo_articulo': { selector: '#dropdown_article [data-testid="btn-crear-article"]', ruta: LISTADO, avanza: 'clic' },
+	'listado.buscador': { selector: '#listado [data-testid="buscador-general"]', ruta: LISTADO, foco: true },
+	'listado.abrir_ficha': FICHA_DE_ARTICULO.abrir,
+	'listado.pestana_precio': FICHA_DE_ARTICULO.pestana_precio,
+	'listado.setear_precio_final': FICHA_DE_ARTICULO.setear_precio_final,
+	'listado.precio_final': FICHA_DE_ARTICULO.precio_final,
+	'listado.guardar_articulo': FICHA_DE_ARTICULO.guardar,
 	'ventas.filtro_fecha': { ancla: 'ventas.control_fecha', ruta: VENTAS },
 	'compras.filtro_fecha': { ancla: 'compras.control_fecha', ruta: COMPRAS },
 	'compras.nueva': { ancla: 'compras.boton_crear', ruta: COMPRAS, avanza: 'clic' },
