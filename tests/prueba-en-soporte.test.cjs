@@ -416,6 +416,28 @@ test('K: abrir la conversación de WhatsApp no la traslada: escribirle sigue pid
 	})
 })
 
+test('K: el aviso de traspaso de Soporte dice qué pasa con las respuestas; el del Asistente personal no cambió', () => {
+	const traspaso = cargar('components/asistente-ia/traspaso.js')
+	const pedidos = []
+	const componente = { $bvModal: { msgBoxConfirm: (cuerpo, opciones) => { pedidos.push([cuerpo, opciones]); return Promise.resolve(true) } } }
+
+	traspaso.confirmar_traspaso(componente, 'soporte')
+	traspaso.confirmar_traspaso(componente)
+
+	assert.deepEqual(pedidos[0], [
+		'Vas a seguir hablando con Soporte desde tu sistema. Las respuestas te van a llegar acá, no por WhatsApp. Lo que ya hablaron queda guardado.',
+		{ id: 'agentes-confirmar-traspaso', title: '¿Seguimos por acá?', okTitle: 'Sí, enviar', cancelTitle: 'Cancelar', centered: true },
+	])
+	assert.deepEqual(pedidos[1], [
+		'Al enviar, esta conversación seguirá únicamente en el sistema, incluso si cerrás sesión. Tu historial queda acá.',
+		{ id: 'agentes-confirmar-traspaso', title: '¿Seguir esta conversación en el sistema?', okTitle: 'Continuar y enviar', cancelTitle: 'Cancelar', centered: true },
+	])
+
+	// Soporte pide el suyo; el panel del Asistente personal sigue pidiendo el de siempre.
+	assert.match(fuente('components/asistente-ia/Soporte.vue'), /confirmar_traspaso\(this, 'soporte'\)/)
+	assert.match(fuente('components/asistente-ia/Panel.vue'), /confirmar_traspaso\(this\)/)
+})
+
 // ---------------------------------------------------------------------------------------------------------
 
 test('sin async/await y con SASS solo a tabulaciones en lo que tocó la misión', () => {

@@ -146,7 +146,7 @@ export default {
 			const ticket = this.seleccionado
 			const opciones = { agentes_version: 1 }
 			if (!ticket || ticket.origen !== 'whatsapp' || ticket.sistema_exclusivo_at) return Promise.resolve(opciones)
-			return confirmar_traspaso(this).then(confirmado => confirmado && this.activo && this.seleccionado_id === ticket.id
+			return confirmar_traspaso(this, 'soporte').then(confirmado => confirmado && this.activo && this.seleccionado_id === ticket.id
 				? Object.assign(opciones, { traspasar_a_sistema: 1 }) : null)
 		},
 		enviar(payload) {
