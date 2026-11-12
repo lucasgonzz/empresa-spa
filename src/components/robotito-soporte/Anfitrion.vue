@@ -257,6 +257,7 @@ export default {
 			this.pregunta = ''
 			this.pregunta_bloqueada = false
 			this.error_pregunta = ''
+			this._tarjeta_arriba = false
 			if (guia.tema === 'centro_recursos' || claves.includes('tutoriales.abrir')) document.body.classList.add(CLASE_TUTORIALES)
 			const self = this
 			this.$nextTick(function () {
@@ -267,6 +268,10 @@ export default {
 					texto_plano: true,
 					clase_popover: 'tour-soporte',
 					reacomodar_en_resize: true,
+					// Guía armada para la consulta: un paso sin control que señalar (o cuyo control no
+					// apareció) va en una tarjeta acoplada, sin fondo y con el sistema usable. Los
+					// guiones fijos no la usan: todos sus pasos tienen ancla.
+					indicacion_acoplada: guia.tema === TEMA_GUIA_DINAMICA,
 					preparar_capas: paso => {
 						if (paso.ancla && paso.ancla.indexOf('soporte.') === 0) self.restaurar_capas()
 					},
@@ -286,7 +291,7 @@ export default {
 			corrida.mostrados.add(paso)
 			this.evento(corrida.guia.uuid, { event: 'step', step: paso })
 		},
-		decorar_tarjeta(popover, refrescar) {
+		decorar_tarjeta(popover, refrescar, estado) {
 			const cabecera = this.$refs.cabecera
 			const pregunta = this.$refs.pregunta
 			if (cabecera) popover.wrapper.insertBefore(cabecera.$el, popover.title)
@@ -297,6 +302,28 @@ export default {
 			popover.previousButton.disabled = popover.previousButton.style.display === 'none'
 			popover.previousButton.style.display = ''
 			this._refrescar_vineta = refrescar
+			if (estado && estado.acoplada) this.agregar_boton_mover(popover)
+		},
+		// La tarjeta acoplada no sabe de qué control habla: si justo lo tapa, la persona la corre.
+		agregar_boton_mover(popover) {
+			const anterior = popover.wrapper.querySelector('.robotito-tarjeta__mover')
+			if (anterior) anterior.remove()
+			const self = this
+			const boton = document.createElement('button')
+			boton.type = 'button'
+			boton.className = 'robotito-tarjeta__mover'
+			const pintar = function () {
+				popover.wrapper.classList.toggle('tour-tarjeta-acoplada--arriba', Boolean(self._tarjeta_arriba))
+				boton.textContent = self._tarjeta_arriba ? 'Mover abajo' : 'Mover arriba'
+				boton.setAttribute('aria-label', self._tarjeta_arriba
+					? 'Mover esta tarjeta abajo de la pantalla' : 'Mover esta tarjeta arriba de la pantalla')
+			}
+			boton.addEventListener('click', function () {
+				self._tarjeta_arriba = !self._tarjeta_arriba
+				pintar()
+			})
+			pintar()
+			popover.wrapper.insertBefore(boton, popover.footer)
 		},
 		refrescar_vineta() {
 			if (this._refrescar_vineta) this._refrescar_vineta()
@@ -433,6 +460,65 @@ export default {
 
 .robotito-capa-con-borrador
 	display: none !important
+
+// Paso sin control que señalar: sin fondo oscurecido y con la tarjeta en una esquina, para que la
+// persona siga la instrucción mirando su pantalla. Las clases las pone el motor (acoplar_tarjeta).
+body.tour-tarjeta-acoplada .driver-overlay
+	display: none !important
+
+.driver-popover.tour-soporte.tour-tarjeta-acoplada
+	// driver.js ubica la tarjeta con estilos en línea y los reescribe en cada resize.
+	top: auto !important
+	left: auto !important
+	right: 16px !important
+	bottom: 16px !important
+	width: min(340px, calc(100vw - 32px))
+	max-height: calc(100vh - 32px)
+	max-height: calc(100dvh - 32px)
+	overflow-y: auto
+
+	&.tour-tarjeta-acoplada--arriba
+		top: 16px !important
+		bottom: auto !important
+
+	.driver-popover-arrow
+		display: none
+
+	.driver-popover-description
+		max-height: min(9rem, 22vh)
+
+	.robotito-tarjeta__mover
+		all: unset
+		display: block
+		margin-top: 10px
+		color: var(--robotito-acento)
+		font-size: 12px
+		font-weight: 650
+		text-decoration: underline
+		cursor: pointer
+		&:focus-visible
+			outline: 2px solid var(--robotito-foco)
+			outline-offset: 2px
+
+	// En el teléfono ocupa el ancho, pegada abajo, y se achica para dejar ver la pantalla.
+	@media (max-width: 575.98px)
+		left: 8px !important
+		right: 8px !important
+		bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important
+		width: auto
+		max-height: 46vh
+		max-height: 46dvh
+		padding: 12px
+
+		&.tour-tarjeta-acoplada--arriba
+			top: 8px !important
+			bottom: auto !important
+
+		.driver-popover-title
+			font-size: 15px
+
+		.driver-popover-description
+			max-height: 5.8rem
 
 .tour-soporte:has(.robotito-pregunta__espera) .driver-popover-navigation-btns
 	visibility: hidden
