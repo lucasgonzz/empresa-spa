@@ -42,7 +42,7 @@
 			<div v-if="attachment_error" class="support-input-mic-error" role="alert">
 				{{ attachment_error }}
 			</div>
-			<!-- Audios, imágenes y, desde la misión prueba-e2e-campana-imperio, Excel, CSV y PDF -->
+			<!-- Audios, imágenes y, desde la misión prueba-e2e-campana-imperio, Excel y PDF -->
 			<input
 				ref="file_input"
 				class="d-none"
@@ -347,7 +347,7 @@ export default {
 			this.image_editor_source_file = null
 		},
 		/**
-		 * Abre selector nativo para adjuntar un audio, una imagen o un documento (Excel, CSV, PDF).
+		 * Abre selector nativo para adjuntar un audio, una imagen o un documento (Excel, PDF).
 		 */
 		open_file_input() {
 			this.$refs.file_input.click()

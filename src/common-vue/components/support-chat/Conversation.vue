@@ -60,7 +60,7 @@
 								class="support-message-image"
 								alt="Imagen adjunta" />
 						</button>
-						<!-- Un documento (Excel, CSV, PDF) u otro archivo: se descarga, con su nombre a la vista -->
+						<!-- Un documento (Excel, PDF) u otro archivo: se descarga, con su nombre a la vista -->
 						<a
 							v-else
 							class="support-message-file"
@@ -672,7 +672,7 @@ export default {
 	background: #000;
 }
 
-/* Documento adjunto (Excel, CSV, PDF): clip + nombre, que corta en cualquier lado si el nombre es largo */
+/* Documento adjunto (Excel, PDF): clip + nombre, que corta en cualquier lado si el nombre es largo */
 .support-message-file {
 	display: inline-flex;
 	align-items: flex-start;

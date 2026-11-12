@@ -3,7 +3,8 @@
 // Hasta hoy el selector de archivos solo ofrecía audios e imágenes: un negocio en prueba no tenía cómo mandarle
 // su Excel o su PDF a Soporte desde el sistema.
 //
-//  L1. El selector ofrece además .xlsx, .xls, .csv y .pdf. Las imágenes siguen pasando por el editor y los audios
+//  L1. El selector ofrece además .xlsx, .xls y .pdf (sin .csv: el admin y el monitor solo importan Excel). Las
+//      imágenes siguen pasando por el editor y los audios
 //      van directo al adjunto, como siempre.
 //  L2. Un documento de más de 10 MB no se adjunta y se avisa en pantalla; si igual la API rechaza el envío con
 //      un motivo (422), la burbuja lo muestra.
@@ -25,8 +26,10 @@ function fuente(ruta) {
 
 const adjuntos = cargar('common-vue/components/support-chat/adjuntos.js')
 
-test('L: el selector ofrece audios, imágenes y además Excel, CSV y PDF', () => {
-	assert.equal(adjuntos.ACEPTA, 'audio/*,image/*,.xlsx,.xls,.csv,.pdf')
+test('L: el selector ofrece audios, imágenes y además Excel y PDF, sin CSV', () => {
+	assert.equal(adjuntos.ACEPTA, 'audio/*,image/*,.xlsx,.xls,.pdf')
+	assert.deepEqual(adjuntos.EXTENSIONES_DE_DOCUMENTO, ['xlsx', 'xls', 'pdf'])
+	assert.doesNotMatch(adjuntos.ACEPTA, /csv/i, 'El admin y el monitor solo importan xlsx y xls: no se ofrece el CSV.')
 	const sfc = compiler.parseComponent(fuente('common-vue/components/support-chat/MessageInput.vue'))
 	assert.match(sfc.template.content, /type="file"\s+:accept="acepta"/)
 	assert.doesNotMatch(sfc.template.content, /accept="audio\/\*,image\/\*"/)
@@ -41,8 +44,9 @@ test('L: qué es un documento y qué no', () => {
 	const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 	assert.equal(adjuntos.es_documento({ name: 'Lista de precios.xlsx', type: xlsx }), true)
 	assert.equal(adjuntos.es_documento({ name: 'lista.XLS', type: 'application/vnd.ms-excel' }), true)
-	assert.equal(adjuntos.es_documento({ name: 'lista.csv', type: 'text/csv' }), true)
-	assert.equal(adjuntos.es_documento({ name: 'lista.csv', type: '' }), true, 'Windows manda el CSV sin tipo.')
+	assert.equal(adjuntos.es_documento({ name: 'lista.xlsx', type: '' }), true, 'Windows a veces manda el archivo sin tipo.')
+	assert.equal(adjuntos.es_documento({ name: 'lista.csv', type: 'text/csv' }), false, 'El CSV ya no es un documento del chat.')
+	assert.equal(adjuntos.es_documento({ name: 'lista.csv', type: '' }), false)
 	assert.equal(adjuntos.es_documento({ name: 'catalogo.v2.pdf', type: 'application/pdf' }), true)
 	assert.equal(adjuntos.es_documento({ name: 'captura.png', type: 'image/png' }), false)
 	assert.equal(adjuntos.es_documento({ name: 'foto.pdf', type: 'image/jpeg' }), false, 'Una imagen renombrada sigue siendo imagen.')
@@ -127,7 +131,7 @@ test('L: un documento viaja como mensaje de texto con adjunto (el `kind` de siem
 	vm.$emit = (nombre, valor) => enviados.push([nombre, valor])
 	vm.confirmando = false
 	vm.recording = false
-	const lista = { name: 'lista.csv', type: 'text/csv', size: 1200 }
+	const lista = { name: 'lista.xls', type: 'application/vnd.ms-excel', size: 1200 }
 	vm.attachment = lista
 	vm.body = 'Va mi lista'
 	vm.emit_send()

@@ -1,14 +1,20 @@
 // Qué se puede adjuntar en el chat de Soporte (misión prueba-e2e-campana-imperio, 11/11/2026).
 //
 // Hasta hoy el selector de archivos solo ofrecía audios e imágenes: un negocio en prueba no tenía cómo
-// mandarle su lista de precios a Soporte desde el sistema. Ahora ofrece además Excel, CSV y PDF. Las
+// mandarle su lista de precios a Soporte desde el sistema. Ahora ofrece además Excel y PDF. Las
 // imágenes siguen pasando por el editor y los audios por la grabación: acá solo se suman los documentos.
 //
 // Sin Vue ni store, para que MessageInput.vue y Conversation.vue pregunten lo mismo y para poder probarlo.
 // Las extensiones y el tope son los mismos que valida empresa-api (SupportMessageAttachment).
 
-/** Extensiones de documento que acepta el chat. */
-export const EXTENSIONES_DE_DOCUMENTO = ['xlsx', 'xls', 'csv', 'pdf']
+/**
+ * Extensiones de documento que acepta el chat: Excel y PDF.
+ *
+ * 🔴 Sin `.csv` a propósito: la importación del lado del admin y del monitor solo carga xlsx y xls, y
+ * ofrecer el CSV en el selector sería prometer algo que después no se puede importar. (empresa-api no lo
+ * rechaza: el servidor sigue aceptando lo mismo que antes.)
+ */
+export const EXTENSIONES_DE_DOCUMENTO = ['xlsx', 'xls', 'pdf']
 
 /** Tope de un documento, en bytes (10 MB). Audios e imágenes no tienen tope propio, como hasta ahora. */
 export const TOPE_DE_DOCUMENTO = 10 * 1024 * 1024
@@ -26,7 +32,7 @@ export function extension_de(nombre) {
 }
 
 /**
- * true si el archivo es un documento (Excel, CSV o PDF). Un audio o una imagen nunca lo son, se llamen
+ * true si el archivo es un documento (Excel o PDF). Un audio o una imagen nunca lo son, se llamen
  * como se llamen: siguen por su camino de siempre.
  *
  * @param {File|Object|null} archivo Algo con `name` y `type`.
