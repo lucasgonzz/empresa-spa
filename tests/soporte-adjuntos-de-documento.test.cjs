@@ -193,12 +193,17 @@ test('L: si la API rechaza el envío con un motivo (422), la burbuja lo dice; si
 		armar({ response: { status: 422, data: { code: 'adjunto_demasiado_grande', message: 'El archivo pesa más de 10 MB. Achicalo o mandalo en partes.' } } }),
 		armar({ response: { status: 500, data: { message: 'Server Error' } } }),
 		armar(new Error('sin red')),
+		// El hosting corta la subida antes de llegar a la API: 413, con una página de error y no un JSON.
+		armar({ response: { status: 413, data: '<html><h1>413 Request Entity Too Large</h1></html>' } }),
 	]).then(filas => {
 		console.log = log
 		assert.equal(filas[0]._delivery_error, 'not_sent')
 		assert.equal(filas[0]._delivery_error_message, 'El archivo pesa más de 10 MB. Achicalo o mandalo en partes.')
 		assert.equal(filas[1]._delivery_error_message, null, 'Un 500 no le muestra su texto al usuario.')
 		assert.equal(filas[2]._delivery_error_message, null)
+		assert.equal(filas[3]._delivery_error, 'not_sent')
+		assert.equal(filas[3]._delivery_error_message, 'El archivo es muy grande. Probá con uno más liviano o mandalo por WhatsApp.')
+		assert.equal(etiqueta(filas[3]), 'El archivo es muy grande. Probá con uno más liviano o mandalo por WhatsApp.', 'La burbuja muestra el motivo, no «No enviado».')
 	})
 })
 

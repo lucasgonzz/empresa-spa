@@ -11,6 +11,24 @@ function generar_uuid_del_mensaje() {
 	return hex.replace(/^(........)(....)(....)(....)(............)$/, '$1-$2-$3-$4-$5')
 }
 
+/** Lo que se le dice al usuario cuando el hosting corta la subida por el tamaño del archivo (413). */
+export const AVISO_ARCHIVO_MUY_GRANDE = 'El archivo es muy grande. Probá con uno más liviano o mandalo por WhatsApp.'
+
+/**
+ * Por qué no salió el mensaje, en palabras para el usuario, o null si no hay nada mejor que «No enviado».
+ * Un 422 trae el motivo de la API (un documento de más de 10 MB); un 413 lo corta el hosting antes de
+ * llegar a la API y no trae texto: se le pone el aviso del tamaño. Un 500 o la falta de red, nada.
+ *
+ * @param {Object} error El error de axios.
+ * @returns {String|null}
+ */
+export function motivo_del_rechazo(error) {
+	const respuesta = error && error.response
+	if (!respuesta) return null
+	if (respuesta.status === 413) return AVISO_ARCHIVO_MUY_GRANDE
+	return respuesta.status === 422 && respuesta.data && typeof respuesta.data.message === 'string' ? respuesta.data.message : null
+}
+
 function identidad_de_sesion({ auth, ai_chat }) {
 	const usuario = auth.user
 	return usuario ? [usuario.id, !!usuario.es_sesion_soporte, !!usuario.es_acceso_maestro, ai_chat && ai_chat.revision_sesion].join(':') : null
@@ -312,13 +330,10 @@ export default {
 				.catch(error => {
 					if (identidad_de_sesion(rootState) !== identidad) return
 					commit('setSending', false)
-					const respuesta = error && error.response
 					commit('markPendingDeliveryError', {
 						client_key: client_key,
 						error_code: 'not_sent',
-						error_message: respuesta && respuesta.status === 422 && respuesta.data && typeof respuesta.data.message === 'string'
-							? respuesta.data.message
-							: null,
+						error_message: motivo_del_rechazo(error),
 					})
 					console.log(error)
 				})
