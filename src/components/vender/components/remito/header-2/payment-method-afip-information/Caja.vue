@@ -163,6 +163,17 @@ export default {
 			}
 		},
 	},
+	created() {
+		/*
+			Misión prueba-primera-venta (12/11/2026): al volver a Vender (por ejemplo, después de abrir
+			la caja en Tesorería) ninguno de los watchers dispara —el catálogo de cajas y el método de pago
+			ya estaban—, así que la venta seguía sin caja. Se aplica la por defecto (o la única disponible)
+			si falta, con los mismos guardas de siempre.
+		*/
+		if (this.necesita_caja_unica) {
+			this.aplicar_caja_por_defecto_si_falta()
+		}
+	},
 	methods: {
 		/**
 		 * Asigna la caja por defecto del metodo de pago y la sucursal.
@@ -192,6 +203,46 @@ export default {
             if (caja_por_defecto && this.cajas.length) {
 				this.caja_id = caja_por_defecto.id
             }
+
+			this.usar_la_unica_caja_disponible()
+		},
+		/**
+		 * Si el desplegable ofrece UNA sola caja y la venta no tiene puesta ninguna de las que ofrece,
+		 * pone esa (misión prueba-primera-venta, 12/11/2026).
+		 *
+		 * En el ensayo de la prueba gratuita el dueño, con una sola caja abierta, tuvo que elegirla a mano
+		 * en cada venta: la caja por defecto sale de `default_payment_method_cajas` y, sin esa
+		 * configuración (o con la por defecto cerrada), el select quedaba en "Seleccione caja" y el
+		 * guardado frenaba con "Indique una CAJA para esta venta".
+		 *
+		 * 🔴 Con DOS o más opciones no se adivina: elige el vendedor (o la configuración por defecto, de
+		 * arriba). Y una caja que ya está puesta y el desplegable ofrece se respeta: la eligió alguien.
+		 *
+		 * Las opciones son las mismas que dibuja el select (get_caja_options: abiertas, de la sucursal y
+		 * la moneda de la venta, y a las que el usuario tiene acceso), así que nunca pone una caja que el
+		 * vendedor no podría elegir. Solo cuando la caja de este select es la que viaja en la venta
+		 * (necesita_caja_unica): a cuenta corriente, en un presupuesto o con reparto de métodos no aplica.
+		 *
+		 * @returns {void}
+		 */
+		usar_la_unica_caja_disponible() {
+
+			if (!this.necesita_caja_unica) {
+				return
+			}
+
+			let opciones = this.get_caja_options(this.vender_payment_method_id, this.address_id, this.moneda_id)
+				.filter(opcion => opcion.value)
+
+			if (opciones.length !== 1) {
+				return
+			}
+
+			if (this.caja_id == opciones[0].value) {
+				return
+			}
+
+			this.caja_id = opciones[0].value
 		},
 		/**
 		 * Aplica la caja por defecto cuando la caja de este select vuelve a hacer falta (ver el
