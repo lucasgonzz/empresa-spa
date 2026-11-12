@@ -21,7 +21,7 @@ export default {
 			if (this.cajas.length) {
 
 				if (!this.cajas_abiertas.length) {
-					this.$toast.error('Habra al menos una CAJA para poder indicarla en esta venta')
+					this.avisar_que_no_hay_cajas_abiertas()
 					return false 
 				}
 
@@ -34,7 +34,7 @@ export default {
 					)
 				) {
 
-					this.$toast.error('Indique una CAJA para esta venta')
+					this.avisar_que_falta_la_caja()
 					return false 
 				}
 
@@ -70,11 +70,62 @@ export default {
 				
 				if (typeof caja_seleccionada == 'undefined') {
 
-					this.$toast.error('Indique una CAJA para esta venta')
+					this.avisar_que_falta_la_caja()
 					return false 
 				}
 			}
 			return true 
-		},	
+		},
+		/*
+			Misión prueba-primera-venta (12/11/2026): en el ensayo de la prueba gratuita «Guardar venta»
+			frenó tres veces seguidas, de a un requisito por vez (cajas cerradas, caja sin elegir,
+			sucursal sin elegir). Los dos avisos de abajo dicen TODO lo que falta de una: si además de la
+			caja falta la sucursal (la misma condición de check_sucursal, que sigue corriendo después y
+			frena sola si la caja estaba bien), lo dicen en el mismo aviso.
+		*/
+		/**
+		 * No hay ninguna caja abierta: dice dónde se abre y, si el usuario puede entrar a Tesorería,
+		 * tocar el aviso lo lleva ahí. La venta en curso queda en el store: al volver sigue como estaba.
+		 *
+		 * @returns {void}
+		 */
+		avisar_que_no_hay_cajas_abiertas() {
+			let puede_ir = this.can('caja.index')
+
+			let mensaje = 'No hay ninguna CAJA abierta. Abrí una en Tesorería: en la fila de la caja, botón «Abrir».'
+
+			if (puede_ir) {
+				mensaje += ' Tocá este aviso para ir.'
+			}
+
+			if (this.falta_sucursal_de_la_venta()) {
+				mensaje += ' Además, indicá la SUCURSAL de la venta.'
+			}
+
+			let opciones = { duration: 10000 }
+
+			if (puede_ir) {
+				opciones.onClick = () => {
+					if (this.$route.name != 'caja') {
+						this.$router.push({ name: 'caja' })
+					}
+				}
+			}
+
+			this.$toast.error(mensaje, opciones)
+		},
+		/**
+		 * Hay cajas abiertas pero la venta no tiene una elegida (o tiene una cerrada).
+		 *
+		 * @returns {void}
+		 */
+		avisar_que_falta_la_caja() {
+			if (this.falta_sucursal_de_la_venta()) {
+				this.$toast.error('Indicá la CAJA y la SUCURSAL de esta venta')
+				return
+			}
+
+			this.$toast.error('Indique una CAJA para esta venta')
+		},
 	}
 }
