@@ -217,7 +217,7 @@ export default {
 			}
 
 			if (!this.cajas_abiertas.length) {
-				this.$toast.error('Habra al menos una CAJA para poder indicarla en este presupuesto')
+				this.$toast.error('Abrí al menos una CAJA para poder indicarla en este presupuesto')
 				return false
 			}
 
