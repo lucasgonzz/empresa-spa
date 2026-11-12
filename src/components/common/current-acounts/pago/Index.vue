@@ -283,7 +283,19 @@ export default {
         			this.$toast.success('Pago registrado')
                     this.$bvModal.hide('current-acounts-pago')
                     // this.updateClient(this.from_model)
-                    this.loadModel(this.from_model_name, this.from_model.id)
+                    /*
+                        El titular vuelve con sus cuentas y el saldo nuevo: con eso se refresca la
+                        franja «Saldo actual» del modal, que si no seguía con el saldo viejo hasta
+                        reabrirlo (misión prueba-primera-venta, 12/11/2026). Los datos se toman
+                        ANTES de clear() y del pedido, que no los cambian pero así no dependen de eso.
+                    */
+                    let model_name = this.from_model_name
+                    let model_id = this.from_model.id
+                    let credit_account_id = this.from_credit_account.id
+                    this.loadModel(model_name, model_id)
+                    .then(() => {
+                        this.refrescar_saldo_de_la_cuenta(model_name, model_id, credit_account_id)
+                    })
                     this.clear()
 
                     this.update_ventas()
@@ -310,6 +322,32 @@ export default {
         		})
             }
     	},
+        /**
+         * Pasa a la franja «Saldo actual» el saldo de la cuenta que trajo el titular recién recargado.
+         *
+         * @param {string} model_name 'client' o 'provider'.
+         * @param {Number} model_id Id del titular.
+         * @param {Number} credit_account_id La cuenta en la que se registró el pago.
+         * @returns {void}
+         */
+        refrescar_saldo_de_la_cuenta(model_name, model_id, credit_account_id) {
+            let modulo = this.$store.state[model_name]
+            if (!modulo || !Array.isArray(modulo.models)) {
+                return
+            }
+
+            let titular = modulo.models.find(model => model.id == model_id)
+            if (!titular || !Array.isArray(titular.credit_accounts)) {
+                return
+            }
+
+            let cuenta = titular.credit_accounts.find(credit_account => credit_account.id == credit_account_id)
+            if (!cuenta) {
+                return
+            }
+
+            this.$store.commit('current_acount/actualizar_saldo_de_la_cuenta', cuenta)
+        },
         update_payment_plan_cuotas() {
             if (this.view == 'planes-de-pago') {
                 this.$store.dispatch('payment_plan_cuota/getModels')
