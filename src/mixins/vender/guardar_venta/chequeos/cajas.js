@@ -90,9 +90,43 @@ export default {
 		 * @returns {void}
 		 */
 		avisar_que_no_hay_cajas_abiertas() {
-			let puede_ir = this.can('caja.index')
+			this.avisar_con_camino_a_tesoreria('No hay ninguna CAJA abierta. Abrí una en Tesorería: en la fila de la caja, botón «Abrir».')
+		},
+		/**
+		 * Hay cajas abiertas pero la venta no tiene una elegida, o tiene una cerrada.
+		 *
+		 * Con una cerrada es casi siempre la caja por defecto del método de pago (Vender la pone aunque
+		 * esté cerrada y no la cambia por otra: ver Caja.vue::usar_la_unica_caja_disponible), así que se
+		 * la nombra y se dice dónde abrirla, en vez de pedir "una CAJA" con el select ya lleno.
+		 *
+		 * @returns {void}
+		 */
+		avisar_que_falta_la_caja() {
+			let caja_id = this.$store.state.vender.caja_id
+			let puesta = caja_id ? this.cajas.find(caja => caja.id == caja_id) : null
 
-			let mensaje = 'No hay ninguna CAJA abierta. Abrí una en Tesorería: en la fila de la caja, botón «Abrir».'
+			if (puesta && !puesta.abierta) {
+				this.avisar_con_camino_a_tesoreria('La caja «' + puesta.name + '» de esta venta está cerrada. Abrila en Tesorería: en la fila de la caja, botón «Abrir». O elegí otra caja.')
+				return
+			}
+
+			if (this.falta_sucursal_de_la_venta()) {
+				this.$toast.error('Indicá la CAJA y la SUCURSAL de esta venta')
+				return
+			}
+
+			this.$toast.error('Indique una CAJA para esta venta')
+		},
+		/**
+		 * Aviso de caja con el camino a Tesorería: si el usuario puede entrar, tocarlo lo lleva ahí (la
+		 * venta en curso queda en el store y al volver sigue como estaba). Si además falta la sucursal,
+		 * lo dice en el mismo aviso.
+		 *
+		 * @param {string} mensaje
+		 * @returns {void}
+		 */
+		avisar_con_camino_a_tesoreria(mensaje) {
+			let puede_ir = this.can('caja.index')
 
 			if (puede_ir) {
 				mensaje += ' Tocá este aviso para ir.'
@@ -113,19 +147,6 @@ export default {
 			}
 
 			this.$toast.error(mensaje, opciones)
-		},
-		/**
-		 * Hay cajas abiertas pero la venta no tiene una elegida (o tiene una cerrada).
-		 *
-		 * @returns {void}
-		 */
-		avisar_que_falta_la_caja() {
-			if (this.falta_sucursal_de_la_venta()) {
-				this.$toast.error('Indicá la CAJA y la SUCURSAL de esta venta')
-				return
-			}
-
-			this.$toast.error('Indique una CAJA para esta venta')
 		},
 	}
 }

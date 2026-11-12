@@ -17,6 +17,7 @@
 <script>
 import cajas from '@/mixins/vender/cajas'
 import caja_por_defecto from '@/mixins/caja_por_defecto'
+import { caja_unica_a_elegir } from '@/utils/caja_unica_de_vender'
 export default {
 	mixins: [cajas, caja_por_defecto],
 	watch: {
@@ -163,6 +164,12 @@ export default {
 			}
 		},
 	},
+	data() {
+		return {
+			// La caja que puso usar_la_unica_caja_disponible (0 si ninguna): solo esa se saca si deja de corresponder.
+			caja_unica_puesta_id: 0,
+		}
+	},
 	created() {
 		/*
 			Misión prueba-primera-venta (12/11/2026): al volver a Vender (por ejemplo, después de abrir
@@ -204,45 +211,60 @@ export default {
 				this.caja_id = caja_por_defecto.id
             }
 
-			this.usar_la_unica_caja_disponible()
+			this.usar_la_unica_caja_disponible(caja_por_defecto)
 		},
 		/**
-		 * Si el desplegable ofrece UNA sola caja y la venta no tiene puesta ninguna de las que ofrece,
-		 * pone esa (misión prueba-primera-venta, 12/11/2026).
+		 * Si el desplegable ofrece UNA sola caja para el método de pago, la pone (misión
+		 * prueba-primera-venta, 12/11/2026). La decisión es `caja_unica_a_elegir` (utils/caja_unica_de_vender.js,
+		 * con su prueba en tests/caja-unica-de-vender.test.cjs).
 		 *
 		 * En el ensayo de la prueba gratuita el dueño, con una sola caja abierta, tuvo que elegirla a mano
-		 * en cada venta: la caja por defecto sale de `default_payment_method_cajas` y, sin esa
-		 * configuración (o con la por defecto cerrada), el select quedaba en "Seleccione caja" y el
-		 * guardado frenaba con "Indique una CAJA para esta venta".
+		 * en cada venta: sin configuración de caja por defecto el select quedaba en "Seleccione caja".
 		 *
-		 * 🔴 Con DOS o más opciones no se adivina: elige el vendedor (o la configuración por defecto, de
-		 * arriba). Y una caja que ya está puesta y el desplegable ofrece se respeta: la eligió alguien.
+		 * 🔴 La caja por defecto del método manda siempre: si es OTRA (aunque esté cerrada), no se elige la
+		 * única abierta —una transferencia configurada a «Banco» no puede entrar en «Efectivo»—; queda la
+		 * por defecto puesta y el guardado avisa que está cerrada y dónde se abre. Con dos o más opciones
+		 * no se adivina. Solo cuando la caja de este select es la que viaja en la venta
+		 * (necesita_caja_unica): a cuenta corriente, en un presupuesto o con reparto de varios métodos
+		 * (cada uno con su caja) no aplica.
 		 *
-		 * Las opciones son las mismas que dibuja el select (get_caja_options: abiertas, de la sucursal y
-		 * la moneda de la venta, y a las que el usuario tiene acceso), así que nunca pone una caja que el
-		 * vendedor no podría elegir. Solo cuando la caja de este select es la que viaja en la venta
-		 * (necesita_caja_unica): a cuenta corriente, en un presupuesto o con reparto de métodos no aplica.
+		 * Y lo que pone esta función no queda pegado: si al cambiar el método de pago (o la sucursal, o la
+		 * moneda) esa caja deja de ser la que correspondería elegir sola, vuelve a "Seleccione caja". Una
+		 * caja que puso el vendedor o la configuración por defecto no se toca.
 		 *
+		 * @param {Object|null} caja_por_defecto La por defecto del método y la sucursal, abierta o cerrada.
 		 * @returns {void}
 		 */
-		usar_la_unica_caja_disponible() {
+		usar_la_unica_caja_disponible(caja_por_defecto) {
 
 			if (!this.necesita_caja_unica) {
 				return
 			}
 
+			// Si alguien (el vendedor o la por defecto) ya cambió la caja, la marca de "la puse yo" se olvida.
+			if (this.caja_id != this.caja_unica_puesta_id) {
+				this.caja_unica_puesta_id = 0
+			}
+
 			let opciones = this.get_caja_options(this.vender_payment_method_id, this.address_id, this.moneda_id)
-				.filter(opcion => opcion.value)
 
-			if (opciones.length !== 1) {
+			let elegida = caja_unica_a_elegir(opciones, this.cajas, this.vender_payment_method_id, caja_por_defecto, this.caja_id)
+
+			if (elegida) {
+				this.caja_id = elegida
+				this.caja_unica_puesta_id = elegida
 				return
 			}
 
-			if (this.caja_id == opciones[0].value) {
-				return
-			}
+			if (this.caja_unica_puesta_id && this.caja_id == this.caja_unica_puesta_id) {
 
-			this.caja_id = opciones[0].value
+				let seguiria = caja_unica_a_elegir(opciones, this.cajas, this.vender_payment_method_id, caja_por_defecto, 0)
+
+				if (seguiria != this.caja_id) {
+					this.caja_id = 0
+					this.caja_unica_puesta_id = 0
+				}
+			}
 		},
 		/**
 		 * Aplica la caja por defecto cuando la caja de este select vuelve a hacer falta (ver el
