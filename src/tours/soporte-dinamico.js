@@ -1,4 +1,5 @@
 import { ancla_revertir_importacion } from './importacion-soporte'
+import catalogo from './catalogo-soporte.json'
 
 export const TEMA_GUIA_DINAMICA = 'guia_dinamica'
 const LISTADO = { name: 'article' }
@@ -8,6 +9,39 @@ const COMPRAS = { name: 'provider', params: { view: 'compras' } }
 const TESORERIA = { name: 'caja' }
 const REVERTIR_IMPORTACION = 'listado.revertir_importacion'
 const BOTON_APERTURAS = '[data-tour="caja.historial_aperturas"]'
+const ABM = { name: 'abm', params: { view: 'articulos', sub_view: 'categorias' } }
+// Una solapa del ABM está siempre a la vista: si a los cinco segundos no apareció, la persona no la
+// tiene (otra versión, otra extensión) y el paso sigue como tarjeta acoplada en vez de quedar esperando.
+const TECHO_SOLAPA_MS = 5000
+
+/**
+ * Paso que señala un grupo o una solapa del ABM para que la persona la toque.
+ *
+ * `ruta` es adónde se navega si la persona está en otro lado y `ruta_suficiente` lo que alcanza para
+ * no moverla: para señalar «Impuestos sobre ventas» basta con estar en ABM → Precios, en la solapa que
+ * sea. `ruta_destino` es donde queda después del clic; las indicaciones que siguen la heredan, así
+ * que quien avanza con «Siguiente» sin tocar la solapa igual termina en la pantalla de la que hablan.
+ *
+ * @param {Object} entrada Entrada de `abm` de catalogo-soporte.json.
+ * @returns {Object}
+ */
+function paso_de_abm(entrada) {
+	const destino = { name: 'abm', params: { view: entrada.view, sub_view: entrada.sub_view } }
+	const paso = { ancla: entrada.clave, avanza: 'clic', techo_ms: TECHO_SOLAPA_MS, ruta_destino: destino }
+
+	if (entrada.tipo === 'grupo') {
+		return Object.assign(paso, { ruta: ABM, ruta_suficiente: { name: 'abm' } })
+	}
+	return Object.assign(paso, {
+		ruta: { name: 'abm', params: { view: entrada.view, sub_view: entrada.sub_view_inicial } },
+		ruta_suficiente: { name: 'abm', params: { view: entrada.view } },
+	})
+}
+
+const SOLAPAS_ABM = {}
+catalogo.abm.forEach(function (entrada) {
+	SOLAPAS_ABM[entrada.clave] = paso_de_abm(entrada)
+})
 
 function controles_de_porcentaje_abm(modelo, solapa) {
 	const ruta = { name: 'abm', params: { view: 'precios', sub_view: solapa } }
@@ -47,7 +81,7 @@ const PANTALLAS = {
 	'vista.cheques': { name: 'cheque', params: { sub_view: 'recibido', sub_sub_view: 'pendientes' } },
 	'vista.agenda': { name: 'pending', params: { view: 'por-realizar' } },
 	'vista.comprobantes': { name: 'comprobantes' },
-	'vista.abm': { name: 'abm', params: { view: 'articulos', sub_view: 'categorias' } },
+	'vista.abm': ABM,
 	'vista.alertas': { name: 'alertas' },
 	'vista.clientes': { name: 'client', params: { view: 'clientes' } },
 	'vista.proveedores': { name: 'provider', params: { view: 'proveedores' } },
@@ -118,7 +152,8 @@ function compilar_paso(datos, soporte_abierto) {
 
 	const clave = datos.clave
 	const pantalla = Object.prototype.hasOwnProperty.call(PANTALLAS, clave) ? PANTALLAS[clave] : null
-	const control = Object.prototype.hasOwnProperty.call(CONTROLES, clave) ? CONTROLES[clave] : null
+	const control = Object.prototype.hasOwnProperty.call(CONTROLES, clave) ? CONTROLES[clave]
+		: Object.prototype.hasOwnProperty.call(SOLAPAS_ABM, clave) ? SOLAPAS_ABM[clave] : null
 	if (!pantalla && !control) return null
 
 	const paso = Object.assign({ foco: false, requerido: true, texto: datos.texto }, pantalla ? { ruta: pantalla, indicacion: true } : control)
@@ -139,5 +174,33 @@ function compilar_paso(datos, soporte_abierto) {
 export function pasos_dinamicos(pasos, soporte_abierto) {
 	if (!Array.isArray(pasos) || !pasos.length || pasos.length > 8) return []
 	const compilados = pasos.map(paso => compilar_paso(paso, soporte_abierto))
-	return compilados.includes(null) ? [] : compilados
+	if (compilados.includes(null)) return []
+
+	// Una indicación sin pantalla propia se muestra donde dejó a la persona la solapa del ABM anterior.
+	let destino = null
+	compilados.forEach(function (paso) {
+		if (paso.ruta_destino) {
+			destino = paso.ruta_destino
+		} else if (paso.ruta) {
+			destino = null
+		} else if (paso.indicacion && destino) {
+			paso.ruta = destino
+		}
+	})
+	return compilados
+}
+
+/**
+ * Pantallas y controles que este archivo sabe compilar, para scripts/generar-catalogo-soporte.cjs.
+ *
+ * @returns {{pantallas: Array, controles: Array}}
+ */
+export function catalogo_local() {
+	return {
+		pantallas: Object.keys(PANTALLAS).map(clave => ({ clave: clave, ruta: PANTALLAS[clave] })),
+		controles: Object.keys(CONTROLES).filter(clave => clave !== 'indicacion').map(function (clave) {
+			const control = CONTROLES[clave]
+			return { clave: clave, ancla: control.ancla || null, selector: control.selector || null, ruta: control.ruta || null }
+		}),
+	}
 }
