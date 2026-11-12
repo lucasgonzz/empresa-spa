@@ -30,6 +30,21 @@ export function abre_en_soporte(user, puede_soporte) {
 	return !!puede_soporte && prueba_vigente(user)
 }
 
+/**
+ * ¿Soporte tiene que abrir sola la conversación de la prueba? Con la prueba vigente y solo en la sesión del
+ * propio negocio.
+ *
+ * 🔴 Abrir una conversación marca como leídos los mensajes de Soporte. En una sesión de soporte firmado
+ * (`es_sesion_soporte`: el equipo entrando al sistema del negocio) o de acceso maestro (`es_acceso_maestro`)
+ * eso le borraría al dueño el aviso de un mensaje que todavía no vio: ahí se muestra la lista, como siempre.
+ *
+ * @param {Object|null} user
+ * @returns {Boolean}
+ */
+export function abre_sola_la_conversacion(user) {
+	return prueba_vigente(user) && !user.es_sesion_soporte && !user.es_acceso_maestro
+}
+
 const NOMBRE_DE_LA_PRUEBA = /prueba\s+gratuita/i
 
 /**

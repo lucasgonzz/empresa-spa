@@ -63,7 +63,7 @@ import Conversation from '@/common-vue/components/support-chat/Conversation'
 import MessageInput from '@/common-vue/components/support-chat/MessageInput'
 import Icono from '@/components/asistente-ia/Icono'
 import { confirmar_traspaso } from '@/components/asistente-ia/traspaso'
-import { prueba_vigente, conversacion_de_la_prueba } from '@/components/asistente-ia/prueba_en_soporte'
+import { abre_sola_la_conversacion, conversacion_de_la_prueba } from '@/components/asistente-ia/prueba_en_soporte'
 
 export default {
 	components: { Conversation, MessageInput, Icono },
@@ -75,7 +75,8 @@ export default {
 		}
 	},
 	computed: {
-		en_prueba() { return prueba_vigente(this.$store.state.auth.user) },
+		// Prueba vigente Y sesión del propio negocio: en una de soporte firmado o de acceso maestro no se abre nada sola.
+		en_prueba() { return abre_sola_la_conversacion(this.$store.state.auth.user) },
 		esperando_la_prueba() { return this.activo && this.en_prueba && !this.prueba_resuelta && this.loading },
 		tickets() { return this.$store.state.support_ticket.models },
 		loading() { return this.$store.state.support_ticket.loading },

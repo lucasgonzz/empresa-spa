@@ -416,6 +416,32 @@ test('K: abrir la conversación de WhatsApp no la traslada: escribirle sigue pid
 	})
 })
 
+test('K: en una sesión de soporte firmado o de acceso maestro no se abre nada sola (no se marca nada como leído)', () => {
+	const de_soporte = Object.assign({}, VIGENTE, { es_sesion_soporte: true })
+	const maestro = Object.assign({}, VIGENTE, { es_acceso_maestro: true })
+
+	assert.equal(prueba.abre_sola_la_conversacion(VIGENTE), true)
+	assert.equal(prueba.abre_sola_la_conversacion(de_soporte), false)
+	assert.equal(prueba.abre_sola_la_conversacion(maestro), false)
+	;[VENCIDA, CONTRATO, CLIENTE, DEMO, null, undefined].forEach(user => {
+		assert.equal(prueba.abre_sola_la_conversacion(user), false, JSON.stringify(user))
+	})
+	// Agentes sigue abriendo en Soporte para esas sesiones: lo que no hacen es abrir (y leer) la conversación.
+	assert.equal(prueba.abre_en_soporte(de_soporte, true), true)
+
+	;[de_soporte, maestro].forEach(user => {
+		const vm = soporte({ auth: { user }, support_ticket: { models: [Object.assign({}, DE_LA_PRUEBA, { unread_messages_count: 2 })] } })
+		vm.abrir_conversacion_de_la_prueba()
+		Soporte.watch.loading.call(vm, false)
+		Soporte.watch.tickets.call(vm)
+		assert.deepEqual(vm.abiertas(), [], JSON.stringify(user))
+		assert.equal(vm.seleccionado_id, null, 'Queda la lista, con la pantalla vacía de siempre.')
+
+		const cargando = soporte({ auth: { user }, support_ticket: { loading: true } })
+		assert.equal(cargando.esperando_la_prueba, false)
+	})
+})
+
 test('K: el aviso de traspaso de Soporte dice qué pasa con las respuestas; el del Asistente personal no cambió', () => {
 	const traspaso = cargar('components/asistente-ia/traspaso.js')
 	const pedidos = []
