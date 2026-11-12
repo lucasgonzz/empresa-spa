@@ -102,6 +102,7 @@
 </template>
 <script>
 import SearchModal from '@/common-vue/components/search/Modal'
+import { criterio_para_el_modal } from '@/common-vue/components/search/criterio_al_abrir_modal'
 
 export default {
 	components: {
@@ -738,8 +739,48 @@ export default {
 
 				this.$bvModal.show(this._id+'-search-modal')
 				setTimeout(() => {
-					document.getElementById(this._id+'-search-modal-input').focus()
+					self.pasar_foco_al_input_del_modal(0)
 				}, 100)
+			}
+		},
+		/**
+		 * Lleva el foco al input del modal de busqueda, con lo que el usuario haya tipeado afuera.
+		 *
+		 * 🔴 Ensayo de la prueba, ronda 3 (12/11/2026): tipeando «Sierra» en «Agregar Articulo» a ritmo
+		 * humano, la «S» quedaba en este campo y el modal recibia «ierra». El input del modal nace con
+		 * el criterio que este campo tenia AL ABRIR (criterio_inicial, leido una sola vez), y el foco
+		 * recien pasa ahi en este setTimeout: lo tipeado en el medio caia afuera. Antes de enfocar, se
+		 * le pasa al modal lo que tiene este campo (la regla esta en criterio_al_abrir_modal.js), con
+		 * setInputValueSync para que el v-model del buscador general se entere, y el cursor al final.
+		 *
+		 * Reintenta si el input todavia no existe: el buscador general del modal es un componente
+		 * async y en la primera apertura de cada carga de pagina su chunk puede tardar mas de 100 ms.
+		 * Antes ese caso tiraba un TypeError (getElementById(...) null) y el foco no llegaba nunca.
+		 *
+		 * @param {Number} intento Intentos ya hechos (tope de 20, cada 50 ms: un segundo).
+		 * @returns {void}
+		 */
+		pasar_foco_al_input_del_modal(intento) {
+			let input = document.getElementById(this._id+'-search-modal-input')
+			if (!input) {
+				if (intento < 20) {
+					setTimeout(() => {
+						this.pasar_foco_al_input_del_modal(intento + 1)
+					}, 50)
+				}
+				return
+			}
+			let valor = criterio_para_el_modal({
+				valor_afuera: this.query,
+				valor_modal: input.value,
+				foco_en_modal: document.activeElement === input,
+			})
+			if (valor !== null) {
+				this.setInputValueSync(input, valor)
+			}
+			input.focus()
+			if (valor !== null && typeof input.setSelectionRange == 'function') {
+				input.setSelectionRange(valor.length, valor.length)
 			}
 		},
 		setSelected(model, results) {
