@@ -17,7 +17,7 @@
 		scrollable
 		:id="modal_id || model_name"
 		:data-modelo-en-edicion="model.id ? model_name : null"
-		:ignore-enforce-focus-selector="['surchage', 'discount'].includes(model_name) ? '.driver-popover.tour-soporte' : null"
+		:ignore-enforce-focus-selector="['surchage', 'discount', 'article'].includes(model_name) ? '.driver-popover.tour-soporte' : null"
 		:data-tour="ancla_tour_modal">
 
 			<template #modal-title>
