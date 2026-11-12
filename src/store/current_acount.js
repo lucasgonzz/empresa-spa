@@ -270,6 +270,24 @@ export default {
 			// Invalidar incluso antes del próximo GET impide que una respuesta anterior la repueble.
 			limpiarCuenta(state)
 		},
+		/**
+		 * Actualiza el saldo de la cuenta que se está viendo SIN limpiar la consulta (misión
+		 * prueba-primera-venta, 12/11/2026). Después de registrar un pago, la franja «Saldo actual»
+		 * seguía mostrando el saldo de cuando se abrió el modal hasta cerrarlo y reabrirlo.
+		 * set_from_credit_account no sirve para esto: vacía los movimientos (limpiarCuenta).
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Object} cuenta La cuenta recién leída de la API (de su titular: cliente o proveedor).
+		 * @returns {void}
+		 */
+		actualizar_saldo_de_la_cuenta(state, cuenta) {
+			if (!cuenta || !state.from_credit_account || state.from_credit_account.id != cuenta.id) {
+				return
+			}
+			state.from_credit_account = Object.assign({}, state.from_credit_account, {
+				saldo: cuenta.saldo,
+			})
+		},
 		setSelected(state, value) {
 			state.selected = value 
 		},
