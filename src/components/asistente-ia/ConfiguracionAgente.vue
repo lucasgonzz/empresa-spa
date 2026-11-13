@@ -446,7 +446,7 @@ export default {
 	computed: {
 		puede_configurar_mcp() {
 			const usuario = this.$store.state.auth.user
-			return !!(usuario && !usuario.es_acceso_maestro)
+			return !!(usuario && !usuario.es_sesion_soporte)
 		},
 		config_store() {
 			return this.$store.state.ai_chat.asistente_config

@@ -36,12 +36,11 @@ export default {
 		mostrador_tiene_extension() {
 			return !!this.hasExtencion('agentes_ia')
 		},
-		/** El acceso maestro necesita la autorización explícita de la API para ver el chat privado. */
+		/** El maestro audita como el dueño; el soporte firmado conserva su restricción. */
 		mostrador_es_el_dueno() {
 			const usuario = this.user
-			return !!(usuario && !usuario.es_sesion_soporte && (usuario.es_acceso_maestro
-				? this.is_owner && usuario.asistente_personal_autorizado === true
-				: this.is_owner || usuario.admin_access))
+			return !!(usuario && !usuario.es_sesion_soporte
+				&& (usuario.es_acceso_maestro || this.is_owner || usuario.admin_access))
 		},
 		puede_entrar_al_mostrador() {
 			return this.mostrador_tiene_extension && this.mostrador_es_el_dueno

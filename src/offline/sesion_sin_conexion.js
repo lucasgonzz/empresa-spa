@@ -47,9 +47,8 @@ const PREFIJO_CATALOGO = 'catalogo:'
  * - El dueño tiene prendido el modo sin conexión (`sync_offline_articles`, el mismo interruptor
  *   que la descarga de artículos): sin artículos en el equipo, entrar sin red no sirve para nada, y
  *   el que apagó el modo sin conexión no espera que el sistema quede abriendo solo.
- * - No es un acceso maestro (`es_acceso_maestro`) ni un login maestro básico
- *   (`skip_offline_articles_sync`): esa sesión es de soporte, no del comercio, y no tiene que poder
- *   reabrirse sola en el equipo.
+ * - El login básico omite artículos (`skip_offline_articles_sync`); el login_full puede conservar
+ *   su sesión sin conexión como el dueño. El acceso firmado de soporte no se guarda.
  *
  * @param {Object|null} user Usuario autenticado (forma de GET /api/user).
  * @returns {Boolean}
@@ -58,7 +57,7 @@ export function puede_guardar_sesion(user) {
 	if (!user || !user.id) {
 		return false
 	}
-	if (user.es_acceso_maestro || user.skip_offline_articles_sync) {
+	if (user.es_sesion_soporte || user.skip_offline_articles_sync) {
 		return false
 	}
 	/** El dueño: el mismo usuario si no tiene `owner_id`, o el que viene embebido. */
@@ -81,7 +80,7 @@ function copia_plana(valor) {
 
 /**
  * Guarda (o reemplaza) la sesión de este equipo, si el usuario puede tenerla. Si no puede (modo
- * sin conexión apagado, acceso maestro), BORRA la que hubiera: una sesión vieja de este mismo
+ * sin conexión apagado, login básico o soporte firmado), BORRA la que hubiera: una sesión vieja de este mismo
  * comercio no tiene que seguir abriendo sola después de que el dueño apagó el modo.
  *
  * @param {Object} user Usuario confirmado por el servidor.

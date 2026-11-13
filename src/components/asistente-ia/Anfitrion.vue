@@ -257,8 +257,8 @@ export default {
 			if (!this.Echo) {
 				return
 			}
-			// El login maestro usa polling: cada lectura vuelve a comprobar que la clave siga vigente.
-			const canal = (this.should_show && this.puede_entrar_al_mostrador && this.user && !this.user.es_acceso_maestro && this.user.id)
+			// El maestro usa el mismo canal privado de la persona que el ingreso propio.
+			const canal = (this.should_show && this.puede_entrar_al_mostrador && this.user && this.user.id)
 				? 'chat.user.' + this.user.id
 				: null
 			// Guarda de doble suscripción: watch de user.id y de should_show pueden

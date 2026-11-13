@@ -3,7 +3,7 @@ import axios from 'axios'
 export function puede_ver_implementacion(auth) {
 	const user = auth.user
 	return !!(auth.authenticated && user && user.prueba && user.prueba.activa
-		&& !user.owner_id && !user.es_acceso_maestro)
+		&& !user.owner_id && !user.es_sesion_soporte)
 }
 
 export default {
