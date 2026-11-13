@@ -37,7 +37,7 @@ export default {
 	computed: {
 		soporte_privado_habilitado() {
 			const usuario = this.user
-			return Boolean(usuario && usuario.soporte_agentes_privado === true && !usuario.es_sesion_soporte && !usuario.es_acceso_maestro)
+			return Boolean(usuario && usuario.soporte_agentes_privado === true && !usuario.es_sesion_soporte)
 		},
 	},
 	methods: {

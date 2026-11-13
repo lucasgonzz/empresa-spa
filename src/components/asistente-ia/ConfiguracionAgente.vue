@@ -381,6 +381,15 @@
 				</div>
 			</div>
 
+			<div v-if="config_store && config_store.alta_bebidas_disponible" class="config-agente__pregunta">
+				<b-form-checkbox v-model="alta_bebidas" :disabled="cargando_config || guardando" data-testid="config-alta-bebidas">
+					Alta completa de bebidas
+				</b-form-checkbox>
+				<p class="text-muted mt-2">
+					Reúne proveedor, bodega, cepa para vinos, presentación, cajas e imagen antes de confirmar.
+					Podés apagarla para volver al alta habitual.
+				</p>
+			</div>
 			<div class="config-agente__pie">
 				<b-button
 				variant="outline-secondary"
@@ -411,6 +420,8 @@ export default {
 			// Selección local, arranca en los defaults del sistema (plan: resuelto /
 			// agil) y se sincroniza con lo que traiga el store al abrir.
 			confianza: 'resuelto',
+			alta_bebidas: false,
+			cargando_config: false,
 			pensamiento: 'agil',
 			guardando: false,
 
@@ -435,7 +446,7 @@ export default {
 	computed: {
 		puede_configurar_mcp() {
 			const usuario = this.$store.state.auth.user
-			return !!(usuario && !usuario.es_acceso_maestro)
+			return !!(usuario && !usuario.es_sesion_soporte)
 		},
 		config_store() {
 			return this.$store.state.ai_chat.asistente_config
@@ -541,6 +552,7 @@ export default {
 				this.confianza = cfg.confianza
 			}
 			this.pensamiento = cfg.pensamiento == 'profundo' ? 'profundo' : 'agil'
+			this.alta_bebidas = !!cfg.alta_bebidas
 		},
 		/**
 		 * Al abrir: muestra ya lo que hubiera en el store y pide la config fresca; cuando
@@ -548,10 +560,15 @@ export default {
 		 */
 		al_abrir() {
 			let self = this
+			// La respuesta fresca no debe pisar una elección hecha sobre la configuración anterior.
+			this.cargando_config = true
 			this.sincronizar_desde_store()
 			this.$store.dispatch('ai_chat/fetchAsistenteConfig')
 				.then(function () {
 					self.sincronizar_desde_store()
+				})
+				.finally(function () {
+					self.cargando_config = false
 				})
 			// La conexión MCP: se olvida cualquier clave de una apertura anterior y se pide fresca.
 			this.olvidar_clave()
@@ -766,6 +783,7 @@ export default {
 			this.$store.dispatch('ai_chat/guardarAsistenteConfig', {
 				confianza: this.confianza,
 				pensamiento: this.pensamiento,
+				...(this.config_store && this.config_store.alta_bebidas_disponible ? { alta_bebidas: this.alta_bebidas } : {}),
 			})
 				.then(function () {
 					self.guardando = false
