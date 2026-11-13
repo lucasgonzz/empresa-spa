@@ -382,7 +382,7 @@
 			</div>
 
 			<div v-if="config_store && config_store.alta_bebidas_disponible" class="config-agente__pregunta">
-				<b-form-checkbox v-model="alta_bebidas" data-testid="config-alta-bebidas">
+				<b-form-checkbox v-model="alta_bebidas" :disabled="cargando_config || guardando" data-testid="config-alta-bebidas">
 					Alta completa de bebidas
 				</b-form-checkbox>
 				<p class="text-muted mt-2">
@@ -421,6 +421,7 @@ export default {
 			// agil) y se sincroniza con lo que traiga el store al abrir.
 			confianza: 'resuelto',
 			alta_bebidas: false,
+			cargando_config: false,
 			pensamiento: 'agil',
 			guardando: false,
 
@@ -559,10 +560,15 @@ export default {
 		 */
 		al_abrir() {
 			let self = this
+			// La respuesta fresca no debe pisar una elección hecha sobre la configuración anterior.
+			this.cargando_config = true
 			this.sincronizar_desde_store()
 			this.$store.dispatch('ai_chat/fetchAsistenteConfig')
 				.then(function () {
 					self.sincronizar_desde_store()
+				})
+				.finally(function () {
+					self.cargando_config = false
 				})
 			// La conexión MCP: se olvida cualquier clave de una apertura anterior y se pide fresca.
 			this.olvidar_clave()
