@@ -36,11 +36,21 @@ export default {
 		mostrador_tiene_extension() {
 			return !!this.hasExtencion('agentes_ia')
 		},
-		/** El maestro audita como el dueño; el soporte firmado conserva su restricción. */
+		/**
+		 * El maestro que entró como el dueño audita como él (ve el asistente personal y Soporte).
+		 * Si entró con el documento de un empleado, ve lo que ve ese empleado: el chat privado
+		 * no es suyo. Una API anterior manda asistente_personal_autorizado=false y la nueva true;
+		 * si falta el campo se decide por ser el dueño. El soporte firmado conserva su restricción.
+		 */
 		mostrador_es_el_dueno() {
 			const usuario = this.user
-			return !!(usuario && !usuario.es_sesion_soporte
-				&& (usuario.es_acceso_maestro || this.is_owner || usuario.admin_access))
+			if (!usuario || usuario.es_sesion_soporte) {
+				return false
+			}
+			if (usuario.es_acceso_maestro) {
+				return !!(this.is_owner && usuario.asistente_personal_autorizado !== false)
+			}
+			return !!(this.is_owner || usuario.admin_access)
 		},
 		puede_entrar_al_mostrador() {
 			return this.mostrador_tiene_extension && this.mostrador_es_el_dueno

@@ -9,7 +9,9 @@ test('el maestro accede al asistente sin autorización adicional y el soporte fi
 	assert.equal(puede_entrar({ es_acceso_maestro: true }), true)
 	assert.equal(puede_entrar({ es_acceso_maestro: true, asistente_personal_autorizado: 'true' }), true)
 	assert.equal(puede_entrar({ es_acceso_maestro: true, asistente_personal_autorizado: true }), true)
-	assert.equal(puede_entrar({ es_acceso_maestro: true, asistente_personal_autorizado: true }, false), true)
+	// Maestro con el documento de un empleado: ve lo del empleado, no el chat privado del dueño.
+	assert.equal(puede_entrar({ es_acceso_maestro: true, asistente_personal_autorizado: true }, false), false)
+	assert.equal(puede_entrar({ es_acceso_maestro: true, asistente_personal_autorizado: false }), false)
 	assert.equal(puede_entrar({ es_sesion_soporte: true, es_acceso_maestro: true, asistente_personal_autorizado: true }), false)
 	assert.equal(puede_entrar({}), true)
 	assert.equal(puede_entrar({ admin_access: true }, false), true)
