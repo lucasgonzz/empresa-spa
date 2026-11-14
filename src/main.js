@@ -9,6 +9,7 @@ import { registrar_llegada_por_redireccion } from '@/utils/version_de_direccion'
 import { env } from '@/runtime_config'
 import { envolver_echo } from '@/utils/canales_en_vivo'
 import { iniciar_diagnostico_conexion } from '@/utils/diagnostico_conexion'
+import { interceptor_cookie_xsrf_propia } from '@/utils/cookie_xsrf_propia'
 
 let diagnostico_de_conexion = null
 
@@ -492,6 +493,14 @@ function global_api_tab_id_interceptor(config) {
     return config
 }
 
+/**
+ * Interceptor de request: en una prueba gratuita la API emite el token CSRF en una cookie con nombre
+ * propio (para no pisarle `XSRF-TOKEN` a la tienda del negocio, ronda 4 de la prueba, 14/11/2026). Si
+ * esa cookie existe, axios lee el token de ella; si no, `XSRF-TOKEN` como siempre. Va en las tres
+ * instancias y en el transporte del diagnóstico. Ver `src/utils/cookie_xsrf_propia.js`.
+ */
+const global_api_cookie_xsrf_interceptor = interceptor_cookie_xsrf_propia(() => env('VUE_APP_API_URL'))
+
 // Instancia usada como Vue.prototype.$api (prefijo /api)
 const apiInstance = axios.create({
     baseURL: env('VUE_APP_API_URL') + '/api',
@@ -504,6 +513,7 @@ apiInstance.interceptors.response.use(
 )
 apiInstance.interceptors.request.use(global_api_cancel_token_interceptor)
 apiInstance.interceptors.request.use(global_api_tab_id_interceptor)
+apiInstance.interceptors.request.use(global_api_cookie_xsrf_interceptor)
 
 // ✅ Registramos $api como plugin (como hacías vos)
 Vue.use({
@@ -524,6 +534,7 @@ axiosInstance.interceptors.response.use(
 )
 axiosInstance.interceptors.request.use(global_api_cancel_token_interceptor)
 axiosInstance.interceptors.request.use(global_api_tab_id_interceptor)
+axiosInstance.interceptors.request.use(global_api_cookie_xsrf_interceptor)
 
 // Misma lógica para el axios por defecto (stores que importan `axios` sin `create`, como
 // store/auth.js: es el que hace el GET /api/user de arranque, así que también necesita el
@@ -534,6 +545,7 @@ axios.interceptors.response.use(
 )
 axios.interceptors.request.use(global_api_cancel_token_interceptor)
 axios.interceptors.request.use(global_api_tab_id_interceptor)
+axios.interceptors.request.use(global_api_cookie_xsrf_interceptor)
 
 diagnostico_de_conexion = iniciar_diagnostico_conexion({
     axios,
@@ -541,6 +553,7 @@ diagnostico_de_conexion = iniciar_diagnostico_conexion({
     store,
     router,
     api_url: env('VUE_APP_API_URL'),
+    interceptor_xsrf: global_api_cookie_xsrf_interceptor,
 })
 
 Vue.use({

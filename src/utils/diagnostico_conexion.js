@@ -39,6 +39,8 @@ export function iniciar_diagnostico_conexion(opciones) {
 	const temporizar = opciones.temporizar || ((fn, ms) => setTimeout(fn, ms))
 	const cancelar = opciones.cancelar || (id => clearTimeout(id))
 	const transporte = opciones.transporte || axios.create({ baseURL: api_url, withCredentials: true, timeout: 8000 })
+	// Lee el token CSRF de la misma cookie que el resto de la app (ver src/utils/cookie_xsrf_propia.js).
+	if (opciones.interceptor_xsrf && !opciones.transporte) transporte.interceptors.request.use(opciones.interceptor_xsrf)
 	let persona = null, habilitado = false, generacion = 0, clave = '', cola = []
 	let enviando = false, intentos = 0, pausa_hasta = 0, reintento = null
 	let secuencia = 0, activos = new Map(), exitos = [], hubo_fallo = false
