@@ -55,6 +55,12 @@ export const CRITERIOS = {
 export const NOMBRES_DE_PLAN = {
 	sitios_de_referencia: 'En los sitios de referencia',
 	codigo_de_barras_global: 'Por código de barras, fuera de Argentina',
+	// Misión medidas-masquito-fichas (14/11/2026): las fichas del fabricante que se leen directo, sin el
+	// buscador (solo en las búsquedas de fichas).
+	ficha_maxparts: 'Ficha de maxparts.hu',
+	ficha_lawnbarn: 'Ficha de lawnbarn.com',
+	ficha_kalohaz: 'Ficha de kalohaz.hu',
+	ficha_oregon: 'Ficha de oregonproducts.com',
 }
 
 /**
@@ -84,6 +90,12 @@ export const MOTIVOS = {
 	// Misión medidas-sin-datos (28/10/2026): la IA propuso valores pero el sistema no pudo comprobarlos en la
 	// página (la cita no aparece, dice otro número...). Quedan para revisar a mano, nunca se cargan solos.
 	valor_sin_respaldo: 'Sin respaldo en la página',
+	// Misión medidas-masquito-fichas (14/11/2026): el peso con embalaje de la ficha del fabricante (Oregon) y
+	// un peso que la tienda repite en productos distintos. Los dos quedan para revisar a mano.
+	peso_de_envio: 'Peso con embalaje',
+	valor_de_plantilla: 'Valor repetido de la tienda',
+	// Asignado solo: el peso de la ficha del fabricante, con el código del artículo (solo el peso).
+	peso_de_ficha: 'Peso de la ficha del fabricante',
 	// Asignada sola (D1): el código del artículo está en la página y trae las cuatro medidas.
 	codigo_exacto: 'Código exacto',
 	// Sin datos (D3)
@@ -96,6 +108,8 @@ export const MOTIVOS = {
 	// o es un PDF que no se pudo leer ni con el respaldo). No es lo mismo que «la página no trae medidas».
 	paginas_bloqueadas: 'Páginas bloqueadas',
 	pdf_no_leido: 'PDF sin leer',
+	// Búsqueda de fichas del fabricante: no había ficha del artículo (o la marca no tiene fichas).
+	sin_ficha: 'Sin ficha del fabricante',
 	sin_cupo: 'Sin búsquedas disponibles',
 	error_de_busqueda: 'Error al buscar',
 	error_interno: 'Error al procesar',
@@ -125,6 +139,8 @@ export const MOTIVOS_DE_AVISO = [
 	'cita_sin_etiqueta',
 	'difiere_de_lo_cargado',
 	'valor_sin_respaldo',
+	'peso_de_envio',
+	'valor_de_plantilla',
 	'sin_cupo',
 	'error_de_busqueda',
 	'ia_sin_respuesta',
@@ -174,6 +190,9 @@ export const RESULTADOS_DE_PLAN = {
 	otro_producto: 'La IA dijo que las páginas eran de otro producto.',
 	sin_medidas: 'Las páginas no traían medidas que se pudieran validar.',
 	datos: 'Se encontraron medidas.',
+	// Fichas del fabricante: la dirección armada con el código no tenía ficha, o la ficha era de otro artículo.
+	sin_ficha: 'No había ficha de este artículo.',
+	ficha_sin_el_codigo: 'La ficha no traía el código del artículo.',
 }
 
 /** Qué tan seguro estaba la IA de que la página era el mismo producto (`match`). */
