@@ -53,6 +53,7 @@ export default {
             ) {
 
                 await db.articles.clear()
+                invalidar_indice_de_skus_en_cache()
                 /*
                     Solo la marca de la ultima sincronizacion, no `meta.clear()`: en `meta` vive
                     tambien la sesion guardada para entrar sin conexion y sus catalogos

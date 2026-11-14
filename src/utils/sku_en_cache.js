@@ -164,3 +164,33 @@ export function articulo_por_sku_en_cache(codigo) {
 		})
 	})
 }
+
+/**
+ * Si «Cod barras» tiene que buscar el código propio (SKU) en la CACHE de artículos (ArticleBarCode.vue
+ * ::respaldo_por_sku_en_cache). Función pura, para poder testear cada condición.
+ *
+ * NO busca si:
+ * - el escaneo ya se resolvió (artículo, variante de la cache, ticket de balanza o selector abierto);
+ * - el campo lee otro código: código de proveedor o número interno (la API tampoco busca SKU ahí);
+ * - el código no pasó por la cache (con conexión y sin «Usar cache de artículos» lo resolvió la API,
+ *   que ya busca el SKU);
+ * - con conexión, cache y la extensión de variantes: set_finded_article ya le preguntó a la API, que
+ *   busca el SKU; buscarlo también acá podría agregar el artículo dos veces.
+ *
+ * @param {Object} c
+ * @param {Boolean} c.ya_resuelto
+ * @param {Boolean} c.usar_codigo_proveedor
+ * @param {Boolean} c.numero_interno
+ * @param {Boolean} c.online
+ * @param {Boolean} c.usar_articles_cache
+ * @param {Boolean} c.article_variants
+ * @returns {Boolean}
+ */
+export function debe_buscar_sku_en_cache(c) {
+	if (!c || c.ya_resuelto || c.usar_codigo_proveedor || c.numero_interno) {
+		return false
+	}
+	let uso_la_cache = !c.online || !!c.usar_articles_cache
+	let pregunto_a_la_api = !!c.online && !!c.article_variants
+	return uso_la_cache && !pregunto_a_la_api
+}

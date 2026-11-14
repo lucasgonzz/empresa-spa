@@ -75,7 +75,7 @@ import { codigo_escaneado } from '@/utils/codigo_de_barras'
 	Codigo propio del dueño (SKU) sin conexion o con la cache de articulos (ronda 5 de la prueba,
 	14/11/2026, E9b). Ver respaldo_por_sku_en_cache().
 */
-import { articulo_por_sku_en_cache } from '@/utils/sku_en_cache'
+import { articulo_por_sku_en_cache, debe_buscar_sku_en_cache } from '@/utils/sku_en_cache'
 
 /**
  * Escapa un texto para meterlo en un toast: vue-toast-notification dibuja el mensaje con v-html, y
@@ -225,6 +225,19 @@ export default {
 				*/
 				if (resultado && resultado.variante_de_la_cache) {
 					this.finded_article = resultado.variante_de_la_cache
+				}
+
+				/*
+					Articulo por su codigo propio (SKU) en la cache: viaja en la PROMESA por lo mismo que
+					la variante de arriba (revision de E9b). Escribirlo en this.finded_article desde el
+					.then dejaba que, con el lector rapido y el indice armandose, el SKU de un escaneo
+					pisara al del otro: se agregaba el segundo dos veces y se perdia el primero.
+				*/
+				if (resultado && resultado.articulo_por_sku) {
+					this.finded_article = resultado.articulo_por_sku
+				}
+				if (resultado && resultado.variantes_por_sku) {
+					this.abrir_selector_de_variantes(resultado.variantes_por_sku.articulo, resultado.variantes_por_sku.variantes)
 				}
 
 				console.log('from_balanza: '+this.from_balanza)
@@ -471,34 +484,36 @@ export default {
 		 * - el codigo fue a la API sin cache, o con cache + variantes con conexion (set_finded_article ya le
 		 *   pregunto a la API, que busca el SKU): preguntarle dos veces podria agregarlo dos veces.
 		 *
-		 * Si lo encuentra deja el articulo en finded_article, igual que un codigo de barras de la cache. Con
-		 * variantes disponibles (y la extension) abre el selector, como la cache con un codigo de barras.
+		 * Las condiciones viven en utils/sku_en_cache.js::debe_buscar_sku_en_cache (con tests).
+		 *
+		 * Lo que encuentra NO se escribe en this.finded_article: viaja en la promesa, como la variante
+		 * de la cache, y set_article_from_barcode lo toma en la misma vuelta en que lo usa:
+		 * - `{articulo_por_sku}`: el articulo, que entra igual que un codigo de barras de la cache;
+		 * - `{variantes_por_sku: {articulo, variantes}}`: tiene variantes disponibles (con la
+		 *   extension) y se abre el selector, como la cache con un codigo de barras.
 		 *
 		 * @param {*} resultado Lo que devolvio set_finded_article.
 		 * @param {String} codigo Lo tipeado.
-		 * @returns {Promise<*>} El mismo resultado.
+		 * @returns {Promise<*>} El resultado de set_finded_article, o lo encontrado por SKU.
 		 */
 		respaldo_por_sku_en_cache(resultado, codigo) {
-			if (
-				(resultado && resultado.variante_de_la_cache)
-				|| typeof this.finded_article != 'undefined'
-				|| this.from_balanza
-				|| this.opening_variant_selector
-				|| this.usar_codigo_proveedor
-				|| this.hasExtencion('codigos_de_barra_basados_en_numero_interno')
-			) {
+			let buscar = debe_buscar_sku_en_cache({
+				ya_resuelto: !!(resultado && resultado.variante_de_la_cache)
+					|| typeof this.finded_article != 'undefined'
+					|| this.from_balanza
+					|| this.opening_variant_selector,
+				usar_codigo_proveedor: this.usar_codigo_proveedor,
+				numero_interno: this.hasExtencion('codigos_de_barra_basados_en_numero_interno'),
+				online: this.$store.state.auth.online,
+				usar_articles_cache: this.owner.usar_articles_cache,
+				article_variants: this.hasExtencion('article_variants'),
+			})
+
+			if (!buscar) {
 				return Promise.resolve(resultado)
 			}
 
-			let online = this.$store.state.auth.online
-			let uso_la_cache = !online || this.owner.usar_articles_cache
-			let pregunto_a_la_api = online && this.hasExtencion('article_variants')
-
-			if (!uso_la_cache || pregunto_a_la_api) {
-				return Promise.resolve(resultado)
-			}
-
-			let self = this
+			let con_variantes = this.hasExtencion('article_variants')
 
 			return articulo_por_sku_en_cache(codigo_escaneado(codigo))
 			.catch(err => {
@@ -512,17 +527,22 @@ export default {
 					return resultado
 				}
 
-				let variantes = self.hasExtencion('article_variants')
+				let variantes = con_variantes
 					? variantes_disponibles_en_cache(articulo)
 					: []
 
 				if (variantes.length) {
-					self.abrir_selector_de_variantes(articulo, variantes)
-					return resultado
+					return {
+						variantes_por_sku: {
+							articulo: articulo,
+							variantes: variantes,
+						},
+					}
 				}
 
-				self.finded_article = articulo
-				return resultado
+				return {
+					articulo_por_sku: articulo,
+				}
 			})
 		},
 		/**

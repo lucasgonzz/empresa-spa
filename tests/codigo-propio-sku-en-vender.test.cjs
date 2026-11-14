@@ -142,3 +142,66 @@ test('un SKU como "constructor" no encuentra nada', () => {
 		assert.equal(articulo, null)
 	})
 })
+
+// ── Revisión de E9b: cuándo «Cod barras» busca el SKU en la cache y la carrera del lector rápido ──
+
+const BASE = {
+	ya_resuelto: false,
+	usar_codigo_proveedor: false,
+	numero_interno: false,
+	online: false,
+	usar_articles_cache: false,
+	article_variants: false,
+}
+
+function con(cambios) {
+	return Object.assign({}, BASE, cambios)
+}
+
+test('debe_buscar_sku_en_cache: sin conexión, o con cache sin variantes, busca', () => {
+	const { modulo } = cargar_con([])
+	assert.equal(modulo.debe_buscar_sku_en_cache(con({})), true)
+	assert.equal(modulo.debe_buscar_sku_en_cache(con({ article_variants: true })), true, 'sin conexión no hay API: la cache es la única')
+	assert.equal(modulo.debe_buscar_sku_en_cache(con({ online: true, usar_articles_cache: true })), true)
+})
+
+test('debe_buscar_sku_en_cache: con conexión sin cache, o con cache + variantes, NO (ya lo buscó la API)', () => {
+	const { modulo } = cargar_con([])
+	assert.equal(modulo.debe_buscar_sku_en_cache(con({ online: true })), false)
+	assert.equal(modulo.debe_buscar_sku_en_cache(con({ online: true, usar_articles_cache: true, article_variants: true })), false)
+})
+
+test('debe_buscar_sku_en_cache: con código de proveedor, número interno o algo ya resuelto (balanza, selector, artículo), NO', () => {
+	const { modulo } = cargar_con([])
+	assert.equal(modulo.debe_buscar_sku_en_cache(con({ usar_codigo_proveedor: true })), false)
+	assert.equal(modulo.debe_buscar_sku_en_cache(con({ numero_interno: true })), false)
+	assert.equal(modulo.debe_buscar_sku_en_cache(con({ ya_resuelto: true })), false)
+	assert.equal(modulo.debe_buscar_sku_en_cache(null), false)
+})
+
+test('lector rápido: dos SKU seguidos mientras se arma el índice devuelven cada uno SU artículo, una vez', () => {
+	// Cache lenta: el índice tarda en armarse y los dos escaneos esperan la misma construcción.
+	let soltar
+	const espera = new Promise(resolve => { soltar = resolve })
+	let recorridas = 0
+	const tabla = {
+		each(cb) {
+			recorridas++
+			return espera.then(() => { ARTICULOS.forEach(cb) })
+		},
+		get(id) {
+			return Promise.resolve(ARTICULOS.find(a => a.id === id))
+		},
+	}
+	const modulo = cargar('utils/sku_en_cache.js', { '@/offline/db': { __esModule: true, default: { table: () => tabla } } })
+
+	const primero = modulo.articulo_por_sku_en_cache('104')
+	const segundo = modulo.articulo_por_sku_en_cache('F-101')
+	soltar()
+
+	return Promise.all([primero, segundo]).then(([a, b]) => {
+		assert.equal(a.id, 1, 'el primer escaneo es el Serrucho, no el del segundo')
+		assert.equal(b.id, 2)
+		assert.equal(recorridas, 1, 'el índice se armó una sola vez para los dos')
+	})
+})
