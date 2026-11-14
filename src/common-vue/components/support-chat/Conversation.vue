@@ -33,8 +33,16 @@
 							<video v-if="i % 2 && es_video_de_la_prueba(parte)" :key="i" :src="parte" class="support-message-video" controls preload="metadata">
 								<a :href="parte" target="_blank" rel="noopener noreferrer">{{ parte }}</a>
 							</video>
-							<a v-else-if="i % 2" :key="i" :href="parte" target="_blank" rel="noopener noreferrer">{{ parte }}</a>
-							<span v-else :key="i">{{ parte }}</span>
+							<a v-else-if="i % 2" :key="i" class="support-message-link" :href="parte" target="_blank" rel="noopener noreferrer">{{ parte }}</a>
+							<!-- El resto del texto (E10, 14/11/2026): cualquier otra dirección http(s) también se
+							puede tocar y abre en otra pestaña. enlaces.js calcula los tramos (solo http/https,
+							sin la puntuación final) y acá se dibujan con interpolación: nada de v-html (D43). -->
+							<template v-else>
+								<template v-for="(tramo, j) in enlaces_del_texto(parte)">
+									<a v-if="tramo.enlace" :key="i + '-' + j" class="support-message-link" :href="tramo.enlace" target="_blank" rel="noopener noreferrer">{{ tramo.texto }}</a>
+									<span v-else :key="i + '-' + j">{{ tramo.texto }}</span>
+								</template>
+							</template>
 						</template>
 					</div>
 					<!-- Renderizado diferenciado según tipo de adjunto -->
@@ -152,6 +160,7 @@
 <script>
 import ImageLightbox from '@/common-vue/components/support-chat/ImageLightbox.vue'
 import { nombre_del_adjunto } from '@/common-vue/components/support-chat/adjuntos'
+import { segmentar_enlaces } from '@/common-vue/components/support-chat/enlaces'
 import { env } from '@/runtime_config'
 
 /*
@@ -252,6 +261,17 @@ export default {
 	methods: {
 		partes_del_mensaje(texto) {
 			return String(texto).split(VIDEO_DEL_CENTRO)
+		},
+		/**
+		 * Una parte de texto de partes_del_mensaje() (las pares) partida en tramos sueltos y
+		 * direcciones web, para que cualquier enlace del mensaje se pueda tocar (E10). Las reglas
+		 * (solo http/https, puntuación final afuera) viven en enlaces.js.
+		 *
+		 * @param {string} parte
+		 * @returns {Array<{texto: string, enlace: string|null}>}
+		 */
+		enlaces_del_texto(parte) {
+			return segmentar_enlaces(String(parte))
 		},
 		/**
 		 * true si el enlace es un video de la prueba gratuita (se embebe); false si es del centro.
@@ -659,6 +679,21 @@ export default {
 	width: 100%;
 	height: 36px;
 	margin-top: 2px;
+}
+
+/* Una dirección web del mensaje (E10): con el color del texto del globo (verde claro o tarjeta,
+   claro u oscuro), subrayada, y cortando en cualquier lado para no desbordar el globo en 390 px. */
+.support-message-link {
+	color: inherit;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.support-message-link:hover {
+	color: inherit;
+	text-decoration-thickness: 2px;
 }
 
 /* Video de la prueba gratuita adentro del globo: ocupa el ancho del globo, con el tope de las miniaturas. */

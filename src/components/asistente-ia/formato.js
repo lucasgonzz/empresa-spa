@@ -1,4 +1,5 @@
 import { segmentar_menciones } from '@/components/asistente-ia/menciones'
+import { rangos_de_enlaces } from '@/common-vue/components/support-chat/enlaces'
 
 /**
  * Partir el contenido de un mensaje del asistente en las hojas finales para pintar, cruzando
@@ -29,6 +30,14 @@ import { segmentar_menciones } from '@/components/asistente-ia/menciones'
  * la otra. Los asteriscos de apertura y cierre nunca forman parte de ninguna hoja: se
  * descartan siempre, caigan donde caigan.
  *
+ * TERCERA CAPA, ENLACES (E10, 14/11/2026): las direcciones http(s) del texto (`enlaces.js`, con sus
+ * reglas de esquema y puntuación final) se resuelven sobre el MISMO string y aportan sus bordes a los
+ * puntos de corte, igual que las otras dos capas. Una hoja que cae adentro de una dirección lleva su
+ * `enlace` (el href) y la plantilla la dibuja como `<a>` con interpolación — sigue sin haber HTML
+ * armado en ningún lado. Una dirección que se pisa con una mención NO se enlaza (la mención ya es un
+ * tramo especial, con su propio clic y su ficha). Una dirección en negrita sí: la hoja es enlace y
+ * negrita a la vez, porque la dirección nunca incluye un asterisco (regla 4 de `enlaces.js`).
+ *
  * Solo se interpreta `**...**`. Ningún otro símbolo de markdown (`#`, `_cursiva_`, listas con
  * `-`) se toca: sale tal cual llegó. Un asterisco doble que abre sin cerrar no forma negrita
  * —se deja como texto suelto, asteriscos incluidos— para no comerse contenido real que use
@@ -36,7 +45,7 @@ import { segmentar_menciones } from '@/components/asistente-ia/menciones'
  *
  * @param {*} contenido El `contenido` del mensaje (si no es string, se trata como vacío).
  * @param {*} menciones El array `menciones` del mensaje (si no viene, no hay mención alguna).
- * @returns {Array<{texto: String, mencion: Object|null, negrita: Boolean}>} Concatenar los
+ * @returns {Array<{texto: String, mencion: Object|null, negrita: Boolean, enlace: String|null}>} Concatenar los
  * `texto` de vuelta da el mismo string de entrada MENOS los pares de asteriscos que formaron
  * negrita — es lo único que se descarta, a propósito: son marcas de formato, no contenido.
  */
@@ -90,6 +99,19 @@ export function segmentar_mensaje(contenido, menciones) {
 		puntos_de_corte.add(rango.fin)
 	})
 
+	// Rangos de enlace: se descartan los que se pisan con una mención (la mención gana siempre,
+	// es un tramo especial con su propio comportamiento). Con la negrita no pueden cruzarse a
+	// medias: la dirección corta antes de cualquier asterisco.
+	let enlaces = rangos_de_enlaces(texto).filter(function (enlace) {
+		return !rangos_mencion.some(function (rango) {
+			return enlace.inicio < rango.fin && rango.inicio < enlace.fin
+		})
+	})
+	enlaces.forEach(function (enlace) {
+		puntos_de_corte.add(enlace.inicio)
+		puntos_de_corte.add(enlace.fin)
+	})
+
 	let puntos = Array.from(puntos_de_corte).sort(function (a, b) {
 		return a - b
 	})
@@ -117,10 +139,12 @@ export function segmentar_mensaje(contenido, menciones) {
 			continue
 		}
 		let mencion = rango_que_contiene(rangos_mencion, inicio)
+		let enlace = rango_que_contiene(enlaces, inicio)
 		resultado.push({
 			texto: texto.slice(inicio, fin),
 			mencion: mencion ? mencion.mencion : null,
 			negrita: !!rango_que_contiene(negritas, inicio),
+			enlace: enlace ? enlace.href : null,
 		})
 	}
 
