@@ -68,7 +68,19 @@ export default {
 				.catch(err => {
 					this.loading = false
 					console.log(err)
-					this.$toast.error('Error al crear usuario')
+					let mensaje = 'Error al crear usuario'
+					if (err.response && err.response.data) {
+						let datos = err.response.data
+						if (err.response.status == 422 && datos.errors) {
+							let campo = Object.keys(datos.errors)[0]
+							if (campo && datos.errors[campo].length) {
+								mensaje = datos.errors[campo][0]
+								}
+						} else if (err.response.status == 404 && datos.message) {
+							mensaje = datos.message
+						}
+					}
+					this.$toast.error(mensaje)
 				})
 			}
 		},

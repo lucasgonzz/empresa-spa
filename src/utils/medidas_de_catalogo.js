@@ -147,6 +147,29 @@ export function dominio_de(url) {
 	return coincidencia[1].toLowerCase().replace(/^www\./, '')
 }
 
+/**
+ * La lista de sitios de referencia que manda la API (misión medidas-sitios-de-referencia, 11/11/2026):
+ * dominios ya normalizados por el servidor ("obi.de"). Se queda con los textos no vacíos y sin
+ * repetidos, en el orden en que vinieron. Cualquier cosa que no sea una lista (una API vieja que no
+ * manda el campo) da `[]`.
+ *
+ * @param {*} valor
+ * @returns {Array<String>}
+ */
+export function normalizar_sitios(valor) {
+	let sitios = []
+	a_lista(valor).forEach(function (sitio) {
+		if (typeof sitio !== 'string' && typeof sitio !== 'number') {
+			return
+		}
+		let texto = a_texto(sitio)
+		if (texto && sitios.indexOf(texto) === -1) {
+			sitios.push(texto)
+		}
+	})
+	return sitios
+}
+
 // --- Formato de valores ------------------------------------------------------------------------
 
 /**
@@ -499,6 +522,9 @@ export function normalizar_corrida(crudo) {
 		lanzada_por: a_texto_o_null(crudo.lanzada_por),
 		motivo_estado: a_texto_o_null(crudo.motivo_estado),
 		proveedor: a_texto_o_null(crudo.proveedor),
+		// La foto de los sitios de referencia con que se lanzó (misión medidas-sitios-de-referencia). Una API
+		// vieja no la manda: [].
+		sitios_de_referencia: normalizar_sitios(crudo.sitios_de_referencia),
 	}
 }
 
@@ -871,6 +897,9 @@ export function normalizar_previa(crudo) {
 		ia_motivo: a_texto(previa.ia_motivo),
 		corrida_activa: normalizar_corrida(previa.corrida_activa),
 		tope_demo: previa.tope_demo && typeof previa.tope_demo === 'object' ? previa.tope_demo : null,
+		// Los sitios de referencia que tiene guardados hoy el comercio (misión medidas-sitios-de-referencia):
+		// los que va a usar la búsqueda si se lanza ahora. Una API vieja no los manda: [].
+		sitios_de_referencia: normalizar_sitios(previa.sitios_de_referencia),
 		estimacion: {
 			busquedas: numero_o_null(primero_definido([estimacion.busquedas, previa.busquedas_estimadas])),
 			minutos: numero_o_null(primero_definido([estimacion.minutos, previa.minutos_estimados])),

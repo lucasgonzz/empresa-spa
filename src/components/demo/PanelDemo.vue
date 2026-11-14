@@ -320,7 +320,7 @@ const INTERVALO_HEARTBEAT = 300000
  * Panel lateral de tutoriales de la demo (misión 51).
  *
  * App.vue lo monta sólo con la identidad de demo validada por el servidor. El ingreso por token
- * lo presenta abierto; tras F5 mantiene el acceso compacto al chat, la única entrada a videos.
+ * abre el chat en el lateral de Agentes; tras F5 queda cerrado y se abre desde «Agentes», en la barra.
  * Conserva así el espacio pedido el 25/8 sin perder el recorrido del pedido del 19/10/2026.
  * Un usuario común o una sesión invalidada no montan el componente ni piden el plan.
  *
@@ -330,10 +330,13 @@ const INTERVALO_HEARTBEAT = 300000
  */
 export default {
 	watch: {
+		// Exclusión mutua solo para el panel de respaldo: el chat ya vive adentro del lateral.
 		'$store.state.ai_chat.panel_abierto'(abierto) {
+			if (this.chat_disponible) return
 			if (abierto && !this.colapsado) this.alternar_colapso()
 		},
 		colapsado(colapsado) {
+			if (this.chat_disponible) return
 			if (!colapsado) this.$store.commit('ai_chat/setPanelAbierto', false)
 		},
 	},
@@ -344,7 +347,7 @@ export default {
 	data() {
 		return {
 			chat_disponible: true,
-			// El ingreso por token presenta el chat; al recargar conserva sólo el acceso compacto.
+			// El ingreso por token presenta el chat; al recargar queda cerrado hasta tocar «Agentes».
 			colapsado: this.$store.state.ai_chat.panel_abierto || (!this.$store.state.demo.es_demo && this.$route.name !== 'demoIngreso'),
 			// El tirador late para invitar a volver, después de que "Probar" colapsó el panel.
 			llamando_la_atencion: false,
@@ -450,7 +453,7 @@ export default {
 		// ingreso ya la despachó y el store memorizó la promesa, así que acá no se paga un
 		// segundo GET: se reusa el mismo.
 		//
-		// Al recargar una sesión demo validada también restaura el plan, con el panel compacto:
+		// Al recargar una sesión demo validada también restaura el plan, con el chat cerrado:
 		// desde el 19/10/2026 el chat es la única entrada a los videos y debe seguir accesible.
 		this.$store.dispatch('demo/cargar_plan')
 

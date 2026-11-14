@@ -17,6 +17,7 @@
 <script>
 import cajas from '@/mixins/vender/cajas'
 import caja_por_defecto from '@/mixins/caja_por_defecto'
+import { caja_unica_a_elegir } from '@/utils/caja_unica_de_vender'
 export default {
 	mixins: [cajas, caja_por_defecto],
 	watch: {
@@ -163,6 +164,23 @@ export default {
 			}
 		},
 	},
+	data() {
+		return {
+			// La caja que puso usar_la_unica_caja_disponible (0 si ninguna): solo esa se saca si deja de corresponder.
+			caja_unica_puesta_id: 0,
+		}
+	},
+	created() {
+		/*
+			Misión prueba-primera-venta (12/11/2026): al volver a Vender (por ejemplo, después de abrir
+			la caja en Tesorería) ninguno de los watchers dispara —el catálogo de cajas y el método de pago
+			ya estaban—, así que la venta seguía sin caja. Se aplica la por defecto (o la única disponible)
+			si falta, con los mismos guardas de siempre.
+		*/
+		if (this.necesita_caja_unica) {
+			this.aplicar_caja_por_defecto_si_falta()
+		}
+	},
 	methods: {
 		/**
 		 * Asigna la caja por defecto del metodo de pago y la sucursal.
@@ -192,6 +210,61 @@ export default {
             if (caja_por_defecto && this.cajas.length) {
 				this.caja_id = caja_por_defecto.id
             }
+
+			this.usar_la_unica_caja_disponible(caja_por_defecto)
+		},
+		/**
+		 * Si el desplegable ofrece UNA sola caja para el método de pago, la pone (misión
+		 * prueba-primera-venta, 12/11/2026). La decisión es `caja_unica_a_elegir` (utils/caja_unica_de_vender.js,
+		 * con su prueba en tests/caja-unica-de-vender.test.cjs).
+		 *
+		 * En el ensayo de la prueba gratuita el dueño, con una sola caja abierta, tuvo que elegirla a mano
+		 * en cada venta: sin configuración de caja por defecto el select quedaba en "Seleccione caja".
+		 *
+		 * 🔴 La caja por defecto del método manda siempre: si es OTRA (aunque esté cerrada), no se elige la
+		 * única abierta —una transferencia configurada a «Banco» no puede entrar en «Efectivo»—; queda la
+		 * por defecto puesta y el guardado avisa que está cerrada y dónde se abre. Con dos o más opciones
+		 * no se adivina. Solo cuando la caja de este select es la que viaja en la venta
+		 * (necesita_caja_unica): a cuenta corriente, en un presupuesto o con reparto de varios métodos
+		 * (cada uno con su caja) no aplica.
+		 *
+		 * Y lo que pone esta función no queda pegado: si al cambiar el método de pago (o la sucursal, o la
+		 * moneda) esa caja deja de ser la que correspondería elegir sola, vuelve a "Seleccione caja". Una
+		 * caja que puso el vendedor o la configuración por defecto no se toca.
+		 *
+		 * @param {Object|null} caja_por_defecto La por defecto del método y la sucursal, abierta o cerrada.
+		 * @returns {void}
+		 */
+		usar_la_unica_caja_disponible(caja_por_defecto) {
+
+			if (!this.necesita_caja_unica) {
+				return
+			}
+
+			// Si alguien (el vendedor o la por defecto) ya cambió la caja, la marca de "la puse yo" se olvida.
+			if (this.caja_id != this.caja_unica_puesta_id) {
+				this.caja_unica_puesta_id = 0
+			}
+
+			let opciones = this.get_caja_options(this.vender_payment_method_id, this.address_id, this.moneda_id)
+
+			let elegida = caja_unica_a_elegir(opciones, this.cajas, this.vender_payment_method_id, caja_por_defecto, this.caja_id)
+
+			if (elegida) {
+				this.caja_id = elegida
+				this.caja_unica_puesta_id = elegida
+				return
+			}
+
+			if (this.caja_unica_puesta_id && this.caja_id == this.caja_unica_puesta_id) {
+
+				let seguiria = caja_unica_a_elegir(opciones, this.cajas, this.vender_payment_method_id, caja_por_defecto, 0)
+
+				if (seguiria != this.caja_id) {
+					this.caja_id = 0
+					this.caja_unica_puesta_id = 0
+				}
+			}
 		},
 		/**
 		 * Aplica la caja por defecto cuando la caja de este select vuelve a hacer falta (ver el

@@ -3,6 +3,7 @@
     :title="titulo_del_modal"
         no-close-on-backdrop
     hide-header-close
+    ignore-enforce-focus-selector=".driver-popover.tour-soporte"
     @show="on_modal_show"
     id="payment-method-modal"
     data-tour="vender.modal_cobro">
@@ -14,6 +15,7 @@
 
 
         <multi-payment-methods
+            data-tour="vender.reparto_pago"
             :key="payment_methods_key"
             v-model="selected_payment_methods_"
             :payment_method_factory="payment_method_factory"

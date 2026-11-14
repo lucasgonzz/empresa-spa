@@ -3,8 +3,7 @@
  *
  * Es UN solo lugar a propósito. La ruta /ia exige dos cosas a la vez —la extensión
  * `agentes_ia` (la misma que gatea el botón flotante del chat y las rutas
- * mostrador/* del backend) y ser el dueño o el acceso maestro (decisión 8 del plan;
- * el backend devuelve 403 a un empleado)— y antes cada punto de entrada miraba una
+ * mostrador/* del backend) y tener permiso para el asistente personal— y antes cada punto de entrada miraba una
  * cosa distinta: DepositButtons mandaba a /ia a cualquiera con la extensión de
  * sugerencias (hoy unificada en `agentes_ia`), las notificaciones de sugerencias a cualquiera que
  * las recibiera, y los dos terminaban en el cartel de "solo para el dueño" o en el
@@ -38,11 +37,20 @@ export default {
 			return !!this.hasExtencion('agentes_ia')
 		},
 		/**
-		 * Solo el dueño y el acceso maestro. Es el mismo par que mira check_is_owner
-		 * en common-vue/mixins/nav.js para el menú.
+		 * El maestro que entró como el dueño audita como él (ve el asistente personal y Soporte).
+		 * Si entró con el documento de un empleado, ve lo que ve ese empleado: el chat privado
+		 * no es suyo. Una API anterior manda asistente_personal_autorizado=false y la nueva true;
+		 * si falta el campo se decide por ser el dueño. El soporte firmado conserva su restricción.
 		 */
 		mostrador_es_el_dueno() {
-			return !!(this.is_owner || (this.user && this.user.admin_access))
+			const usuario = this.user
+			if (!usuario || usuario.es_sesion_soporte) {
+				return false
+			}
+			if (usuario.es_acceso_maestro) {
+				return !!(this.is_owner && usuario.asistente_personal_autorizado !== false)
+			}
+			return !!(this.is_owner || usuario.admin_access)
 		},
 		puede_entrar_al_mostrador() {
 			return this.mostrador_tiene_extension && this.mostrador_es_el_dueno

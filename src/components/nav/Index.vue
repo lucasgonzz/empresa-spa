@@ -2,26 +2,53 @@
 	<div>
         <update-features></update-features>
 		
-		<nav-vertical>
-			<template #nav_top>
-				<acceso-asistente class="d-none d-md-flex"></acceso-asistente>
+		<robotito-soporte :key="usuario_robotito || 'sin-sesion'" :usuario_id="usuario_robotito">
+			<template #default="tour">
+				<nav-vertical>
+					<template #nav_top>
+						<acceso-agentes></acceso-agentes>
+					</template>
+					<template #nav_tour>
+						<aviso-robotito
+						v-if="tour.pendiente"
+						:key="tour.pendiente.uuid"
+						:guia="tour.pendiente"
+						:ocupado="tour.ocupado"
+						@visible="tour.visible(tour.pendiente.uuid)"
+						@iniciar="tour.iniciar(tour.pendiente)"
+						@descartar="tour.descartar(tour.pendiente)"></aviso-robotito>
+					</template>
+					<template #nav_top_mobile>
+						<aviso-robotito
+						v-if="tour.pendiente"
+						:key="tour.pendiente.uuid"
+						:guia="tour.pendiente"
+						:ocupado="tour.ocupado"
+						movil
+						@visible="tour.visible(tour.pendiente.uuid)"
+						@iniciar="tour.iniciar(tour.pendiente)"
+						@descartar="tour.descartar(tour.pendiente)"></aviso-robotito>
+						<acceso-agentes movil></acceso-agentes>
+					</template>
+					<!-- <template #nav_bottom>
+						<btn-version-estable></btn-version-estable>
+					</template> -->
+				</nav-vertical>
 			</template>
-			<template #nav_top_mobile>
-				<acceso-asistente movil></acceso-asistente>
-			</template>
-			<!-- <template #nav_bottom>
-				<btn-version-estable></btn-version-estable>
-			</template> -->
-		</nav-vertical>
+		</robotito-soporte>
 		
 		<tasks></tasks>	
 
 	</div>
 </template>
 <script>
+import RobotitoSoporte from '@/components/robotito-soporte/Anfitrion'
+
 export default {
 	components: {
-		AccesoAsistente: () => import('@/components/asistente-ia/Acceso'),
+		RobotitoSoporte,
+		AvisoRobotito: () => import('@/components/robotito-soporte/Aviso'),
+		AccesoAgentes: () => import('@/components/asistente-ia/Acceso'),
 		NavComponent: () => import('@/common-vue/components/nav/Index'),
 		NavVertical: () => import('@/common-vue/components/nav-vertical/Index'),
 		BtnVersionEstable: () => import('@/components/nav/BtnVersionEstable'),
@@ -29,6 +56,17 @@ export default {
 		Tasks: () => import('@/components/nav/tasks/modal/Index'),
 		AlertInfos: () => import('@/components/nav/alert-infos/Index'),
 		UpdateFeatures: () => import('@/components/common/UpdateFeatures'),
+	},
+	computed: {
+		usuario_robotito() {
+			const auth = this.$store.state.auth
+			const usuario = auth.user
+			return auth.authenticated && usuario && !auth.version_bloqueada && !auth.sesion_sin_conexion
+				&& !usuario.es_sesion_soporte
+				&& (usuario.robotito_soporte_habilitado === true
+					|| (usuario.robotito_soporte_habilitado === undefined && !usuario.es_sesion_demo && !this.$store.state.demo.es_demo))
+				? usuario.id : null
+		},
 	},
 	methods: {
 		versionAnterior() {

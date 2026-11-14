@@ -3,6 +3,7 @@
 	size="lg"
 	title="Aperturas"
 	hide-footer
+	ignore-enforce-focus-selector=".driver-popover.tour-soporte"
 	@hidden="al_cerrar"
 	id="aperturas-caja">
 

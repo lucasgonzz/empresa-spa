@@ -6,19 +6,13 @@ const { cargar } = require('./helpers/cargar_modulo_esm.cjs')
 Vue.config.silent = true
 const { catalogo_de_prueba, adjuntos_de_prueba } = cargar('components/prueba/videos.js')
 const Videos = cargar('components/prueba/VideosPrueba.vue').default
-const Panel = cargar('components/demo/DemoChatPanel.vue', {
-	'@/components/demo/DemoGuiaRobot': { default: {} },
-	'@/tours/habilitados': { tour_habilitado: () => true },
-	'@/tours/motor': { iniciar_tour: () => { throw new Error('No debe iniciar tours') }, cortar_tour: () => {} },
-	'@/tours/guia-vender': { ajustar_guia_a_vender: () => [], pasos_de_guia: () => [] },
-}).default
 const URLS = {
-	"04": "https://videos.comerciocity.store/landing-prueba/20261107/04-bienvenida-y-recorrido-v8-904bf6fb63ed71ec.mp4",
-	"05": "https://videos.comerciocity.store/landing-prueba/20261107/05-importa-tu-catalogo-v4-5c3ff8667f590302.mp4",
-	"06": "https://videos.comerciocity.store/landing-prueba/20261107/06-revisa-y-cambia-un-precio-v4-0f33edc6012184fc.mp4",
-	"07": "https://videos.comerciocity.store/landing-prueba/20261107/07-carga-una-compra-con-una-foto-v4-b7ab810b35ab2a1d.mp4",
-	"08": "https://videos.comerciocity.store/landing-prueba/20261107/08-hace-tu-primera-venta-v4-6bf28a33ad57bee8.mp4",
-	"09": "https://videos.comerciocity.store/landing-prueba/20261107/09-proba-al-agente-con-tu-catalogo-v4-afa99edf54562d4f.mp4"
+	"04": "https://videos.comerciocity.store/landing-prueba/20261111/04-bienvenida-y-recorrido-claude-v2-d77600fcb3c9f595.mp4",
+	"05": "https://videos.comerciocity.store/landing-prueba/20261111/05-importa-tu-catalogo-claude-v1-7e315f5c9f377c3c.mp4",
+	"06": "https://videos.comerciocity.store/landing-prueba/20261111/06-revisa-y-cambia-un-precio-claude-v1-53fdff8d1ebbabba.mp4",
+	"07": "https://videos.comerciocity.store/landing-prueba/20261111/07-carga-una-compra-con-una-foto-claude-v1-35e86755dfa2c7e2.mp4",
+	"08": "https://videos.comerciocity.store/landing-prueba/20261111/08-hace-tu-primera-venta-claude-v1-0348d9fe2f116f4a.mp4",
+	"09": "https://videos.comerciocity.store/landing-prueba/20261111/09-proba-al-agente-con-tu-catalogo-claude-v1-81faa2a7b4e798a7.mp4"
 }
 function video(codigo, extra) { return Object.assign({ clave: 'prueba:' + codigo, origen: 'prueba', titulo: 'Video ' + codigo, url: URLS[codigo] || URLS['04'] }, extra) }
 function instanciar(opciones, props) { return new Vue(Object.assign({}, opciones, { propsData: props })) }
@@ -26,15 +20,6 @@ function nodos(nodo, condicion) {
 	if (!nodo) return []
 	return (condicion(nodo) ? [nodo] : []).concat(...(nodo.children || (nodo.componentOptions && nodo.componentOptions.children) || []).map(hijo => nodos(hijo, condicion)))
 }
-function panel(prueba) {
-	const vm = instanciar(Object.assign({}, Panel, { watch: {} }), { prueba, colapsado: false })
-	vm.$store = { state: { vender: {}, auth: { user: {} }, whatsapp_chat: {}, demo: { secciones: [], clips_vistos: [], clips_probados: [] } }, dispatch() { throw new Error('No debe despachar acciones') } }
-	vm.$route = { name: 'vender', params: { view: 'remito' }, fullPath: '/vender/remito' }
-	vm.hasExtencion = () => false
-	vm.$axios = { post() { throw new Error('No debe escribir') }, get() { throw new Error('No debe consultar durante reproducción') } }
-	return vm
-}
-
 test('catálogo vacío o API anterior no muestra recursos', () => {
 	for (const valor of [null, undefined, {}, '', []]) assert.deepEqual(catalogo_de_prueba(valor), [])
 	const vm = instanciar(Videos, { catalogo: [] })
@@ -58,43 +43,7 @@ test('adjuntos se resuelven por clave contra configuración vigente, nunca por U
 	assert.deepEqual(adjuntos_de_prueba(mensaje, []), [])
 	assert.deepEqual(adjuntos_de_prueba({ videos: {} }, [actual]), [])
 })
-test('snapshot compatible con API vieja, conserva texto y no ejecuta guía/hitos', () => {
-	const vm = panel(true)
-	vm.aplicar({ disponible: true, conversacion: { revision: 1 }, mensajes: [{ id: 1, contenido: 'Hola', videos: [video('04')], guia: { accion: 'iniciar' } }], catalogo: [video('04'), video('03')] })
-	assert.equal(vm.mensajes[0].contenido, 'Hola')
-	assert.equal(vm.videos_del_mensaje(vm.mensajes[0]).length, 1)
-	assert.equal(vm.guia_activa, null)
-	vm.aplicar({ disponible: true, conversacion: { revision: 2 }, mensajes: vm.mensajes })
-	assert.deepEqual(vm.catalogo, [])
-	assert.deepEqual(vm.videos_del_mensaje(vm.mensajes[0]), [])
-})
-test('snapshot no disponible retira catálogo y cierra reproducción', () => {
-	const vm = panel(true)
-	let cerrado = 0
-	vm.$refs.videos_prueba = { cerrar() { cerrado++ } }
-	vm.catalogo = [video('04')]
-	vm.aplicar({ disponible: false })
-	assert.equal(vm.disponible, false)
-	assert.equal(vm.catalogo.length, 0)
-	assert.equal(cerrado, 1)
-})
-test('prueba no llama ninguna mutación demo, tour, progreso ni acción incluso invocando métodos', () => {
-	const vm = panel(true)
-	const v = video('04')
-	vm.abrir_selector(v); vm.seleccionar_video(v); vm.abrir_video({ id: 1 }, v)
-	vm.registrar_segundos(v, { segundos_vistos: [1], terminado: true }); vm.enviar_progreso(v.clave); vm.omitir(v); vm.probar(v); vm.iniciar_guia([])
-	assert.deepEqual(vm.pendientes_video, {})
-	assert.equal(vm.video_abierto, null)
-	assert.equal(vm.seleccion_pendiente, null)
-})
-test('demo conserva catálogo y adjuntos históricos sin aplicar allowlist de prueba', () => {
-	const vm = panel(false)
-	const v = { clave: 'demo:1', origen: 'demo', clip_id: 1, url: '', titulo: 'Demo' }
-	vm.aplicar({ conversacion: { revision: 1 }, catalogo: [v], mensajes: [{ id: 1, videos: [v] }] })
-	assert.deepEqual(vm.catalogo, [v])
-	assert.deepEqual(vm.videos_del_mensaje(vm.mensajes[0]), [v])
-	assert.equal(vm.ruta_chat, '/api/demo/chat')
-})
+
 test('selector local pausa antes de cambiar, no duplica el reproductor y no autoavanza', () => {
 	const vm = instanciar(Videos, { catalogo: [video('04'), video('05')] })
 	let pausas = 0, abiertos = 0, cerrados = 0
@@ -113,21 +62,6 @@ test('selector local pausa antes de cambiar, no duplica el reproductor y no auto
 	assert.equal(tarjetas[0].componentOptions.listeners, undefined)
 	vm.cerrar(); assert.equal(vm.elegida, null); assert.equal(cerrados, 1)
 	vm.abrir(); assert.equal(vm.actual, null)
-})
-test('navegación y colapso detienen el video; retirar catálogo elimina el seleccionado', () => {
-	const vm = panel(true)
-	let cerrados = 0
-	vm.$refs.videos_prueba = { cerrar() { cerrados++ } }
-	vm.programar_ubicacion_launcher = () => {}
-	Panel.watch['$route.fullPath'].call(vm)
-	vm.colapsado = true
-	Panel.watch.colapsado.call(vm)
-	assert.equal(cerrados, 2)
-	const reproductor = instanciar(Videos, { catalogo: [video('04')] })
-	reproductor.elegida = 'prueba:04'
-	reproductor.catalogo = []
-	Videos.watch.videos.call(reproductor)
-	assert.equal(reproductor.elegida, null)
 })
 
 const Catalogo = cargar('components/prueba/CatalogoVideosPrueba.vue').default
@@ -151,8 +85,8 @@ test('selector unificado consulta sólo GET del snapshot y no inicia ni traslada
 	assert.equal(pedidos.length, 1)
 	assert.equal(pedidos[0].ruta, '/api/prueba/chat')
 })
-test('sin sesión, permisos, capacidad/credenciales o con prueba vencida no consulta ni muestra videos', async () => {
-	for (const cambiar of [s => { s.auth.authenticated = false }, s => { s.auth.version_bloqueada = {} }, s => { s.auth.user = null }, s => { s.auth.user.puede_usar_chat_prueba = false }, s => { s.auth.user.puede_unificar_chat_prueba = false }, s => { s.auth.user.prueba.activa = false }, s => { s.prueba.vencida = true }]) {
+test('sin sesión, permiso de prueba o con prueba vencida no consulta ni muestra videos', async () => {
+	for (const cambiar of [s => { s.auth.authenticated = false }, s => { s.auth.version_bloqueada = {} }, s => { s.auth.user = null }, s => { s.auth.user.puede_usar_chat_prueba = false }, s => { s.auth.user.prueba.activa = false }, s => { s.prueba.vencida = true }]) {
 		const { vm, pedidos } = catalogo_unificado(() => { throw new Error('No debe consultar') }, cambiar)
 		await vm.cargar()
 		assert.equal(vm.identidad, null)
@@ -209,30 +143,96 @@ test('desmontar o cambiar de pantalla/conversación cierra sin acciones y descar
 
 test('valida URL exacta por pieza: rechaza host, versión, archivo, query, fragmento y credenciales ajenos', () => {
 	const correcta = URLS['04']
-	for (const url of [URLS['05'], correcta + '?v=1', correcta + '#video', correcta.replace('videos.comerciocity.store', 'ajeno.com'), correcta.replace('/20261107/', '/20261001/'), correcta.replace('v8-', 'v7-'), correcta.replace('https://', 'https://usuario:clave@')]) {
+	for (const url of [URLS['05'], correcta + '?v=1', correcta + '#video', correcta.replace('videos.comerciocity.store', 'ajeno.com'), correcta.replace('/20261111/', '/20261001/'), correcta.replace('claude-v2-', 'claude-v1-'), correcta.replace('https://', 'https://usuario:clave@')]) {
 		assert.deepEqual(catalogo_de_prueba([video('04', { url })]), [], url)
 	}
 })
 
-test('legado cierra al perder acceso y una respuesta anterior no restaura el catálogo', () => {
-	for (const status of [401, 403, 404, 405]) {
-		const vm = panel(true)
-		let cierres = 0
-		vm.$refs.videos_prueba = { cerrar() { cierres++ } }
-		vm.catalogo = [video('04')]
-		const acceso = vm.revision_acceso_prueba
-		vm.fallar({ response: { status } }, acceso)
-		assert.equal(cierres, 1)
-		assert.equal(vm.disponible, false)
-		assert.deepEqual(vm.catalogo, [])
-		assert.equal(vm.aplicar_respuesta({ status: 200, data: { disponible: true, catalogo: [video('04')] } }, acceso), false)
-		assert.deepEqual(vm.catalogo, [])
+test('rechaza la tanda anterior aunque la clave siga vigente', () => {
+	const anteriores = {
+		'04': '04-bienvenida-y-recorrido-v8-904bf6fb63ed71ec.mp4',
+		'05': '05-importa-tu-catalogo-v4-5c3ff8667f590302.mp4',
+		'06': '06-revisa-y-cambia-un-precio-v4-0f33edc6012184fc.mp4',
+		'07': '07-carga-una-compra-con-una-foto-v4-b7ab810b35ab2a1d.mp4',
+		'08': '08-hace-tu-primera-venta-v4-6bf28a33ad57bee8.mp4',
+		'09': '09-proba-al-agente-con-tu-catalogo-v4-afa99edf54562d4f.mp4',
 	}
-	for (const respuesta of [{ status: 204 }, { status: 200, data: { disponible: false } }]) {
-		const vm = panel(true)
-		const acceso = vm.revision_acceso_prueba
-		vm.aplicar_respuesta(respuesta, acceso)
-		assert.equal(vm.aplicar_respuesta({ data: { disponible: true, catalogo: [video('04')] } }, acceso), false)
+	for (const codigo of Object.keys(anteriores)) {
+		const url = 'https://videos.comerciocity.store/landing-prueba/20261107/' + anteriores[codigo]
+		assert.deepEqual(catalogo_de_prueba([video(codigo, { url })]), [], codigo)
+		assert.equal(catalogo_de_prueba([video(codigo)]).length, 1, codigo)
+	}
+})
+
+// develop retiró el panel legado de prueba: el acceso actual es Agentes.
+// Estas regresiones verifican el catálogo real, sin reactivar props ni mutaciones de la demo.
+test('retirar catálogo elimina el seleccionado y cierra el selector al quedar vacío', () => {
+	const vm = instanciar(Videos, { catalogo: [video('04')] })
+	let cierres = 0
+	vm.$refs.modal = { hide() { cierres++ } }
+	vm.elegida = 'prueba:04'
+	vm.catalogo = []
+	Videos.watch.videos.call(vm)
+	assert.equal(vm.elegida, null)
+	assert.equal(vm.actual, null)
+	assert.equal(cierres, 1)
+})
+
+test('una denegación posterior retira los videos cargados y cierra reproducción', async () => {
+	for (const status of [401, 403, 404, 405]) {
+		let denegar = false, cierres = 0
+		const { vm } = catalogo_unificado(() => denegar ? Promise.reject({ response: { status } }) : Promise.resolve({ data: { disponible: true, catalogo: [video('04')] } }))
+		vm.$refs.videos = { cerrar() { cierres++ } }
+		await vm.cargar()
+		assert.equal(vm.catalogo.length, 1)
+		denegar = true
+		await vm.cargar()
 		assert.deepEqual(vm.catalogo, [])
+		assert.equal(vm.error, false)
+		assert.equal(cierres, 2)
+	}
+})
+
+test('perder permiso cierra reproducción y descarta una respuesta tardía', async () => {
+	let resolver, cierres = 0
+	const { vm, estado } = catalogo_unificado(() => new Promise(resolve => { resolver = resolve }))
+	vm.$refs.videos = { cerrar() { cierres++ } }
+	const pendiente = vm.cargar()
+	estado.auth.user.puede_usar_chat_prueba = false
+	await vm.cargar()
+	resolver({ data: { disponible: true, catalogo: [video('04')] } })
+	await pendiente
+	assert.equal(vm.identidad, null)
+	assert.deepEqual(vm.catalogo, [])
+	assert.equal(cierres, 2)
+})
+
+test('Soporte permite consultar videos con permiso de prueba aunque el chat personal no esté disponible', async () => {
+	for (const capacidad of [false, undefined]) {
+		const { vm, pedidos } = catalogo_unificado(() => Promise.resolve({ data: { disponible: true, catalogo: [video('04')] } }), estado => { estado.auth.user.puede_unificar_chat_prueba = capacidad })
+		await vm.cargar()
+		assert.equal(vm.identidad, 7)
+		assert.equal(vm.catalogo.length, 1)
+		assert.equal(pedidos.length, 1)
+		assert.equal(pedidos[0].ruta, '/api/prueba/chat')
+	}
+})
+
+test('abrir el selector y cambiar de pieza detienen el audio o video que ya estaba sonando', () => {
+	const anterior = global.document
+	const medios = [{ pausas: 0, pause() { this.pausas++ } }, { pausas: 0, pause() { this.pausas++ } }]
+	const consultas = []
+	try {
+		global.document = { querySelectorAll(selector) { consultas.push(selector); return medios } }
+		const vm = instanciar(Videos, { catalogo: [video('04')] })
+		vm.$refs.modal = { show() {} }
+		vm.abrir()
+		assert.deepEqual(medios.map(medio => medio.pausas), [1, 1])
+		vm.seleccionar(video('04'))
+		assert.deepEqual(medios.map(medio => medio.pausas), [2, 2])
+		assert.deepEqual(consultas, ['video, audio', 'video, audio'])
+	} finally {
+		if (anterior === undefined) delete global.document
+		else global.document = anterior
 	}
 })

@@ -1,176 +1,153 @@
 <template>
-	<!-- Click en el fondo oscuro (afuera del panel) cierra el chat, igual que la cruz y Escape.
-
-	🔴 NO ALCANZA CON `@click.self`: un click se dispara sobre el ancestro común de donde bajó
-	y donde subió el botón. Arrastrar una manija de PanelResizer (o seleccionar texto del hilo)
-	y soltar afuera del panel termina en un click cuyo target es el overlay, y el chat se
-	cerraba en la cara de quien lo estaba estirando. Por eso se cierra SOLO si el mousedown
-	también arrancó en el overlay: `al_mousedown_overlay` prende la bandera únicamente cuando
-	el target es el overlay mismo y la apaga con cualquier otro mousedown. Va en fase de
-	CAPTURA (`.capture`) para enterarse de TODO mousedown del panel aunque un hijo corte la
-	propagación.
-
-	🔴 Y NO ES UN "click afuera" ESCUCHADO EN `document`: los b-popover y b-modal de
-	BootstrapVue que abre el chat (la ficha del artículo, la cuenta corriente, el visor de
-	fotos) se montan colgados de <body>, fuera de este árbol, y un click adentro de ellos
-	contaría como "afuera del panel" y cerraría el chat. Un click en esos elementos nunca
-	tiene como target al overlay, así que acá no molestan.
-
-	Las dos vistas comparten la misma instancia del chat y del compositor. El lateral deja
-	pasar los clics al sistema para poder seguir trabajando y hacer recorridos. -->
-	<div
+	<section
 	class="asistente-ia-overlay"
-	:class="{ 'asistente-ia-overlay--lateral': es_lateral }"
-	@mousedown.capture="al_mousedown_overlay"
-	@click.self="al_click_overlay">
-		<div
-		id="asistente-ia-panel"
-		ref="panel"
-		class="asistente-ia-panel"
-		:role="es_lateral ? 'region' : 'dialog'"
-		:aria-modal="es_lateral ? null : 'true'"
-		aria-label="Asistente"
-		tabindex="-1"
-		:style="panel_inline_style">
-			<!-- Manijas para estirar el modal entero desde los dos bordes. No existen en
-			móvil, igual que el divisor de la sidebar: ahí el panel ocupa el ancho de la
-			pantalla y no hay nada que elegir. Son invisibles en reposo (ver PanelResizer). -->
-			<panel-resizer
-			v-if="!es_movil && !es_lateral"
-			lado="izquierda"
-			@resize="on_panel_resize"
-			@resize-end="on_panel_resize_end"></panel-resizer>
-
-			<panel-resizer
-			v-if="!es_movil && !es_lateral"
-			lado="derecha"
-			@resize="on_panel_resize"
-			@resize-end="on_panel_resize_end"></panel-resizer>
-
-			<!-- Sidebar: lista de conversaciones. En escritorio es una columna
-			redimensionable; bajo 768px se esconde y aparece como cajón (D38). -->
-			<div
-			v-show="!es_lateral && (!es_movil || sidebar_movil_abierta)"
-			ref="lista_conversaciones"
-			class="asistente-ia-panel__sidebar"
-			:class="{ 'asistente-ia-panel__sidebar--abierta': sidebar_movil_abierta }"
-			:style="sidebar_inline_style">
-				<conversation-list
-				:es_cajon="es_movil"
-				@select="on_conversation_selected"
-				@cerrar="sidebar_movil_abierta = false"></conversation-list>
-			</div>
-
-			<!-- Fondito que cierra el cajón móvil al tocar afuera de la lista. -->
-			<div
-			v-if="!es_lateral && es_movil && sidebar_movil_abierta"
-			class="asistente-ia-panel__telon"
-			@click="sidebar_movil_abierta = false"></div>
-
-			<!-- Divisor redimensionable reusado de Vender (D39); no existe en móvil. Acá se
-			pinta transparente (ver el <style>): en ia-spa la barra y la conversación se
-			separan solo por el color de fondo. -->
-			<vender-resizer
-			v-if="!es_movil && !es_lateral"
-			@resize="on_sidebar_resize"
-			@resize-end="on_sidebar_resize_end"></vender-resizer>
-
-			<div class="asistente-ia-panel__main">
-				<!-- Encabezado de 52px sin borde, como el de ia-spa (chat/Encabezado.vue): en el
-				teléfono, el botón de la lista a la izquierda y el de chat nuevo a la derecha. -->
-				<header class="asistente-ia-panel__header">
+	:class="{ 'asistente-ia-overlay--lateral': es_lateral, 'agentes-modulo': !es_lateral, 'support-chat-overlay': soporte_activo }"
+	aria-label="Agentes">
+		<div id="asistente-ia-panel" ref="panel" class="asistente-ia-panel" tabindex="-1">
+			<header
+			class="agentes-cabecera"
+			:class="{ 'agentes-cabecera--ampliada': cabecera_ampliada, 'agentes-cabecera--dos-filas': cabecera_en_dos_filas }"
+			:data-tour="soporte_activo ? 'soporte.encabezado' : null">
+				<div class="agentes-cabecera__marca">
+					<span class="asistente-ia-panel__orb" aria-hidden="true">✦</span>
 					<button
-					v-if="es_movil && !es_lateral"
-					ref="abrir_conversaciones"
+					v-if="lista_es_cajon && !guia_activa"
 					type="button"
 					class="asistente-ia-panel__boton"
-					title="Conversaciones"
-					aria-label="Abrir la lista de conversaciones"
-					:aria-expanded="sidebar_movil_abierta ? 'true' : 'false'"
+					aria-label="Conversaciones"
+					:aria-expanded="String(sidebar_movil_abierta)"
 					@click="sidebar_movil_abierta = !sidebar_movil_abierta">
 						<icono nombre="menu"></icono>
 					</button>
-					<span class="asistente-ia-panel__orb" aria-hidden="true">✦</span>
-					<div class="asistente-ia-panel__identidad">
-						<strong>Tu asistente</strong>
-						<span class="asistente-ia-panel__titulo">{{ titulo_cabecera }}</span>
-					</div>
+				</div>
+				<div class="agentes-selector" role="group" aria-label="Elegí un agente">
+					<button v-if="puede_guia" type="button" :aria-pressed="String(guia_activa)" @click="cambiar_agente('guia')">
+						Tu guía
+					</button>
+					<button v-if="puede_asistente" type="button" :aria-pressed="String(agente_activo === 'asistente')" @click="cambiar_agente('asistente')">
+						Asistente personal
+					</button>
+					<button v-if="puede_soporte" type="button" :aria-pressed="String(soporte_activo)" @click="cambiar_agente('soporte')">
+						Soporte
+					</button>
+				</div>
+				<div class="agentes-cabecera__acciones">
+					<a
+					v-if="tienda_url"
+					class="agentes-cabecera__tienda"
+					:href="tienda_url"
+					target="_blank"
+					rel="noopener noreferrer"
+					data-demo-tienda
+					@click="$root.$emit('agentes:guia-pausar')">Tu tienda <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
 					<button
-					v-if="es_movil || es_lateral"
-					type="button"
+					v-if="es_lateral"
 					class="asistente-ia-panel__boton"
-					title="Nueva conversación"
-					aria-label="Nueva conversación"
-					:disabled="vacia"
-					@click="nueva_conversacion">
-						<icono nombre="nuevo"></icono>
+					type="button"
+					title="Expandir a Agentes"
+					aria-label="Expandir a Agentes"
+					@click="$emit('expandir')">
+						<i class="bi bi-arrows-angle-expand" aria-hidden="true"></i>
 					</button>
 					<button
 					class="asistente-ia-panel__boton"
 					type="button"
-					:title="texto_cambiar_modo"
-					:aria-label="texto_cambiar_modo"
-					@click="$emit('cambiar-modo', es_lateral ? 'completo' : 'lateral')">
-						<i :class="es_lateral ? 'bi bi-arrows-angle-expand' : 'bi bi-arrows-angle-contract'" aria-hidden="true"></i>
-					</button>
-					<button
-					class="asistente-ia-panel__boton"
-					type="button"
-					title="Cerrar el asistente"
-					aria-label="Cerrar el asistente"
-					@click="cerrar">
+					title="Cerrar Agentes"
+					aria-label="Cerrar Agentes"
+					@click="$emit('cerrar')">
 						<icono nombre="cerrar"></icono>
 					</button>
-				</header>
-				<slot name="guia"></slot>
-				<catalogo-videos-prueba></catalogo-videos-prueba>
-				<div v-if="aviso_traslado" class="asistente-ia-panel__aviso-traslado">
-					<span role="status">{{ aviso_traslado }}</span>
-					<button type="button" :disabled="traslado_en_curso" @click="cargar_bandeja(true)">Reintentar</button>
 				</div>
-
-				<!-- Con la conversación en blanco, en escritorio y tablet, el saludo y el
-				compositor quedan centrados y las sugerencias abajo (como ChatGPT e ia-spa,
-				views/Chat.vue). En el teléfono el saludo queda en el medio y las sugerencias van
-				arriba del compositor, en una fila que se desliza. -->
-				<div
-				class="asistente-ia-panel__cuerpo"
-				:class="{ 'asistente-ia-panel__cuerpo--vacia': vacia && !es_movil && !es_lateral }">
-					<conversation
-					:esperando_bandeja="!bandeja_cargada"></conversation>
-					<composer
-					ref="composer"
-					:bloqueado="traslado_en_curso && !selected_conversation_id"
-					:vacia="vacia">
-						<template v-slot:arriba>
-							<pantalla-vacia
-							v-if="vacia && (es_movil || es_lateral)"
-							class="asistente-ia-panel__sugerencias-tel"
-							solo_sugerencias
-							@sugerencia="usar_sugerencia"></pantalla-vacia>
-						</template>
-					</composer>
-					<div
-					v-if="vacia && !es_movil && !es_lateral"
-					class="asistente-ia-panel__sugerencias">
-						<pantalla-vacia
-						solo_sugerencias
-						@sugerencia="usar_sugerencia"></pantalla-vacia>
+			</header>
+			<div class="agentes-canal">
+				<span>{{ texto_canal }}</span>
+				<a v-if="telefono" :href="'https://wa.me/' + telefono" target="_blank" rel="noopener noreferrer">
+					<icono nombre="whatsapp" :tamano="14"></icono>
+					+{{ telefono }}
+				</a>
+			</div>
+			<!-- Cambiar de agente desmonta el reproductor: no debe quedar audio en una pestaña oculta. -->
+			<catalogo-videos-prueba v-if="!guia_activa" :key="agente_activo" ref="videos_prueba"></catalogo-videos-prueba>
+			<div v-if="personal_visitado && puede_asistente" v-show="agente_activo === 'asistente'" class="agentes-espacio">
+				<aside
+				v-if="agente_activo === 'asistente' && (!lista_es_cajon || sidebar_movil_abierta)"
+				class="asistente-ia-panel__sidebar"
+				:class="{ 'agentes-lista--cajon': lista_es_cajon }"
+				:style="sidebar_inline_style">
+					<conversation-list
+					:es_cajon="lista_es_cajon"
+					@select="on_conversation_selected"
+					@cerrar="sidebar_movil_abierta = false"></conversation-list>
+				</aside>
+				<vender-resizer v-if="!lista_es_cajon && !es_lateral" @resize="on_sidebar_resize" @resize-end="on_sidebar_resize_end"></vender-resizer>
+				<div class="asistente-ia-panel__main">
+					<slot name="guia"></slot>
+					<div v-if="aviso_traslado" class="asistente-ia-panel__aviso-traslado">
+						<span role="status">{{ aviso_traslado }}</span>
+						<button type="button" :disabled="traslado_en_curso" @click="cargar_bandeja">Reintentar</button>
+					</div>
+					<div v-if="selected_conversation && selected_conversation.sistema_exclusivo_at" class="agentes-solo-sistema">
+						<i class="bi bi-pc-display" aria-hidden="true"></i> Este hilo sigue únicamente en el sistema.
+					</div>
+					<div class="asistente-ia-panel__cuerpo">
+						<conversation
+						:esperando_bandeja="!bandeja_cargada"
+						:ocultar_bienvenida="!!reporte_id"
+						@ver-informe="abrir_reporte">
+							<template #contexto>
+								<div v-if="reporte_id" class="agentes-informe">
+									<button type="button" class="agentes-informe__volver" @click="nueva_conversacion">Volver a los reportes diarios</button>
+									<informe v-if="reporte" :reporte="reporte"></informe>
+									<p v-else-if="error_reporte" role="status">No pudimos abrir el reporte. <button type="button" @click="cargar_reporte(reporte_id)">Reintentar</button></p>
+									<p v-else role="status">Abriendo el reporte…</p>
+								</div>
+								<reportes-diarios v-else-if="vacia" @abrir="abrir_reporte"></reportes-diarios>
+							</template>
+						</conversation>
+						<composer
+						ref="composer"
+						:bloqueado="traslado_en_curso && !selected_conversation_id"
+						:clave_borrador="clave_borrador"
+						:preparar_envio="preparar_envio_personal"
+						:vacia="vacia">
+							<template #arriba>
+								<pantalla-vacia v-if="vacia && !reporte_id" class="asistente-ia-panel__sugerencias-tel" solo_sugerencias @sugerencia="usar_sugerencia"></pantalla-vacia>
+							</template>
+						</composer>
 					</div>
 				</div>
 			</div>
+			<soporte
+			v-if="soporte_visitado && puede_soporte"
+			v-show="soporte_activo"
+			:activo="soporte_activo"
+			:lista_es_cajon="lista_es_cajon"
+			:lista_abierta="sidebar_movil_abierta"
+			:sidebar_style="sidebar_inline_style"
+			@cerrar-lista="sidebar_movil_abierta = false"></soporte>
+			<!-- 🔴 Sin hijos de Vue, siempre: DemoChatPanel mete acá su $el con appendChild (ver acomodar_en_agentes). -->
+			<div id="agentes-guia-lugar" ref="lugar_guia" v-show="guia_activa" class="agentes-guia-lugar"></div>
+			<button
+			v-if="lista_es_cajon && sidebar_movil_abierta"
+			type="button"
+			class="asistente-ia-panel__telon"
+			aria-label="Cerrar lista de conversaciones"
+			@click="sidebar_movil_abierta = false"></button>
 		</div>
-	</div>
+	</section>
 </template>
 
 <script>
 import ConversationList from '@/components/asistente-ia/ConversationList'
 import Conversation from '@/components/asistente-ia/Conversation'
 import Composer from '@/components/asistente-ia/Composer'
-import PanelResizer from '@/components/asistente-ia/PanelResizer'
+import Soporte from '@/components/asistente-ia/Soporte'
+import ReportesDiarios from '@/components/asistente-ia/ReportesDiarios'
+import { confirmar_traspaso } from '@/components/asistente-ia/traspaso'
 import PantallaVacia from '@/components/asistente-ia/PantallaVacia'
 import Icono from '@/components/asistente-ia/Icono'
 import VenderResizer from '@/components/vender/components/VenderResizer'
+import { url_de_tienda } from '@/store/ai_chat'
 import CatalogoVideosPrueba from '@/components/prueba/CatalogoVideosPrueba'
 
 // Límites del ancho de la sidebar en px (D38).
@@ -178,19 +155,11 @@ const SIDEBAR_MIN = 180
 const SIDEBAR_MAX = 420
 const SIDEBAR_DEFAULT = 260
 
-// Límites del ancho del MODAL ENTERO en px (pedido de Lucas, 19/8/2026).
-//
-// 🔴 984 no es un número redondo elegido a ojo: es 820 × 1.2, el ancho fijo que tenía
-// el panel hasta ahora más el 20% que pidió Lucas. Si alguien lo "redondea" a 1000, deja
-// de ser el 20% y el pedido original se pierde sin que nada lo denuncie.
-const PANEL_MIN = 720
-const PANEL_MAX = 1600
-const PANEL_DEFAULT = 984
-
-const SELECTOR_ENFOCABLE = 'a[href], button, input, select, textarea, [contenteditable=true], [tabindex]'
-
 export default {
 	props: {
+		puede_asistente: Boolean,
+		puede_soporte: Boolean,
+		puede_guia: Boolean,
 		modo: {
 			type: String,
 			default: 'lateral',
@@ -201,7 +170,9 @@ export default {
 		ConversationList,
 		Conversation,
 		Composer,
-		PanelResizer,
+		Soporte,
+		ReportesDiarios,
+		Informe: () => import('@/components/ia/Informe'),
 		PantallaVacia,
 		Icono,
 		VenderResizer,
@@ -210,15 +181,16 @@ export default {
 		return {
 			// Ancho actual de la sidebar en px (solo escritorio).
 			sidebar_width_px: SIDEBAR_DEFAULT,
-			// Ancho actual del modal entero en px (solo escritorio).
-			panel_width_px: PANEL_DEFAULT,
+			personal_visitado: false,
+			soporte_visitado: false,
+			canales: {},
+			reporte_nuevo: null,
+			reporte: null,
+			error_reporte: false,
 			// true cuando el cajón de conversaciones está abierto (solo móvil).
 			sidebar_movil_abierta: false,
 			// Ancho del viewport, para decidir el modo cajón bajo 768px.
 			viewport_width: typeof window !== 'undefined' ? window.innerWidth : 1200,
-			// true si el último mousedown arrancó en el overlay (el fondo, afuera del panel).
-			// Es la guarda del cierre por click afuera: ver el comentario del <template>.
-			mousedown_en_overlay: false,
 			// true cuando terminó (bien o mal) la primera carga de la bandeja al abrir el panel.
 			//
 			// 🔴 Existe por la pantalla vacía centrada (misión agente-mejoras-uso-real): hasta que
@@ -230,15 +202,57 @@ export default {
 			traslado_en_curso: false,
 			aviso_traslado: '',
 			panel_vigente: true,
-			revision_seleccion_automatica: null,
 		}
 	},
 	computed: {
 		es_lateral() {
 			return this.modo === 'lateral'
 		},
-		texto_cambiar_modo() {
-			return this.es_lateral ? 'Expandir y ver conversaciones' : 'Volver al panel lateral'
+		/**
+		 * El agente que se está mostrando, ya resuelto contra lo que la cuenta puede usar.
+		 *
+		 * @returns {String} 'guia' | 'soporte' | 'asistente'
+		 */
+		agente_activo() {
+			const agente = this.$store.state.ai_chat.agente
+			// Una cuenta que solo tiene la guía (un empleado de la demo) cae siempre en ella:
+			// si no, el lateral quedaba vacío con el 'asistente' por defecto del store.
+			if (this.puede_guia && (agente === 'guia' || (!this.puede_asistente && !this.puede_soporte))) return 'guia'
+			if (this.puede_soporte && (!this.puede_asistente || agente === 'soporte')) return 'soporte'
+			return 'asistente'
+		},
+		guia_activa() { return this.agente_activo === 'guia' },
+		soporte_activo() { return this.agente_activo === 'soporte' },
+		tienda_url() { return url_de_tienda(this.owner && this.owner.online) },
+		/**
+		 * La cabecera solo cambia su reparto si tiene algo más que mostrar: una cuenta sin tienda
+		 * ni guía tiene que seguir viéndose exactamente como antes de esta misión.
+		 *
+		 * @returns {Boolean}
+		 */
+		cabecera_ampliada() { return this.puede_guia || !!this.tienda_url },
+		cabecera_en_dos_filas() {
+			return this.cabecera_ampliada && (this.es_movil || (this.es_lateral && this.viewport_width < 1000))
+		},
+		texto_canal() {
+			// «Tu guía» existe solo en la demo (misión prueba-ayuda-unificada-en-soporte: la prueba la perdió).
+			if (this.guia_activa) return 'Tu asistente de la demo: explorá, preguntá y probá.'
+			return this.soporte_activo ? 'Conversaciones supervisadas por el equipo de Soporte de ComercioCity.' : 'Esta conversación es privada entre vos y tu asistente personal.'
+		},
+		lista_es_cajon() { return this.es_movil || (this.es_lateral && this.viewport_width < 1000) },
+		telefono() {
+			if (this.guia_activa) return ''
+			const valor = this.canales[this.soporte_activo ? 'soporte' : 'asistente']
+			const numero = typeof valor === 'string' ? valor.replace(/\D/g, '') : ''
+			return numero.length >= 8 && numero.length <= 15 ? numero : ''
+		},
+		reporte_id() {
+			const hilo = this.selected_conversation
+			return this.reporte_nuevo || (hilo && hilo.origen === 'mostrador_reporte' ? hilo.referencia_id : null)
+		},
+		clave_borrador() {
+			if (this.reporte_id) return 'reporte:' + this.reporte_id
+			return this.selected_conversation_id == null ? 'nuevo' : 'hilo:' + this.selected_conversation_id
 		},
 		conversations() {
 			return this.$store.state.ai_chat.conversations
@@ -248,12 +262,6 @@ export default {
 		},
 		selected_conversation() {
 			return this.$store.getters['ai_chat/selected_conversation']
-		},
-		titulo_cabecera() {
-			if (this.selected_conversation && this.selected_conversation.titulo) {
-				return this.selected_conversation.titulo
-			}
-			return 'Nueva conversación'
 		},
 		es_movil() {
 			return this.viewport_width < 768
@@ -274,55 +282,38 @@ export default {
 		 * el CSS del cajón.
 		 */
 		sidebar_inline_style() {
-			if (this.es_movil) {
+			if (this.lista_es_cajon) {
 				return null
 			}
 			return {
-				width: this.sidebar_width_px + 'px',
-			}
-		},
-		/**
-		 * Ancho del modal entero, en px pelados.
-		 *
-		 * 🔴 El techo de 96vw NO se pone acá: lo pone el `max-width` del CSS, que gana
-		 * sobre este `width` sin que haya que calcular nada. Es a propósito, y no un
-		 * olvido: el ancho se guarda por PERSONA y no por dispositivo, así que alguien que
-		 * estira el panel a 1600 en el escritorio después abre el sistema desde el
-		 * teléfono con ese mismo 1600 guardado. El `max-width` es lo que evita que el
-		 * modal se salga de la pantalla, y es también lo que gobierna bajo 768px, donde
-		 * las manijas no existen.
-		 */
-		panel_inline_style() {
-			if (this.es_lateral) {
-				return null
-			}
-			return {
-				width: this.panel_width_px + 'px',
+				width: (this.es_lateral ? 188 : this.sidebar_width_px) + 'px',
 			}
 		},
 	},
 	created() {
 		this.hidratar_ancho_sidebar()
-		this.hidratar_ancho_panel()
-
-		// Consumo de IA del mes para el footer de la sidebar (S2). Si el API es viejo y no
-		// tiene el endpoint, queda null y el footer no se muestra (degradación limpia).
-		this.$store.dispatch('ai_chat/fetchMiConsumo')
-
-		this.cargar_bandeja()
+		this.preparar_agente(this.agente_activo)
+		this.$axios.get('/api/agentes/canales', { skip_global_error_event: true, skip_navigation_cancel: true })
+			.then(res => { this.canales = res.data || {} })
+			.catch(() => {})
 	},
 	mounted() {
 		this.foco_antes_de_abrir = document.activeElement
 		window.addEventListener('resize', this.on_window_resize)
 		document.addEventListener('keydown', this.on_document_keydown)
-		this.enfocar_vista_completa()
+		this.$root.$emit('agentes:guia-lugar')
 	},
 	beforeDestroy() {
+		// Se mira el foco ANTES de sacar la guía: si estaba en su textarea, al sacarla cae al body
+		// y ya no se sabría que había que devolverlo.
+		const tenia_el_foco = !!(this.$refs.panel && this.$refs.panel.contains(document.activeElement))
+		// Antes de que Vue desarme el lateral: la conversación de la guía tiene que sobrevivirle.
+		this.$root.$emit('agentes:guia-lugar-sale', this.$refs.lugar_guia)
 		this.panel_vigente = false
 		window.removeEventListener('resize', this.on_window_resize)
 		document.removeEventListener('keydown', this.on_document_keydown)
 		const foco = this.foco_antes_de_abrir
-		if (foco && this.$refs.panel.contains(document.activeElement)) {
+		if (foco && tenia_el_foco) {
 			this.$nextTick(() => {
 				if (document.activeElement === document.body && foco.isConnected && !this.hay_interfaz_encima()) {
 					foco.focus({ preventScroll: true })
@@ -331,16 +322,26 @@ export default {
 		}
 	},
 	watch: {
-		modo() {
+		modo() { this.cerrar_videos_prueba(); this.sidebar_movil_abierta = false },
+		'$store.state.support_message.active_ticket_id'() { this.cerrar_videos_prueba() },
+		agente_activo(valor) {
 			this.sidebar_movil_abierta = false
-			this.$nextTick(this.enfocar_vista_completa)
+			this.preparar_agente(valor)
 		},
-		sidebar_movil_abierta(abierta) {
-			this.$nextTick(() => {
-				if (!this.es_movil || this.es_lateral || this.hay_interfaz_encima()) return
-				const destino = abierta ? this.$refs.lista_conversaciones.querySelector('button:not(:disabled)') : this.$refs.abrir_conversaciones
-				if (destino) destino.focus({ preventScroll: true })
-			})
+		/**
+		 * La guía (DemoChatPanel) decide si se muestra mirando `ai_chat.agente` del store, no este
+		 * computed. Si el agente resuelto es la guía y el store dice otra cosa (F5 en /agentes, o una
+		 * cuenta que solo tiene la guía), se alinea el store para que la guía no quede escondida.
+		 */
+		guia_activa: {
+			immediate: true,
+			handler(activa) {
+				if (activa && this.$store.state.ai_chat.agente !== 'guia') this.$store.commit('ai_chat/setAgente', 'guia')
+			},
+		},
+		reporte_id: {
+			immediate: true,
+			handler(id) { this.cargar_reporte(id) },
 		},
 		/**
 		 * Cada cambio de conversación abierta carga su primera página. Con null
@@ -363,7 +364,8 @@ export default {
 		},
 	},
 	methods: {
-		cargar_bandeja(reintento = false) {
+		cerrar_videos_prueba() { if (this.$refs.videos_prueba) this.$refs.videos_prueba.cerrar() },
+		cargar_bandeja() {
 			let self = this
 			const usuario = this.user
 			const revision_seleccion = this.$store.state.ai_chat.revision_seleccion
@@ -371,33 +373,16 @@ export default {
 			const trasladar = usuario && usuario.puede_unificar_chat_prueba === true
 
 			this.traslado_en_curso = trasladar
-			const recuperacion = trasladar ? this.recuperar_chat_prueba() : Promise.resolve(null)
-			recuperacion.then(id_trasladado => {
+			const recuperacion = trasladar ? this.recuperar_chat_prueba() : Promise.resolve()
+			recuperacion.then(() => {
 				if (!sigue_vigente()) return
 				return self.$store.dispatch('ai_chat/getConversations').then(() => {
 					if (!sigue_vigente()) return
 					self.bandeja_cargada = true
 					self.traslado_en_curso = false
 					const seleccion_paso = revision_seleccion === self.$store.state.ai_chat.revision_seleccion
-					const anterior = self.conversations.find(hilo => hilo.id === id_trasladado)
-					const reemplazar_automatica = reintento && anterior && seleccion_paso
-						&& revision_seleccion === self.revision_seleccion_automatica
 					const id_actual = self.selected_conversation_id
-					if (id_actual && !reemplazar_automatica) {
-						if (!reintento || id_actual === id_trasladado) {
-							self.$store.dispatch('ai_chat/getMessages', { conversation_id: id_actual, page: 1 })
-						}
-						return
-					}
-					// Una elección hecha durante la espera tiene prioridad, incluso «Nueva conversación».
-					if (trasladar && !seleccion_paso) return
-					const hilo = anterior || self.conversations[0]
-					if (hilo) {
-						self.$store.commit('ai_chat/setSelectedConversationId', hilo.id)
-						self.revision_seleccion_automatica = anterior ? null : self.$store.state.ai_chat.revision_seleccion
-					} else {
-						self.$store.commit('ai_chat/setMessages', [])
-					}
+					if (id_actual && seleccion_paso) self.$store.dispatch('ai_chat/getMessages', { conversation_id: id_actual, page: 1 })
 				})
 			})
 		},
@@ -434,73 +419,6 @@ export default {
 			return Math.min(Math.max(SIDEBAR_MIN, width), SIDEBAR_MAX)
 		},
 		/**
-		 * Ancho inicial del modal: el elegido en esta sesión (store), o el persistido por
-		 * persona que viajó en GET api/user, o el default. Mismo orden que la sidebar.
-		 */
-		hidratar_ancho_panel() {
-			let width = this.$store.state.ai_chat.panel_width
-			if (!width && this.user && this.user.chat_ia_panel_width) {
-				width = parseInt(this.user.chat_ia_panel_width, 10)
-			}
-			if (!width || isNaN(width)) {
-				width = PANEL_DEFAULT
-			}
-			this.panel_width_px = this.clamp_panel_width(width)
-		},
-		/**
-		 * 🔴 PANEL_MIN y PANEL_MAX tienen que decir el MISMO número que el rango de
-		 * set_chat_ia_preferencias en empresa-api (720..1600). Si acá se amplía el rango y
-		 * allá no, el usuario arrastra hasta un ancho que se ve bien, el PUT vuelve 422 y
-		 * savePreferences() se lo traga en un console.log: el ancho se pierde en silencio
-		 * y recién se nota al recargar.
-		 */
-		clamp_panel_width(width) {
-			return Math.min(Math.max(PANEL_MIN, width), PANEL_MAX)
-		},
-		/**
-		 * Igual que el anterior, pero además contra lo que ENTRA EN LA PANTALLA de ahora.
-		 *
-		 * 🔴 Solo se usa al ARRASTRAR, nunca al hidratar, y la diferencia importa. El
-		 * ancho visible lo topea el `max-width: 96vw` del CSS, así que sin este corte el
-		 * número seguía creciendo hasta 1600 con el borde ya clavado: en una pantalla de
-		 * 1366px son ~145px de cursor sin efecto, y para achicar había que arrastrar de
-		 * vuelta todo lo acumulado antes de ver moverse algo.
-		 *
-		 * Al hidratar NO se aplica, a propósito: el ancho es de la persona y no del
-		 * dispositivo, y recortarlo ahí convertiría una visita desde el teléfono en una
-		 * pérdida permanente del ancho elegido en el escritorio.
-		 */
-		clamp_panel_width_visible(width) {
-			let tope_pantalla = PANEL_MAX
-			if (typeof window !== 'undefined' && window.innerWidth) {
-				tope_pantalla = Math.min(PANEL_MAX, Math.floor(window.innerWidth * 0.96))
-			}
-			// Si la pantalla es tan angosta que ni el mínimo entra, manda PANEL_MIN: el
-			// max-width del CSS se encarga de que igual no desborde.
-			return Math.min(Math.max(PANEL_MIN, width), Math.max(PANEL_MIN, tope_pantalla))
-		},
-		/**
-		 * Suma el delta de una manija de borde, que ya viene orientado hacia afuera.
-		 *
-		 * 🔴 El ×2 no sobra. El modal está CENTRADO en el overlay, así que su ancho se
-		 * reparte mitad y mitad a los dos lados: para que un borde se corra N px, el ancho
-		 * tiene que crecer 2N. Sin el ×2 el borde avanza la mitad de lo que avanza el
-		 * cursor y el arrastre se siente pegajoso.
-		 */
-		on_panel_resize(delta) {
-			this.panel_width_px = this.clamp_panel_width_visible(this.panel_width_px + (delta * 2))
-		},
-		/**
-		 * Al soltar se persiste, igual que la sidebar: en el store para reaperturas del
-		 * panel en esta sesión, y en la base por persona vía savePreferences.
-		 */
-		on_panel_resize_end() {
-			this.$store.commit('ai_chat/setPanelWidth', this.panel_width_px)
-			this.$store.dispatch('ai_chat/savePreferences', {
-				chat_ia_panel_width: this.panel_width_px,
-			})
-		},
-		/**
 		 * Suma el delta que emite el resizer, acotado a los límites (D39).
 		 */
 		on_sidebar_resize(delta) {
@@ -523,47 +441,20 @@ export default {
 			return document.body.classList.contains('modal-open')
 				|| Boolean(document.querySelector('.modal.show, .popover.show, .driver-popover, .driver-active, .asistente-ia-guia-activa'))
 		},
-		enfocar_vista_completa() {
+		on_document_keydown(evento) {
+			if (evento.key !== 'Escape' || evento.defaultPrevented || this.hay_interfaz_encima()) return
 			const panel = this.$refs.panel
-			if (!this.es_lateral && panel && !panel.contains(document.activeElement) && !this.hay_interfaz_encima()) {
-				panel.focus({ preventScroll: true })
-			}
-		},
-		on_document_keydown(event) {
-			if (event.defaultPrevented || (event.key !== 'Escape' && event.key !== 'Tab') || this.hay_interfaz_encima()) return
-			const panel = this.$refs.panel
-			const foco = document.activeElement
-			const dentro = panel.contains(foco)
-			const cajon_abierto = this.es_movil && this.sidebar_movil_abierta
-			if (event.key === 'Escape') {
-				if (this.es_lateral && !dentro) return
-				event.preventDefault()
-				if (cajon_abierto) {
-					this.sidebar_movil_abierta = false
-					return
-				}
-				this.cerrar()
-				return
-			}
-			if (this.es_lateral) return
-
-			// Los elementos del cajón móvil quedan fuera del orden de Tab mientras está cerrado.
-			const ambito = cajon_abierto ? this.$refs.lista_conversaciones : panel
-			const controles = Array.from(ambito.querySelectorAll(SELECTOR_ENFOCABLE)).filter((el) => {
-				return el.tabIndex >= 0 && !el.matches(':disabled') && el.getClientRects().length && getComputedStyle(el).visibility === 'visible'
-			})
-			const destino = event.shiftKey ? controles[controles.length - 1] : controles[0]
-			const limite = event.shiftKey ? controles[0] : controles[controles.length - 1]
-			if (!ambito.contains(foco) || foco === panel || foco === limite || !destino) {
-				event.preventDefault()
-				(destino || panel).focus()
-			}
+			if (!panel || (this.es_lateral && !panel.contains(document.activeElement))) return
+			evento.preventDefault()
+			if (this.sidebar_movil_abierta) this.sidebar_movil_abierta = false
+			else this.$emit('cerrar')
 		},
 		/**
 		 * Al elegir una conversación (o crear una nueva) desde la lista, en móvil
 		 * el cajón se guarda solo.
 		 */
 		on_conversation_selected() {
+			this.reporte_nuevo = null
 			this.sidebar_movil_abierta = false
 		},
 		/**
@@ -573,6 +464,7 @@ export default {
 		 * mensaje.
 		 */
 		nueva_conversacion() {
+			this.reporte_nuevo = null
 			this.$store.commit('ai_chat/setSelectedConversationId', null)
 			this.$store.commit('ai_chat/setMessages', [])
 			this.sidebar_movil_abierta = false
@@ -588,27 +480,65 @@ export default {
 				this.$refs.composer.escribir_y_mandar(texto)
 			}
 		},
-		/**
-		 * Anota si el mousedown arrancó en el overlay mismo. Corre en captura, así que ve
-		 * todos los mousedown del árbol: uno sobre el panel (una manija, el texto, un botón)
-		 * apaga la bandera, y solo uno sobre el fondo la prende.
-		 */
-		al_mousedown_overlay(event) {
-			this.mousedown_en_overlay = event.target === event.currentTarget
+		cambiar_agente(agente) {
+			this.$store.commit('ai_chat/setAgente', agente)
 		},
-		/**
-		 * Click con target en el overlay: cierra solo si el mousedown también fue ahí. Si
-		 * no, era un arrastre o una selección que se soltó afuera del panel, y no se cierra.
-		 */
-		al_click_overlay() {
-			let cerrar = this.mousedown_en_overlay
-			this.mousedown_en_overlay = false
-			if (cerrar && !this.es_lateral) {
-				this.cerrar()
+		preparar_agente(agente) {
+			if (agente === 'soporte') this.soporte_visitado = true
+			// La guía trae su propia conversación: no carga la bandeja ni el consumo del personal.
+			else if (agente === 'asistente' && !this.personal_visitado && this.puede_asistente) {
+				this.personal_visitado = true
+				this.$store.dispatch('ai_chat/fetchMiConsumo')
+				this.cargar_bandeja()
 			}
 		},
-		cerrar() {
-			this.$store.commit('ai_chat/setPanelAbierto', false)
+		abrir_reporte(reporte) {
+			const id = typeof reporte === 'object' ? reporte.id : reporte
+			const hilo = this.selected_conversation
+			if (hilo && hilo.origen === 'mostrador_reporte' && hilo.referencia_id == id) {
+				const informe = this.$el.querySelector('.agentes-informe')
+				if (informe) informe.scrollIntoView({ block: 'start' })
+				return
+			}
+			this.nueva_conversacion()
+			const conversacion = this.conversations.find(item => item.origen === 'mostrador_reporte' && item.referencia_id == id)
+			if (conversacion) this.$store.commit('ai_chat/setSelectedConversationId', conversacion.id)
+			else this.reporte_nuevo = id
+		},
+		cargar_reporte(id) {
+			const solicitud = {}
+			this._solicitud_reporte = solicitud
+			this.reporte = null
+			this.error_reporte = false
+			if (!id) return
+			this.$axios.get('/api/mostrador/reportes/' + id, { skip_global_error_event: true, skip_navigation_cancel: true })
+				.then(res => {
+					if (this._solicitud_reporte !== solicitud || !this.panel_vigente) return
+					this.reporte = res.data.model
+					this.$store.commit('mostrador/marcarLeido', id)
+				})
+				.catch(() => {
+					if (this._solicitud_reporte === solicitud) this.error_reporte = true
+				})
+		},
+		preparar_envio_personal() {
+			const hilo = this.selected_conversation
+			const opciones = { agentes_version: 1 }
+			const whatsapp = hilo && (hilo.origen_canal || hilo.origen) === 'whatsapp' && !hilo.sistema_exclusivo_at
+			if (whatsapp) {
+				return confirmar_traspaso(this).then(confirmado => confirmado && this.selected_conversation_id === hilo.id && this.agente_activo === 'asistente'
+					? Object.assign(opciones, { traspasar_a_sistema: 1 }) : null)
+			}
+			if (!this.reporte_nuevo) return Promise.resolve(opciones)
+			const id = this.reporte_nuevo
+			const revision = this.$store.state.ai_chat.revision_seleccion
+			return this.$store.dispatch('mostrador/crearConversacion', { id: id, seleccion_vigente: () => {
+				return this.panel_vigente && this.agente_activo === 'asistente' && this.reporte_nuevo === id && this.$store.state.ai_chat.revision_seleccion === revision
+			} }).then(conversacion => {
+				if (!conversacion || !this.panel_vigente || this.agente_activo !== 'asistente' || this.reporte_nuevo !== id || this.selected_conversation_id !== conversacion.id) return null
+				this.reporte_nuevo = null
+				return this.preparar_envio_personal()
+			})
 		},
 	},
 }
@@ -618,33 +548,159 @@ export default {
 @import '@/components/asistente-ia/_mixins'
 @import '@/components/demo/_estetica-asistente'
 
+#agentes-confirmar-traspaso___BV_modal_outer_
+	z-index: 1095 !important
+
 .asistente-ia-overlay
 	--ia-velo: rgba(0, 0, 0, .52)
-	position: fixed
-	inset: 0
-	background: var(--ia-velo)
-	z-index: 1055
-	/* El contenedor global del sistema centra el texto: la ventana va alineada a la izquierda, como la app. */
 	text-align: left
-	display: flex
-	align-items: center
-	justify-content: center
 
 	&--lateral
+		position: fixed
 		inset: 76px 18px 18px
 		z-index: 1040
+		display: flex
 		justify-content: flex-end
-		background: transparent
 		pointer-events: none
 
 		.asistente-ia-panel
-			width: min(420px, 100%)
-			max-width: none
+			width: min(450px, 100%)
 			height: 100%
 			pointer-events: auto
+			@media (min-width: 1000px)
+				width: min(640px, 100%)
 
-		.asistente-ia-panel__main
-			padding-right: 0
+.agentes-modulo
+	padding-top: 12px
+	padding-bottom: 12px
+	.asistente-ia-panel
+		width: 100%
+		height: calc(100vh - 24px)
+		height: calc(100dvh - 24px)
+
+.agentes-espacio
+	flex: 1
+	display: flex
+	min-height: 0
+
+.agentes-cabecera
+	display: grid
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)
+	align-items: center
+	padding: 10px 12px
+	gap: 8px
+	background: #1b2239
+	&__marca, &__acciones
+		display: flex
+		align-items: center
+		gap: 5px
+	&__acciones
+		justify-content: flex-end
+	&__tienda
+		display: inline-flex
+		align-items: center
+		gap: 4px
+		padding: 0 6px
+		color: #b7c9ff
+		font-size: .8rem
+		font-weight: 600
+		white-space: nowrap
+		&:hover, &:focus
+			color: #fff
+	.asistente-ia-panel__orb
+		width: 30px
+		height: 30px
+		font-size: .9rem
+	&--ampliada
+		grid-template-columns: auto minmax(0, 1fr) auto
+		.agentes-selector
+			justify-self: center
+	// Con tres pestañas y «Tu tienda» no entra todo en un renglón: arriba marca y acciones, abajo el selector.
+	&--dos-filas
+		grid-template-columns: minmax(0, 1fr) auto
+		.agentes-cabecera__acciones
+			grid-column: 2
+			grid-row: 1
+		.agentes-selector
+			grid-column: 1 / -1
+			grid-row: 2
+			justify-self: stretch
+			button
+				flex: 1 1 auto
+
+.agentes-guia-lugar
+	flex: 1
+	display: flex
+	flex-direction: column
+	min-height: 0
+
+.agentes-selector
+	display: flex
+	gap: 3px
+	padding: 4px
+	border-radius: 999px
+	background: #111729
+	border: 1px solid var(--ia-borde)
+	button
+		padding: 7px 14px
+		border: 0
+		border-radius: 999px
+		background: transparent
+		color: var(--ia-texto-2)
+		white-space: nowrap
+		font-size: .85rem
+		font-weight: 600
+		&[aria-pressed="true"]
+			background: var(--ia-bg-activo)
+			color: var(--ia-texto)
+		&:focus-visible, &:hover
+			color: #fff
+
+.agentes-canal, .agentes-solo-sistema
+	display: flex
+	align-items: center
+	flex-wrap: wrap
+	justify-content: space-between
+	padding: 7px 14px
+	gap: 4px 10px
+	color: var(--ia-texto-2)
+	background: var(--ia-bg-sutil)
+	border-bottom: 1px solid var(--ia-borde)
+	font-size: .78rem
+	a
+		display: inline-flex
+		align-items: center
+		gap: 5px
+		color: var(--ia-ok)
+		font-weight: 600
+		white-space: nowrap
+
+.agentes-solo-sistema
+	justify-content: flex-start
+
+.agentes-informe
+	padding: 12px
+	border: 1px solid var(--ia-borde)
+	border-radius: 16px
+	background: var(--ia-bg-elevado)
+	overflow: auto
+	--color-text-primary: var(--ia-texto)
+	--color-text-secondary: var(--ia-texto-2)
+	--bg-card: var(--ia-bg-elevado)
+	--color-border: var(--ia-borde)
+	&__volver
+		padding: 0
+		border: 0
+		color: var(--ia-primario)
+		background: transparent
+		font-size: .8rem
+
+.agentes-lista--cajon
+	position: absolute
+	inset: 0 auto 0 0
+	width: min(290px, 88%)
+	z-index: 3
+	box-shadow: 0 0 40px rgba(0, 0, 0, .3)
 
 // Los tokens se aplican solo acá: los mismos mensajes se usan en otros paneles del sistema.
 .asistente-ia-panel
@@ -672,8 +728,6 @@ export default {
 	--ia-boton-enviar-texto: #151b2e
 	--ia-boton-enviar-apagado: #373f62
 	--ia-boton-enviar-apagado-texto: #c2c4ff
-	max-width: 96vw
-	height: min(88vh, 900px)
 	border: 1px solid transparent
 	background: linear-gradient($asistente-hilo, $asistente-hilo) padding-box, $asistente-degrade border-box
 	background-size: 100% 100%, 300% 300%
@@ -686,6 +740,7 @@ export default {
 	border-radius: 24px
 	box-shadow: 0 24px 70px #090d2852, 0 0 26px #7969ec20
 	display: flex
+	flex-direction: column
 	overflow: hidden
 	position: relative
 	animation: asistente-ia-panel-entrada .18s ease-out, asistente-ia-panel-onda 9s ease infinite
@@ -740,6 +795,7 @@ export default {
 		position: absolute
 		inset: 0
 		background: var(--ia-velo)
+		border: 0
 		z-index: 2
 
 	&__main
@@ -748,39 +804,8 @@ export default {
 		display: flex
 		flex-direction: column
 		background: var(--ia-bg)
-		// 🔴 Franja reservada para la manija derecha. La conversación scrollea sola
-		// (overflow-y: auto) y su barra de scroll se apoya en el borde derecho de este
-		// contenedor: sin estos 6px, la barra queda DEBAJO de la manija y agarrar el thumb
-		// redimensiona el modal en lugar de scrollear. El padding no mueve una barra de
-		// scroll, hay que angostar el contenedor -- por eso va acá y no en la conversación.
-		padding-right: 6px
-
-	&__header
-		min-height: 72px
-		flex-shrink: 0
-		display: flex
-		align-items: center
-		gap: 8px
-		padding: 12px 14px
-		background: $asistente-cabecera
-
 	&__orb
 		+asistente-orb
-
-	&__identidad
-		flex: 1
-		min-width: 0
-
-		strong
-			color: #fff
-
-	&__titulo
-		display: block
-		font-size: .75rem
-		color: var(--ia-texto-3)
-		white-space: nowrap
-		overflow: hidden
-		text-overflow: ellipsis
 
 	&__boton
 		+asistente-ia-boton-icono(34px, 10px)
@@ -796,32 +821,6 @@ export default {
 		min-height: 0
 		display: flex
 		flex-direction: column
-
-	// La pantalla vacía de ia-spa en escritorio y tablet (views/Chat.vue,
-	// `.principal__cuerpo--vacia`): saludo y compositor centrados en el alto, sugerencias abajo.
-	// La conversación deja de ocupar todo el alto (deja de ser `flex: 1`) para que el centrado
-	// sea del bloque entero, y el aviso de "puede equivocarse" se esconde como allá.
-	&__cuerpo--vacia
-		justify-content: center
-		padding-bottom: 8vh
-
-		.asistente-ia-conversacion-marco, .asistente-ia-conversacion
-			flex: 0 0 auto
-
-		.asistente-ia-conversacion
-			overflow: visible
-
-		// El saludo pegado al compositor: su propio margen de abajo (28px) ya es la separación.
-		.asistente-ia-conversacion__bienvenida
-			padding: 0
-
-		.asistente-ia-composer__aviso
-			display: none
-
-	&__sugerencias
-		+asistente-ia-columna
-		flex-shrink: 0
-		margin-top: 16px
 
 	&__sugerencias-tel
 		margin-bottom: 10px
@@ -847,53 +846,37 @@ export default {
 	.asistente-ia-msj-usuario__burbuja
 		border-radius: 17px 17px 3px 17px
 
-// El divisor de Vender pinta una barra gris de 6px entre la lista y la conversación. En ia-spa
-// no hay nada ahí: se deja transparente (la "manija invisible") y se tiñe apenas al pasar el
-// mouse o mientras se arrastra, para que se descubra. Las dos manijas de los bordes del modal,
-// lo mismo con los tokens de acá.
-//
-// 🔴 Los selectores llevan las dos clases del panel adelante a propósito: los dos resizers tienen
-// estilo `scoped` (clase + atributo, 0,2,0 o 0,3,0 con el estado) y a igual peso ganaría el orden
-// de la hoja final, que depende del orden de carga de los módulos.
-.asistente-ia-overlay .asistente-ia-panel
-	.vender-resizer
-		background: transparent
+.asistente-ia-overlay .asistente-ia-panel .vender-resizer
+	background: transparent
+	&:hover, &.vender-resizer--active
+		background: var(--ia-borde)
 
-		&:hover, &.vender-resizer--active
-			background: var(--ia-borde)
-
-	.asistente-ia-resizer:hover, .asistente-ia-resizer.asistente-ia-resizer--activo
-		background: var(--ia-borde-fuerte)
-
-// Bajo 768px la sidebar es un cajón absoluto adentro del panel (D38): se abre
-// con el botón de la lista del encabezado y el resizer no existe.
-@media screen and (max-width: 767px)
-	.asistente-ia-panel__header
-		padding-left: 8px
-
+@media (max-width: 767px)
 	.asistente-ia-overlay--lateral
 		inset: 68px 6px 6px
+	.agentes-modulo
+		padding-top: 6px
+		padding-bottom: 6px
+		.asistente-ia-panel
+			height: calc(100vh - 72px)
+			height: calc(100dvh - 72px)
 
-	// El recorrido interactúa con los controles de Vender detrás del chat. Se guarda
-	// visualmente el lateral en el teléfono, conservando la conversación y el borrador.
 	.asistente-ia-guia-activa .asistente-ia-overlay--lateral .asistente-ia-panel
 		visibility: hidden
 		pointer-events: none
 
-	.asistente-ia-panel__sidebar
-		position: absolute
-		top: 0
-		bottom: 0
-		left: 0
-		width: min(300px, 85%)
-		z-index: 3
-		transform: translateX(-100%)
-		transition: transform .24s ease
-		box-shadow: none
-
-		&--abierta
-			transform: translateX(0)
-			box-shadow: 0 0 40px rgba(0, 0, 0, .3)
+@media (max-width: 480px)
+	.agentes-cabecera
+		padding: 8px 9px
+		gap: 4px
+		.asistente-ia-panel__orb
+			display: none
+		.asistente-ia-panel__boton
+			width: 30px
+			height: 32px
+	.agentes-selector button
+		padding: 6px 9px
+		font-size: .78rem
 
 @keyframes asistente-ia-panel-entrada
 	from
@@ -913,6 +896,4 @@ export default {
 	.asistente-ia-panel, .asistente-ia-panel .asistente-ia-composer__caja
 		animation: none
 
-	.asistente-ia-panel__sidebar
-		transition: none
 </style>

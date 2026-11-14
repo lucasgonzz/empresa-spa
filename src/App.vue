@@ -15,8 +15,6 @@
         <nav-component></nav-component>
         <avisos-de-implementacion v-if="implementacion_usuario_id" :key="implementacion_usuario_id"></avisos-de-implementacion>
         <btn-scroll-top></btn-scroll-top>
-        <support-chat-floating-button></support-chat-floating-button>
-        <asistente-ia-anfitrion></asistente-ia-anfitrion>
         <!--
             Anfitrión del sidebar de WhatsApp. Va acá arriba, y no adentro del módulo, porque
             desde este refactor la conversación se abre también desde Clientes, Pedidos y
@@ -132,12 +130,16 @@
             falsa en la misión 51.
 
             El servidor debe confirmar que la sesión autenticada es una demo. El chat es ahora
-            el único acceso a los videos, así que una recarga conserva su launcher compacto;
-            sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
+            el único acceso a los videos: una recarga lo deja cerrado y se abre desde «Agentes»,
+            en la barra; sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
             para autorizar el panel. Ver store/demo.js y el estado inicial de PanelDemo.
         -->
-        <panel-demo v-if="$store.getters['demo/panel_visible']"></panel-demo>
-        <panel-prueba v-else-if="prueba_chat_usuario_id" :key="prueba_chat_usuario_id"></panel-prueba>
+        <!--
+            La prueba gratuita ya no monta su propio chat (misión prueba-ayuda-unificada-en-soporte,
+            10/11/2026): toda la guía la da Soporte, así que en una prueba ya no hay «Tu guía». Sin
+            asistente unificado el lead ve solo Soporte; con él, Asistente personal y Soporte.
+        -->
+        <panel-demo v-if="$store.getters['demo/panel_visible']" v-show="$route.name !== 'agentes'"></panel-demo>
 
         <!--
             El v-if esconde la vista entera mientras hay bloqueo de app instalada: el login no se
@@ -154,6 +156,7 @@
                 Para un cliente real no muestra nada.
             -->
             <prueba-primer-ingreso-modal v-if="authenticated"></prueba-primer-ingreso-modal>
+            <asistente-ia-anfitrion></asistente-ia-anfitrion>
             <router-view/>
 
         </b-container>
@@ -164,7 +167,6 @@ import ErrorModal from '@/common-vue/components/error/Index'
 import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
 import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
-import SupportChatFloatingButton from '@/common-vue/components/support-chat/FloatingButton'
 import AsistenteIaAnfitrion from '@/components/asistente-ia/Anfitrion'
 import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
 import TiendaMensajesSidebarHost from '@/components/online/components/mensajes/SidebarHost'
@@ -214,7 +216,6 @@ export default {
         LogoLoading, 
         NavComponent,
         BtnScrollTop,
-        SupportChatFloatingButton,
         AsistenteIaAnfitrion,
         WhatsappSidebarHost,
         TiendaMensajesSidebarHost,
@@ -239,16 +240,8 @@ export default {
         ProcesosModal: () => import('@/components/common/procesos-en-segundo-plano/Modal'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
-        PanelPrueba: () => import('@/components/prueba/PanelAsistente'),
     },
     computed: {
-        prueba_chat_usuario_id() {
-            const usuario = this.$store.state.auth.user
-            if (this.$route.name === 'demoIngreso') return null
-            return this.authenticated && !this.version_bloqueada && !this.$store.state.prueba.vencida
-                && usuario && usuario.puede_usar_chat_prueba === true
-                && usuario.puede_unificar_chat_prueba !== true ? usuario.id : null
-        },
         implementacion_usuario_id() {
             return !this.version_bloqueada && puede_ver_implementacion(this.$store.state.auth)
                 ? this.$store.state.auth.user.id : null

@@ -16,8 +16,9 @@ export default {
 		identidad() {
 			const auth = this.$store.state.auth
 			const usuario = auth.user
+			// Soporte también ofrece el catálogo: la capacidad de chat personal no gobierna esta lectura.
 			return auth.authenticated && !auth.version_bloqueada && !this.$store.state.prueba.vencida
-				&& usuario && usuario.puede_usar_chat_prueba === true && usuario.puede_unificar_chat_prueba === true
+				&& usuario && usuario.puede_usar_chat_prueba === true
 				&& usuario.prueba && usuario.prueba.activa === true ? usuario.id : null
 		},
 	},

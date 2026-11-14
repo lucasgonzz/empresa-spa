@@ -254,6 +254,11 @@ const routes = [
         component: () => import('@/views/Ia')
     },
     {
+        // El anfitrión del App renderiza esta vista para conservar el compositor al expandir.
+        path: '/agentes',
+        name: 'agentes',
+    },
+    {
         // Motor de ofertas por cliente (extension 'motor_de_ofertas'). Sin :id
         // muestra el listado; con :id, el detalle de esa corrida. El MISMO
         // componente se monta ademas en /online/promociones (Tienda Online ->

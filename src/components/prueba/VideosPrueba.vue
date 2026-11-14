@@ -36,6 +36,7 @@ export default {
 	methods: {
 		abrir(video) {
 			if (!this.videos.length) return
+			this.pausar_otros_medios()
 			if (video && !this.seleccionar(video)) return
 			if (!video) this.elegida = null
 			this.$refs.modal.show()
@@ -43,9 +44,15 @@ export default {
 		seleccionar(video) {
 			let actual = this.videos.find(item => item.clave === (video && video.clave))
 			if (!actual) return false
+			this.pausar_otros_medios()
 			this.pausar()
 			this.elegida = actual.clave
 			return true
+		},
+		pausar_otros_medios() {
+			// Soporte conserva su hilo oculto: su multimedia no debe sonar junto al selector.
+			if (typeof document === 'undefined') return
+			Array.from(document.querySelectorAll('video, audio')).forEach(function (medio) { medio.pause() })
 		},
 		pausar() { if (this.$refs.tarjeta) this.$refs.tarjeta.pausar() },
 		cerrar() { this.pausar(); this.elegida = null; if (this.$refs.modal) this.$refs.modal.hide() },

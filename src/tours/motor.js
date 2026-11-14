@@ -107,6 +107,10 @@ const TECHO_TRAS_SALTEO = 2500
  */
 const TOPE_SALTEOS_SEGUIDOS = 3
 
+/* Clase del body y de la tarjeta mientras un paso se muestra acoplado. Ver `acoplar_tarjeta()`. */
+const CLASE_ACOPLADA = 'tour-tarjeta-acoplada'
+let teclas_acopladas = null
+
 /**
  * Cuánto se espera, como mucho, a que un desplegable termine de abrirse antes de seguir igual.
  *
@@ -315,11 +319,11 @@ function se_puede_senalar(elemento) {
  * @param {Number} techo
  * @returns {Promise<Element|null>}
  */
-function esperar_elemento(selector, techo) {
+function esperar_elemento(selector, techo, buscar = buscar_visible) {
 	const limite = typeof techo === 'number' ? techo : TECHO_ESPERA_ELEMENTO
 
 	return new Promise(function (resolver) {
-		const ya_esta = buscar_visible(selector)
+		const ya_esta = buscar(selector)
 
 		if (ya_esta) {
 			resolver(ya_esta)
@@ -329,7 +333,7 @@ function esperar_elemento(selector, techo) {
 		let transcurrido = 0
 
 		const reloj = setInterval(function () {
-			const elemento = buscar_visible(selector)
+			const elemento = buscar(selector)
 
 			if (elemento) {
 				clearInterval(reloj)
@@ -388,7 +392,7 @@ function esperar_ms(ms) {
  * @param {Object|null} ruta
  * @returns {Promise}
  */
-function ir_a(router, ruta) {
+function ir_a(router, ruta, suficiente) {
 	if (!ruta || !router) {
 		return Promise.resolve()
 	}
@@ -397,7 +401,14 @@ function ir_a(router, ruta) {
 
 	/* Si ya estamos donde hay que estar, no se navega: remontar la vista al pedo tira el estado que
 	 * el paso anterior dejó armado (una venta a medio cargar, un filtro puesto, un modal abierto). */
-	if (actual && actual.name === ruta.name && mismos_params(actual.params, ruta.params)) {
+	if (esta_en(actual, ruta)) {
+		return Promise.resolve()
+	}
+
+	/* `ruta_suficiente` (recorridos de soporte, 12/11/2026): el paso señala algo que se ve desde varias
+	 * pantallas —una solapa del ABM se ve desde cualquier otra solapa de su grupo— y mover a la
+	 * persona a la pantalla "oficial" le cambiaría lo que tiene abierto sin necesidad. */
+	if (suficiente && esta_en(actual, suficiente)) {
 		return Promise.resolve()
 	}
 
@@ -408,6 +419,15 @@ function ir_a(router, ruta) {
 		.then(function () {
 			return esperar_ms(ESPERA_TRAS_NAVEGAR)
 		})
+}
+
+/**
+ * @param {Object|null} actual Ruta en la que está parado el router.
+ * @param {Object} ruta Ruta declarada por el paso; los params que no nombra no se comparan.
+ * @returns {Boolean}
+ */
+function esta_en(actual, ruta) {
+	return Boolean(actual && actual.name === ruta.name && mismos_params(actual.params, ruta.params))
 }
 
 /**
@@ -859,15 +879,27 @@ function asentar_layout(elemento) {
  * @returns {Promise<Element|null>}
  */
 function preparar_paso(paso, contexto) {
-	return ir_a(contexto.router, paso.ruta)
+	if (contexto.preparar_capas) contexto.preparar_capas(paso)
+	if (paso.indicacion) {
+		return ir_a(contexto.router, paso.ruta, paso.ruta_suficiente).then(function () {
+			if (!paso.ruta) return true
+			const actual = contexto.router && contexto.router.currentRoute
+			return esta_en(actual, paso.ruta) || Boolean(paso.ruta_suficiente && esta_en(actual, paso.ruta_suficiente))
+		})
+	}
+	return ir_a(contexto.router, paso.ruta, paso.ruta_suficiente)
 		.then(function () {
+			if (paso.esperar_montaje) {
+				// El campo puede existir dentro de una etapa aún plegada. El gancho la abre después.
+				return esperar_elemento(paso.esperar_montaje, techo_de(paso), selector => document.querySelector(selector))
+			}
+			return true
+		})
+		.then(function (montado) {
+			if (!montado) return null
 			return correr_gancho(paso, contexto)
-		})
-		.then(function () {
-			return esperar_ms(paso.espera_ms || 0)
-		})
-		.then(function () {
-			return esperar_elemento(selector_de(paso), techo_de(paso))
+				.then(() => esperar_ms(paso.espera_ms || 0))
+				.then(() => esperar_elemento(selector_de(paso), techo_de(paso)))
 		})
 		.then(function (encontrado) {
 			if (!encontrado) {
@@ -893,6 +925,59 @@ function preparar_paso(paso, contexto) {
 }
 
 /**
+ * Deja la tarjeta del paso acoplada a una esquina y le devuelve la pantalla a la persona.
+ *
+ * driver.js no tiene un modo "sin fondo": con un paso sin elemento dibuja el overlay entero y
+ * `driver.css` deja toda la página inerte (`.driver-active * { pointer-events: none }`). Acá se le
+ * saca `driver-active` al body mientras dure el paso —el overlay y la posición los resuelve el CSS
+ * por la clase `tour-tarjeta-acoplada`— y se frenan dos teclas antes de que lleguen a `window`, que
+ * es donde escucha driver.js: Tab (su trampa de foco se llevaría el cursor a la tarjeta en cada campo
+ * del formulario) y Escape (cerrar un modal del sistema preguntaría si se quiere terminar el
+ * recorrido). Los manejadores de la aplicación, que están debajo de `document`, ya corrieron.
+ *
+ * @returns {void}
+ */
+function acoplar_tarjeta() {
+	document.body.classList.add(CLASE_ACOPLADA)
+	document.body.classList.remove('driver-active')
+
+	if (teclas_acopladas) {
+		return
+	}
+
+	teclas_acopladas = function (evento) {
+		if (evento.key === 'Tab' || evento.key === 'Escape') {
+			evento.stopPropagation()
+		}
+	}
+	document.addEventListener('keydown', teclas_acopladas)
+	document.addEventListener('keyup', teclas_acopladas)
+}
+
+/**
+ * Vuelve al modo normal de driver.js antes de un paso que sí resalta un control, o al cerrar.
+ *
+ * @param {Boolean} sigue true si el recorrido continúa: hay que devolverle `driver-active` al body.
+ * @returns {void}
+ */
+function desacoplar_tarjeta(sigue) {
+	if (teclas_acopladas) {
+		document.removeEventListener('keydown', teclas_acopladas)
+		document.removeEventListener('keyup', teclas_acopladas)
+		teclas_acopladas = null
+	}
+
+	if (!document.body.classList.contains(CLASE_ACOPLADA)) {
+		return
+	}
+
+	document.body.classList.remove(CLASE_ACOPLADA)
+	if (sigue) {
+		document.body.classList.add('driver-active')
+	}
+}
+
+/**
  * Suelta todo lo que la corrida dejó enganchado.
  *
  * @returns {void}
@@ -908,6 +993,7 @@ function limpiar() {
 
 	limpiezas = []
 
+	desacoplar_tarjeta(false)
 	ocultar_revelados()
 	soltar_refresco()
 	cerrar_dialogo_de_confirmacion()
@@ -1020,7 +1106,7 @@ function guion_de(clip) {
  * @returns {void}
  */
 function avanzar_a(i) {
-	if (!corrida || corrida.avanzando) {
+	if (!corrida || corrida.avanzando || (corrida.contexto.pausado && corrida.contexto.pausado())) {
 		return
 	}
 
@@ -1099,19 +1185,50 @@ function mostrar_paso(i) {
 		return
 	}
 
-	const paso = corrida.pasos[i]
+	let paso = corrida.pasos[i]
 	const corrida_del_paso = corrida
 
 	corrida.preparando = i
 	corrida.avanzando = true
 
+	const vigente = () => corrida === corrida_del_paso && corrida.preparando === i
+	let tapado = false
 	preparar_paso(paso, corrida.contexto).then(function (elemento) {
+		if (!vigente() || !elemento || paso.indicacion || !corrida.contexto.despejar_paso) return elemento
+		return corrida.contexto.despejar_paso(elemento, vigente).then(function (libre) {
+			if (!vigente()) return null
+			tapado = !libre
+			if (tapado) return null
+			acomodar_scroll(paso, elemento)
+			return asentar_layout(elemento)
+		})
+	}).then(function (elemento) {
 		/* El lead pudo haber cortado el tour mientras se preparaba este paso. */
-		if (corrida !== corrida_del_paso || corrida.preparando !== i) {
+		if (!vigente()) {
 			return
 		}
 
 		corrida.avanzando = false
+
+		if (tapado) {
+			paso = { indicacion: true, texto: paso.texto + ' Hay una ventana que tapa el control. Para usarla, cerrá primero este recorrido.' }
+			elemento = true
+		}
+
+		// Si el control depende del estado del comercio, explicamos la condición en el mismo paso.
+		// La indicación no habilita clics ni busca otro control como sustituto.
+		if (!elemento && paso.si_falta) {
+			paso = { indicacion: true, texto: paso.si_falta }
+			elemento = true
+		}
+
+		/* Recorridos de soporte (12/11/2026): si el control declarado no apareció en su techo, el paso
+		 * no se pierde ni corta el recorrido. Queda como tarjeta acoplada, con la pantalla libre para
+		 * que la persona siga la instrucción. Solo con `indicacion_acoplada`: la demo sigue salteando. */
+		if (!elemento && !paso.indicacion && corrida.contexto.indicacion_acoplada) {
+			paso = { indicacion: true, texto: paso.texto }
+			elemento = true
+		}
 
 		if (!elemento) {
 			/* 🔴 Saltear, nunca colgarse. Un elemento que no aparece es lo NORMAL en varios pasos:
@@ -1127,7 +1244,7 @@ function mostrar_paso(i) {
 
 			/* Tres seguidos: la pantalla que este tour da por hecha no está. Se corta acá en vez de
 			 * seguir salteando de a uno hasta el final, que es lo que dejaba al lead esperando. */
-			if (corrida.salteados_seguidos >= TOPE_SALTEOS_SEGUIDOS) {
+			if (paso.requerido || corrida.salteados_seguidos >= TOPE_SALTEOS_SEGUIDOS) {
 				corrida.corto_por_salteos = true
 				mostrar_paso(corrida.pasos.length)
 				return
@@ -1138,6 +1255,7 @@ function mostrar_paso(i) {
 		}
 
 		corrida.indice = i
+		corrida.texto_paso_visible = paso.texto
 		corrida.mostrados++
 		corrida.salteados_seguidos = 0
 
@@ -1162,11 +1280,21 @@ function mostrar_paso(i) {
 		 * parte de la pantalla queda interactiva de más. Ver `custodiar_clase_activa()`. */
 		soltar_refresco()
 
+		/* Una indicación sin control que señalar no puede tapar la pantalla de la que habla. Con
+		 * `indicacion_acoplada` la tarjeta va a una esquina, sin fondo oscurecido y con el sistema
+		 * usable. Ver `acoplar_tarjeta()`. Sin esa opción (la demo, los tours fijos) queda centrada. */
+		const acoplado = Boolean(paso.indicacion && corrida.contexto.indicacion_acoplada)
+		corrida.paso_acoplado = acoplado
+		if (!acoplado) {
+			desacoplar_tarjeta(true)
+		}
+
 		recorrido.highlight({
-			element: elemento,
+			element: paso.indicacion ? undefined : elemento,
 			popover: {
-				description: corrida.contexto.renderizar_guia ? '' : paso.texto,
-				side: paso.lado || lado_sugerido(elemento),
+				popoverClass: acoplado ? (corrida.contexto.clase_popover || 'tour-demo') + ' ' + CLASE_ACOPLADA : undefined,
+				description: corrida.contexto.renderizar_guia || corrida.contexto.texto_plano ? '' : paso.texto,
+				side: paso.indicacion ? 'over' : paso.lado || lado_sugerido(elemento),
 				align: paso.alineacion || 'start',
 				/* El progreso se arma a mano porque el motor muestra de a un paso: driver.js no
 				 * sabe cuántos son en total, y el total real no se conoce hasta el final (los
@@ -1179,10 +1307,20 @@ function mostrar_paso(i) {
 			},
 		})
 
-		enganchar_refresco(elemento)
-		reubicar_cartel(i, elemento)
-		enfocar_campo_del_paso(paso, elemento)
-		enganchar_avance(paso, i, elemento)
+		if (acoplado) {
+			acoplar_tarjeta()
+		}
+
+		if (corrida.contexto.al_mostrar_paso) {
+			corrida.contexto.al_mostrar_paso(i + 1)
+		}
+
+		if (!paso.indicacion) {
+			enganchar_refresco(elemento)
+			reubicar_cartel(i, elemento)
+			enfocar_campo_del_paso(paso, elemento)
+			enganchar_avance(paso, i, elemento)
+		}
 	})
 }
 
@@ -1428,7 +1566,7 @@ function menu_de(elemento) {
 function enganchar_refresco(elemento) {
 	const activa = corrida
 	const indice = corrida.indice
-	const es_guia = Boolean(corrida.contexto.renderizar_guia)
+	const reacomodar_en_resize = Boolean(corrida.contexto.renderizar_guia || corrida.contexto.reacomodar_en_resize)
 	let pedido = false
 	let reloj_resize = null
 
@@ -1449,10 +1587,11 @@ function enganchar_refresco(elemento) {
 	}
 	function al_redimensionar() {
 		volver_a_medir()
-		if (!es_guia) return
+		if (!reacomodar_en_resize) return
 		clearTimeout(reloj_resize)
 		reloj_resize = setTimeout(function () {
 			if (corrida !== activa || corrida.indice !== indice || !recorrido || corrida.avanzando) return
+			if (corrida.contexto.pausado && corrida.contexto.pausado()) return
 			const paso = corrida.pasos[indice]
 			const encontrado = buscar_visible(selector_de(paso))
 			if (!encontrado || subir_a_ancestro(encontrado, paso.ancestro) !== elemento) {
@@ -1460,7 +1599,16 @@ function enganchar_refresco(elemento) {
 				return
 			}
 			acomodar_scroll(paso, elemento)
-			recorrido.refresh()
+			const vigente = () => corrida === activa && corrida.indice === indice && recorrido && !corrida.avanzando
+			if (!corrida.contexto.despejar_paso) {
+				recorrido.refresh()
+				return
+			}
+			corrida.contexto.despejar_paso(elemento, vigente).then(function (libre) {
+				if (!vigente()) return
+				if (libre) recorrido.refresh()
+				else mostrar_paso(indice)
+			})
 		}, 160)
 	}
 
@@ -1900,7 +2048,7 @@ function enganchar_avance_por_entrada(paso, i, elemento) {
  * @returns {void}
  */
 function enganchar_avance_por_clic(paso, i, resaltado) {
-	const selector = selector_de(paso)
+	const selector = paso.selector_avance || selector_de(paso)
 
 	if (!selector) {
 		return
@@ -1917,7 +2065,7 @@ function enganchar_avance_por_clic(paso, i, resaltado) {
 	 * Con un campo adentro, entonces, el avance espera a que el dato esté cargado (`change`, que en
 	 * un input dispara al salir del campo con el valor cambiado), no a que lo toquen.
 	 */
-	const campo = campo_de_carga(resaltado || buscar_visible(selector))
+	const campo = !paso.selector_avance && campo_de_carga(resaltado || buscar_visible(selector))
 
 	if (campo) {
 		enganchar_avance_por_carga(campo, selector, i)
@@ -1936,8 +2084,9 @@ function enganchar_avance_por_clic(paso, i, resaltado) {
 		/* Se acepta el clic si cayó adentro del nodo resaltado O si matchea el selector del paso.
 		 * Las dos formas hacen falta: la primera cubre los pasos que resaltan un ancestro (ver
 		 * `subir_a_ancestro`), y la segunda los nodos que se re-renderizaron entre que se los
-		 * resaltó y que el lead los tocó. */
-		const cayo_adentro = resaltado && typeof resaltado.contains === 'function' && resaltado.contains(evento.target)
+		 * resaltó y que el lead los tocó. Si el paso señala varios controles, el selector de
+		 * avance manda: por ejemplo, en Tesorería solo avanza el botón Aperturas. */
+		const cayo_adentro = !paso.selector_avance && resaltado && typeof resaltado.contains === 'function' && resaltado.contains(evento.target)
 
 		if (!cayo_adentro && !evento.target.closest(selector)) {
 			return
@@ -1969,7 +2118,7 @@ function enganchar_avance_por_clic(paso, i, resaltado) {
 		 * antes de que el clic haya hecho lo suyo y el paso siguiente mide un DOM viejo. */
 		setTimeout(function () {
 			if (corrida && corrida.indice === i) {
-				mostrar_paso(i + 1)
+				avanzar_a(i + 1)
 			}
 		}, 80)
 	}
@@ -2015,7 +2164,7 @@ function esperar_menu_desplegado(selector, resaltado, i) {
 
 		if (menu_abierto()) {
 			clearInterval(reloj)
-			mostrar_paso(i + 1)
+			avanzar_a(i + 1)
 			return
 		}
 
@@ -2024,7 +2173,7 @@ function esperar_menu_desplegado(selector, resaltado, i) {
 		if (transcurrido >= TECHO_MENU_ABIERTO) {
 			clearInterval(reloj)
 			console.warn('Tour ' + corrida.clip_id + ': el desplegable del paso ' + (i + 1) + ' no llegó a abrirse en ' + TECHO_MENU_ABIERTO + ' ms; se avanza igual')
-			mostrar_paso(i + 1)
+			avanzar_a(i + 1)
 		}
 	}, INTERVALO_SONDEO)
 
@@ -2067,7 +2216,7 @@ function enganchar_avance_por_desaparicion(paso, i) {
 
 		if (!buscar_visible(selector)) {
 			clearInterval(reloj)
-			mostrar_paso(i + 1)
+			avanzar_a(i + 1)
 			return
 		}
 
@@ -2191,7 +2340,7 @@ function enganchar_avance_por_carga(campo, selector, i) {
 
 		setTimeout(function () {
 			if (corrida && corrida.indice === i) {
-				mostrar_paso(i + 1)
+				avanzar_a(i + 1)
 			}
 		}, 120)
 	}
@@ -2260,7 +2409,7 @@ function enganchar_avance_por_aparicion(paso, i) {
 			return
 		}
 
-		mostrar_paso(i + 1)
+		avanzar_a(i + 1)
 	})
 }
 
@@ -2329,6 +2478,7 @@ function cerrar_corrida(motivo) {
 		clip_id: corrida.clip_id || null,
 		motivo: motivo === 'listo' ? 'listo' : 'cortado',
 		completo: completo,
+		incompleto: Boolean(corrida.corto_por_salteos),
 		mostrados: corrida.mostrados,
 		pasos: corrida.pasos.length,
 	}
@@ -2712,7 +2862,7 @@ export function iniciar_tour(clip, contexto) {
 
 	recorrido = driver({
 		allowClose: true,
-		popoverClass: contexto.renderizar_guia ? 'tour-demo tour-demo--guia' : 'tour-demo',
+		popoverClass: contexto.renderizar_guia ? 'tour-demo tour-demo--guia' : (contexto.clase_popover || 'tour-demo'),
 		smoothScroll: true,
 		/**
 		 * 🔴 Sin animación de transición, y no es una preferencia estética.
@@ -2775,8 +2925,14 @@ export function iniciar_tour(clip, contexto) {
 			if (popover.previousButton) {
 				popover.previousButton.style.display = corrida.indice > 0 ? '' : 'none'
 			}
+			if (contexto.texto_plano) {
+				popover.description.textContent = corrida.texto_paso_visible
+				popover.description.style.display = ''
+			}
 			if (contexto.decorar_popover) {
-				contexto.decorar_popover(popover)
+				contexto.decorar_popover(popover, function () {
+					if (corrida && corrida.contexto === contexto && recorrido) recorrido.refresh()
+				}, { acoplada: Boolean(corrida.paso_acoplado) })
 			}
 		},
 		/**
@@ -2800,6 +2956,7 @@ export function iniciar_tour(clip, contexto) {
 			destruir_recorrido()
 		},
 		onNextClick: function () {
+			if (contexto.pausado && contexto.pausado()) return
 			/* Antes de mover el índice: si este paso esperaba un gesto y el lead lo salteó con el
 			 * botón, queda anotado para que un corte posterior no le eche la culpa a los datos. */
 			marcar_avance_a_mano()

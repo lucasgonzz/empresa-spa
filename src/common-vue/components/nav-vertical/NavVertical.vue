@@ -40,6 +40,7 @@
 	    :key="i"
 	    :class="route_item_class(route)"
 	    :data-nav-implementacion="route.name === 'implementacion' ? '' : null"
+	    :data-nav-tutoriales="route.name === 'centro_de_recursos' ? '' : null"
 	    :role="route.name === 'implementacion' ? 'link' : null"
 	    :aria-label="route.name === 'implementacion' ? 'Implementación' : null"
 	    :tabindex="route.name === 'implementacion' ? tabindex_implementacion : null"
@@ -124,6 +125,10 @@
 
 	</div>
 
+	<div class="aviso-tour-lateral d-none d-md-block">
+		<slot name="nav_tour"></slot>
+	</div>
+
 	<div v-if="aviso_implementacion && centro_aviso !== null"
 		ref="aviso_lateral"
 		class="aviso-implementacion-lateral d-none d-md-block"
@@ -159,6 +164,7 @@ export default {
 			aviso_retiene_barra: false,
 			observador_aviso: null,
 			show_nav_mobile: false,
+			contraida_por_agentes: false,
 			openItem: null,
 			hideTimeout: null,
 		}
@@ -169,8 +175,9 @@ export default {
 				this.aviso_retiene_barra = false
 			}
 		},
-		route_name() {
+		route_name(nombre) {
 			this.show_nav_mobile = false
+			this.contraida_por_agentes = nombre === 'agentes' && !!(this.$refs.barra && this.$refs.barra.matches(':hover'))
 		},
 	},
 	mounted() {
@@ -210,11 +217,13 @@ export default {
 			if (this.show_nav_mobile) {
 				_class += 'active-mobile-nav'
 			}
+			if (this.contraida_por_agentes) _class += ' nav-vertical--agentes-recien-abierto'
 			return _class
 		},
 	},
 	methods: {
 		al_salir_de_barra(event) {
+			this.contraida_por_agentes = false
 			const aviso = this.$refs.aviso_lateral
 			this.aviso_retiene_barra = !!(aviso && aviso.contains(event.relatedTarget))
 		},
@@ -374,6 +383,14 @@ $nav_item_radius: 8px
 	transform: translateY(-50%)
 	transition: left .22s ease
 
+.aviso-tour-lateral
+	position: fixed
+	top: 6px
+	left: calc(#{$nav_collapsed_visible} - 10px)
+	z-index: 1001
+	#app:has(.support-chat-overlay) &
+		z-index: 1054
+
 @media (min-width: 768px)
 	.nav-vertical:hover ~ .aviso-implementacion-lateral,
 	.aviso-retiene-barra > .aviso-implementacion-lateral,
@@ -416,11 +433,13 @@ $nav_item_radius: 8px
 
 	@media screen and (min-width: 768px)
 		transform: translateX(-$nav_collapsed_offset)
-		&:hover
+		&:hover:not(.nav-vertical--agentes-recien-abierto)
 			transform: translateX(0px)
 			box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18)
 			& .user-info .item, & .user-info hr
 				opacity: 1
+	.robotito-tour-tutoriales &
+		transform: translateX(0)
 
 	.route
 		width: calc(100% - 16px)

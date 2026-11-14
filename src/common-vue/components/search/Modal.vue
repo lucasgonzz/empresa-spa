@@ -5,7 +5,7 @@ size="xl"
 hide-footer
 :id="modal_id"
 :data-tour="ancla_tour"
-:ignore-enforce-focus-selector="ancla_tour ? '.demo-guia-robot' : null"
+:ignore-enforce-focus-selector="ancla_tour ? '.demo-guia-robot, .tour-soporte' : null"
 @show="onModalShow"
 @hidden="onModalHidden">
 	<div
@@ -119,6 +119,7 @@ hide-footer
 			<div
 			v-else
 			class="search-modal-estado"
+			:data-tour="ancla_tour && busqueda_realizada ? 'vender.busqueda_sin_resultados' : null"
 			:data-testid="busqueda_realizada ? 'search-no-results' : 'search-sin-criterio'">
 				<div class="search-modal-estado__icono">
 					<i :class="estado_icono"></i>

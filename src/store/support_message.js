@@ -3,6 +3,37 @@ import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = env('VUE_APP_API_URL')
 
+function generar_uuid_del_mensaje() {
+	const bytes = window.crypto.getRandomValues(new Uint8Array(16))
+	bytes[6] = (bytes[6] & 0x0f) | 0x40
+	bytes[8] = (bytes[8] & 0x3f) | 0x80
+	const hex = Array.from(bytes, byte => (byte + 0x100).toString(16).slice(1)).join('')
+	return hex.replace(/^(........)(....)(....)(....)(............)$/, '$1-$2-$3-$4-$5')
+}
+
+/** Lo que se le dice al usuario cuando el hosting corta la subida por el tamaño del archivo (413). */
+export const AVISO_ARCHIVO_MUY_GRANDE = 'El archivo es muy grande. Probá con uno más liviano o mandalo por WhatsApp.'
+
+/**
+ * Por qué no salió el mensaje, en palabras para el usuario, o null si no hay nada mejor que «No enviado».
+ * Un 422 trae el motivo de la API (un documento de más de 10 MB); un 413 lo corta el hosting antes de
+ * llegar a la API y no trae texto: se le pone el aviso del tamaño. Un 500 o la falta de red, nada.
+ *
+ * @param {Object} error El error de axios.
+ * @returns {String|null}
+ */
+export function motivo_del_rechazo(error) {
+	const respuesta = error && error.response
+	if (!respuesta) return null
+	if (respuesta.status === 413) return AVISO_ARCHIVO_MUY_GRANDE
+	return respuesta.status === 422 && respuesta.data && typeof respuesta.data.message === 'string' ? respuesta.data.message : null
+}
+
+function identidad_de_sesion({ auth, ai_chat }) {
+	const usuario = auth.user
+	return usuario ? [usuario.id, !!usuario.es_sesion_soporte, !!usuario.es_acceso_maestro, ai_chat && ai_chat.revision_sesion].join(':') : null
+}
+
 export default {
 	namespaced: true,
 	/**
@@ -126,7 +157,7 @@ export default {
 		 * el modelo y el broadcast SupportMessageReceived vuelve a disparar addModel.
 		 */
 		addModel(state, value) {
-			if (!value || value.id == null) {
+			if (!value || value.id == null || value.support_ticket_id != state.active_ticket_id) {
 				return
 			}
 			// Llegó el registro real: quita optimista del mismo cuerpo en el mismo ticket.
@@ -171,6 +202,8 @@ export default {
 				if (state.models[idx]._client_pending === client_key) {
 					const merged = Object.assign({}, state.models[idx], {
 						_delivery_error: error_code,
+						// El motivo que dio la API al rechazarlo (422), si lo dio: lo muestra la burbuja.
+						_delivery_error_message: payload.error_message || null,
 					})
 					state.models.splice(idx, 1, merged)
 					return
@@ -199,17 +232,27 @@ export default {
 		/**
 		 * Carga ticket y actualiza lista de mensajes visibles.
 		 */
-		loadTicketMessages({ commit, dispatch }, ticket_id) {
+		loadTicketMessages({ commit, dispatch, state, rootState }, ticket) {
+			const agentes = ticket && typeof ticket === 'object' && ticket.agentes
+			const ticket_id = agentes ? ticket.id : ticket
+			const identidad = identidad_de_sesion(rootState)
+			const vigente = () => state.active_ticket_id === ticket_id && identidad_de_sesion(rootState) === identidad
 			commit('setActiveTicketId', ticket_id)
 			commit('setModels', [])
+			if (ticket_id == null) {
+				commit('setMessagesLoading', false)
+				return Promise.resolve()
+			}
 			commit('setMessagesLoading', true)
 			return axios
-				.get('/api/support-ticket/' + ticket_id)
+				.get('/api/support-ticket/' + ticket_id, { params: agentes ? { agentes: 1 } : undefined, skip_navigation_cancel: Boolean(agentes) })
 				.then(function (response) {
+					if (!vigente()) return null
 					let messages = []
 					if (response.data.model && response.data.model.messages) {
 						messages = response.data.model.messages
 					}
+					if (response.data.model) commit('support_ticket/upsertFromBroadcast', response.data.model, { root: true })
 					commit('setModels', messages)
 					commit('setMessagesLoading', false)
 					// Tras marcar leído en API, se refresca la bandeja para alinear contadores (badge, sidebar).
@@ -221,26 +264,28 @@ export default {
 					})
 					if (marks.length) {
 						return Promise.all(marks).then(function () {
-							return dispatch('support_ticket/getModels', null, { root: true })
+							if (vigente()) return dispatch(agentes ? 'support_ticket/getAgentes' : 'support_ticket/getModels', null, { root: true })
 						})
 					}
 					return null
 				})
 				.catch(function (error) {
-					commit('setMessagesLoading', false)
+					if (vigente()) commit('setMessagesLoading', false)
 					console.log(error)
 				})
 		},
 		/**
 		 * Envía un mensaje al ticket activo o abre ticket implícitamente.
 		 */
-		sendMessage({ commit, state, dispatch }, payload) {
+		sendMessage({ commit, state, dispatch, rootState }, payload) {
 			commit('setSending', true)
 			const client_key = 'c' + String(Date.now()) + '-' + String(Math.random()).slice(2, 8)
 			const body_text = (payload.body && String(payload.body).trim()) || ''
 			const kind_val = payload.kind || 'text'
-			const opt_ticket = state.active_ticket_id
-			commit('pushPendingMessage', {
+			const opt_ticket = payload.ticket_id === undefined ? state.active_ticket_id : payload.ticket_id
+			const mensaje_uuid = payload.agentes_version && (payload.mensaje_uuid || generar_uuid_del_mensaje())
+			const identidad = identidad_de_sesion(rootState)
+			if (state.active_ticket_id === opt_ticket) commit('pushPendingMessage', {
 				_client_pending: client_key,
 				support_ticket_id: opt_ticket,
 				sender_type: 'user',
@@ -248,13 +293,19 @@ export default {
 				body: body_text,
 				_attachment_pending: payload.attachment ? true : false,
 				_retry_attachment: payload.attachment || null,
+				_agentes_version: payload.agentes_version,
+				_traspasar_a_sistema: payload.traspasar_a_sistema,
+				_mensaje_uuid: mensaje_uuid,
 			})
 			let form_data = new FormData()
 			form_data.append('body', payload.body || '')
 			form_data.append('kind', kind_val)
-			if (state.active_ticket_id) {
-				form_data.append('support_ticket_id', state.active_ticket_id)
+			if (opt_ticket) {
+				form_data.append('support_ticket_id', opt_ticket)
 			}
+			if (payload.agentes_version) form_data.append('agentes_version', payload.agentes_version)
+			if (mensaje_uuid) form_data.append('mensaje_uuid', mensaje_uuid)
+			if (payload.traspasar_a_sistema) form_data.append('traspasar_a_sistema', payload.traspasar_a_sistema)
 			if (payload.attachment) {
 				form_data.append('attachment', payload.attachment)
 			}
@@ -267,17 +318,22 @@ export default {
 			return axios
 				.post('/api/support-message', form_data, { skip_navigation_cancel: true })
 				.then(response => {
+					if (identidad_de_sesion(rootState) !== identidad) return null
 					commit('setSending', false)
-					commit('replacePendingWithModel', { client_key: client_key, model: response.data.model })
 					if (response.data && response.data.model) {
+						if (state.active_ticket_id === opt_ticket) commit('replacePendingWithModel', { client_key: client_key, model: response.data.model })
 						dispatch('support_ticket/applyTicketFromMessage', response.data.model, { root: true })
+						return response.data.model
 					}
+					return null
 				})
 				.catch(error => {
+					if (identidad_de_sesion(rootState) !== identidad) return
 					commit('setSending', false)
 					commit('markPendingDeliveryError', {
 						client_key: client_key,
 						error_code: 'not_sent',
+						error_message: motivo_del_rechazo(error),
 					})
 					console.log(error)
 				})
@@ -294,18 +350,24 @@ export default {
 				body: message.body,
 				kind: message.kind || 'text',
 				attachment: message._retry_attachment || null,
+				agentes_version: message._agentes_version,
+				traspasar_a_sistema: message._traspasar_a_sistema,
+				mensaje_uuid: message._mensaje_uuid,
+				ticket_id: message._agentes_version ? message.support_ticket_id : undefined,
 			})
 		},
 		/**
 		 * Reintenta sincronización hacia admin-api para un mensaje ya guardado (no recibido en central).
 		 */
-		retryRemoteSync({ commit }, message_or_id) {
+		retryRemoteSync({ commit, dispatch, rootState }, message_or_id) {
 			const id = typeof message_or_id === 'object' ? message_or_id.id : message_or_id
+			const identidad = identidad_de_sesion(rootState)
 			return axios
 				.post('/api/support-message/' + id + '/retry-remote-sync')
 				.then(function (res) {
-					if (res.data && res.data.model) {
+					if (identidad_de_sesion(rootState) === identidad && res.data && res.data.model) {
 						commit('patchMessage', res.data.model)
+						dispatch('support_ticket/applyTicketFromMessage', res.data.model, { root: true })
 					}
 				})
 				.catch(function (err) {

@@ -66,7 +66,36 @@ data-testid="imagenes-detalle-encabezado"
 			promedio por articulo y cuantas fueron por codigo de barras y cuantas por nombre. Las
 			validaciones con IA van aparte y mas chicas: no son busquedas, pero tambien cuestan.
 		-->
+		<!--
+			Las de la web o del catalogo en PDF del proveedor (mision importaciones-de-martin) no
+			buscan ni usan la IA: en lugar de "0 busquedas" va de donde salieron las fotos y como se
+			decidio cada una. La fuente sale de la API como texto plano (nunca v-html); la de un PDF
+			(adjunto-<id>.pdf) es un nombre interno y no se muestra.
+		-->
 		<div
+		v-if="es_de_un_proveedor"
+		class="img-det-enc__busquedas img-det-enc__fuente"
+		data-testid="imagenes-detalle-fuente"
+		:data-origen="asignacion.origen"
+		:data-fuente="fuente || null">
+			<template v-if="es_de_proveedor_pdf">
+				<span class="img-det-enc__busquedas-etiqueta">Fotos sacadas del</span>
+				<span class="img-det-enc__fuente-sitio">catálogo en PDF que mandaste</span>
+			</template>
+			<template v-else>
+				<span class="img-det-enc__busquedas-etiqueta">Fotos traídas de</span>
+				<span class="img-det-enc__fuente-sitio">{{ fuente || 'la web del proveedor' }}</span>
+			</template>
+			<span class="img-det-enc__busquedas-detalle">
+				Las que coincidieron por código de barras o de proveedor se asignaron solas; las dudosas quedan en «A revisar» para que las apruebes.
+			</span>
+			<span class="img-det-enc__busquedas-ia">
+				Sin búsquedas en Google ni validaciones con IA
+			</span>
+		</div>
+
+		<div
+		v-else
 		class="img-det-enc__busquedas"
 		data-testid="imagenes-detalle-busquedas"
 		:data-busquedas="asignacion.busquedas">
@@ -93,9 +122,15 @@ data-testid="imagenes-detalle-encabezado"
 				<dt>Artículos</dt>
 				<dd>{{ entero(asignacion.total_articulos) }}</dd>
 			</div>
-			<div class="img-det-enc__dato">
-				<dt>Buscado en</dt>
-				<dd>{{ proveedor }}</dd>
+			<!--
+				En las de la web del proveedor va el sitio (si la API lo mando: sin el, repetir "Web del
+				proveedor" al lado del Origen no suma nada). En las del PDF no va nada: no se busco.
+			-->
+			<div
+			v-if="!es_de_un_proveedor || (es_de_proveedor_web && fuente)"
+			class="img-det-enc__dato">
+				<dt>{{ es_de_un_proveedor ? 'Sitio' : 'Buscado en' }}</dt>
+				<dd>{{ es_de_un_proveedor ? fuente : proveedor }}</dd>
 			</div>
 			<div
 			v-if="asignacion.lanzada_por"
@@ -130,6 +165,10 @@ import {
 	texto_de,
 	esta_activa,
 	es_de_catalogo,
+	es_de_proveedor_web,
+	es_de_proveedor_pdf,
+	es_de_un_proveedor,
+	fuente_de,
 	motivo_de_estado,
 	entero_es,
 	promedio_es,
@@ -209,6 +248,22 @@ export default {
 			return this.asignacion.status === 'detenida'
 				|| this.asignacion.status === 'fallida'
 				|| !!this.asignacion.trabada
+		},
+		/** true si las fotos se trajeron de la web de un proveedor (ver es_de_proveedor_web en textos.js). */
+		es_de_proveedor_web() {
+			return es_de_proveedor_web(this.asignacion)
+		},
+		/** true si las fotos se sacaron del catálogo en PDF de un proveedor. */
+		es_de_proveedor_pdf() {
+			return es_de_proveedor_pdf(this.asignacion)
+		},
+		/** true para las dos: web o PDF del proveedor (sin búsquedas ni IA). */
+		es_de_un_proveedor() {
+			return es_de_un_proveedor(this.asignacion)
+		},
+		/** "ferreteria.com.ar", o '' si la API no mandó la fuente. */
+		fuente() {
+			return fuente_de(this.asignacion)
 		},
 		origen() {
 			return texto_de(ORIGENES, this.asignacion.origen)
@@ -340,6 +395,15 @@ export default {
 	line-height: 1.4
 	color: var(--color-text-secondary, #6c757d)
 	font-variant-numeric: tabular-nums
+
+// El sitio del proveedor ocupa el lugar del numero grande: un dominio largo corta en cualquier
+// punto en vez de romper el ancho de la caja.
+.img-det-enc__fuente-sitio
+	font-size: 1.35rem
+	font-weight: 700
+	line-height: 1.2
+	color: var(--color-text-primary, #212529)
+	overflow-wrap: anywhere
 
 .img-det-enc__busquedas-ia
 	margin-top: 2px

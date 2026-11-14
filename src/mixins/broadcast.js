@@ -3,8 +3,7 @@ export default {
     mixins: [online],
     data() {
         return {
-            /** Nombre del canal support.user.* actualmente suscrito (para Echo.leave al cambiar de usuario). */
-            support_user_echo_channel: null,
+            canales_de_soporte: [],
             /** Nombre del canal order.created.* actualmente suscrito, para no suscribirse dos veces. */
             order_created_echo_channel: null,
             /** Nombre del canal article_embeddings.* actualmente suscrito, para no suscribirse dos veces. */
@@ -28,7 +27,19 @@ export default {
             this.listenSupportChannel()
             this.listenSessionForcedLogoutChannel()
         },
+        authenticated() {
+            this.listenSupportChannel()
+        },
+        soporte_privado_habilitado() {
+            this.listenSupportChannel()
+        },
     },
+	computed: {
+		soporte_privado_habilitado() {
+			const usuario = this.user
+			return Boolean(usuario && usuario.soporte_agentes_privado === true && !usuario.es_sesion_soporte)
+		},
+	},
 	methods: {
 		listenChannelsLocal() {
             /*
@@ -262,34 +273,39 @@ export default {
             })
         },
         /**
-         * Escucha mensajes de soporte enviados desde admin-api (empresa-api re-emite a support.user.{id}).
-         * Deja el canal previo para no acumular listeners y re-enlaza al cargar el usuario.
+         * Empresa emite Agentes por su canal privado. El público conserva los avisos de tickets
+         * anteriores y la compatibilidad con instalaciones que aún no tienen el canal nuevo.
          */
         listenSupportChannel() {
             if (!this.Echo) {
                 return
             }
-            if (this.support_user_echo_channel) {
-                this.Echo.leave(this.support_user_echo_channel)
-                this.support_user_echo_channel = null
+            const usuario = this.authenticated && this.user
+            const canales = []
+            if (usuario && usuario.id) {
+                canales.push('support.user.' + usuario.id)
+                if (this.soporte_privado_habilitado) {
+                    canales.push('agentes.support.user.' + usuario.id)
+                }
             }
-            if (!this.user || !this.user.id) {
-                return
-            }
-            const support_user_channel = 'support.user.' + this.user.id
-            this.support_user_echo_channel = support_user_channel
-            this.Echo.channel(support_user_channel)
+            if (canales.join(',') === this.canales_de_soporte.join(',')) return
+            this.canales_de_soporte.forEach(canal => this.Echo.leave(canal))
+            this.canales_de_soporte = canales
+            if (canales[0]) this.escuchar_eventos_de_soporte(this.Echo.channel(canales[0]))
+            if (canales[1]) this.escuchar_eventos_de_soporte(this.Echo.private(canales[1]))
+        },
+        escuchar_eventos_de_soporte(canal) {
+            canal
             .listen('.SupportMessageReceived', (event_data) => {
                 if (!event_data || !event_data.message) {
                     return
                 }
                 const msg = event_data.message
                 this.$store.commit('support_message/addModel', msg)
-                // ticket + unread_messages_count: el API emite toArray; si faltan, se refresca la bandeja (badge en FloatingButton).
                 if (msg.ticket && msg.ticket.id) {
                     this.$store.dispatch('support_ticket/applyTicketFromMessage', msg)
                 } else if (msg.sender_type === 'admin' && msg.support_ticket_id) {
-                    this.$store.dispatch('support_ticket/getModels')
+                    this.$store.dispatch('support_ticket/getAgentes')
                 }
             })
             .listen('.SupportMessageRead', (event_data) => {

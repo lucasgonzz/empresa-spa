@@ -42,7 +42,10 @@ const BarraDeSolapa = cargar('components/alertas/components/lista-de-alertas-tab
 const PaginacionItems = cargar('components/alertas/components/lista-de-alertas-table/medidas/detalle/PaginacionItems.vue').default
 // El modal importa dos stores que traen axios: se cargan con dobles (solo se usan sus funciones puras).
 const ModalCatalogo = cargar('components/alertas/components/lista-de-alertas-table/medidas/ModalCatalogo.vue', {
-	'@/store/dimension_search': { es_cancelacion: () => false },
+	'@/store/dimension_search': {
+		es_cancelacion: () => false,
+		es_ruta_no_disponible: err => !!err && !!err.response && (err.response.status === 404 || err.response.status === 403),
+	},
 	'@/store/image_assignment': {
 		normalizar_tope_demo: () => ({ aplica: false, tope: 0, usadas: 0, restantes: 0 }),
 		aviso_de_tope_demo: () => '',
@@ -1138,4 +1141,160 @@ test('Asignadas: los demás motivos y su frase se ven como siempre', () => {
 	assert.equal(vm.motivo, 'Valor ambiguo')
 	assert.equal(vm.tono_del_motivo, 'aviso')
 	assert.match(texto_de(vm._render()), /Frase larga\./)
+})
+
+// --- Sitios de referencia (misión medidas-sitios-de-referencia, 11/11/2026) ------------------------
+
+test('Diagnóstico: los planes nuevos tienen su nombre y un criterio desconocido no rompe', () => {
+	const arbol = instanciar(Diagnostico, {
+		item_id: 11,
+		diagnostico: medidas.normalizar_diagnostico([
+			{ criterio: 'sitios_de_referencia', usado: true, consulta: '("4006") (site:obi.de)', resultados: 0, resultado: 'sin_resultados', paginas: [] },
+			{ criterio: 'codigo_de_barras', usado: true, consulta: '"4006"', resultados: 0, paginas: [] },
+			{ criterio: 'codigo_de_barras_global', usado: false, motivo: 'El artículo no tiene un código de barras válido.' },
+			{ criterio: 'plan_que_no_existe_todavia', usado: false, motivo: 'x' },
+		]),
+	})._render()
+	const texto = texto_de(arbol)
+	assert.match(texto, /En los sitios de referencia/)
+	assert.match(texto, /Por código de barras, fuera de Argentina/)
+	assert.doesNotMatch(texto, /Por en los sitios/)
+	assert.match(texto, /Por código de barras "4006"/)
+	assert.match(texto, /Por plan que no existe todavia/)
+})
+
+test('Encabezado: la línea de sitios de referencia solo si la corrida tuvo', () => {
+	const con = instanciar(Encabezado, { corrida: corrida({ sitios_de_referencia: ['obi.de', 'verdefacile.eu'] }) })._render()
+	assert.equal(texto_de(por_testid(con, 'medidas-detalle-sitios')), 'Sitios de referencia: obi.de, verdefacile.eu')
+	assert.equal(por_testid(instanciar(Encabezado, { corrida: corrida() })._render(), 'medidas-detalle-sitios'), undefined)
+	assert.equal(por_testid(instanciar(Encabezado, { corrida: corrida({ sitios_de_referencia: [] }) })._render(), 'medidas-detalle-sitios'), undefined)
+})
+
+/** Un $store de mentira para el bloque de sitios: registra los dispatch y responde lo que se le diga. */
+function store_de_sitios(maestro, responder) {
+	const enviados = []
+	return {
+		enviados: enviados,
+		store: {
+			state: { auth: { user: { es_acceso_maestro: maestro } } },
+			dispatch: (nombre, valor) => {
+				enviados.push([nombre, valor])
+				return responder(nombre, valor)
+			},
+			commit: () => {},
+		},
+	}
+}
+
+function esperar() {
+	return new Promise(resolver => setTimeout(resolver, 0))
+}
+
+test('Modal: los sitios se traen al abrir; el maestro los edita y guarda, y se ve lo que devolvió el servidor', async () => {
+	const vm = modal_con_previa()
+	const falso = store_de_sitios(true, nombre => {
+		if (nombre === 'dimension_search/get_sitios_de_referencia') {
+			return Promise.resolve(['obi.de'])
+		}
+		if (nombre === 'dimension_search/guardar_sitios_de_referencia') {
+			return Promise.resolve(['obi.de', 'verdefacile.eu'])
+		}
+		return Promise.resolve(vm.previa)
+	})
+	vm.$store = falso.store
+	vm.cargar_sitios()
+	await esperar()
+	assert.equal(vm.sitios_estado, 'listo')
+	assert.equal(vm.sitios_texto, 'obi.de')
+	const arbol = vm._render()
+	assert.match(texto_de(por_testid(arbol, 'medidas-catalogo-sitios')), /Sitios de referencia Páginas donde están cargados los pesos y medidas de tus productos\. Se buscan primero\./)
+	assert.ok(por_testid(arbol, 'medidas-catalogo-sitios-texto'))
+	assert.equal(vm.sitios_cambiaron, false)
+	assert.equal(vm.puede_lanzar, true)
+
+	// Con cambios sin guardar no se lanza: la búsqueda usa lo guardado.
+	vm.sitios_texto = 'obi.de\nhttps://www.verdefacile.eu/it/manguera'
+	assert.equal(vm.sitios_cambiaron, true)
+	assert.equal(vm.puede_lanzar, false)
+	assert.ok(por_testid(vm._render(), 'medidas-catalogo-sitios-sin-guardar'))
+
+	vm.guardar_sitios()
+	await esperar()
+	assert.deepEqual(falso.enviados[1], ['dimension_search/guardar_sitios_de_referencia', ['obi.de', 'https://www.verdefacile.eu/it/manguera']])
+	assert.deepEqual(vm.sitios, ['obi.de', 'verdefacile.eu'])
+	assert.equal(vm.sitios_texto, 'obi.de\nverdefacile.eu')
+	assert.equal(vm.sitios_cambiaron, false)
+	assert.equal(vm.puede_lanzar, true)
+	assert.match(texto_de(por_testid(vm._render(), 'medidas-catalogo-sitios-guardados')), /Guardado: se van a buscar primero en 2 sitios\./)
+})
+
+test('Modal: un 422 al guardar se dice al lado del campo y lo escrito queda', async () => {
+	const vm = modal_con_previa()
+	const falso = store_de_sitios(true, nombre => {
+		if (nombre === 'dimension_search/get_sitios_de_referencia') {
+			return Promise.resolve([])
+		}
+		const e = new Error('HTTP 422')
+		e.response = { status: 422, data: { message: 'x', errors: { 'sitios.0': ['«hola» no es un sitio válido.'] } } }
+		return Promise.reject(e)
+	})
+	vm.$store = falso.store
+	const log = console.log
+	console.log = () => {}
+	try {
+		vm.cargar_sitios()
+		await esperar()
+		vm.sitios_texto = 'hola'
+		vm.guardar_sitios()
+		await esperar()
+	} finally {
+		console.log = log
+	}
+	assert.equal(vm.sitios_texto, 'hola')
+	assert.equal(texto_de(por_testid(vm._render(), 'medidas-catalogo-sitios-error')), '«hola» no es un sitio válido.')
+	// Al volver a escribir, el error se va.
+	vm.al_escribir_sitios()
+	assert.equal(vm.sitios_error, '')
+})
+
+test('Modal: sin acceso maestro la lista es de solo lectura, y vacía dice «Sin sitios de referencia»', async () => {
+	const vm = modal_con_previa()
+	vm.$store = store_de_sitios(false, () => Promise.resolve(['obi.de', 'meteorpiston.com'])).store
+	vm.cargar_sitios()
+	await esperar()
+	const arbol = vm._render()
+	assert.equal(por_testid(arbol, 'medidas-catalogo-sitios-texto'), undefined)
+	assert.equal(por_testid(arbol, 'medidas-catalogo-sitios-guardar'), undefined)
+	assert.match(texto_de(por_testid(arbol, 'medidas-catalogo-sitios-lista')), /obi\.de meteorpiston\.com/)
+	const vacio = modal_con_previa()
+	vacio.$store = store_de_sitios(false, () => Promise.resolve([])).store
+	vacio.cargar_sitios()
+	await esperar()
+	assert.match(texto_de(por_testid(vacio._render(), 'medidas-catalogo-sitios-vacio')), /Sin sitios de referencia\./)
+})
+
+test('Modal: contra una API sin la ruta (404) el bloque de sitios no se dibuja; otro error ofrece reintentar', async () => {
+	const log = console.log
+	console.log = () => {}
+	try {
+		for (const [status, esperado] of [[404, 'no_disponible'], [500, 'error']]) {
+			const vm = modal_con_previa()
+			const e = new Error('HTTP ' + status)
+			e.response = { status: status, data: {} }
+			vm.$store = store_de_sitios(true, () => Promise.reject(e)).store
+			vm.cargar_sitios()
+			await esperar()
+			assert.equal(vm.sitios_estado, esperado)
+			const arbol = vm._render()
+			if (esperado === 'no_disponible') {
+				assert.equal(por_testid(arbol, 'medidas-catalogo-sitios'), undefined)
+			} else {
+				assert.ok(por_testid(arbol, 'medidas-catalogo-sitios-error-al-traer'))
+			}
+			// Lanzar no depende de los sitios si no hay nada sin guardar.
+			assert.equal(vm.puede_lanzar, true)
+		}
+	} finally {
+		console.log = log
+	}
 })
