@@ -71,6 +71,11 @@ import {
 
 import db from '@/offline/db'
 import { codigo_escaneado } from '@/utils/codigo_de_barras'
+/*
+	Codigo propio del dueño (SKU) sin conexion o con la cache de articulos (ronda 5 de la prueba,
+	14/11/2026, E9b). Ver respaldo_por_sku_en_cache().
+*/
+import { articulo_por_sku_en_cache, debe_buscar_sku_en_cache } from '@/utils/sku_en_cache'
 
 /**
  * Escapa un texto para meterlo en un toast: vue-toast-notification dibuja el mensaje con v-html, y
@@ -200,7 +205,13 @@ export default {
 				// para un nuevo escaneo, tiene que volver a bloquear el agregado automatico.
 				this.opening_variant_selector = false
 
-				let resultado = await this.set_finded_article(this.item_vender.codigo)
+				/*
+					El respaldo por SKU va encadenado con .then y no con otro await (regla del repo): el await de
+					siempre espera la cadena entera. Solo hace algo si nada de set_finded_article encontro el codigo.
+				*/
+				let codigo_tipeado = this.item_vender.codigo
+				let resultado = await this.set_finded_article(codigo_tipeado)
+					.then(resultado_del_codigo => this.respaldo_por_sku_en_cache(resultado_del_codigo, codigo_tipeado))
 
 				/*
 					Variante encontrada en la cache sin conexion (mision
@@ -214,6 +225,19 @@ export default {
 				*/
 				if (resultado && resultado.variante_de_la_cache) {
 					this.finded_article = resultado.variante_de_la_cache
+				}
+
+				/*
+					Articulo por su codigo propio (SKU) en la cache: viaja en la PROMESA por lo mismo que
+					la variante de arriba (revision de E9b). Escribirlo en this.finded_article desde el
+					.then dejaba que, con el lector rapido y el indice armandose, el SKU de un escaneo
+					pisara al del otro: se agregaba el segundo dos veces y se perdia el primero.
+				*/
+				if (resultado && resultado.articulo_por_sku) {
+					this.finded_article = resultado.articulo_por_sku
+				}
+				if (resultado && resultado.variantes_por_sku) {
+					this.abrir_selector_de_variantes(resultado.variantes_por_sku.articulo, resultado.variantes_por_sku.variantes)
 				}
 
 				console.log('from_balanza: '+this.from_balanza)
@@ -446,6 +470,80 @@ export default {
 
 			}
 
+		},
+		/**
+		 * Codigo propio del dueño (SKU) en «Cod barras» cuando el codigo se resolvio contra la CACHE de
+		 * articulos (sin conexion, o con «Usar cache de articulos») y nada lo encontro (ronda 5 de la
+		 * prueba, 14/11/2026, E9b). Con conexion y sin cache lo resuelve la API en el mismo pedido
+		 * (VenderController::articulo_por_sku_exacto), con la misma regla: SKU exacto tras trim, sin
+		 * distinguir mayusculas, unico entre los activos (utils/sku_en_cache.js).
+		 *
+		 * No hace nada (devuelve el resultado tal cual) si:
+		 * - ya hay algo: un articulo, una variante de la cache, un ticket de balanza o el selector abierto;
+		 * - el campo lee otro codigo (codigo de proveedor o numero interno), igual que la API;
+		 * - el codigo fue a la API sin cache, o con cache + variantes con conexion (set_finded_article ya le
+		 *   pregunto a la API, que busca el SKU): preguntarle dos veces podria agregarlo dos veces.
+		 *
+		 * Las condiciones viven en utils/sku_en_cache.js::debe_buscar_sku_en_cache (con tests).
+		 *
+		 * Lo que encuentra NO se escribe en this.finded_article: viaja en la promesa, como la variante
+		 * de la cache, y set_article_from_barcode lo toma en la misma vuelta en que lo usa:
+		 * - `{articulo_por_sku}`: el articulo, que entra igual que un codigo de barras de la cache;
+		 * - `{variantes_por_sku: {articulo, variantes}}`: tiene variantes disponibles (con la
+		 *   extension) y se abre el selector, como la cache con un codigo de barras.
+		 *
+		 * @param {*} resultado Lo que devolvio set_finded_article.
+		 * @param {String} codigo Lo tipeado.
+		 * @returns {Promise<*>} El resultado de set_finded_article, o lo encontrado por SKU.
+		 */
+		respaldo_por_sku_en_cache(resultado, codigo) {
+			let buscar = debe_buscar_sku_en_cache({
+				ya_resuelto: !!(resultado && resultado.variante_de_la_cache)
+					|| typeof this.finded_article != 'undefined'
+					|| this.from_balanza
+					|| this.opening_variant_selector,
+				usar_codigo_proveedor: this.usar_codigo_proveedor,
+				numero_interno: this.hasExtencion('codigos_de_barra_basados_en_numero_interno'),
+				online: this.$store.state.auth.online,
+				usar_articles_cache: this.owner.usar_articles_cache,
+				article_variants: this.hasExtencion('article_variants'),
+			})
+
+			if (!buscar) {
+				return Promise.resolve(resultado)
+			}
+
+			let con_variantes = this.hasExtencion('article_variants')
+
+			return articulo_por_sku_en_cache(codigo_escaneado(codigo))
+			.catch(err => {
+				// Si no se pudo leer la cache, el codigo sigue como no encontrado
+				console.log('Error al buscar el SKU en la cache de articulos')
+				console.log(err)
+				return null
+			})
+			.then(articulo => {
+				if (!articulo) {
+					return resultado
+				}
+
+				let variantes = con_variantes
+					? variantes_disponibles_en_cache(articulo)
+					: []
+
+				if (variantes.length) {
+					return {
+						variantes_por_sku: {
+							articulo: articulo,
+							variantes: variantes,
+						},
+					}
+				}
+
+				return {
+					articulo_por_sku: articulo,
+				}
+			})
 		},
 		/**
 		 * Abre el selector de variantes (SelectVariant.vue) para un articulo con variantes
