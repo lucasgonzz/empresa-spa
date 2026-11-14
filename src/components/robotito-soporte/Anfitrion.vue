@@ -36,11 +36,13 @@ import { pasos_de_soporte, tema_de_soporte_conocido } from '@/tours/soporte'
 import { TEMA_GUIA_DINAMICA } from '@/tours/soporte-dinamico'
 import { TEMA_REVERTIR_IMPORTACION } from '@/tours/importacion-soporte'
 import { despejar_paso } from '@/tours/capas-de-soporte'
+import { tarjeta_va_arriba } from './posicion-tarjeta'
 
 const RUTA = '/api/support-tour/'
 const OPCIONES_HTTP = { skip_navigation_cancel: true, skip_global_error_event: true, timeout: 12000 }
 const CLASE_TUTORIALES = 'robotito-tour-tutoriales'
 const CLASE_CAPA_OCULTA = 'robotito-capa-con-borrador'
+const CLASE_TARJETA_ARRIBA = 'tour-tarjeta-acoplada--arriba'
 const ESPERA_GUIA_MS = 240000
 const CONSULTA_GUIA_MS = 5000
 const MODALES_ANTES_DE_VALORAR = {
@@ -258,6 +260,7 @@ export default {
 			this.pregunta_bloqueada = false
 			this.error_pregunta = ''
 			this._tarjeta_arriba = false
+			this._tarjeta_forzada = null
 			if (guia.tema === 'centro_recursos' || claves.includes('tutoriales.abrir')) document.body.classList.add(CLASE_TUTORIALES)
 			const self = this
 			this.$nextTick(function () {
@@ -292,6 +295,8 @@ export default {
 			this.evento(corrida.guia.uuid, { event: 'step', step: paso })
 		},
 		decorar_tarjeta(popover, refrescar, estado) {
+			// driver.js arma una tarjeta nueva en cada paso: lo que vigilaba la anterior se suelta acá.
+			this.soltar_vigia_tarjeta()
 			const cabecera = this.$refs.cabecera
 			const pregunta = this.$refs.pregunta
 			if (cabecera) popover.wrapper.insertBefore(cabecera.$el, popover.title)
@@ -302,33 +307,88 @@ export default {
 			popover.previousButton.disabled = popover.previousButton.style.display === 'none'
 			popover.previousButton.style.display = ''
 			this._refrescar_vineta = refrescar
-			if (estado && estado.acoplada) this.agregar_boton_mover(popover)
+			if (estado && estado.acoplada) this.vigilar_tarjeta(popover.wrapper, this.agregar_boton_mover(popover))
 		},
 		// La tarjeta acoplada no sabe de qué control habla: si justo lo tapa, la persona la corre.
+		// `_tarjeta_arriba` es la posición que eligió la persona (abajo por defecto) y se conserva entre
+		// pasos. Con un modal abierto la tarjeta se corre sola a donde no tape su pie (Guardar, Guardar y
+		// cerrar), salvo que en esta misma tarjeta la persona la haya movido a mano (`_tarjeta_forzada`).
+		// Devuelve la función que vuelve a decidir la posición.
 		agregar_boton_mover(popover) {
 			const anterior = popover.wrapper.querySelector('.robotito-tarjeta__mover')
 			if (anterior) anterior.remove()
 			const self = this
+			const tarjeta = popover.wrapper
 			const boton = document.createElement('button')
 			boton.type = 'button'
 			boton.className = 'robotito-tarjeta__mover'
+			let arriba = false
 			const pintar = function () {
-				popover.wrapper.classList.toggle('tour-tarjeta-acoplada--arriba', Boolean(self._tarjeta_arriba))
-				boton.textContent = self._tarjeta_arriba ? 'Mover abajo' : 'Mover arriba'
-				boton.setAttribute('aria-label', self._tarjeta_arriba
+				arriba = self._tarjeta_forzada === tarjeta ? Boolean(self._tarjeta_arriba)
+					: tarjeta_va_arriba(tarjeta, arriba, self._tarjeta_arriba)
+				tarjeta.classList.toggle(CLASE_TARJETA_ARRIBA, arriba)
+				boton.textContent = arriba ? 'Mover abajo' : 'Mover arriba'
+				boton.setAttribute('aria-label', arriba
 					? 'Mover esta tarjeta abajo de la pantalla' : 'Mover esta tarjeta arriba de la pantalla')
 			}
 			boton.addEventListener('click', function () {
-				self._tarjeta_arriba = !self._tarjeta_arriba
+				self._tarjeta_arriba = !arriba
+				self._tarjeta_forzada = tarjeta
 				pintar()
 			})
 			pintar()
-			popover.wrapper.insertBefore(boton, popover.footer)
+			tarjeta.insertBefore(boton, popover.footer)
+			return pintar
+		},
+		// Vuelve a decidir la posición de la tarjeta acoplada mientras está en pantalla: cuando se abre o
+		// se cierra un modal (también si se desmonta al cambiar de pantalla), al scrollear (el pie de un
+		// modal largo entra en la vista), al cambiar el tamaño de la ventana o el alto de la tarjeta.
+		vigilar_tarjeta(tarjeta, pintar) {
+			const self = this
+			let pedido = null
+			const repintar = function () {
+				if (pedido !== null) return
+				pedido = window.requestAnimationFrame(function () {
+					pedido = null
+					if (tarjeta.isConnected) pintar()
+				})
+			}
+			// Un modal que se abre o se cierra es otra situación: se vuelve a decidir aunque la persona
+			// la haya movido a mano.
+			const cambio_de_modal = function () {
+				if (self._tarjeta_forzada === tarjeta) self._tarjeta_forzada = null
+				repintar()
+			}
+			this.$root.$on('bv::modal::shown', cambio_de_modal)
+			this.$root.$on('bv::modal::hidden', cambio_de_modal)
+			const dejar_ruta = this.$watch('$route.fullPath', cambio_de_modal)
+			window.addEventListener('resize', repintar)
+			document.addEventListener('scroll', repintar, true)
+			const observador = typeof ResizeObserver === 'function' ? new ResizeObserver(repintar) : null
+			if (observador) observador.observe(tarjeta)
+			// Segunda medida con la tarjeta ya ubicada por driver.js y el contenido de Robotito adentro.
+			repintar()
+			this._soltar_vigia = function () {
+				self.$root.$off('bv::modal::shown', cambio_de_modal)
+				self.$root.$off('bv::modal::hidden', cambio_de_modal)
+				dejar_ruta()
+				window.removeEventListener('resize', repintar)
+				document.removeEventListener('scroll', repintar, true)
+				if (observador) observador.disconnect()
+				if (pedido !== null) window.cancelAnimationFrame(pedido)
+				pedido = null
+			}
+		},
+		soltar_vigia_tarjeta() {
+			if (!this._soltar_vigia) return
+			this._soltar_vigia()
+			this._soltar_vigia = null
 		},
 		refrescar_vineta() {
 			if (this._refrescar_vineta) this._refrescar_vineta()
 		},
 		guardar_contenido_tarjeta() {
+			this.soltar_vigia_tarjeta()
 			this._refrescar_vineta = null
 			const contenedor = this.$refs.contenido_guardado
 			if (!contenedor) return

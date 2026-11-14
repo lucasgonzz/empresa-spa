@@ -66,6 +66,8 @@
 					+{{ telefono }}
 				</a>
 			</div>
+			<!-- Cambiar de agente desmonta el reproductor: no debe quedar audio en una pestaña oculta. -->
+			<catalogo-videos-prueba v-if="!guia_activa" :key="agente_activo" ref="videos_prueba"></catalogo-videos-prueba>
 			<div v-if="personal_visitado && puede_asistente" v-show="agente_activo === 'asistente'" class="agentes-espacio">
 				<aside
 				v-if="agente_activo === 'asistente' && (!lista_es_cajon || sidebar_movil_abierta)"
@@ -146,6 +148,7 @@ import PantallaVacia from '@/components/asistente-ia/PantallaVacia'
 import Icono from '@/components/asistente-ia/Icono'
 import VenderResizer from '@/components/vender/components/VenderResizer'
 import { url_de_tienda } from '@/store/ai_chat'
+import CatalogoVideosPrueba from '@/components/prueba/CatalogoVideosPrueba'
 
 // Límites del ancho de la sidebar en px (D38).
 const SIDEBAR_MIN = 180
@@ -163,6 +166,7 @@ export default {
 		},
 	},
 	components: {
+		CatalogoVideosPrueba,
 		ConversationList,
 		Conversation,
 		Composer,
@@ -318,7 +322,8 @@ export default {
 		}
 	},
 	watch: {
-		modo() { this.sidebar_movil_abierta = false },
+		modo() { this.cerrar_videos_prueba(); this.sidebar_movil_abierta = false },
+		'$store.state.support_message.active_ticket_id'() { this.cerrar_videos_prueba() },
 		agente_activo(valor) {
 			this.sidebar_movil_abierta = false
 			this.preparar_agente(valor)
@@ -359,6 +364,7 @@ export default {
 		},
 	},
 	methods: {
+		cerrar_videos_prueba() { if (this.$refs.videos_prueba) this.$refs.videos_prueba.cerrar() },
 		cargar_bandeja() {
 			let self = this
 			const usuario = this.user
