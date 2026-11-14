@@ -128,6 +128,7 @@
 // cuando llegara el chunk del badge.
 import BadgeSinVincular from '@/components/online/components/vincular-comprador/BadgeSinVincular'
 import sin_vincular from '@/components/online/components/vincular-comprador/sin_vincular'
+import { hay_pedido_nuevo, accion_para_refrescar_pedidos } from '@/utils/pedidos_nuevos'
 
 /*
 	Pedidos online.
@@ -164,6 +165,49 @@ export default {
 	created() {
 		this.$store.dispatch('order/getModels')
 	},
+	computed: {
+		/**
+		 * Ids de los pedidos sin confirmar (`order.unconfirmed_models`), los del globito del menú. Los
+		 * actualizan el aviso en vivo de un pedido nuevo (Pusher), la reconexión, el arranque y el polling
+		 * de 5 minutos (store/order.js::getUnconfirmedModels).
+		 *
+		 * @returns {Array}
+		 */
+		ids_sin_confirmar() {
+			let models = this.$store.state.order.unconfirmed_models || []
+			return models.map(order => order.id)
+		},
+	},
+	watch: {
+		/**
+		 * Pedido nuevo de la tienda con esta pantalla abierta (ronda 5 de la prueba, 14/11/2026, E9a): la
+		 * tabla se pedía una sola vez, al crearse, y el pedido nuevo solo movía el globito del menú; se
+		 * veía «No hay Pedidos» hasta tocar «Por fecha» o «Historico». Ahora, si aparece un id que no
+		 * estaba, se vuelve a pedir lo que la tabla está mostrando (ver utils/pedidos_nuevos.js).
+		 *
+		 * @param {Array} ids_actuales
+		 * @param {Array} ids_anteriores
+		 * @returns {void}
+		 */
+		ids_sin_confirmar(ids_actuales, ids_anteriores) {
+			if (hay_pedido_nuevo(ids_anteriores, ids_actuales)) {
+				this.refrescar_pedidos()
+			}
+		},
+		/**
+		 * Volver a «Pedidos» desde Clientes, Mensajes o Promociones: este componente sigue montado (las
+		 * secciones de Tienda Online viven en la misma ruta), así que no pasaba por created() y mostraba
+		 * la lista de la primera vez.
+		 *
+		 * @param {String} value
+		 * @returns {void}
+		 */
+		view(value) {
+			if (value == 'pedidos') {
+				this.refrescar_pedidos()
+			}
+		},
+	},
 	mounted() {
 		/*
 			Hook del formulario genérico: cuando un guardado de `order` falla, esta pantalla mira
@@ -176,6 +220,21 @@ export default {
 		this.$root.$off('order:save-error', this.manejar_error_de_guardado)
 	},
 	methods: {
+		/**
+		 * Vuelve a pedir lo que la tabla está mostrando (el día de «Por fecha» o la página 1 del
+		 * «Historico»), salvo que haya una búsqueda del usuario. La regla está en
+		 * utils/pedidos_nuevos.js::accion_para_refrescar_pedidos.
+		 *
+		 * @returns {void}
+		 */
+		refrescar_pedidos() {
+			let accion = accion_para_refrescar_pedidos(this.$store.state.order)
+			if (accion == 'runListadoPorDefecto') {
+				this.$store.dispatch('order/runListadoPorDefecto', { page: 1 })
+			} else if (accion) {
+				this.$store.dispatch('order/' + accion)
+			}
+		},
 		stock_a_consultar(article) {
 			return !!article.pivot && Number(article.pivot.stock_a_consultar) === 1
 		},
