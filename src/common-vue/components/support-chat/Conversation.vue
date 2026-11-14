@@ -696,6 +696,17 @@ export default {
 	text-decoration-thickness: 2px;
 }
 
+/* Foco por teclado propio, como el enlace del Asistente: el clic no deja anillo, el Tab sí. */
+.support-message-link:focus {
+	outline: none;
+}
+
+.support-message-link:focus-visible {
+	outline: 2px solid #007bff;
+	outline-offset: 1px;
+	border-radius: 2px;
+}
+
 /* Video de la prueba gratuita adentro del globo: ocupa el ancho del globo, con el tope de las miniaturas. */
 .support-message-video {
 	display: block;

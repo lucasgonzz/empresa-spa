@@ -184,3 +184,109 @@ test('Asistente (mensaje/agente/Index.vue): el segmento con dirección se dibuja
 	const con_espacios = sass.reduce((lineas, estilo) => lineas.concat(estilo.content.split('\n').filter(linea => /^\t* +\S/.test(linea))), [])
 	assert.deepEqual(con_espacios, [])
 })
+
+// ─── Revisión de E10: ataques ────────────────────────────────────────────────────────────
+
+test('ataque: usuario o clave en la autoridad nunca se enlaza (el host real sería otro)', () => {
+	;[
+		'https://bueno.com@malo.com/x',
+		'https://bueno.com:@malo.com',
+		'https://usuario:clave@malo.com/',
+		'http://@malo.com',
+		'https://bueno.com%40x@malo.com',
+	].forEach(direccion => {
+		assert.equal(enlaces.es_direccion_web(direccion), false, direccion)
+		assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('Entrá a ' + direccion + ' ya')), [], direccion)
+	})
+	// Un @ DESPUÉS de la autoridad (en el camino o la query) no cambia el host: se enlaza.
+	assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('ver https://x.com/a@b')), [['https://x.com/a@b', 'https://x.com/a@b']])
+	assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('ver https://x.com/?m=a@b.com')), [['https://x.com/?m=a@b.com', 'https://x.com/?m=a@b.com']])
+})
+
+test('ataque: invisibles y bidi adentro de la dirección la dejan como texto', () => {
+	const c = codigo => String.fromCharCode(codigo)
+	;[0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0x202A, 0x202D, 0x202E, 0x2060, 0x2066, 0x2069, 0xFEFF, 0x01, 0x1F, 0x7F, 0x85, 0x9F].forEach(codigo => {
+		const direccion = 'https://x.com/' + c(codigo) + 'abc'
+		assert.equal(enlaces.es_direccion_web(direccion), false, codigo.toString(16))
+		const tramos = enlaces.segmentar_enlaces('ver ' + direccion + ' ya')
+		assert.deepEqual(solo_enlaces(tramos).filter(([texto]) => texto.indexOf(c(codigo)) !== -1), [], codigo.toString(16))
+	})
+	// El override bidi en el host («https://moc.lam» que se lee al revés): texto.
+	assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('https://' + c(0x202E) + 'moc.olam/x')), [])
+})
+
+test('ataque: host que new URL traduce a otro no se enlaza (incluye IDN, a propósito)', () => {
+	const c = codigo => String.fromCharCode(codigo)
+	;[
+		'https://x.com' + c(0x3002) + 'y',   // punto ideográfico: x.com.y
+		'https://x.com' + c(0xFF0E) + 'y',   // punto de ancho completo
+		'https://x%2Ecom/a',
+		'https://xn--ejemplo.com' + c(0x3002) + 'ar',
+		'https://ma' + c(0xF1) + 'ana.com.ar',   // con eñe: pasa a punycode, ante la duda texto
+		'https://0x7f.1/x',                    // IPv4 en hexa: el navegador lo traduce a 127.0.0.1
+	].forEach(direccion => {
+		assert.equal(enlaces.es_direccion_web(direccion), false, direccion)
+	})
+	// Mayúsculas en el host, puerto e IPv6: el host es el mismo, se enlazan.
+	assert.equal(enlaces.es_direccion_web('https://X.COM/a'), true)
+	assert.equal(enlaces.es_direccion_web('https://x.com:8080/a'), true)
+	assert.equal(enlaces.es_direccion_web('http://[::1]:3000/'), true)
+	assert.equal(enlaces.es_direccion_web('https://127.0.0.1/x'), true)
+})
+
+test('ataque: la elipsis queda afuera del enlace', () => {
+	assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('Mirá https://x.com/a… y después')), [['https://x.com/a', 'https://x.com/a']])
+	assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('Mirá https://x.com…')), [['https://x.com', 'https://x.com']])
+	assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('(https://x.com/a)…')), [['https://x.com/a', 'https://x.com/a']])
+})
+
+test('ataque: JaVaScRiPt: y variantes de mayúsculas no se enlazan; HTTPS en mayúsculas sí', () => {
+	;['JaVaScRiPt:alert(1)', 'JAVASCRIPT:alert(1)', 'jAvAsCrIpT://x.com', 'DaTa:text/html,x', 'javascript://https://x.com'].forEach(texto => {
+		assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('mirá ' + texto + ' ya')), [], texto)
+	})
+	assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('ver HTTPS://X.COM/a')), [['HTTPS://X.COM/a', 'HTTPS://X.COM/a']])
+})
+
+test('ataque: entradas largas terminan rápido y lo que pasa el tope queda como texto', () => {
+	const casos = [
+		'https://x.com/' + ')'.repeat(100000),
+		'https://x.com/' + ').'.repeat(50000),
+		'https://x.com/' + '('.repeat(50000) + ')'.repeat(50000),
+		'https://x.com/' + '.'.repeat(100000),
+		'https://x.com/' + 'a'.repeat(100000),
+	]
+	casos.forEach((texto, indice) => {
+		const desde = process.hrtime.bigint()
+		enlaces.segmentar_enlaces(texto)
+		segmentar_mensaje(texto, [])
+		const ms = Number(process.hrtime.bigint() - desde) / 1e6
+		assert.ok(ms < 200, 'caso ' + indice + ': ' + ms.toFixed(1) + ' ms')
+	})
+	// Más largo que el tope: texto.
+	const larga = 'https://x.com/' + 'a'.repeat(enlaces.LARGO_MAXIMO)
+	assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('ver ' + larga)), [])
+	// Justo en el tope: se enlaza.
+	const justa = 'https://x.com/' + 'a'.repeat(enlaces.LARGO_MAXIMO - 'https://x.com/'.length)
+	assert.equal(justa.length, enlaces.LARGO_MAXIMO)
+	assert.deepEqual(solo_enlaces(enlaces.segmentar_enlaces('ver ' + justa)), [[justa, justa]])
+	// Muchas direcciones normales (7.000, 112.000 caracteres) siguen enlazando todas, en tiempo
+	// lineal: cada una pasa por new URL (~30 µs) dos veces (enlaces.js y formato.js). Con el find
+	// por hoja de antes, formato.js solo ya tardaba ~800 ms; el tope es holgado por la máquina cargada.
+	const muchas = ('https://x.com/a ').repeat(7000)
+	const desde = process.hrtime.bigint()
+	assert.equal(solo_enlaces(enlaces.segmentar_enlaces(muchas)).length, 7000)
+	assert.equal(solo_enlaces(segmentar_mensaje(muchas, [])).length, 7000)
+	const ms = Number(process.hrtime.bigint() - desde) / 1e6
+	assert.ok(ms < 1500, 'muchas direcciones: ' + ms.toFixed(1) + ' ms')
+	// Muchas negritas (camino de antes, ahora con cursor): rápido también.
+	const negritas = ('**a** ').repeat(7000)
+	const desde_negritas = process.hrtime.bigint()
+	assert.equal(segmentar_mensaje(negritas, []).filter(hoja => hoja.negrita).length, 7000)
+	assert.ok(Number(process.hrtime.bigint() - desde_negritas) / 1e6 < 500, 'muchas negritas')
+})
+
+test('Soporte: el enlace tiene su foco por teclado propio', () => {
+	const sfc = compiler.parseComponent(fuente('common-vue/components/support-chat/Conversation.vue'))
+	const css = sfc.styles.map(estilo => estilo.content).join('\n')
+	assert.match(css, /\.support-message-link:focus-visible \{[^}]*outline: 2px solid/)
+})

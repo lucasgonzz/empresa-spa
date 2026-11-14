@@ -102,10 +102,14 @@ export function segmentar_mensaje(contenido, menciones) {
 	// Rangos de enlace: se descartan los que se pisan con una mención (la mención gana siempre,
 	// es un tramo especial con su propio comportamiento). Con la negrita no pueden cruzarse a
 	// medias: la dirección corta antes de cualquier asterisco.
+	// Los dos conjuntos están ordenados: un cursor sobre las menciones que solo avanza (lineal).
+	let indice_mencion = 0
 	let enlaces = rangos_de_enlaces(texto).filter(function (enlace) {
-		return !rangos_mencion.some(function (rango) {
-			return enlace.inicio < rango.fin && rango.inicio < enlace.fin
-		})
+		while (indice_mencion < rangos_mencion.length && rangos_mencion[indice_mencion].fin <= enlace.inicio) {
+			indice_mencion++
+		}
+		let rango = rangos_mencion[indice_mencion]
+		return !(rango && rango.inicio < enlace.fin)
 	})
 	enlaces.forEach(function (enlace) {
 		puntos_de_corte.add(enlace.inicio)
@@ -119,11 +123,25 @@ export function segmentar_mensaje(contenido, menciones) {
 	// Los puntos de corte incluyen los bordes de TODOS los rangos (mención, marcador,
 	// negrita), así que ningún rango puede empezar o terminar en la mitad de una hoja: el
 	// punto de inicio de la hoja alcanza para saber si cae adentro de un rango o no.
-	function rango_que_contiene(rangos, punto) {
-		return rangos.find(function (rango) {
-			return punto >= rango.inicio && punto < rango.fin
-		})
+	//
+	// 🔴 Lineal (revisión de E10): cada conjunto de rangos está ordenado y sin solapamientos
+	// propios, y las hojas se recorren en orden, así que cada conjunto lleva un cursor que solo
+	// avanza. Buscar con `find` en cada hoja era cuadrático: un mensaje con miles de enlaces o
+	// negritas tardaba segundos en cada re-render.
+	function cursor_de(rangos) {
+		let posicion = 0
+		return function (punto) {
+			while (posicion < rangos.length && rangos[posicion].fin <= punto) {
+				posicion++
+			}
+			let rango = rangos[posicion]
+			return rango && punto >= rango.inicio && punto < rango.fin ? rango : undefined
+		}
 	}
+	let marcador_en = cursor_de(marcadores)
+	let mencion_en = cursor_de(rangos_mencion)
+	let enlace_en = cursor_de(enlaces)
+	let negrita_en = cursor_de(negritas)
 
 	let resultado = []
 	for (let i = 0; i < puntos.length - 1; i++) {
@@ -132,18 +150,17 @@ export function segmentar_mensaje(contenido, menciones) {
 		if (fin <= inicio) {
 			continue
 		}
-		let es_marcador = marcadores.some(function (marcador) {
-			return inicio >= marcador.inicio && fin <= marcador.fin
-		})
-		if (es_marcador) {
+		// Un marcador es borde de corte en sus dos puntas: la hoja que empieza adentro de uno está
+		// entera adentro de él (lo mismo que preguntaba antes `inicio >= m.inicio && fin <= m.fin`).
+		if (marcador_en(inicio)) {
 			continue
 		}
-		let mencion = rango_que_contiene(rangos_mencion, inicio)
-		let enlace = rango_que_contiene(enlaces, inicio)
+		let mencion = mencion_en(inicio)
+		let enlace = enlace_en(inicio)
 		resultado.push({
 			texto: texto.slice(inicio, fin),
 			mencion: mencion ? mencion.mencion : null,
-			negrita: !!rango_que_contiene(negritas, inicio),
+			negrita: !!negrita_en(inicio),
 			enlace: enlace ? enlace.href : null,
 		})
 	}
