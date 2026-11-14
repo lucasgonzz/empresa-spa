@@ -746,3 +746,36 @@ test('sitios de referencia: el error de guardado sale en una frase legible', () 
 	assert.match(textos.mensaje_de_error_de_sitios(error_http(500, { message: 'Server Error' })), /Volvé a intentar/)
 	assert.match(textos.mensaje_de_error_de_sitios(new Error('Network Error')), /Revisá la conexión/)
 })
+
+// --- Misión medidas-masquito-fichas (14/11/2026) -----------------------------------------------
+
+test('fichas del fabricante: los motivos y los planes nuevos tienen su texto; los de revisar van en ámbar', () => {
+	assert.equal(textos.texto_de(textos.MOTIVOS, 'peso_de_ficha'), 'Peso de la ficha del fabricante')
+	assert.equal(textos.texto_de(textos.MOTIVOS, 'peso_de_envio'), 'Peso con embalaje')
+	assert.equal(textos.texto_de(textos.MOTIVOS, 'sin_ficha'), 'Sin ficha del fabricante')
+	assert.equal(textos.texto_de(textos.MOTIVOS, 'valor_de_plantilla'), 'Valor repetido de la tienda')
+	assert.ok(textos.MOTIVOS_DE_AVISO.indexOf('peso_de_envio') !== -1)
+	assert.ok(textos.MOTIVOS_DE_AVISO.indexOf('valor_de_plantilla') !== -1)
+	// Una asignada y un «sin ficha» no son una alarma.
+	assert.equal(textos.MOTIVOS_DE_AVISO.indexOf('peso_de_ficha'), -1)
+	assert.equal(textos.MOTIVOS_DE_AVISO.indexOf('sin_ficha'), -1)
+	assert.equal(textos.NOMBRES_DE_PLAN.ficha_maxparts, 'Ficha de maxparts.hu')
+	assert.equal(textos.NOMBRES_DE_PLAN.ficha_lawnbarn, 'Ficha de lawnbarn.com')
+	assert.equal(textos.NOMBRES_DE_PLAN.ficha_kalohaz, 'Ficha de kalohaz.hu')
+	assert.equal(textos.NOMBRES_DE_PLAN.ficha_oregon, 'Ficha de oregonproducts.com')
+	assert.equal(textos.texto_de(textos.RESULTADOS_DE_PLAN, 'sin_ficha'), 'No había ficha de este artículo.')
+	assert.equal(textos.texto_de(textos.RESULTADOS_DE_PLAN, 'ficha_sin_el_codigo'), 'La ficha no traía el código del artículo.')
+})
+
+test('fichas del fabricante: el diagnóstico de una ficha se normaliza con cero consultas', () => {
+	const planes = medidas.normalizar_diagnostico([{
+		criterio: 'ficha_maxparts', usado: true, busquedas: 0, resultados: 1, resultado: 'datos',
+		resumen: 'Peso en la ficha de maxparts.hu: «Nettó tömeg (kg) 0.341».',
+		paginas: [{ url: 'https://maxparts.hu/spd/HU10_41470300403/', titulo: 'FŐTENGELY STIHL', dominio: 'maxparts.hu', leida: true, motivo: null }],
+	}, { criterio: 'ficha_lawnbarn', usado: false, busquedas: 0, motivo: 'El código no está en el índice de Lawn Barn.' }])
+	assert.equal(planes[0].busquedas, 0)
+	assert.equal(planes[0].resultados, 1)
+	assert.equal(planes[0].paginas[0].dominio, 'maxparts.hu')
+	assert.equal(planes[1].usado, false)
+	assert.equal(planes[1].motivo_no_usado, 'El código no está en el índice de Lawn Barn.')
+})
