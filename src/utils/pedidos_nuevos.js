@@ -3,9 +3,10 @@
  * prueba gratuita, 14/11/2026, ítem E9a).
  *
  * El defecto: la tabla de Pedidos (components/online/components/orders/Index.vue) pide la lista UNA
- * vez, al crearse. El aviso en vivo de un pedido nuevo (Pusher, mixins/broadcast.js), la reconexión y
- * el polling de 5 minutos solo refrescan `order.unconfirmed_models` —el globito del menú—, no la
- * lista. Quien abre la tienda con «Ver mi tienda» (que está en esta misma pantalla), compra y vuelve
+ * vez, al crearse. El aviso en vivo de un pedido nuevo (Pusher, mixins/broadcast.js) y la reconexión
+ * solo refrescan `order.unconfirmed_models` —el globito del menú—, no la lista. (El polling de 5
+ * minutos de mixins/start_methods.js NO corre con Tienda Online abierta: sin Pusher, esta pantalla
+ * vuelve a preguntar al volver a la pestaña; ver orders/Index.vue.) Quien abre la tienda con «Ver mi tienda» (que está en esta misma pantalla), compra y vuelve
  * a la pestaña del sistema ve «No hay Pedidos» con el globito en 1, hasta tocar «Por fecha» o
  * «Historico», que son los que vuelven a pedir.
  *
@@ -54,4 +55,42 @@ export function accion_para_refrescar_pedidos(estado) {
 		return 'runListadoPorDefecto'
 	}
 	return null
+}
+
+/**
+ * Cuándo se puede refrescar la tabla de Pedidos (revisión de E9a, 14/11/2026):
+ * - 'nunca' si la sección a la vista no es Pedidos: al volver a ella se vuelve a pedir igual.
+ * - 'pendiente' si el dueño tiene filas tildadas o el formulario de un pedido abierto: `getModels`
+ *   le borra la selección (`setSelected([])`) y cambiarle la lista abajo del modal confunde. Se
+ *   refresca apenas suelta la selección o cierra el modal.
+ * - 'ahora' en cualquier otro caso.
+ *
+ * @param {Object} momento
+ * @param {String} momento.seccion `$route.params.view`.
+ * @param {Number} momento.seleccionados Cantidad de filas tildadas (`state.order.selected`).
+ * @param {Boolean} momento.modal_abierto Si el formulario de un pedido está abierto.
+ * @returns {String} 'ahora', 'pendiente' o 'nunca'.
+ */
+export function momento_de_refrescar(momento) {
+	if (!momento || momento.seccion != 'pedidos') {
+		return 'nunca'
+	}
+	if (Number(momento.seleccionados || 0) > 0 || momento.modal_abierto) {
+		return 'pendiente'
+	}
+	return 'ahora'
+}
+
+/** Mínimo entre dos consultas por volver a la pestaña: alternar pestañas no bombardea la API. */
+export const MINIMO_ENTRE_CONSULTAS_POR_VISIBILIDAD_MS = 10000
+
+/**
+ * Si al volver a la pestaña se puede volver a preguntar por los pedidos sin confirmar.
+ *
+ * @param {Number} ultima_consulta_ms Momento de la última consulta por visibilidad (0 = nunca).
+ * @param {Number} ahora_ms
+ * @returns {Boolean}
+ */
+export function puede_consultar_por_visibilidad(ultima_consulta_ms, ahora_ms) {
+	return !ultima_consulta_ms || (ahora_ms - ultima_consulta_ms) >= MINIMO_ENTRE_CONSULTAS_POR_VISIBILIDAD_MS
 }
