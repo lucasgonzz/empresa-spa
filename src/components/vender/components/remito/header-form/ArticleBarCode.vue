@@ -71,6 +71,11 @@ import {
 
 import db from '@/offline/db'
 import { codigo_escaneado } from '@/utils/codigo_de_barras'
+/*
+	Codigo propio del dueño (SKU) sin conexion o con la cache de articulos (ronda 5 de la prueba,
+	14/11/2026, E9b). Ver respaldo_por_sku_en_cache().
+*/
+import { articulo_por_sku_en_cache } from '@/utils/sku_en_cache'
 
 /**
  * Escapa un texto para meterlo en un toast: vue-toast-notification dibuja el mensaje con v-html, y
@@ -200,7 +205,13 @@ export default {
 				// para un nuevo escaneo, tiene que volver a bloquear el agregado automatico.
 				this.opening_variant_selector = false
 
-				let resultado = await this.set_finded_article(this.item_vender.codigo)
+				/*
+					El respaldo por SKU va encadenado con .then y no con otro await (regla del repo): el await de
+					siempre espera la cadena entera. Solo hace algo si nada de set_finded_article encontro el codigo.
+				*/
+				let codigo_tipeado = this.item_vender.codigo
+				let resultado = await this.set_finded_article(codigo_tipeado)
+					.then(resultado_del_codigo => this.respaldo_por_sku_en_cache(resultado_del_codigo, codigo_tipeado))
 
 				/*
 					Variante encontrada en la cache sin conexion (mision
@@ -446,6 +457,73 @@ export default {
 
 			}
 
+		},
+		/**
+		 * Codigo propio del dueño (SKU) en «Cod barras» cuando el codigo se resolvio contra la CACHE de
+		 * articulos (sin conexion, o con «Usar cache de articulos») y nada lo encontro (ronda 5 de la
+		 * prueba, 14/11/2026, E9b). Con conexion y sin cache lo resuelve la API en el mismo pedido
+		 * (VenderController::articulo_por_sku_exacto), con la misma regla: SKU exacto tras trim, sin
+		 * distinguir mayusculas, unico entre los activos (utils/sku_en_cache.js).
+		 *
+		 * No hace nada (devuelve el resultado tal cual) si:
+		 * - ya hay algo: un articulo, una variante de la cache, un ticket de balanza o el selector abierto;
+		 * - el campo lee otro codigo (codigo de proveedor o numero interno), igual que la API;
+		 * - el codigo fue a la API sin cache, o con cache + variantes con conexion (set_finded_article ya le
+		 *   pregunto a la API, que busca el SKU): preguntarle dos veces podria agregarlo dos veces.
+		 *
+		 * Si lo encuentra deja el articulo en finded_article, igual que un codigo de barras de la cache. Con
+		 * variantes disponibles (y la extension) abre el selector, como la cache con un codigo de barras.
+		 *
+		 * @param {*} resultado Lo que devolvio set_finded_article.
+		 * @param {String} codigo Lo tipeado.
+		 * @returns {Promise<*>} El mismo resultado.
+		 */
+		respaldo_por_sku_en_cache(resultado, codigo) {
+			if (
+				(resultado && resultado.variante_de_la_cache)
+				|| typeof this.finded_article != 'undefined'
+				|| this.from_balanza
+				|| this.opening_variant_selector
+				|| this.usar_codigo_proveedor
+				|| this.hasExtencion('codigos_de_barra_basados_en_numero_interno')
+			) {
+				return Promise.resolve(resultado)
+			}
+
+			let online = this.$store.state.auth.online
+			let uso_la_cache = !online || this.owner.usar_articles_cache
+			let pregunto_a_la_api = online && this.hasExtencion('article_variants')
+
+			if (!uso_la_cache || pregunto_a_la_api) {
+				return Promise.resolve(resultado)
+			}
+
+			let self = this
+
+			return articulo_por_sku_en_cache(codigo_escaneado(codigo))
+			.catch(err => {
+				// Si no se pudo leer la cache, el codigo sigue como no encontrado
+				console.log('Error al buscar el SKU en la cache de articulos')
+				console.log(err)
+				return null
+			})
+			.then(articulo => {
+				if (!articulo) {
+					return resultado
+				}
+
+				let variantes = self.hasExtencion('article_variants')
+					? variantes_disponibles_en_cache(articulo)
+					: []
+
+				if (variantes.length) {
+					self.abrir_selector_de_variantes(articulo, variantes)
+					return resultado
+				}
+
+				self.finded_article = articulo
+				return resultado
+			})
 		},
 		/**
 		 * Abre el selector de variantes (SelectVariant.vue) para un articulo con variantes
