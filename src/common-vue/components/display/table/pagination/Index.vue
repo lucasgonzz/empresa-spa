@@ -9,7 +9,7 @@
 
 			<span
 			class="pagination-bar-meta">
-				{{ numero_es(total_results) }} resultados
+				{{ numero_es(total_results) }} {{ palabra_resultados(total_results) }}
 			</span>
 
 			<span
@@ -50,6 +50,7 @@
 	</div>
 </template>
 <script>
+import { palabra_resultados } from '@/utils/textos_busqueda'
 export default {
 	props: {
 		model_name: String,
@@ -143,6 +144,16 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * «resultado» o «resultados» segun la cantidad (ronda 6 de la prueba gratuita: decia
+		 * «1 resultados»). Ver utils/textos_busqueda.js.
+		 *
+		 * @param {Number} cantidad
+		 * @returns {String}
+		 */
+		palabra_resultados(cantidad) {
+			return palabra_resultados(cantidad)
+		},
 		/**
 		 * Alinea el input con el valor persistido en el store del modelo (article/sale).
 		 */
