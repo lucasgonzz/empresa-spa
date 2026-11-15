@@ -525,4 +525,17 @@ export default {
 		::v-deep button.venta-total-box.btn-block
 			min-width: 0
 			padding: 0 14px
+
+	/* Venta ya guardada (ronda 6 de la prueba gratuita): con «Venta N», Imprimir y el teléfono de */
+	/* WhatsApp la barra no entraba a 390 px y se comía la izquierda («enta 1», sin Limpiar). El */
+	/* teléfono pasa a un ancho de celular y los secundarios a menos relleno; nada se oculta. */
+	.vender-actions-bar__whatsapp-input
+		width: 112px
+		padding-left: 8px
+		padding-right: 8px
+		font-size: 0.84rem
+
+	.vender-actions-bar__item--secondary
+		::v-deep .btn
+			padding: 0 10px
 </style>
