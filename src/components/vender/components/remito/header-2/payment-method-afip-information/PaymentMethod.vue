@@ -81,6 +81,19 @@
 	</b-button>
 
 	<!--
+		Ronda 6 de la prueba gratuita (15/11/2026): con un cliente elegido el metodo de pago y la caja
+		quedan grisados (ver `disabled`) y nada decia por que. Solo texto: la logica que los grisa no
+		se toca. No sale en un presupuesto, que se cobra al guardar (otro cartel lo explica).
+	-->
+	<p
+	v-if="aviso_cuenta_corriente"
+	class="vender-aviso-cuenta-corriente"
+	data-testid="venta-aviso-cuenta-corriente">
+		<i class="icon-info"></i>
+		{{ aviso_cuenta_corriente }}
+	</p>
+
+	<!--
 		Prompt 266 (Fase 2, Capa 3): con el flag `precio_base_incluye_tarjeta` activo, el precio
 		mostrado en el carrito ya es el de etiqueta (incluye la tarjeta mas cara). Al elegir un
 		metodo de pago, se muestra el precio final equivalente para ese metodo y su descuento
@@ -108,6 +121,7 @@
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 /* Estado (y boton manual) de la recuperacion de este catalogo si su pedido del arranque fallo. */
 import payment_methods_recovery from '@/mixins/vender/payment_methods_recovery'
+import { aviso_venta_a_cuenta_corriente } from '@/utils/aviso_cuenta_corriente'
 export default {
 	mixins: [select_payment_methods, payment_methods_recovery],
 	components: {
@@ -220,6 +234,19 @@ export default {
 			return false
 		},
 		/* true cuando lo que se arma es un presupuesto (toggle prendido o presupuesto cargado). */
+		/**
+		 * Texto del cartelito de «va a la cuenta corriente», o null si no corresponde. Sale cuando
+		 * los campos quedan grisados por el cliente: hay cliente, «Omitir cuenta corriente» apagado y
+		 * no es un presupuesto. Ver utils/aviso_cuenta_corriente.js.
+		 *
+		 * @returns {String|null}
+		 */
+		aviso_cuenta_corriente() {
+			if (!this.client || this.omitir_en_cuenta_corriente || this.en_modo_presupuesto || this.budget) {
+				return null
+			}
+			return aviso_venta_a_cuenta_corriente(this.client)
+		},
 		en_modo_presupuesto() {
 			return this.$store.getters['vender/en_modo_presupuesto']
 		},
@@ -526,6 +553,21 @@ export default {
 }
 </script>
 <style lang="sass">
+/* Cartelito de «va a la cuenta corriente» debajo del metodo de pago (ronda 6 de la prueba gratuita). */
+.vender-aviso-cuenta-corriente
+	display: flex
+	align-items: flex-start
+	gap: 6px
+	margin: 6px 0 10px
+	font-size: 0.8rem
+	line-height: 1.35
+	text-align: left
+	color: var(--color-primary, #007bff)
+
+	i
+		margin-top: 2px
+		flex-shrink: 0
+
 .cont-payment-methods
 
 	/* Listbox expandido por atajo: limitar alto y permitir scroll interno */
