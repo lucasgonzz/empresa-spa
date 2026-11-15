@@ -186,7 +186,10 @@ export default {
 
 					value: 0,
 
-					text: 'Seleccione Punto de Venta',
+					// Entre 768 y 991 px (tablet) el select mide un tercio del renglon y el texto largo
+					// quedaba cortado (a 820 px, ronda 6 de la prueba gratuita; a 390 px alcanza con la
+					// letra mas chica de los estilos): ahi va la version corta. En el resto, el de siempre.
+					text: this.$vssWidth >= 768 && this.$vssWidth < 992 ? 'Punto de venta' : 'Seleccione Punto de Venta',
 
 				},
 
@@ -257,8 +260,23 @@ export default {
 
 
 .select-afip-information
-	select 
+	select
 		height: 36px
+
+	/* Tablet y celular (ronda 6 de la prueba gratuita): el renglon «Factura | Punto de venta» es */
+	/* angosto (a 820 px la columna mide un tercio). Un poco menos de letra y de relleno, para que */
+	/* el texto corto del select (ver options) se lea entero. */
+	@media (max-width: 991.98px)
+		::v-deep .input-group-text
+			padding-left: 8px
+			padding-right: 8px
+			font-size: 0.875rem
+
+		select
+			font-size: 0.875rem
+			padding-left: 8px
+			padding-right: 22px
+			background-position: right 6px center
 
 	/* Sin selección: fondo oscuro para destacar que falta elegir punto de venta */
 

@@ -25,9 +25,12 @@
 		id="article-amount"
 		v-model="item_vender.amount"
 		@keydown.enter="add_item_vender"
-		placeholder="Cantidad"></b-form-input>
-		<b-button 
-		class="d-lg-none m-l-10"
+		class="amount-input"
+		title="Cantidad"
+		aria-label="Cantidad"
+		:placeholder="placeholder_cantidad"></b-form-input>
+		<b-button
+		class="d-lg-none m-l-10 amount-confirmar"
 		@click="callAddArticleToSale"
 		variant="primary">
 			<i class="icon-check"></i>
@@ -60,6 +63,17 @@ export default {
 	},
 	mixins: [vender],
 	computed: {
+		/**
+		 * Placeholder del campo. Entre 768 y 991 px (tablet) el campo comparte una columna angosta con
+		 * el boton de confirmar y «Cantidad» quedaba en «C» (ronda 6 de la prueba gratuita, a 820 px):
+		 * ahi va abreviado. En escritorio y en el celular (va a lo ancho) sigue «Cantidad». El title y el
+		 * aria-label dicen la palabra entera.
+		 *
+		 * @returns {String}
+		 */
+		placeholder_cantidad() {
+			return this.$vssWidth >= 768 && this.$vssWidth < 992 ? 'Cant.' : 'Cantidad'
+		},
 		/**
 		 * Stock global del artículo seleccionado (suma de todos los depósitos).
 		 * Devuelve cadena vacía si no hay artículo o no es un article.
@@ -124,6 +138,26 @@ export default {
 	flex-direction: column
 	align-items: stretch
 	justify-content: flex-start
+
+/* Tablet y celular (abajo de lg, donde aparece el boton de confirmar al lado): el campo es angosto. */
+/* Sin las flechitas del number y con menos relleno, «Cant.» entra entero (ronda 6, a 820 px quedaba «C»). */
+@media (max-width: 991.98px)
+	.amount-input
+		padding-left: 6px
+		padding-right: 4px
+		min-width: 0
+		-moz-appearance: textfield
+
+		&::-webkit-outer-spin-button,
+		&::-webkit-inner-spin-button
+			-webkit-appearance: none
+			margin: 0
+
+	.amount-confirmar
+		margin-left: 6px !important
+		padding-left: 10px
+		padding-right: 10px
+		flex-shrink: 0
 
 /* Bloque de indicadores de stock */
 .amount-stock

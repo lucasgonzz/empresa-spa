@@ -38,7 +38,10 @@ hide-footer
 			modo="modal"
 			:input_id="_id+'-search-modal-input'"
 			:placeholder="_placeholder"
+			:mostrar_aviso_enter="!saving_if_not_exist && !!(loading || results.length)"
+			@estado-criterio="onEstadoCriterio"
 			@keydown.native="reset_ya_se_busco"
+			@input.native="al_cambiar_texto_sin_teclado"
 			@keydown.native.up="selectUp"
 			@keydown.native.down="selectDown"
 			@buscar="onBuscarDesdeBuscadorGeneral"
@@ -181,6 +184,7 @@ hide-footer
 </template>
 <script>
 import TableComponent from '@/common-vue/components/display/TableComponent'
+import { aviso_busqueda_pendiente, TEXTO_BUSCADOR_VACIO } from '@/utils/textos_busqueda'
 import ColumnsPreferencesConfigModal from '@/common-vue/components/view/header/props-to-show/ColumnsPreferencesConfigModal.vue'
 import {
 	default_column_width_for_property,
@@ -371,6 +375,12 @@ export default {
 			// nada tipeado aca, mandan las props".
 			query_local: null,
 			generacion_busqueda: 0,
+
+			// Lo que hay escrito en el buscador general embebido y si falta buscarlo (evento
+			// 'estado-criterio'). El texto tipeado vive en ese componente y aca recien llega con el
+			// Enter; esto es lo unico que deja al estado vacio decir «Apretá Enter para buscar
+			// «martillo»» en vez de pedir que se escriba algo que ya esta escrito (ronda 6, 15/11/2026).
+			estado_criterio: { texto: '', pendiente: false },
 		}
 	},
 	watch: {
@@ -567,19 +577,31 @@ export default {
 		 * busqueda sin resultados.
 		 */
 		estado_icono() {
-			if (!this.busqueda_realizada) {
+			if (!this.busqueda_realizada || this.estado_criterio.pendiente) {
 				return 'icon-search'
 			}
 			return 'icon-info-o'
 		},
+		/**
+		 * Titulo del estado vacio. Con texto escrito que todavia no se busco dice que falta el
+		 * Enter, con ese texto; con el campo vacio pide que se escriba. Este modal busca recien con
+		 * Enter (o la lupa) y eso no se cambia: lo que se corrige es que antes decia «Escribi un
+		 * criterio de busqueda» con «martillo» ya escrito (ronda 6 de la prueba gratuita).
+		 *
+		 * El pendiente le gana tambien a «No se encontraron resultados»: si el usuario cambio el texto
+		 * despues de una busqueda vacia, ese cartel habla de una busqueda que ya no es la que ve.
+		 */
 		estado_titulo() {
+			if (this.estado_criterio.pendiente) {
+				return aviso_busqueda_pendiente(this.estado_criterio.texto, '')
+			}
 			if (!this.busqueda_realizada) {
-				return 'Escribi un criterio de busqueda'
+				return TEXTO_BUSCADOR_VACIO
 			}
 			return 'No se encontraron resultados'
 		},
 		estado_detalle() {
-			if (!this.busqueda_realizada) {
+			if (!this.busqueda_realizada || this.estado_criterio.pendiente) {
 				return 'Buscamos por las propiedades tildadas en el filtro del buscador.'
 			}
 			return 'Proba con otras palabras, o revisa las propiedades tildadas en el filtro del buscador.'
@@ -589,6 +611,11 @@ export default {
 		 * que tenia el template antes de este prompt.
 		 */
 		estado_hint() {
+			// Con texto nuevo sin buscar, el proximo Enter BUSCA (reset_ya_se_busco): ofrecer
+			// «ENTER para crear» seria prometer lo que esa tecla no va a hacer.
+			if (this.estado_criterio.pendiente) {
+				return null
+			}
 			if (!this.busqueda_realizada || !this.query.length) {
 				return null
 			}
@@ -641,6 +668,8 @@ export default {
 		onModalShow() {
 			this.modal_visible = true
 			this.busqueda_realizada = false
+			// El buscador embebido nace de nuevo en esta apertura y vuelve a avisar su estado.
+			this.estado_criterio = { texto: '', pendiente: false }
 
 			// 🔴 En esta apertura todavia no se busco nada, asi que el proximo Enter tiene que BUSCAR,
 			// no seleccionar. Sin esta linea, ya_se_busco quedaba en true desde la apertura anterior
@@ -689,6 +718,19 @@ export default {
 		 * Ver emitSetSelected para el motivo por el que la guarda existe y por que se baja aca y no
 		 * con un temporizador.
 		 */
+		/**
+		 * El buscador general embebido avisa que hay escrito y si falta buscarlo (ver su watcher de
+		 * aviso_enter). Alimenta el estado vacio de este modal (estado_titulo).
+		 *
+		 * @param {Object} estado { texto: String, pendiente: Boolean }
+		 * @return {void}
+		 */
+		onEstadoCriterio(estado) {
+			this.estado_criterio = {
+				texto: estado && estado.texto ? estado.texto : '',
+				pendiente: !!(estado && estado.pendiente),
+			}
+		},
 		onModalHidden() {
 			this.modal_visible = false
 			this.$emit('setNotShowModel', false)
@@ -1282,7 +1324,7 @@ export default {
 				}
 			} else {
 				// Sin criterio y sin filtros: no se busca y no se molesta con un toast rojo. El modal
-				// muestra el estado "Escribi un criterio de busqueda" (prompt 02 de este grupo).
+				// muestra el estado "Escribí qué querés buscar" (prompt 02 de este grupo).
 				this.results = []
 				this.total_results = 0
 				this.loading = false
@@ -1464,6 +1506,21 @@ export default {
 					this.no_hacer_seleccion = false
 				}, 100)
 			}, 100)
+		},
+		/**
+		 * El texto del input cambio por un camino que no pasa por el teclado: pegar con el boton
+		 * derecho, arrastrar, autocompletar (revision de la ronda 6). Sin esto, despues de una
+		 * busqueda sin resultados ya_se_busco quedaba arriba y el Enter CREABA el modelo con el texto
+		 * nuevo mientras el cartel decia «Apretá Enter para buscar». Ahora ese Enter busca, que es lo
+		 * que el cartel promete. Tipear tambien dispara este evento: es el mismo efecto que el
+		 * keydown, sin nada extra (el Enter no dispara `input`, asi que el atajo del segundo Enter
+		 * para crear sigue igual).
+		 *
+		 * @return {void}
+		 */
+		al_cambiar_texto_sin_teclado() {
+			this.ya_se_busco = false
+			this.seleccion_manual = false
 		},
 		reset_ya_se_busco(event) {
 			console.log('reset_ya_se_busco')

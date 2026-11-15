@@ -612,9 +612,18 @@ export default {
             }
             return this.price(article_price_type.pivot.final_price)
         },
+        /**
+         * Hora de creacion en 24 horas («13:16»). Hasta la ronda 6 de la prueba gratuita
+         * (15/11/2026) era 'h:mm' sin a. m./p. m., y una venta de las 13:16 se veia «1:16», igual que
+         * una de la madrugada. La usa solo la columna «Hora» de movimiento_caja (Tesorería →
+         * Movimientos de caja).
+         *
+         * @param {Object} model Con created_at.
+         * @returns {String|undefined}
+         */
         get_hora_from_created_at(model) {
             if (model.created_at) {
-                return moment(model.created_at).format('h:mm')
+                return moment(model.created_at).format('HH:mm')
             }
         },
         get_variants_for_deposit_movement(prop, article) {

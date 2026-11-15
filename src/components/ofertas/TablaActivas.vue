@@ -130,7 +130,7 @@
 			class="paginacion-modulo m-t-15">
 				<div class="paginacion-modulo__barra">
 					<span class="paginacion-modulo__meta">
-						{{ numero_es(paginacion.total) }} resultados
+						{{ numero_es(paginacion.total) }} {{ palabra_resultados(paginacion.total) }}
 					</span>
 					<template v-if="paginacion.total > paginacion.per_page">
 						<span
@@ -151,6 +151,7 @@
 	</div>
 </template>
 <script>
+import { palabra_resultados } from '@/utils/textos_busqueda'
 import { telefono_de_chat_de_oferta, mensaje_de_oferta } from '@/utils/whatsapp_phone'
 /*
 	Las ofertas ya cargadas como promocion: lo que la tienda le muestra hoy a cada
@@ -237,6 +238,16 @@ export default {
 		this.$store.dispatch('offer_suggestion_line/getActivas', {page: 1})
 	},
 	methods: {
+		/**
+		 * «resultado» o «resultados» segun la cantidad (ronda 6 de la prueba gratuita: decia
+		 * «1 resultados»). Ver utils/textos_busqueda.js.
+		 *
+		 * @param {Number} cantidad
+		 * @returns {String}
+		 */
+		palabra_resultados(cantidad) {
+			return palabra_resultados(cantidad)
+		},
 		aplicar_filtro(filtro) {
 			this.$store.commit('offer_suggestion_line/set_filtros_activas', filtro)
 			this.$store.dispatch('offer_suggestion_line/getActivas', {page: 1})
