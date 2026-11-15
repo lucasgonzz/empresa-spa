@@ -233,7 +233,6 @@ export default {
 			}
 			return false
 		},
-		/* true cuando lo que se arma es un presupuesto (toggle prendido o presupuesto cargado). */
 		/**
 		 * Texto del cartelito de «va a la cuenta corriente», o null si no corresponde. Sale cuando
 		 * los campos quedan grisados por el cliente: hay cliente, «Omitir cuenta corriente» apagado y
@@ -247,6 +246,7 @@ export default {
 			}
 			return aviso_venta_a_cuenta_corriente(this.client)
 		},
+		/* true cuando lo que se arma es un presupuesto (toggle prendido o presupuesto cargado). */
 		en_modo_presupuesto() {
 			return this.$store.getters['vender/en_modo_presupuesto']
 		},
