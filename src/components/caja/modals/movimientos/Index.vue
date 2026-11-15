@@ -34,7 +34,7 @@
 				<!--
 					Solo en el celular (ver estilos): la tabla se desplaza de costado y a 390 px no habia
 					ninguna señal de eso; se veia «Concepto Movimiento» y nada de importes (ronda 6 de la
-					prueba gratuita). Las columnas ademas se angostan para que entre el Ingreso.
+					prueba gratuita). Las columnas ademas se ajustan a su contenido.
 				-->
 				<p
 				class="movimientos-caja-deslizar"
@@ -254,8 +254,13 @@ export default {
 //
 // Celular (ronda 6 de la prueba gratuita): cada columna traia un minimo de 150-200 px (el de la
 // preferencia de columnas, inline), asi que a 390 px solo entraban «Concepto Movimiento» y la hora.
-// Aca las columnas se ajustan a su contenido y el encabezado puede ir en dos renglones: entra el
-// Ingreso a la vista. El borde derecho se desvanece para que se note que la tabla sigue de costado.
+// Aca las columnas se ajustan a su contenido y el encabezado puede ir en dos renglones. La señal de
+// que la tabla sigue de costado es el aviso de texto de arriba (ver el template).
+//
+// 🔴 Sin desvanecidos: con las celdas al ancho justo, el difuminado fijo de 26 px de .cell-nowrap
+// (display/table/Tr.vue) caia sobre las ultimas cifras y se leia «$15.00▒» o «13:1▒». Un importe se
+// lee entero o no se muestra: aca va sin mascara, igual que .cell-no-fade. Por lo mismo no hay
+// mascara en el borde de la tabla (tapaba la ultima columna aun deslizada hasta el final).
 @media (max-width: 575.98px)
 	#movimientos-caja
 		.common-table
@@ -272,7 +277,8 @@ export default {
 			td
 				white-space: nowrap
 
-		.cont-table
-			-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent)
-			mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent)
+			.cell-nowrap
+				-webkit-mask-image: none !important
+				mask-image: none !important
+				text-overflow: clip
 </style>
