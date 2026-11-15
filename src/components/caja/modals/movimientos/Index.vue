@@ -30,6 +30,17 @@
 		model_name="movimiento_caja">
 			<template #header>
 				<info-apertura-caja></info-apertura-caja>
+
+				<!--
+					Solo en el celular (ver estilos): la tabla se desplaza de costado y a 390 px no habia
+					ninguna señal de eso; se veia «Concepto Movimiento» y nada de importes (ronda 6 de la
+					prueba gratuita). Las columnas ademas se angostan para que entre el Ingreso.
+				-->
+				<p
+				class="movimientos-caja-deslizar"
+				data-testid="movimientos-caja-deslizar">
+					Deslizá la tabla hacia la izquierda para ver los importes →
+				</p>
 			</template>
 
 			<template #table-prop-concepto_movimiento_caja_id="props">
@@ -224,4 +235,44 @@ export default {
 
 	&--vacio
 		color: var(--color-text-secondary)
+
+// Aviso de que la tabla se desplaza: solo en el celular.
+.movimientos-caja-deslizar
+	display: none
+
+@media (max-width: 575.98px)
+	.movimientos-caja-deslizar
+		display: block
+		margin: 10px 0 0
+		font-size: 0.8rem
+		font-weight: 600
+		color: var(--color-primary, #007bff)
+</style>
+<style lang="sass">
+// Sin scoped a proposito: la tabla la dibuja common-vue (display/table) y sus celdas no llevan el
+// scope de este archivo. Va acotado por el id del modal, asi que no toca ninguna otra tabla.
+//
+// Celular (ronda 6 de la prueba gratuita): cada columna traia un minimo de 150-200 px (el de la
+// preferencia de columnas, inline), asi que a 390 px solo entraban «Concepto Movimiento» y la hora.
+// Aca las columnas se ajustan a su contenido y el encabezado puede ir en dos renglones: entra el
+// Ingreso a la vista. El borde derecho se desvanece para que se note que la tabla sigue de costado.
+@media (max-width: 575.98px)
+	#movimientos-caja
+		.common-table
+			th,
+			td
+				min-width: 0 !important
+				width: auto !important
+				max-width: none !important
+
+			th,
+			th .cont-th
+				white-space: normal
+
+			td
+				white-space: nowrap
+
+		.cont-table
+			-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent)
+			mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent)
 </style>
