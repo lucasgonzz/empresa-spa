@@ -328,6 +328,14 @@ export default {
 		*/
 		document.addEventListener('mouseover', this.al_entrar)
 		document.addEventListener('mouseout', this.al_salir)
+		/*
+			La cuenta de los 2 segundos arranca con un mousemove real, no con el mouseover (ronda 6
+			de la prueba gratuita, 15/11/2026). Al cerrarse un modal, Chrome dispara mouseover sobre lo
+			que quedó debajo del puntero QUIETO --el contenido cambió, el mouse no se movió-- y la
+			ayuda de Sucursal en Vender se abría sola y quedaba flotando. Ese mouseover "de layout" no
+			trae mousemove; el que entra de verdad con el mouse, sí. Ver al_mover().
+		*/
+		document.addEventListener('mousemove', this.al_mover, { passive: true })
 		/* Si el usuario actúa o mueve la pantalla, se cierra sin esperar el margen. */
 		document.addEventListener('click', this.ocultar_ya, true)
 		document.addEventListener('scroll', this.ocultar_ya, true)
@@ -336,6 +344,7 @@ export default {
 	beforeDestroy() {
 		document.removeEventListener('mouseover', this.al_entrar)
 		document.removeEventListener('mouseout', this.al_salir)
+		document.removeEventListener('mousemove', this.al_mover, { passive: true })
 		document.removeEventListener('click', this.ocultar_ya, true)
 		document.removeEventListener('scroll', this.ocultar_ya, true)
 		document.removeEventListener('keydown', this.al_teclear)
@@ -386,7 +395,34 @@ export default {
 				return
 			}
 			this.cancelar_mostrar()
+			/*
+				No arranca la cuenta todavía: queda como candidato hasta que llegue un mousemove
+				real adentro del control (ver al_mover y el comentario de mounted). El mouseover
+				que dispara el navegador cuando el contenido cambia bajo un puntero quieto --al
+				cerrar un modal-- no trae mousemove y no abre nada.
+			*/
+			this._candidato = control
+		},
+		/**
+		 * Mouse que se movió de verdad. Si se movió adentro del control candidato (ver al_entrar) y
+		 * la cuenta todavía no arrancó, la arranca: a los 2 segundos se muestra la ayuda.
+		 *
+		 * @param {MouseEvent} event
+		 * @returns {void}
+		 */
+		al_mover(event) {
+			let control = this._candidato
+			if (!control || this._timer_mostrar) {
+				return
+			}
+			if (!control.el.contains(event.target)) {
+				return
+			}
+			if (this.control_activo && this.control_activo.el === control.el) {
+				return
+			}
 			this._timer_mostrar = setTimeout(() => {
+				this._timer_mostrar = null
 				/*
 					Antes de mostrar se verifica que el control siga en el documento. Entre
 					que arrancó la cuenta y que se cumplen los 2 segundos, la fila pudo
@@ -406,6 +442,7 @@ export default {
 				return
 			}
 			this.cancelar_mostrar()
+			this._candidato = null
 			this.pedir_ocultar()
 		},
 		al_teclear() {
@@ -425,6 +462,8 @@ export default {
 		ocultar_ya() {
 			this.cancelar_mostrar()
 			this.cancelar_ocultar()
+			// Despues de un clic o una tecla la ayuda no vuelve a contar sola: hay que volver a entrar.
+			this._candidato = null
 			if (this.visible || this.control_activo) {
 				this.visible = false
 				this.control_activo = null
