@@ -48,6 +48,18 @@ test('un criterio largo se recorta con «…» y no pasa del máximo', () => {
 	assert.equal(recortar_criterio('abcd efgh', 6), 'abcd…')
 })
 
+test('el recorte no parte un emoji: cuenta caracteres, no unidades UTF-16', () => {
+	// 29 letras y después un emoji: el corte cae justo donde un slice UTF-16 lo partiría.
+	const con_emoji = 'a'.repeat(28) + '🔨🔨 martillo'
+	const recortado = recortar_criterio(con_emoji)
+	assert.equal(Array.from(recortado).length, 30)
+	assert.equal(recortado, 'a'.repeat(28) + '🔨…')
+	// Ningún surrogate suelto en el resultado.
+	assert.equal(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/.test(recortado), false)
+	// Si entra entero, se devuelve tal cual aunque tenga emojis.
+	assert.equal(recortar_criterio('🔨 martillo'), '🔨 martillo')
+})
+
 test('contador: 1 en singular, el resto en plural', () => {
 	assert.equal(palabra_resultados(1), 'resultado')
 	assert.equal(palabra_resultados('1'), 'resultado')

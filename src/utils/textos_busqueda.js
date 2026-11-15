@@ -48,12 +48,14 @@ export function normalizar_criterio(texto) {
  */
 export function recortar_criterio(texto, largo_maximo) {
 	let maximo = largo_maximo || LARGO_MAXIMO_CRITERIO_EN_AVISO
-	let criterio = normalizar_criterio(texto)
-	if (criterio.length <= maximo) {
-		return criterio
+	// Por puntos de codigo (Array.from) y no por unidades UTF-16: un slice comun puede partir un
+	// emoji al medio y dejar un caracter roto en pantalla.
+	let caracteres = Array.from(normalizar_criterio(texto))
+	if (caracteres.length <= maximo) {
+		return caracteres.join('')
 	}
 	// Se corta y se le sacan los espacios del final para no dejar «martillo …».
-	return criterio.slice(0, maximo - 1).replace(/\s+$/, '') + '…'
+	return caracteres.slice(0, maximo - 1).join('').replace(/\s+$/, '') + '…'
 }
 
 /**

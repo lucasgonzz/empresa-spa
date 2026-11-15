@@ -46,6 +46,24 @@
 				:placeholder="placeholder"
 				@keyup.enter="buscar('enter')">
 
+				<!--
+					Aviso de «falta apretar Enter» en el ENCABEZADO de un modulo (ronda 6 de la prueba
+					gratuita): una pastilla adentro del propio pill, al lado de lo que se escribio. No
+					flota sobre nada --la primera version flotaba abajo y tapaba el select de sucursal a
+					390 px y el paginado a 1366-- y no recibe clics (pointer-events: none). El texto
+					completo, con lo tipeado, va en title/aria-label. En el modal va el aviso de abajo.
+				-->
+				<span
+				v-if="modo !== 'modal' && mostrar_aviso_enter && aviso_enter"
+				class="buscador-general__pastilla-enter"
+				data-testid="buscador-general-aviso-enter"
+				role="status"
+				:title="aviso_enter"
+				:aria-label="aviso_enter">
+					<span class="buscador-general__pastilla-apreta">Apretá</span>
+					Enter ↵
+				</span>
+
 				<!-- Limpiar: solo cuando hay una busqueda del buscador general activa -->
 				<button
 				v-if="is_filtered_by_buscador"
@@ -95,14 +113,13 @@
 			Aviso de «falta apretar Enter» (ronda 6 de la prueba gratuita, 15/11/2026). Este buscador
 			busca recien con Enter (o la lupa) y NO se cambia eso; lo que faltaba era decirlo: el dueño
 			escribia «martillo», esperaba, y la pantalla seguia igual. Aparece mientras hay texto que
-			todavia no se busco y se va solo al buscar. En el encabezado de un modulo flota abajo del
-			pill (no empuja la tabla); adentro del modal de busqueda va en el flujo, y el modal lo apaga
-			con `mostrar_aviso_enter` cuando ya lo dice su estado vacio (ver search/Modal.vue).
+			todavia no se busco y se va solo al buscar. Este es el del modal de busqueda: va en el flujo,
+			debajo del pill, y el modal lo apaga con `mostrar_aviso_enter` cuando ya lo dice su estado
+			vacio (ver search/Modal.vue). En el encabezado de un modulo va la pastilla de adentro del pill.
 		-->
 		<div
-		v-if="mostrar_aviso_enter && aviso_enter"
-		class="buscador-general__aviso-enter"
-		:class="'buscador-general__aviso-enter--' + modo"
+		v-if="modo === 'modal' && mostrar_aviso_enter && aviso_enter"
+		class="buscador-general__aviso-enter buscador-general__aviso-enter--modal"
 		data-testid="buscador-general-aviso-enter"
 		aria-live="polite">
 			<span class="buscador-general__tecla">Enter</span>
@@ -732,6 +749,9 @@ export default {
 			}
 
 			this.query_value = ''
+			// La busqueda que estaba hecha ya no rige: si vuelve a escribir el mismo texto, el aviso
+			// de «Apretá Enter» tiene que aparecer (ronda 6, revision).
+			this.criterio_buscado = ''
 
 			// 🔴 Los filtros fijos se resetean SOLO cuando el que se apago fue el payload, y no
 			// cuando el computed cayo por listado_por_defecto. La diferencia no es teorica: al
@@ -762,6 +782,8 @@ export default {
 		 */
 		buscador_apagado_nonce_del_store() {
 			this.query_value = ''
+			// Mismo motivo que en el watcher de is_filtered_by_buscador: la busqueda ya no rige.
+			this.criterio_buscado = ''
 			this.resetear_valores_de_filtros_fijos()
 		},
 	},
@@ -1795,9 +1817,6 @@ export default {
 // Estetica Apple: pill blanco, minimalista, sin ancho fijo (lo define el contenedor).
 .buscador-general
 	width: 100%
-	// Ancla del aviso de «Apretá Enter» del modo encabezado, que flota abajo del pill.
-	position: relative
-
 	// Aviso de busqueda pendiente (ronda 6 de la prueba gratuita): corto, visible y sin texto
 	// largo. Mismo lenguaje que el hint «ENTER» del estado vacio del modal de busqueda.
 	.buscador-general__aviso-enter
@@ -1817,14 +1836,32 @@ export default {
 		white-space: normal
 		overflow-wrap: anywhere
 
-	// En el encabezado de un modulo flota abajo del pill: no empuja la tabla ni el paginado.
-	.buscador-general__aviso-enter--header
-		position: absolute
-		top: calc(100% + 6px)
-		left: 12px
-		max-width: calc(100% - 12px)
-		z-index: 20
-		box-shadow: var(--shadow-color, rgba(99, 99, 99, 0.2)) 0px 2px 8px 0px
+	// Pastilla «Apretá Enter ↵» del modo encabezado: adentro del pill, a la derecha de lo escrito.
+	// No flota sobre otros controles y deja pasar el mouse (no tapa nada clicable).
+	.buscador-general__pastilla-enter
+		display: inline-flex
+		align-items: center
+		gap: 3px
+		flex-shrink: 0
+		margin: 0 4px
+		padding: 2px 8px
+		border-radius: 999px
+		font-size: 0.72rem
+		font-weight: 700
+		line-height: 1.3
+		white-space: nowrap
+		color: var(--color-primary, #007bff)
+		background: rgba(0, 123, 255, 0.08)
+		border: 1px solid rgba(0, 123, 255, 0.35)
+		pointer-events: none
+
+		// En el celular el pill es angosto: queda «Enter ↵» y lo escrito conserva su lugar.
+		@media (max-width: 575.98px)
+			margin: 0 2px
+			padding: 2px 6px
+
+			.buscador-general__pastilla-apreta
+				display: none
 
 	// Adentro del modal de busqueda va en el flujo, debajo del pill.
 	.buscador-general__aviso-enter--modal

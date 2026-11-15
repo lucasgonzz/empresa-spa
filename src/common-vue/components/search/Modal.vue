@@ -41,6 +41,7 @@ hide-footer
 			:mostrar_aviso_enter="!saving_if_not_exist && !!(loading || results.length)"
 			@estado-criterio="onEstadoCriterio"
 			@keydown.native="reset_ya_se_busco"
+			@input.native="al_cambiar_texto_sin_teclado"
 			@keydown.native.up="selectUp"
 			@keydown.native.down="selectDown"
 			@buscar="onBuscarDesdeBuscadorGeneral"
@@ -1505,6 +1506,21 @@ export default {
 					this.no_hacer_seleccion = false
 				}, 100)
 			}, 100)
+		},
+		/**
+		 * El texto del input cambio por un camino que no pasa por el teclado: pegar con el boton
+		 * derecho, arrastrar, autocompletar (revision de la ronda 6). Sin esto, despues de una
+		 * busqueda sin resultados ya_se_busco quedaba arriba y el Enter CREABA el modelo con el texto
+		 * nuevo mientras el cartel decia «Apretá Enter para buscar». Ahora ese Enter busca, que es lo
+		 * que el cartel promete. Tipear tambien dispara este evento: es el mismo efecto que el
+		 * keydown, sin nada extra (el Enter no dispara `input`, asi que el atajo del segundo Enter
+		 * para crear sigue igual).
+		 *
+		 * @return {void}
+		 */
+		al_cambiar_texto_sin_teclado() {
+			this.ya_se_busco = false
+			this.seleccion_manual = false
 		},
 		reset_ya_se_busco(event) {
 			console.log('reset_ya_se_busco')
