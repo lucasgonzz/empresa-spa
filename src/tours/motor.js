@@ -3,6 +3,16 @@ import 'driver.js/dist/driver.css'
 
 import CATALOGO from '@/tours/catalogo'
 import GANCHOS from '@/tours/ganchos'
+import {
+	controles_permitidos,
+	contenedor_permitido,
+	control_en_punto,
+	elegir_posicion_tarjeta,
+	PESO_ANCLA,
+	PESO_CONTROL_NUEVO,
+	PESO_PIE_DE_MODAL,
+} from '@/tours/paso-interactivo'
+import { pies_de_modal_visibles } from '@/components/robotito-soporte/posicion-tarjeta'
 
 /**
  * Motor de los tours guiados de la demo.
@@ -181,6 +191,299 @@ let dialogo_de_cierre = null
  * @type {Function|null}
  */
 let soltar_teclado_del_dialogo = null
+
+/**
+ * Cómo soltar los listeners de «usar los controles del formulario durante un paso» (ver
+ * `instalar_interaccion()`), o null. Se instalan al arrancar el recorrido y se sueltan al destruirlo.
+ *
+ * @type {Function|null}
+ */
+let soltar_interaccion = null
+
+/** Hay un despeje de la tarjeta pedido para el próximo cuadro. Ver `programar_despeje()`. */
+let despeje_pedido = false
+
+/**
+ * Lo que se puede enfocar con Tab dentro de la tarjeta, del ancla y de los controles permitidos.
+ *
+ * @type {String}
+ */
+const ENFOCABLES = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]'
+
+/**
+ * El ancla del paso que está a la vista, si el paso es de los que resaltan un control (no la tarjeta
+ * acoplada, sin el diálogo de cierre abierto). Si no, null.
+ *
+ * @returns {Element|null}
+ */
+function ancla_vigente() {
+	if (!corrida || !recorrido || corrida.paso_acoplado || dialogo_de_cierre) {
+		return null
+	}
+	const ancla = corrida.elemento_activo
+	if (!ancla || !ancla.isConnected || !document.body.classList.contains('driver-active')) {
+		return null
+	}
+	return ancla
+}
+
+/**
+ * Usa un control de formulario por la persona, cuando su clic cayó en el fondo oscuro de driver.js.
+ *
+ * El control está debajo del `<path>` del fondo y además inerte por `.driver-active * {
+ * pointer-events: none }`, así que el clic no le llega solo. Se hace lo mismo que haría el clic: los
+ * interruptores y checkboxes se alternan con un `click()` de verdad (dispara `change` y el `v-model` se
+ * entera), y el resto recibe el foco con el cursor al final, listo para escribir. El teclado no mira
+ * `pointer-events`, así que lo que se tipea entra.
+ *
+ * @param {{el: Element, accion: String}} control
+ * @returns {void}
+ */
+function usar_control(control) {
+	const el = control.el
+	try {
+		if (control.accion === 'alternar') {
+			el.click()
+			el.focus({ preventScroll: true })
+		} else {
+			el.focus({ preventScroll: true })
+			if (typeof el.setSelectionRange === 'function' && typeof el.value === 'string') {
+				try {
+					el.setSelectionRange(el.value.length, el.value.length)
+				} catch (error) {
+					/* Los input number no admiten selección: el foco alcanza. */
+				}
+			}
+			if (el.tagName === 'SELECT' && typeof el.showPicker === 'function') {
+				try {
+					el.showPicker()
+				} catch (error) {
+					/* Sin gesto de usuario reconocido el navegador puede negarse: queda con el foco. */
+				}
+			}
+		}
+	} catch (error) {
+		console.warn('Tour: no se pudo usar el control del formulario', error)
+	}
+	programar_despeje()
+}
+
+/**
+ * Engancha, para todo el recorrido, lo que deja usar los controles de formulario del modal del ancla
+ * sin que cuente como «salir del recorrido» (regla B de `paso-interactivo.js`).
+ *
+ * 🔴 Cómo lo decidía driver.js hasta acá (ronda 7 de la prueba gratuita): el fondo oscuro es un
+ * `<path>` SVG con `pointer-events: auto` y z-index 10000 sobre toda la pantalla salvo el recuadro
+ * del ancla, y `driver.css` deja inerte todo lo demás (`.driver-active * { pointer-events: none }`).
+ * Todo clic fuera del recuadro le pega al `<path>`; driver.js lo atrapa en captura sobre `document`
+ * (pointerdown, mousedown, pointerup, mouseup y click), y el `click` dispara `overlayClick` →
+ * `allowClose` → nuestro `onDestroyStarted` → «¿Terminamos el tour?». No distinguía un campo de un
+ * botón ni del fondo vacío.
+ *
+ * Ahora se escucha ANTES, en captura sobre `window` (la captura de `window` corre antes que la de
+ * `document`). Si el clic cayó en el fondo justo sobre un control de formulario permitido —input,
+ * textarea, select, interruptor o checkbox del mismo modal del ancla, o de la vista sin modal; nunca
+ * botones, enlaces, ni lo del encabezado o el pie del modal—, se frena antes de que driver.js lo vea
+ * y se usa el control (`usar_control`). Cualquier otro clic sigue su camino de siempre: el fondo vacío
+ * y los botones ajenos al paso siguen preguntando si se termina.
+ *
+ * El Tab, que driver.js encierra entre la tarjeta y el ancla (su `keydown` en `window`), recorre
+ * además esos controles, en el orden del documento. Escape sigue preguntando.
+ *
+ * @returns {void}
+ */
+function instalar_interaccion() {
+	if (soltar_interaccion) {
+		return
+	}
+	/* Sin un navegador de verdad (los tests de node arman un `window` a medida) no hay nada que escuchar. */
+	if (typeof window === 'undefined' || typeof window.addEventListener !== 'function'
+		|| typeof document === 'undefined' || typeof document.addEventListener !== 'function') {
+		return
+	}
+
+	function al_puntero(evento) {
+		const objetivo = evento.target
+		if (!objetivo || typeof objetivo.closest !== 'function' || !objetivo.closest('.driver-overlay')) {
+			return
+		}
+		const ancla = ancla_vigente()
+		if (!ancla) {
+			return
+		}
+		const control = control_en_punto(controles_permitidos(ancla), evento.clientX, evento.clientY)
+		if (!control) {
+			return
+		}
+		evento.preventDefault()
+		evento.stopImmediatePropagation()
+		if (evento.type === 'click') {
+			usar_control(control)
+		}
+	}
+
+	function al_teclear(evento) {
+		if (evento.key !== 'Tab' || evento.altKey || evento.ctrlKey || evento.metaKey) {
+			return
+		}
+		const ancla = ancla_vigente()
+		if (!ancla) {
+			return
+		}
+		const controles = controles_permitidos(ancla).map(function (control) {
+			return control.el
+		})
+		if (!controles.length) {
+			return
+		}
+		const del_ancla = Array.from(ancla.querySelectorAll(ENFOCABLES))
+		if (ancla.matches(ENFOCABLES)) {
+			del_ancla.unshift(ancla)
+		}
+		const del_paso = del_ancla.concat(controles).filter(function (el, i, todos) {
+			return todos.indexOf(el) === i
+		}).sort(function (a, b) {
+			return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+		})
+		const tarjeta = document.querySelector('.driver-popover')
+		const de_la_tarjeta = tarjeta ? Array.from(tarjeta.querySelectorAll(ENFOCABLES)).filter(function (el) {
+			return el.offsetParent !== null
+		}) : []
+		const lista = de_la_tarjeta.concat(del_paso)
+		const actual = lista.indexOf(document.activeElement)
+		const siguiente = evento.shiftKey
+			? lista[actual - 1] || lista[lista.length - 1]
+			: lista[actual + 1] || lista[0]
+		if (!siguiente) {
+			return
+		}
+		evento.preventDefault()
+		evento.stopImmediatePropagation()
+		siguiente.focus({ preventScroll: true })
+		programar_despeje()
+	}
+
+	const tipos = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']
+	tipos.forEach(function (tipo) {
+		window.addEventListener(tipo, al_puntero, true)
+	})
+	window.addEventListener('keydown', al_teclear, true)
+	window.addEventListener('resize', programar_despeje)
+	document.addEventListener('focusin', programar_despeje, true)
+
+	soltar_interaccion = function () {
+		tipos.forEach(function (tipo) {
+			window.removeEventListener(tipo, al_puntero, true)
+		})
+		window.removeEventListener('keydown', al_teclear, true)
+		window.removeEventListener('resize', programar_despeje)
+		document.removeEventListener('focusin', programar_despeje, true)
+	}
+}
+
+/**
+ * Pide correr `despejar_tarjeta()` después de que driver.js termine de ubicar la tarjeta. driver.js
+ * la ubica en un `requestAnimationFrame` (su `refresh()` es asíncrono), así que acá se esperan dos.
+ *
+ * @returns {void}
+ */
+function programar_despeje() {
+	if (despeje_pedido) {
+		return
+	}
+	if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+		return
+	}
+	despeje_pedido = true
+	window.requestAnimationFrame(function () {
+		window.requestAnimationFrame(function () {
+			despeje_pedido = false
+			despejar_tarjeta()
+		})
+	})
+}
+
+/**
+ * Corre la tarjeta si tapa lo que el paso pide usar (regla A de `paso-interactivo.js`).
+ *
+ * Solo actúa cuando hay algo de prioridad alta a la vista: un control de formulario que apareció
+ * después de mostrarse el paso (el campo «Precio final» al prender «Setear precio final») o el
+ * control que tiene el foco. Sin eso la tarjeta queda donde la puso driver.js, como siempre. Con eso,
+ * se elige la ubicación que menos tapa: el control nuevo pesa más que el ancla, y el ancla más que el
+ * pie del modal. La posición se pisa a mano (driver.js no tiene un lado «donde no tape esto») y se
+ * vuelve a calcular después de cada `refresh()`, que la repone.
+ *
+ * @returns {void}
+ */
+function despejar_tarjeta() {
+	const ancla = ancla_vigente()
+	if (!ancla) {
+		return
+	}
+	const tarjeta = document.querySelector('.driver-popover')
+	if (!tarjeta || !tarjeta.isConnected) {
+		return
+	}
+	const conocidos = corrida.controles_al_mostrar
+	const enfocado = document.activeElement
+	const obstaculos = []
+	controles_permitidos(ancla).forEach(function (control) {
+		const nuevo = !conocidos || !conocidos.has(control.el)
+		const con_foco = enfocado && (control.el === enfocado || control.zona.contains(enfocado))
+		if (nuevo || con_foco) {
+			obstaculos.push({ caja: control.caja, peso: PESO_CONTROL_NUEVO })
+		}
+	})
+	if (!obstaculos.length) {
+		return
+	}
+	const caja_ancla = ancla.getBoundingClientRect()
+	obstaculos.push({ caja: caja_ancla, peso: PESO_ANCLA })
+	pies_de_modal_visibles(document, window.innerWidth, window.innerHeight).forEach(function (pie) {
+		obstaculos.push({ caja: pie, peso: PESO_PIE_DE_MODAL })
+	})
+
+	const posicion = elegir_posicion_tarjeta(tarjeta.getBoundingClientRect(), caja_ancla, obstaculos, {
+		ancho: window.innerWidth,
+		alto: window.innerHeight,
+	})
+	if (!posicion) {
+		return
+	}
+	tarjeta.style.left = posicion.left + 'px'
+	tarjeta.style.top = posicion.top + 'px'
+	tarjeta.style.right = 'auto'
+	tarjeta.style.bottom = 'auto'
+	tarjeta.style.transform = 'none'
+	const flecha = tarjeta.querySelector('.driver-popover-arrow')
+	if (flecha) {
+		flecha.classList.add('driver-popover-arrow-none')
+	}
+}
+
+/**
+ * Registra, al mostrarse un paso con ancla, qué controles había a la vista: los que aparezcan después
+ * son «nuevos» para `despejar_tarjeta()`. Y vigila el contenedor del ancla (el modal) para despejar
+ * apenas aparece o cambia algo.
+ *
+ * @param {Element} elemento Ancla del paso.
+ * @returns {Function} Cómo soltar la vigilancia.
+ */
+function vigilar_controles_del_paso(elemento) {
+	corrida.elemento_activo = elemento
+	corrida.controles_al_mostrar = new WeakSet(controles_permitidos(elemento).map(function (control) {
+		return control.el
+	}))
+	const contenedor = contenedor_permitido(elemento)
+	if (!contenedor || typeof MutationObserver !== 'function') {
+		return function () {}
+	}
+	const vigia = new MutationObserver(programar_despeje)
+	vigia.observe(contenedor, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] })
+	return function () {
+		vigia.disconnect()
+	}
+}
 
 /**
  * Traduce un paso al selector CSS con el que se lo busca en el DOM.
@@ -1627,10 +1930,41 @@ function enganchar_refresco(elemento) {
 	const custodio = custodiar_clase_activa(elemento)
 	const custodio_menu = custodiar_menu_abierto(elemento)
 
+	/* El elemento también se CORRE sin cambiar de tamaño, y eso no lo ve el ResizeObserver: el
+	 * buscador del Listado queda centrado en su barra y se desplaza cuando a la derecha aparece un
+	 * botón (o cuando el input se angosta con la pastilla «Apretá Enter»). El recuadro quedaba pintado
+	 * donde estaba y dejaba el texto tipeado afuera (ronda 7 de la prueba gratuita, paso 2 del
+	 * recorrido «cambiar el precio»). Se compara la caja cada 300 ms y se re-mide si se movió. */
+	let ultima_caja = elemento.getBoundingClientRect()
+	const sondeo_de_posicion = setInterval(function () {
+		const caja = elemento.getBoundingClientRect()
+		const se_movio = Math.abs(caja.left - ultima_caja.left) > 1 || Math.abs(caja.top - ultima_caja.top) > 1
+			|| Math.abs(caja.width - ultima_caja.width) > 1 || Math.abs(caja.height - ultima_caja.height) > 1
+		ultima_caja = caja
+		if (se_movio) {
+			volver_a_medir()
+		}
+		/* Red de seguridad de la regla A: un control que aparece sin mutación observable a tiempo (una
+		 * transición, un `v-show` que termina de medir después) igual se despeja en esta vuelta. Si la
+		 * tarjeta no tapa nada, `despejar_tarjeta()` no toca nada. */
+		programar_despeje()
+	}, 300)
+
+	/* Qué controles había al mostrarse el paso, para que la tarjeta no tape los que aparezcan después
+	 * (regla A). Ver `vigilar_controles_del_paso()` y `despejar_tarjeta()`. */
+	const soltar_controles = vigilar_controles_del_paso(elemento)
+	programar_despeje()
+
 	sueltas_de_refresco = function () {
 		document.removeEventListener('scroll', volver_a_medir, true)
 		window.removeEventListener('resize', al_redimensionar)
 		clearTimeout(reloj_resize)
+		clearInterval(sondeo_de_posicion)
+		soltar_controles()
+		if (corrida) {
+			corrida.elemento_activo = null
+			corrida.controles_al_mostrar = null
+		}
 
 		if (observador) {
 			observador.disconnect()
@@ -2516,6 +2850,12 @@ function destruir_recorrido() {
 	 * `document.body` y sobrevivir a la corrida lo dejaría flotando sobre la aplicación. */
 	cerrar_dialogo_de_confirmacion()
 
+	/* Los controles del formulario vuelven a ser lo de siempre: sin recorrido no hay nada que dejar pasar. */
+	if (soltar_interaccion) {
+		soltar_interaccion()
+		soltar_interaccion = null
+	}
+
 	if (!recorrido) {
 		return
 	}
@@ -2992,6 +3332,16 @@ export function iniciar_tour(clip, contexto) {
 			pedir_confirmacion_de_cierre()
 		},
 	})
+
+	/* Cada vez que driver.js re-ubica la tarjeta (todos los `refresh()` del motor pasan por acá), se
+	 * vuelve a mirar si tapa lo que el paso pide usar: driver.js no sabe de eso y la repone donde
+	 * estaba. Ver `despejar_tarjeta()`. */
+	const refresh_de_driver = recorrido.refresh
+	recorrido.refresh = function () {
+		refresh_de_driver.apply(this, arguments)
+		programar_despeje()
+	}
+	instalar_interaccion()
 
 	reportar('tour.iniciado', { pasos: pasos.length })
 
