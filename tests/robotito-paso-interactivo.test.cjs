@@ -124,6 +124,46 @@ test('A: sin lugar que libere todo, prioriza el campo nuevo sobre el ancla y el 
 	assert.equal(costo_de(movida, [{ caja: ancla_t, peso: 1 }]), 0, 'el ancla queda libre si se puede')
 })
 
+// Revisión de 9aa1b091: el modal del artículo es `scrollable`, con encabezado y pie fijos. Un clic en
+// la X, «Eliminar» o «Guardar y cerrar» no puede tocar lo que el cuerpo tenga escondido debajo.
+const { punto_en_alguna, recortar_caja, contenedor_permitido, CLASE_BUSCADOR_DE_RELACION } = cargar('tours/paso-interactivo.js')
+
+test('B: un punto dentro del encabezado o del pie del modal no es para ningún control', () => {
+	const encabezado = caja(0, 0, 390, 56)
+	const pie = caja(0, 780, 390, 64)
+	assert.equal(punto_en_alguna([encabezado, pie], 360, 28), true, 'la X')
+	assert.equal(punto_en_alguna([encabezado, pie], 300, 805), true, 'Guardar y cerrar')
+	assert.equal(punto_en_alguna([encabezado, pie], 200, 400), false, 'el cuerpo')
+	assert.equal(punto_en_alguna([], 200, 400), false)
+})
+
+test('B: un control que el scroll del modal dejó debajo del pie no tiene parte visible', () => {
+	const cuerpo = caja(0, 56, 390, 724) // entre el encabezado y el pie
+	const ventana = caja(0, 0, 390, 844)
+	const escondido = caja(20, 790, 300, 36) // scrolleado debajo del pie
+	assert.equal(recortar_caja(escondido, [ventana, cuerpo]), null)
+	// A medias: solo cuenta lo que se ve, y un clic en la parte tapada ya no cae en él.
+	const a_medias = caja(20, 760, 300, 36)
+	const visible = recortar_caja(a_medias, [ventana, cuerpo])
+	assert.deepEqual(visible, { left: 20, right: 320, top: 760, bottom: 780 })
+	assert.equal(control_en_punto([{ caja: visible }], 100, 790), null)
+	assert.ok(control_en_punto([{ caja: visible }], 100, 770))
+})
+
+test('B: el input de un buscador de relación no se toca ni por clic ni por Tab', () => {
+	assert.equal(CLASE_BUSCADOR_DE_RELACION, 'search-field__input')
+	assert.equal(es_control_de_formulario({ tag: 'input', tipo: 'text', en_contenedor: true, buscador_de_relacion: true }), false)
+})
+
+test('A y B: sin modal no hay contenedor permitido (todo queda como antes)', () => {
+	const sin_modal = { closest: () => null }
+	assert.equal(contenedor_permitido(sin_modal), null)
+	const modal = { tag: 'modal-content' }
+	const en_modal = { closest: selector => (selector === '.modal.show .modal-content' ? modal : null) }
+	assert.equal(contenedor_permitido(en_modal), modal)
+	assert.equal(contenedor_permitido(null), null)
+})
+
 test('A: las ubicaciones posibles quedan siempre enteras en la pantalla', () => {
 	ubicaciones_posibles({ ancho: 350, alto: 280 }, ancla, vista, 12, 8).forEach(function (u) {
 		assert.ok(u.left >= 8 && u.top >= 8 && u.right <= vista.ancho - 8 && u.bottom <= vista.alto - 8, JSON.stringify(u))
