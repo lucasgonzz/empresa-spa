@@ -128,6 +128,12 @@
 // cuando llegara el chunk del badge.
 import BadgeSinVincular from '@/components/online/components/vincular-comprador/BadgeSinVincular'
 import sin_vincular from '@/components/online/components/vincular-comprador/sin_vincular'
+import {
+	hay_pedido_nuevo,
+	accion_para_refrescar_pedidos,
+	momento_de_refrescar,
+	puede_consultar_por_visibilidad,
+} from '@/utils/pedidos_nuevos'
 
 /*
 	Pedidos online.
@@ -159,10 +165,83 @@ export default {
 			 * Ver LimiteCreditoHelper::validar_pedido_confirmado() en empresa-api.
 			 */
 			limite_credito_info: {},
+			/**
+			 * Hay un refresco de la tabla esperando que el dueño suelte la selección o cierre el
+			 * formulario del pedido (ver utils/pedidos_nuevos.js::momento_de_refrescar).
+			 */
+			refresco_pendiente: false,
+			/** Si el formulario de un pedido (b-modal `order`) está abierto. */
+			modal_de_pedido_abierto: false,
+			/** Momento (ms) de la última consulta por volver a la pestaña; 0 = ninguna. */
+			ultima_consulta_por_visibilidad: 0,
 		}
 	},
 	created() {
 		this.$store.dispatch('order/getModels')
+	},
+	computed: {
+		/**
+		 * Ids de los pedidos sin confirmar (`order.unconfirmed_models`), los del globito del menú. Los
+		 * actualizan el aviso en vivo de un pedido nuevo (Pusher), la reconexión, el arranque y, con
+		 * esta pantalla abierta, el volver a la pestaña (consultar_al_volver_a_la_pestana). El polling
+		 * de 5 minutos de mixins/start_methods.js NO corre con Tienda Online a la vista.
+		 *
+		 * @returns {Array}
+		 */
+		ids_sin_confirmar() {
+			let models = this.$store.state.order.unconfirmed_models || []
+			return models.map(order => order.id)
+		},
+		/**
+		 * Cuántas filas tiene tildadas el dueño.
+		 *
+		 * @returns {Number}
+		 */
+		pedidos_seleccionados() {
+			let selected = this.$store.state.order.selected
+			return Array.isArray(selected) ? selected.length : 0
+		},
+	},
+	watch: {
+		/**
+		 * Pedido nuevo de la tienda con esta pantalla abierta (ronda 5 de la prueba, 14/11/2026, E9a): la
+		 * tabla se pedía una sola vez, al crearse, y el pedido nuevo solo movía el globito del menú; se
+		 * veía «No hay Pedidos» hasta tocar «Por fecha» o «Historico». Ahora, si aparece un id que no
+		 * estaba, se vuelve a pedir lo que la tabla está mostrando (ver utils/pedidos_nuevos.js).
+		 *
+		 * @param {Array} ids_actuales
+		 * @param {Array} ids_anteriores
+		 * @returns {void}
+		 */
+		ids_sin_confirmar(ids_actuales, ids_anteriores) {
+			if (hay_pedido_nuevo(ids_anteriores, ids_actuales)) {
+				this.refrescar_si_se_puede()
+			}
+		},
+		/**
+		 * Soltó la selección: si había un refresco esperando, se hace ahora.
+		 *
+		 * @param {Number} cantidad
+		 * @returns {void}
+		 */
+		pedidos_seleccionados(cantidad) {
+			if (!cantidad && this.refresco_pendiente) {
+				this.refrescar_si_se_puede()
+			}
+		},
+		/**
+		 * Volver a «Pedidos» desde Clientes, Mensajes o Promociones: este componente sigue montado (las
+		 * secciones de Tienda Online viven en la misma ruta), así que no pasaba por created() y mostraba
+		 * la lista de la primera vez.
+		 *
+		 * @param {String} value
+		 * @returns {void}
+		 */
+		view(value) {
+			if (value == 'pedidos') {
+				this.refrescar_si_se_puede()
+			}
+		},
 	},
 	mounted() {
 		/*
@@ -170,12 +249,102 @@ export default {
 			primero si es el 422 del límite de crédito y, si lo es, se lo queda.
 		*/
 		this.$root.$on('order:save-error', this.manejar_error_de_guardado)
+		// Formulario del pedido abierto o cerrado (b-modal con id `order`, model/Index.vue).
+		this.$root.$on('bv::modal::shown', this.al_abrirse_un_modal)
+		this.$root.$on('bv::modal::hidden', this.al_cerrarse_un_modal)
+		document.addEventListener('visibilitychange', this.consultar_al_volver_a_la_pestana)
 	},
 	beforeDestroy() {
 		// `$root` vive toda la sesión: sin el $off queda un listener por cada montaje.
 		this.$root.$off('order:save-error', this.manejar_error_de_guardado)
+		this.$root.$off('bv::modal::shown', this.al_abrirse_un_modal)
+		this.$root.$off('bv::modal::hidden', this.al_cerrarse_un_modal)
+		document.removeEventListener('visibilitychange', this.consultar_al_volver_a_la_pestana)
 	},
 	methods: {
+		/**
+		 * Refresca la tabla si se puede ahora; si el dueño tiene filas tildadas o un pedido abierto, lo
+		 * deja pendiente; si la sección a la vista no es Pedidos, no hace nada (al volver se pide igual).
+		 *
+		 * @returns {void}
+		 */
+		refrescar_si_se_puede() {
+			let momento = momento_de_refrescar({
+				seccion: this.view,
+				seleccionados: this.pedidos_seleccionados,
+				modal_abierto: this.modal_de_pedido_abierto,
+			})
+			if (momento == 'pendiente') {
+				this.refresco_pendiente = true
+				return
+			}
+			if (momento == 'ahora') {
+				this.refresco_pendiente = false
+				this.refrescar_pedidos()
+			}
+		},
+		/**
+		 * Volver a la pestaña del sistema (revisión de E9a): quien abre la tienda con «Ver mi tienda»,
+		 * compra y vuelve, no recibe nada si Pusher no llegó, porque el polling de 5 minutos de
+		 * mixins/start_methods.js está cortado con Tienda Online a la vista. Al volver a ser visible, y
+		 * con Pedidos a la vista, se vuelve a preguntar por los pedidos sin confirmar; si hay uno nuevo,
+		 * el watcher de ids_sin_confirmar refresca la tabla con las mismas guardas. Como mucho una vez
+		 * cada 10 segundos.
+		 *
+		 * @returns {void}
+		 */
+		consultar_al_volver_a_la_pestana() {
+			if (document.visibilityState !== 'visible' || this.view != 'pedidos') {
+				return
+			}
+			let ahora = Date.now()
+			if (!puede_consultar_por_visibilidad(this.ultima_consulta_por_visibilidad, ahora)) {
+				return
+			}
+			this.ultima_consulta_por_visibilidad = ahora
+			this.$store.dispatch('order/getUnconfirmedModels')
+		},
+		/**
+		 * @param {Object} bv_event
+		 * @param {String} modal_id
+		 * @returns {void}
+		 */
+		al_abrirse_un_modal(bv_event, modal_id) {
+			if (modal_id == 'order') {
+				this.modal_de_pedido_abierto = true
+			}
+		},
+		/**
+		 * Cerró el formulario del pedido: si había un refresco esperando, se hace ahora.
+		 *
+		 * @param {Object} bv_event
+		 * @param {String} modal_id
+		 * @returns {void}
+		 */
+		al_cerrarse_un_modal(bv_event, modal_id) {
+			if (modal_id != 'order') {
+				return
+			}
+			this.modal_de_pedido_abierto = false
+			if (this.refresco_pendiente) {
+				this.refrescar_si_se_puede()
+			}
+		},
+		/**
+		 * Vuelve a pedir lo que la tabla está mostrando (el día de «Por fecha» o la página 1 del
+		 * «Historico»), salvo que haya una búsqueda del usuario. La regla está en
+		 * utils/pedidos_nuevos.js::accion_para_refrescar_pedidos.
+		 *
+		 * @returns {void}
+		 */
+		refrescar_pedidos() {
+			let accion = accion_para_refrescar_pedidos(this.$store.state.order)
+			if (accion == 'runListadoPorDefecto') {
+				this.$store.dispatch('order/runListadoPorDefecto', { page: 1 })
+			} else if (accion) {
+				this.$store.dispatch('order/' + accion)
+			}
+		},
 		stock_a_consultar(article) {
 			return !!article.pivot && Number(article.pivot.stock_a_consultar) === 1
 		},
