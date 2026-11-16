@@ -1437,8 +1437,10 @@ export default {
 		},
 
 		vender({ commit, state, getters }, info) {
-			commit('refrescar_fecha_automatica')
-			let problema_fecha = problema_de_fecha_de_venta(state.created_at)
+			let fecha_del_intento = info && info.fecha_del_intento
+			if (!fecha_del_intento) commit('refrescar_fecha_automatica')
+			let fecha = fecha_del_intento ? fecha_del_intento.created_at_elegido : state.created_at
+			let problema_fecha = problema_de_fecha_de_venta(fecha)
 			if (problema_fecha) {
 				return Promise.reject({ response: { status: 422, data: { message: problema_fecha } } })
 			}
@@ -1518,7 +1520,7 @@ export default {
 					SaleHelper::resolver_created_at(): el dia elegido + la hora actual. Si no viaja
 					--una SPA vieja-- el back cae a now(), que es el comportamiento de siempre.
 				*/
-				created_at: state.created_at,
+				created_at: fecha,
 				incoterms: state.incoterms,
 				observations_ocultas: state.observations_ocultas,
 				aplicar_recargos_directo_a_items: state.aplicar_recargos_directo_a_items,

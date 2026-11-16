@@ -91,7 +91,8 @@ export default {
             console.log(sale_data)
 
             /** Momento de la captura, el mismo para `created_at` (local) y `capturada_at` (viaja). */
-            const ahora = new Date().toISOString()
+            // Si viene de un POST sin respuesta, conserva el instante del intento original.
+            const ahora = sale_data.capturada_at || new Date().toISOString()
 
             await db.sales.add({
                 ...sale_data,

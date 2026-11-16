@@ -29,9 +29,10 @@ export function hay_guardado_offline_en_curso() {
 	return guardado_offline_en_curso
 }
 
-function preparar_fecha_de_venta(vista) {
-	vista.$store.commit('vender/refrescar_fecha_automatica')
-	let problema = problema_de_fecha_de_venta(vista.$store.state.vender.created_at)
+function preparar_fecha_de_venta(vista, fecha_del_intento) {
+	if (!fecha_del_intento) vista.$store.commit('vender/refrescar_fecha_automatica')
+	let fecha = fecha_del_intento ? fecha_del_intento.created_at_elegido : vista.$store.state.vender.created_at
+	let problema = problema_de_fecha_de_venta(fecha)
 	if (problema) {
 		vista.$toast.error(problema, { duration: 7000 })
 		return false
@@ -201,12 +202,18 @@ export default {
 			// También cubre llamados directos y artículos agregados por los chequeos previos.
 			this.setTotal()
 			const pending = [...this.$store.state.vender.pending_attachments]
+			// El timeout puede terminar otro día: el respaldo offline conserva este intento.
+			let fecha_del_intento = {
+				created_at_elegido: this.$store.state.vender.created_at,
+				capturada_at: new Date().toISOString(),
+			}
 
 			if (!offline_uuid) {
 				offline_uuid = generar_offline_uuid()
 			}
 
 			this.$store.dispatch('vender/vender', {
+				fecha_del_intento: fecha_del_intento,
 				discounts: this.get_models_by_id('discount', this.discounts_id),
 				surchages: this.get_models_by_id('surchage', this.surchages_id),
 				offline_uuid: offline_uuid,
@@ -332,7 +339,7 @@ export default {
 					this.$toast.warning('No hubo respuesta del servidor: la venta pasa a guardarse en este equipo y se sube sola cuando vuelva la conexión. Si el servidor ya la había recibido, no se duplica.', {
 						duration: 12000
 					})
-					this.guardar_venta_offline(offline_uuid)
+					this.guardar_venta_offline(offline_uuid, fecha_del_intento)
 
 				} else {
 
@@ -408,8 +415,8 @@ export default {
 		 *                              que llevaba ese POST. Si no viene, save_sale_offline()
 		 *                              genera uno.
 		 */
-		async guardar_venta_offline(offline_uuid) {
-			if (!preparar_fecha_de_venta(this)) return
+		async guardar_venta_offline(offline_uuid, fecha_del_intento) {
+			if (!preparar_fecha_de_venta(this, fecha_del_intento)) return
 
 			/*
 				Doble Enter o doble clic en "Guardar venta" sin conexion: el camino con servidor tiene
@@ -523,7 +530,8 @@ export default {
 					POST. sync_pending_sales() se encarga de mapearla a `created_at` en el cuerpo del
 					POST, que es el nombre que espera SaleController::store().
 				*/
-				created_at_elegido: this.$store.state.vender.created_at,
+				created_at_elegido: fecha_del_intento ? fecha_del_intento.created_at_elegido : this.$store.state.vender.created_at,
+				capturada_at: fecha_del_intento ? fecha_del_intento.capturada_at : undefined,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,
 

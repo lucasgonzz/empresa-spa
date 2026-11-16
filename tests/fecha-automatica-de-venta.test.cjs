@@ -38,7 +38,8 @@ function cargar(ruta, axios) {
 function escenario() {
 	reloj = Date.parse('2026-11-15T23:55:00-03:00')
 	let enviado
-	const axios = { defaults: {}, post(url, datos) { enviado = datos; return new Promise(() => {}) } }
+	let rechazar_post
+	const axios = { defaults: {}, post(url, datos) { enviado = datos; return new Promise((resolve, reject) => { rechazar_post = reject }) } }
 	const modulo = cargar('store/vender/vender.js', axios).default
 	const state = modulo.state
 	state.previus_sales = { previus_sale: {}, abriendo_venta_previa: false }
@@ -65,7 +66,7 @@ function escenario() {
 	vista.resetear_vender = () => {}
 	const dia_siguiente = () => { reloj = Date.parse('2026-11-16T10:27:13-03:00') }
 	const enviar = () => modulo.actions.vender({ state, getters: {}, commit: (n, v) => store.commit(n, v) }, { discounts: [], surchages: [] })
-	return { modulo, state, store, vista, errores, dia_siguiente, enviar, payload: () => enviado, captura: () => captura }
+	return { modulo, state, store, vista, errores, dia_siguiente, enviar, payload: () => enviado, captura: () => captura, fallar_post: () => rechazar_post({ isAxiosError: true }) }
 }
 
 test('venta inicializada cruza medianoche sin limpiar: el POST usa el día actual', () => {
@@ -172,3 +173,65 @@ for (const valor of ['', '2026-02-30', 'no-es-fecha']) {
 		assert.equal(caso.state.created_at, valor)
 	})
 }
+
+
+test('POST antes de medianoche sin respuesta: el fallback conserva el día y el instante del intento', async () => {
+	const caso = escenario()
+	const DateReal = global.Date
+	reloj = DateReal.parse('2026-11-15T23:59:50-03:00')
+	global.Date = class extends DateReal {
+		constructor(...args) { super(...(args.length ? args : [reloj])) }
+		static now() { return reloj }
+	}
+	caso.store.dispatch = (accion, info) => caso.modulo.actions.vender({
+		state: caso.state, getters: {}, commit: (n, v) => caso.store.commit(n, v),
+	}, info)
+	try {
+		caso.vista.guardar_venta_online('uuid-frontera')
+		assert.equal(caso.payload().created_at, '2026-11-15')
+		caso.dia_siguiente()
+		caso.store.commit('vender/refrescar_fecha_automatica')
+		assert.equal(caso.state.created_at, '2026-11-16')
+		caso.fallar_post()
+		await new Promise(resolve => setImmediate(resolve))
+		assert.equal(caso.captura().offline_uuid, 'uuid-frontera')
+		assert.equal(caso.captura().created_at_elegido, '2026-11-15')
+		assert.equal(caso.captura().capturada_at, '2026-11-16T02:59:50.000Z')
+	} finally {
+		global.Date = DateReal
+	}
+})
+
+test('guardar en IndexedDB y sincronizar días después conserva fecha y hora originales', async () => {
+	const { cargar: cargar_real } = require('./helpers/cargar_modulo_esm.cjs')
+	let guardada
+	const posts = []
+	const db = { sales: {
+		add: datos => { guardada = { ...datos, id: 1 }; return Promise.resolve(1) },
+		toArray: () => Promise.resolve(guardada ? [{ ...guardada }] : []),
+		delete: () => { guardada = null; return Promise.resolve() },
+		update: () => Promise.resolve(),
+	} }
+	const mixin = cargar_real('offline/sync_sales.js', {
+		'./db': { __esModule: true, default: db },
+		'moment': moment,
+	}).default
+	const contexto = Object.assign({}, mixin.methods, {
+		owner_id: 17, is_owner: true, $store: { commit() {} },
+		$toast: { success() {}, warning() {}, error() {} }, price: String,
+		$api: { post(url, datos) { posts.push(datos); return Promise.resolve({ status: 201, data: { model: { id: 91 } } }) } },
+	})
+	reloj = Date.parse('2026-11-16T10:27:13-03:00')
+	await contexto.save_sale_offline({
+		offline_uuid: 'uuid-historico', total: 100, created_at_elegido: '2026-11-15',
+		capturada_at: '2026-11-16T02:59:50.000Z', employee_id: 0,
+	})
+	assert.equal(guardada.created_at, '2026-11-16T02:59:50.000Z')
+	assert.equal(guardada.capturada_at, '2026-11-16T02:59:50.000Z')
+	reloj = Date.parse('2026-11-19T10:27:13-03:00')
+	await contexto.subir_ventas_del_equipo({ omitir_rechazadas: true })
+	assert.equal(posts.length, 1)
+	assert.equal(posts[0].created_at, '2026-11-15')
+	assert.equal(posts[0].capturada_at, '2026-11-16T02:59:50.000Z')
+	assert.equal(posts[0].venta_offline, 1) // Contrato existente: flag numérico del POST.
+})
