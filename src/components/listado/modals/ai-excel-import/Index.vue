@@ -260,7 +260,27 @@
 				data-testid="ai-import-proveedor"
 				:options="provider_options">
 				</b-form-select>
+				<b-button
+				v-if="can('provider.store')"
+				type="button"
+				size="sm"
+				variant="outline-primary"
+				class="m-t-10"
+				data-testid="ai-import-nuevo-proveedor"
+				@click="abrir_alta_proveedor">
+					Nuevo proveedor
+				</b-button>
 			</b-form-group>
+
+			<model-index
+			v-if="can('provider.store')"
+			model_name="provider"
+			:modal_id="modal_id + '-nuevo-proveedor'"
+			:show_btn_pdf="false"
+			:show_btn_delete="false"
+			check_permissions
+			@modelSaved="seleccionar_proveedor_creado">
+			</model-index>
 
 			<b-alert
 			v-if="has_provider_column"
@@ -1269,7 +1289,9 @@
 			</b-form-group>
 
 			<b-form-group
-			description="Dejar en blanco para importar hasta la última fila"
+			:description="finish_row_original
+				? 'Última fila con datos detectada: ' + finish_row_original + '. Podés cambiarla.'
+				: 'Dejá en blanco para importar hasta la última fila.'"
 			label="Última fila hasta la cual importar">
 				<b-form-input
 				type="number"
@@ -1417,6 +1439,7 @@
 
 <script>
 import * as XLSX from 'xlsx/xlsx.mjs'
+import ModelIndex from '@/common-vue/components/model/Index'
 import RelacionesParecidas from './RelacionesParecidas'
 import prueba from '@/mixins/prueba'
 import {
@@ -1436,6 +1459,7 @@ export default {
 	 * el resultado, y un chunk aparte solo agregaría un parpadeo (o un fallo, sin conexión).
 	 */
 	components: {
+		ModelIndex,
 		RelacionesParecidas,
 	},
 
@@ -1493,6 +1517,7 @@ export default {
 
 			/* ID del proveedor inferido por Claude (puede ser null). */
 			selected_provider_id: null,
+			proveedores_creados: [],
 
 			/* Nivel de confianza del proveedor inferido: "alto", "medio" o "bajo". */
 			provider_confidence: 'bajo',
@@ -2111,7 +2136,7 @@ export default {
 
 			/* Deduplicar por id antes de mapear, por si el store acumuló cargas múltiples. */
 			const seen_ids = new Set()
-			this.providers.forEach(provider => {
+			this.providers.concat(this.proveedores_creados).forEach(provider => {
 				if (!seen_ids.has(provider.id)) {
 					seen_ids.add(provider.id)
 					options.push({ value: provider.id, text: provider.name })
@@ -3116,6 +3141,27 @@ export default {
 	},
 
 	methods: {
+		abrir_alta_proveedor() {
+			this.setModel(null, 'provider', [], false, false)
+
+			// setModel carga los valores iniciales en el store de forma diferida.
+			setTimeout(() => {
+				if (this.step === 2) {
+					this.$bvModal.show(this.modal_id + '-nuevo-proveedor')
+				}
+			}, 80)
+		},
+		seleccionar_proveedor_creado(proveedor, { es_nuevo }) {
+			if (!es_nuevo || !proveedor || !proveedor.id) {
+				return
+			}
+
+			// La opción también está disponible si la carga del catálogo falló o sigue en curso.
+			this.proveedores_creados.push({ id: proveedor.id, name: proveedor.name })
+			this.selected_provider_id = proveedor.id
+			this.$bvModal.hide(this.modal_id + '-nuevo-proveedor')
+		},
+
 		es_archivo_pdf(file) {
 			return !!(file && /\.pdf$/i.test(file.name))
 		},
@@ -3418,21 +3464,18 @@ export default {
 
 			this.hoja_leida = indice
 
-			/* Método principal: mismo criterio que import/Index.vue cuando hay !ref. */
+			// La extensión declarada de la hoja puede incluir filas vacías con formato.
 			if (worksheet['!ref']) {
-				let range = XLSX.utils.decode_range(worksheet['!ref'])
 				let ultima_fila_con_contenido = 1
 
-				for (let fila = range.s.r; fila <= range.e.r; fila++) {
-					for (let col = range.s.c; col <= range.e.c; col++) {
-						let cell_ref = XLSX.utils.encode_cell({ c: col, r: fila })
-						let cell = worksheet[cell_ref]
-
-						if (cell && cell.v !== null && cell.v !== '') {
-							ultima_fila_con_contenido = fila + 1
-							break
-						}
+				for (let referencia in worksheet) {
+					let celda = worksheet[referencia]
+					if (referencia[0] === '!' || !celda || celda.v == null || String(celda.v).trim() === '') {
+						continue
 					}
+
+					let fila = XLSX.utils.decode_cell(referencia).r + 1
+					ultima_fila_con_contenido = Math.max(ultima_fila_con_contenido, fila)
 				}
 
 				/* Detectar la fila de encabezado antes de retornar. */
@@ -3451,7 +3494,7 @@ export default {
 
 				if (Array.isArray(row)) {
 					for (let j = 0; j < row.length; j++) {
-						if (row[j] !== null && row[j] !== '' && String(row[j]).trim() !== '') {
+						if (row[j] != null && String(row[j]).trim() !== '') {
 							has_content = true
 							break
 						}
@@ -4034,8 +4077,9 @@ export default {
 		 */
 		analyze() {
 			let self = this
+			let archivo = self.file
 
-			if (!self.file) {
+			if (!archivo) {
 				self.$toast.error(self.permite_pdf ? 'Seleccioná un archivo Excel o PDF' : 'Seleccioná un archivo Excel')
 				return
 			}
@@ -4053,20 +4097,21 @@ export default {
 			 */
 			let detect_promise = Promise.resolve()
 
-			if (!self.finish_row && !self.es_archivo_pdf(self.file)) {
-				let file_to_read = self.resolve_selected_excel_file(self.file)
+			if (!self.finish_row && !self.es_archivo_pdf(archivo)) {
+				let file_to_read = self.resolve_selected_excel_file(archivo)
 				if (file_to_read) {
 					detect_promise = self.process_excel_file(file_to_read)
 				}
 			}
 
 			detect_promise
-			.then(function() {
-				self.run_analyze_request()
-			})
 			.catch(function() {
 				/* Aunque falle la lectura local, permitimos analizar (el backend ajusta finish_row). */
-				self.run_analyze_request()
+			})
+			.then(function() {
+				if (self.file === archivo) {
+					self.run_analyze_request()
+				}
 			})
 		},
 
@@ -6537,6 +6582,7 @@ export default {
 			this.excel_path    = null
 			this.column_mapping = []
 			this.selected_provider_id = null
+			this.proveedores_creados = []
 			this.provider_confidence  = 'bajo'
 			this.create_and_edit      = null
 			this.precios_incluyen_iva = 0
