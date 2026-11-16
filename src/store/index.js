@@ -20,6 +20,7 @@ import papelera from '@/store/papelera/index'
 import demo from '@/store/demo'
 // Prueba gratuita de 7 días (misión prueba-experiencia-empresa, 3/11/2026). Mismo criterio: para un cliente real no hace nada.
 import prueba from '@/store/prueba'
+import implementacion from '@/store/implementacion'
 
 import article from '@/store/article'
 import brand from '@/store/brand'
@@ -347,6 +348,7 @@ export default new Vuex.Store({
 
         demo,
         prueba,
+        implementacion,
 
         article,
         brand,

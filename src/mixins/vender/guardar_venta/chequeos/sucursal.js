@@ -53,13 +53,23 @@ export default {
 				selector escondido dejaría al vendedor sin salida.
 			*/
 			// if (this.address_id == 0 && this.articulos_con_depositos.length) {
-			if (this.address_id == 0 && this.muestra_sucursales) {
+			if (this.falta_sucursal_de_la_venta()) {
 				// this.$toast.error('Hay '+this.articulos_con_depositos.length+' articulos con stock en diferentes depositos')
 				this.$toast.error('Indique la SUCURSAL ' + comprobante + ' para restar el stock en los depositos que correspondan')
 				return false
 			}
 
 			return true
-		}
+		},
+		/**
+		 * La condición con la que check_sucursal frena: hay selector de sucursal (dos o más) y la venta
+		 * no tiene ninguna. La usa también el aviso de caja (chequeos/cajas.js) para decir en un solo
+		 * aviso todo lo que falta (misión prueba-primera-venta, 12/11/2026). Si cambia una, cambia la otra.
+		 *
+		 * @returns {boolean}
+		 */
+		falta_sucursal_de_la_venta() {
+			return this.address_id == 0 && !!this.muestra_sucursales
+		},
 	}
 }

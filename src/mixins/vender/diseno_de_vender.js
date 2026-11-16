@@ -522,6 +522,10 @@ export default {
 
 				item.scrollIntoView({ behavior: 'smooth', block: bloque || 'start' })
 
+				if (config.enfocar === false) {
+					return
+				}
+
 				if (key === 'metodo_de_pago') {
 					self.$nextTick(function () {
 						self.$nextTick(function () {

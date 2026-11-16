@@ -12,6 +12,7 @@ export default {
 		},
 		{
 			group_title: 'Datos generales',
+			group_priority: 1,
 		},
 		{
 			text: 'Imagenes',
@@ -160,6 +161,7 @@ export default {
 
 		{
 			group_title: 'Precio',
+			group_priority: 2,
 		},
 		{
 			// Prompt 612: se renombro de "Costo" a "Costo base" (mismo campo/mismo valor guardado,
@@ -531,6 +533,7 @@ export default {
 
 		{
 			group_title: 'Stock',
+			group_priority: 3,
 		},
 		{
 			text: 'stock',

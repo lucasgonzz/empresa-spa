@@ -4,7 +4,13 @@ const { cargar } = require('./helpers/cargar_modulo_esm.cjs')
 
 function preparar(responder = () => Promise.resolve({ data: { models: [] } })) {
 	const pedidos = []
-	const axios = { defaults: {}, get: (url, config) => { pedidos.push({ metodo: 'get', url, config }); return responder('get', url, config) }, put: (url, data, config) => { pedidos.push({ metodo: 'put', url, data, config }); return responder('put', url, data) } }
+	const axios = {
+		defaults: {},
+		get(url, config) {
+			pedidos.push({ url, config })
+			return responder(url, config)
+		},
+	}
 	const modulo = cargar('store/current_acount.js', {
 		axios: { __esModule: true, default: axios },
 		'@/runtime_config': { env: () => 'http://api.test' },
@@ -12,11 +18,10 @@ function preparar(responder = () => Promise.resolve({ data: { models: [] } })) {
 	})
 	const store = modulo.default
 	const state = JSON.parse(JSON.stringify(store.state))
-	const auth = { user: null }
-	const ctx = { state, commit(nombre, valor) { if (nombre == 'auth/setCurrentAcountConsulta') auth.user.current_acount_consulta = valor; else store.mutations[nombre](state, valor) }, dispatch(nombre, valor) { return store.actions[nombre](ctx, valor) } }
-	function ingresar(id, consulta) { auth.user = id ? { id, current_acount_consulta: consulta } : null; store.mutations.restaurar_consulta(state, auth.user) }
+	const ctx = { state, commit(nombre, valor) { store.mutations[nombre](state, valor) }, dispatch(nombre, valor) { return store.actions[nombre](ctx, valor) } }
+	function ingresar(id, consulta) { ctx.commit('restaurar_consulta', id ? { id, current_acount_consulta: consulta } : null) }
 	function cuenta(id, titular = id, tipo = 'client') { state.from_model_name = tipo; state.from_model = { id: titular }; store.mutations.set_from_credit_account(state, { id, model_id: titular, model_name: tipo }) }
-	return { modulo, store, state, ctx, pedidos, auth, ingresar, cuenta }
+	return { modulo, store, state, ctx, pedidos, ingresar, cuenta }
 }
 const ultimos = cantidad => ({ modo: 'ultimos', clave: 'ultimos', cantidad, desde: null, hasta: null })
 
@@ -28,21 +33,48 @@ test('normaliza los dos modos, descarta ids/fechas de atajos y rechaza fechas ir
 	assert.equal(modulo.fechaDeConsultaValida('2024-02-29'), true)
 })
 
-test('restaura por persona, conserva filtros entre clientes/proveedores y limpia datos/pagos al abrir otra cuenta', async () => {
+test('ignora el filtro guardado de una versión anterior y abre cada cliente o proveedor con movimientos recientes', async () => {
 	const p = preparar()
-	p.ingresar(10, ultimos(37)); p.cuenta(2)
+	p.ingresar(10, { modo: 'atajo', clave: 'mes_anterior', cantidad: 10 })
+	p.cuenta(2)
+	await p.ctx.dispatch('getModels')
+	assert.equal(p.state.periodo.modo, 'defecto')
+	assert.equal(p.pedidos[0].config.params.minimo, 10)
+	assert.equal(p.pedidos[0].config.params.hasta, undefined)
+
+	p.ctx.commit('set_periodo', ultimos(37))
 	p.state.models = [{ id: 8 }]; p.state.selected = [{ id: 8 }]; p.state.to_pay = { id: 8 }; p.state.to_pay_list = [{ id: 8 }]
 	p.cuenta(3, 5, 'provider')
-	assert.equal(p.state.periodo.cantidad, 37)
+	await p.ctx.dispatch('getModels')
+	assert.equal(p.state.periodo.modo, 'defecto')
+	assert.equal(p.pedidos[1].url, '/api/current-acount/3/10')
+	assert.equal(p.pedidos[1].config.params.minimo, 10)
 	for (const key of ['models', 'to_show', 'selected', 'to_pay_list']) assert.deepEqual(p.state[key], [])
 	assert.equal(p.state.to_pay, null)
-	await p.ctx.dispatch('getModels')
-	assert.equal(p.pedidos[0].url, '/api/current-acount/3/37')
-	assert.deepEqual(p.pedidos[0].config.params, {})
-	p.ingresar(null); p.ingresar(11, null)
+
+	p.ctx.commit('set_periodo', ultimos(37))
+	p.ingresar(11, ultimos(37))
 	assert.equal(p.state.periodo.modo, 'defecto')
-	p.ingresar(null); p.ingresar(10, ultimos(37))
+	assert.equal(p.state.from_credit_account.id, undefined)
+})
+
+test('recargar o actualizar el saldo conserva un filtro explícito hasta volver a abrir la misma cuenta', async () => {
+	const p = preparar()
+	p.ingresar(1)
+	p.cuenta(2)
+	p.ctx.commit('set_periodo', ultimos(37))
+	p.ctx.commit('set_from_credit_account', { ...p.state.from_credit_account, saldo: 500 })
+	await p.ctx.dispatch('getModels')
 	assert.equal(p.state.periodo.cantidad, 37)
+	assert.equal(p.pedidos[0].url, '/api/current-acount/2/37')
+	assert.deepEqual(p.pedidos[0].config.params, {})
+
+	await p.ctx.dispatch('abrirConsulta')
+	assert.equal(p.state.periodo.modo, 'defecto')
+	assert.equal(p.pedidos[1].url, '/api/current-acount/2/10')
+	assert.equal(p.pedidos[1].config.params.minimo, 10)
+	await p.ctx.dispatch('abrirConsulta')
+	assert.equal(p.pedidos.length, 2, 'Una apertura que ya pidió el período por defecto no repite el GET.')
 })
 
 test('invalida respuesta vieja al cambiar de cuenta aunque no siga un GET (pago de cuota)', async () => {
@@ -65,37 +97,6 @@ test('no consulta la cuenta anterior bajo el nombre de otro titular', async () =
 	assert.equal(p.state.from_credit_account.id, undefined)
 })
 
-test('serializa los guardados y la última elección es la que queda persistida y en memoria', async () => {
-	const pendientes = []
-	const p = preparar(() => new Promise(r => pendientes.push(r)))
-	p.ingresar(1); p.cuenta(2)
-	const primero = p.ctx.dispatch('aplicarConsulta', ultimos(15))
-	const segundo = p.ctx.dispatch('aplicarConsulta', ultimos(39))
-	await Promise.resolve()
-	assert.equal(p.pedidos.length, 1)
-	pendientes.shift()({ data: {} }); await primero; await Promise.resolve()
-	assert.equal(p.pedidos.length, 2)
-	assert.equal(p.pedidos[1].data.cantidad, 39)
-	pendientes.shift()({ data: {} }); await segundo
-	assert.equal(p.state.periodo.cantidad, 39)
-	assert.equal(p.auth.user.current_acount_consulta.cantidad, 39)
-	assert.equal(p.state.guardando_consulta, false)
-})
-
-test('API vieja/fallo avisa; reintentar guardado conserva filas y no consulta movimientos', async () => {
-	let falla = true
-	const p = preparar(() => falla ? Promise.reject({ response: { status: 404 } }) : Promise.resolve({ data: {} }))
-	p.ingresar(1); p.cuenta(2)
-	assert.equal(await p.ctx.dispatch('aplicarConsulta', ultimos(22)), false)
-	assert.equal(p.state.error_guardado_consulta, true)
-	p.state.models = [{ id: 50 }]
-	falla = false
-	assert.equal(await p.ctx.dispatch('guardarConsulta', p.state.periodo), true)
-	assert.deepEqual(p.state.models, [{ id: 50 }])
-	assert.equal(p.state.error_guardado_consulta, false)
-	assert.ok(p.pedidos.every(pedido => pedido.metodo == 'put'))
-})
-
 test('los atajos recalculan hoy y el personalizado conserva sus fechas', () => {
 	const { modulo } = preparar()
 	const OriginalDate = Date
@@ -109,20 +110,6 @@ test('los atajos recalculan hoy y el personalizado conserva sus fechas', () => {
 		assert.equal(modulo.paramsDePeriodo(atajo).desde, '2026-08-30')
 		assert.deepEqual(modulo.paramsDePeriodo({ modo: 'personalizado', desde: '2024-02-29', hasta: '2024-03-02' }), { desde: '2024-02-29', hasta: '2024-03-02' })
 	} finally { global.Date = OriginalDate }
-})
-
-test('un cambio de persona descarta guardados encolados de la sesión anterior', async () => {
-	let resolver
-	const p = preparar(() => new Promise(r => { resolver = r }))
-	p.ingresar(1)
-	const primero = p.ctx.dispatch('aplicarConsulta', ultimos(15))
-	const segundo = p.ctx.dispatch('aplicarConsulta', ultimos(99))
-	await Promise.resolve()
-	p.ingresar(null); p.ingresar(2)
-	resolver({ data: {} }); await primero; await segundo
-	assert.equal(p.pedidos.length, 1)
-	assert.equal(p.state.periodo.modo, 'defecto')
-	assert.equal(p.state.error_guardado_consulta, false)
 })
 
 test('Imprimir conserva el contrato histórico de cantidad y las fechas solo en período', () => {

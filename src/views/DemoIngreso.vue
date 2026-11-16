@@ -114,10 +114,9 @@ export default {
 				// App.vue no monta el panel y nadie pide el plan. Un cliente real nunca pasa
 				// por aca, y por eso su arranque no agrega ni una llamada.
 				//
-				// Prueba gratuita (4/11/2026, misión prueba-defectos-asistente-y-vender): el link de una prueba
-				// entra por acá igual, pero el servidor ya no la anuncia como demo (`es_sesion_demo` en false) y
-				// no tiene que aparecer ni el asistente ni el recorrido. Se prende solo lo que el servidor confirmó;
-				// `auth/me` terminó recién arriba, así que el usuario ya está en el store.
+				// El link de una prueba entra por acá igual, pero la API no anuncia `es_sesion_demo`.
+				// App.vue muestra el asistente de prueba en la pantalla de destino si `auth/me` confirmó
+				// su capacidad propia; no se pide el plan ni se monta el recorrido de la demo.
 				const usuario = self.$store.state.auth.user
 				self.$store.commit('demo/setEsDemo', Boolean(usuario && usuario.es_sesion_demo))
 

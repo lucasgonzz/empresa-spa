@@ -212,27 +212,22 @@ export function add_article_dynamic_columns(props, context, collections) {
 }
 
 /**
- * Propiedades de price_type para las tarjetas del modal de edicion de articulo (margen/precio
- * por lista) — SIEMPRE completas, independientes de que el usuario haya ocultado esa lista como
- * columna de la tabla. Vease check_propiedades_extras() en view/Index.vue: las inserta via el
- * flag propiedad_extra_para_modal, sin pasar por props_to_show/visibilidad de tabla.
+ * Grupo de tarjetas de precio en la ficha, independiente de las columnas elegidas para la tabla.
  *
- * @param {Object} context objeto con authenticated y hasExtencion()
  * @param {Array} price_types
  * @returns {Array}
  */
-export function build_price_type_modal_extra_properties(context, price_types) {
-	if (!usa_lista_de_precios(context)) {
+export function build_price_type_modal_extra_properties(price_types) {
+	if (!price_types.length) {
 		return []
 	}
-	return (price_types || []).map(function (price_type) {
-		return {
-			key: 'price_type_' + price_type.id,
-			text: price_type.name,
-			type: 'text',
-			no_usar_en_filtros: true,
-			propiedad_extra_para_modal: true,
-			insert_after_keys: PRICE_TYPE_INSERT_AFTER,
-		}
-	})
+	return [{
+		key: 'article_price_list_cards',
+		text: 'Listas de precios',
+		type: 'text',
+		full_cols: true,
+		no_usar_en_filtros: true,
+		propiedad_extra_para_modal: true,
+		insert_after_keys: ['previus_final_price', 'final_price', 'costo_real', 'cost'],
+	}]
 }

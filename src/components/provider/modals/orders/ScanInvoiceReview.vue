@@ -262,6 +262,18 @@
 					class="scan-review__tabla"
 					data-tour="compras.tabla_escaneo">
 
+						<div v-if="articulos_de_otro_proveedor.length" class="scan-review__proveedor-todos">
+							<b-form-checkbox
+							switch
+							data-testid="scan-proveedor-todos"
+							:checked="todos_actualizan_proveedor"
+							:indeterminate="algunos_actualizan_proveedor && !todos_actualizan_proveedor"
+							@change="actualizar_proveedor_en_todos">
+								Cambiar proveedor principal en todos
+							</b-form-checkbox>
+							<small>El código de esta factura se guarda para su proveedor en ambos casos.</small>
+						</div>
+
 						<div class="scan-review__fila scan-review__cabecera">
 							<div class="scan-review__celda scan-review__celda--check">&nbsp;</div>
 							<div class="scan-review__celda">Código</div>
@@ -403,12 +415,17 @@
 									</span>
 								</template>
 								<template v-else>
-									<b-badge variant="warning">Sin coincidencia segura</b-badge>
+									<b-badge :variant="articulo.crear_en_catalogo ? 'info' : 'warning'">
+										{{ articulo.crear_en_catalogo ? 'Artículo nuevo' : 'Sin coincidencia segura' }}
+									</b-badge>
 									<b-form-checkbox
 									v-model="articulo.crear_en_catalogo"
 									class="scan-review__crear">
 										Crear en el catálogo
 									</b-form-checkbox>
+									<span v-if="articulo.crear_en_catalogo && articulo.desvinculado" class="scan-review__criterio">
+										Revisá los códigos antes de crear el artículo.
+									</span>
 
 									<!--
 										🔴 La marca por fila de que confirmar así la tira. El
@@ -437,6 +454,21 @@
 								@click="$set(articulo, 'buscar_articulo', !articulo.buscar_articulo)">
 									{{ es_nuevo(articulo) ? 'Buscar artículo existente' : 'Cambiar artículo vinculado' }}
 								</b-button>
+								<b-button
+								v-if="!es_nuevo(articulo)"
+								size="sm"
+								variant="outline-secondary"
+								@click="marcar_como_nuevo(articulo)">
+									Crear como artículo nuevo
+								</b-button>
+								<b-form-checkbox
+								v-if="es_de_otro_proveedor(articulo)"
+								:checked="articulo.update_provider"
+								@change="actualizar_proveedor_en_filas([articulo], $event)"
+								switch
+								:data-testid="'scan-proveedor-' + articulo.fila">
+									Cambiar proveedor principal
+								</b-form-checkbox>
 								<div v-if="articulo.buscar_articulo" class="scan-review__buscar-catalogo">
 									<label :for="'scan-buscar-' + articulo.fila">Buscá por nombre o código del artículo</label>
 									<div class="scan-review__buscar-controles">
@@ -462,7 +494,7 @@
 										variant="outline-secondary"
 										size="sm"
 										@click="vincular_modelo(articulo, candidato)">
-											{{ candidato.name }}<span v-if="candidato.provider_code"> · {{ candidato.provider_code }}</span>
+											{{ candidato.name }}<span v-if="candidato.provider_code"> · {{ candidato.provider_code }}</span><span v-if="candidato.provider"> · {{ candidato.provider.name }}</span>
 										</b-button>
 									</div>
 									<p v-if="articulo.mas_resultados_catalogo" class="scan-review__ayuda-catalogo">Hay más resultados. Agregá palabras o el código completo para encontrarlo.</p>
@@ -845,6 +877,18 @@ export default {
 		}
 	},
 	computed: {
+		proveedor_de_la_compra() {
+			return (this.detalle && this.detalle.provider_id) || (this.compra && this.compra.provider_id)
+		},
+		articulos_de_otro_proveedor() {
+			return this.articulos.filter(articulo => this.es_de_otro_proveedor(articulo))
+		},
+		todos_actualizan_proveedor() {
+			return this.articulos_de_otro_proveedor.length > 0 && this.articulos_de_otro_proveedor.every(articulo => articulo.update_provider)
+		},
+		algunos_actualizan_proveedor() {
+			return this.articulos_de_otro_proveedor.some(articulo => articulo.update_provider)
+		},
 		detalle() {
 			return this.$store.state.provider_order_scan.detalle
 		},
@@ -1366,6 +1410,8 @@ export default {
 					campos_dudosos: articulo.campos_dudosos || [],
 					match: match,
 					article_id: match.article_id,
+					update_provider: true,
+					desvinculado: false,
 					/* Los dos arrancan como los dejó el backend (§2.1). */
 					incluir: articulo.incluir !== false,
 					crear_en_catalogo: articulo.crear_en_catalogo === true,
@@ -1800,19 +1846,50 @@ export default {
 				return item.article_id === article_id
 			})
 
-			this.vincular_modelo(articulo, { id: article_id, name: candidato ? candidato.nombre : null })
+			if (candidato) {
+				this.vincular_modelo(articulo, { id: candidato.article_id, name: candidato.nombre, provider_id: candidato.provider_id })
+			}
 		},
 		vincular_modelo(articulo, candidato) {
 			// El código de la factura se conserva: el catálogo puede mostrar el de otro proveedor.
+			if (Number(articulo.article_id) !== Number(candidato.id)) {
+				let fila_del_mismo_articulo = this.articulos.find(fila => Number(fila.article_id) === Number(candidato.id))
+				articulo.update_provider = fila_del_mismo_articulo ? fila_del_mismo_articulo.update_provider : true
+			}
 			this.$set(articulo, 'article_id', candidato.id)
 			this.$set(articulo, 'crear_en_catalogo', false)
 			this.$set(articulo, 'buscar_articulo', false)
 			this.$set(articulo, 'match', {
 				estado: 'encontrado',
 				article_id: candidato.id,
+				provider_id: candidato.provider_id,
 				criterio: 'manual',
 				nombre_en_catalogo: candidato.name,
 				candidatos: [],
+			})
+		},
+		marcar_como_nuevo(articulo) {
+			articulo.article_id = null
+			articulo.crear_en_catalogo = true
+			articulo.desvinculado = true
+			articulo.buscar_articulo = false
+			articulo.match = { candidatos: [] }
+		},
+		es_de_otro_proveedor(articulo) {
+			let proveedor_actual = Number(articulo.match && articulo.match.provider_id)
+			let proveedor_compra = Number(this.proveedor_de_la_compra)
+			return articulo.incluir && !this.es_nuevo(articulo)
+				&& proveedor_actual > 0 && proveedor_compra > 0 && proveedor_actual !== proveedor_compra
+		},
+		actualizar_proveedor_en_todos(actualizar) {
+			this.actualizar_proveedor_en_filas(this.articulos_de_otro_proveedor, actualizar)
+		},
+		actualizar_proveedor_en_filas(filas, actualizar) {
+			let ids = new Set(filas.map(fila => Number(fila.article_id)))
+			this.articulos.forEach(articulo => {
+				if (ids.has(Number(articulo.article_id))) {
+					articulo.update_provider = actualizar
+				}
 			})
 		},
 		buscar_en_catalogo(articulo) {
@@ -1834,7 +1911,7 @@ export default {
 				conector: 'or',
 				extra_filters: [],
 				contexto: 'provider_order',
-				provider_id: this.compra ? this.compra.provider_id : null,
+				mostrar_codigo_principal: true,
 				per_page: 10,
 			})
 			.then(res => {
@@ -1950,6 +2027,7 @@ export default {
 				.map(articulo => {
 					return {
 						article_id: articulo.article_id || null,
+						update_provider: this.es_de_otro_proveedor(articulo) ? articulo.update_provider : undefined,
 						crear_en_catalogo: articulo.crear_en_catalogo === true,
 						bar_code: articulo.bar_code,
 						codigo_proveedor: articulo.codigo_proveedor,
@@ -2437,6 +2515,17 @@ export default {
 		font-size: 0.78rem
 		font-weight: 700
 		color: var(--color-text-primary)
+
+	&__proveedor-todos
+		padding: 8px 12px
+		background: var(--bg-section)
+		border-top: 1px solid var(--scan-linea)
+		font-size: 0.85rem
+		font-weight: 600
+
+		small
+			display: block
+			font-weight: 400
 
 	&__celda
 		min-width: 0

@@ -742,7 +742,7 @@ ModelForm-- ya lo hace bien; los buscadores hardcodeados de un módulo son los q
 
 | Cuándo | Qué dibuja |
 |---|---|
-| Sin código de barras **y** sin código de proveedor | Un **buscador de artículos**, para que no des de alta uno que ya existe. La pantalla dice *"Preciona ENTER para usar este nombre"* |
+| Sin código de barras **y** sin código de proveedor | Un **buscador de artículos**, para que no des de alta uno que ya existe. La pantalla dice *"Presioná ENTER para usar este nombre"* |
 | Con alguno de los dos | Un `<textarea>` común |
 
 Los dos publican `article-name`, así que el selector es el mismo; lo que cambia es **cómo se

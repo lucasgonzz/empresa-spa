@@ -3,7 +3,7 @@
 	v-if="should_show"
 	class="whatsapp-sidebar-host">
 		<whatsapp-sidebar
-		v-if="sidebar_abierto"></whatsapp-sidebar>
+		v-if="sidebar_abierto && $route.name !== 'whatsapp'"></whatsapp-sidebar>
 	</div>
 </template>
 <script>
@@ -201,6 +201,9 @@ export default {
 			if (!payload || !payload.chat) {
 				return
 			}
+			const chat_actual = this.$store.getters['whatsapp_chat/selected_chat']
+			const cambio_de_modo = chat_actual && chat_actual.id == payload.chat_id
+				&& payload.chat.ai_mode && chat_actual.ai_mode !== payload.chat.ai_mode
 
 			/*
 				Actualiza la fila de la bandeja sin pisar las props que este payload liviano no trae. Un chat que
@@ -228,6 +231,9 @@ export default {
 				&& state.selected_chat_id == payload.chat_id
 
 			if (!payload.message) {
+				if (is_open_chat && cambio_de_modo) {
+					this.$store.dispatch('whatsapp_chat/getMessages', {chat_id: payload.chat_id, page: 1, silent: true})
+				}
 				return
 			}
 
@@ -240,12 +246,12 @@ export default {
 				} else {
 					this.$store.commit('whatsapp_chat/appendMessage', payload.message)
 					// Sonido corto solo para mensajes entrantes del cliente.
-					if (payload.message.direction == 'in') {
+					if (payload.message.direction == 'in' && !payload.chat.is_test) {
 						this.playIncomingSound()
 					}
 				}
 				this.$store.dispatch('whatsapp_chat/markRead', payload.chat_id)
-			} else if (payload.message.direction == 'in') {
+			} else if (payload.message.direction == 'in' && !payload.chat.is_test) {
 				this.playIncomingSound()
 			}
 		},

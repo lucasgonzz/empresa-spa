@@ -15,21 +15,22 @@
 		<!-- El interruptor que invierte cual de los dos campos manda. Va separado y con su
 		     explicacion: antes estaba abajo, con el mismo peso visual que "Incluir en Excel", que es
 		     un tema completamente distinto. -->
-		<div class="price-type-card__interruptor">
+		<div v-if="mostrar_interruptor" class="price-type-card__interruptor">
 			<b-form-checkbox
+			switch
 			variant="success"
 			:value="1"
 			:unchecked-value="0"
-			v-model="article_price_type.pivot.setear_precio_final"
-			size="sm">
+			:checked="Number(article_price_type.pivot.setear_precio_final) === 1 ? 1 : 0"
+			@change="article_price_type.pivot.setear_precio_final = $event">
 				Setear precio final
 			</b-form-checkbox>
 			<div class="price-type-card__interruptor-ayuda">
-				<template v-if="article_price_type.pivot.setear_precio_final">
-					Cargas el precio y el sistema calcula el margen
+				<template v-if="Number(article_price_type.pivot.setear_precio_final) === 1">
+					Cargá el precio y el sistema calcula el margen.
 				</template>
 				<template v-else>
-					Cargas el margen y el sistema calcula el precio
+					Cargá el margen y el sistema calcula el precio.
 				</template>
 			</div>
 		</div>
@@ -40,9 +41,9 @@
 		     veia en ninguna lista sin recargos, aunque el dato existiera. -->
 		<div class="price-type-card__datos">
 			<div
-			v-if="price_type_store.price_type_surchages.length"
+		v-if="(price_type_store.price_type_surchages || []).length"
 			class="price-type-card__dato">
-				<span class="price-type-card__dato-label">Con recargos</span>
+			<span class="price-type-card__dato-label">Después de recargos</span>
 				{{ price(article_price_type.pivot.precio_luego_de_recargos) }}
 			</div>
 
@@ -73,24 +74,13 @@ export default {
 	props: {
 		article_price_type: Object,
 		price_type_store: Object,
+		es_primera_lista: Boolean,
+		mostrar_interruptor: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	computed: {
-		/**
-		 * ¿Estas opciones son las de la PRIMERA lista de precios?
-		 *
-		 * `article_price_type.id` es el id del `price_type` (lo arma `price-type-input/Index.vue`,
-		 * tanto para un articulo nuevo como para uno existente), y `price_types` viene del mixin
-		 * global `mixins/generals.js`.
-		 *
-		 * @returns {Boolean}
-		 */
-		es_primera_lista() {
-			if (!this.price_types.length || !this.article_price_type) {
-				return false
-			}
-
-			return this.price_types[0].id == this.article_price_type.id
-		},
 		/**
 		 * En un articulo nuevo el pivot se arma en memoria (ver init_article_price_type en
 		 * Index.vue) y todavia no tiene monto_ganancia: ahi no hay nada que mostrar.

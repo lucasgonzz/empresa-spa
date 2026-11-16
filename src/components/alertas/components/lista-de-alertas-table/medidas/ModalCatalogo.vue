@@ -50,6 +50,118 @@ title="Buscar peso y medidas de todo el catálogo"
 			</p>
 		</div>
 
+		<!--
+			Misión medidas-sitios-de-referencia (11/11/2026): las páginas donde el comercio sabe que están
+			los pesos y medidas de sus productos. La búsqueda las consulta primero, por código. Se traen con
+			el GET al abrir; contra una API vieja (404) el bloque no se dibuja. Editar es del acceso maestro
+			(el mismo criterio que Lanzar); cualquier otro solo ve la lista. La corrida usa la lista
+			GUARDADA: con cambios sin guardar no se deja lanzar.
+		-->
+		<div
+		v-if="mostrar_sitios"
+		class="med-cat__opcion med-cat__sitios"
+		data-testid="medidas-catalogo-sitios">
+			<p class="med-cat__sitios-titulo">
+				{{ textos.sitios_titulo }}
+			</p>
+			<p class="med-cat__sitios-ayuda">
+				{{ textos.sitios_ayuda }}
+			</p>
+
+			<div
+			v-if="sitios_estado === 'cargando'"
+			class="med-cat__sitios-cargando">
+				<b-spinner
+				small
+				variant="primary"></b-spinner>
+				<span>{{ textos.sitios_cargando }}</span>
+			</div>
+
+			<div
+			v-else-if="sitios_estado === 'error'"
+			class="med-cat__aviso med-cat__aviso--mal"
+			data-testid="medidas-catalogo-sitios-error-al-traer">
+				<span>{{ textos.sitios_error_al_traer }}</span>
+				<button
+				type="button"
+				class="med-cat__link"
+				@click="cargar_sitios">
+					Reintentar
+				</button>
+			</div>
+
+			<template v-else-if="puede_editar_sitios">
+				<b-form-textarea
+				v-model="sitios_texto"
+				class="med-cat__sitios-campo"
+				rows="3"
+				max-rows="8"
+				placeholder="obi.de"
+				aria-label="Sitios de referencia, uno por renglón"
+				data-testid="medidas-catalogo-sitios-texto"
+				:state="sitios_error ? false : null"
+				:disabled="guardando_sitios || lanzando"
+				@input="al_escribir_sitios"></b-form-textarea>
+				<p class="med-cat__sitios-nota">
+					{{ textos.sitios_nota }}
+				</p>
+				<p
+				v-if="sitios_error"
+				class="med-cat__sitios-error"
+				role="alert"
+				data-testid="medidas-catalogo-sitios-error">
+					{{ sitios_error }}
+				</p>
+				<div class="med-cat__sitios-pie">
+					<span
+					v-if="sitios_cambiaron"
+					class="med-cat__sitios-estado med-cat__sitios-estado--pendiente"
+					data-testid="medidas-catalogo-sitios-sin-guardar">
+						{{ textos.sitios_sin_guardar }}
+					</span>
+					<span
+					v-else-if="sitios_guardados_recien"
+					class="med-cat__sitios-estado"
+					data-testid="medidas-catalogo-sitios-guardados">
+						{{ texto_sitios_guardados }}
+					</span>
+					<b-button
+					class="btn-modulo med-cat__sitios-guardar"
+					variant="outline-primary"
+					size="sm"
+					data-testid="medidas-catalogo-sitios-guardar"
+					:disabled="!sitios_cambiaron || guardando_sitios || lanzando"
+					@click="guardar_sitios">
+						<b-spinner
+						v-if="guardando_sitios"
+						small
+						class="m-r-5"></b-spinner>
+						{{ textos.sitios_guardar }}
+					</b-button>
+				</div>
+			</template>
+
+			<!-- Solo lectura: la lista tal como está guardada. -->
+			<template v-else>
+				<ul
+				v-if="sitios.length"
+				class="med-cat__sitios-lista"
+				data-testid="medidas-catalogo-sitios-lista">
+					<li
+					v-for="sitio in sitios"
+					:key="'sitio-' + sitio">
+						{{ sitio }}
+					</li>
+				</ul>
+				<p
+				v-else
+				class="med-cat__sitios-nota"
+				data-testid="medidas-catalogo-sitios-vacio">
+					{{ textos.sitios_vacio }}
+				</p>
+			</template>
+		</div>
+
 		<div
 		v-if="cargando"
 		class="med-cat__cargando">
@@ -307,8 +419,8 @@ title="Buscar peso y medidas de todo el catálogo"
 </b-modal>
 </template>
 <script>
-import { entero_es, duracion_en_texto, dolares_en_texto, esta_activa, porcentaje_de, texto_de_reintento, TEXTOS } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
-import { es_cancelacion } from '@/store/dimension_search'
+import { entero_es, duracion_en_texto, dolares_en_texto, esta_activa, porcentaje_de, texto_de_reintento, lineas_de_sitios, mensaje_de_error_de_sitios, TEXTOS } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { es_cancelacion, es_ruta_no_disponible } from '@/store/dimension_search'
 import { normalizar_tope_demo, aviso_de_tope_demo, mensaje_de_tope_demo_agotado } from '@/store/image_assignment'
 
 /**
@@ -345,9 +457,68 @@ export default {
 			reintentar_sin_datos: false,
 			/** Textos de la pantalla (para el template). */
 			textos: TEXTOS,
+			/**
+			 * Estado del bloque «Sitios de referencia»: 'cargando', 'listo', 'error' (el GET falló) o
+			 * 'no_disponible' (la API todavía no tiene la ruta: el bloque no se dibuja).
+			 */
+			sitios_estado: 'cargando',
+			/** La lista GUARDADA, tal como la devolvió el servidor (dominios normalizados). */
+			sitios: [],
+			/** Lo que hay escrito en el campo: un sitio por renglón. */
+			sitios_texto: '',
+			/** true mientras viaja el PUT. */
+			guardando_sitios: false,
+			/** Por qué no se pudo guardar (frase lista para mostrar), o ''. */
+			sitios_error: '',
+			/** true justo después de guardar bien, hasta que se vuelve a escribir. */
+			sitios_guardados_recien: false,
 		}
 	},
 	computed: {
+		/**
+		 * true si la sesión entró con la clave maestra. Hoy el modal lo monta solo el acceso maestro,
+		 * pero el bloque de sitios no depende de eso: sin el dato, la lista se ve y no se edita.
+		 *
+		 * @returns {Boolean}
+		 */
+		es_acceso_maestro() {
+			let store = this.$store
+			let usuario = store && store.state && store.state.auth ? store.state.auth.user : null
+			return !!(usuario && usuario.es_acceso_maestro)
+		},
+		/** El bloque de sitios se dibuja salvo contra una API que no tiene la ruta. */
+		mostrar_sitios() {
+			return this.sitios_estado !== 'no_disponible'
+		},
+		/** Editar los sitios: acceso maestro y la lista ya traída. */
+		puede_editar_sitios() {
+			return this.es_acceso_maestro && this.sitios_estado === 'listo'
+		},
+		/**
+		 * true si lo escrito difiere de lo guardado (comparando renglón por renglón, sin espacios ni
+		 * vacíos). Una URL con `https://` cuenta como cambio hasta que se guarda y el servidor la
+		 * devuelve como dominio.
+		 *
+		 * @returns {Boolean}
+		 */
+		sitios_cambiaron() {
+			if (!this.puede_editar_sitios) {
+				return false
+			}
+			return lineas_de_sitios(this.sitios_texto).join('\n') !== this.sitios.join('\n')
+		},
+		/**
+		 * "Guardado: se van a buscar primero en 4 sitios." / "Guardado: sin sitios de referencia."
+		 *
+		 * @returns {String}
+		 */
+		texto_sitios_guardados() {
+			let cantidad = this.sitios.length
+			if (!cantidad) {
+				return 'Guardado: sin sitios de referencia.'
+			}
+			return 'Guardado: se van a buscar primero en ' + (cantidad === 1 ? '1 sitio.' : entero_es(cantidad) + ' sitios.')
+		},
 		/**
 		 * "Esta opción suma 140 artículos..." con lo que dice la previa; '' si la API no lo manda o es cero.
 		 *
@@ -451,6 +622,10 @@ export default {
 			if (this.tope_demo.aplica && this.tope_demo.restantes <= 0) {
 				return false
 			}
+			// La corrida usa los sitios GUARDADOS: con cambios sin guardar (o guardándose) se espera.
+			if (this.sitios_cambiaron || this.guardando_sitios) {
+				return false
+			}
 			return this.previa.a_buscar > 0
 		},
 		/**
@@ -517,12 +692,84 @@ export default {
 			this.solo_con_stock = true
 			this.reintentar_sin_datos = false
 			this.cargar()
+			this.cargar_sitios()
 		},
 		al_cerrar() {
 			this.previa = null
 			this.error = false
 			this.lanzando = false
 			this.recalculando = false
+			this.guardando_sitios = false
+			this.sitios_error = ''
+			this.sitios_guardados_recien = false
+		},
+		/**
+		 * Trae los sitios de referencia guardados. Un 404/403 (API que todavía no tiene la ruta, o que no
+		 * deja verla) esconde el bloque sin avisar nada; otro error lo dice el bloque, con Reintentar. Una
+		 * cancelación se vuelve a pedir una vez, igual que la previa.
+		 *
+		 * @param {Boolean} es_reintento
+		 */
+		cargar_sitios(es_reintento) {
+			let self = this
+			self.sitios_estado = 'cargando'
+			self.sitios_error = ''
+			self.sitios_guardados_recien = false
+			self.$store.dispatch('dimension_search/get_sitios_de_referencia')
+			.then(sitios => {
+				self.aplicar_sitios(sitios)
+				self.sitios_estado = 'listo'
+			})
+			.catch(err => {
+				console.log(err)
+				if (es_cancelacion(err) && es_reintento !== true) {
+					self.cargar_sitios(true)
+					return
+				}
+				self.sitios_estado = es_ruta_no_disponible(err) ? 'no_disponible' : 'error'
+			})
+		},
+		/**
+		 * La lista que devolvió el servidor pasa a ser la guardada y lo que se ve en el campo.
+		 *
+		 * @param {Array<String>} sitios
+		 */
+		aplicar_sitios(sitios) {
+			this.sitios = Array.isArray(sitios) ? sitios.slice() : []
+			this.sitios_texto = this.sitios.join('\n')
+		},
+		/** Se volvió a escribir: el error y el «Guardado» de antes ya no corresponden. */
+		al_escribir_sitios() {
+			this.sitios_error = ''
+			this.sitios_guardados_recien = false
+		},
+		/**
+		 * Guarda la lista entera (PUT). Lo que vuelve —ya normalizado: sin `https://`, `www.` ni ruta—
+		 * reemplaza lo escrito, así se ve exactamente lo que se va a usar. Un 422 o un 403 se dicen al
+		 * lado del campo y lo escrito queda, para corregirlo.
+		 */
+		guardar_sitios() {
+			if (!this.puede_editar_sitios || this.guardando_sitios || !this.sitios_cambiaron) {
+				return
+			}
+			let self = this
+			self.guardando_sitios = true
+			self.sitios_error = ''
+			self.sitios_guardados_recien = false
+			self.$store.dispatch('dimension_search/guardar_sitios_de_referencia', lineas_de_sitios(self.sitios_texto))
+			.then(sitios => {
+				self.aplicar_sitios(sitios)
+				self.guardando_sitios = false
+				self.sitios_guardados_recien = true
+			})
+			.catch(err => {
+				console.log(err)
+				self.guardando_sitios = false
+				if (es_cancelacion(err)) {
+					return
+				}
+				self.sitios_error = mensaje_de_error_de_sitios(err)
+			})
 		},
 		cerrar() {
 			this.$bvModal.hide('medidas-catalogo')
@@ -666,6 +913,80 @@ export default {
 	font-size: 0.78rem
 	line-height: 1.4
 	color: var(--color-text-secondary, #6c757d)
+
+// Bloque «Sitios de referencia»: misma caja que las opciones, con su campo y su botón Guardar.
+.med-cat__sitios
+	gap: 6px
+
+.med-cat__sitios-titulo
+	margin: 0
+	font-size: 0.875rem
+	font-weight: 600
+	color: var(--color-text-primary, #212529)
+
+.med-cat__sitios-ayuda,
+.med-cat__sitios-nota
+	margin: 0
+	font-size: 0.78rem
+	line-height: 1.4
+	color: var(--color-text-secondary, #6c757d)
+
+.med-cat__sitios-cargando
+	display: flex
+	align-items: center
+	gap: 8px
+	padding: 6px 0
+	font-size: 0.8125rem
+	color: var(--color-text-secondary, #6c757d)
+
+// 16px en el campo: en el teléfono, con menos, el navegador hace zoom al tocarlo.
+.med-cat__sitios-campo
+	margin-top: 4px
+	font-size: 16px
+	line-height: 1.45
+
+.med-cat__sitios-error
+	margin: 0
+	font-size: 0.8125rem
+	line-height: 1.4
+	color: var(--btn-peligro-texto, #9c3a36)
+	overflow-wrap: anywhere
+
+.med-cat__sitios-pie
+	display: flex
+	align-items: center
+	justify-content: flex-end
+	flex-wrap: wrap
+	gap: 6px 12px
+
+.med-cat__sitios-estado
+	flex: 1 1 200px
+	font-size: 0.78rem
+	line-height: 1.4
+	color: var(--color-text-success-strong, #155724)
+
+.med-cat__sitios-estado--pendiente
+	color: var(--color-text-warning-strong, #856404)
+
+.med-cat__sitios-guardar
+	min-width: 96px
+
+.med-cat__sitios-lista
+	display: flex
+	flex-wrap: wrap
+	gap: 6px
+	margin: 4px 0 0
+	padding: 0
+	list-style: none
+
+	li
+		max-width: 100%
+		padding: 2px 10px
+		border-radius: 999px
+		background: var(--bg-section, #f8f9fa)
+		font-size: 0.8125rem
+		color: var(--color-text-primary, #212529)
+		overflow-wrap: anywhere
 
 .med-cat__cargando
 	display: flex

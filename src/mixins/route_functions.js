@@ -12,6 +12,7 @@ export default {
 		 * @param {number|null} conversation_id
 		 */
 		abrir_chat_ia(conversation_id = null) {
+			this.$store.commit('ai_chat/setAgente', 'asistente')
 			if (conversation_id) {
 				this.$store.commit('ai_chat/setSelectedConversationId', conversation_id)
 			}

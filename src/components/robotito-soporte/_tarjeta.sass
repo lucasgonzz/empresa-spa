@@ -1,0 +1,177 @@
+@import '@/components/demo/_estetica-asistente'
+
+// La tarjeta vive en body porque el motor la mide junto al control resaltado.
+.driver-popover.tour-soporte
+	--robotito-superficie: #{$asistente-hilo}
+	--robotito-cabecera: #{$asistente-cabecera}
+	--robotito-campo: #{$asistente-compositor}
+	--robotito-borde: #343d5a
+	--robotito-texto: #f5f6ff
+	--robotito-suave: #c0c8e0
+	--robotito-acento: #a9ceff
+	--robotito-foco: #8fc7ff
+	--robotito-error: #ffb9bc
+	box-sizing: border-box
+	min-width: 0
+	width: min(350px, calc(100vw - 24px))
+	max-width: none
+	padding: 15px
+	border: 1px solid transparent
+	border-radius: 18px
+	background: linear-gradient(160deg, var(--robotito-cabecera), var(--robotito-superficie) 65%) padding-box, $asistente-degrade border-box
+	box-shadow: 0 20px 44px #090d286b, 0 0 22px #7969ec29
+	color: var(--robotito-texto)
+	font-family: var(--ia-fuente)
+	font-size: 14px
+	line-height: 1.45
+	overflow-wrap: anywhere
+
+	*
+		font-family: inherit
+
+	button
+		box-shadow: none
+
+	button:focus-visible, textarea:focus-visible
+		outline: 2px solid var(--robotito-foco)
+		outline-offset: 2px
+
+	.robotito-tarjeta__cabecera
+		display: flex
+		align-items: center
+		justify-content: space-between
+		gap: 10px
+		margin: 0 38px 13px 0
+
+	.robotito-tarjeta__identidad
+		display: flex
+		align-items: center
+		gap: 9px
+
+	.robotito-tarjeta__avatar
+		+asistente-orb
+		width: 36px
+		height: 36px
+		border-radius: 12px
+		.robot-implementacion
+			width: 25px
+			animation: none
+
+	.robotito-tarjeta__marca
+		font-size: 14px
+		font-weight: 750
+		line-height: 1.2
+
+	.robotito-tarjeta__etiqueta
+		margin-top: 2px
+		color: var(--robotito-suave)
+		font-size: 11px
+		line-height: 1.25
+
+	.robotito-tarjeta__avance
+		min-width: 64px
+		color: var(--robotito-acento)
+		font-size: 11px
+		font-weight: 650
+		text-align: right
+		white-space: nowrap
+
+	.robotito-tarjeta__segmentos
+		display: flex
+		gap: 3px
+		margin-top: 5px
+		span
+			flex: 1
+			height: 3px
+			border-radius: 3px
+			background: var(--robotito-borde)
+		.esta-completo
+			background: linear-gradient(90deg, #76d8ff, #ae9bff)
+
+	.driver-popover-title
+		color: var(--robotito-texto)
+		font: 740 17px/1.3 var(--ia-fuente)
+
+	.driver-popover-description
+		max-height: min(11rem, 26vh)
+		overflow-y: auto
+		margin-top: 6px
+		color: var(--robotito-suave)
+		font: 400 14px/1.45 var(--ia-fuente)
+		white-space: pre-line
+
+	.driver-popover-close-btn
+		top: 15px
+		right: 15px
+		width: 32px
+		height: 34px
+		border: 1px solid var(--robotito-borde)
+		border-radius: 10px
+		background: var(--robotito-cabecera)
+		color: var(--robotito-suave)
+		font-size: 21px
+		line-height: 34px
+		&:hover
+			background: var(--robotito-campo)
+			color: var(--robotito-texto)
+
+	.driver-popover-footer
+		margin-top: 12px
+
+	.driver-popover-navigation-btns
+		justify-content: space-between
+		gap: 8px
+		button
+			display: inline-flex
+			align-items: center
+			justify-content: center
+			min-height: 40px
+			gap: 8px
+			margin: 0
+			padding: 0 13px
+			border: 1px solid transparent
+			border-radius: 11px
+			font: 650 13px/1.2 var(--ia-fuente)
+			text-shadow: none
+
+		.driver-popover-prev-btn
+			border-color: var(--robotito-borde)
+			background: var(--robotito-cabecera)
+			color: var(--robotito-texto)
+			&::before
+				content: '‹' / ''
+				font-size: 19px
+			&:hover:not(:disabled)
+				background: var(--robotito-campo)
+			&:disabled
+				opacity: .45
+				cursor: default
+
+		.driver-popover-next-btn
+			background: linear-gradient(120deg, #a4dfff, #c7bfff)
+			color: #151b2e
+			&::after
+				content: '›' / ''
+				font-size: 19px
+			&:hover
+				background: linear-gradient(120deg, #c0eaff, #ded6ff)
+
+	.driver-popover-arrow-side-left
+		border-left-color: #af9ef4
+	.driver-popover-arrow-side-right
+		border-right-color: #a1b4fa
+	.driver-popover-arrow-side-top
+		border-top-color: #c490db
+	.driver-popover-arrow-side-bottom
+		border-bottom-color: #9bc0fc
+
+html.dark-mode .driver-popover.tour-soporte
+	box-shadow: 0 20px 44px #0009, 0 0 24px #7969ec47
+
+@media (max-height: 440px)
+	.driver-popover.tour-soporte
+		max-height: calc(100vh - 24px)
+		max-height: calc(100dvh - 24px)
+		overflow-y: auto
+		.driver-popover-arrow
+			display: none

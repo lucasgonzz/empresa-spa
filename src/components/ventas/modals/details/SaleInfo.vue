@@ -155,10 +155,20 @@
 		v-if="sale_details.consolidacion_facturacion_id">
 			<strong>
 				<i class="icon-clipboard"></i>
-				Esta venta fue facturada dentro de una consolidación de facturación
+				Esta venta está incluida en una consolidación
 			</strong>
 			<br>
-			La factura AFIP se emitió a través de la venta consolidada N° {{ sale_details.consolidacion_facturacion_id }}.
+			<b-button
+			v-if="consolidada"
+			size="sm"
+			variant="link"
+			class="p-0 text-left"
+			:disabled="cargando_venta_vinculada"
+			@click="abrir_venta_vinculada(consolidada.id)">
+				{{ texto_consolidada }}
+			</b-button>
+			<span v-else-if="cargando_vinculos" role="status">Cargando factura consolidada…</span>
+			<span v-else>El detalle de la factura consolidada no está disponible.</span>
 		</b-alert>
 
 		<!-- Aviso cuando esta venta ES la consolidadora -->
@@ -174,6 +184,23 @@
 			<br>
 			No representa una venta real: fue creada para agrupar varias ventas en un único comprobante AFIP.
 			No genera movimientos en cuenta corriente ni descuenta stock.
+			<div class="m-t-10">
+				<strong>Ventas de origen</strong>
+				<ul v-if="ventas_de_origen.length" class="mb-0 pl-3">
+					<li v-for="venta in ventas_de_origen" :key="venta.id">
+						<b-button
+						size="sm"
+						variant="link"
+						class="p-0 text-left"
+						:disabled="cargando_venta_vinculada"
+						@click="abrir_venta_vinculada(venta.id)">
+							Abrir venta N° {{ venta.num || venta.id }}
+						</b-button>
+					</li>
+				</ul>
+				<p v-else-if="cargando_vinculos" class="mb-0" role="status">Cargando ventas de origen…</p>
+				<p v-else class="mb-0">El detalle de las ventas de origen no está disponible.</p>
+			</div>
 		</b-alert>
 	</b-row>
 </template>
@@ -194,6 +221,9 @@ export default {
 	data() {
 		return {
 			loading: false,
+			vinculos_consolidacion: {},
+			cargando_vinculos: false,
+			cargando_venta_vinculada: false,
 		}
 	},
 	computed: {
@@ -204,6 +234,18 @@ export default {
 		 */
 		sale_details() {
 			return this.$store.state.sale.model 
+		},
+		consolidada() {
+			return this.vinculos_consolidacion.consolidada
+		},
+		ventas_de_origen() {
+			return this.vinculos_consolidacion.ventas_de_origen || []
+		},
+		texto_consolidada() {
+			const comprobante = (this.consolidada.afip_tickets || []).find(ticket => ticket.cbte_numero)
+			return comprobante
+				? 'Abrir factura consolidada N° ' + comprobante.cbte_numero
+				: 'Abrir venta consolidada N° ' + (this.consolidada.num || this.consolidada.id)
 		},
 		/**
 		 * Indica si la venta puede editarse desde este modal. Ademas de lo que ya exige
@@ -224,7 +266,70 @@ export default {
 			return this.hasExtencion('acopios')
 		},
 	},
+	watch: {
+		sale_details: {
+			immediate: true,
+			handler(venta) {
+				this.cargar_vinculos(venta)
+			},
+		},
+	},
 	methods: {
+		cargar_vinculos(venta) {
+			this.vinculos_consolidacion = {}
+			this.cargando_vinculos = false
+			if (!venta || !venta.id || (!venta.consolidacion_facturacion_id && !venta.is_consolidacion_facturacion)) {
+				return
+			}
+
+			if (venta.vinculos_consolidacion) {
+				this.vinculos_consolidacion = venta.vinculos_consolidacion
+				return
+			}
+
+			this.cargando_vinculos = true
+			this.consultar_venta_con_vinculos(venta.id)
+			.then(res => {
+				if (this.sale_details === venta && res.data.model) {
+					this.vinculos_consolidacion = res.data.model.vinculos_consolidacion || {}
+				}
+			})
+			.catch(() => {
+				// La venta actual sigue visible si falla la consulta de sus vínculos.
+			})
+			.finally(() => {
+				if (this.sale_details === venta) {
+					this.cargando_vinculos = false
+				}
+			})
+		},
+		abrir_venta_vinculada(venta_id) {
+			const origen = this.sale_details
+			this.cargando_venta_vinculada = true
+			this.consultar_venta_con_vinculos(venta_id)
+			.then(res => {
+				if (!res.data.model || !res.data.model.vinculos_consolidacion) {
+					throw new Error('Venta vinculada no disponible')
+				}
+				if (this.sale_details === origen && !this._isDestroyed) {
+					this.setModel(res.data.model, 'sale', [], false, false)
+				}
+			})
+			.catch(() => {
+				if (this.sale_details === origen && !this._isDestroyed) {
+					this.$toast.error('No se pudo abrir la venta vinculada.')
+				}
+			})
+			.finally(() => {
+				this.cargando_venta_vinculada = false
+			})
+		},
+		consultar_venta_con_vinculos(venta_id) {
+			return this.$api.get('sale/' + venta_id, {
+				params: { vinculos_consolidacion: 1 },
+				skip_global_error_event: true,
+			})
+		},
 		/**
 		 * Abre el modal de unidades entregadas de la venta.
 		 */

@@ -16,6 +16,11 @@ export default {
 		metodos_de_pago_del_catalogo() {
 			return this.$store.state.current_acount_payment_method.models
 		},
+		exigir_medio_de_pago_en_venta_nueva() {
+			return !!(this.owner && this.owner.vender_exigir_eleccion_medio_pago)
+				&& !this.$store.getters['vender/previus_sales/editando_venta_previa']
+				&& !this.$store.getters['vender/en_modo_presupuesto']
+		},
 	},
 	methods: {
 		/**
@@ -41,27 +46,35 @@ export default {
 		 * suma de las filas de el total antes de commitear selected_payment_methods, asi que si hay
 		 * reparto, el reparto esta bien.
 		 *
-		 * Solo aplica si el comercio TIENE metodos de pago cargados: una cuenta que no los usa
-		 * vende sin elegir ninguno, y no hay nada que exigirle.
+		 * Con la opción activa, una venta nueva de contado necesita un método del catálogo incluso
+		 * si este aún no llegó. Las demás operaciones conservan la regla habitual.
 		 *
 		 * @returns {boolean} true = seguir guardando. false = abortar, ya se mostro el aviso.
 		 */
 		check_payment_methods() {
 
-			if (!this.metodos_de_pago_del_catalogo.length) {
+			const exigir_eleccion = this.exigir_medio_de_pago_en_venta_nueva
+			if (!exigir_eleccion && !this.metodos_de_pago_del_catalogo.length) {
 				return true
 			}
 
 			// Venta de contado: sin cliente, o con cliente pero omitida en cuenta corriente.
 			let es_de_contado = !this.client || this.omitir_en_cuenta_corriente
+			if (!es_de_contado) {
+				return true
+			}
 
-			if (
-				es_de_contado
-				&& !this.current_acount_payment_method_id
-				&& !this.selected_payment_methods.length
-			) {
+			let tiene_medio_de_pago = this.current_acount_payment_method_id || this.selected_payment_methods.length
+			if (exigir_eleccion) {
+				const en_catalogo = id => this.metodos_de_pago_del_catalogo.some(metodo => metodo.id == id)
+				tiene_medio_de_pago = this.selected_payment_methods.length
+					? this.selected_payment_methods.some(pago => pago.amount != null && en_catalogo(pago.current_acount_payment_method_id))
+					: en_catalogo(this.current_acount_payment_method_id)
+			}
 
-				this.$toast.error('Seleccione un metodo de pago', {
+			if (!tiene_medio_de_pago) {
+
+				this.$toast.error('Seleccione un método de pago', {
 					duration: 5000,
 				})
 

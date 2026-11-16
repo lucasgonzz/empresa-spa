@@ -157,7 +157,7 @@ class="med-diag"
 </template>
 <script>
 import { url_segura } from '@/utils/medidas_de_catalogo'
-import { CRITERIOS, MOTIVOS_DE_DESCARTE, RESULTADOS_DE_PLAN, COINCIDENCIAS_DE_LA_IA, texto_de, entero_es, texto_de_lectura_con_respaldo, texto_de_respaldo_sin_resultado, motivo_de_campo_de_la_ia } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { CRITERIOS, NOMBRES_DE_PLAN, MOTIVOS_DE_DESCARTE, RESULTADOS_DE_PLAN, COINCIDENCIAS_DE_LA_IA, texto_de, entero_es, texto_de_lectura_con_respaldo, texto_de_respaldo_sin_resultado, motivo_de_campo_de_la_ia } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 
 /**
  * Qué se probó con un artículo que quedó sin datos: un bloque por plan de búsqueda (código de
@@ -190,12 +190,17 @@ export default {
 	},
 	methods: {
 		/**
-		 * "Por código de barras" / "Por código de proveedor" / "Por nombre".
+		 * "Por código de barras" / "Por código de proveedor" / "Por nombre". Los planes cuyo nombre no se
+		 * arma bien con «Por …» («En los sitios de referencia», «Por código de barras, fuera de
+		 * Argentina») salen enteros de NOMBRES_DE_PLAN; un criterio desconocido se humaniza.
 		 *
 		 * @param {Object} plan
 		 * @returns {String}
 		 */
 		nombre_del_plan(plan) {
+			if (plan.criterio && Object.prototype.hasOwnProperty.call(NOMBRES_DE_PLAN, plan.criterio)) {
+				return NOMBRES_DE_PLAN[plan.criterio]
+			}
 			let texto = texto_de(CRITERIOS, plan.criterio)
 			return texto ? 'Por ' + texto.charAt(0).toLowerCase() + texto.slice(1) : 'Búsqueda'
 		},

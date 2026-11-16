@@ -113,7 +113,10 @@ export default {
 		actualizar_cliente() {
 			console.log('actualizar_cliente')
 			if (this.maked_sale.client_id && this.maked_sale.save_current_acount) {
-				this.loadModel('client', this.maked_sale.client_id)
+				// En silencio: el aviso de esto es «Venta guardada» (guardar_venta_online). Con el
+				// «Cliente actualizado» de siempre, una venta a cuenta corriente parecía haber
+				// editado al cliente (ensayo de la prueba, ronda 3, 12/11/2026).
+				this.loadModel('client', this.maked_sale.client_id, '/', false)
 			}
 		},
 
@@ -198,6 +201,16 @@ export default {
 			.then(res => {
 				console.log('SE GUARDO VENTA')
 				console.log(res)
+				/*
+					Aviso de exito, de contado o a cuenta corriente (ensayo de la prueba, ronda 3,
+					12/11/2026): antes la de contado no decia nada --solo cambiaba «Venta N» chico al
+					pie-- y la de c/c decia «Cliente actualizado». Va primero, antes de limpiar Vender:
+					la venta ya esta guardada aunque lo de abajo falle (y si falla, el catch avisa que
+					hay que mirar en Ventas).
+				*/
+				this.$toast.success('Venta guardada', {
+					duration: 2500,
+				})
 				const sale = this.$store.state.vender.sale
 				if (sale && sale.id && pending.length) {
 					this.upload_pending_attachments(sale.id, pending)

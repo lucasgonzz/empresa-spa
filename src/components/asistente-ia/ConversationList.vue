@@ -79,12 +79,13 @@
 								ícono, que es la degradación correcta.
 							-->
 							<span
-							v-if="conversation.origen == 'whatsapp'"
 							class="asistente-ia-lista__canal"
-							title="Esta conversación la empezaste por WhatsApp">
+							:title="es_de_whatsapp(conversation) ? 'Empezó en WhatsApp' : 'Empezó en el sistema'">
 								<icono
+								v-if="es_de_whatsapp(conversation)"
 								nombre="whatsapp"
 								:tamano="14"></icono>
+								<i v-else class="bi bi-pc-display" aria-hidden="true"></i>
 							</span>
 							<!-- Título en UNA línea con ellipsis (como ChatGPT); sin título todavía,
 							se muestra el provisorio (D20). -->
@@ -324,6 +325,9 @@ export default {
 		},
 	},
 	methods: {
+		es_de_whatsapp(conversation) {
+			return (conversation.origen_canal || conversation.origen) === 'whatsapp'
+		},
 		/**
 		 * Abre el modal de configuración del agente (S3, acceso 1). El modal está montado
 		 * una sola vez en el botón flotante; acá solo se lo dispara por id.

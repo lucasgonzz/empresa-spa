@@ -4,6 +4,22 @@
 			Misión "chat IA" (15/8/2026): la vista dejó de montar NavComponent (las
 			secciones se navegan desde la nav vertical, hijos de "Tienda Online").
 		-->
+		<!--
+			Acceso a la tienda del negocio (ensayo de la prueba, ronda 3, 12/11/2026): la dirección
+			solo estaba en Agentes → «Tu tienda ↗» y el dueño no la encontraba desde acá. Usa la MISMA
+			fuente y la misma validación que ese botón (url_de_tienda sobre owner.online, en
+			store/ai_chat.js): sin una dirección segura, no se dibuja.
+		-->
+		<div
+		v-if="tienda_url"
+		class="online-ver-tienda">
+			<a
+			class="online-ver-tienda__link"
+			:href="tienda_url"
+			target="_blank"
+			rel="noopener noreferrer"
+			data-testid="online-ver-mi-tienda">Ver mi tienda <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+		</div>
 		<orders></orders>
 		<buyers></buyers>
 		<!--
@@ -37,7 +53,20 @@
 	</div>
 </template>
 <script>
+import { url_de_tienda } from '@/store/ai_chat'
+
 export default {
+	computed: {
+		/**
+		 * Dirección de la tienda del negocio, o null. La misma cuenta que «Tu tienda» del panel de
+		 * Agentes (components/asistente-ia/Panel.vue): no se duplica la validación.
+		 *
+		 * @returns {String|null}
+		 */
+		tienda_url() {
+			return url_de_tienda(this.owner && this.owner.online)
+		},
+	},
 	components: {
 		Orders: () => import('@/components/online/components/orders/Index'),
 		Buyers: () => import('@/components/online/components/buyer/Index'),
@@ -62,3 +91,21 @@ export default {
 	},
 }
 </script>
+<style lang="sass">
+// Renglón chico arriba de la sección, alineado a la derecha. Un solo link corto que no se parte
+// (nowrap) y con max-width para que en 360 px no empuje nada hacia los costados.
+.online-ver-tienda
+	display: flex
+	justify-content: flex-end
+	max-width: 100%
+	padding: 4px 15px 0
+
+	.online-ver-tienda__link
+		display: inline-flex
+		align-items: center
+		gap: 4px
+		max-width: 100%
+		font-size: .9rem
+		font-weight: 600
+		white-space: nowrap
+</style>

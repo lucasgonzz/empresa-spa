@@ -50,6 +50,7 @@
 			-->
 			<view-component
 			v-else
+			:data-modelo-abm="selected_model"
 			show_filter_modal
 			:check_permissions="false"
 			:show_btn_save="!abm_ocultar_guardar_y_eliminar"
@@ -107,6 +108,7 @@ import routes from '@/router/routes'
 	`if_has_extencion` de siempre. Las views que no la declaran no cambian.
 */
 import { cumple_config_del_dueno } from '@/common-vue/mixins/generals'
+import { clave_grupo_abm, clave_solapa_abm } from '@/tours/claves-abm'
 export default {
 	mixins: [abm],
 	components: {
@@ -141,12 +143,15 @@ export default {
 
 						views.push({
 							name: view.view,
+							// Ancla de los recorridos de Robotito (src/tours/claves-abm.js). Solo agrega un atributo.
+							data_tour: clave_grupo_abm(view.view),
 						})
 					}
 				} else {
 
 					views.push({
 						name: view.view,
+						data_tour: clave_grupo_abm(view.view),
 					})
 				}
 				
@@ -298,6 +303,11 @@ export default {
 			var nombre_propio = (view && view.nombres && view.nombres[model]) ? view.nombres[model] : null
 			var item = {
 				model_name: model,
+			}
+			// Ancla de los recorridos de Robotito: la misma clave que publica catalogo-soporte.json.
+			// Solo con grupo (la ruta /abm): un ABM armado con `models` sueltos no la lleva.
+			if (view) {
+				item.data_tour = clave_solapa_abm(view.view, plural)
 			}
 			if (this.idiom == 'es') {
 				item.nombre = nombre_propio ? nombre_propio : plural

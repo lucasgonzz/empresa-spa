@@ -37,6 +37,7 @@
 				<encabezado
 				:asignacion="asignacion"
 				:es_acceso_maestro="es_acceso_maestro"
+				:puede_gestionar_catalogo="puede_gestionar_catalogo"
 				:operando="operando_asignacion"
 				@detener="detener"
 				@reanudar="reanudar"></encabezado>
@@ -270,6 +271,10 @@ export default {
 		 * búsquedas de todo el catálogo (las de selección y del asistente, cualquiera; plan §13).
 		 */
 		es_acceso_maestro: {
+			type: Boolean,
+			default: false,
+		},
+		puede_gestionar_catalogo: {
 			type: Boolean,
 			default: false,
 		},

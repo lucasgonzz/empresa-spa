@@ -1,5 +1,6 @@
 export default {
 	properties: [
+		{ group_title: 'General' },
 		{
 			text: 'Nombre',
 			key: 'name',
@@ -8,9 +9,11 @@ export default {
 			is_title: true,
 		},
 		{
-			text: 'Pocision',
+			text: 'Posición de las listas',
 			key: 'position',
 			type: 'number',
+			orden_listas_de_precios: true,
+			full_cols: true,
 			value: '',
 			show: true,
 		},
@@ -58,22 +61,23 @@ export default {
 			src/common-vue/views/Abm.vue). La columna sigue en la base por compatibilidad con el SPA
 			viejo cacheado; la API ya no la persiste.
 		*/
+		{ group_title: 'Configuración extra' },
 		{
-			text: 'Ocultar al publico',
+			text: 'Ocultar al público',
 			key: 'ocultar_al_publico',
 			type: 'checkbox',
 			value: 0,
 			show: true,
 		},
 		{
-			text: 'Por defecto, incluir los articulos en esta lista para exportar en el Excel a los clientes',
+			text: 'Por defecto, incluir los artículos de esta lista en el Excel para clientes',
 			key: 'incluir_en_lista_de_precios_de_excel',
 			type: 'checkbox',
 			value: 1,
 			not_show: true,
 		},
 		{
-			// text: 'Setear el precio final',
+			text: 'Se usa para Tienda Nube',
 			key: 'se_usa_en_tienda_nube',
 			if_has_extencion: 'usa_tienda_nube',
 			type: 'checkbox',
@@ -121,9 +125,12 @@ export default {
 				'Si es la lista que ve el público (la de número de posición mayor que no esté oculta al público), también se aplica a los visitantes.',
 			]
 		},
+		{ group_title: 'Recargos' },
 		{
 			text: 'Recargos',
 			key: 'price_type_surchages',
+			full_cols: true,
+			descripcion_visible: 'Usá recargos para registrar comisiones u otros importes que se descuentan de lo que te deja esta lista. Por ejemplo, si el cliente paga $1.000 y tenés una comisión del 10%, te quedan $900 antes de descontar el costo y los impuestos. Podés indicar un importe fijo o un porcentaje. Cada porcentaje se aplica sobre lo que queda después de los recargos anteriores.',
 			not_show: true,
 			has_many: {
 				text: 'Recargos',
@@ -131,8 +138,9 @@ export default {
 			},
 		},
 
+		{ group_title: 'Categorías' },
 		{
-			text: 'Categorias',
+			text: 'Categorías',
 			store: 'category',
 			search_on_models_by: 'name',
 			type: 'search',
@@ -159,7 +167,7 @@ export default {
 			}
 		},
 		{
-			text: 'Sub Categorias',
+			text: 'Subcategorías',
 			key: 'sub_categories',
 			type: 'search',
 			store: 'sub_category',
@@ -182,8 +190,8 @@ export default {
 		como_se_utiliza: 'Creá la lista con nombre, posición y margen por defecto. Opcionalmente definí recargos propios de la lista y márgenes específicos por categoría o subcategoría. Después asignásela a los clientes que corresponda.',
 		palabras_clave: ['listas de precios', 'margen', 'ganancia', 'mayorista', 'minorista', 'porcentaje', 'catálogo', 'tienda', 'artículos habilitados'],
 	},
-	singular_model_name_spanish: 'Tipo de precio',
-	plural_model_name_spanish: 'Tipos de precio',
-	create_model_name_spanish: 'Nuevo tipo de precio',
+	singular_model_name_spanish: 'Lista de precios',
+	plural_model_name_spanish: 'Listas de precios',
+	create_model_name_spanish: 'Nueva lista de precios',
 	text_delete: 'el',
 }

@@ -9,6 +9,18 @@ import axios from 'axios'
  *   - El estado del proceso (loading, error, resultado).
  *   - Los parámetros de la nueva factura consolidada.
  */
+function datosConsolidacion(state) {
+    return {
+        client_id:                state.client_id,
+        sale_ids:                 state.sale_ids_seleccionados,
+        afip_information_id:      state.afip_information_id,
+        afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
+        afip_fecha_emision:       state.afip_fecha_emision,
+        forma_de_pago:            state.forma_de_pago,
+        agrupar_items:            state.agrupar_items,
+    }
+}
+
 export default {
     namespaced: true,
 
@@ -196,6 +208,20 @@ export default {
             }
         },
 
+        previsualizar({ commit, state }) {
+            commit('setLoading', true)
+            commit('setError', null)
+
+            return axios.post('/api/sales/consolidar-facturacion/vista-previa', datosConsolidacion(state))
+                .then(({ data }) => data)
+                .catch(err => {
+                    const mensaje = err.response && err.response.data && err.response.data.message
+                    commit('setError', mensaje || 'No se pudo calcular la vista previa. Intentá de nuevo.')
+                    return null
+                })
+                .finally(() => commit('setLoading', false))
+        },
+
         /**
          * Envía la solicitud de consolidación a la API y agrega la venta
          * resultante al store de ventas.
@@ -203,7 +229,7 @@ export default {
          * @param {Object} context
          * @returns {Promise<boolean>} true si la consolidación fue exitosa.
          */
-        async consolidar({ commit, state, dispatch }) {
+        async consolidar({ commit, state, dispatch }, vista_previa) {
             commit('setLoading', true)
             commit('setError', null)
 
@@ -214,14 +240,9 @@ export default {
                  * no hay forma de decir a cuál de ellas se le está recortando el importe.
                  * Decisión de Lucas del 20/8/2026. El backend lo fuerza a null igual.
                  */
-                const payload = {
-                    client_id:                state.client_id,
-                    sale_ids:                 state.sale_ids_seleccionados,
-                    afip_information_id:      state.afip_information_id,
-                    afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
-                    afip_fecha_emision:       state.afip_fecha_emision,
-                    forma_de_pago:            state.forma_de_pago,
-                    agrupar_items:            state.agrupar_items,
+                const payload = datosConsolidacion(state)
+                if (vista_previa && vista_previa.firma_vista_previa) {
+                    payload.firma_vista_previa = vista_previa.firma_vista_previa
                 }
 
                 const res = await axios.post('/api/sales/consolidar-facturacion', payload)
@@ -259,16 +280,4 @@ export default {
         },
     },
 
-    getters: {
-        /**
-         * Total acumulado de las ventas seleccionadas para mostrar en el resumen del modal.
-         * @param {Object} state
-         * @returns {number}
-         */
-        total_seleccionado(state) {
-            return state.ventas_por_consolidar
-                .filter(v => state.sale_ids_seleccionados.includes(v.id))
-                .reduce((acc, v) => acc + parseFloat(v.total || 0), 0)
-        },
-    },
 }

@@ -25,6 +25,14 @@ function cargar(ruta, mocks) {
 		return cache.get(ruta)
 	}
 	const archivo = path.join(raiz, 'src', ruta)
+	if (ruta.endsWith('.json')) {
+		// Un JSON de datos (el catálogo de soporte): webpack lo entrega ya parseado.
+		const datos = JSON.parse(fs.readFileSync(archivo, 'utf8'))
+		if (!mocks) {
+			cache.set(ruta, datos)
+		}
+		return datos
+	}
 	let fuente = fs.readFileSync(archivo, 'utf8')
 	let plantilla = null
 	if (ruta.endsWith('.vue')) {
@@ -76,7 +84,7 @@ function cargar(ruta, mocks) {
  * @returns {string}
  */
 function agregar_extension(ruta) {
-	if (/\.(js|vue)$/.test(ruta)) {
+	if (/\.(js|vue|json)$/.test(ruta)) {
 		return ruta
 	}
 	return fs.existsSync(path.join(raiz, 'src', ruta + '.js')) ? ruta + '.js' : ruta + '.vue'

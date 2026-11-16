@@ -17,13 +17,13 @@ data-testid="alertas-imagenes">
 			Cada asignación automática de imágenes queda acá. Abrí una para ver qué se asignó, qué quedó para revisar y por qué no se encontró el resto. Las búsquedas son las consultas al buscador de imágenes que gastó cada una.
 		</p>
 		<b-button
-		v-if="es_acceso_maestro"
+		v-if="puede_gestionar_catalogo"
 		class="btn-modulo alertas-imagenes__catalogo"
 		variant="primary"
 		data-testid="imagenes-catalogo-abrir"
 		@click="abrir_modal_catalogo">
 			<i class="bi bi-images m-r-5"></i>
-			Asignar imágenes a todo el catálogo
+			{{ es_catalogo_de_prueba ? 'Buscar imágenes para mi catálogo' : 'Asignar imágenes a todo el catálogo' }}
 		</b-button>
 	</div>
 
@@ -31,7 +31,8 @@ data-testid="alertas-imagenes">
 	@abrir="abrir_detalle"></tabla-asignaciones>
 
 	<modal-catalogo
-	v-if="es_acceso_maestro"
+	v-if="puede_gestionar_catalogo"
+	:es-acceso-maestro="es_acceso_maestro"
 	@lanzada="al_lanzar_catalogo"
 	@ver_asignacion="abrir_detalle"></modal-catalogo>
 
@@ -39,6 +40,7 @@ data-testid="alertas-imagenes">
 	:asignacion_id="asignacion_abierta_id"
 	:solapa_pedida="solapa_pedida"
 	:es_acceso_maestro="es_acceso_maestro"
+	:puede_gestionar_catalogo="puede_gestionar_catalogo"
 	@cerrado="al_cerrar_detalle"></detalle-asignacion>
 
 </div>
@@ -114,6 +116,12 @@ export default {
 		es_acceso_maestro() {
 			let usuario = this.$store.state.auth.user
 			return !!(usuario && usuario.es_acceso_maestro)
+		},
+		es_catalogo_de_prueba() {
+			return !!(this.is_owner && this.user.prueba && this.user.prueba.imagenes_catalogo && this.user.prueba.vence_at)
+		},
+		puede_gestionar_catalogo() {
+			return this.es_acceso_maestro || !!(this.is_owner && this.user.prueba && this.user.prueba.imagenes_catalogo)
 		},
 		/**
 		 * Lo que el link directo pide, id y solapa juntos (`12|no_asignadas`). Mirar los dos hace

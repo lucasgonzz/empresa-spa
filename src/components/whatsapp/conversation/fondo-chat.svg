@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="248" height="204" viewBox="0 0 248 204">
+  <g fill="none" stroke="#828282" stroke-opacity=".23" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 23h21a5 5 0 0 1 5 5v9a5 5 0 0 1-5 5h-9l-7 5v-5h-5a5 5 0 0 1-5-5v-9a5 5 0 0 1 5-5Zm3 8h15m-15 4h9" transform="rotate(-12 29 35)"/>
+    <path d="m77 22 4 7 8 1-6 6 2 8-8-4-7 4 1-8-6-6 8-1 4-7Z" transform="rotate(14 77 33)"/>
+    <path d="M123 28h17l2 14h-21l2-14Zm4 0v-3a5 5 0 0 1 10 0v3m-16 8h21" transform="rotate(-18 131 34)"/>
+    <path d="M175 29c-8-9-16 3 0 12 16-9 8-21 0-12Zm23-9 4 4m-2-6v8m-4-4h8"/>
+    <path d="m221 37 20-11-7 21-5-8-8-2Zm8 2 12-13"/>
+    <path d="M26 72h14l4 8-6 9H26l-6-9 6-8Zm-6 8h24m-13-8-3 8 4 9 4-9-2-8" transform="rotate(-15 32 80)"/>
+    <path d="M66 65c-5 2-4 11 4 19 8 8 16 9 18 4l-6-5-4 2a17 17 0 0 1-8-8l2-4-6-8Z" transform="rotate(18 76 78)"/>
+    <path d="M118 70a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-4 12q4 5 8 0m-7-5h.1m6 0h.1"/>
+    <path d="M153 70h22v15h-22V70Zm4 4h14m-14 4h7m10 7 4 4m-27-23 2 1"/>
+    <path d="M217 66c6 4 8 8 4 13l-7 7-8-8c-4-5 1-11 7-9l4-3Zm-7 7 7 7m-4-10 7 7" transform="rotate(12 215 76)"/>
+    <path d="M18 120a12 12 0 0 1 24 0l-2 9H20l-2-9Zm5 0h14m-7-7v14"/>
+    <path d="M65 118c0-9 19-11 20-1 1 8-9 13-14 11l-6 3 2-6c-1-2-2-4-2-7Zm5 2h1m5 0h1m4 0h1"/>
+    <path d="M117 109v18m-9-9h18m-15-6 12 12m0-12-12 12" transform="rotate(14 117 118)"/>
+    <path d="M148 124a11 11 0 1 0 22 0 11 11 0 0 0-22 0Zm11-6v6l4 3m-8-18h8"/>
+    <path d="M199 119h24v14h-24v-14Zm0 0 12 8 12-8m-14-4h15" transform="rotate(-15 212 124)"/>
+    <path d="M20 168c8-8 19-7 25 0-6 7-17 8-25 0Zm25 0 6-5v10l-6-5m-17-1h.1"/>
+    <path d="M78 151c4 6 10 6 10 13a8 8 0 1 1-16 0c0-5 5-8 6-13Zm0 14c-2 2-2 5 0 6"/>
+    <path d="M113 165h24v15h-24v-15Zm6 0 2-3h8l2 3m-10 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0Z" transform="rotate(12 125 171)"/>
+    <path d="M160 169h21m-10-10v20m-7-17 14 14m0-14-14 14"/>
+    <path d="m211 155 7 5-2 8-8 3-5-6 2-7 6-3Zm6 13 5 5m-2-13 7-3m-27 21 6-4"/>
+    <path d="M10 53h.1m46-2h.1m43 9h.1m44-7h.1m44 0h.1m48 9h.1M14 102h.1m39 0h.1m40 10h.1m43-9h.1m49-9h.1m44 8h.1M9 151h.1m46-8h.1m48 4h.1m40 5h.1m48-6h.1m43-3h.1M13 194h.1m44-4h.1m43 1h.1m45 4h.1m46-8h.1m42 3h.1"/>
+  </g>
+</svg>

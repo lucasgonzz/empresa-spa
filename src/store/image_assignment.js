@@ -153,6 +153,7 @@ export function normalizar_tope_demo(valor) {
 		tope: Number(valor.tope) || 0,
 		usadas: Number(valor.usadas) || 0,
 		restantes: Math.max(0, Number(valor.restantes) || 0),
+		unidad: valor.unidad,
 	}
 }
 
@@ -163,6 +164,9 @@ export function normalizar_tope_demo(valor) {
  * @returns {String}
  */
 export function aviso_de_tope_demo(tope) {
+	if (tope.unidad === 'producto') {
+		return 'Te quedan ' + tope.restantes + ' de ' + tope.tope + ' búsquedas gratuitas de imágenes. Cada artículo que se busca usa un intento, aunque no aparezca una imagen.'
+	}
 	return 'Te quedan ' + tope.restantes + ' de ' + tope.tope + ' búsquedas de la demo. Cada artículo usa al menos una: los que no alcancen quedan para cargar a mano.'
 }
 
@@ -173,6 +177,9 @@ export function aviso_de_tope_demo(tope) {
  * @returns {String}
  */
 export function mensaje_de_tope_demo_agotado(tope) {
+	if (tope.unidad === 'producto') {
+		return 'Usaste todas las búsquedas gratuitas de imágenes de tu prueba. Podés seguir cargando fotos a mano.'
+	}
 	return 'Llegaste al límite de búsquedas de la demo (' + tope.tope + '). Podés seguir cargando a mano.'
 }
 

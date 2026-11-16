@@ -41,6 +41,7 @@
 			v-else
 			v-for="chat in chats"
 			:key="chat.id"
+			:data-tour="chat.id === chat_de_prueba_id ? 'whatsapp.chat_de_prueba' : null"
 			:chat="chat"
 			:is_active="chat.id == selected_chat_id"
 			@select="selectChat"></chat-row>
@@ -56,6 +57,9 @@ import ChatRow from '@/components/whatsapp/chats-list/ChatRow'
 import NewChatModal from '@/components/whatsapp/chats-list/NewChatModal'
 import WhatsappConfig from '@/components/whatsapp/config/Index'
 export default {
+	props: {
+		chat_de_prueba_id: Number,
+	},
 	components: {
 		ChatSearch,
 		ChatRow,
@@ -70,7 +74,8 @@ export default {
 			return this.$store.state.whatsapp_chat.loading_chats
 		},
 		selected_chat_id() {
-			return this.$store.state.whatsapp_chat.selected_chat_id
+			const chat = this.$store.state.whatsapp_chat
+			return chat.sidebar_abierto ? chat.selected_chat_id : null
 		},
 	},
 	methods: {

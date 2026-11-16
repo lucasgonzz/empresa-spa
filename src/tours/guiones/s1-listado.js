@@ -297,7 +297,7 @@ export default {
 			},
 			{
 				ancla: 'listado.campo_precio_manual',
-				texto: 'Mirá: el precio manual quedó bloqueado. Mientras haya margen, el precio lo calcula el sistema.',
+				texto: 'Mientras uses el margen, el sistema calcula el precio. Para cargarlo a mano, activá «Setear precio final».',
 				avanza: 'siguiente',
 			},
 			{
@@ -1021,7 +1021,7 @@ export default {
 			},
 			{
 				ancla: 'listado.tabla_mapeo_columnas',
-				texto: 'La IA mira tus encabezados y los valores de abajo, y te dice qué es cada columna con su nivel de seguridad. Lo dudoso queda en amarillo.',
+				texto: 'La IA mira tus encabezados y los valores de abajo, y te dice qué es cada columna. Lo que conviene validar queda en amarillo y lo dudoso en rojo.',
 				avanza: 'siguiente',
 				techo_ms: TECHO_IA,
 			},
@@ -1037,7 +1037,8 @@ export default {
 				techo_ms: TECHO_IA,
 			},
 			{
-				/* Sin esta decisión el botón "Continuar" queda `:disabled`, y el paso siguiente
+				/* Solo aparece si el Excel trae códigos de proveedor repetidos; si no, el motor lo saltea.
+				 * Sin esta decisión el botón "Continuar" queda `:disabled`, y el paso siguiente
 				 * sería un botón muerto sin ninguna explicación. */
 				ancla: 'listado.politica_codigos_repetidos',
 				texto: 'Decile qué hacer con los códigos que ya existen en el sistema. Hasta que no elijas, "Continuar" queda apagado.',

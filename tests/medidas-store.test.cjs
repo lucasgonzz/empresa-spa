@@ -26,6 +26,14 @@ function store_con(responder) {
 			pedidos.push({ metodo: 'post', url: url, cuerpo: cuerpo, config: config })
 			return responder('post', url, config, cuerpo)
 		},
+		put: (url, cuerpo, config) => {
+			pedidos.push({ metodo: 'put', url: url, cuerpo: cuerpo, config: config })
+			return responder('put', url, config, cuerpo)
+		},
+		put: (url, cuerpo, config) => {
+			pedidos.push({ metodo: 'put', url: url, cuerpo: cuerpo, config: config })
+			return responder('put', url, config, cuerpo)
+		},
 	}
 	const modulo = cargar('store/dimension_search.js', {
 		'axios': { __esModule: true, default: axios },
@@ -352,4 +360,78 @@ test('aprobar_varios: normaliza omitidos_sin_respaldo (0 si la API no lo manda) 
 	assert.deepEqual(rv.fallidos, [])
 	const vacio = store_con(() => Promise.resolve({ data: null }))
 	assert.equal((await vacio.store.actions.aprobar_varios({}, [1])).omitidos_sin_respaldo, 0)
+})
+
+// --- Sitios de referencia (misión medidas-sitios-de-referencia, 11/11/2026) ------------------------
+
+test('sitios de referencia: el GET va en silencio y normaliza la lista (sin el campo, [])', async () => {
+	const { store, pedidos } = store_con(() => Promise.resolve({ data: { sitios: ['obi.de', ' verdefacile.eu ', '', 'obi.de', null, 3] } }))
+	const sitios = await store.actions.get_sitios_de_referencia({})
+	assert.equal(pedidos[0].metodo, 'get')
+	assert.equal(pedidos[0].url, '/api/dimension-search-reference-sites')
+	assert.equal(pedidos[0].config.skip_global_error_event, true)
+	assert.equal(pedidos[0].config.skip_navigation_cancel, true)
+	assert.deepEqual(sitios, ['obi.de', 'verdefacile.eu', '3'])
+	const viejo = store_con(() => Promise.resolve({ data: {} }))
+	assert.deepEqual(await viejo.store.actions.get_sitios_de_referencia({}), [])
+})
+
+test('sitios de referencia: el PUT manda {sitios}, sin toasts globales, y devuelve lo normalizado por el servidor', async () => {
+	const { store, pedidos } = store_con(() => Promise.resolve({ data: { sitios: ['obi.de', 'carbydoctor.com.au'] } }))
+	const sitios = await store.actions.guardar_sitios_de_referencia({}, ['https://www.obi.de/x', 'carbydoctor.com.au'])
+	assert.equal(pedidos[0].metodo, 'put')
+	assert.equal(pedidos[0].url, '/api/dimension-search-reference-sites')
+	assert.deepEqual(pedidos[0].cuerpo, { sitios: ['https://www.obi.de/x', 'carbydoctor.com.au'] })
+	assert.equal(pedidos[0].config.skip_global_error_event, true)
+	assert.equal(pedidos[0].config.skip_global_validation_toast, true)
+	assert.equal(pedidos[0].config.skip_navigation_cancel, true)
+	assert.deepEqual(sitios, ['obi.de', 'carbydoctor.com.au'])
+})
+
+test('sitios de referencia: un 422 se rechaza tal cual (con su response) para que el modal lo explique', async () => {
+	const { store } = store_con(() => Promise.reject(error_http(422, 'no es un dominio')))
+	let rechazo = null
+	try {
+		await store.actions.guardar_sitios_de_referencia({}, ['hola'])
+	} catch (err) {
+		rechazo = err
+	}
+	assert.equal(rechazo.response.status, 422)
+})
+
+// --- Sitios de referencia (misión medidas-sitios-de-referencia, 11/11/2026) ------------------------
+
+test('sitios de referencia: el GET va en silencio y normaliza la lista (sin el campo, [])', async () => {
+	const { store, pedidos } = store_con(() => Promise.resolve({ data: { sitios: ['obi.de', ' verdefacile.eu ', '', 'obi.de', null, 3] } }))
+	const sitios = await store.actions.get_sitios_de_referencia({})
+	assert.equal(pedidos[0].metodo, 'get')
+	assert.equal(pedidos[0].url, '/api/dimension-search-reference-sites')
+	assert.equal(pedidos[0].config.skip_global_error_event, true)
+	assert.equal(pedidos[0].config.skip_navigation_cancel, true)
+	assert.deepEqual(sitios, ['obi.de', 'verdefacile.eu', '3'])
+	const viejo = store_con(() => Promise.resolve({ data: {} }))
+	assert.deepEqual(await viejo.store.actions.get_sitios_de_referencia({}), [])
+})
+
+test('sitios de referencia: el PUT manda {sitios}, sin toasts globales, y devuelve lo normalizado por el servidor', async () => {
+	const { store, pedidos } = store_con(() => Promise.resolve({ data: { sitios: ['obi.de', 'carbydoctor.com.au'] } }))
+	const sitios = await store.actions.guardar_sitios_de_referencia({}, ['https://www.obi.de/x', 'carbydoctor.com.au'])
+	assert.equal(pedidos[0].metodo, 'put')
+	assert.equal(pedidos[0].url, '/api/dimension-search-reference-sites')
+	assert.deepEqual(pedidos[0].cuerpo, { sitios: ['https://www.obi.de/x', 'carbydoctor.com.au'] })
+	assert.equal(pedidos[0].config.skip_global_error_event, true)
+	assert.equal(pedidos[0].config.skip_global_validation_toast, true)
+	assert.equal(pedidos[0].config.skip_navigation_cancel, true)
+	assert.deepEqual(sitios, ['obi.de', 'carbydoctor.com.au'])
+})
+
+test('sitios de referencia: un 422 se rechaza tal cual (con su response) para que el modal lo explique', async () => {
+	const { store } = store_con(() => Promise.reject(error_http(422, 'no es un dominio')))
+	let rechazo = null
+	try {
+		await store.actions.guardar_sitios_de_referencia({}, ['hola'])
+	} catch (err) {
+		rechazo = err
+	}
+	assert.equal(rechazo.response.status, 422)
 })

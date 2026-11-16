@@ -20,7 +20,8 @@ export default {
 		repercute: [
 			'El stock se descuenta del depósito de esta sucursal, no del total del negocio.',
 		],
-		requiere: 'Es obligatoria. Sin sucursal elegida, el botón de guardar no hace absolutamente nada: no manda el pedido y tampoco avisa por qué. Si apretás guardar y no pasa nada, mirá primero acá.',
+		requiere: 'Es obligatoria: sin sucursal elegida, la venta no se guarda y el sistema te avisa que falta.',
+		nota_interna: 'Antes de la 4.3.56 guardar sin sucursal no hacía nada y no avisaba; desde la 4.3.56 frena con aviso.',
 	},
 
 	'venta-total': {

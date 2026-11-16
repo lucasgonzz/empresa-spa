@@ -9,6 +9,7 @@ import {
 	normalizar_resultado_de_accion,
 	normalizar_previa,
 	normalizar_resultado_de_lote,
+	normalizar_sitios,
 	extraer_paginador,
 	extraer_modelo,
 	a_numero,
@@ -59,6 +60,12 @@ const RUTA_DE_CORRIDAS = '/api/dimension-search-runs'
 
 /** Prefijo de las rutas de items (aprobar, rechazar, quitar). */
 const RUTA_DE_ITEMS = '/api/dimension-search-items'
+
+/**
+ * Ruta de los sitios de referencia del comercio (misión medidas-sitios-de-referencia, 11/11/2026): las
+ * páginas donde están cargados los pesos y medidas de sus productos, que la búsqueda consulta primero.
+ */
+const RUTA_DE_SITIOS = '/api/dimension-search-reference-sites'
 
 /** Opciones de axios de TODOS los pedidos de este módulo (ver el 🔴 de arriba). */
 const OPCIONES_BASE = { skip_navigation_cancel: true }
@@ -604,6 +611,35 @@ export default {
 			}
 			return axios.post(RUTA_DE_CORRIDAS + '/catalogo', cuerpo, opciones())
 				.then(res => normalizar_corrida(extraer_modelo(res.data)))
+				.catch(relanzar_marcando_la_cancelacion)
+		},
+		/**
+		 * Los sitios de referencia que tiene guardados el comercio (`{sitios: [...]}`). Silencioso: contra
+		 * una API que todavía no tiene la ruta (404) el modal simplemente no muestra el bloque, y cualquier
+		 * otro error lo dice el propio bloque, sin el toast del interceptor global.
+		 *
+		 * @returns {Promise<Array<String>>}
+		 */
+		get_sitios_de_referencia() {
+			return axios.get(RUTA_DE_SITIOS, OPCIONES_SILENCIOSAS)
+				.then(res => normalizar_sitios(res.data && res.data.sitios))
+				.catch(relanzar_marcando_la_cancelacion)
+		},
+		/**
+		 * Reemplaza la lista entera de sitios de referencia (solo el acceso maestro: 403 para el resto).
+		 * La API devuelve la lista ya normalizada (dominios sin `https://`, `www.` ni ruta), que es la que
+		 * se muestra. Un 422 (`{message, errors}`: una entrada que no es un dominio, más de 8 sitios) lo
+		 * muestra el bloque al lado del campo, por eso va sin el toast de validación ni el global.
+		 *
+		 * @param {Object} context
+		 * @param {Array<String>} sitios Lo que escribió la persona, un renglón por sitio.
+		 * @returns {Promise<Array<String>>}
+		 */
+		guardar_sitios_de_referencia(context, sitios) {
+			let cuerpo = { sitios: Array.isArray(sitios) ? sitios : [] }
+			let config = opciones({ skip_global_error_event: true, skip_global_validation_toast: true })
+			return axios.put(RUTA_DE_SITIOS, cuerpo, config)
+				.then(res => normalizar_sitios(res.data && res.data.sitios))
 				.catch(relanzar_marcando_la_cancelacion)
 		},
 		/**

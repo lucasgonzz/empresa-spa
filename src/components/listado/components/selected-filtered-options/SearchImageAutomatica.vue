@@ -157,7 +157,7 @@ export default {
 				// Desde $root: si el menú se desmonta mientras el aviso está abierto, el aviso no se
 				// cierra solo (BootstrapVue lo destruye junto con el componente que lo abrió).
 				this.$root.$bvModal.msgBoxConfirm(aviso_de_tope_demo(tope), {
-					title: 'Búsquedas de la demo',
+					title: tope.unidad === 'producto' ? 'Búsquedas gratuitas de imágenes' : 'Búsquedas de la demo',
 					okTitle: 'Asignar imágenes',
 					cancelTitle: 'Cancelar',
 					centered: true,
@@ -262,6 +262,7 @@ export default {
 
 			let articulos = data.articulos
 			let saltados = typeof data.saltados_con_imagen === 'number' ? data.saltados_con_imagen : 0
+			let sin_cupo = Number(data.saltados_por_cupo) || 0
 
 			let mensaje = 'Asignando imágenes para ' + articulos + (articulos === 1 ? ' artículo' : ' artículos') + ' en segundo plano. '
 
@@ -269,6 +270,12 @@ export default {
 				mensaje += saltados === 1
 					? '1 ya tenía imagen y se salteó. '
 					: saltados + ' ya tenían imagen y se saltearon. '
+			}
+
+			if (sin_cupo > 0) {
+				mensaje += sin_cupo === 1
+					? 'Un artículo quedó fuera por el cupo de la prueba. '
+					: sin_cupo + ' artículos quedaron fuera por el cupo de la prueba. '
 			}
 
 			return mensaje + cierre

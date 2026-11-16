@@ -28,6 +28,29 @@
 		save_check_function="check_pedido_puede_avanzar_de_estado"
 		order_list_by="order_status"
 		model_name="order">
+			<template #model_modal_header="{ model }">
+				<b-alert
+				v-if="renglones_a_consultar(model).length"
+				show
+				variant="warning">
+					<strong>Disponibilidad a consultar</strong>
+					<p class="mb-1">Estos renglones se pidieron con disponibilidad a consultar.</p>
+					<ul class="mb-0 pl-3">
+						<li
+						v-for="article in renglones_a_consultar(model)"
+						:key="article.pivot.id">
+							{{ article.pivot.amount }} × {{ article.name }}<template v-if="article.variant"> ({{ article.variant }})</template>
+						</li>
+					</ul>
+				</b-alert>
+			</template>
+			<template #belongs="{ model }">
+				<b-badge
+				v-if="stock_a_consultar(model)"
+				variant="warning">
+					Consultar
+				</b-badge>
+			</template>
 			<!--
 				El comprador viene EMBEBIDO en el pedido: Order::scopeWithAll de empresa-api ya
 				trae 'buyer' en el eager loading, así que el teléfono está en memoria y no hay
@@ -153,6 +176,12 @@ export default {
 		this.$root.$off('order:save-error', this.manejar_error_de_guardado)
 	},
 	methods: {
+		stock_a_consultar(article) {
+			return !!article.pivot && Number(article.pivot.stock_a_consultar) === 1
+		},
+		renglones_a_consultar(order) {
+			return (order.articles || []).filter(this.stock_a_consultar)
+		},
 		/**
 		 * Se queda con el 422 del límite de crédito y abre el modal salteable en vez de dejar que
 		 * el formulario muestre su alert genérico.

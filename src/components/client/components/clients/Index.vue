@@ -33,6 +33,10 @@
 		</template>
 
 			<template v-slot:table_left_options="slotProps">
+				<b-badge
+				v-if="slotProps.model.tiene_acopio_pendiente === true && hasExtencion('acopios') && can('client.index')"
+				variant="danger">Acopio pendiente</b-badge>
+
 				<btn-current-acounts
 				:model="slotProps.model"
 				model_name="client"></btn-current-acounts>

@@ -364,10 +364,15 @@ export default {
 						table_width: 200,
 					},
 					{
-						text: 'Actualizar proveedor en el sistema',
+						text: 'Cambiar proveedor principal',
 						key: 'update_provider',
 						value: 0,
 						type: 'checkbox',
+						visible_when: (articulo, compra) => Number(articulo.provider_id) > 0
+							&& Number(compra && compra.provider_id) > 0
+							&& Number(articulo.provider_id) !== Number(compra.provider_id),
+						explicit_choice_key: 'update_provider_explicit',
+						implicit_parent_flag: 'update_prices',
 						table_width: 200,
 					},
 					{

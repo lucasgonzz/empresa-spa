@@ -37,10 +37,11 @@
 				tocarlas se mandan. En el sidebar del informe no hay sugerencias: ahí se escribe
 				con la caja del informe. -->
 				<div
-				v-else-if="!messages.length"
+				v-if="!loading && !messages.length && !ocultar_bienvenida"
 				class="asistente-ia-conversacion__bienvenida">
 					<pantalla-vacia solo_saludo></pantalla-vacia>
 				</div>
+				<slot name="contexto"></slot>
 
 				<!-- `ref="mensajes"`: este div ES el alto del contenido (es la columna flex que
 				aloja todos los mensajes), así que observarlo es la forma de enterarse de que el
@@ -48,7 +49,7 @@
 				decodificar, una tarjeta que se confirma, el indicador de pensando que se va. Ver
 				`arrancar_observador_de_alto()`. -->
 				<div
-				v-else
+				v-if="!loading && messages.length"
 				ref="mensajes"
 				class="asistente-ia-conversacion__mensajes">
 					<p
@@ -191,6 +192,7 @@ export default {
 		Icono,
 	},
 	props: {
+		ocultar_bienvenida: Boolean,
 		/**
 		 * true cuando la conversación ya se está mirando desde el lugar que la originó
 		 * (el sidebar del informe abierto del mostrador, misión "modulo-ia-mostrador",
@@ -655,6 +657,10 @@ export default {
 		ir_al_origen() {
 			let ruta = RUTA_POR_ORIGEN[this.conversation.origen]
 			let id = '' + this.conversation.referencia_id
+			if (ruta === 'ia' && this.$listeners['ver-informe']) {
+				this.$emit('ver-informe', this.conversation.referencia_id)
+				return
+			}
 			this.$store.commit('ai_chat/setPanelAbierto', false)
 			// Guard contra NavigationDuplicated si ya se está mirando ese detalle.
 			if (this.$route.name == ruta && this.$route.params.id == id) {

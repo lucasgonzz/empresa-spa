@@ -2,18 +2,22 @@
 	<div
 	v-if="mostrar"
 	class="whatsapp-bubble whatsapp-bubble--in whatsapp-bubble--sim whatsapp-simulated-composer"
+	data-tour="whatsapp.escribir_como_cliente"
 	@click="enfocar">
 		<textarea
 		ref="textarea"
 		v-model="body"
 		class="whatsapp-simulated-composer__texto"
 		rows="1"
+		maxlength="2000"
+		enterkeyhint="send"
 		:disabled="enviando"
-		placeholder="Escribí acá el próximo mensaje del cliente..."
+		aria-label="Mensaje de prueba del cliente"
+		placeholder="Escribí como cliente…"
 		@keydown.enter="onKeydownEnter"></textarea>
 		<div class="whatsapp-simulated-composer__footer">
 			<i class="bi bi-cone-striped"></i>
-			Simulando al cliente — Enter para mandar, Shift+Enter para salto de línea
+			Como cliente · Enter para enviar
 		</div>
 	</div>
 </template>
@@ -52,7 +56,7 @@ export default {
 	},
 	computed: {
 		mostrar() {
-			return this.$store.state.whatsapp_chat.simulando_en_vivo
+			return this.is_owner && (Boolean(this.chat && this.chat.is_test) || this.$store.state.whatsapp_chat.simulando_en_vivo)
 		},
 		chat_id() {
 			return this.$store.state.whatsapp_chat.selected_chat_id
@@ -136,21 +140,29 @@ export default {
 		enviar() {
 			let self = this
 			let body = this.body.trim()
-			if (!body || !this.chat || !this.chat.phone || this.enviando) {
+			if (!body || !this.chat || this.enviando) {
 				return
 			}
 			this.enviando = true
+			const chat_id = this.chat.id
 			this.$store.dispatch('whatsapp_chat/simulateInbound', {
-				phone: this.chat.phone,
+				chat_id: this.chat.is_test ? chat_id : undefined,
+				phone: this.chat.is_test ? undefined : this.chat.phone,
 				body: body,
 			})
 			.then(function () {
 				self.enviando = false
+				if (self.chat_id != chat_id) {
+					return
+				}
 				self.body = ''
 				self.$nextTick(function () {
 					self.ajustar_alto()
 					if (self.$refs.textarea) {
 						self.$refs.textarea.focus()
+					}
+					if (self.chat && self.chat.is_test && self.chat.id == chat_id) {
+						document.dispatchEvent(new Event('whatsapp:mensaje-de-prueba-enviado:' + chat_id))
 					}
 				})
 			})
@@ -171,13 +183,13 @@ export default {
 
 			if (status == 429) {
 				this.$toast.error(
-					'Estás simulando muy seguido: el límite es 10 mensajes por minuto. Cada simulación gasta una llamada paga al agente, por eso el techo. Esperá un minuto y probá de nuevo.',
+					(data && data.message) || 'Llegaste al límite de simulaciones. Probá de nuevo más tarde.',
 					{ duration: 8000 }
 				)
 				return
 			}
 			if (status == 403) {
-				this.$toast.error('Solo el dueño puede simular mensajes entrantes.')
+				this.$toast.error((data && data.message) || 'Solo el dueño puede simular mensajes entrantes.')
 				return
 			}
 			// 422 de validación (con `errors` campo por campo): el interceptor global de

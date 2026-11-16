@@ -5,6 +5,9 @@
     title="Consolidar ventas para facturar"
     size="lg"
     hide-footer
+    :hide-header-close="loading"
+    :no-close-on-backdrop="loading"
+    :no-close-on-esc="loading"
     @shown="onShown"
     @hidden="onHidden">
 
@@ -92,6 +95,7 @@
             <!-- Tabla de ventas elegibles -->
             <b-table
             small
+            responsive
             hover
             :items="ventas_por_consolidar"
             :fields="tabla_campos"
@@ -116,13 +120,9 @@
                 </template>
             </b-table>
 
-            <!-- Resumen del total seleccionado -->
-            <div class="m-t-10 text-right">
-                <strong>
-                    Total seleccionado: {{ price(total_seleccionado) }}
-                    ({{ sale_ids_seleccionados.length }} venta/s)
-                </strong>
-            </div>
+            <p class="m-t-10 text-right">
+                Ventas seleccionadas · {{ sale_ids_seleccionados.length }}
+            </p>
 
             <hr>
 
@@ -177,6 +177,35 @@
                 </b-col>
             </b-row>
 
+            <b-card v-if="vista_previa" class="m-b-15" title="Vista previa de la consolidación">
+                <p>
+                    Los artículos pasan a la consolidada con los ajustes que correspondan a su venta de origen.
+                </p>
+                <ul class="list-unstyled">
+                    <li v-for="venta in vista_previa.ventas" :key="venta.id">
+                        <strong>Venta N° {{ venta.num || venta.id }}</strong>
+                        <span v-if="venta.total_antes_de_ajustes != null && Number(venta.total_antes_de_ajustes) !== Number(venta.total)">
+                            · Renglones originales {{ importeVistaPrevia(venta.total_antes_de_ajustes) }}
+                        </span>
+                        · Aporta {{ importeVistaPrevia(venta.total) }}
+                    </li>
+                </ul>
+                <strong>Total de la venta consolidada · {{ importeVistaPrevia(vista_previa.total) }}</strong>
+                <b-alert
+                v-if="vista_previa.avisos && vista_previa.avisos.length"
+                show
+                variant="warning"
+                class="mt-3 mb-0">
+                    <strong>Revisá estas ventas para poder generar la factura.</strong>
+                    <ul class="mb-0">
+                        <li v-for="aviso in vista_previa.avisos" :key="aviso">{{ aviso }}</li>
+                    </ul>
+                    <b-button size="sm" variant="link" class="px-0" :disabled="loading" @click="previsualizar">
+                        Volver a calcular
+                    </b-button>
+                </b-alert>
+            </b-card>
+
             <!-- Alerta de error -->
             <b-alert
             v-if="error"
@@ -186,11 +215,22 @@
                 {{ error }}
             </b-alert>
 
+            <b-button
+            v-if="!vista_previa"
+            block
+            variant="primary"
+            :disabled="!puede_consolidar || loading"
+            @click="previsualizar">
+                <b-spinner v-if="loading" small class="m-r-5" />
+                Ver cómo quedan los importes
+            </b-button>
+
             <!-- Botón de confirmación -->
             <b-button
             block
             variant="primary"
-            :disabled="!puede_consolidar || loading"
+            v-else
+            :disabled="!puede_confirmar || loading"
             @click="consolidar">
                 <b-spinner v-if="loading" small class="m-r-5" />
                 Generar factura consolidada
@@ -226,6 +266,7 @@ export default {
         return {
             /** Indica si ya se hizo al menos una búsqueda (para mostrar el mensaje vacío). */
             busqueda_realizada: false,
+            resultado_vista_previa: null,
 
             /** Opciones de formato de fechas para los datepickers. */
             date_format_options: { year: 'numeric', month: '2-digit', day: '2-digit' },
@@ -241,6 +282,30 @@ export default {
     },
 
     computed: {
+        configuracion_vista_previa() {
+            return JSON.stringify([
+                this.client_id,
+                this.sale_ids_seleccionados,
+                this.afip_information_id,
+                this.afip_tipo_comprobante_id,
+                this.afip_fecha_emision,
+                this.forma_de_pago,
+                this.agrupar_items,
+            ])
+        },
+
+        vista_previa() {
+            const resultado = this.resultado_vista_previa
+            return resultado && resultado.configuracion === this.configuracion_vista_previa
+                ? resultado.datos
+                : null
+        },
+
+        puede_confirmar() {
+            return this.puede_consolidar && this.vista_previa
+                && !(this.vista_previa.avisos && this.vista_previa.avisos.length)
+        },
+
         /** Estado del submódulo de consolidación. */
         consolidar_state() {
             return this.$store.state.sale.consolidar_facturacion
@@ -311,11 +376,6 @@ export default {
             return this.consolidar_state.error
         },
 
-        /** Total acumulado de las ventas seleccionadas. */
-        total_seleccionado() {
-            return this.$store.getters['sale/consolidar_facturacion/total_seleccionado']
-        },
-
         /** Opciones para el selector de clientes. */
         client_options() {
             return this.$store.state.client.options.map(c => ({
@@ -358,6 +418,7 @@ export default {
          * Limpia búsqueda al cerrar el modal.
          */
         onHidden() {
+            this.resultado_vista_previa = null
             this.$store.commit('sale/consolidar_facturacion/cerrarModal')
             this.busqueda_realizada = false
         },
@@ -422,17 +483,45 @@ export default {
         /**
          * Dispara la consolidación y emite evento al componente padre si tuvo éxito.
          */
-        async consolidar() {
-            const ok = await this.$store.dispatch('sale/consolidar_facturacion/consolidar')
-            if (ok) {
-                this.$bvModal.hide(this.modal_id)
-                // Quien monta el modal decide que recargar (la cuenta corriente, por ejemplo).
-                this.$emit('consolidada')
-                this.$bvToast.toast(
-                    'Se generó la factura consolidada correctamente.',
-                    { title: 'Factura consolidada', variant: 'success', solid: true }
-                )
+        importeVistaPrevia(valor) {
+            const es_dolar = this.vista_previa.moneda_id == 2
+            return new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: es_dolar ? 'USD' : 'ARS',
+                currencyDisplay: es_dolar ? 'code' : 'symbol',
+            }).format(Number(valor))
+        },
+
+        previsualizar() {
+            const configuracion = this.configuracion_vista_previa
+            this.resultado_vista_previa = null
+            return this.$store.dispatch('sale/consolidar_facturacion/previsualizar')
+                .then(datos => {
+                    if (datos && configuracion === this.configuracion_vista_previa) {
+                        this.resultado_vista_previa = { configuracion, datos }
+                    }
+                })
+        },
+
+        consolidar() {
+            if (!this.puede_confirmar || this.loading) {
+                return
             }
+
+            const vista_previa = this.vista_previa
+            this.resultado_vista_previa = null
+            return this.$store.dispatch('sale/consolidar_facturacion/consolidar', vista_previa)
+                .then(ok => {
+                    if (!ok) {
+                        return
+                    }
+                    this.$bvModal.hide(this.modal_id)
+                    this.$emit('consolidada')
+                    this.$bvToast.toast(
+                        'Se generó la factura consolidada correctamente.',
+                        { title: 'Factura consolidada', variant: 'success', solid: true }
+                    )
+                })
         },
 
         /**

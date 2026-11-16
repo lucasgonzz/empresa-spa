@@ -2,20 +2,28 @@
 	<div
 	class="whatsapp-dashboard"
 	data-tour="whatsapp.tablero">
-		<div
-		v-for="tarjeta in tarjetas"
-		:key="tarjeta.key"
-		class="whatsapp-dashboard__tarjeta"
-		:class="tarjeta.clase"
-		:data-tour="tarjeta.tour">
-			<i
-			class="whatsapp-dashboard__icono bi"
-			:class="tarjeta.icono"></i>
-			<div class="whatsapp-dashboard__contenido">
-				<span class="whatsapp-dashboard__valor">{{ tarjeta.valor }}</span>
-				<span class="whatsapp-dashboard__etiqueta">{{ tarjeta.etiqueta }}</span>
+		<header class="whatsapp-dashboard__intro">
+			<h2>Resumen de WhatsApp</h2>
+			<p>Elegí una conversación en la lista para abrirla acá.</p>
+		</header>
+		<section v-for="grupo in grupos" :key="grupo.titulo" class="whatsapp-dashboard__grupo">
+			<h3>{{ grupo.titulo }}</h3>
+			<div class="whatsapp-dashboard__grilla">
+				<div
+				v-for="tarjeta in grupo.tarjetas"
+				:key="tarjeta.key"
+				class="whatsapp-dashboard__tarjeta"
+				:class="tarjeta.clase"
+				:data-tour="tarjeta.tour">
+					<i class="whatsapp-dashboard__icono bi" :class="tarjeta.icono" aria-hidden="true"></i>
+					<div class="whatsapp-dashboard__contenido">
+						<span class="whatsapp-dashboard__valor">{{ tarjeta.valor }}</span>
+						<span class="whatsapp-dashboard__etiqueta">{{ tarjeta.etiqueta }}</span>
+						<small v-if="tarjeta.detalle" class="whatsapp-dashboard__detalle">{{ tarjeta.detalle }}</small>
+					</div>
+				</div>
 			</div>
-		</div>
+		</section>
 	</div>
 </template>
 <script>
@@ -51,12 +59,20 @@ export default {
 		}
 	},
 	computed: {
+		grupos() {
+			return [
+				{ titulo: 'Conversaciones', tarjetas: this.tarjetas.slice(0, 3) },
+				{ titulo: 'Seguimiento del agente', tarjetas: this.tarjetas.filter(t => ['pedidos_para_confirmar', 'consultas_pendientes'].includes(t.key)) },
+				{ titulo: 'Análisis del catálogo', tarjetas: this.tarjetas.filter(t => t.key.startsWith('embeddings_')) },
+			].filter(grupo => grupo.tarjetas.length)
+		},
 		tarjetas() {
 			let tarjetas = [
 				{
 					key: 'sin_responder',
 					icono: 'bi-exclamation-circle-fill',
 					etiqueta: 'Sin responder',
+					detalle: 'El cliente escribió y todavía espera una respuesta.',
 					valor: this.$store.getters['whatsapp_chat/chats_sin_responder_count'],
 					clase: 'whatsapp-dashboard__tarjeta--sin-responder',
 					tour: 'whatsapp.tablero_sin_responder',
@@ -90,15 +106,16 @@ export default {
 						icono: 'bi-bag-check-fill',
 						etiqueta: 'Pedidos para confirmar',
 						valor: this.$store.getters['whatsapp_chat/chats_con_pedido_count'],
-						clase: 'whatsapp-dashboard__tarjeta--seguimiento whatsapp-dashboard__tarjeta--ancha',
+						clase: 'whatsapp-dashboard__tarjeta--seguimiento',
 						tour: 'whatsapp.tablero_pedidos_para_confirmar',
 					},
 					{
 						key: 'consultas_pendientes',
 						icono: 'bi-question-circle-fill',
-						etiqueta: 'Consultas pendientes',
+						etiqueta: 'Consultas para retomar',
+						detalle: 'El agente respondió y quedó en averiguar algo.',
 						valor: this.$store.getters['whatsapp_chat/chats_con_consulta_count'],
-						clase: 'whatsapp-dashboard__tarjeta--seguimiento whatsapp-dashboard__tarjeta--ancha',
+						clase: 'whatsapp-dashboard__tarjeta--seguimiento',
 						tour: 'whatsapp.tablero_consultas_pendientes',
 					},
 				])
@@ -109,7 +126,7 @@ export default {
 					{
 						key: 'embeddings_sin_generar',
 						icono: 'bi-dash-circle',
-						etiqueta: 'Artículos sin generar embedding',
+						etiqueta: 'Artículos sin analizar',
 						valor: this.$store.state.article_embeddings_estado.sin_generar,
 						clase: '',
 						tour: 'whatsapp.tablero_embeddings_sin_generar',
@@ -117,7 +134,7 @@ export default {
 					{
 						key: 'embeddings_pendiente',
 						icono: 'bi-arrow-repeat',
-						etiqueta: 'Con embedding desactualizado',
+						etiqueta: 'Análisis por actualizar',
 						valor: this.$store.state.article_embeddings_estado.pendiente,
 						clase: 'whatsapp-dashboard__tarjeta--pendiente',
 						tour: 'whatsapp.tablero_embeddings_pendiente',
@@ -125,7 +142,7 @@ export default {
 					{
 						key: 'embeddings_generandose',
 						icono: 'bi-cpu-fill',
-						etiqueta: 'Generándose ahora',
+						etiqueta: 'Artículos en análisis',
 						valor: this.$store.state.article_embeddings_estado.generandose,
 						clase: 'whatsapp-dashboard__tarjeta--hoy',
 						tour: 'whatsapp.tablero_embeddings_generandose',
@@ -205,137 +222,73 @@ export default {
 </script>
 <style lang="sass">
 .whatsapp-dashboard
-	height: 100%
-	// 🔴 `--bg-section` y no `--wa-panel` (= `--bg-card`, blanco en modo claro): el tablero
-	// vivía con el mismo fondo que la bandeja de chats de al lado y las dos quedaban
-	// indistinguibles. `--bg-section` es el token que ya usa el resto del sistema para una
-	// superficie "un escalón por debajo" de una tarjeta blanca (headers de tabla, paneles
-	// secundarios) — mismo vocabulario, no un color inventado. Las tarjetas de adentro
-	// (`--bg-hover`, con su propio borde) siguen leyéndose por encima de este fondo en los dos
-	// temas, sin tocar nada más.
+	min-height: 100%
+	padding: clamp(14px, 3vw, 38px)
 	background: var(--bg-section)
-	padding: 24px
-	display: grid
-	// Seis columnas y no tres: las tarjetas comunes ocupan dos (tres por fila, como siempre) y las dos
-	// del seguimiento ocupan tres (dos por fila), así 3 + 2 + 3 no deja huecos en ningún ancho, con o
-	// sin las tres tarjetas de embeddings.
-	grid-template-columns: repeat(6, 1fr)
-	gap: 16px
-	align-content: start
+	color: var(--wa-texto)
+	&__intro
+		margin-bottom: 1.5rem
+		h2
+			font-size: 1.35rem
+			font-weight: 700
+		p
+			margin: .4rem 0 0
+			color: var(--color-text-secondary)
+	&__grupo + &__grupo
+		margin-top: 1.35rem
+	&__grupo h3
+		font-size: .95rem
+		font-weight: 700
+		margin: 0 0 .65rem
+	&__grilla
+		display: grid
+		grid-template-columns: repeat(auto-fit, minmax(125px, 1fr))
+		gap: .65rem
 	&__tarjeta
-		grid-column: span 2
+		min-width: 0
 		display: flex
-		align-items: center
-		gap: 14px
-		padding: 18px
+		flex-direction: column
+		align-items: flex-start
+		gap: .5rem
+		padding: clamp(.65rem, 1.6vw, 1.1rem)
 		border-radius: 12px
-		background: var(--bg-hover)
 		border: 1px solid var(--wa-borde)
-		// Franja de color a la izquierda: mismo lenguaje que el resaltado de fila de ChatRow.vue,
-		// para que la tarjeta y las filas que cuenta se lean como una sola cosa.
-		border-left: 4px solid transparent
+		background: var(--wa-panel)
 	&__icono
-		font-size: 1.6rem
-		flex-shrink: 0
+		display: inline-grid
+		place-items: center
+		width: 32px
+		height: 32px
+		border-radius: 9px
+		font-size: .9rem
+		color: var(--wa-texto)
+		background: var(--wa-hover)
 	&__contenido
 		display: flex
 		flex-direction: column
 		min-width: 0
 	&__valor
-		font-size: 1.7rem
+		font-size: 1.5rem
 		font-weight: 700
-		line-height: 1.1
-		color: var(--wa-texto)
+		line-height: 1.2
 	&__etiqueta
-		font-size: .8rem
+		font-size: .84rem
+		font-weight: 600
+		overflow-wrap: anywhere
+	&__detalle
+		margin-top: .25rem
+		line-height: 1.25
 		color: var(--color-text-secondary)
-		white-space: normal
-	// --- Sin responder: rojo ---------------------------------------------------------------
-	// Mismo par bg/borde que el resaltado de fila de ChatRow.vue: la tarjeta y las filas que
-	// cuenta se leen como una sola cosa, no como dos vocabularios de color distintos.
-	&__tarjeta--sin-responder
+	&__tarjeta--sin-responder &__icono
+		color: var(--wa-sin-responder-texto)
 		background: var(--wa-sin-responder-bg)
-		border-left-color: var(--wa-sin-responder-borde)
-		.whatsapp-dashboard__icono
-			color: var(--wa-sin-responder-borde)
-		.whatsapp-dashboard__valor
-			color: var(--wa-sin-responder-texto)
-	// --- Esperando aprobación: amarillo -----------------------------------------------------
-	&__tarjeta--pendiente
+	&__tarjeta--pendiente &__icono
+		color: var(--wa-pendiente-texto)
 		background: var(--wa-pendiente-bg)
-		border-left-color: var(--wa-pendiente-borde)
-		.whatsapp-dashboard__icono
-			color: var(--wa-pendiente-borde)
-		.whatsapp-dashboard__valor
-			color: var(--wa-pendiente-texto)
-	// --- Conversaciones de hoy: verde de la marca -------------------------------------------
-	// Sin token de fondo propio (no hace falta uno más): mismo velo translúcido que ya usa
-	// ChatRow.vue para la fila activa, sobre --wa-verde.
-	&__tarjeta--hoy
-		background: rgba(37, 211, 102, .12)
-		background: color-mix(in srgb, var(--wa-verde) 12%, transparent)
-		border-left-color: var(--wa-verde)
-		.whatsapp-dashboard__icono
-			color: var(--wa-verde)
-		.whatsapp-dashboard__valor
-			color: var(--wa-texto)
-	// --- Pedidos para confirmar / Consultas pendientes: violeta -------------------------------
-	// Lo que el agente dejó para que una persona atienda (misión senal-pedidos-y-consultas-del-agente).
-	// Mismo par bg/borde que el chip y el borde de la fila en ChatRow.vue.
-	&__tarjeta--ancha
-		grid-column: span 3
-	&__tarjeta--seguimiento
+	&__tarjeta--hoy &__icono
+		color: var(--wa-sender)
+		background: var(--wa-burbuja-out)
+	&__tarjeta--seguimiento &__icono
+		color: var(--wa-seguimiento-texto)
 		background: var(--wa-seguimiento-bg)
-		border-left-color: var(--wa-seguimiento-borde)
-		.whatsapp-dashboard__icono
-			color: var(--wa-seguimiento-borde)
-		.whatsapp-dashboard__valor
-			color: var(--wa-seguimiento-texto)
-
-// Tablet (768-1024px, ver CLAUDE.md — regla de los tres anchos): todavía entran las tres en
-// fila, solo se acota el padding para que no se aprieten contra la lista de chats.
-@media screen and (max-width: 1024px)
-	.whatsapp-dashboard
-		padding: 16px
-		gap: 10px
-		&__tarjeta
-			padding: 14px
-			gap: 10px
-		&__valor
-			font-size: 1.4rem
-
-// Tablet angosto (768-900px): la columna del tablero mide ~450px y cada tarjeta común (dos de las seis
-// columnas), ~135px: ícono + número + «Conversaciones de hoy» no entran en fila y el texto se sale de la
-// tarjeta (medido en vivo a 820 y 768px, ya pasaba con las tres tarjetas de antes). Se apilan como en el
-// teléfono: ícono arriba, número y etiqueta abajo. Las anchas del seguimiento sí entran en fila.
-@media screen and (min-width: 768px) and (max-width: 900px)
-	.whatsapp-dashboard
-		&__tarjeta:not(.whatsapp-dashboard__tarjeta--ancha)
-			flex-direction: column
-			text-align: center
-			gap: 4px
-		&__tarjeta:not(.whatsapp-dashboard__tarjeta--ancha) &__etiqueta
-			font-size: .72rem
-
-// Teléfono (<768px): la vista se apila (ver views/Whatsapp.vue) y el tablero pasa a ocupar el
-// ancho completo arriba de la lista. Tres tarjetas chicas en fila siguen entrando (y las dos del
-// seguimiento, de a dos en la fila de abajo): son número + etiqueta corta, no hace falta apilarlas
-// también a ellas.
-@media screen and (max-width: 767px)
-	.whatsapp-dashboard
-		height: auto
-		grid-template-columns: repeat(6, 1fr)
-		padding: 12px
-		gap: 8px
-		&__tarjeta
-			flex-direction: column
-			text-align: center
-			padding: 10px 6px
-			gap: 4px
-		&__icono
-			font-size: 1.25rem
-		&__valor
-			font-size: 1.15rem
-		&__etiqueta
-			font-size: .68rem
 </style>

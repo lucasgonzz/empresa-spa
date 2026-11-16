@@ -1,6 +1,7 @@
 <template>
 	<div
 	class="tienda-mensajes-composer"
+	:data-robotito-borrador="texto_limpio || sending ? 'true' : null"
 	data-testid="tienda-mensajes-composer">
 		<div class="tienda-mensajes-composer__fila">
 			<!--

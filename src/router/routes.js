@@ -7,38 +7,6 @@ export default [
 	// 	can: 'article.store',
 	// },
 	{
-		/*
-			Módulo IA: el mostrador (misión "modulo-ia-mostrador", 14/9/2026). Va PRIMERO
-			por decisión de Lucas: es el primer ítem de la barra. Reemplaza al módulo IA
-			viejo (Sugerencias / Compras / Ofertas), que salió del menú; Promociones sigue
-			entrando por Tienda Online.
-
-			Gate doble, y los dos son deliberados: `if_has_extencion: 'agentes_ia'`
-			(la misma extensión que gatea el botón flotante del chat y las rutas
-			mostrador/* del backend; no se creó una extensión nueva) y
-			`check_is_owner: true` (solo el dueño y el acceso maestro ven el módulo,
-			decisión 8 del plan; el backend devuelve 403 a un empleado).
-
-			`no_aterrizar: true` es lo que evita que ser el PRIMERO del array lo vuelva
-			la pantalla de aterrizaje después del login: redirect() de
-			common-vue/mixins/permissions.js elige la primera ruta con permiso y no mira
-			extensiones, así que sin esta marca un dueño sin la extensión caía en un
-			módulo que el menú le esconde, y el lead de la demo aterrizaba en un mostrador
-			vacío. El aterrizaje sigue siendo el de siempre (Reportes).
-
-			La ruta real vive en router/index.js (`/ia/:id?`): el :id opcional es el
-			puente desde una conversación del chat hacia su informe.
-		*/
-		text: 'IA',
-		path: '/ia',
-		name: 'ia',
-		component: '@/views/Ia',
-		icon: 'stars',
-		if_has_extencion: 'agentes_ia',
-		check_is_owner: true,
-		no_aterrizar: true,
-	},
-	{
 		text: 'Reportes',
 		path: '/reportes',
 		component: '@/views/Reportes',
@@ -518,13 +486,7 @@ export default [
 		]
 	},
 	{
-		/*
-			ABM se esconde del menú (decisión de Lucas, 3/11/2026, programa «Prueba gratuita de 7 días»). Con
-			`not_show` y NO borrando la entrada: Abm.vue la busca por `name` para resolver el modelo por
-			defecto, y redirect() (permissions.js) la saltea como aterrizaje. La pantalla sigue existiendo por
-			URL (/abm) y por los atajos que llegan a ella (integraciones de tienda online, UserConfig.vue).
-		*/
-		not_show: true,
+		no_aterrizar: true,
 		text: 'ABM',
 		name: 'abm',
 		params: {
@@ -620,6 +582,13 @@ export default [
 		name: 'centro_de_recursos',
 		function: 'abrir_centro_de_recursos',
 		icon: 'collection-play',
+		no_aterrizar: true,
+	},
+	{
+		text: 'Implementación',
+		path: '/implementacion',
+		name: 'implementacion',
+		icon: 'list-check',
 		no_aterrizar: true,
 	},
 ]

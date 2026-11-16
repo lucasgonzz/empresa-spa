@@ -735,11 +735,26 @@ export default {
 			}
 			return null
 		},
-		loadModel(model_name, id, param_url = '/') {
+		/**
+		 * Vuelve a traer un modelo de la API y lo deja en su store.
+		 *
+		 * @param {String} model_name
+		 * @param {Number} id
+		 * @param {String} param_url Lo que va entre la ruta del modelo y el id ('/' o '/show/').
+		 * @param {Boolean} con_aviso En false no muestra el «<Modelo> actualizado». Lo usan los que
+		 *        recargan un modelo como CONSECUENCIA de otra cosa que ya tiene su propio aviso: guardar
+		 *        una venta a cuenta corriente o registrar un pago decían «Cliente actualizado» sin que el
+		 *        usuario hubiera tocado el cliente (ensayo de la prueba, ronda 3, 12/11/2026). Default
+		 *        true: el resto de los llamadores siguen igual.
+		 * @returns {Promise}
+		 */
+		loadModel(model_name, id, param_url = '/', con_aviso = true) {
 			return this.$api.get(this.routeString(model_name)+param_url+id)
 			.then(res => {
 				this.$store.commit(model_name+'/add', res.data.model)
-				this.$toast.success(this.singular(model_name)+' actualizado')
+				if (con_aviso) {
+					this.$toast.success(this.singular(model_name)+' actualizado')
+				}
                 console.log('se actualizo '+model_name)
 			})
 			.catch(err => {

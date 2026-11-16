@@ -40,6 +40,9 @@
 							class="icon-right"></i> -->
 							{{ getLabel(prop) }}
 						</label>
+						<p v-if="prop.descripcion_visible" class="text-muted small mb-2">
+							{{ prop.descripcion_visible }}
+						</p>
 
 						<!-- Descripcion de la propiedad - Popover con hover-intent (1s para mostrar,
 						     margen de gracia para ocultar) en vez de click. Un solo b-popover para
@@ -105,6 +108,11 @@
 										Sin datos
 									</span>
 								</div>
+
+								<orden-listas-de-precios
+								v-else-if="prop.orden_listas_de_precios"
+								:model="model"
+								:disabled="isDisabled(prop, form_to_filter)"></orden-listas-de-precios>
 									
 									<field-search-input
 									v-else-if="useSearch(prop)"
@@ -582,6 +590,7 @@ export default {
 		Cards,
 		Images,
 		GroupPorps,
+		OrdenListasDePrecios: () => import('@/components/abm/OrdenListasDePrecios'),
 		BtnLoader,
 		FieldCheckboxToggle,
 		// BtnDelete,
@@ -720,28 +729,17 @@ export default {
 		 * Arma los items visibles para el `HorizontalNav` de grupos.
 		 */
 		visible_group_items() {
-			/* Acumula nombres de grupo visibles evitando duplicados. */
-			let visible_group_titles = []
-
+			let grupos = new Map()
 			this.properties.forEach(prop => {
-				if (prop && prop.group_title && this.group_has_visible_props(prop.group_title)) {
-					let already_added = visible_group_titles.find(group_title => {
-						return group_title == prop.group_title
+				if (prop && prop.group_title && !grupos.has(prop.group_title)
+					&& this.group_has_visible_props(prop.group_title)) {
+					grupos.set(prop.group_title, {
+						name: prop.group_title,
+						priority: prop.group_priority || Infinity,
 					})
-					if (!already_added) {
-						visible_group_titles.push(prop.group_title)
-					}
 				}
 			})
-
-			/* Formatea cada grupo como item compatible con `HorizontalNav`. */
-			let group_items = []
-			visible_group_titles.forEach(group_title => {
-				group_items.push({
-					name: group_title,
-				})
-			})
-			return group_items
+			return Array.from(grupos.values()).sort((a, b) => a.priority - b.priority)
 		},
 	},
 	watch: {

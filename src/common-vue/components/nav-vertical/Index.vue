@@ -2,9 +2,15 @@
 <div
 v-if="show_nav">
 	<nav-vertical>
+		<template #nav_top_mobile>
+			<slot name="nav_top_mobile"></slot>
+		</template>
 		<template #nav_top>
 			<slot name="nav_top">
 			</slot>
+		</template>
+		<template #nav_tour>
+			<slot name="nav_tour"></slot>
 		</template>
 		<template #nav_bottom>
 			<slot name="nav_bottom">

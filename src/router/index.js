@@ -79,6 +79,11 @@ const routes = [
         component: () => import('@/views/Alertas')
     },
     {
+        path: '/implementacion',
+        name: 'implementacion',
+        component: () => import('@/components/implementacion/LineaDeTiempo'),
+    },
+    {
         path: '/vender/:view?',
         name: 'vender',
         component: () => import('@/views/Vender')
@@ -247,6 +252,11 @@ const routes = [
         path: '/ia/:id?',
         name: 'ia',
         component: () => import('@/views/Ia')
+    },
+    {
+        // El anfitrión del App renderiza esta vista para conservar el compositor al expandir.
+        path: '/agentes',
+        name: 'agentes',
     },
     {
         // Motor de ofertas por cliente (extension 'motor_de_ofertas'). Sin :id

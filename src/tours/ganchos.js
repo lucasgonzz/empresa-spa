@@ -16,6 +16,7 @@
 	etapa 1 cuando llegaron los diseños de Vender, mision diseno-vender-configurable, 28/9/2026).
 */
 import { EVENTO_ENFOCAR_ELEMENTO } from '@/mixins/vender/diseno_de_vender'
+import { EVENTO_ABRIR_MENU_LISTADO, EVENTO_BUSCAR_IMPORTACION } from './importacion-soporte'
 
 /** Apertura de la etapa que tiene el campo (con el diseño predeterminado, la 1) + su `scrollIntoView` suave. Medido. */
 const ESPERA_CAMPO_DE_VENDER = 450
@@ -62,12 +63,12 @@ function esperar(ms) {
  * @param {String} key key del catálogo ('cliente', 'metodo_de_pago', 'facturacion', 'lista_de_precios')
  * @returns {Promise}
  */
-function llevar_al_campo_de_vender(contexto, key) {
+function llevar_al_campo_de_vender(contexto, key, opciones) {
 	if (!contexto || !contexto.root) {
 		return Promise.resolve()
 	}
 
-	contexto.root.$emit(EVENTO_ENFOCAR_ELEMENTO, key, {})
+	contexto.root.$emit(EVENTO_ENFOCAR_ELEMENTO, key, opciones || {})
 
 	return esperar(key === 'metodo_de_pago' ? ESPERA_METODO_DE_PAGO : ESPERA_CAMPO_DE_VENDER)
 }
@@ -127,6 +128,37 @@ function esperar_modal(contexto, paso) {
 	guion lo usaba, y "la etapa 1" ya no es un lugar fijo.
 */
 export default {
+	abrir_menu_importacion: function (contexto) {
+		if (contexto.root) contexto.root.$emit(EVENTO_ABRIR_MENU_LISTADO, 'importacion', true)
+	},
+	mostrar_menu_exportacion: function (contexto) {
+		if (contexto.root) contexto.root.$emit(EVENTO_ABRIR_MENU_LISTADO, 'exportacion', false)
+	},
+	abrir_menu_exportacion: function (contexto) {
+		if (contexto.root) contexto.root.$emit(EVENTO_ABRIR_MENU_LISTADO, 'exportacion', true)
+	},
+	buscar_importacion: function (contexto, paso) {
+		if (contexto.root) contexto.root.$emit(EVENTO_BUSCAR_IMPORTACION, paso.import_history_id)
+	},
+	abrir_buscador_articulos: function (contexto) {
+		return llevar_al_campo_de_vender(contexto, 'buscador_de_articulos')
+	},
+	abrir_codigo_de_barras: function (contexto) {
+		return llevar_al_campo_de_vender(contexto, 'codigo_de_barras')
+	},
+	abrir_recargos_de_venta: function (contexto) {
+		return llevar_al_campo_de_vender(contexto, 'recargos', { enfocar: false })
+	},
+	mostrar_total_de_venta: function (contexto) {
+		return llevar_al_campo_de_vender(contexto, 'resumen', { enfocar: false })
+	},
+	mostrar_boton_de_reparto: function (contexto) {
+		if (contexto.root) contexto.root.$bvModal.hide('payment-method-modal')
+		return llevar_al_campo_de_vender(contexto, 'metodo_de_pago', { enfocar: false })
+	},
+	mostrar_cajas: function (contexto) {
+		if (contexto.root) contexto.root.$bvModal.hide('aperturas-caja')
+	},
 	/** El selector de cliente de Vender. */
 	abrir_etapa_1_cliente: function (contexto) {
 		return llevar_al_campo_de_vender(contexto, 'cliente')

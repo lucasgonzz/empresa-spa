@@ -30,11 +30,7 @@ export default {
 				*/
 				let properties
 				try {
-					properties = this.getSelectAndCheckboxProps(model, model_name)
-					properties = properties.concat(this.getPivotProperties(model, model_name))
-					properties = this.overrideProperties(properties, properties_to_override)
-
-					properties = this.funcion_personalizada(properties)
+				properties = this.preparar_propiedades_del_modelo(model, model_name, properties_to_override)
 				} catch (err) {
 					console.error('setModel: no se pudieron preparar las props de ' + model_name, err)
 					/*
@@ -85,6 +81,12 @@ export default {
 			} catch (err) {
 				console.error('setModel: tampoco se pudo mostrar el aviso', err)
 			}
+		},
+		preparar_propiedades_del_modelo(model, model_name, properties_to_override = []) {
+			let properties = this.getSelectAndCheckboxProps(model, model_name)
+			properties = properties.concat(this.getPivotProperties(model, model_name))
+			properties = this.overrideProperties(properties, properties_to_override)
+			return this.funcion_personalizada(properties)
 		},
 		funcion_personalizada(properties) {
 			console.log('funcion_personalizada props:')

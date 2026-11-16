@@ -1,7 +1,8 @@
 <template>
 	<div class="support-conversation">
 		<div v-if="selected_ticket" class="support-conversation-title">
-			{{ selected_ticket.name || ('Ticket #' + selected_ticket.id) }}
+			{{ selected_ticket.name || ('Ticket #' + (numero_ticket_admin || selected_ticket.id)) }}
+			<span v-if="selected_ticket.name && numero_ticket_admin"> · Ticket #{{ numero_ticket_admin }}</span>
 		</div>
 		<div class="support-conversation-body" ref="conversation_body">
 			<div
@@ -25,7 +26,17 @@
 							has_delivery_error(message) ? 'support-message-bubble--error' : '',
 						]"
 						:title="message_sent_at_tooltip(message)">
-					<div v-if="message.body">{{ message.body }}</div>
+					<div v-if="message.body">
+						<template v-for="(parte, i) in partes_del_mensaje(message.body)">
+							<!-- Los videos de la prueba gratuita (misión prueba-ayuda-unificada-en-soporte, S3) se
+							ven acá mismo; los del centro de recursos siguen siendo un enlace a su página. -->
+							<video v-if="i % 2 && es_video_de_la_prueba(parte)" :key="i" :src="parte" class="support-message-video" controls preload="metadata">
+								<a :href="parte" target="_blank" rel="noopener noreferrer">{{ parte }}</a>
+							</video>
+							<a v-else-if="i % 2" :key="i" :href="parte" target="_blank" rel="noopener noreferrer">{{ parte }}</a>
+							<span v-else :key="i">{{ parte }}</span>
+						</template>
+					</div>
 					<!-- Renderizado diferenciado según tipo de adjunto -->
 					<template v-if="message.attachments && message.attachments.length">
 						<!-- Reproducción inline para mensajes de audio -->
@@ -49,14 +60,26 @@
 								class="support-message-image"
 								alt="Imagen adjunta" />
 						</button>
-						<!-- Fallback genérico para otros tipos de adjunto -->
+						<!-- Un documento (Excel, PDF) u otro archivo: se descarga, con su nombre a la vista -->
 						<a
 							v-else
+							class="support-message-file"
 							target="_blank"
+							rel="noopener noreferrer"
+							:download="nombre_del_adjunto(message.attachments[0])"
+							:title="'Descargar ' + nombre_del_adjunto(message.attachments[0])"
 							:href="attachment_url(message.attachments[0])">
-							Adjunto
+							<i class="bi bi-paperclip" aria-hidden="true"></i>
+							<span>{{ nombre_del_adjunto(message.attachments[0]) }}</span>
 						</a>
 					</template>
+					<!-- Mientras se envía todavía no hay adjunto guardado: se muestra el nombre del archivo -->
+					<span
+						v-else-if="message._client_pending && message._retry_attachment && message.kind === 'text'"
+						class="support-message-file">
+						<i class="bi bi-paperclip" aria-hidden="true"></i>
+						<span>{{ message._retry_attachment.name }}</span>
+					</span>
 					</div>
 					<div
 						v-if="is_mine(message) && has_delivery_error(message)"
@@ -109,7 +132,7 @@
 					type="button"
 					class="btn btn-primary btn-sm support-conversation-new-ticket-btn"
 					@click="$emit('start-new-ticket')">
-					Iniciar nuevo ticket
+					{{ new_ticket_label }}
 				</button>
 			</div>
 			<div
@@ -128,7 +151,21 @@
 
 <script>
 import ImageLightbox from '@/common-vue/components/support-chat/ImageLightbox.vue'
+import { nombre_del_adjunto } from '@/common-vue/components/support-chat/adjuntos'
 import { env } from '@/runtime_config'
+
+/*
+ * Los enlaces que se separan del texto de un mensaje: un video del centro de recursos o uno de la
+ * prueba gratuita. UN solo grupo de captura a propósito: `split` deja el texto en las posiciones pares
+ * y los enlaces en las impares, y es lo que lee el template.
+ *
+ * Los de la prueba (misión prueba-ayuda-unificada-en-soporte, S3, 10/11/2026) los manda el admin y
+ * Martín en el ticket de Soporte, y se muestran como video. La regex queda acotada al prefijo exacto
+ * `https://videos.comerciocity.store/landing-prueba/` y a un `.mp4` sin query: cualquier otra URL sigue
+ * siendo texto, y nunca se embebe algo que no sea de ese bucket.
+ */
+const VIDEO_DE_LA_PRUEBA = /^https:\/\/videos\.comerciocity\.store\/landing-prueba\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*\.mp4$/
+const VIDEO_DEL_CENTRO = /(https:\/\/recursos\.comerciocity\.com\/\?v=[a-z]+\d+(?:\.\d+)+\b|https:\/\/videos\.comerciocity\.store\/landing-prueba\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*\.mp4(?![A-Za-z0-9_\/?#-]))/gi
 
 /**
  * Emite `retry-message` cuando el usuario reintenta un envío fallido.
@@ -145,6 +182,7 @@ export default {
 			type: Array,
 			default: () => [],
 		},
+		numero_ticket_admin: Number,
 		selected_ticket: {
 			type: Object,
 			default: null,
@@ -170,6 +208,10 @@ export default {
 		new_ticket_hint: {
 			type: String,
 			default: '',
+		},
+		new_ticket_label: {
+			type: String,
+			default: 'Iniciar nuevo ticket',
 		},
 	},
 	data() {
@@ -208,6 +250,18 @@ export default {
 		},
 	},
 	methods: {
+		partes_del_mensaje(texto) {
+			return String(texto).split(VIDEO_DEL_CENTRO)
+		},
+		/**
+		 * true si el enlace es un video de la prueba gratuita (se embebe); false si es del centro.
+		 *
+		 * @param {string} enlace Una de las partes impares de partes_del_mensaje().
+		 * @returns {boolean}
+		 */
+		es_video_de_la_prueba(enlace) {
+			return VIDEO_DE_LA_PRUEBA.test(String(enlace))
+		},
 		/**
 		 * Clave única por fila en la lista: incluye índice para no chocar si el API
 		 * o el store dejan dos mensajes con el mismo id (Vue exige keys distintas).
@@ -288,7 +342,8 @@ export default {
 		 */
 		delivery_error_label(message) {
 			if (message._delivery_error === 'not_sent') {
-				return 'No enviado'
+				// Si la API explicó por qué lo rechazó (un adjunto demasiado pesado), se muestra eso.
+				return message._delivery_error_message || 'No enviado'
 			}
 			if (message.remote_delivery_status === 'not_received') {
 				return 'No recibido en soporte central'
@@ -360,7 +415,16 @@ export default {
 		 * Construye URL de adjunto usando path almacenado.
 		 */
 		attachment_url(attachment) {
-			return env('VUE_APP_API_URL') + '/storage/' + attachment.path
+			return attachment.public_url || (env('VUE_APP_API_URL') + '/storage/' + attachment.path)
+		},
+		/**
+		 * Nombre visible de un adjunto que no es audio ni imagen.
+		 *
+		 * @param {Object} attachment Fila de `message.attachments`.
+		 * @returns {string}
+		 */
+		nombre_del_adjunto(attachment) {
+			return nombre_del_adjunto(attachment)
 		},
 		/**
 		 * Abre el visor de imagen en la misma página.
@@ -595,6 +659,32 @@ export default {
 	width: 100%;
 	height: 36px;
 	margin-top: 2px;
+}
+
+/* Video de la prueba gratuita adentro del globo: ocupa el ancho del globo, con el tope de las miniaturas. */
+.support-message-video {
+	display: block;
+	width: 100%;
+	max-width: 320px;
+	max-height: 240px;
+	margin: 6px 0 2px;
+	border-radius: 6px;
+	background: #000;
+}
+
+/* Documento adjunto (Excel, PDF): clip + nombre, que corta en cualquier lado si el nombre es largo */
+.support-message-file {
+	display: inline-flex;
+	align-items: flex-start;
+	gap: 6px;
+	max-width: 100%;
+	margin-top: 2px;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.support-message-file > i {
+	flex-shrink: 0;
 }
 
 /* Botón sin estilo que envuelve la miniatura */

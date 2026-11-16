@@ -41,6 +41,20 @@ export const CRITERIOS = {
 	codigo_de_barras: 'Código de barras',
 	codigo_proveedor: 'Código de proveedor',
 	nombre: 'Nombre',
+	// Misión medidas-sitios-de-referencia (11/11/2026): dos planes nuevos del diagnóstico. El
+	// `criterio_usado` del artículo sigue siendo uno de los tres de arriba; estos aparecen solo en
+	// «Ver qué se probó» (ver NOMBRES_DE_PLAN).
+	sitios_de_referencia: 'Sitios de referencia',
+	codigo_de_barras_global: 'Código de barras, fuera de Argentina',
+}
+
+/**
+ * El nombre completo de un plan en «Ver qué se probó», para los criterios que no se leen bien con el
+ * «Por …» armado desde CRITERIOS. Un criterio que no está acá ni en CRITERIOS se humaniza.
+ */
+export const NOMBRES_DE_PLAN = {
+	sitios_de_referencia: 'En los sitios de referencia',
+	codigo_de_barras_global: 'Por código de barras, fuera de Argentina',
 }
 
 /**
@@ -197,6 +211,87 @@ export const TEXTOS = {
 	// Etiqueta de «Asignadas» para lo que salió sin respaldo en la página y ya aprobó una persona.
 	revisada_a_mano: 'Revisada a mano',
 	nota_sin_datos: 'No se encontró nada confiable para estos artículos. Abrí «Ver qué se probó» para ver las consultas y las páginas que se leyeron.',
+	// Bloque «Sitios de referencia» del modal de catálogo (misión medidas-sitios-de-referencia).
+	sitios_titulo: 'Sitios de referencia',
+	sitios_ayuda: 'Páginas donde están cargados los pesos y medidas de tus productos. Se buscan primero.',
+	sitios_nota: 'Una dirección por renglón, hasta 8 sitios. Podés pegar el link completo: se guarda solo el sitio.',
+	sitios_vacio: 'Sin sitios de referencia.',
+	sitios_cargando: 'Trayendo los sitios de referencia…',
+	sitios_error_al_traer: 'No pudimos traer los sitios de referencia.',
+	sitios_sin_guardar: 'Guardá los cambios antes de lanzar: la búsqueda usa los sitios guardados.',
+	sitios_guardar: 'Guardar',
+}
+
+/** Tope de sitios de referencia por comercio (el mismo que valida la API). */
+export const TOPE_DE_SITIOS = 8
+
+/**
+ * Lo que escribió la persona en el campo de sitios, como lista: un sitio por renglón (también se
+ * aceptan comas, por si pegó una lista en una línea), sin espacios ni renglones vacíos y sin repetidos.
+ * No normaliza los dominios: eso lo hace la API, y lo que devuelve es lo que se muestra.
+ *
+ * @param {String} texto
+ * @returns {Array<String>}
+ */
+export function lineas_de_sitios(texto) {
+	let lineas = []
+	String(texto || '').split(/[\r\n,]+/).forEach(function (linea) {
+		let limpia = linea.trim()
+		if (limpia && lineas.indexOf(limpia) === -1) {
+			lineas.push(limpia)
+		}
+	})
+	return lineas
+}
+
+/**
+ * "Sitios de referencia: obi.de, verdefacile.eu" para el encabezado del detalle; '' sin sitios.
+ *
+ * @param {Array<String>} sitios
+ * @returns {String}
+ */
+export function texto_de_sitios(sitios) {
+	if (!Array.isArray(sitios) || !sitios.length) {
+		return ''
+	}
+	return TEXTOS.sitios_titulo + ': ' + sitios.join(', ')
+}
+
+/**
+ * Por qué no se pudieron guardar los sitios, en una frase para mostrar al lado del campo. Con un 422
+ * se juntan los mensajes de `errors` (sin repetir) y, si no vino ninguno, el `message`.
+ *
+ * @param {*} err El error de axios.
+ * @returns {String}
+ */
+export function mensaje_de_error_de_sitios(err) {
+	let respuesta = err && err.response ? err.response : null
+	if (!respuesta) {
+		return 'No pudimos guardar los sitios de referencia. Revisá la conexión y volvé a intentar.'
+	}
+	let datos = respuesta.data && typeof respuesta.data === 'object' ? respuesta.data : {}
+	let mensaje = typeof datos.message === 'string' ? datos.message.trim() : ''
+	if (respuesta.status === 422) {
+		let mensajes = []
+		let errores = datos.errors && typeof datos.errors === 'object' ? datos.errors : {}
+		Object.keys(errores).forEach(function (campo) {
+			let lista = Array.isArray(errores[campo]) ? errores[campo] : [errores[campo]]
+			lista.forEach(function (texto) {
+				let limpio = typeof texto === 'string' ? texto.trim() : ''
+				if (limpio && mensajes.indexOf(limpio) === -1) {
+					mensajes.push(limpio)
+				}
+			})
+		})
+		if (mensajes.length) {
+			return mensajes.join(' ')
+		}
+		return mensaje || 'Revisá los sitios: alguno no es una dirección válida.'
+	}
+	if (respuesta.status === 403) {
+		return mensaje || 'Solo el acceso maestro puede cambiar los sitios de referencia.'
+	}
+	return 'No pudimos guardar los sitios de referencia. Volvé a intentar.'
 }
 
 /**

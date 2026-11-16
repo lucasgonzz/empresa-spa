@@ -110,11 +110,22 @@ data-testid="medidas-detalle-encabezado"
 
 	</div>
 
+	<!--
+		Los sitios de referencia con que se lanzó la búsqueda (la foto de ese momento, no la lista de
+		hoy). Sin sitios, o con una API que no manda el campo, no se dibuja.
+	-->
+	<p
+	v-if="texto_sitios"
+	class="med-enc__sitios"
+	data-testid="medidas-detalle-sitios">
+		{{ texto_sitios }}
+	</p>
+
 </section>
 </template>
 <script>
 import EstadoCorrida from '@/components/alertas/components/lista-de-alertas-table/medidas/EstadoCorrida'
-import { entero_es, consultas_por_articulo, texto_de_alcance_de_la_corrida } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
+import { entero_es, consultas_por_articulo, texto_de_alcance_de_la_corrida, texto_de_sitios } from '@/components/alertas/components/lista-de-alertas-table/medidas/textos'
 
 /**
  * Encabezado del detalle de una corrida de medidas: estado y avance, el motivo si terminó de una
@@ -153,6 +164,14 @@ export default {
 		},
 		alcance() {
 			return texto_de_alcance_de_la_corrida(this.corrida)
+		},
+		/**
+		 * "Sitios de referencia: obi.de, verdefacile.eu", o '' si la corrida no tuvo.
+		 *
+		 * @returns {String}
+		 */
+		texto_sitios() {
+			return texto_de_sitios(this.corrida.sitios_de_referencia)
 		},
 		/**
 		 * "1.400 validaciones con IA" (una sola: "1 validación con IA").
@@ -290,6 +309,14 @@ export default {
 		font-weight: 500
 		color: var(--color-text-primary, #212529)
 		overflow-wrap: anywhere
+
+// Una línea chica bajo la grilla; los dominios largos cortan donde haga falta (no desbordan en teléfono).
+.med-enc__sitios
+	margin: 0
+	font-size: 0.8125rem
+	line-height: 1.4
+	color: var(--color-text-secondary, #6c757d)
+	overflow-wrap: anywhere
 
 // Tablet chica y teléfono: las consultas arriba y los datos abajo, a lo ancho.
 @media (max-width: 767px)

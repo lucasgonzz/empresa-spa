@@ -1,7 +1,8 @@
 <template>
 	<div
 	v-if="chat"
-	class="whatsapp-composer">
+	class="whatsapp-composer"
+	:data-robotito-borrador="tiene_borrador_en_curso ? 'true' : null">
 		<!-- Chat en simulación: el backend FRENA todo envío de texto hacia WhatsApp mientras el
 		último entrante sea simulado. Sin este aviso el operador escribía, apretaba enviar, la
 		fila se guardaba y no salía nada: fallaba en silencio.
@@ -12,7 +13,7 @@
 		mandar un mensaje creyendo que sale está en esta línea, en el `title` de abajo, en el
 		placeholder del input y en el badge del header. -->
 		<div
-		v-if="en_simulacion"
+		v-if="en_simulacion && !chat.is_test"
 		class="whatsapp-composer__simulacion"
 		title="El último mensaje entrante lo inyectaste vos desde &quot;Simular mensaje&quot;, así que la ventana de 24 h está forzada. Lo que mandes se guarda y se ve acá, pero al cliente no le llega. Se destraba solo en cuanto el cliente escriba de verdad.">
 			<i class="bi bi-cone-striped"></i>
@@ -108,6 +109,8 @@
 			id="whatsapp-composer-text"
 			class="form-control whatsapp-composer__texto"
 			rows="1"
+			aria-label="Mensaje del negocio"
+			enterkeyhint="send"
 			data-tour="whatsapp.campo_respuesta"
 			:placeholder="placeholder"
 			@keydown.enter="onKeydownEnter"></textarea>
@@ -228,6 +231,12 @@ export default {
 		}
 	},
 	computed: {
+		tiene_borrador_en_curso() {
+			const pendiente = this.borrador
+			return Boolean(this.text.trim() || this.epigrafe.trim() || this.adjunto || this.audio_recording
+				|| this.sending || this.enviando_adjunto
+				|| (pendiente && pendiente.chat_id == this.chat_id && (pendiente.texto || '').trim()))
+		},
 		// El getter del store hace exactamente esto y ya existía; este computed estaba copiado
 		// byte por byte también en conversation/Index.vue y en Header.vue.
 		chat() {
@@ -272,10 +281,13 @@ export default {
 		 * alto, el cursor no.
 		 */
 		placeholder() {
+			if (this.chat && this.chat.is_test) {
+				return 'Como negocio…'
+			}
 			if (this.en_simulacion) {
 				return 'Simulación: lo que escribas se guarda pero no le llega al cliente'
 			}
-			return 'Escribí un mensaje (Enter para enviar, Shift+Enter para salto de línea)'
+			return 'Escribí un mensaje…'
 		},
 		/**
 		 * Ayuda del micrófono. El botón tiene dos semánticas y ninguna se ve mirándolo, así que
@@ -804,6 +816,11 @@ export default {
 	background: var(--wa-panel)
 	border-top: 1px solid var(--wa-borde)
 	color: var(--wa-texto)
+	button
+		box-shadow: none !important
+		&:focus-visible
+			outline: 2px solid var(--wa-verde)
+			outline-offset: 2px
 
 	// --- Aviso de simulacion ------------------------------------------------------------------
 	// Una sola linea. El parrafo de detalle se saco el 24/8/2026 (pedido de Lucas): en un panel de

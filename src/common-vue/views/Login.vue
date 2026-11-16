@@ -67,6 +67,7 @@
 		<!-- ─── Panel del formulario (blanco) ─── -->
 		<div class="login-page__right">
 			<div class="login-page__form-wrap">
+				<vinculacion-navegador-maestro v-if="$route.query.vincular === '1'" />
 				<login-form :split_layout="true" />
 				<!-- Mobile: nota de seguridad debajo del botón -->
 				<div class="login-page__security login-page__security--mobile">
@@ -87,6 +88,7 @@
 
 <script>
 import LoginForm from '@/common-vue/components/login/LoginForm'
+import VinculacionNavegadorMaestro from '@/common-vue/components/login/VinculacionNavegadorMaestro'
 
 /**
  * Vista de login split-screen (desktop) y apilada (mobile).
@@ -96,6 +98,7 @@ import LoginForm from '@/common-vue/components/login/LoginForm'
 export default {
 	components: {
 		LoginForm,
+		VinculacionNavegadorMaestro,
 	},
 }
 </script>

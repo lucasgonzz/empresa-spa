@@ -1256,6 +1256,9 @@ export default {
             }
             return typeof model.ofrecer_envio_zipnova != 'undefined'
         },
+        mostrar_permitir_pedidos_sin_stock(prop, model) {
+            return !!model && typeof model.permitir_pedidos_sin_stock != 'undefined'
+        },
         /**
          * "Descuentos y recargos del cliente" del formulario del pedido (misión
          * descuentos-recargos-por-cliente, 23/9/2026): "Descuento Mayorista 10% · Recargo Flete 5%.

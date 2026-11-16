@@ -59,6 +59,16 @@ export default __base_store({
 		model_name: 'price_type',
 		per_page: 25,
 	},
+	mutations: {
+		setPosiciones(state, posiciones) {
+			const por_id = new Map(posiciones.map(lista => [Number(lista.id), lista.position]))
+			const actualizar = lista => por_id.has(Number(lista.id))
+				? { ...lista, position: por_id.get(Number(lista.id)) }
+				: lista
+			state.models = state.models.map(actualizar)
+			state.filtered = state.filtered.map(actualizar)
+		},
+	},
 	getters: {
 		/**
 		 * Las listas de precios cargadas.

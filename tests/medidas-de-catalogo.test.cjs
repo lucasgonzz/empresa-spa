@@ -707,3 +707,42 @@ test('normalizar_previa: la estimación trae el respaldo (créditos, dólares y 
 	assert.equal(vieja.usd_respaldo, null)
 	assert.equal(vieja.texto_respaldo, '')
 })
+
+// --- Sitios de referencia (misión medidas-sitios-de-referencia, 11/11/2026) ------------------------
+
+test('sitios de referencia: la corrida y la previa los traen como lista, y sin el campo quedan en []', () => {
+	assert.deepEqual(medidas.normalizar_corrida({ id: 1, status: 'terminada', sitios_de_referencia: ['obi.de', 'meteorpiston.com'] }).sitios_de_referencia, ['obi.de', 'meteorpiston.com'])
+	assert.deepEqual(medidas.normalizar_corrida({ id: 1, status: 'terminada' }).sitios_de_referencia, [])
+	assert.deepEqual(medidas.normalizar_corrida({ id: 1, status: 'terminada', sitios_de_referencia: null }).sitios_de_referencia, [])
+	assert.deepEqual(medidas.normalizar_previa({ a_buscar: 3, sitios_de_referencia: ['obi.de'] }).sitios_de_referencia, ['obi.de'])
+	assert.deepEqual(medidas.normalizar_previa({ a_buscar: 3 }).sitios_de_referencia, [])
+	assert.deepEqual(medidas.normalizar_sitios('obi.de'), [])
+	assert.deepEqual(medidas.normalizar_sitios([' a.com ', 'a.com', {}, '']), ['a.com'])
+})
+
+test('sitios de referencia: renglones del campo, la línea del encabezado y los criterios nuevos', () => {
+	assert.deepEqual(textos.lineas_de_sitios(' obi.de \r\n\r\nhttps://www.verdefacile.eu/it/x\nobi.de, carbydoctor.com.au '), ['obi.de', 'https://www.verdefacile.eu/it/x', 'carbydoctor.com.au'])
+	assert.deepEqual(textos.lineas_de_sitios(''), [])
+	assert.deepEqual(textos.lineas_de_sitios(null), [])
+	assert.equal(textos.texto_de_sitios(['obi.de', 'verdefacile.eu']), 'Sitios de referencia: obi.de, verdefacile.eu')
+	assert.equal(textos.texto_de_sitios([]), '')
+	assert.equal(textos.texto_de_sitios(undefined), '')
+	assert.equal(textos.texto_de(textos.CRITERIOS, 'sitios_de_referencia'), 'Sitios de referencia')
+	assert.equal(textos.texto_de(textos.CRITERIOS, 'codigo_de_barras_global'), 'Código de barras, fuera de Argentina')
+	assert.equal(textos.NOMBRES_DE_PLAN.sitios_de_referencia, 'En los sitios de referencia')
+	assert.equal(textos.NOMBRES_DE_PLAN.codigo_de_barras_global, 'Por código de barras, fuera de Argentina')
+})
+
+test('sitios de referencia: el error de guardado sale en una frase legible', () => {
+	function error_http(status, data) {
+		return { response: { status: status, data: data } }
+	}
+	const con_errores = error_http(422, { message: 'Datos inválidos.', errors: { 'sitios.0': ['«hola» no es un sitio válido.'], 'sitios.1': ['«hola» no es un sitio válido.'], sitios: ['Se pueden cargar hasta 8 sitios.'] } })
+	assert.equal(textos.mensaje_de_error_de_sitios(con_errores), '«hola» no es un sitio válido. Se pueden cargar hasta 8 sitios.')
+	assert.equal(textos.mensaje_de_error_de_sitios(error_http(422, { message: 'Se pueden cargar hasta 8 sitios.' })), 'Se pueden cargar hasta 8 sitios.')
+	assert.match(textos.mensaje_de_error_de_sitios(error_http(422, {})), /alguno no es una dirección válida/)
+	assert.match(textos.mensaje_de_error_de_sitios(error_http(403, {})), /Solo el acceso maestro/)
+	assert.equal(textos.mensaje_de_error_de_sitios(error_http(403, { message: 'No tenés permiso.' })), 'No tenés permiso.')
+	assert.match(textos.mensaje_de_error_de_sitios(error_http(500, { message: 'Server Error' })), /Volvé a intentar/)
+	assert.match(textos.mensaje_de_error_de_sitios(new Error('Network Error')), /Revisá la conexión/)
+})

@@ -1,31 +1,78 @@
 <template>
 	<!--
-		🔴 El ancla sale SOLO en la primera lista de precios, y eso no es capricho: este componente
-		se dibuja una vez POR LISTA (`v-for="price_type in price_types"` en `views/Listado.vue`), y
-		una cuenta con cuatro listas dibujaria cuatro veces el mismo `data-tour`. El contrato exige
-		que cada valor aparezca una sola vez en pantalla; con el valor repetido el tour resalta la
-		tarjeta que le toque primero, que no tiene por que ser la que el guion nombra.
+		El ancla aparece solo en la lista que el recorrido señala. Listado elige la misma lista
+		para la tarjeta y sus opciones, aunque haya varias.
 	-->
 	<div
 	:data-tour="es_primera_lista ? 'listado.tarjeta_lista_precio' : null"
-	class="cont-inputs card p-10 j-start"
-	v-if="article_price_type">
+	class="cont-inputs card article-price-list-card">
+		<h3 class="article-price-list-card__nombre">{{ price_type.name }}</h3>
+
+		<div v-if="es_precio_final" class="price-type-card__campos">
+			<price-type-monedas
+			v-if="mostrar_precio_final_por_moneda"
+			:article_price_type="article_price_type"
+			solo_lectura></price-type-monedas>
+			<final-price v-else en_tarjeta></final-price>
+			<div
+			class="price-type-card__interruptor"
+			:data-tour="precio_final_manual ? null : 'listado.campo_precio_manual'">
+				<b-form-checkbox
+				switch
+				:checked="precio_final_manual"
+				:disabled="!puede_cambiar_modo_precio_final"
+				@change="cambiar_modo_precio_final">
+					Setear precio final
+				</b-form-checkbox>
+				<div class="price-type-card__interruptor-ayuda">
+					{{ precio_final_manual ? 'Cargá el precio a mano.' : 'El sistema calcula el precio a partir del margen.' }}
+				</div>
+			</div>
+			<b-form-group
+			v-if="precio_final_manual"
+			class="price-type-card__campo"
+			label="Precio final">
+				<price-input></price-input>
+			</b-form-group>
+			<b-form-group
+			v-else-if="can('article.percentage_gain')"
+			class="price-type-card__campo"
+			label="Margen de ganancia">
+				<percentage-gain-input></percentage-gain-input>
+			</b-form-group>
+
+			<options-price-type
+			v-if="article_price_type"
+			:price_type_store="price_type"
+			:article_price_type="article_price_type"
+			:mostrar_interruptor="false"></options-price-type>
+		</div>
 
 		<price-type-monedas
-		v-if="hasExtencion('ventas_en_dolares')"
+		v-else-if="article_price_type && hasExtencion('ventas_en_dolares')"
 		:ref="'ptMonedas-'+price_type.id"
+		:anclar_opciones="anclar_opciones"
 		:article_price_type="article_price_type"></price-type-monedas>
 
 		<div
-		v-else>
+		v-else-if="article_price_type"
+		class="w-100">
 			
 			<cont-price-type
 			:article_price_type="article_price_type"></cont-price-type>
 
 			<options-price-type
-			:price_type_store="price_type_store"
+			:price_type_store="price_type"
+			:es_primera_lista="anclar_opciones"
 			:article_price_type="article_price_type"></options-price-type>
 		</div>
+
+		<p
+		v-if="!es_precio_final && article.id && !lista_en_articulo"
+		class="price-type-card__origen mb-0 mt-2"
+		role="status">
+			{{ pedido_precio ? 'Cargando el precio de esta lista…' : 'El precio se calcula al guardar el artículo.' }}
+		</p>
 
 		<!--
 			Mision catalogo-por-lista-tienda (5/10/2026): "Visible en la tienda para esta lista".
@@ -67,40 +114,49 @@
 	</div>
 </template>
 <script>
+import { usa_algun_margen, usa_precio_manual } from '@/utils/criterio_de_precio'
+
 export default {
 	props: {
 		price_type: Object,
+		es_primera_lista: Boolean,
+		anclar_opciones: Boolean,
 	},
 	components: {
 		PriceTypeMonedas: () => import('@/components/listado/components/price-type-input/PriceTypeMonedas'),
 		ContPriceType: () => import('@/components/listado/components/price-type-input/ContPriceType'),
 		OptionsPriceType: () => import('@/components/listado/components/price-type-input/OptionsPriceType'),
+		FinalPrice: () => import('@/components/listado/components/modal-props/FinalPrice'),
+		PercentageGainInput: () => import('@/components/listado/components/modal-props/PercentageGainInput'),
+		PriceInput: () => import('@/components/listado/components/modal-props/PriceInput'),
 	},
 	computed: {
-		/**
-		 * ¿Esta tarjeta es la de la PRIMERA lista de precios?
-		 *
-		 * Es lo unico que decide si esta instancia lleva el `data-tour` o no. `price_types` sale
-		 * del mixin global `mixins/generals.js` y es el mismo array que recorre el `v-for` de
-		 * `views/Listado.vue`, asi que "la primera" es exactamente la primera tarjeta dibujada.
-		 *
-		 * @returns {Boolean}
-		 */
-		es_primera_lista() {
-			if (!this.price_types.length) {
-				return false
-			}
-
-			return this.price_types[0].id == this.price_type.id
+		es_precio_final() {
+			return Number(this.price_type.es_precio_final) === 1
 		},
 		article() {
 			return this.$store.state.article.model
 		},
-		article_price_type() {
-			return this.local_article_price_type
+		precio_final_manual() {
+			return this.modo_precio_final === null ? usa_precio_manual(this.article) : this.modo_precio_final
 		},
-		price_type_store() {
-			return this.$store.state.price_type.models.find(p => p.id == this.price_type.id)
+		puede_cambiar_modo_precio_final() {
+			return this.can('article.percentage_gain') || !usa_algun_margen(this.article)
+		},
+		article_price_type() {
+			return this.lista_en_articulo || this.local_article_price_type
+		},
+		lista_en_articulo() {
+			return (this.article.price_types || []).find(price_type => price_type.id == this.price_type.id)
+		},
+		mostrar_precio_final_por_moneda() {
+			return this.article.id && this.article_price_type
+				&& this.hasExtencion('ventas_en_dolares')
+				&& this.$store.state.moneda.models.length
+				&& (this.article.price_type_monedas || []).some(item => item.price_type_id == this.price_type.id)
+		},
+		recalculo_de_precios() {
+			return this.$store.state.global_notification.price_stats
 		},
 		/**
 		 * ¿Se muestra el check "Visible en la tienda para esta lista"? (mision catalogo-por-lista-tienda)
@@ -115,10 +171,9 @@ export default {
 		 * @returns {Boolean}
 		 */
 		mostrar_visible_en_tienda() {
-			if (!this.hasExtencion('online') || !this.price_type_store) {
-				return false
-			}
-			return this.price_type_store.catalogo_restringido_en_tienda == 1
+			return this.article_price_type
+				&& this.hasExtencion('online')
+				&& this.price_type.catalogo_restringido_en_tienda == 1
 		},
 		/**
 		 * ¿El bloque de la tienda lleva su propia linea separadora arriba?
@@ -135,27 +190,18 @@ export default {
 		 */
 		tienda_lleva_separador() {
 			if (this.hasExtencion('ventas_en_dolares')) {
-				return false
+				return this.es_precio_final && !this.mostrar_precio_final_por_moneda
 			}
 			return !this.hasExtencion('elegir_si_incluir_lista_de_precios_de_excel')
 		},
-		indicar_percentage() {
-			if (this.article_price_type.pivot.setear_precio_final) {
-				return false
-			}
-			return true
-		},
-		indicar_final_price() {
-			if (this.article_price_type.pivot.setear_precio_final) {
-				return true
-			}
-			return false
-		},
-		
 	},
 	data() {
 		return {
-			local_article_price_type: null
+			local_article_price_type: null,
+			modo_precio_final: null,
+			precio_manual_anterior: null,
+			margen_anterior: null,
+			pedido_precio: null,
 		}
 	},
 	watch: {
@@ -163,56 +209,96 @@ export default {
 			handler: 'init_article_price_type',
 			immediate: true
 		},
+		recalculo_de_precios(corrida) {
+			if (corrida && corrida.origen === 'tipo_de_precio') {
+				this.cargar_precio_pendiente()
+			}
+		},
 		local_article_price_type: {
-			handler(new_val) {
-				if (!this.article.id) {
-					const index = this.article.price_types.findIndex(pt => pt.id == this.price_type.id)
-
-					if (index !== -1) {
-						this.article.price_types.splice(index, 1, JSON.parse(JSON.stringify(new_val)))
-					} else {
-						this.article.price_types.push(JSON.parse(JSON.stringify(new_val)))
-					}
+			handler(lista, anterior) {
+				// En una ficha existente, la fila provisional solo viaja si alguien la edita.
+				if (lista && !this.lista_en_articulo && (!this.article.id || lista === anterior)) {
+					this.$set(this.article, 'price_types', (this.article.price_types || []).concat(lista))
 				}
 			},
 			deep: true
 		}
 	},
 	methods: {
-		init_article_price_type() {
-			if (this.article.id) {
-				this.local_article_price_type = this.article.price_types.find(price_type => price_type.id == this.price_type.id)
+		cambiar_modo_precio_final(manual) {
+			this.modo_precio_final = manual
+			if (manual) {
+				this.margen_anterior = {
+					valor: this.article.percentage_gain,
+					usar_proveedor: this.article.apply_provider_percentage_gain,
+				}
+				this.$set(this.article, 'percentage_gain', null)
+				this.$set(this.article, 'apply_provider_percentage_gain', 0)
+				if (this.precio_manual_anterior !== null) {
+					this.$set(this.article, 'price', this.precio_manual_anterior)
+				}
 			} else {
-				this.local_article_price_type = {
-					id: this.price_type.id,
-					pivot: {
-						price_type_id: this.price_type.id,
-						percentage: '',
-						final_price: '',
-						setear_precio_final: this.price_type_store.setear_precio_final,
-						incluir_en_excel_para_clientes: 1,
-						/*
-							Mision catalogo-por-lista-tienda (5/10/2026): un articulo NUEVO arranca sin
-							habilitar en la tienda para ninguna lista (decision de Lucas: en una lista
-							restringida los articulos nacen sin habilitar). Va en 0 y no ausente para
-							que el check arranque destildado y el valor viaje explicito; en una lista
-							sin restriccion el 0 no cambia nada. El otro constructor de este pivote en
-							memoria (set_article_price_types de mixins/model_functions.js) hace lo mismo.
-						*/
-						visible_en_tienda: 0
-					}
+				this.precio_manual_anterior = this.article.price
+				this.$set(this.article, 'price', null)
+				if (this.margen_anterior) {
+					this.$set(this.article, 'percentage_gain', this.margen_anterior.valor)
+					this.$set(this.article, 'apply_provider_percentage_gain', this.margen_anterior.usar_proveedor)
 				}
 			}
-		}
+		},
+		init_article_price_type() {
+			this.modo_precio_final = null
+			this.precio_manual_anterior = null
+			this.margen_anterior = null
+			this.local_article_price_type = this.lista_en_articulo ? null : {
+				id: this.price_type.id,
+				pivot: {
+					price_type_id: this.price_type.id,
+					incluir_en_excel_para_clientes: this.price_type.incluir_en_lista_de_precios_de_excel,
+					visible_en_tienda: 0,
+					...(!this.es_precio_final && {
+						percentage: this.price_type.percentage ?? '',
+						final_price: '',
+						setear_precio_final: this.price_type.setear_precio_final,
+					}),
+				},
+			}
+			this.cargar_precio_pendiente()
+		},
+		cargar_precio_pendiente() {
+			if (!this.article.id || this.lista_en_articulo || this.pedido_precio === this.article) {
+				return
+			}
+			const article = this.article
+			this.pedido_precio = article
+			this.$api.get('article/' + article.id, { skip_global_error_event: true })
+			.then(res => {
+				// Se incorpora solo la lista que faltaba. La ficha puede tener cambios sin guardar.
+				if (this._isDestroyed || this.article !== article || this.lista_en_articulo) {
+					return
+				}
+				let actualizado = res.data.model
+				let lista = (actualizado.price_types || []).find(item => item.id == this.price_type.id)
+				if (lista) {
+					let monedas_del_articulo = article.price_type_monedas || []
+					let monedas_nuevas = (actualizado.price_type_monedas || []).filter(item => {
+						return item.price_type_id == lista.id
+							&& !monedas_del_articulo.some(moneda => moneda.price_type_id == lista.id && moneda.moneda_id == item.moneda_id)
+					})
+					this.$set(article, 'price_types', (article.price_types || []).concat(lista))
+					this.$set(article, 'price_type_monedas', monedas_del_articulo.concat(monedas_nuevas))
+				}
+			})
+			.catch(() => {})
+			.finally(() => {
+				if (this.pedido_precio === article) this.pedido_precio = null
+			})
+		},
 	},
 }
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
-// Tarjeta de una lista de precio dentro del modal del articulo. El nombre de la lista NO se dibuja
-// aca: lo pone el label del form-group de ModelForm, por fuera del slot (verificado el 5/8/2026,
-// build_price_type_modal_extra_properties le pasa price_type.name como text).
-//
 // 🔴 Toda esta hoja tenia su version oscura escrita adentro de `@if ($theme == 'dark')`, que es
 // codigo muerto: `$theme` es una variable de COMPILACION fijada en 'light' en _custom.scss, asi que
 // esa rama no se compilo nunca. El resultado era el que Lucas reporto el 7/9/2026: en la solapa de
@@ -229,6 +315,20 @@ export default {
 
 html.dark-mode
 	--price-type-precio: #5dd879
+
+.article-price-list-card
+	min-width: 0
+	padding: 16px
+	border-color: var(--color-border-secondary, #dce1e7)
+	border-radius: 14px
+	box-shadow: 0 1px 3px rgba(0, 0, 0, .08)
+
+.article-price-list-card__nombre
+	font-size: 1rem
+	font-weight: 700
+	color: var(--color-text-primary, #212529)
+	overflow-wrap: anywhere
+	margin-bottom: 12px
 
 .cont-inputs
 	display: flex
@@ -279,8 +379,8 @@ html.dark-mode
 		flex-direction: column
 		width: 100%
 
-		.price-type-card__campo
-			margin-bottom: 8px
+	.price-type-card__campo
+		margin: 8px 0 0
 
 		// El campo que manda: se lee como el editable de la tarjeta.
 		// El verde de este badge NO va por el token: es un color de ACCION (fondo pleno con texto
@@ -294,16 +394,6 @@ html.dark-mode
 				color: #FFF
 				font-weight: bold
 
-		// El derivado: el valor lo calcula el sistema. Ademas del disabled propio del input, se
-		// atenua el grupo entero, para que la relacion entre los dos campos se vea de un vistazo.
-		.price-type-card__campo--derivado
-			opacity: 0.65
-
-			.input-group-text
-				background: transparent
-				border-style: dashed
-				color: var(--color-text-secondary, rgba(0, 0, 0, .5))
-
 	.price-type-card__opciones
 		width: 100%
 		display: flex
@@ -311,14 +401,18 @@ html.dark-mode
 
 	// El interruptor que decide cual de los dos campos manda, con su explicacion al lado.
 	.price-type-card__interruptor
-		padding: 6px 8px
-		border-radius: 6px
+		padding: 8px 10px
+		border-radius: 10px
 		// Va con --bg-hover y NO con --bg-section, que seria el candidato obvio: la tarjeta es una
 		// .card, o sea --bg-card, y en oscuro --bg-section queda MAS oscuro que la tarjeta --el
 		// interruptor se hundiria en vez de despegarse--. --bg-hover es el unico de los tres que
 		// esta por encima de --bg-card en oscuro, que es lo que buscaba el rgba(255,255,255,.06)
 		// de la rama muerta. En claro vale #f1f3f5, practicamente el gris que se ve hoy.
 		background: var(--bg-hover, rgba(0, 0, 0, .04))
+
+		.custom-switch .custom-control-input:checked ~ .custom-control-label::before
+			background-color: #28a745
+			border-color: #28a745
 
 		.price-type-card__interruptor-ayuda
 			font-size: 0.75em

@@ -28,11 +28,13 @@
 
 				<b-form-checkbox
 				:class="inputId(prop)"
+				:aria-label="propText(prop)"
 				@keyup.enter="changeFocus()"
 				v-else-if="showProp(prop) && prop.type == 'checkbox'"
 				:value="1"
 				:unchecked-value="0"
-				v-model="model.pivot[prop.key]">
+				:checked="checkbox_value(prop)"
+				@change="set_checkbox_value(prop, $event)">
 				</b-form-checkbox>
 
 				<b-form-input
@@ -100,6 +102,9 @@ export default {
 			}
 		},
 		showProp(prop) {
+			if (prop.visible_when && !prop.visible_when(this.model, this.pivot_parent_model)) {
+				return false
+			}
 			if (prop.v_if) {
 				if (prop.v_if.b_t_many_model_prop) {
 					if (prop.v_if.check_array_length) {
@@ -119,6 +124,19 @@ export default {
 				return this.hasExtencion(prop.if_has_extencion)
 			}
 			return true 
+		},
+		checkbox_value(prop) {
+			let valor = this.model.pivot[prop.key]
+			if (prop.implicit_parent_flag && !Number(this.model.pivot[prop.explicit_choice_key])) {
+				return Number(!!(Number(valor) || Number(this.pivot_parent_model && this.pivot_parent_model[prop.implicit_parent_flag])))
+			}
+			return valor
+		},
+		set_checkbox_value(prop, valor) {
+			this.$set(this.model.pivot, prop.key, valor)
+			if (prop.explicit_choice_key) {
+				this.$set(this.model.pivot, prop.explicit_choice_key, 1)
+			}
 		},
 		inputId(prop) {
 			return this.model_name+'-'+prop.key+'-'+this.model.id

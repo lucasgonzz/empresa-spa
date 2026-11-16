@@ -13,9 +13,8 @@
         -->
         <app-instalada-vieja></app-instalada-vieja>
         <nav-component></nav-component>
+        <avisos-de-implementacion v-if="implementacion_usuario_id" :key="implementacion_usuario_id"></avisos-de-implementacion>
         <btn-scroll-top></btn-scroll-top>
-        <support-chat-floating-button></support-chat-floating-button>
-        <asistente-ia-floating-button></asistente-ia-floating-button>
         <!--
             Anfitrión del sidebar de WhatsApp. Va acá arriba, y no adentro del módulo, porque
             desde este refactor la conversación se abre también desde Clientes, Pedidos y
@@ -131,11 +130,16 @@
             falsa en la misión 51.
 
             El servidor debe confirmar que la sesión autenticada es una demo. El chat es ahora
-            el único acceso a los videos, así que una recarga conserva su launcher compacto;
-            sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
+            el único acceso a los videos: una recarga lo deja cerrado y se abre desde «Agentes»,
+            en la barra; sólo el ingreso por token lo presenta abierto. No se usa almacenamiento local
             para autorizar el panel. Ver store/demo.js y el estado inicial de PanelDemo.
         -->
-        <panel-demo v-if="$store.getters['demo/panel_visible']"></panel-demo>
+        <!--
+            La prueba gratuita ya no monta su propio chat (misión prueba-ayuda-unificada-en-soporte,
+            10/11/2026): toda la guía la da Soporte, así que en una prueba ya no hay «Tu guía». Sin
+            asistente unificado el lead ve solo Soporte; con él, Asistente personal y Soporte.
+        -->
+        <panel-demo v-if="$store.getters['demo/panel_visible']" v-show="$route.name !== 'agentes'"></panel-demo>
 
         <!--
             El v-if esconde la vista entera mientras hay bloqueo de app instalada: el login no se
@@ -152,6 +156,7 @@
                 Para un cliente real no muestra nada.
             -->
             <prueba-primer-ingreso-modal v-if="authenticated"></prueba-primer-ingreso-modal>
+            <asistente-ia-anfitrion></asistente-ia-anfitrion>
             <router-view/>
 
         </b-container>
@@ -162,12 +167,12 @@ import ErrorModal from '@/common-vue/components/error/Index'
 import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
 import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
-import SupportChatFloatingButton from '@/common-vue/components/support-chat/FloatingButton'
-import AsistenteIaFloatingButton from '@/components/asistente-ia/FloatingButton'
+import AsistenteIaAnfitrion from '@/components/asistente-ia/Anfitrion'
 import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
 import TiendaMensajesSidebarHost from '@/components/online/components/mensajes/SidebarHost'
 import DescripcionDeControl from '@/common-vue/components/ayuda/DescripcionDeControl'
 import AppInstaladaVieja from '@/components/common/AppInstaladaVieja'
+import { puede_ver_implementacion } from '@/store/implementacion'
 
 import app from '@/common-vue/mixins/app'
 import start_methods from '@/mixins/start_methods'
@@ -207,11 +212,11 @@ export default {
     components: {
         ErrorModal,
         PruebaPrimerIngresoModal: () => import('@/components/prueba/PrimerIngresoModal'),
+        AvisosDeImplementacion: () => import('@/components/implementacion/Avisos'),
         LogoLoading, 
         NavComponent,
         BtnScrollTop,
-        SupportChatFloatingButton,
-        AsistenteIaFloatingButton,
+        AsistenteIaAnfitrion,
         WhatsappSidebarHost,
         TiendaMensajesSidebarHost,
         DescripcionDeControl,
@@ -237,6 +242,10 @@ export default {
         PanelDemo: () => import('@/components/demo/PanelDemo'),
     },
     computed: {
+        implementacion_usuario_id() {
+            return !this.version_bloqueada && puede_ver_implementacion(this.$store.state.auth)
+                ? this.$store.state.auth.user.id : null
+        },
         uiSizeClass() {
             const slug = this.$store.state.auth.user?.inputs_size?.slug
             return slug ? `ui-${slug}` : ''

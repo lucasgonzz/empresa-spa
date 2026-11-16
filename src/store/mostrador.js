@@ -167,23 +167,28 @@ export default {
 		 * sistema. Nunca rechaza: la falla queda en motivo_vacio y el escritorio la
 		 * explica.
 		 */
-		getReportes({ commit }) {
+		getReportes({ commit, rootState }, opciones = {}) {
+			const revision = rootState.ai_chat.revision_sesion
+			const vigente = () => rootState.ai_chat.revision_sesion === revision
 			commit('setLoading', true)
-			commit('auth/setMessage', 'Buscando tus informes', { root: true })
-			commit('auth/setLoading', true, { root: true })
+			const mostrar_carga = !(opciones && opciones.silencioso)
+			if (mostrar_carga) {
+				commit('auth/setMessage', 'Buscando tus informes', { root: true })
+				commit('auth/setLoading', true, { root: true })
+			}
 			return axios.get('/api/mostrador/reportes', {
 				skip_global_error_event: true,
+				skip_navigation_cancel: !mostrar_carga,
 			})
 				.then(res => {
+					if (!vigente()) return
 					commit('setReportes', res.data)
 					let hay = (res.data.ultimos && res.data.ultimos.length) || (res.data.anteriores && res.data.anteriores.length)
 					commit('setMotivoVacio', hay ? null : 'sin_informes')
 					commit('setReportesCargados', true)
-					commit('setLoading', false)
-					commit('auth/setLoading', false, { root: true })
-					commit('auth/setMessage', '', { root: true })
 				})
 				.catch(err => {
+					if (!vigente()) return
 					let status = err.response ? err.response.status : null
 					commit('setReportes', null)
 					if (status == 404) {
@@ -196,9 +201,13 @@ export default {
 						console.log(err)
 					}
 					commit('setReportesCargados', true)
-					commit('setLoading', false)
-					commit('auth/setLoading', false, { root: true })
-					commit('auth/setMessage', '', { root: true })
+				})
+				.finally(() => {
+					if (vigente()) commit('setLoading', false)
+					if (mostrar_carga) {
+						commit('auth/setLoading', false, { root: true })
+						commit('auth/setMessage', '', { root: true })
+					}
 				})
 		},
 		/**
@@ -283,19 +292,31 @@ export default {
 		 * @param {number} reporte_id
 		 * @returns {Promise} resuelve con la conversación.
 		 */
-		crearConversacion({ commit, dispatch, state }, reporte_id) {
+		crearConversacion({ commit, dispatch, state }, reporte) {
+			const inline = typeof reporte === 'object'
+			const reporte_id = inline ? reporte.id : reporte
 			// skip_global_error_event, como getReportes: la falla la atiende
 			// PreguntaInput (repone el texto y avisa con su propio toast). Sin la
 			// bandera, el interceptor de main.js además disparaba errorEvent y el
 			// dueño veía DOS toasts por el mismo fallo.
 			return axios.post('/api/mostrador/reportes/' + reporte_id + '/conversacion', null, {
 				skip_global_error_event: true,
+				skip_navigation_cancel: inline,
 			})
 				.then(res => {
 					let conversation = res.data.model
 					let ya_existia = res.status == 200
+					if (inline && !reporte.seleccion_vigente()) return null
 					commit('ai_chat/upsertConversation', conversation, { root: true })
 					commit('ai_chat/setMessages', [], { root: true })
+					if (inline) {
+						commit('ai_chat/setSeleccionSinRecarga', true, { root: true })
+						commit('ai_chat/setSelectedConversationId', conversation.id, { root: true })
+						commit('setConversationId', { reporte_id: reporte_id, conversation_id: conversation.id })
+						if (!ya_existia) return conversation
+						return dispatch('ai_chat/getMessages', { conversation_id: conversation.id, page: 1 }, { root: true })
+							.then(() => conversation)
+					}
 
 					let mensajes_listos
 					if (ya_existia) {

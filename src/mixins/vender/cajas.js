@@ -70,6 +70,9 @@ export default {
 			let address_id = this.$cookies.get('address_id')
 
 			let payment_method_id = this.$store.state.vender.current_acount_payment_method_id
+			if (!payment_method_id && this.owner && this.owner.vender_exigir_eleccion_medio_pago) {
+				return
+			}
 
 			let caja_id = this.get_caja_por_defecto(payment_method_id, address_id)
 

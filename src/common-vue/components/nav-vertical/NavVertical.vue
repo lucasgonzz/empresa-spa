@@ -1,5 +1,5 @@
 <template>
-<div>
+<div class="contenedor-nav-vertical" :class="{ 'aviso-retiene-barra': aviso_implementacion && aviso_retiene_barra }">
 	<div 
 	class="mobile-nav-header d-md-none">
 		<span 
@@ -7,7 +7,13 @@
 		class="route-name">
 			{{ routeText(selected_route) }}
 		</span>
-		<div 
+		<aviso-de-implementacion v-if="!show_nav_mobile"></aviso-de-implementacion>
+		<slot name="nav_top_mobile"></slot>
+		<button
+		type="button"
+		data-menu-implementacion-movil
+		:aria-expanded="String(show_nav_mobile)"
+		aria-label="Menú de navegación"
 		@click="setShow"
 		class="button-toggle">
 			<i 
@@ -16,12 +22,15 @@
 			<i 
 			v-else
 			class="icon-cancel"></i>
-		</div>
+		</button>
 	</div>
 
 	<div 
+	ref="barra"
 	:class="_class"
-	class="nav-vertical s-1">
+	class="nav-vertical s-1"
+	@mouseleave="al_salir_de_barra"
+	@scroll.passive="alinear_aviso">
 
 		<slot name="nav_top"></slot>
 
@@ -30,8 +39,14 @@
 	    v-if="showRoute(route)"
 	    :key="i"
 	    :class="route_item_class(route)"
+	    :data-nav-implementacion="route.name === 'implementacion' ? '' : null"
+	    :data-nav-tutoriales="route.name === 'centro_de_recursos' ? '' : null"
+	    :role="route.name === 'implementacion' ? 'link' : null"
+	    :aria-label="route.name === 'implementacion' ? 'Implementación' : null"
+	    :tabindex="route.name === 'implementacion' ? tabindex_implementacion : null"
 		class="route"
-	    @click="callSetRoute(route)">
+	    @click="callSetRoute(route)"
+	    @keydown.enter.self="route.name === 'implementacion' && callSetRoute(route)">
 
 	    	<div 
 	    	class="menu-trigger">
@@ -56,12 +71,15 @@
 			    	<div class="route-icon-badge-wrap">
 				    	<i
 				    	v-if="route.icon"
-				    	:class="get_icon_class(route)"
+						:class="[get_icon_class(route), { 'implementacion-con-aviso': route.name === 'implementacion' && aviso_implementacion }]"
 				    	class="route-icon"></i>
 				    	<img 
 				    	v-else-if="route.image_url"
 				    	class="route-nav-img"
 				    	:src="image(route)">
+						<aviso-de-implementacion
+						v-if="route.name === 'implementacion'"
+						class="aviso-implementacion-menu d-md-none"></aviso-de-implementacion>
 
 				    	<b-badge
 				    	class="route-alert-badge"
@@ -103,9 +121,20 @@
 
 		<slot name="nav_bottom"></slot>
 
-		<user-info
-		@abrir-ruta="callSetRoute"></user-info>
+		<user-info></user-info>
 
+	</div>
+
+	<div class="aviso-tour-lateral d-none d-md-block">
+		<slot name="nav_tour"></slot>
+	</div>
+
+	<div v-if="aviso_implementacion && centro_aviso !== null"
+		ref="aviso_lateral"
+		class="aviso-implementacion-lateral d-none d-md-block"
+		@mouseleave="aviso_retiene_barra = false"
+		:style="{ '--centro-aviso': centro_aviso + 'px' }">
+		<aviso-de-implementacion></aviso-de-implementacion>
 	</div>
 
 	<download-resources></download-resources>
@@ -119,9 +148,11 @@
 import nav from '@/common-vue/mixins/nav'
 import routes from '@/router/routes'
 import nav_functions from '@/mixins/nav_functions'
+import { puede_ver_implementacion } from '@/store/implementacion'
 export default {
 	mixins: [nav, nav_functions],
 	components: {
+		AvisoDeImplementacion: () => import('@/components/implementacion/BotonAviso'),
         DownloadResources: () => import('@/common-vue/components/download-resources/Index'),
         UserInfo: () => import('@/common-vue/components/nav-vertical/UserInfo'),
         UserConfig: () => import('@/common-vue/components/nav/UserConfig'),
@@ -129,19 +160,54 @@ export default {
 	},
 	data() {
 		return {
+			centro_aviso: null,
+			aviso_retiene_barra: false,
+			observador_aviso: null,
 			show_nav_mobile: false,
+			contraida_por_agentes: false,
 			openItem: null,
 			hideTimeout: null,
 		}
 	},
 	watch: {
-		route_name() {
-			this.show_nav_mobile = false
+		aviso_implementacion(aviso) {
+			if (!aviso) {
+				this.aviso_retiene_barra = false
+			}
 		},
+		route_name(nombre) {
+			this.show_nav_mobile = false
+			this.contraida_por_agentes = nombre === 'agentes' && !!(this.$refs.barra && this.$refs.barra.matches(':hover'))
+		},
+	},
+	mounted() {
+		window.addEventListener('resize', this.alinear_aviso)
+		if (window.ResizeObserver) {
+			this.observador_aviso = new ResizeObserver(this.alinear_aviso)
+			this.observador_aviso.observe(this.$refs.barra)
+		}
+		this.alinear_aviso()
+	},
+	updated() {
+		this.alinear_aviso()
+	},
+	beforeDestroy() {
+		window.removeEventListener('resize', this.alinear_aviso)
+		if (this.observador_aviso) {
+			this.observador_aviso.disconnect()
+		}
 	},
 	computed: {
 		routes() {
-			return routes
+			const tiene_implementacion = puede_ver_implementacion(this.$store.state.auth)
+				&& this.$store.state.implementacion.disponible === true
+			return routes.filter(route => route.name !== 'implementacion' || tiene_implementacion)
+		},
+		aviso_implementacion() {
+			return this.$store.getters['implementacion/aviso_pendiente'] && !this.$store.state.implementacion.apertura
+		},
+		tabindex_implementacion() {
+			return this.is_mobile && !this.show_nav_mobile ? -1 : 0
 		},
 		_class() {
 			let _class = ''
@@ -151,10 +217,22 @@ export default {
 			if (this.show_nav_mobile) {
 				_class += 'active-mobile-nav'
 			}
+			if (this.contraida_por_agentes) _class += ' nav-vertical--agentes-recien-abierto'
 			return _class
 		},
 	},
 	methods: {
+		al_salir_de_barra(event) {
+			this.contraida_por_agentes = false
+			const aviso = this.$refs.aviso_lateral
+			this.aviso_retiene_barra = !!(aviso && aviso.contains(event.relatedTarget))
+		},
+		alinear_aviso() {
+			const item = this.aviso_implementacion && this.$refs.barra
+				&& this.$refs.barra.querySelector('[data-nav-implementacion]')
+			const rect = item && item.getBoundingClientRect()
+			this.centro_aviso = rect ? rect.top + rect.height / 2 : null
+		},
 		toggleSubmenu(route) {
 			if (this.openItem === route.name) {
 				this.openItem = null;
@@ -274,6 +352,59 @@ $nav_item_radius: 8px
 		letter-spacing: -0.01em
 	i
 		font-size: 1.125rem
+	.button-toggle
+		border: 0
+		background: transparent
+		color: inherit
+
+.implementacion-con-aviso
+	display: none !important
+
+@media (max-width: 767px)
+	.nav-vertical:not(.active-mobile-nav) .aviso-implementacion-menu
+		display: none
+	.nav-vertical .aviso-implementacion-menu
+		position: absolute
+		right: -4px
+		width: 177px
+		flex-direction: row-reverse
+		.vineta::before
+			left: auto
+			right: -.32rem
+			transform: rotate(225deg)
+	.nav-vertical.active-mobile-nav [data-nav-implementacion]:has(.aviso-implementacion-menu) .route-text
+		visibility: hidden
+
+.aviso-implementacion-lateral
+	position: fixed
+	z-index: 1001
+	left: $nav_collapsed_visible - 20px
+	top: clamp(44px, var(--centro-aviso), calc(100% - 44px))
+	transform: translateY(-50%)
+	transition: left .22s ease
+
+.aviso-tour-lateral
+	position: fixed
+	top: 6px
+	left: calc(#{$nav_collapsed_visible} - 10px)
+	z-index: 1001
+	#app:has(.support-chat-overlay) &
+		z-index: 1054
+
+@media (min-width: 768px)
+	.nav-vertical:hover ~ .aviso-implementacion-lateral,
+	.aviso-retiene-barra > .aviso-implementacion-lateral,
+	.aviso-implementacion-lateral:has(button:focus-visible)
+		left: $nav_width - 20px
+	.aviso-retiene-barra > .nav-vertical,
+	.contenedor-nav-vertical:has(> .aviso-implementacion-lateral button:focus-visible) > .nav-vertical
+		transform: translateX(0)
+		box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18)
+
+@media (prefers-reduced-motion: reduce)
+	.contenedor-nav-vertical > .nav-vertical,
+	.aviso-implementacion-lateral
+		transition: none
 
 .nav-vertical
 	display: flex
@@ -302,11 +433,13 @@ $nav_item_radius: 8px
 
 	@media screen and (min-width: 768px)
 		transform: translateX(-$nav_collapsed_offset)
-		&:hover
+		&:hover:not(.nav-vertical--agentes-recien-abierto)
 			transform: translateX(0px)
 			box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18)
 			& .user-info .item, & .user-info hr
 				opacity: 1
+	.robotito-tour-tutoriales &
+		transform: translateX(0)
 
 	.route
 		width: calc(100% - 16px)
@@ -318,6 +451,14 @@ $nav_item_radius: 8px
 		cursor: pointer
 		border-radius: $nav_item_radius
 		transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease
+		&[data-nav-implementacion]
+			flex-shrink: 0
+			position: sticky
+			bottom: 0
+			z-index: 1
+			background-color: $nav_bg
+			&.active-item, &:hover, &:focus-visible
+				background-color: $nav_active_bg
 		&:hover
 			background: $nav_hover_bg
 			color: #ffffff

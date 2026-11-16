@@ -36,6 +36,30 @@
 			<!-- Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): visible mientras queden datos de ejemplo. -->
 			<btn-importar-mi-informacion></btn-importar-mi-informacion>
 
+			<b-button
+			v-if="is_owner && user.prueba && user.prueba.imagenes_catalogo && !user.prueba.semilla_presente && hasExtencion('agentes_ia')"
+			:to="{ name: 'alertas', params: { view: 'imagenes' } }"
+			aria-label="Imágenes inteligentes"
+			data-testid="prueba-imagenes-inteligentes"
+			title="Imágenes inteligentes"
+			variant="outline-primary"
+			size="sm">
+				<i class="bi bi-images" aria-hidden="true"></i>
+				<span class="d-none d-xl-inline m-l-5">Imágenes inteligentes</span>
+			</b-button>
+
+			<b-button
+			v-if="puede_simular_agente"
+			v-b-modal.prueba-simular-agente
+			aria-label="Probar agente de WhatsApp"
+			data-testid="prueba-abrir-simulador-agente"
+			title="Probar agente de WhatsApp"
+			variant="outline-primary"
+			size="sm">
+				<i class="bi bi-whatsapp" aria-hidden="true"></i>
+				<span class="d-none d-xl-inline m-l-5">Probar agente de WhatsApp</span>
+			</b-button>
+
 			<btn-update-article-list
 			class="toolbar-btn--desde-md"></btn-update-article-list>
 
@@ -72,13 +96,18 @@
 		<stock-suggestion></stock-suggestion>
 
 		<deposit-movements></deposit-movements>
+
+		<simular-agente-modal v-if="puede_simular_agente"></simular-agente-modal>
 	</div>
 </template>
 <script>
+import SimularAgenteModal from '@/components/prueba/SimularAgenteModal'
+
 export default {
 	components: {
 		SelectAddress: () => import('@/components/listado/components/horizontal-nav/SelectAddress'),
 		BtnImportarMiInformacion: () => import('@/components/prueba/BtnImportarMiInformacion'),
+		SimularAgenteModal,
 		BtnUpdateArticleList: () => import('@/components/listado/components/horizontal-nav/BtnUpdateArticleList'),
 		BtnInventoryPerformance: () => import('@/components/listado/components/horizontal-nav/BtnInventoryPerformance'),
 		StockSuggestion: () => import('@/components/listado/components/horizontal-nav/stock-suggestion/Index'),
@@ -87,6 +116,34 @@ export default {
 		ArticlePdfPersonalizado: () => import('@/components/listado/components/horizontal-nav/ArticlePdfPersonalizado'),
 		DepositButtons: () => import('@/components/listado/components/horizontal-nav/DepositButtons'),
 
-	}
+	},
+	computed: {
+		puede_simular_agente() {
+			const prueba = this.user && this.user.prueba
+			return this.is_owner && prueba && prueba.puede_simular_agente && !prueba.semilla_presente && this.hasExtencion('agentes_ia')
+		},
+	},
+	watch: {
+		puede_simular_agente() {
+			this.abrir_simulador_desde_implementacion()
+		},
+		'$route.query.probar_agente'() {
+			this.abrir_simulador_desde_implementacion()
+		},
+	},
+	mounted() {
+		this.abrir_simulador_desde_implementacion()
+	},
+	methods: {
+		abrir_simulador_desde_implementacion() {
+			if (!this.puede_simular_agente || this.$route.query.probar_agente !== '1') {
+				return
+			}
+			const query = { ...this.$route.query }
+			delete query.probar_agente
+			this.$router.replace({ query })
+			this.$nextTick(() => this.$bvModal.show('prueba-simular-agente'))
+		},
+	},
 }
 </script>

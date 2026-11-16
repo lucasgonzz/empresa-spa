@@ -65,6 +65,12 @@
 			v-if="adjuntos_visibles.length"
 			:adjuntos="adjuntos_visibles"></adjuntos-de-mensaje>
 
+			<!-- La oferta de pasar la duda a Soporte (misión prueba-ayuda-unificada-en-soporte, S2):
+			el adjunto `tipo: 'soporte'`. AdjuntosDeMensaje la ignora (solo pinta imágenes). -->
+			<oferta-de-soporte
+			v-if="oferta_de_soporte"
+			:oferta="oferta_de_soporte"></oferta-de-soporte>
+
 			<!-- Tarjetas de carga que propuso el asistente (misión asistente-ia-acciones,
 			15/9/2026): una por acción, debajo del texto. Las 'descartada' no se pintan (son de
 			una respuesta que terminó en error). -->
@@ -121,12 +127,14 @@
 <script>
 import AccionCard from '@/components/asistente-ia/AccionCard'
 import AdjuntosDeMensaje from '@/components/asistente-ia/AdjuntosDeMensaje'
+import OfertaDeSoporte from '@/components/asistente-ia/OfertaDeSoporte'
 import Icono from '@/components/asistente-ia/Icono'
 import ValoracionMensaje from '@/components/asistente-ia/mensaje/agente/ValoracionMensaje'
 import { segmentar_mensaje } from '@/components/asistente-ia/formato'
 import { valoracion_de } from '@/components/asistente-ia/valoracion'
 import { logo_del_negocio } from '@/components/asistente-ia/identidad'
 import { copiar_al_portapapeles } from '@/components/asistente-ia/portapapeles'
+import { uuid_de_la_oferta } from '@/components/asistente-ia/seguir_con_soporte'
 
 /**
  * Texto del `title` (y de lo que lee un lector de pantalla) de cada tipo de mención. El de
@@ -147,6 +155,7 @@ export default {
 	components: {
 		AccionCard,
 		AdjuntosDeMensaje,
+		OfertaDeSoporte,
 		Icono,
 		ValoracionMensaje,
 	},
@@ -316,6 +325,20 @@ export default {
 				return []
 			}
 			return this.message.adjuntos
+		},
+		/**
+		 * La oferta de Soporte del mensaje (`{ tipo: 'soporte', texto }`, misión
+		 * prueba-ayuda-unificada-en-soporte), o null. Solo una, solo de una respuesta guardada, solo con un
+		 * `uuid` válido (es la clave del envío único: sin él, una respuesta de una API anterior, no hay
+		 * botón) y solo si la cuenta tiene Soporte: sin la pestaña no hay a dónde ir.
+		 *
+		 * @returns {Object|null}
+		 */
+		oferta_de_soporte() {
+			if (!this.message.id || !this.hasExtencion('support_chat')) return null
+			const oferta = this.adjuntos_visibles.find(adjunto => adjunto && adjunto.tipo === 'soporte'
+				&& typeof adjunto.texto === 'string' && adjunto.texto.trim() !== '' && uuid_de_la_oferta(adjunto) !== null)
+			return oferta || null
 		},
 		/**
 		 * La barra existe para una respuesta guardada (con id) que ya terminó y tiene algo que
