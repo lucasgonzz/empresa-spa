@@ -256,6 +256,13 @@ export default {
 			description: 'Muestra como agotados los artículos con stock cero. Si habilitás los pedidos de artículos sin stock, los artículos que se pueden pedir se muestran con el aviso «Consultar».',
 		},
 		{
+			text: 'Reservar stock al recibir pedidos web',
+			key: 'reservar_stock_pedidos_web',
+			type: 'checkbox',
+			v_if_function: 'mostrar_reservar_stock_pedidos_web',
+			description: 'Reserva la mercadería disponible cuando llega el pedido, sin generar una venta ni cobrar. Al confirmar se descuenta definitivamente y al cancelar se libera. Con control de depósito, la reserva se mantiene hasta confirmar las unidades revisadas. Si apagás la opción se liberan las reservas pendientes, sin modificar ventas ni egresos ya confirmados. Requiere verificar previamente las versiones del sistema y de la tienda con soporte. No se aplica a pedidos anteriores.',
+		},
+		{
 			text: 'Permitir pedidos de artículos sin stock',
 			key: 'permitir_pedidos_sin_stock',
 			type: 'checkbox',

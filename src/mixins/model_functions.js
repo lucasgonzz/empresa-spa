@@ -1265,6 +1265,9 @@ export default {
             }
             return typeof model.ofrecer_envio_zipnova != 'undefined'
         },
+        mostrar_reservar_stock_pedidos_web(prop, model) {
+            return !!(this.is_owner && model && typeof model.reservar_stock_pedidos_web != 'undefined')
+        },
         mostrar_permitir_pedidos_sin_stock(prop, model) {
             return !!model && typeof model.permitir_pedidos_sin_stock != 'undefined'
         },
