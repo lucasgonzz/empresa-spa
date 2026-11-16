@@ -1,3 +1,4 @@
+import { problema_de_fecha_de_venta } from '@/utils/fecha_automatica_de_venta'
 import chequeos from '@/mixins/vender/guardar_venta/chequeos/index'
 import limpiar_vender from '@/mixins/vender/limpiar_vender'
 import default_payment_method from '@/mixins/vender/default_payment_method'
@@ -26,6 +27,16 @@ let guardado_offline_en_curso = false
  */
 export function hay_guardado_offline_en_curso() {
 	return guardado_offline_en_curso
+}
+
+function preparar_fecha_de_venta(vista) {
+	vista.$store.commit('vender/refrescar_fecha_automatica')
+	let problema = problema_de_fecha_de_venta(vista.$store.state.vender.created_at)
+	if (problema) {
+		vista.$toast.error(problema, { duration: 7000 })
+		return false
+	}
+	return true
 }
 
 export default {
@@ -63,6 +74,7 @@ export default {
 	},
 	methods: {
 		guardar_venta() {
+			if (!preparar_fecha_de_venta(this)) return
 			/*
 				🔴 Con un cobro por QR de Mercado Pago en curso que todavía no se pagó, la venta NO se
 				guarda (misión cobro-qr-mercado-pago, 26/10/2026). El atajo de teclado de Guardar
@@ -185,6 +197,7 @@ export default {
 		 *                              viene, se genera uno.
 		 */
 		guardar_venta_online(offline_uuid) {
+			if (!preparar_fecha_de_venta(this)) return
 			// También cubre llamados directos y artículos agregados por los chequeos previos.
 			this.setTotal()
 			const pending = [...this.$store.state.vender.pending_attachments]
@@ -396,6 +409,7 @@ export default {
 		 *                              genera uno.
 		 */
 		async guardar_venta_offline(offline_uuid) {
+			if (!preparar_fecha_de_venta(this)) return
 
 			/*
 				Doble Enter o doble clic en "Guardar venta" sin conexion: el camino con servidor tiene
