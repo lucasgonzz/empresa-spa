@@ -47,6 +47,7 @@
 				<b-form-group
 				label="Condicion de venta">
 					<select-incoterms
+					:value="incoterms"
 					@set_selected="set_incoterms"></select-incoterms>
 				</b-form-group>
 

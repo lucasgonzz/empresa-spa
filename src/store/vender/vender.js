@@ -280,7 +280,7 @@ export default {
 
 		afip_tipo_comprobante_id: 0,
 
-		incoterms: 0,
+		incoterms: null,
 		forma_de_pago: '',
 		permiso_existente: '',
 

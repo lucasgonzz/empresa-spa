@@ -1,3 +1,5 @@
+import { incoterms_opcional, mensaje_error_facturacion, aviso_resultado_fiscal } from '@/utils/facturacion'
+
 export default {
 	computed: {
         maked_sale() {
@@ -97,13 +99,13 @@ export default {
 					sale_id: this.maked_sale.id,
 					ventas_afip_information_id: afip_information_id,
 					afip_tipo_comprobante_id: afip_tipo_comprobante_id,
-					incoterms: incoterms,
+					incoterms: incoterms_opcional(incoterms),
 					forma_de_pago: forma_de_pago,
 					permiso_existente: permiso_existente,
 				})
 				.then(res => {
 
-		            window.clearInterval(this.interval)
+					window.clearInterval(this.interval)
 					this.interval = null
 
 					this.ocultar_mensaje_demorado()
@@ -113,6 +115,13 @@ export default {
 					this.$store.commit('sale/add', sale)
 					this.$store.commit('vender/setSale', sale)
 					this.$store.commit('vender/set_ultima_venta_sesion', sale)
+
+					let aviso = aviso_resultado_fiscal(res.data)
+					if (aviso) {
+						this.$store.commit('vender/setAfipResult', [{Msg: aviso}].concat(this.mensajes_de_arca(sale)))
+						this.$toast.error(aviso, {duration: 10000})
+						return
+					}
 
 					if (sale.afip_errors.length) {
 						this.$toast.error('Afip informo errores', {
@@ -160,16 +169,12 @@ export default {
 					
 				})
 				.catch(err => {
-					// this.$bvModal.hide('loading-afip-ticket')
-		            window.clearInterval(this.interval)
-					console.log(err)
-					if (err.message == 'Request failed with status code 500') {
-						this.$store.commit('vender/setAfipResult', [{Msg: 'Ocurrio un error en el servidor de AFIP'}])
-					}
-					this.$toast.error('Error al facturar')
-					setTimeout(() => {
-						this.ocultar_tarjeta()
-					}, 2000)
+					window.clearInterval(this.interval)
+					this.interval = null
+					this.ocultar_mensaje_demorado()
+					let mensaje = mensaje_error_facturacion(err)
+					this.$store.commit('vender/setAfipResult', [{Msg: mensaje}])
+					this.$toast.error(mensaje, {duration: 10000})
 				})
 			}
 		},
@@ -241,7 +246,7 @@ export default {
 			this.$store.commit('vender/set_permiso_existente', '')
 			/*
 				La condicion de venta del comprobante de exportacion (tipo 8) vuelve a su valor
-				inicial del store (0) junto con los otros dos campos de ese comprobante. Nadie la
+				inicial del store (null) junto con los otros dos campos de ese comprobante. Nadie la
 				limpiaba: la venta siguiente salia a AFIP con el incoterm de la anterior, y como
 				el tipo vuelve a 0 aca mismo, el select (SelectIncoterms.vue, con su propio dato
 				local) se desmontaba y no habia forma de verlo. Va ACA y no en limpiar_vender()
@@ -249,7 +254,7 @@ export default {
 				presupuesto) el tipo 8 queda como estaba y el select sigue montado con su valor,
 				y reiniciar el store ahi dejaria la pantalla diciendo una cosa y el POST otra.
 			*/
-			this.$store.commit('vender/set_incoterms', 0)
+			this.$store.commit('vender/set_incoterms', null)
 		},
 		ticket_demorado() {
 			document.getElementById('loading-afip-ticket').classList.add('loading-afip-ticket-demorado')

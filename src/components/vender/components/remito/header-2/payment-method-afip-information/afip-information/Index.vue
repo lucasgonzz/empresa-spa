@@ -6,6 +6,7 @@
 		<select-afip-tipo-comprobante></select-afip-tipo-comprobante>
 
 		<select-incoterms
+		:value="$store.state.vender.incoterms"
 		@set_selected="set_incoterms"
 		v-if="afip_tipo_comprobante_id == 8"></select-incoterms>
 

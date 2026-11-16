@@ -4,18 +4,23 @@
 		<b-form-select
 		:options="options"
 		@change="change"
-		v-model="incoterms"></b-form-select>
+		:value="value"></b-form-select>
 	</b-input-group>
 </template>
 <script>
 export default {
+	props: {
+		value: {
+			default: null,
+		},
+	},
 	computed: {
 		options() {
 			return [
 
 				{
 					text: 'Condicion de venta',
-					value: 0,
+					value: null,
 				},
 				{
 					text: 'Free on Board',
@@ -82,14 +87,9 @@ export default {
 			]
 		}
 	},
-	data() {
-		return {
-			incoterms: 0
-		}
-	},
 	methods: {
-		change() {
-			this.$emit('set_selected', this.incoterms)
+		change(value) {
+			this.$emit('set_selected', value)
 		}
 	}
 }
