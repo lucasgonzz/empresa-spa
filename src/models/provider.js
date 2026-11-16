@@ -2,7 +2,9 @@ export default {
 	properties: [
 		{
 			text: 'N°',
-			key: 'id',
+			// La numeración del proveedor pertenece al comercio, no al id global de la base.
+			key: 'num',
+			previous_column_keys: ['id'],
 			type: 'number',
 			not_show_on_form: true,
 		},

@@ -180,6 +180,7 @@ import BtnPdf from '@/common-vue/components/BtnPdf'
 
 import ModelForm from '@/common-vue/components/model/ModelForm'
 import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
+import { numero_de_modelo } from '@/common-vue/helpers/numero_de_modelo'
 import { ANCLA_MODAL, ANCLA_BOTON_GUARDAR, ancla_de } from '@/common-vue/tours/anclas-por-modelo'
 
 export default {
@@ -431,11 +432,13 @@ export default {
 				let text = 'Actualizar '+this.singular(this.model_name).toLowerCase()
 				let prop_title = this.prop_to_show_in_modal_title(this.model_name)
 				if (prop_title) {
-					text += ' '+ this.model[prop_title]
-				} else if (this.model.num) {
-					text += ' N° '+this.model.num
-				} else if (this.model.id) {
-					text += ' N° '+this.model.id
+					let referencia = this.model[prop_title]
+					if (referencia !== null && typeof referencia !== 'undefined' && String(referencia).trim() !== '') {
+						text += ' '+referencia
+					}
+				} else {
+					let numero = numero_de_modelo(this.model, this.modelPropertiesFromName(this.model_name))
+					if (numero !== '') text += ' N° '+numero
 				}
 				return text
 			}

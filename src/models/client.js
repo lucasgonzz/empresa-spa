@@ -2,7 +2,9 @@ export default {
 	properties: [
 		{
 			text: 'N°',
-			key: 'id',
+			// El número comercial coincide con los comprobantes; id sigue siendo la clave interna.
+			key: 'num',
+			previous_column_keys: ['id'],
 			type: 'number',
 			value: '',
 			show: true,
