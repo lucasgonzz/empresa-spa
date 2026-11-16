@@ -40,20 +40,30 @@
 			segmento.
 
 			`data-mencion-tipo` y `data-mencion-id` los lee el listener delegado de
-			FichaArticuloPopover.vue (la ficha del artículo al pasar el mouse): no cambiarlos. -->
+			FichaArticuloPopover.vue (la ficha del artículo al pasar el mouse): no cambiarlos.
+
+			Desde E10 (14/11/2026) un segmento puede ser una dirección web: entonces el MISMO elemento
+			del v-for se dibuja como <a :href target="_blank" rel="noopener noreferrer"> en vez de
+			<span> (`<component :is>`), para seguir teniendo un solo nodo por segmento y no meter
+			espacios. El texto sigue yendo por `{{ }}`; el href lo validó enlaces.js (solo http/https).
+			En un <span> los tres atributos del enlace valen null y Vue no los escribe. -->
 			<p
 			v-if="segmentos_del_texto.length"
-			class="asistente-ia-msj-agente__texto"><span
+			class="asistente-ia-msj-agente__texto"><component
+			:is="segmento.href ? 'a' : 'span'"
 			v-for="(segmento, indice) in segmentos_del_texto"
 			:key="indice"
 			:class="segmento.clase"
+			:href="segmento.href"
+			:target="segmento.href ? '_blank' : null"
+			:rel="segmento.href ? 'noopener noreferrer' : null"
 			:role="segmento.role"
 			:tabindex="segmento.tabindex"
 			:title="segmento.titulo"
 			:data-mencion-tipo="segmento.tipo"
 			:data-mencion-id="segmento.mencion_id"
 			@click="al_activar_mencion(segmento)"
-			@keydown.enter="al_activar_mencion(segmento)">{{ segmento.texto }}</span></p>
+			@keydown.enter="al_activar_mencion(segmento)">{{ segmento.texto }}</component></p>
 
 			<!-- Adjuntos del asistente (misión asistente-omnisciente, 21/9/2026, §1 del contrato):
 			hoy, la foto de un artículo. Van debajo del texto y ARRIBA de las tarjetas: la foto es
@@ -260,9 +270,15 @@ export default {
 			let segmentos = []
 			segmentar_mensaje(this.message.contenido, this.message.menciones).forEach(function (segmento) {
 				if (!segmento.mencion) {
+					// Una dirección web (E10): mismo segmento, con su href y la clase del enlace. Nunca
+					// coincide con una mención: formato.js descarta la dirección que se pisa con una.
+					let clases = []
+					if (segmento.enlace) clases.push('asistente-ia-enlace')
+					if (segmento.negrita) clases.push('asistente-ia-negrita')
 					segmentos.push({
 						texto: segmento.texto,
-						clase: segmento.negrita ? 'asistente-ia-negrita' : null,
+						clase: clases.length ? clases.join(' ') : null,
+						href: segmento.enlace || null,
 						tipo: null,
 						mencion_id: null,
 						titulo: null,
@@ -277,6 +293,7 @@ export default {
 				segmentos.push({
 					texto: segmento.texto,
 					clase: segmento.negrita ? clase_mencion + ' asistente-ia-negrita' : clase_mencion,
+					href: null,
 					tipo: tipo,
 					mencion_id: segmento.mencion.id,
 					titulo: TITULO_POR_TIPO[tipo] || null,
@@ -531,6 +548,31 @@ export default {
 // pueda meter un espacio donde `pre-wrap` lo dibujaría (ver el comentario del <p> arriba).
 .asistente-ia-negrita
 	font-weight: 600
+
+// Dirección web adentro del texto (E10, 14/11/2026): un <a> en el mismo renglón, con el color del
+// texto (se lee igual sobre el fondo claro y el oscuro, sin depender del azul de Bootstrap) y
+// subrayado lleno, que la distingue de la mención (punteada). Hereda el `pre-wrap` y el
+// `overflow-wrap: anywhere` del párrafo; se repite acá para que una dirección larga corte en 390 px
+// aunque el enlace termine pintado en otro contenedor.
+.asistente-ia-enlace
+	color: inherit
+	text-decoration: underline
+	text-decoration-thickness: 1px
+	text-underline-offset: 3px
+	overflow-wrap: anywhere
+	word-break: break-word
+
+	&:hover
+		color: inherit
+		text-decoration-thickness: 2px
+
+	&:focus
+		outline: none
+
+	&:focus-visible
+		outline: 2px solid var(--ia-foco)
+		outline-offset: 1px
+		border-radius: 2px
 
 // ─── Menciones adentro del texto (misión agente-ia-mano-derecha, 16/9/2026) ──────────────
 //

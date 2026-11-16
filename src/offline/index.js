@@ -2,6 +2,7 @@ import syncArticlesMixin from '@/offline/sync_articles'
 import syncSalesMixin from '@/offline/sync_sales'
 import syncClientsMixin from '@/offline/sync_clients'
 import db from './db'
+import { invalidar_indice_de_skus_en_cache } from '@/utils/sku_en_cache'
 import { borrar_sesion } from './sesion_sin_conexion'
 import { contar_ventas_del_equipo } from './sync_sales'
 import { esta_en_espera } from './reintentos_de_ventas'
@@ -92,6 +93,8 @@ export default {
                 marca puntual y la sesion por su funcion.
             */
             await db.articles.clear()
+            // El indice de SKU de «Cod barras» (utils/sku_en_cache.js) deja de valer con la tabla vacia.
+            invalidar_indice_de_skus_en_cache()
             await db.meta.delete('last_articles_sync')
             /*
                 Los clientes guardados para elegir en Vender sin conexion (mision

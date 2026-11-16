@@ -46,6 +46,24 @@
 				:placeholder="placeholder"
 				@keyup.enter="buscar('enter')">
 
+				<!--
+					Aviso de «falta apretar Enter» en el ENCABEZADO de un modulo (ronda 6 de la prueba
+					gratuita): una pastilla adentro del propio pill, al lado de lo que se escribio. No
+					flota sobre nada --la primera version flotaba abajo y tapaba el select de sucursal a
+					390 px y el paginado a 1366-- y no recibe clics (pointer-events: none). El texto
+					completo, con lo tipeado, va en title/aria-label. En el modal va el aviso de abajo.
+				-->
+				<span
+				v-if="modo !== 'modal' && mostrar_aviso_enter && aviso_enter"
+				class="buscador-general__pastilla-enter"
+				data-testid="buscador-general-aviso-enter"
+				role="status"
+				:title="aviso_enter"
+				:aria-label="aviso_enter">
+					<span class="buscador-general__pastilla-apreta">Apretá</span>
+					Enter ↵
+				</span>
+
 				<!-- Limpiar: solo cuando hay una busqueda del buscador general activa -->
 				<button
 				v-if="is_filtered_by_buscador"
@@ -92,6 +110,23 @@
 		</div>
 
 		<!--
+			Aviso de «falta apretar Enter» (ronda 6 de la prueba gratuita, 15/11/2026). Este buscador
+			busca recien con Enter (o la lupa) y NO se cambia eso; lo que faltaba era decirlo: el dueño
+			escribia «martillo», esperaba, y la pantalla seguia igual. Aparece mientras hay texto que
+			todavia no se busco y se va solo al buscar. Este es el del modal de busqueda: va en el flujo,
+			debajo del pill, y el modal lo apaga con `mostrar_aviso_enter` cuando ya lo dice su estado
+			vacio (ver search/Modal.vue). En el encabezado de un modulo va la pastilla de adentro del pill.
+		-->
+		<div
+		v-if="modo === 'modal' && mostrar_aviso_enter && aviso_enter"
+		class="buscador-general__aviso-enter buscador-general__aviso-enter--modal"
+		data-testid="buscador-general-aviso-enter"
+		aria-live="polite">
+			<span class="buscador-general__tecla">Enter</span>
+			{{ aviso_enter }}
+		</div>
+
+		<!--
 			Modal de configuracion de filtro fijo (prompt 05 del grupo 179): se abre al hacer clic en
 			el NOMBRE de una propiedad del desplegable. Emite 'agregar'/'quitar' con la config
 			elegida; Index.vue la persiste (preference_type global_search_filters, prompt 06) y
@@ -118,6 +153,7 @@
 </template>
 <script>
 import { global_search_default_keys } from '@/common-vue/config/global_search_defaults'
+import { aviso_busqueda_pendiente, hay_busqueda_pendiente, TEXTO_BUSCADOR_VACIO } from '@/utils/textos_busqueda'
 
 export default {
 	/**
@@ -239,11 +275,24 @@ export default {
 				return []
 			},
 		},
+
+		/**
+		 * Si se muestra el aviso «Apretá Enter para buscar «…»» mientras hay texto sin buscar.
+		 * Por defecto si. El modal de busqueda lo apaga cuando su estado vacio ya dice lo mismo en
+		 * grande, para no repetirlo dos veces en la misma pantalla.
+		 */
+		mostrar_aviso_enter: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	data() {
 		return {
 			// Texto ingresado por el usuario en el buscador.
 			query_value: '',
+			// Texto con el que se busco por ultima vez desde este buscador ('' si todavia no se
+			// busco). Contra este se decide si lo que esta escrito ya se busco o falta el Enter.
+			criterio_buscado: '',
 			// Keys de own_props tildadas para la busqueda.
 			selected_props: [],
 			// Keys de relation_props tildadas para la busqueda.
@@ -290,6 +339,17 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Aviso de busqueda pendiente: «Apretá Enter para buscar «martillo»» mientras hay texto
+		 * escrito que todavia no se busco; null si no hay nada pendiente (campo vacio, o el texto
+		 * es el de la ultima busqueda). Ver utils/textos_busqueda.js.
+		 *
+		 * @returns {String|null}
+		 */
+		aviso_enter() {
+			return aviso_busqueda_pendiente(this.query_value, this.criterio_buscado)
+		},
+
 		/**
 		 * Props propias del modelo, buscables por texto/numero: type en text/textarea/number,
 		 * que no tengan el flag `not_use_in_global_search`, y que tengan `text` (etiqueta). Se
@@ -651,6 +711,22 @@ export default {
 	},
 	watch: {
 		/**
+		 * Avisa al consumidor que texto hay escrito y si falta buscarlo. Lo usa el modal de busqueda
+		 * (search/Modal.vue) para su estado vacio: el texto tipeado vive en este componente y al
+		 * modal recien le llega con el Enter, asi que sin este evento el modal no puede saber que
+		 * hay algo escrito. `immediate` para que el modal lo sepa tambien con el criterio inicial.
+		 */
+		aviso_enter: {
+			immediate: true,
+			handler() {
+				this.$emit('estado-criterio', {
+					texto: this.query_value,
+					pendiente: hay_busqueda_pendiente(this.query_value, this.criterio_buscado),
+				})
+			},
+		},
+
+		/**
 		 * Si el buscador general deja de estar activo por una causa externa (ej: el botón
 		 * "Quitar filtros" del grupo de al lado, que ahora también apaga global_search_payload),
 		 * limpia el texto ingresado para que el input no quede mostrando un criterio que ya no
@@ -673,6 +749,9 @@ export default {
 			}
 
 			this.query_value = ''
+			// La busqueda que estaba hecha ya no rige: si vuelve a escribir el mismo texto, el aviso
+			// de «Apretá Enter» tiene que aparecer (ronda 6, revision).
+			this.criterio_buscado = ''
 
 			// 🔴 Los filtros fijos se resetean SOLO cuando el que se apago fue el payload, y no
 			// cuando el computed cayo por listado_por_defecto. La diferencia no es teorica: al
@@ -703,6 +782,8 @@ export default {
 		 */
 		buscador_apagado_nonce_del_store() {
 			this.query_value = ''
+			// Mismo motivo que en el watcher de is_filtered_by_buscador: la busqueda ya no rige.
+			this.criterio_buscado = ''
 			this.resetear_valores_de_filtros_fijos()
 		},
 	},
@@ -1408,7 +1489,7 @@ export default {
 			// todas las palabras que haga falta, sin minimo ni maximo.
 			if (this.query_value.trim().length === 0 && !has_extra_filters) {
 				if (this.modo !== 'modal') {
-					this.$toast.info('Escribi un criterio de busqueda')
+					this.$toast.info(TEXTO_BUSCADOR_VACIO)
 					return
 				}
 
@@ -1453,6 +1534,10 @@ export default {
 			this.selected_props.forEach(function (key) {
 				props_payload.push({ key: key, keyword_mode: self.keywordModeDe(key) })
 			})
+
+			// Lo escrito ya se busco: se apaga el aviso de «Apretá Enter» (ver aviso_enter). Va antes
+			// de despachar porque las dos ramas de abajo buscan con este mismo texto.
+			this.criterio_buscado = this.query_value
 
 			let payload = {
 				// Se llama `query_value`, no `query`: en el backend `$request->query` es el
@@ -1663,6 +1748,7 @@ export default {
 		 */
 		limpiar() {
 			this.query_value = ''
+			this.criterio_buscado = ''
 			this.resetear_valores_de_filtros_fijos()
 
 			if (this.modo === 'modal') {
@@ -1731,6 +1817,67 @@ export default {
 // Estetica Apple: pill blanco, minimalista, sin ancho fijo (lo define el contenedor).
 .buscador-general
 	width: 100%
+	// Aviso de busqueda pendiente (ronda 6 de la prueba gratuita): corto, visible y sin texto
+	// largo. Mismo lenguaje que el hint «ENTER» del estado vacio del modal de busqueda.
+	.buscador-general__aviso-enter
+		display: inline-flex
+		align-items: center
+		gap: 6px
+		max-width: 100%
+		font-size: 0.8rem
+		font-weight: 600
+		line-height: 1.3
+		color: var(--color-text-primary, #1d1d1f)
+		background: var(--bg-card, #fff)
+		border: 1px solid var(--color-primary, #007bff)
+		border-radius: 8px
+		padding: 4px 10px
+		// Si no entra en un renglon (celular), pasa a dos: se lee entero, nunca cortado.
+		white-space: normal
+		overflow-wrap: anywhere
+
+	// Pastilla «Apretá Enter ↵» del modo encabezado: adentro del pill, a la derecha de lo escrito.
+	// No flota sobre otros controles y deja pasar el mouse (no tapa nada clicable).
+	.buscador-general__pastilla-enter
+		display: inline-flex
+		align-items: center
+		gap: 3px
+		flex-shrink: 0
+		margin: 0 4px
+		padding: 2px 8px
+		border-radius: 999px
+		font-size: 0.72rem
+		font-weight: 700
+		line-height: 1.3
+		white-space: nowrap
+		color: var(--color-primary, #007bff)
+		background: rgba(0, 123, 255, 0.08)
+		border: 1px solid rgba(0, 123, 255, 0.35)
+		pointer-events: none
+
+		// En el celular el pill es angosto: queda «Enter ↵» y lo escrito conserva su lugar.
+		@media (max-width: 575.98px)
+			margin: 0 2px
+			padding: 2px 6px
+
+			.buscador-general__pastilla-apreta
+				display: none
+
+	// Adentro del modal de busqueda va en el flujo, debajo del pill.
+	.buscador-general__aviso-enter--modal
+		margin-top: 8px
+
+	.buscador-general__tecla
+		display: inline-block
+		font-size: 0.68rem
+		font-weight: 700
+		letter-spacing: 0.04em
+		text-transform: uppercase
+		color: var(--color-primary, #007bff)
+		border: 1px solid var(--color-primary, #007bff)
+		border-radius: 4px
+		padding: 0 4px
+		flex-shrink: 0
 
 	.buscador-general__row
 		display: flex

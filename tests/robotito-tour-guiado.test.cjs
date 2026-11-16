@@ -321,3 +321,90 @@ test('el anfitrión pide la tarjeta acoplada solo para la guía dinámica y deja
 		global.document = anterior
 	}
 })
+
+// Ronda 4 de la prueba (14/11/2026): sin ancla y con la ficha del artículo abierta, la tarjeta acoplada abajo
+// a la derecha tapaba «Guardar» y «Guardar y cerrar» del pie del modal. Medidas tomadas en producción a 1366×768.
+test('con un modal abierto la tarjeta acoplada va donde no tape el pie del modal', () => {
+	const { conviene_arriba, pies_de_modal_visibles, superficie_pisada } = cargar('components/robotito-soporte/posicion-tarjeta.js')
+	const caja = (left, top, right, bottom) => ({ left, top, right, bottom })
+	assert.equal(superficie_pisada(caja(0, 0, 10, 10), caja(10, 0, 20, 10)), 0, 'Tocarse por el borde no es pisar.')
+
+	// 1366×768: tarjeta abajo a la derecha (16px de margen) y el pie de la ficha en 680–738.
+	const escritorio = caja(1010, 426, 1350, 752)
+	const pie_ficha = caja(70, 680, 1297, 738)
+	assert.equal(conviene_arriba(escritorio, false, [], 768, false), false, 'Sin modal queda donde estaba: abajo.')
+	assert.equal(conviene_arriba(escritorio, false, [], 768, true), true, 'Sin modal respeta «Mover arriba».')
+	assert.equal(conviene_arriba(escritorio, false, [pie_ficha], 768, false), true, 'Con el pie abajo, sube.')
+	assert.equal(conviene_arriba(caja(1010, 16, 1350, 342), true, [pie_ficha], 768, false), true,
+		'Ya arriba, la decisión no cambia: no oscila al repintar.')
+
+	// Un modal corto, con el pie arriba: la tarjeta se queda (o vuelve) abajo.
+	const pie_arriba = caja(300, 200, 1066, 260)
+	assert.equal(conviene_arriba(escritorio, false, [pie_arriba], 768, false), false)
+	assert.equal(conviene_arriba(caja(1010, 16, 1350, 342), true, [pie_arriba], 768, true), false)
+
+	// 820×1180 (tablet): modal casi de todo el ancho, pie abajo.
+	assert.equal(conviene_arriba(caja(464, 830, 804, 1164), false, [caja(10, 1100, 810, 1160)], 1180, false), true)
+
+	// 390×844 (teléfono): la tarjeta ocupa el ancho (8px por lado) y el modal ocupa la pantalla.
+	const telefono = caja(8, 448, 382, 836)
+	assert.equal(conviene_arriba(telefono, false, [caja(0, 780, 390, 844)], 844, false), true)
+	assert.equal(conviene_arriba(telefono, false, [], 844, false), false)
+
+	// Si las dos posiciones pisan, gana la que pisa menos; a igual pisada, la preferida.
+	assert.equal(conviene_arriba(telefono, false, [caja(0, 0, 390, 40), caja(0, 700, 390, 844)], 844, false), true)
+	assert.equal(conviene_arriba(telefono, false, [caja(0, 0, 390, 100), caja(0, 744, 390, 844)], 844, false), false)
+
+	// Solo cuentan los pies que se ven, recortados a la ventana.
+	const pies = [caja(70, 680, 1297, 738), caja(70, 900, 1297, 960), caja(-20, 740, 400, 800)]
+	const documento = { querySelectorAll(selector) {
+		assert.equal(selector, '.modal.show .modal-footer')
+		return pies.map(rect => ({ getBoundingClientRect: () => rect }))
+	} }
+	assert.deepEqual(pies_de_modal_visibles(documento, 1366, 768), [caja(70, 680, 1297, 738), caja(0, 740, 400, 768)])
+})
+
+test('la tarjeta acoplada arranca arriba si abajo tapa el pie del modal, y la persona la puede bajar igual', () => {
+	const anfitrion = cargar('components/robotito-soporte/Anfitrion.vue', { './CabeceraTarjeta': {}, './Pregunta': {}, './Valoracion': {} }).default
+	const anteriores = { document: global.document, window: global.window }
+	const clases = new Set()
+	const boton = { atributos: {}, setAttribute(nombre, valor) { this.atributos[nombre] = valor }, addEventListener(tipo, oyente) { this.clic = oyente } }
+	global.window = { innerWidth: 1366, innerHeight: 768 }
+	global.document = {
+		createElement: () => boton,
+		querySelectorAll: () => [{ getBoundingClientRect: () => ({ left: 70, top: 680, right: 1297, bottom: 738 }) }],
+	}
+	try {
+		const tarjeta = {
+			querySelector: () => null,
+			insertBefore: () => {},
+			classList: { toggle: (nombre, activo) => (activo ? clases.add(nombre) : clases.delete(nombre)) },
+			// La caja de la tarjeta según dónde la dejó la clase.
+			getBoundingClientRect: () => (clases.has('tour-tarjeta-acoplada--arriba')
+				? { left: 1010, top: 16, right: 1350, bottom: 342 } : { left: 1010, top: 426, right: 1350, bottom: 752 }),
+		}
+		const vm = { _tarjeta_arriba: false, _tarjeta_forzada: null }
+		const pintar = anfitrion.methods.agregar_boton_mover.call(vm, { footer: {}, wrapper: tarjeta })
+		assert.ok(clases.has('tour-tarjeta-acoplada--arriba'), 'Arranca arriba: abajo tapaba Guardar.')
+		assert.equal(boton.textContent, 'Mover abajo')
+		assert.equal(vm._tarjeta_arriba, false, 'La preferencia de la persona no se toca sola.')
+
+		boton.clic()
+		assert.equal(clases.has('tour-tarjeta-acoplada--arriba'), false, 'La persona la baja aunque tape el pie.')
+		assert.equal(boton.textContent, 'Mover arriba')
+		pintar()
+		assert.equal(clases.has('tour-tarjeta-acoplada--arriba'), false, 'Al repintar respeta lo que eligió a mano.')
+
+		// Se cierra el modal (el vigía suelta lo forzado): vuelve a abajo, la preferencia.
+		vm._tarjeta_forzada = null
+		global.document.querySelectorAll = () => []
+		pintar()
+		assert.equal(clases.has('tour-tarjeta-acoplada--arriba'), false)
+		boton.clic()
+		assert.ok(clases.has('tour-tarjeta-acoplada--arriba'))
+		assert.equal(vm._tarjeta_arriba, true)
+	} finally {
+		global.document = anteriores.document
+		global.window = anteriores.window
+	}
+})
