@@ -15,12 +15,13 @@ data-tour="vender.tarjeta_afip">
 		class="text-with-icon-sm text-danger">
 			<i class="icon-cancel"></i>
 			<strong>
-				Ocurrio algo inesperado
+				Revisá la facturación
 			</strong>
 		</div>
 		<p
 		class="text-left"
-		v-for="result in afip_results">
+		v-for="(result, result_index) in afip_results"
+		:key="result_index">
 			<i class="icon-right"></i>
 			{{ result.Msg }}
 		</p>
