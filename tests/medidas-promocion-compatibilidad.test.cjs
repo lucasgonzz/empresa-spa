@@ -12,6 +12,11 @@ const funciones = cargar('mixins/model_functions.js', {
 	'@/utils/formas_de_envio': {},
 }).default.methods
 const promocion = cargar('models/promocion_vinoteca.js').default
+const combo = cargar('models/combo.js').default
+const formato = cargar('common-vue/mixins/generals/formatting.js', {
+	moment: require('moment'),
+	numeral: require('numeral'),
+}).default.methods
 
 test('una promo de API anterior conserva su formulario sin enviar columnas desconocidas', () => {
 	const anterior = { id: 14, name: 'Mix clásico', stock: 4 }
@@ -32,4 +37,13 @@ test('las medidas vacías de una API nueva siguen disponibles para cargar o limp
 test('el alta ofrece los campos aunque todavía no exista una promoción guardada', () => {
 	assert.equal(funciones.mostrar_medidas_de_envio_de_promocion(null, { id: null }), true)
 	assert.equal(funciones.mostrar_medidas_de_envio_de_promocion(null, {}), true)
+})
+
+test('los ocho inputs usan el paso de cuatro decimales y admiten kilos y centímetros fraccionarios', () => {
+	for (const modelo of [promocion, combo]) {
+		for (const campo of ['peso', 'alto', 'ancho', 'profundidad']) {
+			const prop = modelo.properties.find(prop => prop.key === campo)
+			assert.equal(formato.get_number_input_step(prop), '0.0001')
+		}
+	}
 })
