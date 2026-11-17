@@ -230,6 +230,40 @@ export default {
 	},
 	actions: {
 		/**
+		 * Completa un mensaje que llegó recortado por Pusher (misión asistente-diario-20261117, M2).
+		 *
+		 * empresa-api manda una versión liviana del evento SupportMessageReceived cuando el mensaje entero pasa
+		 * el límite de Pusher: los mismos campos, el cuerpo cortado con «…» y `recortado: true`. Si el mensaje es
+		 * del ticket que está abierto, se pide el ticket (GET /api/support-ticket/{id}, la misma ruta que usa
+		 * loadTicketMessages, sin marcar nada como leído) y se reemplaza la burbuja por el mensaje completo. Si
+		 * falla, queda el texto recortado: el mensaje entero aparece al volver a abrir el ticket.
+		 *
+		 * @param {Object} context
+		 * @param {Object} message El mensaje liviano que llegó por el broadcast.
+		 * @returns {Promise}
+		 */
+		completarMensajeRecortado({ commit, state }, message) {
+			if (!message || message.id == null || !message.support_ticket_id || message.support_ticket_id != state.active_ticket_id) {
+				return Promise.resolve()
+			}
+			return axios
+				.get('/api/support-ticket/' + message.support_ticket_id, { skip_navigation_cancel: true })
+				.then(function (response) {
+					const model = response.data && response.data.model
+					if (!model || !model.messages || message.support_ticket_id != state.active_ticket_id) {
+						return
+					}
+					model.messages.forEach(function (completo) {
+						if (completo.id == message.id) {
+							commit('patchMessage', Object.assign({}, completo, { recortado: false }))
+						}
+					})
+				})
+				.catch(function (error) {
+					console.log(error)
+				})
+		},
+		/**
 		 * Carga ticket y actualiza lista de mensajes visibles.
 		 */
 		loadTicketMessages({ commit, dispatch, state, rootState }, ticket) {
