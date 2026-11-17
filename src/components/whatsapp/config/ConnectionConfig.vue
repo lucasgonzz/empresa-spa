@@ -27,7 +27,7 @@
 		<div class="whatsapp-connection-config__toggle-group">
 			<b-form-checkbox
 			v-model="form.is_active"
-			:disabled="!configurada"
+			:disabled="!configurada && !form.is_active"
 			switch>
 				Bot activo
 			</b-form-checkbox>
