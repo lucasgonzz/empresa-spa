@@ -486,6 +486,7 @@ function relation_group_row_from_group(context, group, order) {
 		order: order,
 		children: group.children.map(prop => ({
 			key: group.relation + '.' + prop.key,
+			previous_column_keys: (prop.previous_column_keys || []).map(key => group.relation + '.' + key),
 			relation: group.relation,
 			relation_prop_key: prop.key,
 			label: context.getLabel(prop),
@@ -544,6 +545,7 @@ export function get_default_rows_for_model(store_context, model_name, preference
 
 	let rows = all_properties.map((prop, index) => ({
 		key: prop.key,
+		previous_column_keys: prop.previous_column_keys || [],
 		label: context.getLabel(prop),
 		visible: prop.locked_visible ? true : !prop.not_show,
 		order: index,
@@ -613,6 +615,29 @@ function orden_numerico(item) {
 function separar_filas_de_preferencia(rows, own_keys, groups_by_relation) {
 	let propias = []
 	let hijas_por_relacion = {}
+	let aliases = {}
+	// Cambiar N° de id a num no debe borrar la configuración previa, tampoco en Cliente de Ventas.
+	Object.keys(own_keys).forEach(key => {
+		;(own_keys[key].previous_column_keys || []).forEach(previous => { aliases[previous] = key })
+	})
+	Object.keys(groups_by_relation).forEach(relation => {
+		groups_by_relation[relation].children.forEach(child => {
+			;(child.previous_column_keys || []).forEach(previous => { aliases[previous] = child.key })
+		})
+	})
+	let claves_guardadas = []
+	;(rows || []).forEach(row => {
+		if (row) {
+			claves_guardadas.push(row.key)
+			;(row.children || []).forEach(child => { if (child) claves_guardadas.push(child.key) })
+		}
+	})
+	function fila_vigente(item) {
+		let key = aliases[item.key]
+		// Si ya se guardó la nueva columna, su preferencia prevalece sobre la vieja.
+		if (key && claves_guardadas.indexOf(key) !== -1) return null
+		return key ? { ...item, key } : item
+	}
 
 	function agregar_hija(item) {
 		let punto = item.key.indexOf('.')
@@ -638,7 +663,8 @@ function separar_filas_de_preferencia(rows, own_keys, groups_by_relation) {
 		if (item.is_relation_group && Array.isArray(item.children)) {
 			item.children.forEach(child => {
 				if (child && typeof child.key == 'string') {
-					agregar_hija({ ...child, order: item.order })
+					let vigente = fila_vigente(child)
+					if (vigente) agregar_hija({ ...vigente, order: item.order })
 				}
 			})
 			return
@@ -646,6 +672,8 @@ function separar_filas_de_preferencia(rows, own_keys, groups_by_relation) {
 		if (typeof item.key != 'string' || item.key === '') {
 			return
 		}
+		item = fila_vigente(item)
+		if (!item) return
 		if (own_keys[item.key]) {
 			propias.push(item)
 			return

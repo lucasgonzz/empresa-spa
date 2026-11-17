@@ -1,6 +1,7 @@
 // import Vue from 'vue'
 import axios from 'axios'
 import moment from 'moment'
+import { refrescar_fecha_automatica, problema_de_fecha_de_venta } from '@/utils/fecha_automatica_de_venta'
 import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = env('VUE_APP_API_URL')
@@ -280,7 +281,7 @@ export default {
 
 		afip_tipo_comprobante_id: 0,
 
-		incoterms: 0,
+		incoterms: null,
 		forma_de_pago: '',
 		permiso_existente: '',
 
@@ -488,31 +489,13 @@ export default {
 		fecha_entrega: null,
 
 		/*
-			Mision fecha-creacion-editable (22/9/2026): la fecha con la que se registra la venta.
-			Arranca en HOY y no en null a proposito -- el campo de la etapa 1 es un
-			<input type="date"> y con null se veria vacio. Viaja como string 'YYYY-MM-DD' en el
-			POST, en el PUT y en el camino offline.
-
-			limpiar_vender lo devuelve a HOY (no a null) despues de guardar, asi la venta
-			siguiente arranca con el campo puesto.
-
-			🔴 ESTE VALOR ES SOLO LA SEMILLA DEL ARRANQUE, NO EL DEFAULT DE CADA VENTA, y no
-			alcanza solo. `state` es un objeto literal, no una funcion: Vuex lo evalua UNA vez,
-			al importar el modulo --o sea cuando se carga la pestaña-- y de ahi en mas este
-			moment() queda congelado en ese dia.
-
-			Una pestaña abierta desde la tarde le pone a la venta de las 00:05 el dia de AYER;
-			el back guarda "dia elegido + hora actual" (SaleHelper::resolver_created_at), asi
-			que la venta queda fechada casi 24 horas atras, fuera del listado del dia y fuera
-			del arqueo del turno, sin un solo error en el camino.
-
-			Los dos lugares que lo vuelven a calcular FRESCO son los que mandan:
-			  - views/Vender.vue, en el created(), al arrancar una venta nueva;
-			  - mixins/vender/limpiar_vender.js, al guardar / cancelar / limpiar.
-			Si alguno de los dos se "simplifica" a un literal o se borra por redundante,
-			vuelve el bug de la medianoche.
+			Semilla de la fecha automática. Mientras sea automática sigue al reloj al volver
+			a Vender, reanudar la pestaña y guardar. set_created_at marca elección manual o
+			precarga: desde ese momento ningún refresco la pisa, aunque se haya elegido HOY.
+			Limpiar inicia otra venta con iniciar_fecha_automatica.
 		*/
 		created_at: moment().format('YYYY-MM-DD'),
+		fecha_automatica: true,
 
 		aplicar_recargos_directo_a_items: 0,
 
@@ -781,6 +764,14 @@ export default {
 		*/
 		set_created_at(state, value) {
 			state.created_at = value
+			state.fecha_automatica = false
+		},
+		iniciar_fecha_automatica(state) {
+			state.fecha_automatica = true
+			state.created_at = moment().format('YYYY-MM-DD')
+		},
+		refrescar_fecha_automatica(state) {
+			refrescar_fecha_automatica(state)
 		},
 		set_payment_method_discount_percentage(state, value) {
 			state.discount_percentage = value
@@ -1446,6 +1437,13 @@ export default {
 		},
 
 		vender({ commit, state, getters }, info) {
+			let fecha_del_intento = info && info.fecha_del_intento
+			if (!fecha_del_intento) commit('refrescar_fecha_automatica')
+			let fecha = fecha_del_intento ? fecha_del_intento.created_at_elegido : state.created_at
+			let problema_fecha = problema_de_fecha_de_venta(fecha)
+			if (problema_fecha) {
+				return Promise.reject({ response: { status: 422, data: { message: problema_fecha } } })
+			}
 			// Log previo al envío para auditar el estado final con el que se intenta guardar.
 			commit('append_sale_log', {
 				event_key: 'sale_submit_attempt',
@@ -1522,7 +1520,7 @@ export default {
 					SaleHelper::resolver_created_at(): el dia elegido + la hora actual. Si no viaja
 					--una SPA vieja-- el back cae a now(), que es el comportamiento de siempre.
 				*/
-				created_at: state.created_at,
+				created_at: fecha,
 				incoterms: state.incoterms,
 				observations_ocultas: state.observations_ocultas,
 				aplicar_recargos_directo_a_items: state.aplicar_recargos_directo_a_items,

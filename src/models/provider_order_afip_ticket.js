@@ -138,6 +138,8 @@ export default {
 	],
 	plural_model_name_spanish: 'Facturas',
 	singular_model_name_spanish: 'Factura',
+	// Es el número del comprobante del proveedor, con su punto de venta cuando corresponde.
+	prop_to_show_in_modal_title: 'code',
 	create_model_name_spanish: 'Nueva factura',
 	text_delete: 'esta',
 	/*

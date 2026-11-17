@@ -1,4 +1,6 @@
 export default {
+	// La referencia visible de Mercado Libre difiere de la clave interna de esta integración.
+	prop_to_show_in_modal_title: 'meli_order_id',
 	properties: [
 		/*
 			Número del pedido y estado en castellano (misión mercado-libre-pruebas, 27/10/2026). Sin

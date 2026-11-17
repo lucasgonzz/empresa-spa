@@ -29,7 +29,7 @@
 		class="text-dark border"
 		v-else-if="model.meli_order">
 			<i class="bi bi-shop"></i>
-			Pedido Meli N° {{ model.meli_order.id }}
+			Pedido Meli N° {{ model.meli_order.meli_order_id }}
 		</b-badge>
 	</div>
 </template>

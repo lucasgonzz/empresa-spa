@@ -1,3 +1,5 @@
+import { incoterms_opcional, mensaje_error_facturacion, aviso_resultado_fiscal } from '@/utils/facturacion'
+
 export default {
     computed: {
         selected_sales() {
@@ -247,7 +249,12 @@ export default {
                     llegara a fallar por la forma de la respuesta, el progreso igual tiene que
                     decir la verdad.
                 */
-                item.maked = true
+                let aviso = aviso_resultado_fiscal(res.data)
+                item.maked = !aviso
+                item.fallo = !!aviso
+                if (aviso) {
+                    self.$toast.error(aviso, {duration: 10000})
+                }
 
                 self.$store.commit('sale/add', res.data.sale)
 
@@ -371,7 +378,7 @@ export default {
                 afip_fecha_emision: item.datos_afip.afip_fecha_emision,
                 forma_de_pago: item.datos_afip.forma_de_pago,
                 permiso_existente: item.datos_afip.permiso_existente,
-                incoterms: item.datos_afip.incoterms,
+                incoterms: incoterms_opcional(item.datos_afip.incoterms),
             })
             .catch(err => {
                 /*
@@ -379,9 +386,7 @@ export default {
                     total de la venta, reparto que no suma). Ese texto es lo unico que le dice al
                     usuario que corregir, asi que se muestra tal cual cuando viene.
                 */
-                let mensaje = err.response && err.response.data && err.response.data.message
-                    ? err.response.data.message
-                    : 'Error al emitir factura para la venta N° ' + item.sale.num
+                let mensaje = mensaje_error_facturacion(err)
 
                 self.$toast.error(mensaje)
                 item.maked = false

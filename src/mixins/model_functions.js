@@ -1265,6 +1265,9 @@ export default {
             }
             return typeof model.ofrecer_envio_zipnova != 'undefined'
         },
+        mostrar_reservar_stock_pedidos_web(prop, model) {
+            return !!(this.is_owner && model && typeof model.reservar_stock_pedidos_web != 'undefined')
+        },
         mostrar_permitir_pedidos_sin_stock(prop, model) {
             return !!model && typeof model.permitir_pedidos_sin_stock != 'undefined'
         },
@@ -2024,6 +2027,15 @@ export default {
             } 
 
             return total  
+        },
+
+        mostrar_medidas_de_envio_de_promocion(prop, promo) {
+            // Una API anterior no devuelve estas columnas y rechaza claves desconocidas en PUT.
+            // No se montan los inputs: tampoco agregan claves al modelo que se vuelve a enviar.
+            // Una API nueva devuelve las columnas incluso cuando sus valores son null.
+            return !promo || !promo.id || ['peso', 'alto', 'ancho', 'profundidad'].some(campo => {
+                return Object.prototype.hasOwnProperty.call(promo, campo)
+            })
         },
 
         /* ══════════════════════════════════════════════════════════════════════════════════════

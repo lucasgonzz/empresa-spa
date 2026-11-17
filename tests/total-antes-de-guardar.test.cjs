@@ -23,6 +23,7 @@ function cargar(ruta) {
 	vm.runInNewContext(codigo, {
 		exports,
 		require: nombre => {
+			if (nombre === 'moment') return require('moment')
 			if (nombre.startsWith('@/utils/')) return cargar(nombre.slice(2) + '.js')
 			if (nombre.startsWith('./')) return cargar(path.posix.join(path.posix.dirname(ruta), nombre) + '.js')
 			if (nombre.includes('moneda_y_cotizacion_del_put')) {
@@ -49,6 +50,7 @@ const generales = modulo('mixins/generals.js')
 
 function escenario() {
 	const estado = {
+		created_at: '2026-11-16', fecha_automatica: false,
 		items: [{ id: 54489, is_article: true, amount: 1, price_vender: 3700, price_vender_personalizado: 3700 }],
 		total: 14800, sub_total: 14800, pending_attachments: [],
 		selected_payment_methods: [], modal_payment_methods: [],
@@ -117,22 +119,28 @@ test('un input de cantidad sin keyup actualiza el total mostrado', () => {
 
 test('guardar recalcula antes de validar el cobro, también con atajo de teclado', () => {
 	const { contexto, estado } = escenario()
+	let validado = false
 	contexto.checkear_vender = () => {
+		validado = true
 		assert.equal(estado.total, 3700)
 		return true
 	}
 	contexto.guardar_venta_online = () => assert.equal(estado.total, 3700)
 	guardar.methods.guardar_venta.call(contexto)
+	assert.equal(validado, true)
 })
 
 test('el alta envía el total recalculado aunque se invoque su camino directo', () => {
 	const { contexto, estado } = escenario()
+	let enviado = false
 	contexto.$store.dispatch = () => {
+		enviado = true
 		assert.equal(estado.total, 3700)
 		assert.equal(estado.sub_total, 3700)
 		return new Promise(() => {})
 	}
 	guardar.methods.guardar_venta_online.call(contexto, 'caso-san-cayetano')
+	assert.equal(enviado, true)
 })
 
 test('el PUT de edición envía los renglones y el total de la misma foto', () => {
@@ -149,12 +157,14 @@ test('el PUT de edición envía los renglones y el total de la misma foto', () =
 
 test('el guardado sin conexión conserva el total recalculado', () => {
 	const { contexto } = escenario()
+	let capturado = false
 	contexto.save_sale_offline = cuerpo => {
+		capturado = true
 		assert.equal(cuerpo.total, 3700)
 		assert.equal(cuerpo.sub_total, 3700)
 		return Promise.resolve()
 	}
-	return guardar.methods.guardar_venta_offline.call(contexto, 'caso-san-cayetano')
+	return guardar.methods.guardar_venta_offline.call(contexto, 'caso-san-cayetano').then(() => { assert.equal(capturado, true) })
 })
 
 test('recalcular dos veces preserva precio manual, descuento directo, puntos y forzado', () => {

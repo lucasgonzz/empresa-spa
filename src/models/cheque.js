@@ -222,6 +222,8 @@ export default {
 		},
 	],
 	singular_model_name_spanish: 'Cheque',
+	// El banco y la cartera identifican el cheque por este número, no por la clave de la fila.
+	prop_to_show_in_modal_title: 'numero',
 	plural_model_name_spanish: 'Cheques',
 	create_model_name_spanish: 'Nuevo Cheque',
 	text_delete: 'el',
