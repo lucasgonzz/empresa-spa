@@ -27,6 +27,7 @@
 </template>
 <script>
 import limpiar from '@/mixins/devoluciones/limpiar'
+import { aviso_revision_fiscal } from '@/utils/facturacion'
 export default {
 	mixins: [limpiar],
 	components: {
@@ -173,12 +174,16 @@ export default {
 			// `skip_global_error_event`: el error lo muestra este componente (ver mensaje_de_error()),
 			// así sale UN solo aviso con el motivo real y no el del interceptor más uno propio.
 			this.$api.post('devoluciones', datos, { skip_global_error_event: true })
-			.then(() => {
+			.then(res => {
 
 				self.guardando = false
 				self.$store.commit('auth/setLoading', false)
 
 				self.$toast.success(self.es_compra ? 'Nota de crédito al proveedor creada' : 'Devolución creada')
+				let revision = aviso_revision_fiscal(res && res.data)
+				if (revision) {
+					self.$toast.warning(revision, {duration: 15000})
+				}
 
 				self.limpiar_devolucion()
 			})

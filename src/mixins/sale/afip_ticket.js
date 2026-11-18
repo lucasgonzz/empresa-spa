@@ -1,4 +1,4 @@
-import { incoterms_opcional, mensaje_error_facturacion, aviso_resultado_fiscal } from '@/utils/facturacion'
+import { incoterms_opcional, mensaje_error_facturacion, aviso_resultado_fiscal, aviso_revision_fiscal } from '@/utils/facturacion'
 
 export default {
     computed: {
@@ -254,6 +254,11 @@ export default {
                 item.fallo = !!aviso
                 if (aviso) {
                     self.$toast.error(aviso, {duration: 10000})
+                }
+
+                let revision = aviso_revision_fiscal(res.data)
+                if (revision) {
+                    self.$toast.warning(revision, {duration: 15000})
                 }
 
                 self.$store.commit('sale/add', res.data.sale)
