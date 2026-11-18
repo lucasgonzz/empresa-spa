@@ -2,7 +2,7 @@
 <b-modal
 hide-footer
 size="lg"
-title="Informes de pagos"
+title="Detalle de imputaciones"
 id="pagado-por">
 	<h4
 	class="m-b-15">
@@ -38,9 +38,9 @@ export default {
 	computed: {
 		title() {
 			if (this.debe_id == 0) {
-				return 'Este pago aporto a las siguientes deudas'
+				return 'Este movimiento se aplicó a las siguientes deudas'
 			}
-			return 'Esta venta fue pagada por'
+			return 'Movimientos que cancelan esta deuda'
 		},
 		debe_id() {
 			return this.$store.state.pagado_por.debe_id
@@ -61,14 +61,14 @@ export default {
 			} else {
 				fields.push({	
 					key: 'haber',
-					label: 'Pago',
+					label: 'Origen del aporte',
 				})
 
 			}
 			fields = fields.concat([
 				{	
 					key: 'total_pago',
-					label: 'Total del Pago',
+					label: 'Total del origen',
 				},
 				{	
 					key: 'fondos_iniciales',
@@ -80,7 +80,7 @@ export default {
 				},
 				{	
 					key: 'pagado',
-					label: 'Aporte del Pago',
+					label: 'Importe aplicado',
 				},
 				{	
 					key: 'nuevos_fondos',
@@ -102,7 +102,7 @@ export default {
 			this.models.forEach(model => {
 				items.push({
 					debe: model.debe.detalle,
-					haber: model.haber.detalle,
+					haber: Number(model.haber.debe) < 0 ? 'Crédito histórico: ' + model.haber.detalle : model.haber.detalle,
 					a_cubrir: this.price(model.a_cubrir),
 					fondos_iniciales: this.price(model.fondos_iniciales),
 					nuevos_fondos: this.price(model.nuevos_fondos),

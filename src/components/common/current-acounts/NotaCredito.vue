@@ -20,10 +20,10 @@ hide-footer>
         placeholder="Ingrese una descripcion"
         v-model="form.description"></b-form-textarea>
     </b-form-group>
-	<btn-loader
+    <btn-loader
     @clicked="notaCredito"
-	:loader="loading"
-	text="Registrar nota de credito"></btn-loader>
+    :loader="loading"
+    text="Registrar nota de credito"></btn-loader>
 </b-modal>
 </template>
 <script>
@@ -32,7 +32,7 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 import clients from '@/mixins/clients'
 import current_acounts from '@/mixins/current_acounts'
 export default {
-	name: 'CurrentAcountNotaCredito',
+    name: 'CurrentAcountNotaCredito',
     mixins: [clients, current_acounts],
     components: {
         BtnLoader
@@ -40,41 +40,46 @@ export default {
     data() {
         return {
             form: {
-        	   nota_credito: '',
+               nota_credito: '',
                description: '',
             },
-        	loading: false,
+            loading: false,
         }
     },
     computed: {
         placeholder() {
-        	return `Ingrese el monto de la nota de credito para ${this.from_model.name}`
+            return `Ingrese el monto de la nota de credito para ${this.from_model.name}`
         },
     },
     methods: {
-    	notaCredito() {
-    		this.loading = true
-    		this.$api.post('/current-acount/nota-credito', {
+        notaCredito() {
+            this.loading = true
+            this.$api.post('/current-acount/nota-credito', {
                 credit_account_id   : this.from_credit_account.id,
                 model_id            : this.from_model.id,
-    			model_name          : this.from_model_name,
-    			form                : this.form,
-    		})
-    		.then(res => {
+                model_name          : this.from_model_name,
+                form                : this.form,
+            })
+            .then(() => {
                 this.$store.dispatch('current_acount/getModels')
-    			this.loading = false
-    			this.$toast.success('Nota de credito registrada')
+                this.loading = false
+                this.$toast.success('Nota de credito registrada')
                 this.$bvModal.hide('current-acounts-nota-credito')
                 this.loadModel(this.from_model_name, this.from_model.id)
                 this.clear()
                 // this.updateClient(this.client)
-    		})
-    		.catch(err => {
-    			this.loading = false
-    			console.log(err)
-    			this.$toast.error('Error al registrar nota de credito')
-    		})
-    	},
+            })
+            .catch(err => {
+                this.loading = false
+                // El interceptor muestra los detalles del 422; otro aviso genérico los taparía.
+                let respuesta = err && err.response
+                if (respuesta && respuesta.status === 422 && respuesta.data && respuesta.data.errors) {
+                    return
+                }
+                let mensaje = respuesta && respuesta.data && respuesta.data.message
+                this.$toast.error(mensaje || 'Error al registrar nota de credito')
+            })
+        },
         clear() {
             this.form.nota_credito = ''
             this.form.description = ''

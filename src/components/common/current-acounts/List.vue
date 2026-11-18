@@ -305,8 +305,8 @@ export default {
             }
         },
         showPagadoPor(current_acount) {
-            console.log(current_acount)
-            if (current_acount.debe) {
+            // Un debe negativo aporta crédito: sus destinos se consultan como los de un haber.
+            if (Number(current_acount.debe) > 0) {
                 this.$store.commit('pagado_por/setDebeId', current_acount.id)
             } else {
                 this.$store.commit('pagado_por/setHaberId', current_acount.id)
