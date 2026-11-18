@@ -1265,6 +1265,10 @@ export default {
             }
             return typeof model.ofrecer_envio_zipnova != 'undefined'
         },
+        mostrar_contacto_whatsapp(prop, model) {
+            // Una API anterior no guarda estos campos: evitar ofrecer una edición sin efecto.
+            return !!model && typeof model[prop.key] != 'undefined'
+        },
         mostrar_reservar_stock_pedidos_web(prop, model) {
             return !!(this.is_owner && model && typeof model.reservar_stock_pedidos_web != 'undefined')
         },
