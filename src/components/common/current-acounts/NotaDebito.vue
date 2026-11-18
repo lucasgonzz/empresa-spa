@@ -18,10 +18,10 @@ hide-footer>
         placeholder="Ingrese una descripcion"
         v-model="description"></b-form-textarea>
     </b-form-group>
-	<btn-loader
+    <btn-loader
     @clicked="save"
-	:loader="loading"
-	text="Registrar nota de debito"></btn-loader>
+    :loader="loading"
+    text="Registrar nota de debito"></btn-loader>
 </b-modal>
 </template>
 <script>
@@ -30,48 +30,53 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 import clients from '@/mixins/clients'
 import current_acounts from '@/mixins/current_acounts'
 export default {
-	name: 'CurrentAcountNotaCredito',
+    name: 'CurrentAcountNotaCredito',
     mixins: [clients, current_acounts],
     components: {
         BtnLoader
     },
     data() {
         return {
-    	    debe: '',
+            debe: '',
             description: '',
             loading: false,
         }
     },
     computed: {
         placeholder() {
-        	return `Ingrese el monto de la nota de debito para ${this.from_model.name}`
+            return `Ingrese el monto de la nota de debito para ${this.from_model.name}`
         },
     },
     methods: {
-    	save() {
-    		this.loading = true
-    		this.$api.post('/current-acount/nota-debito', {
+        save() {
+            this.loading = true
+            this.$api.post('/current-acount/nota-debito', {
                 credit_account_id        : this.from_credit_account.id,
                 model_id                 : this.from_model.id,
-    			model_name               : this.from_model_name,
+                model_name               : this.from_model_name,
                 debe                     : this.debe,
-    			description              : this.description,
-    		})
-    		.then(res => {
+                description              : this.description,
+            })
+            .then(() => {
                 this.$store.dispatch('current_acount/getModels')
-    			this.loading = false
-    			this.$toast.success('Nota de debito registrada')
+                this.loading = false
+                this.$toast.success('Nota de debito registrada')
                 this.$bvModal.hide('current-acounts-nota-debito')
                 this.clear()
                 this.loadModel(this.from_model_name, this.from_model.id)
                 // this.updateClient(this.client)
-    		})
-    		.catch(err => {
-    			this.loading = false
-    			console.log(err)
-    			this.$toast.error('Error al registrar nota de debito')
-    		})
-    	},
+            })
+            .catch(err => {
+                this.loading = false
+                // El interceptor conserva el problema concreto de la conciliación.
+                let respuesta = err && err.response
+                if (respuesta && respuesta.status === 422 && respuesta.data && respuesta.data.errors) {
+                    return
+                }
+                let mensaje = respuesta && respuesta.data && respuesta.data.message
+                this.$toast.error(mensaje || 'Error al registrar nota de debito')
+            })
+        },
         clear() {
             this.debe = ''
             this.description = ''
