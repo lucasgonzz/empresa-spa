@@ -619,12 +619,14 @@ test('Index.vue no usa async/await en el guardado y el retomo del borrador', () 
 // ------------------------------------------------ carrera cierre / reapertura (revisión Fase5(1)v2)
 
 /*
- * Backend ficticio con la regla del servidor: un borrador con revisión menor o igual a la ya
- * guardada se ignora. Cada POST queda pendiente hasta que el test lo resuelve a mano.
+ * Backend ficticio con la regla REAL del servidor (ExcelAnalysisRun::guardar_borrador): se ignora
+ * sólo si la revisión guardada es ESTRICTAMENTE mayor que la entrante; con revisión igual el
+ * borrador entrante sobrescribe (el reintento idempotente de un mismo envío es inocuo). Con nada
+ * guardado (null) siempre se guarda. Cada POST queda pendiente hasta que el test lo resuelve a mano.
  */
 function modal_con_backend_ficticio() {
 	const vm = modal_real()
-	const backend = { revision: 0, borrador: null, posts: [] }
+	const backend = { revision: null, borrador: null, posts: [] }
 	vm.$store.dispatch = function(nombre, valor) {
 		if (nombre !== 'excel_analysis/guardar_borrador') {
 			return Promise.resolve()
@@ -635,8 +637,9 @@ function modal_con_backend_ficticio() {
 	}
 	backend.llegar = function(i, ok) {
 		const p = backend.posts[i]
-		if (ok && p.valor.borrador.revision > backend.revision) {
-			backend.revision = p.valor.borrador.revision
+		const entrante = p.valor.borrador.revision
+		if (ok && (backend.revision === null || !(backend.revision > entrante))) {
+			backend.revision = entrante
 			backend.borrador = p.valor.borrador
 		}
 		p.resolver(ok)
@@ -690,6 +693,38 @@ test('cierre y reapertura: el reintento tardío de A conserva su revisión y no 
 	assert.equal(vm.borrador_huella, huella_b, 'la huella de la sesión actual sigue siendo la de B')
 	assert.equal(vm.borrador_seq_confirmado, antes.conf)
 
+})
+
+test('backend ficticio: revisión igual sobrescribe, menor se ignora, mayor reemplaza (como el PHP real)', async () => {
+	const vm = modal_con_backend_ficticio()
+	const b = vm._backend
+	const post = (rev, start_row) => ({ valor: { borrador: { revision: rev, start_row } }, resolver: () => {} })
+	b.posts.push(post(5, 1), post(5, 2), post(4, 3), post(6, 4))
+	b.llegar(0, true)
+	assert.equal(b.borrador.start_row, 1, 'sin nada guardado se guarda')
+	b.llegar(1, true)
+	assert.equal(b.revision, 5)
+	assert.equal(b.borrador.start_row, 2, 'revisión IGUAL: sobrescribe')
+	b.llegar(2, true)
+	assert.equal(b.revision, 5)
+	assert.equal(b.borrador.start_row, 2, 'revisión menor: se ignora')
+	b.llegar(3, true)
+	assert.equal(b.revision, 6)
+	assert.equal(b.borrador.start_row, 4, 'revisión mayor: reemplaza')
+})
+
+test('reintento con la MISMA revisión tras haber llegado el envío original: queda el mismo contenido', async () => {
+	const vm = modal_con_backend_ficticio()
+	vm.start_row = 3
+	vm.guardar_borrador_ahora()
+	const b = vm._backend
+	const rev = b.posts[0].valor.borrador.revision
+	vm.on_hide()                                      // sesión cerrada con A en vuelo
+	b.llegar(0, true)                                 // el servidor guarda A pero la respuesta se da por ok
+	b.posts.push({ valor: JSON.parse(JSON.stringify(b.posts[0].valor)), resolver: () => {} })
+	b.llegar(b.posts.length - 1, true)                // llega de nuevo A con la misma revisión: sobrescribe igual
+	assert.equal(b.revision, rev)
+	assert.equal(b.borrador.start_row, 3)
 })
 
 test('el reintento de una sesión vieja que falla otra vez no reintenta ni toca la sesión actual', async () => {
