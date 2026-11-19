@@ -302,7 +302,8 @@ export default {
 		/*
 		 * Antes de cerrar la sesión: cada modal manda lo que el usuario dejó editado. Espera como
 		 * mucho ESPERA_MAXIMA_DEL_GUARDADO y nunca rechaza: un guardado que falla no puede impedir
-		 * salir. Resuelve true si todos quedaron guardados.
+		 * salir. Al terminar la espera (guardado, fallo o tope) corta el guardado de los modales, así
+		 * nada se reintenta mientras /logout está pendiente. Resuelve true si todos quedaron guardados.
 		 */
 		guardar_antes_de_salir() {
 			if (guardadores.length === 0) {
@@ -310,6 +311,16 @@ export default {
 			}
 
 			let temporizador = null
+			/* Corta el guardado de cada modal: lo que siga en vuelo ya no reintenta ni toca estado. */
+			const cortar_todos = function() {
+				guardadores.forEach(function(g) {
+					try {
+						g.cortar()
+					} catch (err) {
+						console.log(err)
+					}
+				})
+			}
 			const guardados = Promise.all(guardadores.map(function(g) {
 				try {
 					return Promise.resolve(g.guardar()).catch(function() { return false })
@@ -325,6 +336,11 @@ export default {
 
 			return Promise.race([guardados, limite]).then(function(ok) {
 				clearTimeout(temporizador)
+				/*
+				 * Se corta ACÁ, antes de que auth/logout invalide la sesión: con /logout pendiente, un
+				 * POST que falla pasado el tope no puede reintentar (ya no se autenticaría).
+				 */
+				cortar_todos()
 				return ok
 			})
 		},

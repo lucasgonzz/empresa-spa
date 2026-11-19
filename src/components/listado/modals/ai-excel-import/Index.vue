@@ -6647,7 +6647,11 @@ export default {
 		 * @return {void}
 		 */
 		on_show() {
-			/* Si un cierre de sesión cortó el guardado, el modal vuelve a guardar al reabrirse. */
+			/*
+			 * Si un cierre de sesión cortó el guardado, el modal vuelve a admitir guardados NUEVOS al
+			 * reabrirse. Lo que se mandó antes del corte sigue invalidado para siempre: lo decide la
+			 * época del corte (epoca_de_corte_del_borrador), que acá no se toca.
+			 */
 			this._borrador_cortado = false
 
 			/* La lista de pendientes se pide siempre: es lo que se ve arriba del paso 1. */
@@ -6796,8 +6800,9 @@ export default {
 			let self = this
 			/* Sesión del borrador con la que arrancó el guardado: si se corta o cambia, las continuaciones mueren. */
 			const sesion = self.borrador_sesion
+			const epoca = self.epoca_de_corte_del_borrador()
 			const vigente = function() {
-				return !self._borrador_cortado && sesion === self.borrador_sesion
+				return !self._borrador_cortado && epoca === self.epoca_de_corte_del_borrador() && sesion === self.borrador_sesion
 			}
 
 			self.guardar_borrador_ahora()
@@ -6833,7 +6838,20 @@ export default {
 			}
 			this.borrador_huella_en_vuelo = null
 			this.borrador_sesion++
+			this._borrador_corte = this.epoca_de_corte_del_borrador() + 1
 			this._borrador_cortado = true
+		},
+
+		/*
+		 * Cuántas veces se cortó el guardado. Cada envío captura la época con la que salió: si al
+		 * responder es otra, lo cortaron y ya no le corresponde nada (ni tocar estado, ni reintentar,
+		 * ni programar timers). A diferencia de _borrador_cortado, reabrir el modal (on_show) no la
+		 * baja: habilita guardados nuevos, no resucita los de la sesión cancelada.
+		 *
+		 * @return {Number}
+		 */
+		epoca_de_corte_del_borrador() {
+			return this._borrador_corte || 0
 		},
 
 		/*
@@ -6853,6 +6871,7 @@ export default {
 			let sesion
 			let seq
 			let revision
+			const epoca = self.epoca_de_corte_del_borrador()
 
 			/* Cortado: ningún envío nuevo ni reintento (el de una sesión cerrada también es un POST). */
 			if (self._borrador_cortado) {
@@ -6879,8 +6898,11 @@ export default {
 			}).then(function(guardado) {
 				const ok = guardado !== false
 
-				/* Cortado mientras volaba: la respuesta no toca estado, no programa timers ni reintenta. */
-				if (self._borrador_cortado) {
+				/*
+				 * Cortado mientras volaba (aunque después se haya reabierto el modal): la respuesta no
+				 * toca estado, no programa timers ni reintenta.
+				 */
+				if (self._borrador_cortado || epoca !== self.epoca_de_corte_del_borrador()) {
 					return ok
 				}
 

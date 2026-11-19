@@ -855,7 +855,7 @@ test('cerrar el modal con 9 en vuelo y la pantalla de vuelta en el valor confirm
 
 // --- cierre de sesión y destrucción
 
-function auth_real(llamadas) {
+function auth_real(llamadas, post_logout) {
 	const anterior = global.window
 	global.window = { localStorage: { setItem() {}, clear() {} } }
 	const auth = cargar('store/auth.js', {
@@ -864,7 +864,10 @@ function auth_real(llamadas) {
 			default: {
 				defaults: {},
 				get(url) { llamadas.push('GET ' + url); return Promise.resolve({}) },
-				post(url) { llamadas.push('POST ' + url); return Promise.resolve({}) },
+				post(url) {
+					llamadas.push('POST ' + url)
+					return url === '/logout' && post_logout ? post_logout() : Promise.resolve({})
+				},
 			},
 		},
 		vue: { __esModule: true, default: {} },
@@ -1209,4 +1212,157 @@ test('un fallo del primer envío del flush todavía vigente reintenta una vez de
 	assert.equal(b.posts.length, 2, 'reintento inmediato legítimo')
 	b.llegar(1, true)
 	assert.equal(await flush, true)
+})
+
+// ------------------------------------------- revisión diff-v3: corte por tope de espera y época de corte
+
+// Cierre de sesión real (auth/logout + store excel_analysis + modal) con un /logout que no responde hasta que el test quiera.
+function logout_real_con_logout_pendiente() {
+	const llamadas = []
+	const logout = { resolver: null }
+	const store = cargar_store({ defaults: {}, get() { return Promise.resolve({ data: { pendientes: [] } }) }, post() { return Promise.resolve({}) } })
+	const auth = auth_real(llamadas, () => new Promise(resolver => { logout.resolver = resolver }))
+	const vm = modal_con_backend_ficticio()
+	const raiz = raiz_con_store(store, llamadas)
+	const despacho_modal = vm.$store.dispatch
+	vm.$store.dispatch = (n, v) => n === 'excel_analysis/guardar_borrador' ? despacho_modal(n, v) : raiz.dispatch(n, v)
+	componente.created.call(Object.assign(vm, { addresses: [1], price_types: [1] }))
+	return {
+		vm,
+		llamadas,
+		logout,
+		iniciar: () => auth.actions.logout({ commit() {}, dispatch: (n, v) => raiz.dispatch(n, v) }),
+	}
+}
+
+test('logout real: vencido el tope de 4 s y con /logout pendiente, el POST A que falla no reintenta ni programa timers', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const { vm, llamadas, logout, iniciar } = logout_real_con_logout_pendiente()
+		const b = vm._backend
+		vm.start_row = 4
+		const salida = iniciar()
+		await tick()
+		assert.equal(b.posts.length, 1, 'A en vuelo')
+		mock.timers.tick(4000)                            // vence el tope: el store corta, sin que el test corte nada
+		await tick()
+		await tick()
+		assert.deepEqual(llamadas, ['GET /sanctum/csrf-cookie', 'POST /logout'], '/logout quedó pendiente')
+		assert.equal(vm._borrador_cortado, true, 'el store cortó el modal antes de invalidar la sesión')
+		b.llegar(0, false)                                // A falla con /logout todavía sin responder
+		await tick()
+		mock.timers.tick(60000)
+		await tick()
+		assert.equal(b.posts.length, 1, 'ningún POST de reintento mientras /logout está pendiente')
+		assert.equal(vm.borrador_timer_id, null)
+		assert.equal(vm.borrador_huella_en_vuelo, null)
+		logout.resolver({})
+		await salida
+		assert.equal(b.posts.length, 1)
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('logout real: sin timeout y con A que falla dos veces, tampoco queda nada reintentando con /logout pendiente', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const { vm, logout, iniciar } = logout_real_con_logout_pendiente()
+		const b = vm._backend
+		vm.start_row = 4
+		const salida = iniciar()
+		b.llegar(0, false)
+		await tick()
+		b.llegar(1, false)
+		await tick()
+		await tick()
+		mock.timers.tick(60000)
+		await tick()
+		assert.equal(b.posts.length, 2, 'un solo reintento inmediato; nada después')
+		assert.equal(vm.borrador_timer_id, null)
+		logout.resolver({})
+		await salida
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('secuencia guardar_para_salir -> corte por tope -> on_hide -> on_show -> A=false: sin segundo POST al uuid viejo', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const { vm, logout, iniciar } = logout_real_con_logout_pendiente()
+		const b = vm._backend
+		vm.start_row = 4
+		const salida = iniciar()
+		await tick()
+		assert.equal(b.posts.length, 1)
+		assert.equal(b.posts[0].valor.uuid, 'uuid-analisis-1')
+		mock.timers.tick(4000)                            // el store corta por el tope
+		await tick()
+		await tick()
+		componente.methods.on_hide.call(vm)               // el modal se cierra (reset)
+		componente.methods.on_show.call(vm)               // y se reabre: admite guardados nuevos
+		assert.equal(vm._borrador_cortado, false)
+		assert.equal(vm.analysis_uuid, null, 'modal vacío')
+		b.llegar(0, false)                                // A falla recién ahora
+		await tick()
+		mock.timers.tick(60000)
+		await tick()
+		assert.equal(b.posts.length, 1, 'no hay segundo POST al uuid de la sesión cancelada')
+		assert.equal(vm.borrador_timer_id, null)
+		logout.resolver({})
+		await salida
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('cortado y reabierto, un análisis nuevo vuelve a guardar y la respuesta vieja que llega tarde no lo toca', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const vm = modal_con_backend_ficticio()
+		const b = vm._backend
+		vm.start_row = 4
+		vm.guardar_borrador_ahora()                       // A en vuelo (uuid-analisis-1)
+		vm.cortar_guardado_de_borrador()                  // logout cortó
+		componente.methods.on_hide.call(vm)
+		componente.methods.on_show.call(vm)
+		Object.assign(vm, modal_en_paso_2({ analysis_uuid: 'uuid-analisis-2', start_row: 9 }))
+		vm.guardar_borrador_ahora()                       // B: guardado nuevo admitido
+		assert.equal(b.posts.length, 2)
+		assert.equal(b.posts[1].valor.uuid, 'uuid-analisis-2')
+		b.llegar(0, false)                                // A tarde y fallida
+		await tick()
+		assert.equal(b.posts.length, 2, 'A no reintenta')
+		assert.equal(vm.borrador_huella_en_vuelo, huella_del_borrador(armar_borrador(vm)), 'el en-vuelo de B no lo borra A')
+		b.llegar(1, true)
+		await tick()
+		assert.equal(vm.borrador_huella, huella_del_borrador(armar_borrador(vm)), 'B queda confirmado')
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('cierre normal (sin corte) y reapertura: el POST que falla tarde sí se reintenta una vez con su revisión original', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const vm = modal_con_backend_ficticio()
+		const b = vm._backend
+		vm.start_row = 4
+		componente.methods.on_hide.call(vm)               // cierre normal: guarda y limpia
+		componente.methods.on_show.call(vm)
+		assert.equal(b.posts.length, 1)
+		const revision = b.posts[0].valor.borrador.revision
+		b.llegar(0, false)
+		await tick()
+		assert.equal(b.posts.length, 2, 'el reintento legítimo del cierre normal se conserva')
+		assert.equal(b.posts[1].valor.uuid, 'uuid-analisis-1')
+		assert.equal(b.posts[1].valor.borrador.revision, revision)
+		b.llegar(1, false)
+		await tick()
+		mock.timers.tick(60000)
+		assert.equal(b.posts.length, 2, 'un solo reintento')
+	} finally {
+		mock.timers.reset()
+	}
 })
