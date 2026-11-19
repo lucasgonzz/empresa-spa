@@ -55,6 +55,15 @@ export default {
 		 * ya está marcada vista y no se vuelve a ofrecer.
 		 */
 		salteados: [],
+
+		/*
+		 * Importaciones que el usuario dejó a medias y puede retomar, por módulo (article, client,
+		 * provider). Es lo que muestra el modal arriba del paso 1. Cada ítem es el de
+		 * GET /ai-excel-import/pendientes: { uuid, model, original_filename, estado, progreso, paso,
+		 * recomendacion_uuid, creada_en, actualizada_en }. Se recarga cada vez que se abre el modal;
+		 * la fuente de verdad es el servidor.
+		 */
+		pendientes: { article: [], client: [], provider: [] },
 	},
 	getters: {
 		/*
@@ -103,6 +112,26 @@ export default {
 				state.salteados.push(uuid)
 			}
 		},
+		/* Reemplaza la lista de pendientes de un módulo. */
+		set_pendientes(state, payload) {
+			let model = payload && payload.model
+			if (!model) {
+				return
+			}
+			state.pendientes = Object.assign({}, state.pendientes, {
+				[model]: (payload.lista || []).slice(),
+			})
+		},
+		/* Saca una importación de la lista (la descartó o ya la lanzó), en todos los módulos. */
+		quitar_pendiente(state, uuid) {
+			let nuevas = {}
+			Object.keys(state.pendientes).forEach(function(model) {
+				nuevas[model] = state.pendientes[model].filter(function(item) {
+					return item.uuid !== uuid
+				})
+			})
+			state.pendientes = nuevas
+		},
 	},
 	actions: {
 		/*
@@ -142,6 +171,48 @@ export default {
 					 * peor caso la próxima carga le vuelve a ofrecer un análisis que ya
 					 * miró, y lo descarta de nuevo.
 					 */
+					console.log(err)
+				})
+		},
+		/*
+		 * Trae del servidor las importaciones pendientes del usuario para un módulo. Si falla, deja
+		 * la lista como estaba: no poder ver los pendientes no tiene que impedir importar.
+		 */
+		cargar_pendientes({ commit }, model) {
+			return axios.get('/api/ai-excel-import/pendientes', { params: { model: model } })
+				.then(res => {
+					commit('set_pendientes', { model: model, lista: res.data.pendientes || [] })
+					return res.data.pendientes || []
+				})
+				.catch(err => {
+					console.log(err)
+					return []
+				})
+		},
+		/*
+		 * Guarda en el servidor lo que el usuario dejó editado en el modal. Es "mejor esfuerzo":
+		 * si falla, no se le muestra nada y en el peor caso retoma desde el resultado del análisis.
+		 */
+		guardar_borrador(context, { uuid, borrador }) {
+			if (!uuid || !borrador) {
+				return Promise.resolve()
+			}
+			return axios.post('/api/ai-excel-import/analysis/' + uuid + '/borrador', { borrador: borrador })
+				.catch(err => {
+					console.log(err)
+				})
+		},
+		/*
+		 * Descarta una importación pendiente. Se saca de la lista primero para que la pantalla no
+		 * espere; si el servidor falla, la próxima carga de la lista la vuelve a traer.
+		 */
+		descartar_pendiente({ commit }, uuid) {
+			if (!uuid) {
+				return Promise.resolve()
+			}
+			commit('quitar_pendiente', uuid)
+			return axios.post('/api/ai-excel-import/analysis/' + uuid + '/descartar')
+				.catch(err => {
 					console.log(err)
 				})
 		},
