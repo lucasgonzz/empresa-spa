@@ -1125,3 +1125,88 @@ test('no se usa async/await en el cierre de sesión y el aislamiento (Vue 2 sin 
 	const bloque = vue.slice(vue.indexOf('guardar_borrador_para_salir() {'), vue.indexOf('texto_de_pendiente(item)'))
 	assert.doesNotMatch(bloque, /\basync\b|\bawait\b/)
 })
+
+// ------------------------------------------------ revisión diff-v2: flush de salida cortado en vuelo
+
+test('flush de logout con A en vuelo: si se corta y A resuelve false, no hay POST, timer ni mutación nuevos', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const vm = modal_con_backend_ficticio()
+		const b = vm._backend
+		vm.start_row = 4
+		const flush = vm.guardar_borrador_para_salir()    // POST A en vuelo
+		assert.equal(b.posts.length, 1)
+		vm.cortar_guardado_de_borrador()                  // logout cortó durante el vuelo
+		const sesion = vm.borrador_sesion
+		b.llegar(0, false)                                // A resuelve false, tarde
+		assert.equal(await flush, false)
+		await tick()
+		mock.timers.tick(60000)
+		assert.equal(b.posts.length, 1, 'ningún POST nuevo')
+		assert.equal(vm.borrador_timer_id, null, 'ningún timer de 5 s')
+		assert.equal(vm.borrador_huella, null)
+		assert.equal(vm.borrador_huella_en_vuelo, null)
+		assert.equal(vm.borrador_seq, 1)
+		assert.equal(vm.borrador_sesion, sesion)
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('flush cortado, timeout de logout (4 s) y destrucción: A falla tarde y no reactiva reintentos ni timers', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const vm = modal_con_backend_ficticio()
+		const b = vm._backend
+		vm.start_row = 4
+		const flush = vm.guardar_borrador_para_salir()    // A en vuelo
+		mock.timers.tick(4000)                            // vence el tope de espera del logout
+		vm.cortar_guardado_de_borrador()                  // limpiar_al_salir
+		componente.beforeDestroy.call(vm)                 // y la vista se destruye
+		const posts = b.posts.length
+		b.llegar(0, false)
+		await tick()
+		assert.equal(await flush, false)
+		mock.timers.tick(60000)
+		assert.equal(b.posts.length, posts, 'sin POST después del corte')
+		assert.equal(vm.borrador_timer_id, null)
+		assert.equal(vm.borrador_huella, null)
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('con el guardado cortado no entran guardar_borrador_ahora ni enviar_borrador', async () => {
+	const vm = modal_con_backend_ficticio()
+	const b = vm._backend
+	vm.cortar_guardado_de_borrador()
+	vm.start_row = 7
+	assert.equal(await vm.guardar_borrador_ahora(), false)
+	assert.equal(await vm.enviar_borrador('uuid-analisis-1', armar_borrador(vm), 'h', 0), false)
+	assert.equal(b.posts.length, 0)
+	assert.equal(vm.borrador_seq, 0)
+	assert.equal(vm.borrador_huella_en_vuelo, null)
+})
+
+test('el flush legítimo previo al logout sigue guardando y confirmando', async () => {
+	const vm = modal_con_backend_ficticio()
+	const b = vm._backend
+	vm.start_row = 5
+	const flush = vm.guardar_borrador_para_salir()
+	b.llegar(0, true)
+	assert.equal(await flush, true)
+	assert.equal(b.borrador.start_row, 5)
+	assert.ok(vm.borrador_huella)
+})
+
+test('un fallo del primer envío del flush todavía vigente reintenta una vez de inmediato', async () => {
+	const vm = modal_con_backend_ficticio()
+	const b = vm._backend
+	vm.start_row = 5
+	const flush = vm.guardar_borrador_para_salir()
+	b.llegar(0, false)
+	await tick()
+	assert.equal(b.posts.length, 2, 'reintento inmediato legítimo')
+	b.llegar(1, true)
+	assert.equal(await flush, true)
+})

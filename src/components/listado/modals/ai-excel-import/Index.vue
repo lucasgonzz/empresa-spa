@@ -6721,6 +6721,11 @@ export default {
 		 * @return {Promise<boolean>} true si no había nada que mandar o el envío salió bien
 		 */
 		guardar_borrador_ahora() {
+			/* Cortado (cierre de sesión o componente destruido): no entra nada nuevo. */
+			if (this._borrador_cortado) {
+				return Promise.resolve(false)
+			}
+
 			if (this.borrador_timer_id) {
 				clearTimeout(this.borrador_timer_id)
 				this.borrador_timer_id = null
@@ -6789,10 +6794,19 @@ export default {
 		 */
 		guardar_borrador_para_salir() {
 			let self = this
+			/* Sesión del borrador con la que arrancó el guardado: si se corta o cambia, las continuaciones mueren. */
+			const sesion = self.borrador_sesion
+			const vigente = function() {
+				return !self._borrador_cortado && sesion === self.borrador_sesion
+			}
 
 			self.guardar_borrador_ahora()
 
 			return self.esperar_envios_de_borrador().then(function() {
+				if (!vigente()) {
+					return false
+				}
+
 				if (!self.borrador_sin_confirmar()) {
 					return true
 				}
@@ -6800,7 +6814,7 @@ export default {
 				self.guardar_borrador_ahora()
 
 				return self.esperar_envios_de_borrador().then(function() {
-					return !self.borrador_sin_confirmar()
+					return vigente() && !self.borrador_sin_confirmar()
 				})
 			})
 		},
@@ -6840,6 +6854,11 @@ export default {
 			let seq
 			let revision
 
+			/* Cortado: ningún envío nuevo ni reintento (el de una sesión cerrada también es un POST). */
+			if (self._borrador_cortado) {
+				return Promise.resolve(false)
+			}
+
 			if (origen) {
 				sesion   = origen.sesion
 				seq      = origen.seq
@@ -6859,6 +6878,11 @@ export default {
 				borrador: enviado,
 			}).then(function(guardado) {
 				const ok = guardado !== false
+
+				/* Cortado mientras volaba: la respuesta no toca estado, no programa timers ni reintenta. */
+				if (self._borrador_cortado) {
+					return ok
+				}
 
 				if (sesion !== self.borrador_sesion) {
 					/*
