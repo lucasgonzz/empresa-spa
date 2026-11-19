@@ -6743,17 +6743,30 @@ export default {
 		 * @param {Object} borrador  Lo que devolvió armar_borrador()
 		 * @param {String} huella    Huella de ese borrador (sin la revisión)
 		 * @param {Number} reintentos  Cuántas veces se reintentó ya tras el cierre del modal
+		 * @param {Object|null} origen  Sólo en el reintento de una sesión ya cerrada: { sesion, seq, revision }
+		 *                              originales. Ese reintento manda la MISMA revisión (no toma una nueva,
+		 *                              si no pisaría lo que guardó la sesión nueva) y no toca el estado actual.
 		 * @return {void}
 		 */
-		enviar_borrador(uuid, borrador, huella, reintentos) {
+		enviar_borrador(uuid, borrador, huella, reintentos, origen) {
 			let self = this
-			let sesion = self.borrador_sesion
-			let seq = ++self.borrador_seq
+			let sesion
+			let seq
+			let revision
 
-			self.borrador_revision = Math.max(Date.now(), self.borrador_revision + 1)
-			self.borrador_huella_en_vuelo = huella
+			if (origen) {
+				sesion   = origen.sesion
+				seq      = origen.seq
+				revision = origen.revision
+			} else {
+				sesion   = self.borrador_sesion
+				seq      = ++self.borrador_seq
+				self.borrador_revision = Math.max(Date.now(), self.borrador_revision + 1)
+				self.borrador_huella_en_vuelo = huella
+				revision = self.borrador_revision
+			}
 
-			let enviado = Object.assign({}, borrador, { revision: self.borrador_revision })
+			let enviado = Object.assign({}, borrador, { revision: revision })
 
 			self.$store.dispatch('excel_analysis/guardar_borrador', {
 				uuid:     uuid,
@@ -6764,7 +6777,7 @@ export default {
 				if (sesion !== self.borrador_sesion) {
 					/* El modal se cerró (o se abrió otro análisis) mientras tanto: una sola vez más. */
 					if (!ok && reintentos < 1) {
-						self.enviar_borrador(uuid, borrador, huella, reintentos + 1)
+						self.enviar_borrador(uuid, borrador, huella, reintentos + 1, { sesion: sesion, seq: seq, revision: revision })
 					}
 					return
 				}

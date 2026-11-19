@@ -615,3 +615,98 @@ test('Index.vue no usa async/await en el guardado y el retomo del borrador', () 
 	assert.doesNotMatch(bloque, /\basync\b|\bawait\b/)
 	assert.match(fuente, /paso_a_retomar\(self, res_analisis\.data\.borrador/)
 })
+
+// ------------------------------------------------ carrera cierre / reapertura (revisión Fase5(1)v2)
+
+/*
+ * Backend ficticio con la regla del servidor: un borrador con revisión menor o igual a la ya
+ * guardada se ignora. Cada POST queda pendiente hasta que el test lo resuelve a mano.
+ */
+function modal_con_backend_ficticio() {
+	const vm = modal_real()
+	const backend = { revision: 0, borrador: null, posts: [] }
+	vm.$store.dispatch = function(nombre, valor) {
+		if (nombre !== 'excel_analysis/guardar_borrador') {
+			return Promise.resolve()
+		}
+		return new Promise(resolver => {
+			backend.posts.push({ valor, resolver })
+		})
+	}
+	backend.llegar = function(i, ok) {
+		const p = backend.posts[i]
+		if (ok && p.valor.borrador.revision > backend.revision) {
+			backend.revision = p.valor.borrador.revision
+			backend.borrador = p.valor.borrador
+		}
+		p.resolver(ok)
+	}
+	vm._backend = backend
+	return vm
+}
+
+test('cierre y reapertura: el reintento tardío de A conserva su revisión y no pisa a B ni la sesión nueva', async () => {
+	const vm = modal_con_backend_ficticio()
+	vm.start_row = 3
+	vm.guardar_borrador_ahora()                       // A en vuelo (sesión 1)
+	const b = vm._backend
+	const revision_a = b.posts[0].valor.borrador.revision
+	vm.on_hide()                                      // cierre: reintenta lo mismo, sigue en vuelo
+
+	// Reapertura del mismo análisis (sesión 2) y B guarda start_row 9 con revisión nueva.
+	vm.analysis_uuid = 'uuid-analisis-1'
+	vm.step = 2
+	vm.start_row = 9
+	vm.guardar_borrador_ahora()                       // B
+	const idx_b = b.posts.length - 1
+	const revision_b = b.posts[idx_b].valor.borrador.revision
+	assert.ok(revision_b > revision_a)
+	b.llegar(idx_b, true)                             // B confirmado ANTES del fallo tardío de A
+	await tick()
+	const huella_b = huella_del_borrador(armar_borrador(vm))
+	assert.equal(vm.borrador_huella, huella_b)
+	assert.equal(b.borrador.start_row, 9)
+
+	// Falla tardía de A (sesión vieja): dispara su único reintento.
+	const antes = {
+		seq: vm.borrador_seq, rev: vm.borrador_revision,
+		conf: vm.borrador_seq_confirmado, vuelo: vm.borrador_huella_en_vuelo,
+	}
+	b.llegar(0, false)
+	await tick()
+	assert.equal(b.posts.length, idx_b + 2, 'se hizo el reintento de A')
+	const retry_a = b.posts[idx_b + 1]
+	assert.equal(retry_a.valor.borrador.revision, revision_a, 'el reintento lleva la revisión ORIGINAL de A')
+	assert.equal(retry_a.valor.borrador.start_row, 3, 'y el contexto ORIGINAL de A')
+	assert.equal(vm.borrador_seq, antes.seq, 'el reintento no consume número de envío de la sesión actual')
+	assert.equal(vm.borrador_revision, antes.rev, 'ni avanza la revisión de la sesión actual')
+	assert.equal(vm.borrador_huella_en_vuelo, antes.vuelo)
+
+	// El reintento de A llega bien: el backend lo ignora por revisión vieja.
+	b.llegar(idx_b + 1, true)
+	await tick()
+	assert.equal(b.borrador.start_row, 9, 'backend final: B')
+	assert.equal(b.revision, revision_b)
+	assert.equal(vm.borrador_huella, huella_b, 'la huella de la sesión actual sigue siendo la de B')
+	assert.equal(vm.borrador_seq_confirmado, antes.conf)
+
+})
+
+test('el reintento de una sesión vieja que falla otra vez no reintenta ni toca la sesión actual', async () => {
+	const vm = modal_con_backend_ficticio()
+	vm.guardar_borrador_ahora()
+	const b = vm._backend
+	vm.on_hide()
+	vm.analysis_uuid = 'uuid-analisis-1'
+	vm.step = 2
+	vm.start_row = 9
+	const huella_antes = vm.borrador_huella
+	b.llegar(0, false)                                // falla A en sesión vieja
+	await tick()
+	const n = b.posts.length
+	b.llegar(n - 1, false)                            // falla el reintento
+	await tick()
+	assert.equal(b.posts.length, n, 'un solo reintento')
+	assert.equal(vm.borrador_huella, huella_antes)
+	assert.equal(vm.borrador_huella_en_vuelo, null)
+})
