@@ -496,9 +496,19 @@ export default {
 		 * @param {object} context Contexto Vuex del módulo auth.
 		 * @returns {Promise<void>}
 		 */
-		logout({ commit }) {
+		logout({ commit, dispatch }) {
 			commit('setLoading', true)
-			return axios.get('/sanctum/csrf-cookie')
+			/*
+			 * Lo que el usuario dejó editado en el modal de importación se guarda ANTES de invalidar la
+			 * sesión: con /logout hecho, el POST del borrador ya no se autentica. Nunca rechaza.
+			 */
+			return Promise.resolve(dispatch('excel_analysis/guardar_antes_de_salir', null, { root: true }))
+				.catch(err => {
+					console.log(err)
+				})
+				.then(() => {
+					return axios.get('/sanctum/csrf-cookie')
+				})
 				.then(() => {
 					return axios.post('/logout')
 				})
@@ -512,6 +522,13 @@ export default {
 					commit('setLoading', false)
 					commit('setAuthenticated', false)
 					commit('setUser', null)
+				})
+				.then(() => {
+					/* Corta el guardado de los modales y borra los pendientes del usuario que se fue. */
+					return dispatch('excel_analysis/limpiar_al_salir', null, { root: true })
+				})
+				.catch(err => {
+					console.log(err)
 				})
 		},
 		/**
