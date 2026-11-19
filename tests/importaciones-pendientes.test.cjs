@@ -745,3 +745,383 @@ test('el reintento de una sesión vieja que falla otra vez no reintenta ni toca 
 	assert.equal(vm.borrador_huella, huella_antes)
 	assert.equal(vm.borrador_huella_en_vuelo, null)
 })
+
+// ------------------------------------------------ revisión Fase5(3): última edición, cierre de sesión, identidad
+
+/*
+ * Tres ediciones distintas del paso 2 que tienen que sobrevivir al "volver al valor confirmado mientras
+ * otro envío sigue en vuelo": un campo simple, el mapeo, una política y las decisiones del paso 3.
+ */
+const EDICIONES = {
+	'campo simple (start_row)': { campo: 'start_row', a: 3, b: 9 },
+	'mapeo de columnas': {
+		campo: 'column_mapping',
+		a: [{ excel_column_index: 0, system_property: 'name' }],
+		b: [{ excel_column_index: 0, system_property: 'codigo' }],
+	},
+	'política de colisión': { campo: 'politica_colision', a: null, b: 'actualizar' },
+	'decisiones del paso 3': { campo: 'decisiones_relaciones', a: { 'marca|Acme': 0 }, b: { 'marca|Acme': 1 }, step: 3 },
+}
+
+for (const [nombre, e] of Object.entries(EDICIONES)) {
+	test('volver al valor confirmado con otro envío en vuelo igual manda la última edición: ' + nombre, async () => {
+		const vm = modal_con_backend_ficticio()
+		if (e.step) { vm.step = e.step }
+		const b = vm._backend
+		vm[e.campo] = e.a
+		vm.guardar_borrador_ahora()                       // envío 1 = valor A
+		b.llegar(0, true)
+		await tick()
+		assert.ok(vm.borrador_huella, 'A quedó confirmado')
+		vm[e.campo] = e.b
+		vm.guardar_borrador_ahora()                       // envío 2 = valor B, en vuelo
+		vm[e.campo] = e.a                                 // el usuario vuelve a A (= lo confirmado)
+		vm.guardar_borrador_ahora()                       // envío 3 = A otra vez
+		assert.equal(b.posts.length, 3, 'no se omite el regreso al valor confirmado')
+		assert.deepEqual(b.posts[2].valor.borrador[e.campo], e.a)
+		assert.ok(b.posts[2].valor.borrador.revision > b.posts[1].valor.borrador.revision)
+		b.llegar(1, true)
+		b.llegar(2, true)
+		await tick()
+		assert.deepEqual(b.borrador[e.campo], e.a, 'el servidor termina con la última edición')
+		assert.equal(vm.borrador_huella_en_vuelo, null)
+	})
+}
+
+test('la respuesta del primer envío no suelta el en-vuelo del último (misma huella repetida)', async () => {
+	const vm = modal_con_backend_ficticio()
+	const b = vm._backend
+	vm.start_row = 9
+	vm.guardar_borrador_ahora()                           // 1: 9
+	vm.start_row = 4
+	vm.guardar_borrador_ahora()                           // 2: 4
+	vm.start_row = 9
+	vm.guardar_borrador_ahora()                           // 3: 9
+	assert.equal(b.posts.length, 3)
+	b.llegar(0, true)                                     // llega la vieja con la misma huella que la última
+	await tick()
+	assert.ok(vm.borrador_huella_en_vuelo, 'el último envío sigue en vuelo')
+	vm.guardar_borrador_ahora()
+	assert.equal(b.posts.length, 3, 'y no se duplica')
+	b.llegar(1, true)
+	b.llegar(2, true)
+	await tick()
+	assert.equal(b.borrador.start_row, 9)
+})
+
+test('el debounce programa el guardado al volver al valor confirmado si hay otro envío en vuelo', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const vm = modal_con_backend_ficticio()
+		const b = vm._backend
+		vm.start_row = 3
+		vm.guardar_borrador_ahora()
+		b.llegar(0, true)
+		await tick()
+		vm.start_row = 9
+		vm.guardar_borrador_ahora()                       // en vuelo: 9
+		vm.start_row = 3
+		vm.programar_guardado_de_borrador(armar_borrador(vm))
+		assert.ok(vm.borrador_timer_id, 'queda un guardado programado: pantalla 3, servidor va a tener 9')
+		mock.timers.tick(1500)
+		assert.equal(b.posts.length, 3)
+		assert.equal(b.posts[2].valor.borrador.start_row, 3)
+		b.llegar(1, true)
+		b.llegar(2, true)
+		await tick()
+		assert.equal(b.borrador.start_row, 3)
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('cerrar el modal con 9 en vuelo y la pantalla de vuelta en el valor confirmado manda el valor de la pantalla', async () => {
+	const vm = modal_con_backend_ficticio()
+	const b = vm._backend
+	vm.start_row = 3
+	vm.guardar_borrador_ahora()
+	b.llegar(0, true)
+	await tick()
+	vm.start_row = 9
+	vm.guardar_borrador_ahora()
+	vm.start_row = 3
+	vm.on_hide()
+	assert.deepEqual(b.posts.map(p => p.valor.borrador.start_row), [3, 9, 3])
+	b.llegar(1, true)
+	b.llegar(2, true)
+	await tick()
+	assert.equal(b.borrador.start_row, 3)
+})
+
+// --- cierre de sesión y destrucción
+
+function auth_real(llamadas) {
+	const anterior = global.window
+	global.window = { localStorage: { setItem() {}, clear() {} } }
+	const auth = cargar('store/auth.js', {
+		axios: {
+			__esModule: true,
+			default: {
+				defaults: {},
+				get(url) { llamadas.push('GET ' + url); return Promise.resolve({}) },
+				post(url) { llamadas.push('POST ' + url); return Promise.resolve({}) },
+			},
+		},
+		vue: { __esModule: true, default: {} },
+		'@/runtime_config': { env: () => 'https://api.test' },
+		'@/utils/canales_en_vivo': { set_canales_en_vivo() {} },
+		'@/offline/sesion_sin_conexion': {},
+	}).default
+	global.window = anterior
+	return auth
+}
+
+// Un store raíz mínimo que enruta dispatch al módulo excel_analysis real y a auth/logout.
+function raiz_con_store(store, llamadas, usuario) {
+	const estado = Object.assign({}, store.state, { pendientes: { article: [], client: [], provider: [] }, salteados: [] })
+	const raiz = {
+		estado,
+		auth_estado: { user: usuario || { id: 5, owner_id: 1 } },
+		commit(nombre, valor) { store.mutations[nombre](estado, valor) },
+		dispatch(nombre, valor) {
+			const [modulo, accion] = nombre.split('/')
+			if (modulo !== 'excel_analysis') {
+				return Promise.resolve()
+			}
+			return store.actions[accion]({ commit: raiz.commit, state: estado, rootState: { auth: raiz.auth_estado } }, valor)
+		},
+	}
+	return raiz
+}
+
+test('cerrar sesión con una edición dentro del debounce la guarda ANTES de llamar a /logout', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const llamadas = []
+		const store = cargar_store({ defaults: {}, post() { return Promise.resolve({}) } })
+		const auth = auth_real(llamadas)
+		const vm = modal_con_backend_ficticio()
+		const raiz = raiz_con_store(store, llamadas)
+		const b = vm._backend
+		const despacho_modal = vm.$store.dispatch
+		// El modal usa su propio dispatch ficticio para guardar_borrador y el real para el registro.
+		vm.$store.dispatch = function(nombre, valor) {
+			if (nombre === 'excel_analysis/guardar_borrador') {
+				llamadas.push('POST borrador start_row=' + valor.borrador.start_row)
+				return despacho_modal(nombre, valor)
+			}
+			return raiz.dispatch(nombre, valor)
+		}
+		componente.created.call(Object.assign(vm, { addresses: [1], price_types: [1] }))
+
+		vm.start_row = 4
+		vm.programar_guardado_de_borrador(armar_borrador(vm))     // dentro de los 1500 ms
+		assert.ok(vm.borrador_timer_id)
+
+		let terminado = false
+		const salida = auth.actions.logout({ commit() {}, dispatch: (n, v) => raiz.dispatch(n, v) }).then(() => { terminado = true })
+		await tick()
+		assert.deepEqual(llamadas, ['POST borrador start_row=4'], '/logout todavía no se llamó: espera el guardado')
+		assert.equal(terminado, false)
+		b.llegar(0, true)
+		await salida
+		assert.deepEqual(llamadas, ['POST borrador start_row=4', 'GET /sanctum/csrf-cookie', 'POST /logout'])
+		assert.equal(b.borrador.start_row, 4)
+		assert.equal(vm.borrador_timer_id, null)
+		assert.equal(vm._borrador_cortado, true)
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('si el guardado previo al logout falla se reintenta una vez y el logout sigue igual', async () => {
+	const llamadas = []
+	const store = cargar_store({ defaults: {}, post() { return Promise.resolve({}) } })
+	const auth = auth_real(llamadas)
+	const vm = modal_con_backend_ficticio()
+	const raiz = raiz_con_store(store, llamadas)
+	const despacho_modal = vm.$store.dispatch
+	vm.$store.dispatch = (n, v) => n === 'excel_analysis/guardar_borrador' ? despacho_modal(n, v) : raiz.dispatch(n, v)
+	componente.created.call(Object.assign(vm, { addresses: [1], price_types: [1] }))
+	vm.start_row = 6
+	const salida = auth.actions.logout({ commit() {}, dispatch: (n, v) => raiz.dispatch(n, v) })
+	vm._backend.llegar(0, false)
+	await tick()
+	assert.equal(vm._backend.posts.length, 2, 'un reintento inmediato mientras la sesión todavía vale')
+	vm._backend.llegar(1, false)
+	await salida
+	assert.deepEqual(llamadas, ['GET /sanctum/csrf-cookie', 'POST /logout'])
+	assert.equal(vm._backend.posts.length, 2, 'sin más reintentos')
+})
+
+test('el cierre de sesión no queda colgado si el guardado no responde (tope de espera)', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const llamadas = []
+		const store = cargar_store({ defaults: {}, post() { return Promise.resolve({}) } })
+		const auth = auth_real(llamadas)
+		const vm = modal_con_backend_ficticio()
+		const raiz = raiz_con_store(store, llamadas)
+		const despacho_modal = vm.$store.dispatch
+		vm.$store.dispatch = (n, v) => n === 'excel_analysis/guardar_borrador' ? despacho_modal(n, v) : raiz.dispatch(n, v)
+		componente.created.call(Object.assign(vm, { addresses: [1], price_types: [1] }))
+		vm.start_row = 6
+		const salida = auth.actions.logout({ commit() {}, dispatch: (n, v) => raiz.dispatch(n, v) })
+		await tick()
+		mock.timers.tick(4000)
+		await salida
+		assert.deepEqual(llamadas, ['GET /sanctum/csrf-cookie', 'POST /logout'])
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('destruir el componente guarda una vez, corta timers y no reintenta ni toca el estado con respuestas tardías', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const vm = modal_con_backend_ficticio()
+		const b = vm._backend
+		vm.start_row = 4
+		vm.guardar_borrador_ahora()                       // 1 en vuelo
+		b.llegar(0, false)                                // falla: queda un reintento automático a 5 s
+		await tick()
+		assert.ok(vm.borrador_timer_id)
+		vm.start_row = 8                                  // edición nueva dentro del debounce
+		vm.programar_guardado_de_borrador(armar_borrador(vm))
+		const sesion_antes = vm.borrador_sesion
+		componente.beforeDestroy.call(vm)
+		assert.equal(b.posts.length, 2, 'el último intento al destruir')
+		assert.equal(b.posts[1].valor.borrador.start_row, 8)
+		assert.equal(vm.borrador_timer_id, null)
+		assert.ok(vm.borrador_sesion > sesion_antes, 'la sesión del borrador quedó invalidada')
+		b.llegar(1, false)                                // la respuesta llega tarde y falla
+		await tick()
+		mock.timers.tick(60000)
+		assert.equal(b.posts.length, 2, 'sin reintentos sobre un componente destruido')
+		assert.equal(vm.borrador_timer_id, null)
+		assert.equal(vm.borrador_huella, null, 'no tocó lo confirmado')
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('destruir el componente se desregistra del store y la respuesta ok tardía no cambia el estado', async () => {
+	const vm = modal_con_backend_ficticio()
+	const registro = []
+	const despacho_modal = vm.$store.dispatch
+	vm.$store.dispatch = (n, v) => { if (n.startsWith('excel_analysis/') && n !== 'excel_analysis/guardar_borrador') { registro.push(n) } return despacho_modal(n, v) }
+	vm.start_row = 4
+	vm.guardar_borrador_ahora()
+	componente.beforeDestroy.call(vm)
+	assert.ok(registro.includes('excel_analysis/quitar_guardador'))
+	vm._backend.llegar(0, true)
+	await tick()
+	assert.equal(vm.borrador_huella, null, 'la respuesta ok de una sesión invalidada no confirma nada')
+})
+
+// --- aislamiento por identidad en el store
+
+const pend = uuid => ({ uuid, model: 'article', original_filename: uuid + '.xlsx', creada_en: '2026-11-01T10:00:00' })
+
+test('cambio de usuario con la recarga fallida no muestra archivos ni fechas del usuario anterior', async () => {
+	const registro = mock.method(console, 'log', () => {})
+	try {
+		let falla = false
+		const store = cargar_store({
+			defaults: {},
+			get() { return falla ? Promise.reject(new Error('sin red')) : Promise.resolve({ data: { pendientes: [pend('de-A')] } }) },
+		})
+		const raiz = raiz_con_store(store, [], { id: 5, owner_id: 1 })
+		await raiz.dispatch('excel_analysis/cargar_pendientes', 'article')
+		assert.deepEqual(raiz.estado.pendientes.article.map(p => p.uuid), ['de-A'])
+
+		raiz.auth_estado.user = { id: 6, owner_id: 1 }    // otro usuario del mismo comercio
+		falla = true
+		const lista = await raiz.dispatch('excel_analysis/cargar_pendientes', 'article')
+		assert.deepEqual(lista, [])
+		assert.deepEqual(raiz.estado.pendientes.article, [], 'no queda nada de A')
+		assert.equal(raiz.estado.identidad, '1:6')
+	} finally {
+		registro.mock.restore()
+	}
+})
+
+test('la misma identidad con la recarga fallida conserva su lista', async () => {
+	const registro = mock.method(console, 'log', () => {})
+	try {
+		let falla = false
+		const store = cargar_store({
+			defaults: {},
+			get() { return falla ? Promise.reject(new Error('sin red')) : Promise.resolve({ data: { pendientes: [pend('de-A')] } }) },
+		})
+		const raiz = raiz_con_store(store, [], { id: 5, owner_id: 1 })
+		await raiz.dispatch('excel_analysis/cargar_pendientes', 'article')
+		falla = true
+		await raiz.dispatch('excel_analysis/cargar_pendientes', 'article')
+		assert.deepEqual(raiz.estado.pendientes.article.map(p => p.uuid), ['de-A'])
+	} finally {
+		registro.mock.restore()
+	}
+})
+
+test('una respuesta tardía del usuario anterior se descarta tras el cambio de usuario', async () => {
+	const respuestas = []
+	const store = cargar_store({ defaults: {}, get() { return new Promise(r => respuestas.push(r)) } })
+	const raiz = raiz_con_store(store, [], { id: 5, owner_id: 1 })
+	const de_a = raiz.dispatch('excel_analysis/cargar_pendientes', 'article')
+	raiz.auth_estado.user = { id: 6, owner_id: 1 }
+	const de_b = raiz.dispatch('excel_analysis/cargar_pendientes', 'article')
+	respuestas[1]({ data: { pendientes: [pend('de-B')] } })
+	await de_b
+	respuestas[0]({ data: { pendientes: [pend('de-A')] } })      // llega tarde
+	assert.deepEqual(await de_a, [])
+	assert.deepEqual(raiz.estado.pendientes.article.map(p => p.uuid), ['de-B'])
+})
+
+test('el logout limpia pendientes, corrida y órdenes, y descarta respuestas que viajaban', async () => {
+	const respuestas = []
+	const store = cargar_store({ defaults: {}, get() { return new Promise(r => respuestas.push(r)) } })
+	const raiz = raiz_con_store(store, [], { id: 5, owner_id: 1 })
+	raiz.estado.corrida = { uuid: 'c1', estado: 'listo' }
+	raiz.estado.abrir_en = { uuid: 'c1' }
+	raiz.estado.siguiendo_uuid = 'c1'
+	raiz.estado.salteados = ['c1']
+	raiz.commit('set_pendientes', { model: 'article', lista: [pend('de-A')] })
+	raiz.commit('set_identidad', '1:5')
+
+	const en_viaje = raiz.dispatch('excel_analysis/cargar_pendientes', 'article')
+	const corrida_en_viaje = raiz.dispatch('excel_analysis/get_en_curso')
+	await raiz.dispatch('excel_analysis/limpiar_al_salir')
+	assert.deepEqual(raiz.estado.pendientes, { article: [], client: [], provider: [] })
+	assert.equal(raiz.estado.corrida, null)
+	assert.equal(raiz.estado.abrir_en, null)
+	assert.equal(raiz.estado.siguiendo_uuid, null)
+	assert.deepEqual(raiz.estado.salteados, [])
+
+	raiz.auth_estado.user = null
+	respuestas[0]({ data: { pendientes: [pend('de-A')] } })
+	respuestas[1]({ data: { run: { uuid: 'c9', estado: 'listo' } } })
+	assert.deepEqual(await en_viaje, [])
+	assert.equal(await corrida_en_viaje, null)
+	assert.deepEqual(raiz.estado.pendientes.article, [])
+	assert.equal(raiz.estado.corrida, null)
+})
+
+test('el primer usuario de la sesión no pierde lo ya cargado al asignarle su identidad', async () => {
+	const store = cargar_store({ defaults: {}, get() { return Promise.resolve({ data: { pendientes: [] } }) } })
+	const raiz = raiz_con_store(store, [], { id: 5, owner_id: 1 })
+	raiz.estado.corrida = { uuid: 'c1', estado: 'procesando' }
+	await raiz.dispatch('excel_analysis/cargar_pendientes', 'article')
+	assert.equal(raiz.estado.corrida.uuid, 'c1')
+	assert.equal(raiz.estado.identidad, '1:5')
+})
+
+test('no se usa async/await en el cierre de sesión y el aislamiento (Vue 2 sin regenerator)', () => {
+	for (const archivo of ['src/store/excel_analysis.js', 'src/store/auth.js']) {
+		const fuente = fs.readFileSync(path.join(__dirname, '..', archivo), 'utf8')
+		assert.doesNotMatch(fuente.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, ''), /\basync\b|\bawait\b/, archivo)
+	}
+	const vue = fs.readFileSync(path.join(__dirname, '..', 'src/components/listado/modals/ai-excel-import/Index.vue'), 'utf8')
+	const bloque = vue.slice(vue.indexOf('guardar_borrador_para_salir() {'), vue.indexOf('texto_de_pendiente(item)'))
+	assert.doesNotMatch(bloque, /\basync\b|\bawait\b/)
+})
