@@ -71,11 +71,11 @@ export default __base_store({
 		 * habilidades, los dos toggles de automatización, los dos tiempos de espera, el
 		 * interruptor de visión (misión whatsapp-sidebar-multimedia) y el de simulación desde la
 		 * conversación (misión personalizacion-agente-whatsapp), y el objetivo de la conversación
-		 * con sus indicaciones (misión objetivo-agente-whatsapp). Pega al mismo endpoint que la
-		 * config técnica de Kapso (ABM → Integraciones y la solapa "Conexión"), pero manda solo
-		 * estos 10 campos: el controller de la API arma el `updateOrCreate` con
-		 * `$request->has(...)` por campo, así que no pisa los campos técnicos que esta pantalla
-		 * no conoce.
+		 * con sus indicaciones (misión objetivo-agente-whatsapp). Pega al mismo endpoint que el
+		 * switch de la conexión (ABM → Integraciones → WhatsApp y la solapa "Conexión"), pero
+		 * manda solo estos 10 campos: el controller de la API arma el `updateOrCreate` con
+		 * `$request->has(...)` por campo, así que no pisa los campos de la conexión que esta
+		 * pantalla no conoce. Las credenciales de WhatsApp no pasan nunca por el navegador.
 		 *
 		 * Compatibilidad con una API vieja (cliente sin la versión del objetivo): los dos campos
 		 * del objetivo viajan igual y el controller viejo los ignora (arma el guardado solo con
@@ -140,30 +140,28 @@ export default __base_store({
 		},
 
 		/**
-		 * Guarda la configuración TÉCNICA de la conexión con Kapso (solapa "Conexión" del modal
-		 * del módulo, misión whatsapp-agente): las tres credenciales y el switch de activo.
+		 * Guarda lo único que el dueño puede cambiar de la conexión (solapa "Conexión" del modal
+		 * del módulo): el switch de activo.
 		 *
-		 * Manda SOLO estos 4 campos, y es a propósito: el controller de la API arma el
+		 * 🔴 Las credenciales de WhatsApp (clave de Kapso, secreto del webhook, Phone Number ID)
+		 * ya NO se manejan desde el navegador: las carga ComercioCity por la puerta de
+		 * provisión y la API nunca las devuelve. Por eso acá no viajan, ni se leen.
+		 *
+		 * Manda SOLO `is_active`, y es a propósito: el controller de la API arma el
 		 * `updateOrCreate` leyendo campo por campo con `$request->has(...)`, así que lo que no
 		 * viaja no se toca. Gracias a eso esta pantalla y la del agente (`updateAgentConfig`)
 		 * pegan al mismo endpoint sin pisarse. Si alguna vez se manda el form entero desde acá,
 		 * un guardado de conexión le borra la personalidad al agente (y al revés).
 		 *
 		 * Sin `.catch()` a propósito: el error tiene que llegar entero al componente, que es
-		 * quien muestra el `message` del 422 (ej: "no se puede activar el bot sin credenciales").
+		 * quien muestra el `message` del 403/422 (ej: "no se puede activar el bot sin credenciales").
 		 *
 		 * @param {Object} payload
-		 * @param {string} payload.phone_number_id ID del número del negocio en Kapso.
-		 * @param {string} payload.kapso_api_key Clave para mandarle mensajes a Kapso.
-		 * @param {string} payload.webhook_secret Secreto con el que se firma cada mensaje entrante.
 		 * @param {boolean} payload.is_active Si el bot está prendido.
 		 * @returns {Promise}
 		 */
 		updateConnectionConfig({ commit, state }, payload) {
 			return axios.put('/api/' + state.route_string, {
-				phone_number_id: payload.phone_number_id,
-				kapso_api_key: payload.kapso_api_key,
-				webhook_secret: payload.webhook_secret,
 				is_active: payload.is_active,
 			})
 				.then(res => {

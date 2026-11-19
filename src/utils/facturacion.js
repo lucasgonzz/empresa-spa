@@ -29,3 +29,13 @@ export function aviso_resultado_fiscal(datos) {
 	}
 	return null
 }
+
+// Es una revisión local posterior al CAE: no convierte una autorización en rechazo ni invita a reemitir.
+export function aviso_revision_fiscal(datos) {
+	if (!datos || datos.saldo_facturado_en_revision !== true) {
+		return null
+	}
+	return typeof datos.message === 'string' && datos.message.trim()
+		? datos.message
+		: 'El comprobante autorizado quedó guardado, pero el total facturado necesita revisión. No vuelvas a emitir: pedí a soporte revisar y reparar el acumulado.'
+}

@@ -29,6 +29,52 @@ export function motivo_del_rechazo(error) {
 	return respuesta.status === 422 && respuesta.data && typeof respuesta.data.message === 'string' ? respuesta.data.message : null
 }
 
+/**
+ * Lo que se le agrega al final del cuerpo recortado de un mensaje liviano (SupportMessageReceived en
+ * empresa-api, cuando el mensaje entero no entra en Pusher).
+ */
+const PUNTOS_SUSPENSIVOS = '…'
+
+/**
+ * Fusiona un mensaje que llegó (broadcast, POST o la ruta del ticket) con la fila que ya está en la lista.
+ * Un mensaje liviano (`recortado: true`) nunca pisa un cuerpo completo: si la fila ya tiene el cuerpo entero
+ * se conserva ese cuerpo y queda sin la marca; si llega el entero sobre una fila recortada, la marca se
+ * apaga. Misión asistente-diario-20261117, M2.
+ *
+ * @param {Object} actual La fila que ya está en la lista.
+ * @param {Object} nuevo El mensaje que llegó.
+ * @returns {Object}
+ */
+export function fusionar_mensaje(actual, nuevo) {
+	const fusionado = Object.assign({}, actual, nuevo)
+	if (nuevo && nuevo.recortado && actual && !actual.recortado && typeof actual.body === 'string') {
+		fusionado.body = actual.body
+		fusionado.recortado = false
+	} else if (nuevo && typeof nuevo.body === 'string' && !nuevo.recortado && actual && actual.recortado) {
+		// Llegó el mensaje entero sobre una fila recortada: deja de estar recortada.
+		fusionado.recortado = false
+	}
+	return fusionado
+}
+
+/**
+ * true si el cuerpo de la fila optimista (lo que escribió la persona) es el mismo mensaje que llegó: igual, o,
+ * si llegó recortado, que empiece con el cuerpo recortado sin los «…» del final.
+ *
+ * @param {Object} optimista La fila pendiente de la lista.
+ * @param {Object} llegado El mensaje que llegó.
+ * @returns {Boolean}
+ */
+function es_el_mismo_cuerpo(optimista, llegado) {
+	if (optimista.body == llegado.body) return true
+	if (!llegado.recortado || typeof llegado.body !== 'string' || typeof optimista.body !== 'string') return false
+	let prefijo = llegado.body
+	if (prefijo.slice(-PUNTOS_SUSPENSIVOS.length) === PUNTOS_SUSPENSIVOS) {
+		prefijo = prefijo.slice(0, -PUNTOS_SUSPENSIVOS.length)
+	}
+	return optimista.body.indexOf(prefijo) === 0
+}
+
 function identidad_de_sesion({ auth, ai_chat }) {
 	const usuario = auth.user
 	return usuario ? [usuario.id, !!usuario.es_sesion_soporte, !!usuario.es_acceso_maestro, ai_chat && ai_chat.revision_sesion].join(':') : null
@@ -105,7 +151,24 @@ export default {
 					break
 				}
 			}
-			if (idx >= 0) {
+			/*
+			 * M2 (misión asistente-diario-20261117): el broadcast sale ANTES de la respuesta del POST y, si llegó
+			 * recortado, addModel no pudo sacar el optimista. Si ya hay una fila con este id, se saca el optimista y
+			 * se fusiona con esa fila: nunca dos filas con el mismo id.
+			 */
+			let con_el_id = -1
+			for (j = 0; j < state.models.length; j = j + 1) {
+				if (state.models[j].id == model.id && !state.models[j]._client_pending) {
+					con_el_id = j
+					break
+				}
+			}
+			if (con_el_id >= 0) {
+				state.models.splice(con_el_id, 1, fusionar_mensaje(state.models[con_el_id], model))
+				if (idx >= 0) {
+					state.models.splice(idx, 1)
+				}
+			} else if (idx >= 0) {
 				state.models.splice(idx, 1, model)
 			} else {
 				// El broadcast pudo llegar antes: deduplicar por id.
@@ -165,7 +228,8 @@ export default {
 				let n = state.models.length - 1
 				while (n >= 0) {
 					const m = state.models[n]
-					if (m._client_pending && m.support_ticket_id == value.support_ticket_id && m.body == value.body) {
+					// Un mensaje recortado coincide con el optimista que empieza con su cuerpo (M2).
+					if (m._client_pending && m.support_ticket_id == value.support_ticket_id && es_el_mismo_cuerpo(m, value)) {
 						state.models.splice(n, 1)
 					}
 					n = n - 1
@@ -180,7 +244,7 @@ export default {
 				}
 			}
 			if (merge_idx >= 0) {
-				state.models.splice(merge_idx, 1, Object.assign({}, state.models[merge_idx], value))
+				state.models.splice(merge_idx, 1, fusionar_mensaje(state.models[merge_idx], value))
 				return
 			}
 			state.models.push(value)
@@ -221,7 +285,7 @@ export default {
 			let k = 0
 			for (k = 0; k < state.models.length; k = k + 1) {
 				if (state.models[k].id == incoming.id) {
-					const merged = Object.assign({}, state.models[k], incoming)
+					const merged = fusionar_mensaje(state.models[k], incoming)
 					state.models.splice(k, 1, merged)
 					return
 				}
@@ -229,6 +293,40 @@ export default {
 		},
 	},
 	actions: {
+		/**
+		 * Completa un mensaje que llegó recortado por Pusher (misión asistente-diario-20261117, M2).
+		 *
+		 * empresa-api manda una versión liviana del evento SupportMessageReceived cuando el mensaje entero pasa
+		 * el límite de Pusher: los mismos campos, el cuerpo cortado con «…» y `recortado: true`. Si el mensaje es
+		 * del ticket que está abierto, se pide el ticket (GET /api/support-ticket/{id}, la misma ruta que usa
+		 * loadTicketMessages, sin marcar nada como leído) y se reemplaza la burbuja por el mensaje completo. Si
+		 * falla, queda el texto recortado: el mensaje entero aparece al volver a abrir el ticket.
+		 *
+		 * @param {Object} context
+		 * @param {Object} message El mensaje liviano que llegó por el broadcast.
+		 * @returns {Promise}
+		 */
+		completarMensajeRecortado({ commit, state }, message) {
+			if (!message || message.id == null || !message.support_ticket_id || message.support_ticket_id != state.active_ticket_id) {
+				return Promise.resolve()
+			}
+			return axios
+				.get('/api/support-ticket/' + message.support_ticket_id, { skip_navigation_cancel: true })
+				.then(function (response) {
+					const model = response.data && response.data.model
+					if (!model || !model.messages || message.support_ticket_id != state.active_ticket_id) {
+						return
+					}
+					model.messages.forEach(function (completo) {
+						if (completo.id == message.id) {
+							commit('patchMessage', Object.assign({}, completo, { recortado: false }))
+						}
+					})
+				})
+				.catch(function (error) {
+					console.log(error)
+				})
+		},
 		/**
 		 * Carga ticket y actualiza lista de mensajes visibles.
 		 */

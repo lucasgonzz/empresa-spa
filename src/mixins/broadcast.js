@@ -302,6 +302,11 @@ export default {
                 }
                 const msg = event_data.message
                 this.$store.commit('support_message/addModel', msg)
+                // Un mensaje largo llega liviano (recortado: true, ver SupportMessageReceived en empresa-api):
+                // se pide el entero con la ruta del ticket. Sin la marca no cambia nada.
+                if (msg.recortado) {
+                    this.$store.dispatch('support_message/completarMensajeRecortado', msg)
+                }
                 if (msg.ticket && msg.ticket.id) {
                     this.$store.dispatch('support_ticket/applyTicketFromMessage', msg)
                 } else if (msg.sender_type === 'admin' && msg.support_ticket_id) {

@@ -7,6 +7,8 @@
  * el componente desde cero.
  */
 const componente_integraciones_tienda_online = () => import('@/components/abm/integraciones/TiendaOnline')
+// Solapa WhatsApp de Integraciones: estado de la conexion (sin credenciales). Ver src/models/whatsapp_bot_config.js.
+const componente_integraciones_whatsapp = () => import('@/components/abm/integraciones/WhatsApp')
 // Diseños de Vender (mision diseno-vender-configurable, 28/9/2026): editor de arrastrar y soltar,
 // no un formulario. Ver src/models/vender_layout.js.
 const componente_disenos_de_vender = () => import('@/components/abm/disenos-de-vender/Index')
@@ -220,6 +222,9 @@ export default {
 					// endpoint de ABM. Ver src/models/integracion_tienda_online.js.
 					componentes: {
 						integracion_tienda_online: componente_integraciones_tienda_online,
+						// 🔴 WhatsApp NO usa el ABM generico: ese listaba/editaba la clave de Kapso y el
+						// secreto del webhook. El componente solo muestra el estado de la conexion.
+						whatsapp_bot_config: componente_integraciones_whatsapp,
 					},
 				},
 				// Extension: vinoteca

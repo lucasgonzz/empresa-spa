@@ -60,8 +60,10 @@ export function show_laravel_validation_toast(data, options = {}) {
   if (typeof data.message === 'string' && data.message.trim().length) {
     title = data.message.trim()
   }
-  const body = messages.map((msg, idx) => `${idx + 1}. ${msg}`).join('\n')
-  const full_message = `${title}\n\n${body}`
+  // Algunas API repiten el problema concreto en message para las pantallas anteriores.
+  const details = messages.filter((msg) => msg.trim() !== title)
+  const body = details.map((msg, idx) => `${idx + 1}. ${msg}`).join('\n')
+  const full_message = body ? `${title}\n\n${body}` : title
   const toast = Vue.prototype.$toast
   if (toast && typeof toast.error === 'function') {
     const merged_options = Object.assign(

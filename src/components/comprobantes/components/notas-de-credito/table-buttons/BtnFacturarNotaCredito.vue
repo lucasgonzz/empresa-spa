@@ -55,6 +55,7 @@
 	</div>
 </template>
 <script>
+import { aviso_revision_fiscal } from '@/utils/facturacion'
 /**
  * Facturar ante ARCA una nota de crédito que se guardó SIN facturar (Comprobantes › Notas de crédito).
  *
@@ -145,7 +146,12 @@ export default {
 				self.$store.commit('nota_credito/add', res.data.model)
 
 				if (res.data.facturada) {
-					self.$toast.success(res.data.message)
+					let revision = aviso_revision_fiscal(res.data)
+					if (revision) {
+						self.$toast.warning(revision, {duration: 15000})
+					} else {
+						self.$toast.success(res.data.message)
+					}
 				} else {
 					self.$toast.error(res.data.message, { duration: 10000 })
 				}

@@ -1,4 +1,4 @@
-import { incoterms_opcional, mensaje_error_facturacion, aviso_resultado_fiscal } from '@/utils/facturacion'
+import { incoterms_opcional, mensaje_error_facturacion, aviso_resultado_fiscal, aviso_revision_fiscal } from '@/utils/facturacion'
 
 export default {
 	computed: {
@@ -154,6 +154,11 @@ export default {
 					}
 
 					this.mostrar_mensaje_exitoso()
+
+					let revision = aviso_revision_fiscal(res.data)
+					if (revision) {
+						this.$toast.warning(revision, {duration: 15000})
+					}
 
 					/*
 						La limpieza de AFIP ya no vive acá. Vivía adentro de este .then(), así que sólo

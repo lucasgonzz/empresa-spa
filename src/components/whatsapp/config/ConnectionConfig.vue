@@ -1,54 +1,41 @@
 <template>
 	<div class="whatsapp-connection-config">
-		<p class="text-muted whatsapp-connection-config__intro">
-			Estos tres datos los provee Kapso, el proveedor por el que sale y entra WhatsApp.
-			Los encontrás en el panel de Kapso, en la configuración del número del negocio.
-			Mientras no estén cargados, el bot no se puede activar.
-		</p>
+		<b-alert
+		v-if="configurada"
+		show
+		variant="success"
+		class="whatsapp-connection-config__estado">
+			<strong>Conexión configurada</strong>
+			<div v-if="phone_number_id">
+				Número de WhatsApp conectado (ID en Kapso):
+				<span class="whatsapp-connection-config__id">{{ phone_number_id }}</span>
+			</div>
+		</b-alert>
 
-		<b-form-group
-		label="Phone Number ID">
-			<b-form-input
-			v-model="form.phone_number_id"
-			placeholder="123456789012345"></b-form-input>
-			<small class="text-muted whatsapp-connection-config__hint">
-				Identificador del número de WhatsApp del negocio en Kapso. No es el número de
-				teléfono: es el ID que le asigna la plataforma.
-			</small>
-		</b-form-group>
-
-		<b-form-group
-		label="API Key de Kapso">
-			<b-form-input
-			v-model="form.kapso_api_key"
-			placeholder="kapso_live_…"></b-form-input>
-			<small class="text-muted whatsapp-connection-config__hint">
-				Clave con la que el sistema le manda los mensajes a Kapso. Si la cambiás en el
-				panel de Kapso, hay que actualizarla acá o el bot deja de poder responder.
-			</small>
-		</b-form-group>
-
-		<b-form-group
-		label="Webhook Secret">
-			<b-form-input
-			v-model="form.webhook_secret"
-			placeholder="Secreto que configuraste en el webhook de Kapso"></b-form-input>
-			<small class="text-muted whatsapp-connection-config__hint">
-				Con esto se verifica la firma de cada mensaje entrante. Tiene que ser exactamente
-				el mismo que está cargado en el webhook de Kapso: si no coincide, los mensajes de
-				los clientes se rechazan y nunca llegan.
-			</small>
-		</b-form-group>
+		<b-alert
+		v-else
+		show
+		variant="warning"
+		class="whatsapp-connection-config__estado">
+			<strong>Pendiente: la configura el equipo de ComercioCity</strong>
+			<div>
+				Los datos técnicos de WhatsApp los carga ComercioCity por vos. No hace falta que
+				los busques ni los copies: apenas esté lista la conexión vas a poder prender el bot desde acá.
+			</div>
+		</b-alert>
 
 		<div class="whatsapp-connection-config__toggle-group">
 			<b-form-checkbox
 			v-model="form.is_active"
+			:disabled="!configurada && !form.is_active"
 			switch>
 				Bot activo
 			</b-form-checkbox>
 			<small class="text-muted">
-				Con el bot apagado no entra ni sale ningún mensaje por WhatsApp. Para prenderlo
-				hacen falta los tres datos de arriba cargados.
+				Con el bot apagado no entra ni sale ningún mensaje por WhatsApp.
+				<template v-if="!configurada">
+					Para prenderlo, primero tiene que estar configurada la conexión.
+				</template>
 			</small>
 		</div>
 
@@ -68,13 +55,11 @@ export default {
 	},
 	data() {
 		return {
-			// Copia local editable de la configuración técnica (se sincroniza con el store al
-			// cargar/guardar). Son los 4 campos que esta pantalla conoce; los del agente los
-			// maneja AgentConfig.vue contra el mismo endpoint.
+			// Copia local editable (se sincroniza con el store al cargar/guardar). Lo único que
+			// el dueño puede cambiar acá es el switch: las credenciales de WhatsApp las carga
+			// ComercioCity y nunca llegan al navegador. Los campos del agente los maneja
+			// AgentConfig.vue contra el mismo endpoint.
 			form: {
-				phone_number_id: '',
-				kapso_api_key: '',
-				webhook_secret: '',
 				is_active: false,
 			},
 			loading: false,
@@ -87,6 +72,22 @@ export default {
 		config() {
 			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
+		phone_number_id() {
+			return (this.config && this.config.phone_number_id) || ''
+		},
+		/**
+		 * Si la conexión está lista. La API nueva manda `conexion_configurada`; una API vieja
+		 * no lo manda y entonces se deduce de que haya un `phone_number_id` cargado.
+		 */
+		configurada() {
+			if (!this.config) {
+				return false
+			}
+			if (this.config.conexion_configurada !== undefined && this.config.conexion_configurada !== null) {
+				return !!this.config.conexion_configurada
+			}
+			return !!this.config.phone_number_id
+		},
 	},
 	watch: {
 		config: {
@@ -95,23 +96,20 @@ export default {
 				if (!value) {
 					return
 				}
-				this.form.phone_number_id = value.phone_number_id || ''
-				this.form.kapso_api_key = value.kapso_api_key || ''
-				this.form.webhook_secret = value.webhook_secret || ''
 				this.form.is_active = !!value.is_active
 			},
 		},
 	},
 	methods: {
 		/**
-		 * Guarda las credenciales de Kapso y el switch de activo. Usa el indicador global de
+		 * Guarda el switch de activo (lo único editable). Usa el indicador global de
 		 * carga (además del loading local del botón) según la convención del proyecto.
 		 */
 		save() {
 			let self = this
 
 			this.loading = true
-			this.$store.commit('auth/setMessage', 'Guardando la conexión con Kapso')
+			this.$store.commit('auth/setMessage', 'Guardando la conexión de WhatsApp')
 			this.$store.commit('auth/setLoading', true)
 
 			this.$store.dispatch('whatsapp_bot_config/updateConnectionConfig', this.form)
@@ -126,9 +124,9 @@ export default {
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
 				console.log(err)
-				// Acá NO alcanza con un mensaje genérico: la API devuelve 422 con un `message`
-				// que explica el motivo real (el caso típico es querer activar el bot sin las
-				// tres credenciales cargadas). Si se muestra un texto fijo, el dueño ve
+				// Acá NO alcanza con un mensaje genérico: la API devuelve 403/422 con un `message`
+				// que explica el motivo real (el caso típico es querer activar el bot sin la
+				// conexión configurada). Si se muestra un texto fijo, el dueño ve
 				// "no se pudo guardar" y no tiene forma de saber qué le falta.
 				let message = (err.response && err.response.data && err.response.data.message) || 'No se pudo guardar la conexión'
 				self.$toast.error(message)
@@ -139,11 +137,11 @@ export default {
 </script>
 <style lang="sass">
 .whatsapp-connection-config
-	&__intro
+	&__estado
 		margin-bottom: 18px
-	&__hint
-		display: block
-		margin-top: 6px
+	&__id
+		word-break: break-all
+		font-weight: 600
 	&__toggle-group
 		margin-bottom: 18px
 	&__actions

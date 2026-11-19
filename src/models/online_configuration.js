@@ -371,7 +371,21 @@ export default {
 			configuración no las pisa.
 		*/
 		{
-			group_title: 'Redes sociales'
+			group_title: 'Contactos de WhatsApp y redes sociales'
+		},
+		{
+			text: 'WhatsApp para Consultas',
+			key: 'whatsapp_consultations_phone',
+			type: 'text',
+			v_if_function: 'mostrar_contacto_whatsapp',
+			description: 'Opcional. Número internacional con código de país (por ejemplo +54 9 11 2345 6789). Agrega el acceso Consultas en la tienda. Cargarlo no conecta ni activa un agente de IA.',
+		},
+		{
+			text: 'WhatsApp para Hablar con un vendedor',
+			key: 'whatsapp_seller_phone',
+			type: 'text',
+			v_if_function: 'mostrar_contacto_whatsapp',
+			description: 'Opcional. Número internacional con código de país. Abre directamente el WhatsApp del vendedor. Si ambos contactos quedan vacíos, la tienda conserva el WhatsApp general del negocio. No cambia los avisos de pedidos ni las consultas de productos.',
 		},
 		{
 			text: 'Instagram',
