@@ -5,7 +5,7 @@
 	hide-footer
 	:title="modal_title"
 	@show="on_show"
-	@hide="reset">
+	@hide="on_hide">
 
 		<!-- Indicador de pasos -->
 		<div class="ai-import-steps m-b-20">
@@ -22,6 +22,50 @@
 		<!-- PASO 1: Subir archivo y analizar con IA                     -->
 		<!-- ========================================================== -->
 		<div v-if="step === 1">
+
+			<!--
+				Importaciones pendientes: análisis que el usuario ya hizo (o que siguen corriendo) y no
+				terminó de importar. Retomar no vuelve a pedir el archivo ni a analizarlo: el servidor
+				guarda el resultado y lo último que se editó desde el paso 2.
+			-->
+			<div
+			v-if="pendientes_de_este_modal.length"
+			class="ai-import-pendientes m-b-20"
+			data-testid="ai-import-pendientes">
+				<h6 class="m-b-5">Importaciones pendientes</h6>
+				<p class="text-muted small m-b-10">
+					Retomá una importación donde la dejaste, sin volver a subir el archivo.
+				</p>
+				<div
+				v-for="item in pendientes_de_este_modal"
+				:key="item.uuid"
+				class="ai-import-pendiente"
+				data-testid="ai-import-pendiente">
+					<div class="ai-import-pendiente-info">
+						<strong>{{ item.original_filename || 'Archivo sin nombre' }}</strong>
+						<small class="text-muted d-block">{{ texto_de_pendiente(item) }}</small>
+					</div>
+					<div class="ai-import-pendiente-acciones">
+						<b-button
+						size="sm"
+						variant="primary"
+						data-testid="ai-import-pendiente-retomar"
+						:disabled="loading"
+						@click="retomar_pendiente(item)">
+							Retomar
+						</b-button>
+						<b-button
+						size="sm"
+						variant="outline-secondary"
+						data-testid="ai-import-pendiente-descartar"
+						:disabled="loading"
+						@click="descartar_pendiente(item)">
+							Descartar
+						</b-button>
+					</div>
+				</div>
+				<hr>
+			</div>
 
 			<p v-if="permite_pdf" class="text-muted m-b-15">
 				Subí una planilla Excel o un catálogo PDF de hasta 10 MB y 30 páginas por archivo.
@@ -1449,6 +1493,12 @@ import {
 	hay_algo_para_mostrar,
 	es_recortado,
 } from './relaciones_parecidas'
+import {
+	armar_borrador,
+	aplicar_borrador,
+	huella_del_borrador,
+	corrida_a_retomar,
+} from './borrador'
 
 export default {
 	/* Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el aviso antes del primer import. */
@@ -1480,6 +1530,17 @@ export default {
 		return {
 			/* Prueba gratuita: el negocio ya confirmó que se eliminan los datos de ejemplo (ver importar()). */
 			semilla_confirmada: false,
+
+			/*
+			 * Importaciones pendientes recuperables (misión importaciones-pendientes-recuperables):
+			 *  - importacion_lanzada: ya se mandó POST /import; el análisis deja de ser retomable, así
+			 *    que cerrar el modal no tiene que guardar un borrador sobre él.
+			 *  - borrador_timer_id / borrador_huella: debounce del guardado y último contenido enviado,
+			 *    para no repetir el mismo POST.
+			 */
+			importacion_lanzada: false,
+			borrador_timer_id: null,
+			borrador_huella: null,
 
 			/* Paso actual del flujo (1, 2 o 3). */
 			step: 1,
@@ -1858,6 +1919,21 @@ export default {
 	},
 
 	computed: {
+
+		/* Importaciones pendientes del usuario para ESTE módulo (artículos, clientes o proveedores). */
+		pendientes_de_este_modal() {
+			const pendientes = this.$store.state.excel_analysis.pendientes || {}
+			return pendientes[this.model] || []
+		},
+
+		/*
+		 * Lo que habría que guardar ahora mismo, o null si no hay nada (paso 1, importación ya
+		 * lanzada). Es un computed para que Vue siga cada campo del borrador, mapeo incluido, y el
+		 * watcher de abajo se entere de cualquier edición.
+		 */
+		borrador_actual() {
+			return armar_borrador(this)
+		},
 		permite_pdf() {
 			return this.model === 'article' && this.prueba_permite_pdf
 		},
@@ -3005,6 +3081,11 @@ export default {
 	},
 
 	watch: {
+
+		/* Cualquier edición desde el paso 2 se guarda en el servidor (con espera, no por tecla). */
+		borrador_actual(nuevo) {
+			this.programar_guardado_de_borrador(nuevo)
+		},
 
 		/*
 		 * Orden de apertura dejada por el aviso de "terminó el análisis". Cubre el
@@ -5536,6 +5617,13 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
 
+				/*
+				 * La importación ya salió: el servidor sacó el análisis de los pendientes. Se marca
+				 * antes de cerrar para que on_hide no guarde un borrador sobre algo ya terminado.
+				 */
+				this.importacion_lanzada = true
+				this.$store.commit('excel_analysis/quitar_pendiente', this.analysis_uuid)
+
 				this.$bvModal.hide(this.modal_id)
 
 				this.$toast.success(
@@ -6150,6 +6238,9 @@ export default {
 				return
 			}
 
+			/* Si había un análisis abierto con ediciones, se guardan antes de empezar de cero. */
+			self.guardar_borrador_ahora()
+
 			/* Empezamos de cero: puede haber quedado estado de una importación anterior. */
 			self.reset()
 			self.loading = true
@@ -6211,6 +6302,8 @@ export default {
 					self.analysis_uuid = orden.uuid
 					self.aplicar_contexto_analisis(res.data.contexto)
 					self.aplicar_resultado_analisis(res.data.resultado)
+					/* Lo que el usuario había editado desde el paso 2 gana sobre lo que dedujo la IA. */
+					aplicar_borrador(self, res.data.borrador)
 					self.loading = false
 					self.step = 2
 					return
@@ -6252,6 +6345,8 @@ export default {
 					 * clientes y proveedores, se sigue al paso 4 (ver paso_despues_de_la_recomendacion).
 					 */
 					self.aplicar_resultado_recomendacion(chequeo_fallido ? {} : res.data.resultado)
+					/* Después de la recomendación: así las políticas que el usuario había elegido ganan. */
+					aplicar_borrador(self, res_analisis.data.borrador)
 					self.loading = false
 					self.step = self.paso_despues_de_la_recomendacion()
 				})
@@ -6532,6 +6627,9 @@ export default {
 		 * @return {void}
 		 */
 		on_show() {
+			/* La lista de pendientes se pide siempre: es lo que se ve arriba del paso 1. */
+			this.$store.dispatch('excel_analysis/cargar_pendientes', this.model)
+
 			/* Ya hay una apertura dirigida en marcha (ver consumir_orden_de_apertura). */
 			if (this.loading || this.loading_recomendacion) {
 				return
@@ -6553,6 +6651,119 @@ export default {
 		},
 
 		/*
+		 * Al cerrar el modal: primero se guarda lo editado (si ya había un análisis) y recién
+		 * después se limpia la pantalla. Cerrar no descarta nada: la importación queda en la lista
+		 * de pendientes y se retoma desde ahí, sin volver a subir ni analizar el archivo.
+		 */
+		on_hide() {
+			this.guardar_borrador_ahora()
+			this.reset()
+		},
+
+		/*
+		 * Espera a que el usuario deje de tocar antes de mandar el borrador, y no lo manda si es
+		 * idéntico al último enviado.
+		 *
+		 * @param {Object|null} borrador  Lo que devolvió armar_borrador()
+		 * @return {void}
+		 */
+		programar_guardado_de_borrador(borrador) {
+			let self = this
+
+			if (self.borrador_timer_id) {
+				clearTimeout(self.borrador_timer_id)
+				self.borrador_timer_id = null
+			}
+
+			if (!borrador || huella_del_borrador(borrador) === self.borrador_huella) {
+				return
+			}
+
+			self.borrador_timer_id = setTimeout(function() {
+				self.borrador_timer_id = null
+				self.guardar_borrador_ahora()
+			}, 1500)
+		},
+
+		/*
+		 * Manda el borrador ya, sin esperar. Sin análisis (paso 1) o con la importación lanzada no
+		 * hay nada que mandar. Es de mejor esfuerzo: si falla, se retoma desde el resultado del
+		 * análisis, que el servidor conserva igual.
+		 *
+		 * @return {void}
+		 */
+		guardar_borrador_ahora() {
+			if (this.borrador_timer_id) {
+				clearTimeout(this.borrador_timer_id)
+				this.borrador_timer_id = null
+			}
+
+			const borrador = armar_borrador(this)
+
+			if (!borrador) {
+				return
+			}
+
+			const huella = huella_del_borrador(borrador)
+
+			if (huella === this.borrador_huella) {
+				return
+			}
+
+			this.borrador_huella = huella
+
+			this.$store.dispatch('excel_analysis/guardar_borrador', {
+				uuid:     this.analysis_uuid,
+				borrador: borrador,
+			})
+		},
+
+		/*
+		 * Texto debajo del nombre del archivo en la lista de pendientes: en qué quedó y desde cuándo.
+		 *
+		 * @param {Object} item  Un ítem de GET ai-excel-import/pendientes
+		 * @return {String}
+		 */
+		texto_de_pendiente(item) {
+			let estado = 'Análisis listo: seguís en el paso ' + (item.paso || 2)
+
+			if (item.estado !== 'listo') {
+				estado = 'Analizando el archivo…'
+			}
+
+			const fecha = item.actualizada_en || item.creada_en
+
+			return fecha ? estado + ' · ' + String(fecha).replace('T', ' ').slice(0, 16) : estado
+		},
+
+		/*
+		 * Retoma una importación de la lista: abre el resultado guardado en el servidor, sin pedir
+		 * el archivo. Si ya había llegado al paso 3 y la recomendación sigue ahí, vuelve a ese paso.
+		 *
+		 * @param {Object} item  Un ítem de GET ai-excel-import/pendientes
+		 * @return {void}
+		 */
+		retomar_pendiente(item) {
+			const corrida = corrida_a_retomar(item)
+
+			if (!corrida.uuid) {
+				return
+			}
+
+			this.abrir_desde_corrida(corrida)
+		},
+
+		/*
+		 * Descarta una importación pendiente: sale de la lista y no se puede retomar. No importa nada.
+		 *
+		 * @param {Object} item  Un ítem de GET ai-excel-import/pendientes
+		 * @return {void}
+		 */
+		descartar_pendiente(item) {
+			this.$store.dispatch('excel_analysis/descartar_pendiente', item.uuid)
+		},
+
+		/*
 		 * Resetea el estado del modal al cerrarlo para que la próxima vez
 		 * empiece desde el paso 1 limpio.
 		 *
@@ -6562,6 +6773,13 @@ export default {
 		 */
 		reset() {
 			this.soltar_seguimiento_del_analisis()
+
+			if (this.borrador_timer_id) {
+				clearTimeout(this.borrador_timer_id)
+				this.borrador_timer_id = null
+			}
+			this.borrador_huella = null
+			this.importacion_lanzada = false
 
 			this.analysis_uuid     = null
 			this.recomendacion_uuid = null
@@ -6674,6 +6892,8 @@ export default {
 	 * servidor y avisa cuando termina.
 	 */
 	beforeDestroy() {
+		/* Si se va de la vista con ediciones sin mandar (cierre de sesión, otra pantalla), se guardan. */
+		this.guardar_borrador_ahora()
 		this.soltar_seguimiento_del_analisis()
 	},
 
@@ -6704,6 +6924,27 @@ export default {
 	&--active
 		background: var(--color-primary, #007bff)
 		color: #fff
+
+/* Lista de importaciones pendientes arriba del paso 1: en teléfono las acciones pasan debajo del nombre */
+.ai-import-pendiente
+	display: flex
+	flex-wrap: wrap
+	align-items: center
+	justify-content: space-between
+	gap: 8px
+	padding: 8px 12px
+	margin-bottom: 6px
+	border: 1px solid var(--bg-section, #e9ecef)
+	border-radius: 6px
+
+.ai-import-pendiente-info
+	flex: 1 1 200px
+	min-width: 0
+	overflow-wrap: anywhere
+
+.ai-import-pendiente-acciones
+	display: flex
+	gap: 6px
 
 /* Contenedor de notas de asistencia globales de Claude (paso 2) */
 .assistant-notes-container
