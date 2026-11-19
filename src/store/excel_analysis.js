@@ -190,16 +190,20 @@ export default {
 				})
 		},
 		/*
-		 * Guarda en el servidor lo que el usuario dejó editado en el modal. Es "mejor esfuerzo":
-		 * si falla, no se le muestra nada y en el peor caso retoma desde el resultado del análisis.
+		 * Guarda en el servidor lo que el usuario dejó editado en el modal. No le muestra nada si
+		 * falla, pero SÍ avisa a quien lo llamó: la promesa se resuelve en true si el servidor lo
+		 * guardó y en false si no (error de red o de API), para que el modal no dé por guardado un
+		 * borrador que no llegó y lo reintente. Sin uuid o sin borrador no hay nada que guardar: true.
 		 */
 		guardar_borrador(context, { uuid, borrador }) {
 			if (!uuid || !borrador) {
-				return Promise.resolve()
+				return Promise.resolve(true)
 			}
 			return axios.post('/api/ai-excel-import/analysis/' + uuid + '/borrador', { borrador: borrador })
+				.then(() => true)
 				.catch(err => {
 					console.log(err)
+					return false
 				})
 		},
 		/*

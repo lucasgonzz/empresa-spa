@@ -11,6 +11,14 @@
  * conoce, lo descarta.
  */
 
+import { items_de, indice_elegido, hay_algo_para_mostrar } from './relaciones_parecidas'
+
+/*
+ * Además de estos campos "simples" y de "paso", el borrador lleva `decisiones_relaciones` (lo que el
+ * usuario eligió en el paso 3, clave -> índice de opción) y, sólo al enviarlo, `revision` (ver
+ * Index.vue). La API los acepta aparte de BORRADOR_CLAVES.
+ */
+
 /* Campos del modal que se guardan, además de "paso". */
 export const CAMPOS_DEL_BORRADOR = [
 	'column_mapping',
@@ -77,6 +85,11 @@ export function armar_borrador(vm) {
 		}
 	})
 
+	/* Decisiones del paso 3: sin ellas, retomar volvería a las opciones sugeridas. */
+	if (vm.decisiones_relaciones && typeof vm.decisiones_relaciones === 'object') {
+		borrador.decisiones_relaciones = vm.decisiones_relaciones
+	}
+
 	return JSON.parse(JSON.stringify(borrador))
 }
 
@@ -133,6 +146,8 @@ export function aplicar_borrador(vm, borrador) {
 		vm[campo] = borrador[campo]
 	})
 
+	aplicar_decisiones(vm, borrador)
+
 	if (typeof vm.$nextTick === 'function') {
 		vm.$nextTick(function() {
 			CAMPOS_QUE_PISAN_LOS_WATCHERS.forEach(function(campo) {
@@ -158,4 +173,76 @@ export function corrida_a_retomar(pendiente) {
 	}
 
 	return { uuid: pendiente ? pendiente.uuid : null, tipo: 'analisis' }
+}
+
+/**
+ * Vuelve a poner las decisiones del paso 3 que el usuario había tomado. Hay que llamarla DESPUÉS de
+ * aplicar_resultado_recomendacion(), que arma las decisiones iniciales (las sugeridas) y las pisaría.
+ * Sólo se aceptan claves que existen en la lista actual y con un índice que apunta a una opción
+ * válida: lo demás se queda con lo sugerido.
+ *
+ * @param {Object} vm        Componente del modal
+ * @param {Object} borrador  Borrador guardado
+ * @return {void}
+ */
+export function aplicar_decisiones(vm, borrador) {
+	if (!vm || !borrador || !borrador.decisiones_relaciones || typeof borrador.decisiones_relaciones !== 'object') {
+		return
+	}
+
+	let guardadas = borrador.decisiones_relaciones
+	let nuevas = Object.assign({}, vm.decisiones_relaciones)
+
+	items_de(vm.relaciones_parecidas).forEach(function(item) {
+		if (!Object.prototype.hasOwnProperty.call(guardadas, item.clave)) {
+			return
+		}
+		let elegido = Number(guardadas[item.clave])
+		// indice_elegido() valida que sea una opción existente; si no, devuelve la sugerida.
+		let valido = Object.assign({}, nuevas, { [item.clave]: elegido })
+		nuevas[item.clave] = indice_elegido(item, valido)
+	})
+
+	vm.decisiones_relaciones = nuevas
+}
+
+/**
+ * Paso en el que hay que dejar al usuario al retomar: el que tenía guardado, si se puede mostrar con
+ * lo que se recuperó; si no, el que corresponde por defecto.
+ *
+ *  - 2: siempre se puede.
+ *  - 3: en artículos si hay recomendación cargada; en clientes y proveedores sólo si hay nombres
+ *       parecidos para mostrar (si no, se baja al 4, como hace el modal).
+ *  - 4: si hay recomendación cargada, o en clientes y proveedores (donde el 4 sin lista es un camino
+ *       normal, ver seguir_sin_relaciones_parecidas).
+ *  Sin recomendación recuperada no hay paso 3 ni, en artículos, 4: se queda en el 2.
+ *
+ * @param {Object}  vm                       Componente del modal
+ * @param {Object}  borrador                 Borrador guardado (puede faltar)
+ * @param {Boolean} con_recomendacion        La corrida abierta es una recomendación ya lista
+ * @param {Number}  paso_por_defecto         Lo que haría el modal sin borrador
+ * @return {Number}
+ */
+export function paso_a_retomar(vm, borrador, con_recomendacion, paso_por_defecto) {
+	let guardado = borrador ? Number(borrador.paso) : NaN
+
+	if (guardado !== 2 && guardado !== 3 && guardado !== 4) {
+		return paso_por_defecto
+	}
+
+	let es_articulo = !vm || vm.model === 'article'
+
+	if (guardado === 2) {
+		return 2
+	}
+
+	if (!con_recomendacion) {
+		return (guardado === 4 && !es_articulo) ? 4 : 2
+	}
+
+	if (guardado === 3 && !es_articulo && !hay_algo_para_mostrar(vm.relaciones_parecidas)) {
+		return 4
+	}
+
+	return guardado
 }

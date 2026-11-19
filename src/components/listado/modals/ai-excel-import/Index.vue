@@ -1498,6 +1498,7 @@ import {
 	aplicar_borrador,
 	huella_del_borrador,
 	corrida_a_retomar,
+	paso_a_retomar,
 } from './borrador'
 
 export default {
@@ -1535,12 +1536,27 @@ export default {
 			 * Importaciones pendientes recuperables (misión importaciones-pendientes-recuperables):
 			 *  - importacion_lanzada: ya se mandó POST /import; el análisis deja de ser retomable, así
 			 *    que cerrar el modal no tiene que guardar un borrador sobre él.
-			 *  - borrador_timer_id / borrador_huella: debounce del guardado y último contenido enviado,
-			 *    para no repetir el mismo POST.
+			 *  - borrador_timer_id: debounce del guardado (y del reintento si falló).
+			 *  - borrador_huella: huella del último borrador que el servidor CONFIRMÓ guardado. Sólo
+			 *    se actualiza cuando el POST salió bien: si falló, el estado sigue "sucio" y el
+			 *    próximo guardado (o el del cierre del modal) lo vuelve a mandar.
+			 *  - borrador_huella_en_vuelo: huella del POST que todavía no respondió, para no mandar
+			 *    dos veces lo mismo mientras tanto.
+			 *  - borrador_seq / borrador_seq_confirmado: número de envío; una respuesta vieja que llega
+			 *    después de una nueva no pisa lo confirmado (respuestas fuera de orden).
+			 *  - borrador_sesion: cambia en cada reset(); una respuesta de una sesión anterior no toca
+			 *    el estado de la actual.
+			 *  - borrador_revision: marca creciente que viaja en el borrador; el servidor ignora un
+			 *    guardado con revisión menor a la que ya tiene (también fuera de orden en la red).
 			 */
 			importacion_lanzada: false,
 			borrador_timer_id: null,
 			borrador_huella: null,
+			borrador_huella_en_vuelo: null,
+			borrador_seq: 0,
+			borrador_seq_confirmado: 0,
+			borrador_sesion: 0,
+			borrador_revision: 0,
 
 			/* Paso actual del flujo (1, 2 o 3). */
 			step: 1,
@@ -6305,7 +6321,8 @@ export default {
 					/* Lo que el usuario había editado desde el paso 2 gana sobre lo que dedujo la IA. */
 					aplicar_borrador(self, res.data.borrador)
 					self.loading = false
-					self.step = 2
+					/* El paso en que lo dejó, si se puede mostrar sin recomendación; si no, el 2. */
+					self.step = paso_a_retomar(self, res.data.borrador, false, 2)
 					return
 				}
 
@@ -6348,7 +6365,8 @@ export default {
 					/* Después de la recomendación: así las políticas que el usuario había elegido ganan. */
 					aplicar_borrador(self, res_analisis.data.borrador)
 					self.loading = false
-					self.step = self.paso_despues_de_la_recomendacion()
+					/* El paso exacto que tenía guardado (2, 3 o 4) si es válido; si no, el de siempre. */
+					self.step = paso_a_retomar(self, res_analisis.data.borrador, !chequeo_fallido, self.paso_despues_de_la_recomendacion())
 				})
 				.catch(function() {
 					if (token_corrida !== self.analysis_polling_token) return
@@ -6687,8 +6705,13 @@ export default {
 
 		/*
 		 * Manda el borrador ya, sin esperar. Sin análisis (paso 1) o con la importación lanzada no
-		 * hay nada que mandar. Es de mejor esfuerzo: si falla, se retoma desde el resultado del
-		 * análisis, que el servidor conserva igual.
+		 * hay nada que mandar.
+		 *
+		 * El borrador sólo se da por guardado cuando el servidor lo confirma (borrador_huella). Si el
+		 * POST falla, el estado queda sucio: el autoguardado vuelve a intentarlo en unos segundos y,
+		 * si el usuario cierra el modal antes, el cierre lo reintenta con el mismo contenido. Si el
+		 * POST falla justo cuando el modal ya se cerró (el reset() limpió el estado), se reintenta
+		 * una vez más con lo que se estaba mandando.
 		 *
 		 * @return {void}
 		 */
@@ -6706,15 +6729,66 @@ export default {
 
 			const huella = huella_del_borrador(borrador)
 
-			if (huella === this.borrador_huella) {
+			if (huella === this.borrador_huella || huella === this.borrador_huella_en_vuelo) {
 				return
 			}
 
-			this.borrador_huella = huella
+			this.enviar_borrador(this.analysis_uuid, borrador, huella, 0)
+		},
 
-			this.$store.dispatch('excel_analysis/guardar_borrador', {
-				uuid:     this.analysis_uuid,
-				borrador: borrador,
+		/*
+		 * Un envío del borrador al servidor, con su número de envío y su revisión.
+		 *
+		 * @param {String} uuid      Análisis al que pertenece
+		 * @param {Object} borrador  Lo que devolvió armar_borrador()
+		 * @param {String} huella    Huella de ese borrador (sin la revisión)
+		 * @param {Number} reintentos  Cuántas veces se reintentó ya tras el cierre del modal
+		 * @return {void}
+		 */
+		enviar_borrador(uuid, borrador, huella, reintentos) {
+			let self = this
+			let sesion = self.borrador_sesion
+			let seq = ++self.borrador_seq
+
+			self.borrador_revision = Math.max(Date.now(), self.borrador_revision + 1)
+			self.borrador_huella_en_vuelo = huella
+
+			let enviado = Object.assign({}, borrador, { revision: self.borrador_revision })
+
+			self.$store.dispatch('excel_analysis/guardar_borrador', {
+				uuid:     uuid,
+				borrador: enviado,
+			}).then(function(guardado) {
+				const ok = guardado !== false
+
+				if (sesion !== self.borrador_sesion) {
+					/* El modal se cerró (o se abrió otro análisis) mientras tanto: una sola vez más. */
+					if (!ok && reintentos < 1) {
+						self.enviar_borrador(uuid, borrador, huella, reintentos + 1)
+					}
+					return
+				}
+
+				if (self.borrador_huella_en_vuelo === huella) {
+					self.borrador_huella_en_vuelo = null
+				}
+
+				if (ok) {
+					/* Una respuesta vieja que llega tarde no pisa lo que ya confirmó un envío más nuevo. */
+					if (seq > self.borrador_seq_confirmado) {
+						self.borrador_seq_confirmado = seq
+						self.borrador_huella = huella
+					}
+					return
+				}
+
+				/* Falló: sigue sucio. Se reintenta solo, salvo que mientras tanto ya haya otro programado. */
+				if (!self.borrador_timer_id && armar_borrador(self)) {
+					self.borrador_timer_id = setTimeout(function() {
+						self.borrador_timer_id = null
+						self.guardar_borrador_ahora()
+					}, 5000)
+				}
 			})
 		},
 
@@ -6779,6 +6853,9 @@ export default {
 				this.borrador_timer_id = null
 			}
 			this.borrador_huella = null
+			this.borrador_huella_en_vuelo = null
+			this.borrador_seq_confirmado = this.borrador_seq
+			this.borrador_sesion++
 			this.importacion_lanzada = false
 
 			this.analysis_uuid     = null

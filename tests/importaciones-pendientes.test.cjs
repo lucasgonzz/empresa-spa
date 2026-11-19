@@ -399,3 +399,219 @@ test('no se usa async/await en el código nuevo (Vue 2 sin regenerator en src/)'
 		assert.doesNotMatch(fuente, /\basync\b|\bawait\b/, archivo)
 	}
 })
+
+// ------------------------------------------------- revisión: decisiones, paso exacto y reintento
+
+const { aplicar_decisiones, paso_a_retomar } = borrador_js
+
+function relaciones_de_prueba() {
+	const opciones = [{ accion: 'usar', id: 1, nombre: 'Uno' }, { accion: 'crear' }, { accion: 'usar', id: 3, nombre: 'Tres' }]
+	return {
+		ia_consultada: true,
+		items: [
+			{ clave: 'marca|Acme', tipo: 'marca', valor: 'Acme', filas: 2, padre: null, motivo: 'parecido', explicacion: '', opciones, sugerida: 0 },
+			{ clave: 'marca|Beta', tipo: 'marca', valor: 'Beta', filas: 1, padre: null, motivo: 'parecido', explicacion: '', opciones, sugerida: 0 },
+		],
+	}
+}
+
+test('el borrador lleva las decisiones del paso 3 y la huella cambia cuando cambian', () => {
+	const a = armar_borrador(modal_en_paso_2({ step: 3, decisiones_relaciones: { 'marca|Acme': 0 } }))
+	const b = armar_borrador(modal_en_paso_2({ step: 3, decisiones_relaciones: { 'marca|Acme': 1 } }))
+	assert.deepEqual(a.decisiones_relaciones, { 'marca|Acme': 0 })
+	assert.notEqual(huella_del_borrador(a), huella_del_borrador(b))
+})
+
+test('aplicar las decisiones guardadas gana sobre las sugeridas y descarta claves o índices inválidos', () => {
+	const vm = { relaciones_parecidas: relaciones_de_prueba(), decisiones_relaciones: { 'marca|Acme': 0, 'marca|Beta': 0 } }
+	aplicar_decisiones(vm, { decisiones_relaciones: { 'marca|Acme': 2, 'marca|Beta': 99, 'marca|Fantasma': 1 } })
+	assert.deepEqual(vm.decisiones_relaciones, { 'marca|Acme': 2, 'marca|Beta': 0 })
+})
+
+test('el paso a retomar es exacto cuando se puede mostrar y cae al correcto cuando no', () => {
+	const articulo = { model: 'article', relaciones_parecidas: null }
+	const cliente_sin_nombres = { model: 'client', relaciones_parecidas: null }
+	const cliente_con_nombres = { model: 'client', relaciones_parecidas: relaciones_de_prueba() }
+	// Recomendación cargada
+	assert.equal(paso_a_retomar(articulo, { paso: 2 }, true, 3), 2)
+	assert.equal(paso_a_retomar(articulo, { paso: 3 }, true, 3), 3)
+	assert.equal(paso_a_retomar(articulo, { paso: 4 }, true, 3), 4, 'dejado en el 4 no vuelve al 3')
+	assert.equal(paso_a_retomar(cliente_con_nombres, { paso: 3 }, true, 3), 3)
+	assert.equal(paso_a_retomar(cliente_sin_nombres, { paso: 3 }, true, 4), 4)
+	assert.equal(paso_a_retomar(cliente_con_nombres, { paso: 4 }, true, 3), 4)
+	// Sin borrador o con un paso inválido: el de siempre
+	assert.equal(paso_a_retomar(articulo, null, true, 3), 3)
+	assert.equal(paso_a_retomar(articulo, { paso: 9 }, true, 3), 3)
+	assert.equal(paso_a_retomar(articulo, { paso: 'x' }, true, 3), 3)
+	// Sólo análisis (sin recomendación): artículos al 2; clientes y proveedores pueden estar en el 4 sin lista
+	assert.equal(paso_a_retomar(articulo, { paso: 4 }, false, 2), 2)
+	assert.equal(paso_a_retomar(articulo, { paso: 3 }, false, 2), 2)
+	assert.equal(paso_a_retomar(cliente_sin_nombres, { paso: 4 }, false, 2), 4)
+})
+
+function abrir_recomendacion(model, borrador, relaciones) {
+	const vm = modal_real({
+		model, step: 1, analysis_uuid: null, loading: false,
+		$api: {
+			get(url) {
+				if (url === 'ai-excel-import/analysis/rec-1') {
+					return Promise.resolve({ data: {
+						uuid: 'rec-1', tipo: 'recomendacion', estado: 'listo',
+						contexto: { model, analysis_uuid: 'uuid-pendiente', provider_id: 11 },
+						resultado: { relaciones_parecidas: relaciones || null, recomendacion_configuracion: { politica_colision: 'saltear_y_reportar' } },
+					} })
+				}
+				return Promise.resolve({ data: {
+					uuid: 'uuid-pendiente', tipo: 'analisis', estado: 'listo',
+					contexto: { model, original_filename: 'Lista_Ficticia.xlsx', start_row: 2, finish_row: 50, has_header_row: 1 },
+					resultado: { excel_path: 'imported_files/ficticio.xlsx', column_mapping: [], provider_id: 3, provider_confidence: 'alto' },
+					borrador,
+				} })
+			},
+		},
+	})
+	vm.normalize_column_mapping = m => m
+	vm.completar_columnas_omitidas = m => m
+	vm.abrir_desde_corrida({ uuid: 'rec-1', tipo: 'recomendacion' })
+	return vm
+}
+
+for (const paso of [2, 3, 4]) {
+	test('retomar la recomendación de un artículo dejado en el paso ' + paso + ' vuelve exactamente a ese paso', async () => {
+		const vm = abrir_recomendacion('article', { paso, start_row: 8 })
+		await new Promise(r => setImmediate(r))
+		assert.equal(vm.step, paso)
+		assert.equal(vm.start_row, 8)
+		assert.equal(vm.analysis_uuid, 'uuid-pendiente')
+	})
+}
+
+test('retomar en el paso 3 de clientes restaura las decisiones de nombres parecidos', async () => {
+	const vm = abrir_recomendacion('client', { paso: 3, decisiones_relaciones: { 'marca|Acme': 2, 'marca|Beta': 1 } }, relaciones_de_prueba())
+	await new Promise(r => setImmediate(r))
+	assert.equal(vm.step, 3)
+	assert.deepEqual(vm.decisiones_relaciones, { 'marca|Acme': 2, 'marca|Beta': 1 })
+})
+
+test('retomar en el paso 4 de clientes con nombres parecidos va al 4 y conserva las decisiones', async () => {
+	const vm = abrir_recomendacion('provider', { paso: 4, decisiones_relaciones: { 'marca|Acme': 1 } }, relaciones_de_prueba())
+	await new Promise(r => setImmediate(r))
+	assert.equal(vm.step, 4)
+	assert.equal(vm.decisiones_relaciones['marca|Acme'], 1)
+	assert.equal(vm.decisiones_relaciones['marca|Beta'], 0, 'lo no guardado queda con la sugerida')
+})
+
+function modal_con_respuestas(respuestas) {
+	// Cada dispatch de guardar_borrador devuelve la promesa que arma el test; se resuelven a mano.
+	const vm = modal_real()
+	vm._pendientes = []
+	vm.$store.dispatch = function(nombre, valor) {
+		vm._despachos.push([nombre, valor])
+		return new Promise(resolver => vm._pendientes.push(resolver))
+	}
+	return vm
+}
+
+const tick = () => new Promise(r => setImmediate(r))
+
+test('si el autosave falla y se cierra el modal con el mismo estado, el cierre lo reintenta', async () => {
+	const vm = modal_con_respuestas()
+	vm.guardar_borrador_ahora()
+	assert.equal(vm._despachos.length, 1)
+	vm._pendientes[0](false)
+	await tick()
+	assert.equal(vm.borrador_huella, null, 'no se da por guardado si falló')
+	assert.equal(vm.borrador_huella_en_vuelo, null)
+	vm.on_hide()
+	assert.equal(vm._despachos.length, 2, 'el cierre reintenta el mismo contenido')
+	assert.equal(vm._despachos[1][1].borrador.start_row, vm._despachos[0][1].borrador.start_row)
+	vm._pendientes[1](true)
+	await tick()
+})
+
+test('el fallo transitorio se reintenta solo con espera y después queda confirmado', async () => {
+	mock.timers.enable({ apis: ['setTimeout'] })
+	try {
+		const vm = modal_con_respuestas()
+		vm.guardar_borrador_ahora()
+		vm._pendientes[0](false)
+		await tick()
+		assert.equal(vm._despachos.length, 1)
+		mock.timers.tick(5000)
+		assert.equal(vm._despachos.length, 2, 'reintento automático')
+		vm._pendientes[1](true)
+		await tick()
+		assert.ok(vm.borrador_huella, 'confirmado recién cuando el servidor respondió bien')
+		vm.guardar_borrador_ahora()
+		assert.equal(vm._despachos.length, 2, 'ya guardado: no repite')
+	} finally {
+		mock.timers.reset()
+	}
+})
+
+test('mientras un envío está en vuelo no se duplica el mismo contenido y no se da por guardado', () => {
+	const vm = modal_con_respuestas()
+	vm.guardar_borrador_ahora()
+	vm.guardar_borrador_ahora()
+	assert.equal(vm._despachos.length, 1)
+	assert.equal(vm.borrador_huella, null)
+})
+
+test('respuestas fuera de orden: la vieja que llega tarde no pisa lo confirmado por la nueva', async () => {
+	const vm = modal_con_respuestas()
+	vm.guardar_borrador_ahora()               // A
+	vm.start_row = 5
+	vm.guardar_borrador_ahora()               // B
+	assert.equal(vm._despachos.length, 2)
+	assert.ok(vm._despachos[1][1].borrador.revision > vm._despachos[0][1].borrador.revision, 'la revisión crece')
+	const huella_b = huella_del_borrador(armar_borrador(vm))
+	vm._pendientes[1](true)                   // B responde primero
+	await tick()
+	vm._pendientes[0](true)                   // A responde después
+	await tick()
+	assert.equal(vm.borrador_huella, huella_b)
+})
+
+test('si el envío viejo falla y el nuevo sale bien, no quedan dos estados mezclados', async () => {
+	const vm = modal_con_respuestas()
+	vm.guardar_borrador_ahora()               // A
+	vm.start_row = 5
+	vm.guardar_borrador_ahora()               // B
+	vm._pendientes[0](false)
+	vm._pendientes[1](true)
+	await tick()
+	assert.equal(vm.borrador_huella, huella_del_borrador(armar_borrador(vm)))
+})
+
+test('si el POST falla justo al cerrar el modal, se reintenta una vez con lo que se mandaba', async () => {
+	const vm = modal_con_respuestas()
+	vm.on_hide()                              // manda y limpia
+	assert.equal(vm._despachos.length, 1)
+	vm._pendientes[0](false)
+	await tick()
+	assert.equal(vm._despachos.length, 2)
+	assert.equal(vm._despachos[1][1].uuid, 'uuid-analisis-1')
+	vm._pendientes[1](false)
+	await tick()
+	assert.equal(vm._despachos.length, 2, 'un solo reintento')
+})
+
+test('el store resuelve true si el servidor guardó y false si falló (sin lanzar)', async () => {
+	const ok = cargar_store({ defaults: {}, post() { return Promise.resolve({}) } })
+	const mal = cargar_store({ defaults: {}, post() { return Promise.reject(new Error('red')) } })
+	assert.equal(await ok.actions.guardar_borrador({}, { uuid: 'u', borrador: { paso: 2 } }), true)
+	const log = console.log
+	console.log = () => {}
+	try {
+		assert.equal(await mal.actions.guardar_borrador({}, { uuid: 'u', borrador: { paso: 2 } }), false)
+	} finally {
+		console.log = log
+	}
+})
+
+test('Index.vue no usa async/await en el guardado y el retomo del borrador', () => {
+	const fuente = fs.readFileSync(path.join(__dirname, '..', 'src/components/listado/modals/ai-excel-import/Index.vue'), 'utf8')
+	const bloque = fuente.slice(fuente.indexOf('guardar_borrador_ahora() {'), fuente.indexOf('texto_de_pendiente(item)'))
+	assert.doesNotMatch(bloque, /\basync\b|\bawait\b/)
+	assert.match(fuente, /paso_a_retomar\(self, res_analisis\.data\.borrador/)
+})
