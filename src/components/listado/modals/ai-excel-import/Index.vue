@@ -5,7 +5,7 @@
 	hide-footer
 	:title="modal_title"
 	@show="on_show"
-	@hide="reset">
+	@hide="on_hide">
 
 		<!-- Indicador de pasos -->
 		<div class="ai-import-steps m-b-20">
@@ -22,6 +22,50 @@
 		<!-- PASO 1: Subir archivo y analizar con IA                     -->
 		<!-- ========================================================== -->
 		<div v-if="step === 1">
+
+			<!--
+				Importaciones pendientes: análisis que el usuario ya hizo (o que siguen corriendo) y no
+				terminó de importar. Retomar no vuelve a pedir el archivo ni a analizarlo: el servidor
+				guarda el resultado y lo último que se editó desde el paso 2.
+			-->
+			<div
+			v-if="pendientes_de_este_modal.length"
+			class="ai-import-pendientes m-b-20"
+			data-testid="ai-import-pendientes">
+				<h6 class="m-b-5">Importaciones pendientes</h6>
+				<p class="text-muted small m-b-10">
+					Retomá una importación donde la dejaste, sin volver a subir el archivo.
+				</p>
+				<div
+				v-for="item in pendientes_de_este_modal"
+				:key="item.uuid"
+				class="ai-import-pendiente"
+				data-testid="ai-import-pendiente">
+					<div class="ai-import-pendiente-info">
+						<strong>{{ item.original_filename || 'Archivo sin nombre' }}</strong>
+						<small class="text-muted d-block">{{ texto_de_pendiente(item) }}</small>
+					</div>
+					<div class="ai-import-pendiente-acciones">
+						<b-button
+						size="sm"
+						variant="primary"
+						data-testid="ai-import-pendiente-retomar"
+						:disabled="loading"
+						@click="retomar_pendiente(item)">
+							Retomar
+						</b-button>
+						<b-button
+						size="sm"
+						variant="outline-secondary"
+						data-testid="ai-import-pendiente-descartar"
+						:disabled="loading"
+						@click="descartar_pendiente(item)">
+							Descartar
+						</b-button>
+					</div>
+				</div>
+				<hr>
+			</div>
 
 			<p v-if="permite_pdf" class="text-muted m-b-15">
 				Subí una planilla Excel o un catálogo PDF de hasta 10 MB y 30 páginas por archivo.
@@ -1449,6 +1493,13 @@ import {
 	hay_algo_para_mostrar,
 	es_recortado,
 } from './relaciones_parecidas'
+import {
+	armar_borrador,
+	aplicar_borrador,
+	huella_del_borrador,
+	corrida_a_retomar,
+	paso_a_retomar,
+} from './borrador'
 
 export default {
 	/* Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el aviso antes del primer import. */
@@ -1480,6 +1531,34 @@ export default {
 		return {
 			/* Prueba gratuita: el negocio ya confirmó que se eliminan los datos de ejemplo (ver importar()). */
 			semilla_confirmada: false,
+
+			/*
+			 * Importaciones pendientes recuperables (misión importaciones-pendientes-recuperables):
+			 *  - importacion_lanzada: ya se mandó POST /import; el análisis deja de ser retomable, así
+			 *    que cerrar el modal no tiene que guardar un borrador sobre él.
+			 *  - borrador_timer_id: debounce del guardado (y del reintento si falló).
+			 *  - borrador_huella: huella del último borrador que el servidor CONFIRMÓ guardado. Sólo
+			 *    se actualiza cuando el POST salió bien: si falló, el estado sigue "sucio" y el
+			 *    próximo guardado (o el del cierre del modal) lo vuelve a mandar.
+			 *  - borrador_huella_en_vuelo: huella del ÚLTIMO POST enviado que todavía no respondió. Es la
+			 *    referencia para decidir si hay algo nuevo que mandar: mientras haya uno en vuelo, lo que
+			 *    cuenta no es lo confirmado (puede ser más viejo) sino lo que el servidor va a tener al
+			 *    terminar. Se limpia sólo con la respuesta de ese último envío (borrador_seq).
+			 *  - borrador_seq / borrador_seq_confirmado: número de envío; una respuesta vieja que llega
+			 *    después de una nueva no pisa lo confirmado (respuestas fuera de orden).
+			 *  - borrador_sesion: cambia en cada reset(); una respuesta de una sesión anterior no toca
+			 *    el estado de la actual.
+			 *  - borrador_revision: marca creciente que viaja en el borrador; el servidor ignora un
+			 *    guardado con revisión menor a la que ya tiene (también fuera de orden en la red).
+			 */
+			importacion_lanzada: false,
+			borrador_timer_id: null,
+			borrador_huella: null,
+			borrador_huella_en_vuelo: null,
+			borrador_seq: 0,
+			borrador_seq_confirmado: 0,
+			borrador_sesion: 0,
+			borrador_revision: 0,
 
 			/* Paso actual del flujo (1, 2 o 3). */
 			step: 1,
@@ -1858,6 +1937,21 @@ export default {
 	},
 
 	computed: {
+
+		/* Importaciones pendientes del usuario para ESTE módulo (artículos, clientes o proveedores). */
+		pendientes_de_este_modal() {
+			const pendientes = this.$store.state.excel_analysis.pendientes || {}
+			return pendientes[this.model] || []
+		},
+
+		/*
+		 * Lo que habría que guardar ahora mismo, o null si no hay nada (paso 1, importación ya
+		 * lanzada). Es un computed para que Vue siga cada campo del borrador, mapeo incluido, y el
+		 * watcher de abajo se entere de cualquier edición.
+		 */
+		borrador_actual() {
+			return armar_borrador(this)
+		},
 		permite_pdf() {
 			return this.model === 'article' && this.prueba_permite_pdf
 		},
@@ -3005,6 +3099,11 @@ export default {
 	},
 
 	watch: {
+
+		/* Cualquier edición desde el paso 2 se guarda en el servidor (con espera, no por tecla). */
+		borrador_actual(nuevo) {
+			this.programar_guardado_de_borrador(nuevo)
+		},
 
 		/*
 		 * Orden de apertura dejada por el aviso de "terminó el análisis". Cubre el
@@ -5536,6 +5635,13 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
 
+				/*
+				 * La importación ya salió: el servidor sacó el análisis de los pendientes. Se marca
+				 * antes de cerrar para que on_hide no guarde un borrador sobre algo ya terminado.
+				 */
+				this.importacion_lanzada = true
+				this.$store.commit('excel_analysis/quitar_pendiente', this.analysis_uuid)
+
 				this.$bvModal.hide(this.modal_id)
 
 				this.$toast.success(
@@ -6150,6 +6256,9 @@ export default {
 				return
 			}
 
+			/* Si había un análisis abierto con ediciones, se guardan antes de empezar de cero. */
+			self.guardar_borrador_ahora()
+
 			/* Empezamos de cero: puede haber quedado estado de una importación anterior. */
 			self.reset()
 			self.loading = true
@@ -6211,8 +6320,11 @@ export default {
 					self.analysis_uuid = orden.uuid
 					self.aplicar_contexto_analisis(res.data.contexto)
 					self.aplicar_resultado_analisis(res.data.resultado)
+					/* Lo que el usuario había editado desde el paso 2 gana sobre lo que dedujo la IA. */
+					aplicar_borrador(self, res.data.borrador)
 					self.loading = false
-					self.step = 2
+					/* El paso en que lo dejó, si se puede mostrar sin recomendación; si no, el 2. */
+					self.step = paso_a_retomar(self, res.data.borrador, false, 2)
 					return
 				}
 
@@ -6252,8 +6364,11 @@ export default {
 					 * clientes y proveedores, se sigue al paso 4 (ver paso_despues_de_la_recomendacion).
 					 */
 					self.aplicar_resultado_recomendacion(chequeo_fallido ? {} : res.data.resultado)
+					/* Después de la recomendación: así las políticas que el usuario había elegido ganan. */
+					aplicar_borrador(self, res_analisis.data.borrador)
 					self.loading = false
-					self.step = self.paso_despues_de_la_recomendacion()
+					/* El paso exacto que tenía guardado (2, 3 o 4) si es válido; si no, el de siempre. */
+					self.step = paso_a_retomar(self, res_analisis.data.borrador, !chequeo_fallido, self.paso_despues_de_la_recomendacion())
 				})
 				.catch(function() {
 					if (token_corrida !== self.analysis_polling_token) return
@@ -6532,6 +6647,16 @@ export default {
 		 * @return {void}
 		 */
 		on_show() {
+			/*
+			 * Si un cierre de sesión cortó el guardado, el modal vuelve a admitir guardados NUEVOS al
+			 * reabrirse. Lo que se mandó antes del corte sigue invalidado para siempre: lo decide la
+			 * época del corte (epoca_de_corte_del_borrador), que acá no se toca.
+			 */
+			this._borrador_cortado = false
+
+			/* La lista de pendientes se pide siempre: es lo que se ve arriba del paso 1. */
+			this.$store.dispatch('excel_analysis/cargar_pendientes', this.model)
+
 			/* Ya hay una apertura dirigida en marcha (ver consumir_orden_de_apertura). */
 			if (this.loading || this.loading_recomendacion) {
 				return
@@ -6553,6 +6678,333 @@ export default {
 		},
 
 		/*
+		 * Al cerrar el modal: primero se guarda lo editado (si ya había un análisis) y recién
+		 * después se limpia la pantalla. Cerrar no descarta nada: la importación queda en la lista
+		 * de pendientes y se retoma desde ahí, sin volver a subir ni analizar el archivo.
+		 */
+		on_hide() {
+			this.guardar_borrador_ahora()
+			this.reset()
+		},
+
+		/*
+		 * Espera a que el usuario deje de tocar antes de mandar el borrador, y no lo manda si es
+		 * idéntico al último enviado.
+		 *
+		 * @param {Object|null} borrador  Lo que devolvió armar_borrador()
+		 * @return {void}
+		 */
+		programar_guardado_de_borrador(borrador) {
+			let self = this
+
+			if (self.borrador_timer_id) {
+				clearTimeout(self.borrador_timer_id)
+				self.borrador_timer_id = null
+			}
+
+			if (!borrador || huella_del_borrador(borrador) === self.huella_de_referencia_del_borrador()) {
+				return
+			}
+
+			self.borrador_timer_id = setTimeout(function() {
+				self.borrador_timer_id = null
+				self.guardar_borrador_ahora()
+			}, 1500)
+		},
+
+		/*
+		 * Manda el borrador ya, sin esperar. Sin análisis (paso 1) o con la importación lanzada no
+		 * hay nada que mandar.
+		 *
+		 * El borrador sólo se da por guardado cuando el servidor lo confirma (borrador_huella). Si el
+		 * POST falla, el estado queda sucio: el autoguardado vuelve a intentarlo en unos segundos y,
+		 * si el usuario cierra el modal antes, el cierre lo reintenta con el mismo contenido. Si el
+		 * POST falla justo cuando el modal ya se cerró (el reset() limpió el estado), se reintenta
+		 * una vez más con lo que se estaba mandando.
+		 *
+		 * @return {Promise<boolean>} true si no había nada que mandar o el envío salió bien
+		 */
+		guardar_borrador_ahora() {
+			/* Cortado (cierre de sesión o componente destruido): no entra nada nuevo. */
+			if (this._borrador_cortado) {
+				return Promise.resolve(false)
+			}
+
+			if (this.borrador_timer_id) {
+				clearTimeout(this.borrador_timer_id)
+				this.borrador_timer_id = null
+			}
+
+			const borrador = armar_borrador(this)
+
+			if (!borrador) {
+				return Promise.resolve(true)
+			}
+
+			const huella = huella_del_borrador(borrador)
+
+			/*
+			 * Se compara con lo último enviado (si sigue en vuelo) y, si no hay nada en vuelo, con lo
+			 * confirmado. Comparar siempre con lo confirmado omitía volver a un valor ya confirmado
+			 * mientras otro envío distinto seguía en vuelo, y el servidor se quedaba con el valor viejo.
+			 */
+			if (huella === this.huella_de_referencia_del_borrador()) {
+				return this.esperar_envios_de_borrador()
+			}
+
+			return this.enviar_borrador(this.analysis_uuid, borrador, huella, 0)
+		},
+
+		/*
+		 * Contra qué se compara el borrador actual para saber si hay algo nuevo que mandar: el
+		 * último envío que todavía no respondió o, si no hay, lo que el servidor confirmó.
+		 *
+		 * @return {String|null}
+		 */
+		huella_de_referencia_del_borrador() {
+			return this.borrador_huella_en_vuelo !== null && this.borrador_huella_en_vuelo !== undefined
+				? this.borrador_huella_en_vuelo
+				: this.borrador_huella
+		},
+
+		/*
+		 * True si lo que hay en pantalla es distinto de lo que el servidor confirmó.
+		 *
+		 * @return {Boolean}
+		 */
+		borrador_sin_confirmar() {
+			const borrador = armar_borrador(this)
+
+			return !!borrador && huella_del_borrador(borrador) !== this.borrador_huella
+		},
+
+		/*
+		 * Espera a que terminen los envíos del borrador que siguen en vuelo.
+		 *
+		 * @return {Promise<boolean>} false si alguno falló
+		 */
+		esperar_envios_de_borrador() {
+			return Promise.all((this._borrador_envios || []).slice()).then(function(resultados) {
+				return resultados.every(function(ok) { return ok !== false })
+			})
+		},
+
+		/*
+		 * Guardado previo a cerrar la sesión: manda lo pendiente, espera lo que está en vuelo y, si
+		 * quedó algo sin confirmar, lo reintenta una sola vez de inmediato (la sesión todavía vale).
+		 * No lanza: resuelve true si todo quedó confirmado y false si no.
+		 *
+		 * @return {Promise<boolean>}
+		 */
+		guardar_borrador_para_salir() {
+			let self = this
+			/* Sesión del borrador con la que arrancó el guardado: si se corta o cambia, las continuaciones mueren. */
+			const sesion = self.borrador_sesion
+			const epoca = self.epoca_de_corte_del_borrador()
+			const vigente = function() {
+				return !self._borrador_cortado && epoca === self.epoca_de_corte_del_borrador() && sesion === self.borrador_sesion
+			}
+
+			self.guardar_borrador_ahora()
+
+			return self.esperar_envios_de_borrador().then(function() {
+				if (!vigente()) {
+					return false
+				}
+
+				if (!self.borrador_sin_confirmar()) {
+					return true
+				}
+
+				self.guardar_borrador_ahora()
+
+				return self.esperar_envios_de_borrador().then(function() {
+					return vigente() && !self.borrador_sin_confirmar()
+				})
+			})
+		},
+
+		/*
+		 * Corta todo lo que el guardado tenía programado: debounce, reintento y, si hace falta, los
+		 * reintentos tras respuestas tardías. Invalida la sesión del borrador, así que lo que llegue
+		 * después no toca el estado. Lo usan el cierre de sesión y la destrucción del componente.
+		 *
+		 * @return {void}
+		 */
+		cortar_guardado_de_borrador() {
+			if (this.borrador_timer_id) {
+				clearTimeout(this.borrador_timer_id)
+				this.borrador_timer_id = null
+			}
+			this.borrador_huella_en_vuelo = null
+			this.borrador_sesion++
+			this._borrador_corte = this.epoca_de_corte_del_borrador() + 1
+			this._borrador_cortado = true
+		},
+
+		/*
+		 * Cuántas veces se cortó el guardado. Cada envío captura la época con la que salió: si al
+		 * responder es otra, lo cortaron y ya no le corresponde nada (ni tocar estado, ni reintentar,
+		 * ni programar timers). A diferencia de _borrador_cortado, reabrir el modal (on_show) no la
+		 * baja: habilita guardados nuevos, no resucita los de la sesión cancelada.
+		 *
+		 * @return {Number}
+		 */
+		epoca_de_corte_del_borrador() {
+			return this._borrador_corte || 0
+		},
+
+		/*
+		 * Un envío del borrador al servidor, con su número de envío y su revisión.
+		 *
+		 * @param {String} uuid      Análisis al que pertenece
+		 * @param {Object} borrador  Lo que devolvió armar_borrador()
+		 * @param {String} huella    Huella de ese borrador (sin la revisión)
+		 * @param {Number} reintentos  Cuántas veces se reintentó ya tras el cierre del modal
+		 * @param {Object|null} origen  Sólo en el reintento de una sesión ya cerrada: { sesion, seq, revision }
+		 *                              originales. Ese reintento manda la MISMA revisión (no toma una nueva,
+		 *                              si no pisaría lo que guardó la sesión nueva) y no toca el estado actual.
+		 * @return {Promise<boolean>} true si el servidor lo guardó; false si falló o ya no corresponde
+		 */
+		enviar_borrador(uuid, borrador, huella, reintentos, origen) {
+			let self = this
+			let sesion
+			let seq
+			let revision
+			const epoca = self.epoca_de_corte_del_borrador()
+
+			/* Cortado: ningún envío nuevo ni reintento (el de una sesión cerrada también es un POST). */
+			if (self._borrador_cortado) {
+				return Promise.resolve(false)
+			}
+
+			if (origen) {
+				sesion   = origen.sesion
+				seq      = origen.seq
+				revision = origen.revision
+			} else {
+				sesion   = self.borrador_sesion
+				seq      = ++self.borrador_seq
+				self.borrador_revision = Math.max(Date.now(), self.borrador_revision + 1)
+				self.borrador_huella_en_vuelo = huella
+				revision = self.borrador_revision
+			}
+
+			let enviado = Object.assign({}, borrador, { revision: revision })
+
+			const envio = self.$store.dispatch('excel_analysis/guardar_borrador', {
+				uuid:     uuid,
+				borrador: enviado,
+			}).then(function(guardado) {
+				const ok = guardado !== false
+
+				/*
+				 * Cortado mientras volaba (aunque después se haya reabierto el modal): la respuesta no
+				 * toca estado, no programa timers ni reintenta.
+				 */
+				if (self._borrador_cortado || epoca !== self.epoca_de_corte_del_borrador()) {
+					return ok
+				}
+
+				if (sesion !== self.borrador_sesion) {
+					/*
+					 * El modal se cerró (o se abrió otro análisis) mientras tanto: una sola vez más. Si la
+					 * sesión se cortó (cierre de sesión) o el componente se destruyó, no se reintenta.
+					 */
+					if (!ok && reintentos < 1 && !self._borrador_cortado) {
+						return self.enviar_borrador(uuid, borrador, huella, reintentos + 1, { sesion: sesion, seq: seq, revision: revision })
+					}
+					return ok
+				}
+
+				/* Sólo el ÚLTIMO envío suelta el "en vuelo": una respuesta vieja no lo borra. */
+				if (seq === self.borrador_seq) {
+					self.borrador_huella_en_vuelo = null
+				}
+
+				if (ok) {
+					/* Una respuesta vieja que llega tarde no pisa lo que ya confirmó un envío más nuevo. */
+					if (seq > self.borrador_seq_confirmado) {
+						self.borrador_seq_confirmado = seq
+						self.borrador_huella = huella
+					}
+					return true
+				}
+
+				/* Falló: sigue sucio. Se reintenta solo, salvo que mientras tanto ya haya otro programado. */
+				if (!self.borrador_timer_id && armar_borrador(self)) {
+					self.borrador_timer_id = setTimeout(function() {
+						self.borrador_timer_id = null
+						self.guardar_borrador_ahora()
+					}, 5000)
+				}
+
+				return false
+			})
+
+			/* Se lleva la cuenta de los envíos abiertos: el cierre de sesión espera a que terminen. */
+			if (!self._borrador_envios) {
+				self._borrador_envios = []
+			}
+			self._borrador_envios.push(envio)
+
+			const liberar = function() {
+				const i = self._borrador_envios.indexOf(envio)
+				if (i !== -1) {
+					self._borrador_envios.splice(i, 1)
+				}
+			}
+			envio.then(liberar, liberar)
+
+			return envio
+		},
+
+		/*
+		 * Texto debajo del nombre del archivo en la lista de pendientes: en qué quedó y desde cuándo.
+		 *
+		 * @param {Object} item  Un ítem de GET ai-excel-import/pendientes
+		 * @return {String}
+		 */
+		texto_de_pendiente(item) {
+			let estado = 'Análisis listo: seguís en el paso ' + (item.paso || 2)
+
+			if (item.estado !== 'listo') {
+				estado = 'Analizando el archivo…'
+			}
+
+			const fecha = item.actualizada_en || item.creada_en
+
+			return fecha ? estado + ' · ' + String(fecha).replace('T', ' ').slice(0, 16) : estado
+		},
+
+		/*
+		 * Retoma una importación de la lista: abre el resultado guardado en el servidor, sin pedir
+		 * el archivo. Si ya había llegado al paso 3 y la recomendación sigue ahí, vuelve a ese paso.
+		 *
+		 * @param {Object} item  Un ítem de GET ai-excel-import/pendientes
+		 * @return {void}
+		 */
+		retomar_pendiente(item) {
+			const corrida = corrida_a_retomar(item)
+
+			if (!corrida.uuid) {
+				return
+			}
+
+			this.abrir_desde_corrida(corrida)
+		},
+
+		/*
+		 * Descarta una importación pendiente: sale de la lista y no se puede retomar. No importa nada.
+		 *
+		 * @param {Object} item  Un ítem de GET ai-excel-import/pendientes
+		 * @return {void}
+		 */
+		descartar_pendiente(item) {
+			this.$store.dispatch('excel_analysis/descartar_pendiente', item.uuid)
+		},
+
+		/*
 		 * Resetea el estado del modal al cerrarlo para que la próxima vez
 		 * empiece desde el paso 1 limpio.
 		 *
@@ -6562,6 +7014,16 @@ export default {
 		 */
 		reset() {
 			this.soltar_seguimiento_del_analisis()
+
+			if (this.borrador_timer_id) {
+				clearTimeout(this.borrador_timer_id)
+				this.borrador_timer_id = null
+			}
+			this.borrador_huella = null
+			this.borrador_huella_en_vuelo = null
+			this.borrador_seq_confirmado = this.borrador_seq
+			this.borrador_sesion++
+			this.importacion_lanzada = false
 
 			this.analysis_uuid     = null
 			this.recomendacion_uuid = null
@@ -6641,6 +7103,16 @@ export default {
 	 * peticiones redundantes cuando el padre ya los cargó.
 	 */
 	created() {
+		/*
+		 * El cierre de sesión (auth/logout) tiene que guardar lo editado ANTES de invalidar la
+		 * sesión: se registra acá para que el store pueda esperarlo y, después, cortarlo.
+		 */
+		this._guardador_de_borrador = {
+			guardar: () => this.guardar_borrador_para_salir(),
+			cortar: () => this.cortar_guardado_de_borrador(),
+		}
+		this.$store.dispatch('excel_analysis/registrar_guardador', this._guardador_de_borrador)
+
 		if (this.addresses.length === 0) {
 			this.$store.dispatch('address/getModels')
 		}
@@ -6674,6 +7146,14 @@ export default {
 	 * servidor y avisa cuando termina.
 	 */
 	beforeDestroy() {
+		/*
+		 * Si se va de la vista con ediciones sin mandar (otra pantalla), se hace un último intento y
+		 * después se corta todo: sin timers, sin reintentos y sin que una respuesta tardía toque un
+		 * componente destruido. El cierre de sesión ya guardó antes, por el guardador del store.
+		 */
+		this.guardar_borrador_ahora()
+		this.cortar_guardado_de_borrador()
+		this.$store.dispatch('excel_analysis/quitar_guardador', this._guardador_de_borrador)
 		this.soltar_seguimiento_del_analisis()
 	},
 
@@ -6704,6 +7184,27 @@ export default {
 	&--active
 		background: var(--color-primary, #007bff)
 		color: #fff
+
+/* Lista de importaciones pendientes arriba del paso 1: en teléfono las acciones pasan debajo del nombre */
+.ai-import-pendiente
+	display: flex
+	flex-wrap: wrap
+	align-items: center
+	justify-content: space-between
+	gap: 8px
+	padding: 8px 12px
+	margin-bottom: 6px
+	border: 1px solid var(--bg-section, #e9ecef)
+	border-radius: 6px
+
+.ai-import-pendiente-info
+	flex: 1 1 200px
+	min-width: 0
+	overflow-wrap: anywhere
+
+.ai-import-pendiente-acciones
+	display: flex
+	gap: 6px
 
 /* Contenedor de notas de asistencia globales de Claude (paso 2) */
 .assistant-notes-container
