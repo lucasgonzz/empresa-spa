@@ -3296,7 +3296,7 @@ export default {
 			this.barras_repetidas_por_codigo_de_proveedor = !!(
 				barras
 				&& barras.hay_codigo_de_proveedor
-				&& (barras.filas_por_codigo_de_proveedor > 0 || barras.codigos_de_relleno > 0)
+				&& barras.filas_por_codigo_de_proveedor > 0
 			)
 		},
 
@@ -3330,6 +3330,8 @@ export default {
 				})
 				if (columna) {
 					columna.system_property = propiedad
+					// La columna queda elegida: deja de figurar como pendiente de elegir.
+					self.$delete(self.columnas_por_elegir, indice)
 				}
 			})
 
@@ -4896,6 +4898,12 @@ export default {
 				chequear_relaciones:        true,
 				/* Que el paso 3 salga del mapeo de esta tabla, no del que propuso la IA. */
 				recalcular_identificacion:  true,
+				/*
+				 * Misión importacion-formula-precio (20/11/2026): pide el análisis algorítmico del
+				 * precio, los descuentos y los códigos de barras repetidos (resultado.analisis_de_precio).
+				 * Sin esta bandera el backend no lo calcula.
+				 */
+				analizar_precio:            true,
 			}, { timeout: 120000 })
 			.then(function(res) {
 

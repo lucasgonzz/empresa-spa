@@ -141,7 +141,7 @@
 
 		<!-- 3. Códigos de barras repetidos -->
 		<b-alert
-		v-if="barras && (barras.grupos > 0 || barras.codigos_de_relleno > 0)"
+		v-if="barras && barras.grupos > 0"
 		show
 		variant="warning"
 		class="m-b-15"
@@ -150,9 +150,7 @@
 				<i class="icon-alert-triangle m-r-5"></i>
 				Hay códigos de barras repetidos en el Excel
 			</p>
-			<p
-			v-if="barras.grupos > 0"
-			class="small m-b-5 m-t-0">
+			<p class="small m-b-5 m-t-0">
 				{{ barras.grupos }} {{ barras.grupos === 1 ? 'código de barras aparece' : 'códigos de barras aparecen' }}
 				en más de una fila ({{ barras.filas }} filas en total). Por ejemplo, <code>{{ primer_ejemplo.codigo_de_barras }}</code>
 				está en
@@ -163,14 +161,8 @@
 				</span>.
 				Si se identifican por código de barras, esos artículos se pisan entre sí y queda uno solo.
 			</p>
-			<p
-			v-if="barras.codigos_de_relleno > 0"
-			class="small m-b-5 m-t-0">
-				Además, {{ barras.codigos_de_relleno }} filas tienen un código de barras de relleno
-				(<code>{{ valores_de_relleno }}</code>), que no identifica a ningún producto.
-			</p>
 
-			<template v-if="barras.hay_codigo_de_proveedor && (barras.filas_por_codigo_de_proveedor > 0 || barras.codigos_de_relleno > 0)">
+			<template v-if="barras.hay_codigo_de_proveedor && barras.filas_por_codigo_de_proveedor > 0">
 				<b-form-checkbox
 				:checked="barras_repetidas_por_codigo_de_proveedor"
 				class="m-t-8"
@@ -186,9 +178,6 @@
 						{{ barras.filas_por_codigo_de_proveedor }} {{ barras.filas_por_codigo_de_proveedor === 1 ? 'fila tiene' : 'filas tienen' }}
 						el código de barras repetido pero un código de proveedor distinto: se identifican por código de
 						proveedor y no se les carga el código de barras.
-					</li>
-					<li v-if="barras.codigos_de_relleno > 0">
-						Los códigos de barras de relleno no se cargan.
 					</li>
 					<li v-if="barras.filas_que_se_pisan > 0">
 						{{ barras.filas_que_se_pisan }} {{ barras.filas_que_se_pisan === 1 ? 'fila repite' : 'filas repiten' }}
@@ -268,13 +257,6 @@ export default {
 			return this.barras.ejemplos[0]
 		},
 
-		/* Valores de relleno más frecuentes, separados por coma. */
-		valores_de_relleno() {
-			if (!this.barras || !this.barras.valores_de_relleno) {
-				return ''
-			}
-			return Object.keys(this.barras.valores_de_relleno).join(', ')
-		},
 
 		/* Primera fila que no cierra con la cuenta, para el ejemplo. */
 		ejemplo_de_excepcion() {
