@@ -94,3 +94,9 @@ export const MINIMO_ENTRE_CONSULTAS_POR_VISIBILIDAD_MS = 10000
 export function puede_consultar_por_visibilidad(ultima_consulta_ms, ahora_ms) {
 	return !ultima_consulta_ms || (ahora_ms - ultima_consulta_ms) >= MINIMO_ENTRE_CONSULTAS_POR_VISIBILIDAD_MS
 }
+
+/** Sólo el evento en vivo con id válido puede originar un aviso; nunca el listado histórico. */
+export function id_de_aviso_de_pedido(payload) {
+	const id = payload && payload.order_id
+	return /^(?:[1-9][0-9]*)$/.test(String(id)) ? String(id) : null
+}
