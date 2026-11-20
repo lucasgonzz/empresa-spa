@@ -106,6 +106,31 @@ export default {
 		},
 
 		{
+			group_title: 'Contacto al pie de la tienda'
+		},
+		{
+			text: 'Título del contacto al pie',
+			key: 'footer_contacto_titulo',
+			type: 'text',
+			value: '',
+			descripcion_visible: 'Opcional. Hasta 80 caracteres de texto plano, sin HTML. Vacío usa el título predeterminado de la tienda.',
+		},
+		{
+			text: 'Correo de contacto al pie',
+			key: 'footer_contacto_email',
+			type: 'text',
+			value: '',
+			descripcion_visible: 'Opcional. Un correo válido de hasta 150 caracteres (por ejemplo ventas@tutienda.com). Vacío usa el correo predeterminado de la tienda. No cambia los destinatarios de avisos de pedidos ni el remitente de los mails.',
+		},
+		{
+			text: 'Texto de contacto al pie',
+			key: 'footer_contacto_texto',
+			type: 'textarea',
+			value: '',
+			descripcion_visible: 'Opcional. Hasta 2000 caracteres de texto plano, sin HTML; podés usar saltos de línea. Vacío usa el texto predeterminado de la tienda. No reemplaza Contacto ni Quiénes somos.',
+		},
+
+		{
 			group_title: 'Diseño'
 		},
 		{
