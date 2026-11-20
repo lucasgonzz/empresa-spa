@@ -41,6 +41,9 @@ export const CAMPOS_DEL_BORRADOR = [
 	'politica_otro_proveedor',
 	'politica_intra_archivo',
 	'desempatar_por_nombre',
+	// Misión importacion-formula-precio (20/11/2026): tildes del análisis del precio.
+	'descuentos_negativos_descuentan',
+	'barras_repetidas_por_codigo_de_proveedor',
 ]
 
 /*

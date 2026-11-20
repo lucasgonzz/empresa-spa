@@ -1100,9 +1100,26 @@
 
 			</div>
 
-			<!-- Explicación del comportamiento con bar_codes repetidos -->
+			<!--
+				Misión importacion-formula-precio (20/11/2026): análisis algorítmico del Excel (sin
+				IA). Cómo se llega al precio de venta, descuentos escritos con signo negativo y
+				códigos de barras repetidos, con sus tildes.
+			-->
+			<analisis-de-precio
+			v-if="model === 'article'"
+			:analisis="analisis_de_precio"
+			:descuentos_negativos_descuentan.sync="descuentos_negativos_descuentan"
+			:barras_repetidas_por_codigo_de_proveedor.sync="barras_repetidas_por_codigo_de_proveedor"
+			@corregir-mapeo="corregir_mapeo_con_la_formula">
+			</analisis-de-precio>
+
+			<!--
+				Explicación del comportamiento con bar_codes repetidos. Con el análisis del precio
+				(arriba) el aviso de códigos de barras lo da ese componente, con la opción de
+				identificar por código de proveedor; este queda para cuando el análisis no vino.
+			-->
 			<b-alert
-			v-if="bar_codes_detail.length > 0 || (duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > 0)"
+			v-if="!(analisis_de_precio && analisis_de_precio.codigos_de_barra) && (bar_codes_detail.length > 0 || (duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > 0))"
 			show
 			variant="warning"
 			class="m-b-15">
@@ -1485,6 +1502,7 @@
 import * as XLSX from 'xlsx/xlsx.mjs'
 import ModelIndex from '@/common-vue/components/model/Index'
 import RelacionesParecidas from './RelacionesParecidas'
+import AnalisisDePrecio from './AnalisisDePrecio'
 import prueba from '@/mixins/prueba'
 import {
 	decisiones_iniciales,
@@ -1512,6 +1530,7 @@ export default {
 	components: {
 		ModelIndex,
 		RelacionesParecidas,
+		AnalisisDePrecio,
 	},
 
 	props: {
@@ -1792,6 +1811,23 @@ export default {
 			 * nombre — es el contrato con empresa-api.
 			 */
 			desempatar_por_nombre: false,
+
+			/*
+			 * Misión importacion-formula-precio (20/11/2026): análisis algorítmico (sin IA) que
+			 * empresa-api arma al confirmar el paso 2 — fórmula del precio de venta, descuentos
+			 * escritos con signo y códigos de barras repetidos. Ver AnalisisDePrecio.vue.
+			 */
+			analisis_de_precio: null,
+
+			/*
+			 * Opciones de lectura que ofrece ese análisis. Viajan siempre en importar() con estos
+			 * nombres (contrato con empresa-api) y se guardan en el borrador.
+			 *  - descuentos_negativos_descuentan: «-25» le resta el 25 % al costo.
+			 *  - barras_repetidas_por_codigo_de_proveedor: con código de barras repetido y código
+			 *    de proveedor distinto, identificar por código de proveedor.
+			 */
+			descuentos_negativos_descuentan: false,
+			barras_repetidas_por_codigo_de_proveedor: false,
 
 			/*
 			 * Lo que el análisis del backend puede afirmar MIRANDO EL ARCHIVO sobre el desempate
@@ -3240,6 +3276,77 @@ export default {
 	},
 
 	methods: {
+		/**
+		 * Guarda el análisis del precio (misión importacion-formula-precio) y preselecciona sus
+		 * tildes con la recomendación:
+		 *  - descuentos negativos: tildado si la mayoría de los descuentos vienen en negativo o si la
+		 *    cuenta del precio de venta solo cierra leyéndolos como descuento;
+		 *  - códigos de barras repetidos: tildado si hay filas que se pueden distinguir por código
+		 *    de proveedor (sin el tilde, esos artículos se pisan entre sí).
+		 *
+		 * @param {Object|null} analisis - `analisis_de_precio` del resultado de get-recomendacion.
+		 */
+		aplicar_analisis_de_precio(analisis) {
+			this.analisis_de_precio = analisis ? Object.freeze(analisis) : null
+
+			let descuentos = analisis ? analisis.descuentos : null
+			this.descuentos_negativos_descuentan = !!(descuentos && descuentos.recomendar_negativos_descuentan)
+
+			let barras = analisis ? analisis.codigos_de_barra : null
+			this.barras_repetidas_por_codigo_de_proveedor = !!(
+				barras
+				&& barras.hay_codigo_de_proveedor
+				&& (barras.filas_por_codigo_de_proveedor > 0 || barras.codigos_de_relleno > 0)
+			)
+		},
+
+		/**
+		 * «Corregir el mapeo y revisarlo» de la fórmula del precio: aplica el mapeo con el que el
+		 * sistema llega al mismo precio de venta y vuelve al paso 2 para que el usuario lo revise y
+		 * lo confirme (al confirmar se recalcula todo el paso 3).
+		 *
+		 * @param {Object} mapeo_sugerido - { propiedad: índice de columna | null (= no importarla) }.
+		 * @param {Array}  intermedias    - Columnas intermedias de la cuenta: se dejan sin importar.
+		 */
+		corregir_mapeo_con_la_formula(mapeo_sugerido, intermedias) {
+			let self = this
+
+			Object.keys(mapeo_sugerido || {}).forEach(function(propiedad) {
+				let indice = mapeo_sugerido[propiedad]
+
+				// La propiedad deja de estar en la columna donde estaba (si no es la sugerida).
+				self.column_mapping.forEach(function(item) {
+					if (item.system_property === propiedad && item.excel_column_index !== indice) {
+						item.system_property = null
+					}
+				})
+
+				if (indice === null) {
+					return
+				}
+
+				let columna = self.column_mapping.find(function(item) {
+					return item.excel_column_index === indice
+				})
+				if (columna) {
+					columna.system_property = propiedad
+				}
+			})
+
+			// Las columnas intermedias (costo con descuentos, precio sin IVA...) no se importan.
+			let columnas_intermedias = intermedias || []
+			columnas_intermedias.forEach(function(intermedia) {
+				let columna = self.column_mapping.find(function(item) {
+					return item.excel_column_index === intermedia.indice
+				})
+				if (columna && columna.system_property && columna.system_property !== 'descripcion' && columna.system_property !== 'nombre') {
+					columna.system_property = null
+				}
+			})
+
+			this.step = 2
+		},
+
 		abrir_alta_proveedor() {
 			this.setModel(null, 'provider', [], false, false)
 
@@ -4982,6 +5089,13 @@ export default {
 				}
 			}
 
+			/*
+			 * Misión importacion-formula-precio (20/11/2026): análisis algorítmico del precio. Los
+			 * tildes arrancan con lo que el análisis recomienda; el borrador, si lo hay, los repone
+			 * después con lo que el usuario había elegido.
+			 */
+			this.aplicar_analisis_de_precio(resultado.analisis_de_precio || null)
+
 			/* Preseleccionar los valores recomendados. */
 			if (this.recomendacion_configuracion) {
 
@@ -5622,6 +5736,12 @@ export default {
 				 * mostró, y `undefined` en JSON se pierde en vez de viajar como false.
 				 */
 				desempatar_por_nombre:                              this.hay_codigos_de_proveedor_repetidos && this.desempatar_por_nombre === true,
+				/*
+				 * Misión importacion-formula-precio (20/11/2026): opciones de lectura del análisis
+				 * del precio. Se mandan siempre, también apagadas, por lo mismo que las de arriba.
+				 */
+				descuentos_negativos_descuentan:                    this.descuentos_negativos_descuentan === true,
+				barras_repetidas_por_codigo_de_proveedor:           this.barras_repetidas_por_codigo_de_proveedor === true,
 				/*
 				 * Misión importacion-relaciones-parecidas (8/10/2026): lo que el usuario decidió en
 				 * la lista de nombres parecidos del paso 3, para los tres modelos —
@@ -7079,6 +7199,10 @@ export default {
 			/* 🔴 Vuelve al seguro: una importación no hereda el desempate por nombre de la anterior. */
 			this.desempatar_por_nombre       = false
 			this.desempate_por_nombre        = null
+			/* Misión importacion-formula-precio: el análisis y sus tildes eran del archivo anterior. */
+			this.analisis_de_precio                       = null
+			this.descuentos_negativos_descuentan          = false
+			this.barras_repetidas_por_codigo_de_proveedor = false
 			this.preview_rows                = []
 			this.encabezados_repetidos       = null
 			this.ver_detalle_identificacion  = false
