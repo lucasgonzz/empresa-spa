@@ -25,7 +25,16 @@ export default {
 				habilitado: 'Avisos habilitados en este dispositivo.',
 				desactivado: 'Avisos desactivados en este dispositivo.',
 			}
-			return this.estado.pendiente ? 'Esperando el permiso del navegador…' : textos[this.estado.codigo]
+			if (this.estado.pendiente) return 'Esperando el permiso del navegador…'
+			// Este navegador tiene la API pero no deja crear avisos desde la página (Chrome y similares en Android).
+			if (this.estado.codigo === 'sin_soporte' && this.estado.motivo === 'constructor') {
+				return 'Este navegador no permite mostrar avisos desde esta página (pasa en Chrome y otros navegadores de Android). Usá los correos de pedidos de la configuración de tu tienda.'
+			}
+			// Permiso y opt-in no prueban que el navegador pueda mostrar el aviso: eso se confirma con el primer pedido.
+			if (this.estado.codigo === 'habilitado' && !this.estado.verificado) {
+				return textos.habilitado + ' Todavía no se comprobó que el navegador pueda mostrarlos: se confirmará con el primer pedido nuevo.'
+			}
+			return textos[this.estado.codigo]
 		},
 	},
 	mounted() {

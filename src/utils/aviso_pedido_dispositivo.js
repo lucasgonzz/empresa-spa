@@ -1,5 +1,18 @@
 import { id_de_aviso_de_pedido } from '@/utils/pedidos_nuevos'
 
+// Marcas del DISPOSITIVO (no del comercio ni del usuario): la capacidad del navegador no depende de quién inició sesión.
+// Guardan el userAgent con el que se comprobaron: si el navegador se actualiza o se cambia, dejan de valer.
+const CLAVE_DISPOSITIVO = 'cc:aviso-pedido:v1:dispositivo'
+
+// Chrome y los navegadores basados en Chromium de Android exponen Notification y requestPermission, pero
+// `new Notification()` lanza TypeError "Illegal constructor" (sólo admiten showNotification de un service worker,
+// que esta función no usa). Detectarlo por plataforma evita declarar "habilitado" antes del primer pedido, porque
+// la única prueba directa sería construir un aviso. Firefox para Android queda afuera de esta regla: si también
+// fallara, la marca persistida de recibir() lo cubre desde el primer pedido en adelante.
+export function constructor_ilegal_por_plataforma(agente) {
+	return /Android/i.test(agente || '') && !/Firefox/i.test(agente || '')
+}
+
 // Una instancia por aplicación. Nunca deriva avisos de listados, polling ni reconexiones.
 // localStorage es propio del navegador/dispositivo y se separa además por comercio y usuario.
 export function crear_avisador(obtener_navegador) {
@@ -8,6 +21,8 @@ export function crear_avisador(obtener_navegador) {
 	let pendiente = false
 	let generacion = 0
 	let fallo = false
+	// Falla del constructor: es del navegador, así que sobrevive al cambio de usuario/comercio (a diferencia de `fallo`).
+	let fallo_constructor = false
 	let abiertos = []
 	const observadores = new Set()
 	function navegador() { return obtener_navegador() || {} }
@@ -17,21 +32,45 @@ export function crear_avisador(obtener_navegador) {
 	function escribir(sufijo, valor) {
 		try { navegador().localStorage.setItem(clave + sufijo, valor); return true } catch (error) { return false }
 	}
+	function agente() { return String(navegador().userAgent || '') }
+	function leer_dispositivo(sufijo) {
+		try { return navegador().localStorage.getItem(CLAVE_DISPOSITIVO + sufijo) } catch (error) { return null }
+	}
+	function escribir_dispositivo(sufijo, valor) {
+		try { navegador().localStorage.setItem(CLAVE_DISPOSITIVO + sufijo, valor); return true } catch (error) { return false }
+	}
+	// Sólo cuenta la marca hecha con este mismo navegador y versión.
+	function marca_vigente(sufijo) {
+		const marca = leer_dispositivo(sufijo)
+		return marca !== null && marca === (agente() || 'sin_agente')
+	}
+	function constructor_incapaz() {
+		return fallo_constructor || constructor_ilegal_por_plataforma(agente()) || marca_vigente(':incapaz')
+	}
 	function cerrar() {
 		abiertos.forEach(function (aviso) { try { aviso.close() } catch (error) { /* Ya cerrado. */ } })
 		abiertos = []
 	}
 	function estado() {
 		const nav = navegador()
-		const soportado = Boolean(nav.isSecureContext && nav.Notification && nav.Notification.requestPermission && !fallo)
+		const incapaz = constructor_incapaz()
+		const soportado = Boolean(nav.isSecureContext && nav.Notification && nav.Notification.requestPermission && !fallo && !incapaz)
 		const permiso = soportado ? nav.Notification.permission : 'default'
-		const elegido = Boolean(clave && leer(':optin') === '1')
+		// Un opt-in guardado con el permiso en "default" (revocado o reiniciado) no cuenta como elegido: si no, el texto
+		// dice "desactivados" y el botón ofrece "Desactivar". Con permiso otorgado o denegado sí se muestra el opt-in.
+		const elegido = Boolean(clave && soportado && permiso !== 'default' && leer(':optin') === '1')
 		let codigo = 'desactivado'
 		if (!soportado) codigo = 'sin_soporte'
 		else if (permiso === 'denied') codigo = 'denegado'
 		else if (!clave || !conectado) codigo = 'desconectado'
 		else if (elegido && permiso === 'granted') codigo = 'habilitado'
-		return { codigo, elegido, pendiente }
+		// verificado: un aviso real ya se construyó en este navegador. Antes del primer pedido "habilitado" es sólo
+		// permiso + opt-in; la interfaz no debe prometer más que eso.
+		return {
+			codigo, elegido, pendiente,
+			verificado: marca_vigente(':verificado'),
+			motivo: codigo === 'sin_soporte' && incapaz ? 'constructor' : 'navegador',
+		}
 	}
 	function publicar() {
 		const actual = estado()
@@ -114,11 +153,18 @@ export function crear_avisador(obtener_navegador) {
 					tag: clave + ':' + id,
 				})
 				abiertos.push(aviso)
+				escribir_dispositivo(':verificado', agente() || 'sin_agente')
 				aviso.onclose = function () { abiertos = abiertos.filter(function (otro) { return otro !== aviso }) }
 				if (abiertos.length > 10) abiertos.shift().close()
 				return true
 			} catch (error) {
-				fallo = true
+				fallo_constructor = true
+				// Sólo el "Illegal constructor" (TypeError) es permanente para este navegador: se recuerda tras recargar.
+				// Cualquier otro error se informa en esta sesión pero no se persiste, para no bloquear para siempre.
+				if (error && (error.name === 'TypeError' || /illegal constructor/i.test(String(error.message || '')))) {
+					escribir_dispositivo(':incapaz', agente() || 'sin_agente')
+					escribir_dispositivo(':verificado', '')
+				}
 				cerrar()
 				publicar()
 				return false
