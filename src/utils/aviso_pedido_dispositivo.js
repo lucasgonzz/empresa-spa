@@ -32,7 +32,12 @@ export function crear_avisador(obtener_navegador) {
 	function escribir(sufijo, valor) {
 		try { navegador().localStorage.setItem(clave + sufijo, valor); return true } catch (error) { return false }
 	}
-	function agente() { return String(navegador().userAgent || '') }
+	// En el navegador real el agente vive en window.navigator.userAgent (window.userAgent no existe); sólo si falta se
+	// lee el userAgent de arriba, que es la forma que inyectan los navegadores falsos de los tests.
+	function agente() {
+		const nav = navegador()
+		return String((nav.navigator && nav.navigator.userAgent) || nav.userAgent || '')
+	}
 	function leer_dispositivo(sufijo) {
 		try { return navegador().localStorage.getItem(CLAVE_DISPOSITIVO + sufijo) } catch (error) { return null }
 	}
@@ -156,7 +161,6 @@ export function crear_avisador(obtener_navegador) {
 				escribir_dispositivo(':verificado', agente() || 'sin_agente')
 				aviso.onclose = function () { abiertos = abiertos.filter(function (otro) { return otro !== aviso }) }
 				if (abiertos.length > 10) abiertos.shift().close()
-				return true
 			} catch (error) {
 				fallo_constructor = true
 				// Sólo el "Illegal constructor" (TypeError) es permanente para este navegador: se recuerda tras recargar.
@@ -169,6 +173,10 @@ export function crear_avisador(obtener_navegador) {
 				publicar()
 				return false
 			}
+			// Fuera del try: si un observador lanza, no debe tomarse por un constructor roto (eso se persistiría).
+			// Avisa ya a los suscriptores: sin esto el control seguía en "Todavía no se comprobó…" hasta un focus/storage.
+			publicar()
+			return true
 		},
 	}
 	return api
