@@ -3,6 +3,8 @@
 :title="title"
 size="xl"
 hide-footer
+content-class="search-modal-content"
+body-class="search-modal-body"
 :id="modal_id"
 :data-tour="ancla_tour"
 :ignore-enforce-focus-selector="ancla_tour ? '.demo-guia-robot, .tour-soporte' : null"
@@ -68,8 +70,10 @@ hide-footer
 			:model_name="model_name"></btn-create-model>
 		</div>
 		<div
+		class="search-modal-cuerpo"
 		v-if="!saving_if_not_exist">
 			<div
+			class="search-modal-lista"
 			v-if="loading || results.length">
 
 				<!--
@@ -106,6 +110,7 @@ hide-footer
 				</div>
 
 				<table-component
+				class="search-modal-tabla"
 				:data-tour="ancla_tour && busqueda_realizada && !loading && results.length ? 'vender.resultados_buscador_articulos' : null"
 				:properties="properties"
 				:selected_index="selected_index"
@@ -185,6 +190,13 @@ hide-footer
 <script>
 import TableComponent from '@/common-vue/components/display/TableComponent'
 import { aviso_busqueda_pendiente, TEXTO_BUSCADOR_VACIO } from '@/utils/textos_busqueda'
+import {
+	criterio_para_buscar,
+	estado_de_paginado_al_abrir,
+	pagina_de_resultados,
+	texto_de_cantidad,
+	total_de_paginas,
+} from '@/common-vue/components/search/paginado_del_modal'
 import ColumnsPreferencesConfigModal from '@/common-vue/components/view/header/props-to-show/ColumnsPreferencesConfigModal.vue'
 import {
 	default_column_width_for_property,
@@ -330,6 +342,16 @@ export default {
 			current_page: null,
 			total_pages: null,
 			total_results: 0,
+
+			// True cuando la API acoto el conteo (criterio muy corto con mas coincidencias que el
+			// tope): total_results es entonces "tope + 1" y el contador dice «Más de N». Ausente en la
+			// respuesta (API anterior, o cualquier busqueda que no sea la de Vender) cuenta como false.
+			total_es_minimo: false,
+
+			// Busqueda SIN conexion: lista completa ya filtrada y ordenada. `results` muestra solo la
+			// pagina visible (per_page filas) y cambiar de pagina re-corta esta lista sin volver a
+			// filtrar. Null cuando la ultima busqueda fue contra la API (ahi pagina el servidor).
+			resultados_sin_conexion_completos: null,
 
 			ya_se_busco: true,
 
@@ -556,8 +578,13 @@ export default {
 		 * consumidor con route_to_search propio que no devuelva esa clave imprimiria "undefined".
 		 */
 		resultados_cantidad() {
-			if (this.busqueda_realizada && typeof this.total_results === 'number') {
-				return this.total_results
+			// Tambien cuenta como "hay total" la lista conservada entre aperturas (Vender/Compras):
+			// onModalShow() baja busqueda_realizada pero el total y el paginado siguen siendo los de
+			// esa lista, y mostrar 50 (lo que entra en la pagina) contradeciria al paginador.
+			let hay_total = this.busqueda_realizada
+				|| (!this.limpiar_resultados_de_busqueda && this.total_results > 0)
+			if (hay_total && typeof this.total_results === 'number') {
+				return texto_de_cantidad(this.total_results, this.total_es_minimo)
 			}
 			return this.results.length
 		},
@@ -693,9 +720,26 @@ export default {
 			// autoseleccion, no el usuario.
 			this.seleccion_manual = false
 
-			this.total_results = 0
-			this.current_page = null
-			this.total_pages = null
+			// 🔴 El paginado se resetea SOLO si la lista tambien se va. Vender y Compras conservan
+			// `results` entre aperturas (limpiar_resultados_de_busqueda=false) para elegir un articulo
+			// atras del otro sobre la misma busqueda; si aca se bajaba total_results/current_page a
+			// cero, al reabrir quedaban 50 filas sin paginador ni contador (reporte de Lucas,
+			// 22/11/2026). Las reglas estan en paginado_del_modal.js, con sus tests.
+			const paginado = estado_de_paginado_al_abrir({
+				conserva_resultados: !this.limpiar_resultados_de_busqueda,
+				cantidad_resultados: this.results.length,
+				total_results: this.total_results,
+				current_page: this.current_page,
+				total_pages: this.total_pages,
+			})
+			this.total_results = paginado.total_results
+			this.current_page = paginado.current_page
+			this.total_pages = paginado.total_pages
+			if (paginado.total_results === 0) {
+				// Sin paginado conservado tampoco hay bandera de tope ni lista completa sin conexion.
+				this.total_es_minimo = false
+				this.resultados_sin_conexion_completos = null
+			}
 			this.duracion_busqueda_ms = null
 			this.busqueda_inicio_ms = null
 			// Un criterio tipeado en una apertura anterior no debe ganarle a lo que traiga el padre
@@ -743,6 +787,8 @@ export default {
 			this.query = ''
 			this.results = []
 			this.total_results = 0
+			this.total_es_minimo = false
+			this.resultados_sin_conexion_completos = null
 			this.current_page = null
 			this.total_pages = null
 			this.selected_index = -1
@@ -1063,10 +1109,40 @@ export default {
 				this.$toast.error('No se pudo guardar la configuracion de busqueda')
 			}
 		},
+		/**
+		 * El usuario eligio otra pagina en el paginador.
+		 *
+		 * Contra la API se vuelve a buscar (search(true) toma el criterio de la ultima busqueda). Sin
+		 * conexion la lista completa ya esta en memoria: se re-corta la pagina sin volver a filtrar.
+		 *
+		 * @param {Number} page Pagina elegida, desde 1.
+		 * @return {void}
+		 */
 		setCurrentPage(page) {
 			this.current_page = page 
+			if (this.resultados_sin_conexion_completos !== null) {
+				this.mostrar_pagina_sin_conexion()
+				this.foco_en_input()
+				return
+			}
 			this.search(true)
 			this.foco_en_input()
+		},
+		/**
+		 * Muestra en `results` la pagina current_page de la lista completa de la busqueda sin
+		 * conexion. La seleccion con flechas/Enter/clic opera sobre lo visible, asi que se vuelve a
+		 * marcar la primera fila como en cualquier lista nueva.
+		 *
+		 * @return {void}
+		 */
+		mostrar_pagina_sin_conexion() {
+			this.results = pagina_de_resultados(
+				this.resultados_sin_conexion_completos,
+				this.current_page,
+				this.per_page
+			)
+			this.setFirstSelectedRow()
+			this.seleccion_manual = false
 		},
 		foco_en_input() {
 			let input_name = this._id+'-search-modal-input'
@@ -1134,7 +1210,18 @@ export default {
 			// exista criterio de texto, o con que el buscador general haya mandado filtros fijos
 			// (extra_filters), que es la busqueda "solo por categoria" del grupo 179. El filtrado
 			// offline si necesita texto: filtra en memoria comparando strings, no puede aplicar filtros.
-			let tiene_texto = ('' + this.query).trim().length > 0
+			// Al paginar, el criterio es el de la ULTIMA busqueda (la de la lista que se ve), no lo que
+			// diga hoy el input: despues de reabrir el modal puede estar vacio o distinto, y sin esto la
+			// pagina 2 no buscaba o buscaba otra cosa (el cuerpo del POST ya usa query_value de la
+			// ultima busqueda).
+			let criterio = criterio_para_buscar({
+				from_pagination: from_pagination,
+				query: '' + this.query,
+				query_value_ultima_busqueda: this.ultima_busqueda_buscador_general
+					? this.ultima_busqueda_buscador_general.query_value
+					: null,
+			})
+			let tiene_texto = ('' + criterio).trim().length > 0
 			let tiene_filtros_fijos = !!(
 				this.ultima_busqueda_buscador_general
 				&& this.ultima_busqueda_buscador_general.extra_filters
@@ -1210,6 +1297,10 @@ export default {
 						}) : response.data
 						this.total_pages = response.last_page
 						this.total_results = response.total
+						// La API acota el conteo en criterios muy cortos (solo contexto Vender); si la clave no
+						// viene (API anterior u otro modelo) el total es exacto.
+						this.total_es_minimo = res.data.total_es_minimo === true
+						this.resultados_sin_conexion_completos = null
 
 						this.finishSearch()
 					})
@@ -1318,7 +1409,16 @@ export default {
 					console.log('luego:')
 					console.log(results)
 
-					this.total_results = this.results.length
+					// Se pagina en memoria: la lista completa (ordenada una sola vez) queda guardada y
+					// `results` muestra solo la pagina 1; el resto se corta en setCurrentPage sin volver a
+					// filtrar. Con 50 filas o menos no hay paginador, igual que contra la API.
+					this.orderAlpabethic()
+					this.resultados_sin_conexion_completos = this.results.slice()
+					this.total_results = this.resultados_sin_conexion_completos.length
+					this.total_es_minimo = false
+					this.total_pages = total_de_paginas(this.total_results, this.per_page)
+					this.current_page = 1
+					this.results = pagina_de_resultados(this.resultados_sin_conexion_completos, 1, this.per_page)
 					
 					this.finishSearch()
 				}
@@ -1327,6 +1427,8 @@ export default {
 				// muestra el estado "Escribí qué querés buscar" (prompt 02 de este grupo).
 				this.results = []
 				this.total_results = 0
+				this.total_es_minimo = false
+				this.resultados_sin_conexion_completos = null
 				this.loading = false
 			}
 		},
@@ -1811,10 +1913,71 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
+
+// Alto del modal de busqueda (mision search-modal-paginado-y-busqueda-lenta, 22/11/2026).
+//
+// El modal NUNCA puede ser mas alto que la ventana: antes, con 50 resultados, el contenido pasaba
+// el alto de pantalla y quien scrolleaba era la capa `.modal` (la "pagina"). Ahora el tope lo pone
+// `.modal-content` (margenes de bootstrap: 0.5rem por lado en telefono, 1.75rem desde 576px) y
+// el sobrante lo absorbe SOLO la tabla de resultados, que scrollea dentro de su contenedor.
+//
+// Por que no el `scrollable` de bootstrap-vue: pone `overflow: hidden` en `.modal-content` y
+// `overflow-y: auto` en `.modal-body`, y eso recorta el menu desplegable de propiedades del
+// buscador general (b-dropdown, que se abre hacia abajo dentro del header). Aca el tope es solo
+// de alto y no se recorta nada.
+//
+// La cadena flex hasta la tabla es la que hace posible el scroll interno: cada eslabon lleva
+// `min-height: 0`, porque un hijo flex no baja de su alto de contenido (min-height: auto) y sin
+// eso la tabla empujaria al modal fuera de la ventana. Eslabones, de afuera hacia adentro:
+// .search-modal-content > .search-modal-body > .search-component-modal > .search-modal-cuerpo >
+// .search-modal-lista > .search-modal-tabla > div > .table-component-scroll.
+.search-modal-content
+	// `dvh` descuenta la barra de direcciones del telefono; el `vh` de arriba es el fallback.
+	max-height: calc(100vh - 1rem)
+	max-height: calc(100dvh - 1rem)
+	@media (min-width: 576px)
+		max-height: calc(100vh - 3.5rem)
+		max-height: calc(100dvh - 3.5rem)
+	.modal-header
+		flex: 0 0 auto
+
+.search-modal-body
+	display: flex
+	flex-direction: column
+	flex: 1 1 auto
+	min-height: 0
+	min-width: 0
+
 .search-component-modal
 	width: 100%
 	display: flex
 	flex-direction: column
+	flex: 1 1 auto
+	min-height: 0
+	min-width: 0
+
+	// Cuerpo (estado vacio o lista) y lista de resultados: ocupan el resto del alto y lo reparten
+	// con la tabla; el encabezado "Resultados N + paginador" mide lo que mide y queda fijo arriba.
+	.search-modal-cuerpo, .search-modal-lista
+		display: flex
+		flex-direction: column
+		flex: 1 1 auto
+		min-height: 0
+		min-width: 0
+	.search-modal-resultados
+		flex: 0 0 auto
+
+	// TableComponent (clase puesta desde el template de arriba) y su div intermedio sin clase.
+	// El contenedor con scroll vertical y horizontal propio es .table-component-scroll.
+	.search-modal-tabla, .search-modal-tabla > div
+		display: flex
+		flex-direction: column
+		flex: 1 1 auto
+		min-height: 0
+		min-width: 0
+	.search-modal-tabla .table-component-scroll
+		flex: 1 1 auto
+		min-height: 0
 	.header
 		display: flex
 		flex-direction: row

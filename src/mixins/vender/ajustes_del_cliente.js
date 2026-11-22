@@ -4,7 +4,6 @@ import vender_set_total from '@/mixins/vender_set_total'
 	(ver texto_de_donde_desactivar_ajustes, abajo).
 */
 import diseno_de_vender from '@/mixins/vender/diseno_de_vender'
-import { ETAPAS, TITULOS_DE_ETAPAS } from '@/components/vender/layout/elementos'
 /*
 	El aviso lleva el nombre del cliente y los de sus descuentos/recargos, que son texto libre, y
 	vue-toast-notification pinta el mensaje como HTML (innerHTML): sin escapar, un nombre con
@@ -489,9 +488,10 @@ export default {
 		 * Hasta los diseños decía siempre "desplegá el paso 3 «Cierre y opciones»", porque ahí
 		 * estaban los paneles. Ahora cada panel (Descuentos, Recargos) puede estar en cualquier
 		 * etapa, o fuera del diseño:
-		 * - todos en una etapa plegable (1 o 3): "desplegá el paso N «Título» y desactivalos en ..."
-		 *   (con el predeterminado sale exactamente el texto de antes);
-		 * - todos en la etapa 2, que no se pliega: "desactivalos en ... (paso 2 «Título»)";
+		 * - todos en una sección plegable (con el predeterminado la 1 o la 3): "desplegá el paso N
+		 *   «Título» y desactivalos en ..." (con el predeterminado sale exactamente el texto de antes);
+		 * - todos en una sección que no se pliega (la etapa 2, o una de alto fijo): "desactivalos en
+		 *   ... (paso N «Título»)";
 		 * - en etapas distintas: cada panel con su paso entre paréntesis;
 		 * - si el diseño sacó alguno, se nombra solo lo que se puede desactivar; si los sacó todos,
 		 *   no se agrega nada: mandar al vendedor a buscar un panel que no existe es peor que no
@@ -525,8 +525,14 @@ export default {
 				return ''
 			}
 
+			/*
+				"paso N «Titulo»": el numero y el titulo son los de la seccion en el diseño en uso. El
+				titulo lo escribe el usuario del ABM: NO se escapa aca porque todo el texto que arma
+				este metodo pasa despues por escapar_html() al armar el toast (que pinta HTML).
+			*/
 			let paso = function (etapa) {
-				return 'paso ' + (ETAPAS.indexOf(etapa) + 1) + ' «' + TITULOS_DE_ETAPAS[etapa] + '»'
+				let seccion = self.seccion_de_vender(etapa)
+				return 'paso ' + (seccion ? seccion.numero : '?') + ' «' + (seccion ? seccion.titulo : '') + '»'
 			}
 
 			/* "en Descuentos", "en Recargos" o "en Descuentos y en Recargos" */
@@ -541,7 +547,8 @@ export default {
 
 			let donde = ''
 
-			if (misma_etapa && ubicados[0].etapa !== 'etapa_2') {
+			/* "Desplegá" sólo si la sección se puede plegar: una fija o la etapa 2 ya están a la vista */
+			if (misma_etapa && self.seccion_de_vender_es_plegable(ubicados[0].etapa)) {
 				donde = 'desplegá el ' + paso(ubicados[0].etapa) + ' y desactivalos ' + nombres.join(' y ')
 			} else if (misma_etapa) {
 				donde = 'desactivalos ' + nombres.join(' y ') + ' (' + paso(ubicados[0].etapa) + ')'
