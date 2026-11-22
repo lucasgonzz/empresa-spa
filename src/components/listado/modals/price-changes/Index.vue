@@ -84,12 +84,16 @@ export default {
 			loading: false,
 			// Id del cambio de precio a destacar (cuando se llega desde el historial del proveedor); null = ninguno.
 			highlighted_change_id: null,
+			// Timer del próximo reintento del scroll a la fila destacada (null = ninguno) y cuántos intentos van.
+			scroll_timer: null,
+			scroll_attempts: 0,
 		}
 	},
 	created() {
 		this.$root.$on('price-changes:highlight', this.set_highlight)
 	},
 	beforeDestroy() {
+		this.cancel_scroll_retry()
 		this.$root.$off('price-changes:highlight', this.set_highlight)
 	},
 	computed: {
@@ -213,28 +217,73 @@ export default {
 			this.highlighted_change_id = price_change_id
 		},
 		/**
-		 * Lleva la vista hasta la fila del cambio destacado. Se llama cuando llegan los datos del servidor y
-		 * cuando el modal termina de pintarse (@shown de b-modal); espera al siguiente ciclo de render
-		 * para que la tabla ya tenga la fila marcada. El contenido del b-modal se monta fuera del
-		 * componente, por eso se busca en el documento y no en $el. Sin destacado o sin fila no hace nada.
+		 * Lleva la vista hasta la fila del cambio destacado, con reintentos acotados. Se llama cuando
+		 * termina la carga de datos y cuando el modal termina de pintarse (@shown de b-modal). Reinicia
+		 * la cuenta de intentos y arranca el primero en el siguiente ciclo de render.
 		 * @return {void}
 		 */
 		scroll_to_highlight() {
+			this.cancel_scroll_retry()
+			this.scroll_attempts = 0
+			this.$nextTick(this.try_scroll_to_highlight)
+		},
+		/**
+		 * Un intento de llevar la vista a la fila destacada. La fila puede no existir todavía (b-table
+		 * repinta después de la carga y la recarga del modal vacía la tabla) o el scroll puede ser pisado
+		 * por bootstrap-vue; por eso, mientras la fila no esté a la vista y queden intentos, se vuelve a
+		 * intentar cada pocos milisegundos. Apenas la fila está a la vista termina: no se le roba el
+		 * scroll al usuario. Sin destacado no hace nada. El contenido del b-modal se monta fuera del
+		 * componente, por eso se busca en el documento y no en $el.
+		 * @return {void}
+		 */
+		try_scroll_to_highlight() {
+			this.scroll_timer = null
 			if (this.highlighted_change_id === null || typeof document == 'undefined') {
 				return
 			}
-			this.$nextTick(() => {
-				let row = document.querySelector('#price-changes tr.historial-cambio-destacado')
-				if (row && typeof row.scrollIntoView == 'function') {
+			let row = document.querySelector('#price-changes tr.historial-cambio-destacado')
+			if (row) {
+				if (this.is_row_in_view(row)) {
+					return
+				}
+				if (typeof row.scrollIntoView == 'function') {
 					row.scrollIntoView({ block: 'center', behavior: 'auto' })
 				}
-			})
+			}
+			this.scroll_attempts++
+			if (this.scroll_attempts < 15) {
+				this.scroll_timer = setTimeout(this.try_scroll_to_highlight, 150)
+			}
+		},
+		/**
+		 * True si la fila está completa dentro de la pantalla. Sin medidas (no hay getBoundingClientRect
+		 * o window) se asume que no se ve, y se scrollea.
+		 * @param {Object} row Elemento de la fila.
+		 * @return {Boolean}
+		 */
+		is_row_in_view(row) {
+			if (typeof row.getBoundingClientRect != 'function' || typeof window == 'undefined') {
+				return false
+			}
+			let rect = row.getBoundingClientRect()
+			return rect.top >= 0 && rect.bottom <= window.innerHeight
+		},
+		/**
+		 * Corta el reintento pendiente del scroll, si lo hay.
+		 * @return {void}
+		 */
+		cancel_scroll_retry() {
+			if (this.scroll_timer) {
+				clearTimeout(this.scroll_timer)
+				this.scroll_timer = null
+			}
 		},
 		/**
 		 * Al cerrar el modal se olvida el destacado, para que la próxima apertura sea la de siempre.
 		 * @return {void}
 		 */
 		al_cerrar_modal() {
+			this.cancel_scroll_retry()
 			this.highlighted_change_id = null
 		},
 		/**
