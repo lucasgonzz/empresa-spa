@@ -1,36 +1,45 @@
 /*
-	Resolucion de un "Diseño de Vender" (mision diseno-vender-configurable, 28/9/2026).
+	Resolucion de un "Diseño de Vender" (mision diseno-vender-configurable, 28/9/2026; formato v2 con
+	secciones configurables en la mision vender-secciones-personalizables, 22/11/2026).
 
 	Un diseño guardado (`vender_layouts.layout`) es un JSON que el backend NO interpreta: no conoce el
 	catalogo de elementos, que vive en elementos.js. Lo interpreta este archivo, y lo usan las dos
 	puntas de la SPA: Vender (para dibujar) y el editor del ABM (para editar).
 
-	Formato (version 1):
+	Formato (version 2; ver secciones.js para el detalle de cada parte):
 
 		{
-			version: 1,
-			etapas: {
+			version: 2,
+			plantilla: 'agil',          // opcional: plantilla del sistema de la que viene
+			etapas: {                   // campos de cada seccion (la clave es el id de la seccion)
 				etapa_1: [ {key: 'metodo_de_pago', cols: 4}, {key: 'separador', id: 'separador_1', cols: 12} ],
 				etapa_2: [ ... ],
 				etapa_3: [ ... ],
+				seccion_4: [ ... ],
 			},
 			sacados: ['combos'],
+			secciones: { etapa_1: {titulo, descripcion, color, alto, alto_fijo, plegado}, ... },
+			disposicion: [ {columnas: [ {ancho: 4, secciones: ['etapa_1']}, ... ]}, ... ],
 		}
 
-	`layout = null` (el "Diseño predeterminado" que siembra el seeder) significa "el diseño del sistema":
-	ver diseno_predeterminado.js.
+	Un diseño version 1 (sin `secciones` ni `disposicion`) se resuelve con la disposicion de siempre
+	(una columna con las tres etapas) y los metadatos de fabrica: se ve igual que antes.
+
+	`layout = null` (el "Diseño predeterminado" que siembra el seeder) significa "el diseño del sistema"
+	(diseno_predeterminado.js), y `{version: 2, plantilla: 'agil'}` sin `etapas` el diseño agil
+	(diseno_agil.js): los dos se arman en codigo.
 
 	🔴 LA REGLA QUE NO SE PUEDE PERDER: resolver_diseno() SIEMPRE devuelve TODOS los elementos del
-	catalogo, cada uno una sola vez, ubicado en una etapa o en `sacados`. Es lo que garantiza que un
+	catalogo, cada uno una sola vez, ubicado en una seccion o en `sacados`. Es lo que garantiza que un
 	campo que se agregue a Vender en el futuro aparezca en los diseños ya guardados (se inserta al
 	lado de su predecesor del orden por defecto) y que un obligatorio nunca quede afuera aunque el JSON
-	lo diga (vuelve a su etapa). La disponibilidad (extension apagada, sin permiso) NO se aplica aca
-	sino al dibujar, con elementos_visibles(): asi un elemento conserva su lugar mientras su extension
-	esta apagada.
+	lo diga (vuelve a su seccion; si esa seccion ya no esta en el diseño, a la seccion de respaldo, ver
+	seccion_de_respaldo() en secciones.js). La disponibilidad (extension apagada, sin permiso) NO se
+	aplica aca sino al dibujar, con elementos_visibles(): asi un elemento conserva su lugar mientras su
+	extension esta apagada.
 */
 import {
 	ELEMENTOS,
-	ETAPAS,
 	KEY_SEPARADOR,
 	elemento,
 	es_marcador,
@@ -42,6 +51,20 @@ import {
 	se_fuerza,
 } from './elementos'
 import diseno_predeterminado, { VERSION_DEL_FORMATO } from './diseno_predeterminado'
+import diseno_agil from './diseno_agil'
+import {
+	PLANTILLAS,
+	asegurar_seccion_fija,
+	ancho_de_columna_de,
+	disposicion_predeterminada,
+	es_layout_de_plantilla,
+	escalar_cols_a_columna,
+	ids_en_orden,
+	normalizar_disposicion,
+	normalizar_meta_de_seccion,
+	seccion_de_respaldo,
+	titulo_por_defecto,
+} from './secciones'
 
 /*
 	Mismo patron que valida el backend (VenderLayoutHelper::normalizar_layout) para el id de un
@@ -102,20 +125,24 @@ function indice_de_key(lista, key) {
 }
 
 /**
- * Inserta un elemento que el diseño no nombra en su etapa por defecto: despues del predecesor mas
- * cercano (en el orden por defecto) que este en esa etapa; si no hay ninguno, antes del sucesor mas
- * cercano; si tampoco, al final.
+ * Inserta un elemento que el diseño no nombra en su seccion: la que dice el catalogo si el diseño
+ * la tiene; si no, la de respaldo (ver seccion_de_respaldo()). Va despues del predecesor mas
+ * cercano (en el orden por defecto) que este en esa seccion; si no hay ninguno, antes del sucesor
+ * mas cercano; si tampoco, al final. Su ancho es el por defecto, escalado al de la columna donde
+ * vive la seccion (un campo de 4 en una columna de 4 queda de 12: el mismo ancho en pantalla).
  *
- * @param {Object} etapas etapas del diseño que se esta resolviendo (se muta)
+ * @param {Object} etapas campos por seccion del diseño que se esta resolviendo (se muta)
  * @param {Object} el elemento del catalogo
  * @param {Object} predeterminado diseño predeterminado ya armado
  * @param {Object} vm
+ * @param {Array} disposicion disposicion del diseño (de ahi salen los ids y el ancho de la columna)
  * @returns {void}
  */
-function insertar_en_su_lugar(etapas, el, predeterminado, vm) {
-	let lista = etapas[el.etapa]
+function insertar_en_su_lugar(etapas, el, predeterminado, vm, disposicion) {
+	let destino = seccion_de_respaldo(el.etapa, ids_en_orden(disposicion))
+	let lista = etapas[destino]
 
-	/* Orden por defecto de la etapa, sin marcadores */
+	/* Orden por defecto de la seccion de origen del campo, sin marcadores */
 	let orden = []
 	predeterminado.etapas[el.etapa].forEach(function (item) {
 		if (!es_marcador(item.key)) {
@@ -146,37 +173,66 @@ function insertar_en_su_lugar(etapas, el, predeterminado, vm) {
 
 	lista.splice(insertar_en, 0, {
 		key: el.key,
-		cols: cols_por_defecto(el.key, vm),
+		cols: escalar_cols_a_columna(cols_por_defecto(el.key, vm), ancho_de_columna_de(disposicion, destino)),
 	})
 }
 
 /**
  * Resuelve un diseño guardado contra el catalogo actual.
  *
- * - null, un string que no es JSON o algo sin `etapas` -> diseño predeterminado.
- * - Descarta keys desconocidas (elementos retirados) y repetidas (gana la primera).
+ * - null, un string que no es JSON o algo sin `etapas` -> diseño predeterminado; `{version: 2,
+ *   plantilla: 'agil'}` sin `etapas` -> diseño agil.
+ * - La disposicion se normaliza (ver normalizar_disposicion()): sin disposicion (un v1) es la de
+ *   siempre; sin `etapa_2` se la agrega; hasta 6 secciones.
+ * - Los metadatos de cada seccion se completan y acotan (normalizar_meta_de_seccion()).
+ * - Descarta keys desconocidas (elementos retirados) y repetidas (gana la primera), y los campos
+ *   de una seccion que no esta en la disposicion.
  * - Acota `cols` a 1..12 (lo que no es numero toma el ancho por defecto del elemento).
  * - Filtra `sacados`: conocidos, no repetidos y NO obligatorios.
- * - Todo elemento del catalogo que no quedo ubicado ni sacado se inserta en su etapa por defecto.
+ * - Todo elemento del catalogo que no quedo ubicado ni sacado se inserta en su seccion por
+ *   defecto o, si el diseño ya no la tiene, en la de respaldo.
  *
  * @param {Object|string|null} layout
  * @param {Object} vm componente de la SPA
- * @returns {{version: number, etapas: Object, sacados: Array}}
+ * @returns {{version: number, plantilla: (string|undefined), etapas: Object, sacados: Array, secciones: Object, disposicion: Array}}
  */
 export function resolver_diseno(layout, vm) {
 	let predeterminado = diseno_predeterminado(vm)
 	let base = parsear(layout)
 
-	if (!es_diseno_valido(base)) {
+	/* Plantilla de origen del diseño, si la tiene: sobrevive a editarlo y a "Restablecer" */
+	let plantilla = null
+
+	if (es_layout_de_plantilla(base)) {
+		if (base && base.plantilla === 'agil') {
+			base = diseno_agil(vm)
+			plantilla = base.plantilla
+		} else {
+			base = predeterminado
+		}
+	} else if (!es_diseno_valido(base)) {
 		base = predeterminado
+	} else if (PLANTILLAS.indexOf(base.plantilla) !== -1) {
+		plantilla = base.plantilla
 	}
 
+	/* Disposicion: la del diseño normalizada; sin ninguna (un v1) la de siempre */
+	let disposicion = normalizar_disposicion(base.disposicion)
+	if (!disposicion.length) {
+		disposicion = disposicion_predeterminada()
+	}
+	disposicion = asegurar_seccion_fija(disposicion)
+
+	let ids = ids_en_orden(disposicion)
+
 	let etapas = {}
+	let secciones = {}
 	let vistos = {}
 	let ids_de_marcadores = {}
 
-	ETAPAS.forEach(function (etapa) {
+	ids.forEach(function (etapa) {
 		etapas[etapa] = []
+		secciones[etapa] = normalizar_meta_de_seccion(etapa, base.secciones ? base.secciones[etapa] : null)
 
 		let items = Array.isArray(base.etapas[etapa]) ? base.etapas[etapa] : []
 
@@ -233,14 +289,23 @@ export function resolver_diseno(layout, vm) {
 			return
 		}
 		vistos[el.key] = true
-		insertar_en_su_lugar(etapas, el, predeterminado, vm)
+		insertar_en_su_lugar(etapas, el, predeterminado, vm, disposicion)
 	})
 
-	return {
+	let resuelto = {
 		version: VERSION_DEL_FORMATO,
 		etapas: etapas,
 		sacados: sacados,
+		secciones: secciones,
+		disposicion: disposicion,
 	}
+
+	/* La clave `plantilla` sólo existe si el diseño viene de una (así los demás resuelven idénticos) */
+	if (plantilla !== null) {
+		resuelto.plantilla = plantilla
+	}
+
+	return resuelto
 }
 
 /**
@@ -343,13 +408,13 @@ export function etapa_se_mantiene_abierta(resuelto, etapa, vm) {
 /**
  * Devuelve el diseño con los elementos FORZADOS vueltos a su lugar: los que el diseño saco pero
  * que, para este usuario, se tienen que dibujar igual (`se_fuerza_si` del catalogo; hoy solo la
- * cantidad, con "pedir la cantidad al vender" prendido). Se insertan en su etapa por defecto, al
- * lado de su predecesor, con su ancho por defecto.
+ * cantidad, con "pedir la cantidad al vender" prendido). Se insertan en su seccion por defecto
+ * (o la de respaldo), al lado de su predecesor, con su ancho por defecto.
  *
  * Es para dibujar Vender, NO para el editor: el editor tiene que mostrar el diseño tal como se
  * guardo (con la cantidad en la bandeja y el aviso de que igual aparece).
  *
- * No muta el que recibe.
+ * No muta el que recibe; conserva sus secciones, su disposicion y su plantilla.
  *
  * @param {Object} resuelto salida de resolver_diseno()
  * @param {Object} vm
@@ -369,27 +434,35 @@ export function aplicar_elementos_forzados(resuelto, vm) {
 	}
 
 	let etapas = {}
-	ETAPAS.forEach(function (etapa) {
+	Object.keys(resuelto.etapas).forEach(function (etapa) {
 		etapas[etapa] = (resuelto.etapas[etapa] || []).slice()
 	})
 
 	let predeterminado = diseno_predeterminado(vm)
 
 	forzados.forEach(function (key) {
-		insertar_en_su_lugar(etapas, elemento(key), predeterminado, vm)
+		insertar_en_su_lugar(etapas, elemento(key), predeterminado, vm, resuelto.disposicion)
 	})
 
-	return {
+	let con_forzados = {
 		version: resuelto.version,
 		etapas: etapas,
 		sacados: resuelto.sacados.filter(function (key) {
 			return forzados.indexOf(key) === -1
 		}),
+		secciones: resuelto.secciones,
+		disposicion: resuelto.disposicion,
 	}
+
+	if (resuelto.plantilla) {
+		con_forzados.plantilla = resuelto.plantilla
+	}
+
+	return con_forzados
 }
 
 /**
- * Etapa en la que esta ubicada una key en un diseño resuelto, o null si esta sacada.
+ * Seccion (id) en la que esta ubicada una key en un diseño resuelto, o null si esta sacada.
  *
  * @param {Object} resuelto
  * @param {string} key
@@ -397,8 +470,11 @@ export function aplicar_elementos_forzados(resuelto, vm) {
  */
 export function etapa_de_elemento(resuelto, key) {
 	let encontrada = null
-	ETAPAS.forEach(function (etapa) {
-		if (encontrada === null && resuelto && resuelto.etapas && indice_de_key(resuelto.etapas[etapa] || [], key) >= 0) {
+	if (!resuelto || !resuelto.etapas) {
+		return null
+	}
+	Object.keys(resuelto.etapas).forEach(function (etapa) {
+		if (encontrada === null && indice_de_key(resuelto.etapas[etapa] || [], key) >= 0) {
 			encontrada = etapa
 		}
 	})
@@ -466,15 +542,24 @@ export function nuevo_id_de_separador() {
 
 /**
  * Deja un diseño listo para mandar a la API: solo {key, cols} (y el id de los separadores), sin
- * ninguna propiedad de interfaz que el editor le haya colgado a los items.
+ * ninguna propiedad de interfaz que el editor le haya colgado a los items. Sale en formato v2:
+ * `etapas` en el orden de lectura de la disposicion, `sacados`, `secciones` (con el titulo en
+ * null si es el de fabrica) y `disposicion`, mas `plantilla` si el diseño viene de una.
  *
- * @param {{etapas: Object, sacados: Array}} diseno
- * @returns {{version: number, etapas: Object, sacados: Array}}
+ * @param {{etapas: Object, sacados: Array, secciones: Object, disposicion: Array, plantilla: (string|undefined)}} diseno
+ * @returns {{version: number, plantilla: (string|undefined), etapas: Object, sacados: Array, secciones: Object, disposicion: Array}}
  */
 export function serializar_diseno(diseno) {
-	let etapas = {}
+	let disposicion = normalizar_disposicion(diseno ? diseno.disposicion : null)
+	if (!disposicion.length) {
+		disposicion = disposicion_predeterminada()
+	}
+	disposicion = asegurar_seccion_fija(disposicion)
 
-	ETAPAS.forEach(function (etapa) {
+	let etapas = {}
+	let secciones = {}
+
+	ids_en_orden(disposicion).forEach(function (etapa) {
 		etapas[etapa] = []
 
 		let items = (diseno && diseno.etapas && Array.isArray(diseno.etapas[etapa])) ? diseno.etapas[etapa] : []
@@ -496,6 +581,13 @@ export function serializar_diseno(diseno) {
 				cols: acotar_cols(item.cols, 12),
 			})
 		})
+
+		let meta = normalizar_meta_de_seccion(etapa, diseno && diseno.secciones ? diseno.secciones[etapa] : null)
+		if (meta.titulo === titulo_por_defecto(etapa)) {
+			/* El de fabrica no se congela: se guarda null y Vender usa el que corresponda */
+			meta.titulo = null
+		}
+		secciones[etapa] = meta
 	})
 
 	let sacados = []
@@ -507,11 +599,18 @@ export function serializar_diseno(diseno) {
 		}
 	})
 
-	return {
-		version: VERSION_DEL_FORMATO,
-		etapas: etapas,
-		sacados: sacados,
+	let serializado = { version: VERSION_DEL_FORMATO }
+
+	if (diseno && PLANTILLAS.indexOf(diseno.plantilla) !== -1) {
+		serializado.plantilla = diseno.plantilla
 	}
+
+	serializado.etapas = etapas
+	serializado.sacados = sacados
+	serializado.secciones = secciones
+	serializado.disposicion = disposicion
+
+	return serializado
 }
 
 /**

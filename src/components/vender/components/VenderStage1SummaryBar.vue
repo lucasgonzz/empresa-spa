@@ -5,9 +5,14 @@
 		Cada chip tiene un ícono de lápiz que lleva al campo correspondiente: abre la etapa donde lo
 		puso el diseño de Vender en uso (con el predeterminado, la 1), lo trae a la vista y lo enfoca.
 		Si el diseño en uso no muestra ese campo, avisa (ver editar_campo).
+
+		Se esconde cuando ninguna de las secciones que dibujan esos campos se puede plegar (con el
+		Diseño agil la columna de la izquierda esta siempre a la vista y la barra repetiria lo mismo):
+		ver barra_de_resumen_de_vender_hace_falta() del mixin de diseño. Con el predeterminado la
+		etapa 1 es plegable y la barra se muestra como siempre.
 	-->
 	<div
-	v-if="has_any_data"
+	v-if="has_any_data && barra_de_resumen_de_vender_hace_falta()"
 	class="vender-summary-bar vender-full-bleed">
 		<!-- Chip: Sucursal -->
 		<div

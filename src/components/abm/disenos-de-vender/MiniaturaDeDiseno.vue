@@ -1,54 +1,75 @@
 <template>
 	<!--
-		Miniatura de un Diseño de Vender para su tarjeta en la solapa: las tres etapas como bandas, con
-		un bloque por campo del ancho de sus columnas (N/12) y el separador como una linea. Dibuja lo
-		mismo que Vender va a mostrar en ESTE negocio: resolver_diseno + elementos_visibles, las mismas
-		dos funciones que usa Vender. El salto de fila no se dibuja pero corta la fila, como en Vender.
-		La etapa 2 lleva debajo la tabla de articulos, que es fija.
+		Miniatura de un Diseño de Vender para su tarjeta en la solapa: las secciones del diseño dibujadas
+		en su disposicion (bandas de arriba abajo, columnas con su ancho, secciones apiladas en cada
+		columna), cada una con el color que le eligio el negocio y un bloque por campo del ancho de sus
+		columnas (N/12); el separador va como una linea. Dibuja lo mismo que Vender va a mostrar en ESTE
+		negocio: resolver_diseno + elementos_visibles, las mismas dos funciones que usa Vender. El salto de
+		fila no se dibuja pero corta la fila, como en Vender. La seccion de la tabla de articulos (etapa
+		2) lleva debajo la tabla, que es fija.
 
-		Es decorativa (aria-hidden): el nombre y el detalle de la tarjeta dicen lo mismo en texto.
+		El alto de una seccion de alto fijo es proporcional a su alto en doceavos; el de una automatica
+		sigue a sus campos (con un minimo de dos bloques).
+
+		Es decorativa (aria-hidden): el nombre y el detalle de la tarjeta dicen lo mismo en texto. Los
+		titulos NO se dibujan (son texto del usuario y ahi no entrarian).
 	-->
 	<div
 	class="miniatura-de-diseno"
 	aria-hidden="true">
 		<div
-		v-for="banda in bandas"
-		:key="banda.etapa"
+		v-for="(banda, indice_de_banda) in bandas"
+		:key="'banda-' + indice_de_banda"
 		class="miniatura-de-diseno__banda"
-		:class="'acento-etapa-' + banda.numero">
-			<span class="miniatura-de-diseno__numero">{{ banda.numero }}</span>
-			<div class="miniatura-de-diseno__contenido">
-				<div class="miniatura-de-diseno__grilla">
-					<span
-					v-for="item in banda.items"
-					:key="identidad(item)"
-					class="miniatura-de-diseno__celda"
-					:class="{
-						'miniatura-de-diseno__celda--separador': item.key === KEY_SEPARADOR,
-						'miniatura-de-diseno__celda--salto': item.key === KEY_SALTO_DE_FILA,
-					}"
-					:data-cols="item.cols">
-						<span class="miniatura-de-diseno__bloque"></span>
-					</span>
-					<span
-					v-if="!banda.items.length"
-					class="miniatura-de-diseno__vacia"></span>
+		:class="{ 'miniatura-de-diseno__banda--alta': banda.alta }">
+			<div
+			v-for="(columna, indice_de_columna) in banda.columnas"
+			:key="'columna-' + indice_de_columna"
+			class="miniatura-de-diseno__columna"
+			:style="{ flex: columna.ancho + ' 1 0' }">
+				<div
+				v-for="seccion in columna.secciones"
+				:key="seccion.id"
+				class="miniatura-de-diseno__seccion"
+				:class="'acento-' + seccion.color"
+				:style="seccion.estilo">
+					<span class="miniatura-de-diseno__numero">{{ seccion.numero }}</span>
+					<div class="miniatura-de-diseno__contenido">
+						<div class="miniatura-de-diseno__grilla">
+							<span
+							v-for="item in seccion.items"
+							:key="identidad(item)"
+							class="miniatura-de-diseno__celda"
+							:class="{
+								'miniatura-de-diseno__celda--separador': item.key === KEY_SEPARADOR,
+								'miniatura-de-diseno__celda--salto': item.key === KEY_SALTO_DE_FILA,
+							}"
+							:data-cols="item.cols">
+								<span class="miniatura-de-diseno__bloque"></span>
+							</span>
+							<span
+							v-if="!seccion.items.length"
+							class="miniatura-de-diseno__vacia"></span>
+						</div>
+						<span
+						v-if="seccion.id === 'etapa_2'"
+						class="miniatura-de-diseno__tabla"></span>
+					</div>
 				</div>
-				<span
-				v-if="banda.etapa === 'etapa_2'"
-				class="miniatura-de-diseno__tabla"></span>
 			</div>
 		</div>
 	</div>
 </template>
 <script>
-import { ETAPAS, KEY_SEPARADOR, KEY_SALTO_DE_FILA } from '@/components/vender/layout/elementos'
+import { KEY_SEPARADOR, KEY_SALTO_DE_FILA } from '@/components/vender/layout/elementos'
 import { resolver_diseno, elementos_visibles } from '@/components/vender/layout/resolver_diseno'
+import { ids_en_orden } from '@/components/vender/layout/secciones'
 import { identidad } from './editor/estado_del_editor'
 
 /**
- * Miniatura de un diseño (mision diseno-vender-configurable, 28/9/2026). El `vm` que piden las
- * funciones del contrato es este mismo componente (los mixins globales estan en todos).
+ * Miniatura de un diseño (mision diseno-vender-configurable, 28/9/2026; disposicion en columnas en
+ * vender-secciones-personalizables, 22/11/2026). El `vm` que piden las funciones del contrato es
+ * este mismo componente (los mixins globales estan en todos).
  */
 export default {
 	name: 'MiniaturaDeDiseno',
@@ -67,21 +88,45 @@ export default {
 	},
 	computed: {
 		/**
-		 * Una banda por etapa con los items que Vender dibuja (disponibles, separadores limpios).
+		 * Las bandas del diseño con sus columnas y secciones, listas para dibujar: cada seccion con su
+		 * numero (orden de lectura), color, los items que Vender dibuja (disponibles, separadores
+		 * limpios) y el estilo con su alto. Una banda es "alta" si tiene alguna seccion de alto fijo:
+		 * ahi las secciones se reparten el alto de la banda en proporcion a sus doceavos.
 		 *
 		 * @returns {Array}
 		 */
 		bandas() {
 			let self = this
 			let resuelto = resolver_diseno(this.modelo.layout, this)
+			let ids = ids_en_orden(resuelto.disposicion)
 			let bandas = []
 
-			ETAPAS.forEach(function (etapa, indice) {
-				bandas.push({
-					etapa: etapa,
-					numero: indice + 1,
-					items: elementos_visibles(resuelto, etapa, self),
+			resuelto.disposicion.forEach(function (banda) {
+				let alta = false
+				let columnas = []
+
+				banda.columnas.forEach(function (columna) {
+					let secciones = []
+
+					columna.secciones.forEach(function (id) {
+						let meta = resuelto.secciones[id]
+						if (meta.alto_fijo) {
+							alta = true
+						}
+						secciones.push({
+							id: id,
+							numero: ids.indexOf(id) + 1,
+							color: meta.color,
+							items: elementos_visibles(resuelto, id, self),
+							/* Fija: crece en proporcion a su alto; automatica: lo que midan sus campos */
+							estilo: meta.alto_fijo ? { flex: meta.alto + ' 1 0' } : { flex: '0 0 auto' },
+						})
+					})
+
+					columnas.push({ ancho: columna.ancho, secciones: secciones })
 				})
+
+				bandas.push({ alta: alta, columnas: columnas })
 			})
 
 			return bandas
@@ -110,10 +155,33 @@ export default {
 	flex-direction: column
 	gap: 8px
 
+// Una banda es una fila de columnas. Con una seccion de alto fijo la banda tiene un alto propio
+// (84px, 12 doceavos de 7px) y sus secciones se lo reparten; si todas son automaticas mide lo que
+// midan sus campos, como siempre.
 .miniatura-de-diseno__banda
 	display: flex
+	align-items: stretch
+	gap: 6px
+
+.miniatura-de-diseno__banda--alta
+	height: 84px
+
+.miniatura-de-diseno__columna
+	display: flex
+	flex-direction: column
+	gap: 4px
+	min-width: 0
+
+// Una seccion: el circulo con su numero y, al lado, sus campos. El color sale de la clase acento-*
+.miniatura-de-diseno__seccion
+	display: flex
 	align-items: flex-start
-	gap: 8px
+	gap: 5px
+	min-height: 0
+	padding: 3px 4px
+	border: 1px solid var(--color-border-secondary)
+	border-radius: 5px
+	overflow: hidden
 
 .miniatura-de-diseno__numero
 	display: inline-flex

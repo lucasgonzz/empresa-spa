@@ -53,10 +53,10 @@
 			<b-button
 			variant="outline-secondary"
 			size="sm"
-			title="Vuelve a poner cada campo donde estaba en el diseño original de Vender. No cambia el nombre ni el uso."
+			title="Vuelve a poner cada sección y cada campo donde estaba en el diseño original. No cambia el nombre ni el uso."
 			@click="$emit('restablecer')">
 				<i class="bi bi-arrow-counterclockwise"></i>
-				Restablecer el diseño predeterminado
+				{{ texto_restablecer }}
 			</b-button>
 			<!-- Si el diseño sigue al del sistema, o si al guardar va a dejar de seguirlo -->
 			<p
@@ -94,6 +94,11 @@ export default {
 		nombre_invalido: {
 			type: Boolean,
 			default: false,
+		},
+		/* Texto del boton de restablecer: dice a que vuelve ("el diseño ágil" o "el diseño predeterminado") */
+		texto_restablecer: {
+			type: String,
+			default: 'Restablecer el diseño predeterminado',
 		},
 		/* Linea debajo de "Restablecer": si el diseño sigue al del sistema o va a dejar de seguirlo, o null */
 		nota_del_diseno: {
