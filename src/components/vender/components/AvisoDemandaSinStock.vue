@@ -65,17 +65,42 @@ export default {
 		aviso(aviso) {
 			this.detener_temporizador()
 			if (aviso) {
-				let self = this
-				this.temporizador = setTimeout(function () {
-					self.cerrar()
-				}, DURACION_AVISO_MS)
+				this.arrancar_temporizador()
 			}
 		},
 	},
+	/**
+	 * Un aviso que ya estaba en el store al montar (el vendedor salió de Vender y volvió, o el POST
+	 * terminó cuando el componente no existía) no dispara el `watch`: se arranca la cuenta acá para que
+	 * "se va sola a los 12 s" se cumpla siempre.
+	 */
+	mounted() {
+		if (this.aviso) {
+			this.arrancar_temporizador()
+		}
+	},
+	/**
+	 * Decisión: el aviso vive en el store global pero el temporizador es local, así que al destruir el
+	 * componente se limpia también el aviso. Es lo más simple y robusto: no puede quedar una tarjeta
+	 * "huérfana" sin cuenta regresiva. Si el POST vuelve después de salir, el aviso queda en el store y
+	 * el `mounted` de la próxima visita a Vender lo limpia a los 12 s.
+	 */
 	beforeDestroy() {
 		this.detener_temporizador()
+		this.$store.commit('demanda_sin_stock/limpiar_aviso')
 	},
 	methods: {
+
+		/**
+		 * Arranca la cuenta de DURACION_AVISO_MS que cierra el aviso solo (reemplaza la anterior).
+		 */
+		arrancar_temporizador() {
+			let self = this
+			this.detener_temporizador()
+			this.temporizador = setTimeout(function () {
+				self.cerrar()
+			}, DURACION_AVISO_MS)
+		},
 
 		/**
 		 * Cancela el temporizador del cierre automático, si hay uno.
@@ -116,7 +141,8 @@ export default {
 			let promesas = []
 			aviso.ids.forEach(id => {
 				promesas.push(
-					self.$api.put('unmet-demand/' + id + '/cancel')
+					// Banderas de silencio como en el POST del mixin: sólo sale el toast propio si falla.
+					self.$api.put('unmet-demand/' + id + '/cancel', {}, { skip_global_error_event: true, skip_global_validation_toast: true })
 					.then(() => true)
 					.catch(() => false)
 				)

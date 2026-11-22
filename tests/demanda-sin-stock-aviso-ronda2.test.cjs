@@ -35,6 +35,8 @@ function armar_ctx(aviso) {
 		},
 		$toast: { success() {}, error() {} },
 	})
+	// El computed `aviso` del componente no existe en el ctx plano: se lo emula leyendo del store falso.
+	Object.defineProperty(ctx, 'aviso', { get() { return estado.demanda_sin_stock.aviso } })
 	return ctx
 }
 
