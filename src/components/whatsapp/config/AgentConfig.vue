@@ -176,11 +176,17 @@
 
 		<div class="whatsapp-agent-config__toggle-group">
 			<b-form-checkbox
-			v-model="form.auto_send_sale_pdf"
+			v-model="auto_send_switch_value"
+			:disabled="auto_send_disabled"
 			switch>
 				Enviar el comprobante automáticamente al guardar una venta
 			</b-form-checkbox>
-			<small class="text-muted">
+			<small v-if="auto_send_disabled" class="text-muted whatsapp-agent-config__not-ready">
+				<strong>Primero conectá tu número de WhatsApp.</strong>
+				Lo conecta el equipo de ComercioCity desde Implementación de Agentes; mientras no
+				esté conectado, el comprobante no se envía.
+			</small>
+			<small v-else class="text-muted">
 				Solo a clientes con conversación de WhatsApp o teléfono cargado.
 			</small>
 		</div>
@@ -307,6 +313,43 @@ export default {
 		 */
 		config() {
 			return this.$store.state.whatsapp_bot_config.models[0] || null
+		},
+		/**
+		 * Indica si el envío automático del comprobante debe mostrarse bloqueado (número no listo).
+		 * Se bloquea en dos casos: (1) hay config y la API manda `numero_listo_para_envios` en
+		 * `false` estricto; (2) el GET de la config ya terminó bien (`config_loaded`) y no hay fila
+		 * de WhatsApp. NO se bloquea mientras carga ni si el GET falló (error de red), ni con una
+		 * API vieja (fila sin el campo, undefined), null u otro valor.
+		 *
+		 * @returns {boolean} true si hay que deshabilitar el switch.
+		 */
+		auto_send_disabled() {
+			// Bandera del store: true sólo cuando el fetch inicial terminó bien.
+			let config_loaded = !!this.$store.state.whatsapp_bot_config.config_loaded
+			if (!this.config) {
+				return config_loaded
+			}
+			return this.config.numero_listo_para_envios === false
+		},
+		/**
+		 * Valor que muestra el switch del comprobante automático. Bloqueado se ve siempre apagado,
+		 * aunque en la base esté en true de antes, pero `form.auto_send_sale_pdf` no se pisa (así
+		 * `build_payload` sabe qué había y no lo reenvía). Habilitado, lee y escribe el form.
+		 */
+		auto_send_switch_value: {
+			/**
+			 * @returns {boolean} false si está bloqueado; si no, el valor del form.
+			 */
+			get() {
+				return this.auto_send_disabled ? false : !!this.form.auto_send_sale_pdf
+			},
+			/**
+			 * @param {boolean} value Nuevo valor elegido por el dueño en el switch.
+			 * @returns {void}
+			 */
+			set(value) {
+				this.form.auto_send_sale_pdf = value
+			},
 		},
 		/**
 		 * Conserva la tarjeta elegida aunque el dueño personalice su texto. La coincidencia
@@ -515,6 +558,22 @@ export default {
 			return found ? found.key : null
 		},
 		/**
+		 * Arma lo que se manda a la API al guardar: una copia del form. Si el envío automático
+		 * está bloqueado (número no listo) se OMITE `auto_send_sale_pdf`: la API sólo actualiza los
+		 * campos que llegan, así que el dato guardado queda como estaba, sin reenviar true ni
+		 * apagarlo sin que el dueño lo haya tocado (no pudo, el switch está deshabilitado).
+		 *
+		 * @returns {Object} Payload para `updateAgentConfig`.
+		 */
+		build_payload() {
+			// Copia superficial: no se muta `form`, que sigue guardando el valor de la base.
+			let payload = Object.assign({}, this.form)
+			if (this.auto_send_disabled) {
+				delete payload.auto_send_sale_pdf
+			}
+			return payload
+		},
+		/**
 		 * Guarda la personalidad, las habilidades, el objetivo de la conversación (con sus
 		 * indicaciones), los toggles y los dos tiempos de espera. Usa
 		 * el indicador global de carga (además del loading local del botón) según la convención
@@ -525,7 +584,7 @@ export default {
 			this.$store.commit('auth/setMessage', 'Guardando configuración del agente')
 			this.$store.commit('auth/setLoading', true)
 
-			this.$store.dispatch('whatsapp_bot_config/updateAgentConfig', this.form)
+			this.$store.dispatch('whatsapp_bot_config/updateAgentConfig', this.build_payload())
 			.then(() => {
 				this.loading = false
 				this.$store.commit('auth/setLoading', false)
