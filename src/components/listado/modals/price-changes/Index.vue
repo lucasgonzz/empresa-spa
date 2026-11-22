@@ -4,7 +4,9 @@
 hide-footer
 size="lg"
 id="price-changes"
-@show="al_abrir_modal">
+@show="al_abrir_modal"
+@shown="scroll_to_highlight"
+@hidden="al_cerrar_modal">
 	<div
 	v-if="!loading">
 		
@@ -13,9 +15,11 @@ id="price-changes"
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
 		head-variant="dark"
 		responsive
+		stacked="sm"
 		striped
 		:fields="fields"
-		:items="items">
+		:items="items"
+		:tbody-tr-class="row_class">
 			<template #cell(cambios_listas)="data">
 				<div
 				v-for="(cambio, indice) in data.item.cambios_listas"
@@ -32,6 +36,26 @@ id="price-changes"
 					</div>
 				</div>
 				<span v-if="!data.item.cambios_listas.length" class="text-muted">Sin detalle por lista</span>
+			</template>
+
+			<!--
+				Misión historial-precios-proveedor: el precio de proveedor que originó este cambio (sólo
+				si la API trae provider_offers) y el vínculo para ver su historial.
+			-->
+			<template #cell(provider_offers)="data">
+				<div
+				v-for="offer in data.item.provider_offers"
+				:key="offer.id"
+				class="historial-cambio-lista">
+					<div>{{ etiqueta_de_oferta(offer) }}</div>
+					<!-- La pestaña "Historial de precios" sólo existe con article.cost: sin ese permiso no se ofrece -->
+					<b-button
+					v-if="can('article.cost')"
+					size="sm"
+					variant="outline-primary"
+					class="historial-cambio-vinculo"
+					@click="ver_historial_del_proveedor(offer)">Ver historial del proveedor</b-button>
+				</div>
 			</template>
 		</b-table>
 
@@ -58,7 +82,19 @@ export default {
 		return {
 			price_changes: [],
 			loading: false,
+			// Id del cambio de precio a destacar (cuando se llega desde el historial del proveedor); null = ninguno.
+			highlighted_change_id: null,
+			// Timer del próximo reintento del scroll a la fila destacada (null = ninguno) y cuántos intentos van.
+			scroll_timer: null,
+			scroll_attempts: 0,
 		}
+	},
+	created() {
+		this.$root.$on('price-changes:highlight', this.set_highlight)
+	},
+	beforeDestroy() {
+		this.cancel_scroll_retry()
+		this.$root.$off('price-changes:highlight', this.set_highlight)
 	},
 	computed: {
 		price_types() {
@@ -77,6 +113,10 @@ export default {
 			]
 			if (this.can('article.cost')) {
 				fields.unshift({ label: 'Costo', key: 'cost' })
+			}
+			// Columna del precio de proveedor: sólo si algún cambio trae ofertas (con una API vieja no hay).
+			if (this.tiene_ofertas_de_proveedor) {
+				fields.push({ label: 'Precio de proveedor', key: 'provider_offers' })
 			}
 			if (this.tiene_detalle_de_listas) {
 				fields.push({ label: 'Cambios por lista', key: 'cambios_listas' })
@@ -121,6 +161,9 @@ export default {
 					created_at: this.date(model.created_at, true),
 					cambios_listas: Array.isArray(model.cambios_listas) ? model.cambios_listas : [],
 					origen: this.origen_historico(model.origen),
+					// Id del cambio, para destacar la fila cuando se llega desde el historial del proveedor.
+					id: model.id,
+					provider_offers: Array.isArray(model.provider_offers) ? model.provider_offers : [],
 				}
 
 				if (this.listas_visibles.length) {
@@ -150,6 +193,10 @@ export default {
 			})
 			return items 
 		},
+		// True si algún cambio trae precios de proveedor vinculados (la API anterior no manda la clave).
+		tiene_ofertas_de_proveedor() {
+			return this.price_changes.some(model => Array.isArray(model.provider_offers) && model.provider_offers.length)
+		},
 		tiene_detalle_de_listas() {
 			// El API anterior no trae este campo. Las fotos históricas siguen visibles;
 			// no se deduce un "antes" comparando filas que pueden tener huecos.
@@ -160,6 +207,119 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Marca un cambio de precio como destacado (evento 'price-changes:highlight' del historial de
+		 * precios por proveedor).
+		 * @param {Number} price_change_id Id del cambio de precio.
+		 * @return {void}
+		 */
+		set_highlight(price_change_id) {
+			this.highlighted_change_id = price_change_id
+		},
+		/**
+		 * Lleva la vista hasta la fila del cambio destacado, con reintentos acotados. Se llama cuando
+		 * termina la carga de datos y cuando el modal termina de pintarse (@shown de b-modal). Reinicia
+		 * la cuenta de intentos y arranca el primero en el siguiente ciclo de render.
+		 * @return {void}
+		 */
+		scroll_to_highlight() {
+			this.cancel_scroll_retry()
+			this.scroll_attempts = 0
+			this.$nextTick(this.try_scroll_to_highlight)
+		},
+		/**
+		 * Un intento de llevar la vista a la fila destacada. La fila puede no existir todavía (b-table
+		 * repinta después de la carga y la recarga del modal vacía la tabla) o el scroll puede ser pisado
+		 * por bootstrap-vue; por eso, mientras la fila no esté a la vista y queden intentos, se vuelve a
+		 * intentar cada pocos milisegundos. Apenas la fila está a la vista termina: no se le roba el
+		 * scroll al usuario. Sin destacado no hace nada. El contenido del b-modal se monta fuera del
+		 * componente, por eso se busca en el documento y no en $el.
+		 * @return {void}
+		 */
+		try_scroll_to_highlight() {
+			this.scroll_timer = null
+			if (this.highlighted_change_id === null || typeof document == 'undefined') {
+				return
+			}
+			let row = document.querySelector('#price-changes tr.historial-cambio-destacado')
+			if (row) {
+				if (this.is_row_in_view(row)) {
+					return
+				}
+				if (typeof row.scrollIntoView == 'function') {
+					row.scrollIntoView({ block: 'center', behavior: 'auto' })
+				}
+			}
+			this.scroll_attempts++
+			if (this.scroll_attempts < 15) {
+				this.scroll_timer = setTimeout(this.try_scroll_to_highlight, 150)
+			}
+		},
+		/**
+		 * True si la fila está completa dentro de la pantalla. Sin medidas (no hay getBoundingClientRect
+		 * o window) se asume que no se ve, y se scrollea.
+		 * @param {Object} row Elemento de la fila.
+		 * @return {Boolean}
+		 */
+		is_row_in_view(row) {
+			if (typeof row.getBoundingClientRect != 'function' || typeof window == 'undefined') {
+				return false
+			}
+			let rect = row.getBoundingClientRect()
+			return rect.top >= 0 && rect.bottom <= window.innerHeight
+		},
+		/**
+		 * Corta el reintento pendiente del scroll, si lo hay.
+		 * @return {void}
+		 */
+		cancel_scroll_retry() {
+			if (this.scroll_timer) {
+				clearTimeout(this.scroll_timer)
+				this.scroll_timer = null
+			}
+		},
+		/**
+		 * Al cerrar el modal se olvida el destacado, para que la próxima apertura sea la de siempre.
+		 * @return {void}
+		 */
+		al_cerrar_modal() {
+			this.cancel_scroll_retry()
+			this.highlighted_change_id = null
+		},
+		/**
+		 * Clase de cada fila de la tabla: la del cambio destacado lleva un marco.
+		 * @param {Object} item Fila de la tabla.
+		 * @return {String}
+		 */
+		row_class(item) {
+			return item && item.id === this.highlighted_change_id ? 'historial-cambio-destacado' : ''
+		},
+		/**
+		 * Texto de un precio de proveedor: "Proveedor · $costo · Importación". Sin permiso de costos la
+		 * API omite el costo y queda "Proveedor · Importación".
+		 * @param {Object} offer Oferta vinculada al cambio (provider_offers de la API).
+		 * @return {String}
+		 */
+		etiqueta_de_oferta(offer) {
+			let partes = [offer.provider_name || 'Proveedor eliminado']
+			if (offer.cost !== null && typeof offer.cost != 'undefined') {
+				partes.push((Number(offer.moneda_id) === 2 ? 'US' : '') + this.price(offer.cost, false))
+			}
+			let origenes = { importacion: 'Importación', compra: 'Compra', manual: 'Carga manual' }
+			partes.push(origenes[offer.origen] || 'Dato rescatado')
+			return partes.join(' · ')
+		},
+		/**
+		 * Vuelve al historial del proveedor con esa oferta destacada: avisa cuál y abre el modal de
+		 * proveedores del artículo (cerrando éste, para no apilar modales).
+		 * @param {Object} offer Oferta vinculada al cambio.
+		 * @return {void}
+		 */
+		ver_historial_del_proveedor(offer) {
+			this.$root.$emit('provider-offers:highlight', offer.id)
+			this.$bvModal.hide('price-changes')
+			this.$bvModal.show('article-providers')
+		},
 		origen_historico(origen) {
 			let nombres = {
 				ficha: 'Ficha del artículo',
@@ -217,6 +377,8 @@ export default {
 				.then(res => {
 					this.loading = false 
 					this.price_changes = res.data.models 
+					// Con los datos cargados existe la fila destacada: se lleva la vista hasta ella.
+					this.scroll_to_highlight()
 				})
 				.catch(err => {
 					this.loading = false 
@@ -233,4 +395,49 @@ export default {
 	white-space: normal
 	& + &
 		margin-top: .6rem
+
+// Botón de vínculo al historial del proveedor: tocable en teléfono.
+.historial-cambio-vinculo
+	margin-top: 4px
+	min-height: 40px
+
+@media (min-width: 576px)
+	.historial-cambio-vinculo
+		min-height: 0
+</style>
+<!-- Sin scoped: la fila la dibuja b-table y el modal se monta fuera del componente. -->
+<style lang="sass">
+// Cambio destacado al llegar desde el historial del proveedor: marco del color primario (tema claro y oscuro).
+#price-changes .table > tbody > tr.historial-cambio-destacado
+	outline: 2px solid var(--color-primary)
+	outline-offset: -2px
+
+// Teléfono (menos de 576 px): la tabla se apila (stacked="sm", el mismo patrón del modal de proveedores)
+// para que "Precio de proveedor" y su botón queden a la vista sin scroll horizontal.
+@media (max-width: 575.98px)
+	#price-changes .table.b-table.b-table-stacked-sm > tbody > tr > [data-label]
+		// En teléfono cada etiqueta ocupa su propia línea y el valor usa el ancho completo; el reparto
+		// 40/60 de Bootstrap heredaría el nowrap global y superpondría etiquetas largas.
+		&::before
+			display: block
+			float: none
+			width: 100%
+			padding: 0
+			margin-bottom: 4px
+			text-align: left
+			white-space: normal
+			color: var(--color-text-secondary)
+			font-size: 0.75rem
+
+		> div
+			display: block
+			width: 100%
+			padding: 0
+			white-space: normal
+
+	// El botón "Ver historial del proveedor" ocupa el ancho completo y es tocable.
+	#price-changes .historial-cambio-vinculo
+		display: block
+		width: 100%
+		min-height: 40px
 </style>

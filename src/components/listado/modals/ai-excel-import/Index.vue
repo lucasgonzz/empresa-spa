@@ -1269,7 +1269,7 @@
 		<!-- Decisión 3: política para códigos de proveedor existentes en otros proveedores -->
 		<b-form-group
 		v-if="hay_codigos_de_proveedor_repetidos && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
-		label="El código de proveedor ya existe en otros proveedores. ¿Qué hacer con esos artículos?"
+		label="El código de proveedor ya existe en otros proveedores (coincidencias por código de proveedor). ¿Qué hacer con esos artículos?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_otro_proveedor" value="ignorar" data-testid="ai-import-politica-otro-ignorar" class="m-b-5">
 				Ignorar esos artículos y crear nuevos para este proveedor
@@ -1282,6 +1282,56 @@
 				<small class="d-block text-muted m-t-3">
 					Usá esta opción si los artículos fueron importados antes con el proveedor equivocado. Los artículos que tengan ese código de proveedor, sin importar a qué proveedor están asignados actualmente, serán actualizados con los datos de este Excel.
 				</small>
+			</b-form-radio>
+		</b-form-group>
+
+		<!--
+			Misión historial-precios-proveedor: artículos del Excel que ya están cargados con OTRO
+			proveedor y se reconocen por código de barras o SKU (no por código de proveedor: eso lo
+			decide la pregunta de arriba). Sólo aparece si la API los detectó (other_provider_articles);
+			con una API vieja la clave no llega y el paso queda como antes. Las dos respuestas arrancan
+			en "No" y nunca traban Continuar: no responder equivale a no tocar nada.
+		-->
+		<b-form-group
+		v-if="pregunta_otro_proveedor_por_identificacion_visible"
+		data-testid="ai-import-otro-proveedor-bloque"
+		class="ai-import-otro-proveedor-bloque">
+			<div class="ai-import-decision-title m-b-8">
+				{{ other_provider_articles.articles }}
+				{{ Number(other_provider_articles.articles) === 1 ? 'artículo de este Excel ya está cargado' : 'artículos de este Excel ya están cargados' }}
+				con otro proveedor<span v-if="nombres_de_otros_proveedores"> ({{ nombres_de_otros_proveedores }})</span>.
+				¿Les actualizamos el costo y los precios con los de este Excel?
+			</div>
+			<b-form-radio v-model="other_provider_articles_policy" value="ignorar" data-testid="ai-import-otro-proveedor-ignorar" class="m-b-5">
+				No, dejarlos como están
+				<small class="d-block text-muted m-t-3">
+					De cada uno queda registrado a qué costo lo tiene el proveedor elegido en este Excel.
+				</small>
+			</b-form-radio>
+			<b-form-radio v-model="other_provider_articles_policy" value="actualizar" data-testid="ai-import-otro-proveedor-actualizar" class="m-b-5">
+				Sí, actualizar su costo y precios
+				<small class="d-block text-muted m-t-3">
+					Se cuentan los reconocidos por código de barras o SKU; también se actualizan los que coinciden exactamente por nombre.
+				</small>
+			</b-form-radio>
+		</b-form-group>
+
+		<!-- Segunda pregunta: sólo si alguna de las dos preguntas de "otro proveedor" quedó en actualizar -->
+		<b-form-group
+		v-if="pregunta_actualizar_proveedor_visible"
+		data-testid="ai-import-actualizar-proveedor-bloque"
+		class="ai-import-otro-proveedor-bloque">
+			<div class="ai-import-decision-title m-b-8">
+				¿Esos artículos pasan a ser de este proveedor?
+			</div>
+			<b-form-radio v-model="actualizar_proveedor" value="0" data-testid="ai-import-actualizar-proveedor-no" class="m-b-5">
+				No, siguen siendo de su proveedor actual
+				<small class="d-block text-muted m-t-3">
+					Toman el costo y los precios de este Excel, pero el proveedor del artículo no cambia.
+				</small>
+			</b-form-radio>
+			<b-form-radio v-model="actualizar_proveedor" value="1" data-testid="ai-import-actualizar-proveedor-si" class="m-b-5">
+				Sí, pasan a ser de {{ nombre_del_proveedor_elegido || 'este proveedor' }}
 			</b-form-radio>
 		</b-form-group>
 
@@ -1794,6 +1844,21 @@ export default {
 			 * 'actualizar' → pisar los artículos del otro proveedor con los datos del Excel
 			 */
 			politica_otro_proveedor: null,
+
+			/*
+			 * Misión historial-precios-proveedor: artículos del Excel que ya están cargados con otro
+			 * proveedor, reconocidos por código de barras o SKU. Es el resultado.other_provider_articles
+			 * de get-recomendacion ({ articles, rows, by_provider, examples }); null si la API no lo
+			 * manda (API vieja) o si todavía no se pidió. Con él se decide si se muestra la pregunta.
+			 */
+			other_provider_articles: null,
+
+			/*
+			 * Respuesta a "¿les actualizamos el costo y los precios?": 'ignorar' (default, sólo queda
+			 * registrado el precio del proveedor) | 'actualizar'. Es distinta de politica_otro_proveedor,
+			 * que decide sobre coincidencias por CÓDIGO DE PROVEEDOR.
+			 */
+			other_provider_articles_policy: 'ignorar',
 
 			/*
 			 * Prompt 06 (grupo 265 - import-excel-jerarquia-ultima-fila-gana-y-reporte-sobrescritura):
@@ -2707,7 +2772,8 @@ export default {
 				}
 			}
 
-			if (flags.actualizar_articulos_de_otro_proveedor) {
+			// Esta frase habla del cruce por código de proveedor: sólo la pregunta vieja la enciende.
+			if (flags.update_other_provider_by_provider_code) {
 				texto += ' Se pueden actualizar artículos asignados a otro proveedor.'
 			}
 
@@ -2753,6 +2819,69 @@ export default {
 		hay_codigos_de_proveedor_repetidos() {
 			return !!this.duplicate_stats
 				&& Number(this.duplicate_stats.provider_codes_duplicados_intra_archivo) > 0
+		},
+
+		/*
+		 * Misión historial-precios-proveedor: True si la pregunta "¿actualizamos los artículos que ya
+		 * están con otro proveedor?" se muestra. Hace falta: modelo artículo, proveedor elegido y que
+		 * la API haya detectado al menos un artículo del Excel (por código de barras o SKU) cargado con
+		 * otro proveedor. Sin la clave (API vieja) other_provider_articles es null y no aparece.
+		 */
+		pregunta_otro_proveedor_por_identificacion_visible() {
+			return this.model === 'article'
+				&& this.has_selected_provider
+				&& !!this.other_provider_articles
+				&& Number(this.other_provider_articles.articles) > 0
+		},
+
+		/*
+		 * True si se muestra la pregunta vieja de coincidencias por CÓDIGO DE PROVEEDOR con artículos de
+		 * otro proveedor (hay códigos repetidos en el Excel y alguno ya existe en otro proveedor).
+		 */
+		pregunta_otro_proveedor_por_codigo_visible() {
+			return this.hay_codigos_de_proveedor_repetidos
+				&& Number(this.duplicate_stats.provider_codes_existentes_otros_proveedores) > 0
+		},
+
+		/*
+		 * True si alguna de las dos preguntas de "otro proveedor" que se ven quedó en "actualizar":
+		 * recién ahí tiene sentido preguntar si los artículos pasan a ser de este proveedor.
+		 */
+		pregunta_actualizar_proveedor_visible() {
+			return (this.pregunta_otro_proveedor_por_identificacion_visible && this.other_provider_articles_policy === 'actualizar')
+				|| (this.pregunta_otro_proveedor_por_codigo_visible && this.politica_otro_proveedor === 'actualizar')
+		},
+
+		/*
+		 * Nombres de los proveedores actuales de los artículos detectados, separados por coma, para
+		 * el título de la pregunta. Vacío si la API no los informó.
+		 */
+		nombres_de_otros_proveedores() {
+			let nombres = []
+			let detalle = this.other_provider_articles ? this.other_provider_articles.by_provider : null
+			if (Array.isArray(detalle)) {
+				detalle.forEach(function(proveedor) {
+					if (proveedor && proveedor.name) {
+						nombres.push(proveedor.name)
+					}
+				})
+			}
+			return nombres.join(', ')
+		},
+
+		/*
+		 * Nombre del proveedor elegido en el paso 2, para la opción "pasan a ser de …". Null si no se
+		 * encuentra en las opciones cargadas.
+		 */
+		nombre_del_proveedor_elegido() {
+			let elegido = null
+			let id = Number(this.selected_provider_id)
+			this.provider_options.forEach(function(opcion) {
+				if (opcion.value !== null && Number(opcion.value) === id) {
+					elegido = opcion.text
+				}
+			})
+			return elegido
 		},
 
 		/*
@@ -3223,6 +3352,17 @@ export default {
 		permitir_provider_code_repetido() {
 			if (!this.permitir_provider_code_repetido) {
 				this.permitir_provider_code_repetido_en_multi_providers = 0
+			}
+		},
+
+		/*
+		 * Misión historial-precios-proveedor: al volver a "No, dejarlos como están" la segunda
+		 * pregunta (¿pasan a ser de este proveedor?) se resetea a 0, para que una respuesta vieja no
+		 * viaje escondida. Pasar a "actualizar" no toca la segunda.
+		 */
+		other_provider_articles_policy(nuevo_valor) {
+			if (nuevo_valor !== 'actualizar') {
+				this.actualizar_proveedor = 0
 			}
 		},
 
@@ -4904,6 +5044,12 @@ export default {
 				 * Sin esta bandera el backend no lo calcula.
 				 */
 				analizar_precio:            true,
+				/*
+				 * Misión historial-precios-proveedor: pide contar los artículos del Excel que ya están
+				 * cargados con otro proveedor (resultado.other_provider_articles). Una API vieja la
+				 * ignora y no devuelve la clave: la pregunta no aparece.
+				 */
+				detect_other_provider_articles: true,
 			}, { timeout: 120000 })
 			.then(function(res) {
 
@@ -5075,6 +5221,13 @@ export default {
 			 * backend, por si el usuario corrigió el mapeo de columnas en el paso 2.
 			 */
 			this.formatos_numericos = resultado.formatos_numericos || null
+
+			/*
+			 * Misión historial-precios-proveedor: artículos del Excel ya cargados con otro proveedor.
+			 * Clave ausente (API vieja o corrida sin la bandera) = null: no queda a la vista el dato
+			 * de una corrida anterior.
+			 */
+			this.other_provider_articles = resultado.other_provider_articles || null
 
 			/*
 			 * El paso 3 se dibuja con lo recalculado sobre el mapeo confirmado. Si la API todavía
@@ -5573,10 +5726,10 @@ export default {
 
 		/**
 		 * Traduce las decisiones de negocio (politica_colision y politica_otro_proveedor)
-		 * a los 5 flags que sigue esperando /ai-excel-import/import.
+		 * a los flags que sigue esperando /ai-excel-import/import.
 		 * Permite mantener el contrato del backend sin cambios.
 		 *
-		 * @returns {Object} - Objeto con los 5 flags calculados (0 o 1 cada uno).
+		 * @returns {Object} - Objeto con los flags calculados (0 o 1 cada uno), incluidos los dos de "otro proveedor".
 		 */
 		derive_flags_from_choice() {
 			/*
@@ -5604,9 +5757,27 @@ export default {
 			 * proveedores. Sin códigos repetidos la pregunta no se muestra y no pueden tocarse: una
 			 * elección vieja, de antes de corregir el mapeo, no puede seguir viajando escondida.
 			 */
-			if (this.hay_codigos_de_proveedor_repetidos && this.politica_otro_proveedor === 'actualizar') {
+			/*
+			 * Misión historial-precios-proveedor: dos preguntas independientes.
+			 *  - por_codigo: la vieja, sobre coincidencias por CÓDIGO DE PROVEEDOR (sólo si se ve).
+			 *  - por_identificacion: la nueva, sobre artículos reconocidos por código de barras, SKU o
+			 *    nombre (sólo si se ve).
+			 * Cada pregunta decide SU caso (ADENDA 1 del plan):
+			 *  - update_other_provider_by_identification: sólo la nueva (barras, SKU, nombre).
+			 *  - update_other_provider_by_provider_code: sólo la vieja (código de proveedor).
+			 *  - actualizar_articulos_de_otro_proveedor: el OR de las dos, que se mantiene por
+			 *    compatibilidad con una API vieja que sólo conoce esa bandera.
+			 * Una respuesta de una pregunta que no se ve no cuenta.
+			 */
+			let por_codigo = this.pregunta_otro_proveedor_por_codigo_visible && this.politica_otro_proveedor === 'actualizar'
+			let por_identificacion = this.pregunta_otro_proveedor_por_identificacion_visible && this.other_provider_articles_policy === 'actualizar'
+
+			if (por_codigo || por_identificacion) {
 				flags.actualizar_articulos_de_otro_proveedor = 1
 			}
+			flags.update_other_provider_by_provider_code = por_codigo ? 1 : 0
+			flags.update_other_provider_by_identification = por_identificacion ? 1 : 0
+			flags.actualizar_proveedor = ((por_codigo || por_identificacion) && Number(this.actualizar_proveedor) === 1) ? 1 : 0
 
 			/*
 			 * Sin códigos repetidos la pregunta no se muestra, así que el valor es fijo: una
@@ -5723,6 +5894,18 @@ export default {
 				actualizar_articulos_de_otro_proveedor:             derived_flags.actualizar_articulos_de_otro_proveedor,
 				actualizar_por_provider_code:                       derived_flags.actualizar_por_provider_code,
 				actualizar_proveedor:                               derived_flags.actualizar_proveedor,
+				/*
+				 * Misión historial-precios-proveedor: si el cruce por CÓDIGO DE PROVEEDOR con artículos de
+				 * otro proveedor está permitido. Viaja siempre, también en 0: la API, si no la recibe,
+				 * cae en el valor de actualizar_articulos_de_otro_proveedor.
+				 */
+				update_other_provider_by_provider_code:             derived_flags.update_other_provider_by_provider_code,
+				/*
+				 * Misión historial-precios-proveedor: si los artículos de otro proveedor reconocidos por
+				 * código de barras, SKU o nombre se actualizan. Viaja siempre, también en 0, así la
+				 * pregunta vieja ("Actualizar" por código de proveedor) no arrastra a estos artículos.
+				 */
+				update_other_provider_by_identification:            derived_flags.update_other_provider_by_identification,
 				/* Prompt 05 (grupo 239): como interpretar el punto en numeros ambiguos, elegido en el paso 3. */
 				interpretacion_punto:                               this.interpretacion_punto,
 				/*
@@ -7203,6 +7386,9 @@ export default {
 			this.loading_recomendacion       = false
 			this.politica_colision           = null
 			this.politica_otro_proveedor     = null
+			/* Misión historial-precios-proveedor: la detección y la respuesta eran del archivo anterior. */
+			this.other_provider_articles        = null
+			this.other_provider_articles_policy = 'ignorar'
 			this.politica_intra_archivo      = 'ultima_gana'
 			/* 🔴 Vuelve al seguro: una importación no hereda el desempate por nombre de la anterior. */
 			this.desempatar_por_nombre       = false
