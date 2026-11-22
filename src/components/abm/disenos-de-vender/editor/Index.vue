@@ -157,6 +157,7 @@ import {
 } from '@/components/vender/layout/secciones'
 import {
 	agregar_seccion,
+	apilar_campos,
 	cambiar_alto,
 	cambiar_alto_fijo,
 	cambiar_ancho_de_columna,
@@ -624,6 +625,8 @@ export default {
 				resultado = mover_a_columna_nueva(trabajo, ajuste.id)
 			} else if (ajuste.tipo === 'banda_nueva') {
 				resultado = mover_a_banda_nueva(trabajo, ajuste.id)
+			} else if (ajuste.tipo === 'apilar_campos') {
+				resultado = apilar_campos(trabajo, ajuste.id)
 			} else if (ajuste.tipo === 'quitar') {
 				resultado = quitar_seccion(trabajo, ajuste.id, this)
 				if (resultado.ok) {

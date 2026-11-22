@@ -129,6 +129,7 @@ import EtapaDelEditor from './EtapaDelEditor'
 import { MAXIMO_DE_SECCIONES, ids_en_orden } from '@/components/vender/layout/secciones'
 import {
 	puede_mover_a_banda_nueva,
+	puede_apilar_campos,
 	puede_mover_a_columna_nueva,
 	puede_quitar_seccion,
 } from './operaciones_de_secciones'
@@ -241,6 +242,7 @@ export default {
 				columna_nueva: puede_mover_a_columna_nueva(this.estado, id),
 				banda_nueva: puede_mover_a_banda_nueva(this.estado, id),
 				quitar: puede_quitar_seccion(this.estado, id),
+				apilar_campos: puede_apilar_campos(this.estado, id),
 			}
 		},
 		/**

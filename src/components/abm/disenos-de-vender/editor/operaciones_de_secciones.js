@@ -30,6 +30,7 @@ import {
 	seccion_de_respaldo,
 } from '@/components/vender/layout/secciones'
 import { identidad } from './estado_del_editor'
+import { ancho_de_columna_de } from '@/components/vender/layout/secciones'
 
 /* Motivos que se muestran al usuario. */
 export const MOTIVO_MAXIMO_DE_SECCIONES = 'Ya hay ' + MAXIMO_DE_SECCIONES + ' secciones, el máximo.'
@@ -512,4 +513,57 @@ export function cambiar_alto_fijo(estado, id, fijo) {
 	}
 
 	return exito(estado)
+}
+
+/**
+ * Si se pueden poner los campos de una sección uno abajo del otro, sin tocar nada. No se puede si la
+ * sección no existe, no tiene campos o todos ya están a lo ancho (12). Además dice si conviene
+ * (`sugerido`): la columna de la sección mide 4/12 o menos y hay campos más angostos que 12, o sea
+ * que los campos quedarían muy chicos.
+ *
+ * @param {Object} estado estado de trabajo
+ * @param {string} id
+ * @returns {{ok: boolean, motivo: (string|null), estado: Object, sugerido: boolean}}
+ */
+export function puede_apilar_campos(estado, id) {
+	if (!estado.secciones[id] || !estado.etapas[id]) {
+		return Object.assign(rechazo(estado, 'Esa sección no existe.'), { sugerido: false })
+	}
+
+	let angostos = estado.etapas[id].filter(function (item) {
+		return !es_marcador(item.key) && item.cols < 12
+	})
+
+	if (!angostos.length) {
+		return Object.assign(rechazo(estado, 'Todos los campos ya están a lo ancho.'), { sugerido: false })
+	}
+
+	return Object.assign(exito(estado), { sugerido: ancho_de_columna_de(estado.disposicion, id) <= 4 })
+}
+
+/**
+ * Pone todos los campos de una sección a ancho 12, uno abajo del otro (lo que se quiere en una
+ * columna angosta). Los marcadores (separador, salto de fila) no cambian: ya miden 12. Es una
+ * acción explícita del usuario; NO se aplica sola al cambiar anchos ni al mover de columna.
+ *
+ * @param {Object} estado estado de trabajo
+ * @param {string} id
+ * @returns {{ok: boolean, motivo: (string|null), estado: Object, cambiados: number}}
+ */
+export function apilar_campos(estado, id) {
+	let verificacion = puede_apilar_campos(estado, id)
+
+	if (!verificacion.ok) {
+		return verificacion
+	}
+
+	let cambiados = 0
+	estado.etapas[id].forEach(function (item) {
+		if (!es_marcador(item.key) && item.cols !== 12) {
+			item.cols = 12
+			cambiados++
+		}
+	})
+
+	return exito(estado, { cambiados: cambiados })
 }

@@ -7,7 +7,7 @@
 			{ tipo: 'meta', id, propiedad, valor }   titulo, descripcion, color o plegado
 			{ tipo: 'alto', id, valor }              alto en doceavos (1..12)
 			{ tipo: 'fijo', id, valor }              alto fijo (true) o automatico (false)
-			{ tipo: 'columna_nueva' | 'banda_nueva' | 'quitar', id }
+			{ tipo: 'columna_nueva' | 'banda_nueva' | 'apilar_campos' | 'quitar', id }
 
 		que resuelve el editor (Index.vue) con operaciones_de_secciones.js. Los botones de las tres
 		acciones traen `acciones[...]` ({ok, motivo}); si no se puede, el boton queda deshabilitado y el
@@ -151,6 +151,23 @@
 			<div class="editor-ajustes__accion">
 				<b-button
 				size="sm"
+				:variant="accion('apilar_campos').sugerido ? 'outline-primary' : 'outline-secondary'"
+				:disabled="!accion('apilar_campos').ok"
+				@click="$emit('ajuste', { tipo: 'apilar_campos', id: etapa })">
+					<i class="bi bi-distribute-vertical"></i>
+					Poner los campos uno abajo del otro
+				</b-button>
+				<small
+				v-if="!accion('apilar_campos').ok"
+				class="editor-ajustes__motivo">{{ accion('apilar_campos').motivo }}</small>
+				<small
+				v-else-if="accion('apilar_campos').sugerido"
+				class="editor-ajustes__motivo">La columna es angosta: conviene poner los campos uno abajo del otro.</small>
+			</div>
+
+			<div class="editor-ajustes__accion">
+				<b-button
+				size="sm"
 				variant="outline-secondary"
 				:disabled="!accion('columna_nueva').ok"
 				@click="$emit('ajuste', { tipo: 'columna_nueva', id: etapa })">
@@ -225,7 +242,7 @@ export default {
 			type: String,
 			default: '',
 		},
-		/* Que se puede hacer con la seccion: {columna_nueva, banda_nueva, quitar}, cada uno {ok, motivo} */
+		/* Que se puede hacer con la seccion: {columna_nueva, banda_nueva, apilar_campos, quitar}, cada uno {ok, motivo} */
 		acciones: {
 			type: Object,
 			default: function () {
@@ -295,7 +312,7 @@ export default {
 		 * contrario).
 		 *
 		 * @param {string} nombre 'columna_nueva' | 'banda_nueva' | 'quitar'
-		 * @returns {{ok: boolean, motivo: (string|null)}}
+		 * @returns {{ok: boolean, motivo: (string|null), sugerido: (boolean|undefined)}}
 		 */
 		accion(nombre) {
 			return this.acciones[nombre] || { ok: true, motivo: null }
