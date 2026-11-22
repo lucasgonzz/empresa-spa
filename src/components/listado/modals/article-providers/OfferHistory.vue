@@ -54,13 +54,13 @@
 					Registro anterior a esta versión
 				</span>
 
-				<!-- Sólo se registró el precio -->
+				<!-- No tocó el costo: "Sólo se registró el precio" o, si cambió el proveedor, "No cambió el costo" -->
 				<div v-else-if="!data.item.uso_costo">
-					<span>Sólo se registró el precio</span>
+					<span>{{ data.item.sin_costo_texto }}</span>
 					<small
-					v-if="data.item.titular_texto"
+					v-if="data.item.sin_costo_detalle"
 					class="d-block text-muted">
-						el artículo es de {{ data.item.titular_texto }}
+						{{ data.item.sin_costo_detalle }}
 					</small>
 				</div>
 
@@ -307,6 +307,16 @@ export default {
 				proveedor_texto = 'el artículo siguió siendo de ' + titular_distinto
 			}
 
+			// Sin tocar el costo hay dos verdades posibles: sólo se registró el precio (el artículo sigue
+			// siendo de su titular) o el artículo pasó a ser de este proveedor igual (compra o importación
+			// con "pasar al proveedor" y sin actualizar costos): ahí no hay que decir que "sólo" se registró.
+			let sin_costo_texto = 'Sólo se registró el precio'
+			let sin_costo_detalle = titular_distinto ? 'el artículo es de ' + titular_distinto : ''
+			if (Number(offer.changed_article_provider) === 1) {
+				sin_costo_texto = 'No cambió el costo'
+				sin_costo_detalle = proveedor_texto
+			}
+
 			return {
 				id: offer.id,
 				fecha_texto: this.date(offer.fecha),
@@ -321,6 +331,8 @@ export default {
 				costo_texto: costo_texto,
 				proveedor_texto: proveedor_texto,
 				titular_texto: titular_distinto,
+				sin_costo_texto: sin_costo_texto,
+				sin_costo_detalle: sin_costo_detalle,
 				price_change_id: uso_costo ? offer.price_change_id : null,
 			}
 		},

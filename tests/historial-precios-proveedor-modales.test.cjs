@@ -547,3 +547,65 @@ test('uso de la oferta: el cambio que llega por highlight se marca y los demás 
 	vm.$destroy()
 	assert.equal(oyentes(raiz, 'price-changes:highlight'), 0, 'al destruirse saca sus listeners de $root')
 })
+
+// ---------------------------------------------------------------- Ronda 2: las cuatro combinaciones costo x proveedor y dólares
+
+/** Texto de la fila de Rosario para una oferta con esos valores de uso. */
+async function texto_de_uso(cambios) {
+	nuevo_entorno({ respuesta: historial([oferta_ca4(cambios)]) })
+	const { vm } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	return texto(fila_con(vm._render(), 'Rosario'))
+}
+
+test('ronda 2, cuatro combinaciones: (costo 1, proveedor 0) actualizó el costo y el artículo siguió siendo del titular', async () => {
+	const dicho = await texto_de_uso({ updated_article_cost: 1, changed_article_provider: 0 })
+	assert.match(dicho, /Actualizó el costo: \$1\.000 → \$1\.200/)
+	assert.match(dicho, /el artículo siguió siendo de BA/)
+	assert.doesNotMatch(dicho, /pasó a ser/)
+})
+
+test('ronda 2, cuatro combinaciones: (costo 1, proveedor 1) actualizó el costo y el artículo pasó a ser del proveedor', async () => {
+	const dicho = await texto_de_uso({ updated_article_cost: 1, changed_article_provider: 1 })
+	assert.match(dicho, /Actualizó el costo: \$1\.000 → \$1\.200/)
+	assert.match(dicho, /el artículo pasó a ser de Rosario/)
+	assert.doesNotMatch(dicho, /siguió siendo/)
+})
+
+test('ronda 2, cuatro combinaciones: (costo 0, proveedor 1) no cambió el costo pero el artículo pasó a ser del proveedor', async () => {
+	const dicho = await texto_de_uso({ updated_article_cost: 0, changed_article_provider: 1, previous_article_cost: null, price_change_id: null, price_change_created_at: null })
+	assert.match(dicho, /No cambió el costo/)
+	assert.match(dicho, /el artículo pasó a ser de Rosario/)
+	assert.doesNotMatch(dicho, /Sólo se registró el precio/, 'no puede decir que sólo se registró si el artículo cambió de proveedor')
+	assert.doesNotMatch(dicho, /el artículo es de BA|Actualizó el costo/)
+})
+
+test('ronda 2, cuatro combinaciones: (costo 0, proveedor 0) sólo se registró el precio y el artículo es del titular', async () => {
+	const dicho = await texto_de_uso({ updated_article_cost: 0, changed_article_provider: 0, previous_article_cost: null, price_change_id: null, price_change_created_at: null })
+	assert.match(dicho, /Sólo se registró el precio/)
+	assert.match(dicho, /el artículo es de BA/)
+	assert.doesNotMatch(dicho, /pasó a ser|No cambió el costo|Actualizó el costo/)
+})
+
+test('ronda 2, cuatro combinaciones: (null, null) es un registro anterior a esta versión', async () => {
+	const dicho = await texto_de_uso({ updated_article_cost: null, changed_article_provider: null, previous_article_cost: null, price_change_id: null })
+	assert.match(dicho, /Registro anterior a esta versión/)
+	assert.doesNotMatch(dicho, /pasó a ser|No cambió el costo|Sólo se registró|Actualizó el costo/)
+})
+
+test('ronda 2, dólares: el historial muestra los importes con la moneda de la oferta y no como pesos', async () => {
+	const dicho = await texto_de_uso({ moneda_id: 2, cost: 12, previous_article_cost: 10 })
+	assert.match(dicho, /US\$12/, 'la columna Costo en dólares')
+	assert.match(dicho, /Actualizó el costo: US\$10 → US\$12/)
+	assert.doesNotMatch(dicho.replace(/US\$/g, ''), /\$/, 'ningún importe queda sin la moneda')
+	// En pesos sigue igual.
+	assert.doesNotMatch(await texto_de_uso({ moneda_id: 1 }), /US\$/)
+})
+
+test('ronda 2, dólares: la columna "Precio de proveedor" de Cambios de precios también lo muestra en dólares', async () => {
+	nuevo_entorno()
+	const { vm } = montar('components/listado/modals/price-changes/Index.vue')
+	assert.match(vm.etiqueta_de_oferta(oferta_en_cambio({ moneda_id: 2, cost: 12 })), /Rosario · US\$12 · Importación/)
+	assert.match(vm.etiqueta_de_oferta(oferta_en_cambio({ moneda_id: 1, cost: 1200 })), /Rosario · \$1\.200 · Importación/)
+	assert.doesNotMatch(vm.etiqueta_de_oferta(oferta_en_cambio({ moneda_id: 1, cost: 1200 })), /US\$/)
+})
