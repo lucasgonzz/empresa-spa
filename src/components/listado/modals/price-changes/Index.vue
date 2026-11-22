@@ -4,7 +4,8 @@
 hide-footer
 size="lg"
 id="price-changes"
-@show="al_abrir_modal">
+@show="al_abrir_modal"
+@hidden="al_cerrar_modal">
 	<div
 	v-if="!loading">
 		
@@ -15,7 +16,8 @@ id="price-changes"
 		responsive
 		striped
 		:fields="fields"
-		:items="items">
+		:items="items"
+		:tbody-tr-class="row_class">
 			<template #cell(cambios_listas)="data">
 				<div
 				v-for="(cambio, indice) in data.item.cambios_listas"
@@ -32,6 +34,24 @@ id="price-changes"
 					</div>
 				</div>
 				<span v-if="!data.item.cambios_listas.length" class="text-muted">Sin detalle por lista</span>
+			</template>
+
+			<!--
+				Misión historial-precios-proveedor: el precio de proveedor que originó este cambio (sólo
+				si la API trae provider_offers) y el vínculo para ver su historial.
+			-->
+			<template #cell(provider_offers)="data">
+				<div
+				v-for="offer in data.item.provider_offers"
+				:key="offer.id"
+				class="historial-cambio-lista">
+					<div>{{ etiqueta_de_oferta(offer) }}</div>
+					<b-button
+					size="sm"
+					variant="outline-primary"
+					class="historial-cambio-vinculo"
+					@click="ver_historial_del_proveedor(offer)">Ver historial del proveedor</b-button>
+				</div>
 			</template>
 		</b-table>
 
@@ -58,7 +78,15 @@ export default {
 		return {
 			price_changes: [],
 			loading: false,
+			// Id del cambio de precio a destacar (cuando se llega desde el historial del proveedor); null = ninguno.
+			highlighted_change_id: null,
 		}
+	},
+	created() {
+		this.$root.$on('price-changes:highlight', this.set_highlight)
+	},
+	beforeDestroy() {
+		this.$root.$off('price-changes:highlight', this.set_highlight)
 	},
 	computed: {
 		price_types() {
@@ -77,6 +105,10 @@ export default {
 			]
 			if (this.can('article.cost')) {
 				fields.unshift({ label: 'Costo', key: 'cost' })
+			}
+			// Columna del precio de proveedor: sólo si algún cambio trae ofertas (con una API vieja no hay).
+			if (this.tiene_ofertas_de_proveedor) {
+				fields.push({ label: 'Precio de proveedor', key: 'provider_offers' })
 			}
 			if (this.tiene_detalle_de_listas) {
 				fields.push({ label: 'Cambios por lista', key: 'cambios_listas' })
@@ -121,6 +153,9 @@ export default {
 					created_at: this.date(model.created_at, true),
 					cambios_listas: Array.isArray(model.cambios_listas) ? model.cambios_listas : [],
 					origen: this.origen_historico(model.origen),
+					// Id del cambio, para destacar la fila cuando se llega desde el historial del proveedor.
+					id: model.id,
+					provider_offers: Array.isArray(model.provider_offers) ? model.provider_offers : [],
 				}
 
 				if (this.listas_visibles.length) {
@@ -150,6 +185,10 @@ export default {
 			})
 			return items 
 		},
+		// True si algún cambio trae precios de proveedor vinculados (la API anterior no manda la clave).
+		tiene_ofertas_de_proveedor() {
+			return this.price_changes.some(model => Array.isArray(model.provider_offers) && model.provider_offers.length)
+		},
 		tiene_detalle_de_listas() {
 			// El API anterior no trae este campo. Las fotos históricas siguen visibles;
 			// no se deduce un "antes" comparando filas que pueden tener huecos.
@@ -160,6 +199,56 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Marca un cambio de precio como destacado (evento 'price-changes:highlight' del historial de
+		 * precios por proveedor).
+		 * @param {Number} price_change_id Id del cambio de precio.
+		 * @return {void}
+		 */
+		set_highlight(price_change_id) {
+			this.highlighted_change_id = price_change_id
+		},
+		/**
+		 * Al cerrar el modal se olvida el destacado, para que la próxima apertura sea la de siempre.
+		 * @return {void}
+		 */
+		al_cerrar_modal() {
+			this.highlighted_change_id = null
+		},
+		/**
+		 * Clase de cada fila de la tabla: la del cambio destacado lleva un marco.
+		 * @param {Object} item Fila de la tabla.
+		 * @return {String}
+		 */
+		row_class(item) {
+			return item && item.id === this.highlighted_change_id ? 'historial-cambio-destacado' : ''
+		},
+		/**
+		 * Texto de un precio de proveedor: "Proveedor · $costo · Importación". Sin permiso de costos la
+		 * API omite el costo y queda "Proveedor · Importación".
+		 * @param {Object} offer Oferta vinculada al cambio (provider_offers de la API).
+		 * @return {String}
+		 */
+		etiqueta_de_oferta(offer) {
+			let partes = [offer.provider_name || 'Proveedor eliminado']
+			if (offer.cost !== null && typeof offer.cost != 'undefined') {
+				partes.push((Number(offer.moneda_id) === 2 ? 'US' : '') + this.price(offer.cost, false))
+			}
+			let origenes = { importacion: 'Importación', compra: 'Compra', manual: 'Carga manual' }
+			partes.push(origenes[offer.origen] || 'Dato rescatado')
+			return partes.join(' · ')
+		},
+		/**
+		 * Vuelve al historial del proveedor con esa oferta destacada: avisa cuál y abre el modal de
+		 * proveedores del artículo (cerrando éste, para no apilar modales).
+		 * @param {Object} offer Oferta vinculada al cambio.
+		 * @return {void}
+		 */
+		ver_historial_del_proveedor(offer) {
+			this.$root.$emit('provider-offers:highlight', offer.id)
+			this.$bvModal.hide('price-changes')
+			this.$bvModal.show('article-providers')
+		},
 		origen_historico(origen) {
 			let nombres = {
 				ficha: 'Ficha del artículo',
@@ -233,4 +322,20 @@ export default {
 	white-space: normal
 	& + &
 		margin-top: .6rem
+
+// Botón de vínculo al historial del proveedor: tocable en teléfono.
+.historial-cambio-vinculo
+	margin-top: 4px
+	min-height: 40px
+
+@media (min-width: 576px)
+	.historial-cambio-vinculo
+		min-height: 0
+</style>
+<!-- Sin scoped: la fila la dibuja b-table y el modal se monta fuera del componente. -->
+<style lang="sass">
+// Cambio destacado al llegar desde el historial del proveedor: marco del color primario (tema claro y oscuro).
+#price-changes .table > tbody > tr.historial-cambio-destacado
+	outline: 2px solid var(--color-primary)
+	outline-offset: -2px
 </style>
