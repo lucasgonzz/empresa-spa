@@ -183,7 +183,9 @@ export default {
 		/**
 		 * Pide el historial del artículo. Con éxito guarda las ofertas; ante un 404 (API sin el
 		 * endpoint) o cualquier otro error queda la lista vacía y el texto "Todavía no hay historial".
-		 * Sólo un error que no sea 404 avisa con un toast.
+		 * El pedido va con skip_global_error_event para que el aviso no salga dos veces: un 404 no avisa
+		 * nada y cualquier otro error avisa una sola vez con el toast propio. El indicador global de
+		 * carga se apaga en .then y en .catch.
 		 * @return {void}
 		 */
 		load_history() {
@@ -194,7 +196,9 @@ export default {
 			self.loading = true
 			self.$store.commit('auth/setMessage', 'Cargando el historial de precios por proveedor')
 			self.$store.commit('auth/setLoading', true)
-			self.$api.get('provider-price-offer/article/' + self.article.id)
+			// skip_global_error_event: el interceptor de main.js no avisa ni dispara el evento de error; el
+			// catch de abajo decide (404 de una API vieja = vacío sin aviso, otro error = un solo aviso).
+			self.$api.get('provider-price-offer/article/' + self.article.id, { skip_global_error_event: true })
 			.then(function(res) {
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')

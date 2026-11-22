@@ -26,12 +26,13 @@ Vue.config.devtools = false
 Vue.config.ignoredElements = [/^b-/]
 
 // Lo que cada test lee y escribe: se reemplaza en cada caso con nuevo_entorno().
-const entorno = { permisos: [], pedidos: [], respuesta: null, commits: [], toasts: [], errores: [], modales: [], articulo: null }
+const entorno = { permisos: [], pedidos: [], configs: [], respuesta: null, commits: [], toasts: [], errores: [], modales: [], articulo: null }
 
 function nuevo_entorno(opciones) {
 	opciones = opciones || {}
 	entorno.permisos = opciones.permisos || ['article.cost']
 	entorno.pedidos = []
+	entorno.configs = []
 	entorno.respuesta = opciones.respuesta || function() { return Promise.resolve({ data: { models: [], can_see_cost: true } }) }
 	entorno.commits = []
 	entorno.toasts = []
@@ -49,8 +50,10 @@ function nuevo_entorno(opciones) {
 
 Vue.config.errorHandler = function(error) { entorno.errores.push(error) }
 Vue.prototype.$api = {
-	get(url) {
+	get(url, config) {
 		entorno.pedidos.push(url)
+		// Opciones de axios con las que se pidió (ronda 2: skip_global_error_event).
+		entorno.configs.push(config)
 		return entorno.respuesta(url)
 	},
 }
@@ -608,4 +611,42 @@ test('ronda 2, dólares: la columna "Precio de proveedor" de Cambios de precios 
 	assert.match(vm.etiqueta_de_oferta(oferta_en_cambio({ moneda_id: 2, cost: 12 })), /Rosario · US\$12 · Importación/)
 	assert.match(vm.etiqueta_de_oferta(oferta_en_cambio({ moneda_id: 1, cost: 1200 })), /Rosario · \$1\.200 · Importación/)
 	assert.doesNotMatch(vm.etiqueta_de_oferta(oferta_en_cambio({ moneda_id: 1, cost: 1200 })), /US\$/)
+})
+
+// ---------------------------------------------------------------- Ronda 2: api vieja sin toast doble
+
+test('ronda 2, api vieja: el GET del historial pasa skip_global_error_event para que el interceptor global no avise', async () => {
+	nuevo_entorno({ respuesta: historial([oferta_ca4()]) })
+	montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	assert.deepEqual(entorno.pedidos, ['provider-price-offer/article/12'])
+	assert.equal(entorno.configs.length, 1)
+	assert.ok(entorno.configs[0] && entorno.configs[0].skip_global_error_event === true, 'el GET tiene que ir con { skip_global_error_event: true }')
+})
+
+test('ronda 2, api vieja: con 404 el historial queda vacío, sin toast propio, y el indicador de carga se apaga', async () => {
+	nuevo_entorno({ respuesta: function() { return Promise.reject({ response: { status: 404, data: {} } }) } })
+	const { vm } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	assert.match(texto(vm._render()), /Todavía no hay historial de precios por proveedor para este artículo\./)
+	assert.deepEqual(entorno.toasts, [])
+	const cargas = entorno.commits.filter(par => par[0] === 'auth/setLoading').map(par => par[1])
+	assert.deepEqual(cargas, [true, false])
+	assert.equal(entorno.commits.filter(par => par[0] === 'auth/setMessage').pop()[1], '')
+})
+
+test('ronda 2, api vieja: con 500 hay UN solo aviso claro, el historial queda vacío y el indicador se apaga', async () => {
+	nuevo_entorno({ respuesta: function() { return Promise.reject({ response: { status: 500, data: {} } }) } })
+	const { vm } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	assert.equal(entorno.toasts.length, 1, 'un solo aviso')
+	assert.match(entorno.toasts[0], /No se pudo cargar el historial de precios por proveedor/)
+	assert.match(texto(vm._render()), /Todavía no hay historial de precios por proveedor para este artículo\./)
+	const cargas = entorno.commits.filter(par => par[0] === 'auth/setLoading').map(par => par[1])
+	assert.deepEqual(cargas, [true, false])
+	// Sin respuesta (corte de red): también un solo aviso.
+	nuevo_entorno({ respuesta: function() { return Promise.reject(new Error('Network Error')) } })
+	montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	assert.equal(entorno.toasts.length, 1)
 })
