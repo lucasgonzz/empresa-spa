@@ -19,9 +19,14 @@
 	- un separador antes de los paneles de descuentos y recargos, en la etapa 3.
 */
 import { ELEMENTOS, ETAPAS, KEY_SEPARADOR, KEY_SALTO_DE_FILA, cols_por_defecto } from './elementos'
+import { disposicion_predeterminada, meta_por_defecto } from './secciones'
 
-/* Version del formato del JSON de `vender_layouts.layout`. */
-export const VERSION_DEL_FORMATO = 1
+/*
+	Version del formato del JSON de `vender_layouts.layout`. La 2 (mision
+	vender-secciones-personalizables, 22/11/2026) suma `secciones` (metadatos de cada seccion) y
+	`disposicion` (bandas y columnas); las claves de la version 1 siguen igual.
+*/
+export const VERSION_DEL_FORMATO = 2
 
 /*
 	Marcadores del diseño predeterminado: key del elemento ANTES del cual va. Los ids son fijos para
@@ -40,14 +45,20 @@ const MARCADORES_PREDETERMINADOS = [
  * dibujar, no al resolver, asi un elemento de una extension apagada ya tiene su lugar el dia que se
  * prende.
  *
+ * La disposicion es la de siempre (una banda, una columna con las tres etapas apiladas) y los
+ * metadatos de cada seccion son los de fabrica: titulos, colores azul/verde/naranja, alto
+ * automatico y plegado de la etapa 1 y la etapa 3 de antes de las secciones configurables.
+ *
  * @param {Object} vm componente de la SPA (para las cuentas de ancho que dependen de extensiones)
- * @returns {{version: number, etapas: Object, sacados: Array}}
+ * @returns {{version: number, etapas: Object, sacados: Array, secciones: Object, disposicion: Array}}
  */
 export default function diseno_predeterminado(vm) {
 	let etapas = {}
+	let secciones = {}
 
 	ETAPAS.forEach(function (etapa) {
 		etapas[etapa] = []
+		secciones[etapa] = meta_por_defecto(etapa)
 	})
 
 	ELEMENTOS.forEach(function (elemento) {
@@ -71,5 +82,7 @@ export default function diseno_predeterminado(vm) {
 		version: VERSION_DEL_FORMATO,
 		etapas: etapas,
 		sacados: [],
+		secciones: secciones,
+		disposicion: disposicion_predeterminada(),
 	}
 }

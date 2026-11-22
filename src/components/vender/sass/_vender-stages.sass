@@ -19,6 +19,33 @@ $vender_stages_padding: 8px
 	/* Espacio inferior para no quedar tapado por la barra de acciones fija */
 	padding-bottom: 60px
 
+/* Disposicion del diseño de Vender (mision vender-secciones-personalizables, 22/11/2026): el */
+/* contenedor tiene bandas (filas), cada banda columnas y cada columna sus secciones apiladas. */
+/* El margen y el padding laterales son IGUALES al padding de .vender-stages ($vender_stages_padding, */
+/* 8px): la banda ocupa justo el area de contenido del contenedor (ni un pixel de mas: con -9px */
+/* desbordaba 1px y .vender-stages, que ya tiene overflow-y: auto, mostraba scroll horizontal) y una */
+/* banda con UNA columna de 12 tiene exactamente la geometria de antes de las columnas. Entre */
+/* columnas quedan 16px, el mismo gutter que tiene la grilla de campos (GrillaDeEtapa.vue). */
+/* 🔴 Ni la banda ni la columna llevan overflow: el sticky del bloque de buscadores de la etapa 2 */
+/* se pega contra .vender-stages (el que scrollea), y cualquier ancestro con overflow lo rompe. */
+.vender-banda
+	margin: 0 (-$vender_stages_padding)
+
+.vender-banda__columna
+	padding: 0 $vender_stages_padding
+	min-width: 0
+
+/* Desde 992px (la clase la pone VenderStages.vue con matchMedia) las columnas van una al lado de la */
+/* otra, con el ancho de 12 que elige el diseño. align-items: stretch (el default) las deja a todas */
+/* del alto de la banda, asi un sticky dentro de una columna dura lo mismo que la banda entera. */
+.vender-stages--columnas .vender-banda
+	display: flex
+	align-items: stretch
+
+.vender-stages--columnas .vender-banda__columna
+	flex: 0 0 calc(var(--ancho-de-columna) / 12 * 100%)
+	max-width: calc(var(--ancho-de-columna) / 12 * 100%)
+
 /* Bloque de una etapa individual */
 .vender-stage
 	border: 1px solid var(--color-border-tertiary, #dee2e6)
@@ -46,75 +73,50 @@ $vender_stages_padding: 8px
 	&--no-collapse
 		display: contents
 
-/* Acentos por número de etapa: header teñido con el color de la */
-/* sección + borde de ese mismo color en toda la tarjeta ("Opción A+B" del mockup validado por */
-/* Lucas el 17/9/2026, https://claude.ai/artifact/TDnkeFMHxS9nrVpUjkndmY). Reemplaza al acento de */
-/* borde izquierdo de 4px que tenía el header solo: con el borde de color ya en toda la tarjeta, */
-/* un acento aparte quedaba señalando lo mismo dos veces. */
+/* Acentos por seccion: header teñido con el color de la seccion + borde de ese mismo color en toda */
+/* la tarjeta ("Opción A+B" del mockup validado por Lucas el 17/9/2026, */
+/* https://claude.ai/artifact/TDnkeFMHxS9nrVpUjkndmY). Reemplaza al acento de borde izquierdo de */
+/* 4px que tenía el header solo: con el borde de color ya en toda la tarjeta, uno aparte señalaba */
+/* lo mismo dos veces. */
 /* El tono de reposo (header cerrado) es más claro que el de header abierto -- calca la relación */
-/* que ya tenían --bg-section/--bg-hover antes de este cambio, así que la apertura de la etapa */
+/* que ya tenían --bg-section/--bg-hover antes de este cambio, así que la apertura de la sección */
 /* se sigue notando por contraste, no solo por el chevron. */
 /* Los selectores de fondo le ganan por especificidad a `.vender-stage__header` y a */
 /* `.vender-stage--open > .vender-stage__header` (base, más abajo en este archivo) sin depender */
 /* del orden: 4 clases contra 1-2. border-bottom-color y box-shadow del header */
 /* siguen viniendo de la regla base -- acá solo se pisa el fondo. */
-/* 🔴 La etapa se identifica por su clase --etapa-N (la pone el Index de cada etapa) y NO por su */
-/* posición con :nth-child(N), que es lo que se usaba hasta la misión diseno-vender-configurable */
-/* (28/9/2026). Desde esa misión una etapa a la que el diseño no le deja ningún campo no se dibuja */
-/* (v-if), y con :nth-child la etapa 2 pasaba a ser la primera y se teñía con el azul de la 1. */
-/* Cada :nth-child(N) se reemplazó por una clase en el mismo selector compuesto, así que la */
-/* especificidad es exactamente la de antes y la cascada no cambia. */
-.vender-stages .vender-stage.vender-stage--etapa-1 .vender-stage__header
-	background: rgba(0, 123, 255, .09)
+/* 🔴 El color ya NO es una regla por etapa (--etapa-1/2/3 con rgba literales): cada seccion trae en */
+/* linea la variable --acento-rgb ("r,g,b" de su color de la paleta, ver layout/secciones.js) y estas */
+/* reglas la usan con los MISMOS alfas de antes (.09 / .16 / .13 / .18 / .45). Con los colores por */
+/* defecto (azul 0,123,255; verde 25,135,84; naranja 230,119,0) el resultado es identico. Las clases */
+/* vender-stage--etapa-N se mantienen como identidad de la seccion, pero ya no dan color. */
+/* La seccion se identifica por su clase y NO por :nth-child: una seccion sin campos no se dibuja y */
+/* con :nth-child la siguiente tomaria el color de la anterior. */
+/* El literal va por unquote() para que Sass no intente evaluar rgba() con una var() adentro. */
+.vender-stages .vender-stage.vender-stage--acento .vender-stage__header
+	background: unquote('rgba(var(--acento-rgb), .09)')
 
 	&:hover
-		background: rgba(0, 123, 255, .16)
+		background: unquote('rgba(var(--acento-rgb), .16)')
 
-.vender-stages .vender-stage--open.vender-stage--etapa-1 > .vender-stage__header
-	background: rgba(0, 123, 255, .13)
-
-	&:hover
-		background: rgba(0, 123, 255, .18)
-
-.vender-stages .vender-stage.vender-stage--etapa-1 .vender-stage__number
-	background: var(--color-primary, #007bff)
-
-/* Etapa 1: borde de tarjeta completo, en vez del neutro de la regla base .vender-stage. */
-.vender-stages .vender-stage.vender-stage--etapa-1
-	border-color: rgba(0, 123, 255, .45)
-	border-width: 1.5px
-
-/* Etapa 2: siempre "abierta" (--no-collapse), un solo tono de header -- no hay estado cerrado */
-/* que distinguir. El borde de la tarjeta completa NO se puede tocar acá: la etapa 2 es */
-/* display: contents (ver .vender-stage--no-collapse) y no genera caja propia, así que su chasis */
-/* lo dibujan .vender-stage__pinned y .vender-stage__body--scroll por separado, más abajo. */
-.vender-stages .vender-stage.vender-stage--etapa-2 .vender-stage__header--no-collapse
-	background: rgba(25, 135, 84, .13)
+/* Abierta, y tambien las que no se pliegan (la etapa 2, o una de alto fijo): un solo tono, sin */
+/* estado cerrado que distinguir. */
+.vender-stages .vender-stage--open.vender-stage--acento > .vender-stage__header,
+.vender-stages .vender-stage.vender-stage--acento .vender-stage__header--no-collapse
+	background: unquote('rgba(var(--acento-rgb), .13)')
 
 	&:hover
-		background: rgba(25, 135, 84, .18)
+		background: unquote('rgba(var(--acento-rgb), .18)')
 
-.vender-stages .vender-stage.vender-stage--etapa-2 .vender-stage__number
-	background: #198754
+.vender-stages .vender-stage.vender-stage--acento .vender-stage__number
+	background: unquote('rgb(var(--acento-rgb))')
 
-.vender-stages .vender-stage.vender-stage--etapa-3 .vender-stage__header
-	background: rgba(230, 119, 0, .09)
-
-	&:hover
-		background: rgba(230, 119, 0, .16)
-
-.vender-stages .vender-stage--open.vender-stage--etapa-3 > .vender-stage__header
-	background: rgba(230, 119, 0, .13)
-
-	&:hover
-		background: rgba(230, 119, 0, .18)
-
-.vender-stages .vender-stage.vender-stage--etapa-3 .vender-stage__number
-	background: #e67700
-
-/* Etapa 3: borde de tarjeta completo, mismo criterio que la etapa 1. */
-.vender-stages .vender-stage.vender-stage--etapa-3
-	border-color: rgba(230, 119, 0, .45)
+/* Borde de tarjeta completo del color de la seccion, en vez del neutro de la regla base */
+/* .vender-stage. La etapa 2 es display: contents y no genera caja propia, asi que su chasis lo */
+/* dibujan .vender-stage__pinned y .vender-stage__body--scroll por separado, mas abajo (y la */
+/* tarjeta recupera su caja, y este borde, con el alto fijo: ver --alto-fijo). */
+.vender-stages .vender-stage.vender-stage--acento
+	border-color: unquote('rgba(var(--acento-rgb), .45)')
 	border-width: 1.5px
 
 /* Header de etapa: número + textos + chevron */
@@ -126,8 +128,9 @@ $vender_stages_padding: 8px
 .vender-stage__header
 	display: flex
 	align-items: center
-	gap: 10px
-	padding: 11px 14px 11px 12px
+	gap: 8px
+	/* Header bajo (menos de 36px de alto, antes ~52px): titulo y descripcion en un solo renglon */
+	padding: 5px 12px 5px 10px
 	cursor: pointer
 	user-select: none
 	background: var(--bg-section, #e9ecef)
@@ -162,10 +165,9 @@ $vender_stages_padding: 8px
 	position: sticky
 	top: $vender_stage_gap - $vender_stages_padding
 	z-index: 10
-	/* Verde de la etapa 2 (mismo tono que .vender-stage:nth-child(3) usa para naranja, ver arriba): */
-	/* acá va literal y no por nth-child porque esta clase es exclusiva de la etapa 2 -- no hay */
-	/* otra etapa que la use y que necesite un color distinto. */
-	border: 1.5px solid rgba(25, 135, 84, .45)
+	/* Color de la etapa 2 (verde por defecto): sale de --acento-rgb, que hereda de la tarjeta de la */
+	/* etapa 2 (display: contents no corta la herencia). */
+	border: 1.5px solid unquote('rgba(var(--acento-rgb), .45)')
 	border-bottom: none
 	border-radius: 6px 6px 0 0
 	background: var(--bg-card, #fff)
@@ -208,39 +210,95 @@ $vender_stages_padding: 8px
 		&::before
 			content: none
 
+/* Seccion de ALTO FIJO (mision vender-secciones-personalizables): la tarjeta mide el alto que */
+/* eligio el diseño (VenderStages.vue lo pasa en linea, en px, sólo desde 992px) y lo que no entra */
+/* scrollea ADENTRO del cuerpo; el header queda siempre arriba. */
+.vender-stages .vender-stage.vender-stage--alto-fijo
+	display: flex
+	flex-direction: column
+
+	> .vender-stage__header
+		flex: 0 0 auto
+
+	> .vender-stage__body
+		flex: 1 1 auto
+		min-height: 0
+		overflow-y: auto
+
+/* La etapa 2 con alto fijo recupera su caja (era display: contents para el sticky): el bloque de */
+/* buscadores deja de ser sticky -- queda arriba de la tarjeta, que ya no scrollea con la pagina -- y */
+/* la tabla scrollea adentro. El chasis lo dibuja la tarjeta entera (borde, radio y fondo de */
+/* .vender-stage + --acento), asi que las dos mitades pierden el suyo. El `.vender-stage--alto-fijo` */
+/* de esta regla gana por especificidad al `display: contents` de --no-collapse. */
+.vender-stages .vender-stage.vender-stage--no-collapse.vender-stage--alto-fijo
+	display: flex
+	flex-direction: column
+
+	> .vender-stage__pinned
+		position: static
+		flex: 0 0 auto
+		border: none
+		border-radius: 0
+		box-shadow: none
+
+		&::before
+			content: none
+
+	> .vender-stage__body--scroll
+		flex: 1 1 auto
+		min-height: 0
+		overflow-y: auto
+		border: none
+		border-radius: 0
+		margin-bottom: 0
+
 /* Número de etapa en círculo */
 .vender-stage__number
 	display: inline-flex
 	align-items: center
 	justify-content: center
-	width: 28px
-	height: 28px
+	width: 22px
+	height: 22px
 	border-radius: 50%
 	color: #fff
-	font-size: 0.8rem
+	font-size: 0.72rem
 	font-weight: 700
 	flex-shrink: 0
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18)
 
-/* Contenedor de label y sublabel */
+/* Contenedor de label y sublabel: en un solo renglon (titulo a la izquierda, descripcion al lado) */
 .vender-stage__header-text
 	flex: 1
 	display: flex
-	flex-direction: column
+	flex-direction: row
+	align-items: baseline
+	gap: 8px
 	min-width: 0
 
-/* Título principal de la etapa */
+/* Título principal de la sección: no se achica antes que la descripcion, pero se corta si no entra */
 .vender-stage__label
+	flex: 0 1 auto
+	min-width: 0
+	max-width: 100%
 	font-weight: 700
-	font-size: 0.92rem
+	font-size: 0.88rem
+	line-height: 1.3
 	color: var(--color-text-primary, #212529)
 	letter-spacing: 0.01em
+	white-space: nowrap
+	overflow: hidden
+	text-overflow: ellipsis
 
-/* Subtítulo descriptivo de la etapa */
+/* Descripción de la sección: ocupa el resto del renglon y se corta con puntos suspensivos */
 .vender-stage__sublabel
+	flex: 1 1 0
+	min-width: 0
 	font-size: 0.75rem
+	line-height: 1.3
 	color: var(--color-text-secondary, #495057)
-	margin-top: 2px
+	white-space: nowrap
+	overflow: hidden
+	text-overflow: ellipsis
 
 /* Ícono de chevron para indicar estado abierto/cerrado */
 .vender-stage__chevron
@@ -338,9 +396,8 @@ $vender_stages_padding: 8px
 	/* tarjeta ya no genera caja -- ver .vender-stage--no-collapse. */
 	&--scroll
 		padding-top: 0
-		/* Mismo verde y mismo motivo que .vender-stage__pinned: literal porque esta clase también */
-		/* es exclusiva de la etapa 2. */
-		border: 1.5px solid rgba(25, 135, 84, .45)
+		/* Mismo color y mismo motivo que .vender-stage__pinned */
+		border: 1.5px solid unquote('rgba(var(--acento-rgb), .45)')
 		border-top: none
 		border-radius: 0 0 6px 6px
 		background: var(--bg-card, #fff)

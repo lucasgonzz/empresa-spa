@@ -9,9 +9,17 @@
 		3: se dibujan con layout/GrillaDeEtapa.vue. Lo fijo de esta etapa es lo que scrollea debajo
 		(las ventas anteriores vinculadas y la tabla de articulos), que ningun diseño toca.
 
-		La clase vender-stage--etapa-2 es la que le da el verde de la etapa (ver _vender-stages.sass).
+		La clase vender-stage--etapa-2 es la identidad de la etapa; su color (verde por defecto) sale de
+		la variable --acento-rgb que se le pone en linea segun el diseño (ver _vender-stages.sass).
+
+		Con el alto fijo (el diseño ya pidio un alto y Vender esta dibujando columnas) deja de ser
+		sticky: la tarjeta tiene el alto elegido, el bloque de buscadores queda arriba y la tabla
+		scrollea ADENTRO (clase vender-stage--alto-fijo). Con el alto automatico es la de siempre.
 	-->
-	<div class="vender-stage vender-stage--etapa-2 vender-stage--open vender-stage--no-collapse">
+	<div
+	class="vender-stage vender-stage--acento vender-stage--etapa-2 vender-stage--open vender-stage--no-collapse"
+	:class="{ 'vender-stage--alto-fijo': alto_px !== null }"
+	:style="estilo">
 
 		<!--
 			Bloque pegado (sticky): header + total + buscador de artículos.
@@ -25,13 +33,10 @@
 		ref="pinned">
 
 			<!-- Header informativo (sin toggle) -->
-			<div class="vender-stage__header vender-stage__header--no-collapse">
-				<span class="vender-stage__number">2</span>
-				<div class="vender-stage__header-text">
-					<span class="vender-stage__label">{{ titulo }}</span>
-					<span class="vender-stage__sublabel">{{ subtitulo }}</span>
-				</div>
-			</div>
+			<cabecera-de-seccion
+			:numero="numero"
+			:titulo="titulo"
+			:descripcion="subtitulo"></cabecera-de-seccion>
 
 			<!--
 				Los campos que el diseño pone en esta etapa: con el predeterminado, el resumen de la
@@ -90,7 +95,7 @@
 import PreviusSaleData from '@/components/vender/components/remito/PreviusSaleData.vue'
 import ArticlesTable from '@/components/vender/components/remito/ArticlesTable.vue'
 import GrillaDeEtapa from '@/components/vender/layout/GrillaDeEtapa'
-import { TITULOS_DE_ETAPAS } from '@/components/vender/layout/elementos'
+import CabeceraDeSeccion from '@/components/vender/components/seccion/CabeceraDeSeccion'
 import { subtitulo_de_etapa } from '@/components/vender/layout/resolver_diseno'
 import diseno_de_vender, { EVENTO_ENFOCAR_ELEMENTO } from '@/mixins/vender/diseno_de_vender'
 
@@ -112,7 +117,18 @@ const MAXIMO_DEL_AREA = 0.5
 export default {
 	name: 'VenderStage2',
 	mixins: [diseno_de_vender],
+	props: {
+		/**
+		 * Alto en pixeles si la seccion es de alto fijo y Vender esta dibujando columnas; null si el
+		 * alto es automatico. Lo mide VenderStages.vue (ver seccion/Index.vue, que tiene el mismo).
+		 */
+		alto_px: {
+			type: Number,
+			default: null,
+		},
+	},
 	components: {
+		CabeceraDeSeccion,
 		/* El resumen (ContextBar) y los buscadores los dibuja la grilla, segun el diseño en uso */
 		GrillaDeEtapa,
 		PreviusSaleData,
@@ -120,24 +136,53 @@ export default {
 	},
 	computed: {
 		/**
-		 * Titulo de la etapa, el mismo que muestra el editor de diseños.
+		 * Los datos de la seccion en el diseño en uso (titulo, color, numero...).
+		 *
+		 * @returns {Object}
+		 */
+		seccion() {
+			return this.seccion_de_vender('etapa_2') || { numero: 2, titulo: 'Artículos y servicios', descripcion: null, rgb: '25,135,84' }
+		},
+
+		/**
+		 * Titulo de la etapa: el del diseño (por defecto, el mismo que muestra el editor).
 		 *
 		 * @returns {string}
 		 */
 		titulo() {
-			return TITULOS_DE_ETAPAS.etapa_2
+			return this.seccion.titulo
 		},
 
 		/**
-		 * Subtitulo del header: los campos que se dibujan ("Resumen, código de barras, buscador...").
-		 * En la primera version de los diseños quedo el texto fijo de antes ("Buscar artículos,
-		 * servicios, combos y promociones"); ahora sale del diseño en uso, como en las etapas 1 y 3
-		 * y como lo muestra el editor.
+		 * Numero del circulo del header: posicion de la etapa en el orden de lectura del diseño.
+		 *
+		 * @returns {number}
+		 */
+		numero() {
+			return this.seccion.numero
+		},
+
+		/**
+		 * Descripcion del header: la que escribio el usuario o, si no puso ninguna, la automatica con
+		 * los campos que se dibujan ("Resumen, código de barras, buscador...").
 		 *
 		 * @returns {string}
 		 */
 		subtitulo() {
-			return subtitulo_de_etapa(this.elementos_de_etapa_de_vender('etapa_2'))
+			return this.seccion.descripcion || subtitulo_de_etapa(this.elementos_de_etapa_de_vender('etapa_2'))
+		},
+
+		/**
+		 * Estilo en linea: el color de enfasis (r,g,b) y, con alto fijo, el alto de la tarjeta.
+		 *
+		 * @returns {Object}
+		 */
+		estilo() {
+			let estilo = { '--acento-rgb': this.seccion.rgb }
+			if (this.alto_px !== null) {
+				estilo.height = this.alto_px + 'px'
+			}
+			return estilo
 		},
 
 		/**
@@ -173,7 +218,13 @@ export default {
 		*/
 		this.$root.$on(EVENTO_ENFOCAR_ELEMENTO, this.al_pedir_el_foco_de_un_elemento)
 
-		this.contenedor = this.$el.parentElement
+		/*
+			🔴 El contenedor que scrollea es .vender-stages y se lo busca con closest(): antes era
+			this.$el.parentElement, pero ahora entre la etapa y .vender-stages estan la banda y la
+			columna del diseño (mision vender-secciones-personalizables), y el padre directo ya no
+			es el que scrollea: el sticky dejaba de medirse.
+		*/
+		this.contenedor = this.$el.closest('.vender-stages')
 
 		if (!this.contenedor) {
 			return

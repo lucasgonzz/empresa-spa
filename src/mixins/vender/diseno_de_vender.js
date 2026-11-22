@@ -2,9 +2,14 @@
 	El "Diseño de Vender" en uso, para todo lo que en Vender depende de DONDE esta cada campo
 	(mision diseno-vender-configurable, 28/9/2026).
 
+	Desde la mision vender-secciones-personalizables (22/11/2026) las "etapas" son SECCIONES del
+	diseño (ids etapa_1, etapa_2, etapa_3 y seccion_4 a seccion_9, entre 1 y 6): todo lo que antes
+	recorria las tres etapas ahora recorre los ids de la disposicion del diseño en uso, y los
+	metodos conservan su nombre (`etapa` en los nombres quiere decir "id de seccion").
+
 	Lo mezclan:
-	- las tres etapas (components/vender/components/stage-1/2/3/Index.vue): si se dibujan, su
-	  subtitulo, si arrancan abiertas y el enfoque de un campo que les toca;
+	- las secciones (components/vender/components/seccion/Index.vue y stage-2/Index.vue): si se
+	  dibujan, su subtitulo, si arrancan abiertas y el enfoque de un campo que les toca;
 	- la grilla de cada etapa (components/vender/layout/GrillaDeEtapa.vue): que campos dibuja;
 	- la reserva (components/vender/layout/ReservaDeElementos.vue): que campos monta escondidos;
 	- la barra de resumen (VenderStage1SummaryBar.vue) y los atajos de teclado
@@ -75,11 +80,16 @@ import {
 } from '@/components/vender/layout/resolver_diseno'
 import {
 	ELEMENTOS,
-	ETAPAS,
 	es_marcador,
 	es_entrada_de_articulos,
 	esta_disponible,
 } from '@/components/vender/layout/elementos'
+import {
+	SECCION_FIJA,
+	ancho_de_columna_de,
+	ids_en_orden,
+	rgb_del_color,
+} from '@/components/vender/layout/secciones'
 
 /* Evento de $root para llevar el foco a un elemento del diseño: (key, opciones). Lo escuchan las tres etapas. */
 export const EVENTO_ENFOCAR_ELEMENTO = 'vender:enfocar-elemento'
@@ -189,8 +199,8 @@ export default {
 
 		/**
 		 * El diseño en uso, resuelto contra el catalogo y con los elementos forzados de este
-		 * usuario de vuelta en su lugar: {version, etapas: {etapa_1..3}, sacados}. Tiene TODOS los
-		 * elementos, esten disponibles o no.
+		 * usuario de vuelta en su lugar: {version, etapas: {por id de seccion}, sacados, secciones,
+		 * disposicion}. Tiene TODOS los elementos, esten disponibles o no.
 		 *
 		 * aplicar_elementos_forzados() va aca y no en el editor, a proposito: el editor muestra el
 		 * diseño tal como se guardo (con la cantidad en la bandeja y el aviso de que igual
@@ -200,6 +210,15 @@ export default {
 		 */
 		diseno_de_vender() {
 			return aplicar_elementos_forzados(resolver_diseno(this.layout_de_vender_en_uso, this), this)
+		},
+
+		/**
+		 * Los ids de las secciones del diseño en uso, en orden de lectura (banda, columna, apilado).
+		 *
+		 * @returns {Array<string>}
+		 */
+		ids_de_secciones_de_vender() {
+			return ids_en_orden(this.diseno_de_vender.disposicion)
 		},
 
 		/**
@@ -236,6 +255,89 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Los datos de una seccion para dibujarla: sus metadatos ya resueltos (titulo, descripcion,
+		 * color, alto, alto_fijo, plegado) mas su numero (posicion en orden de lectura, 1..6; es el
+		 * del circulo del header), el ancho de la columna donde esta, el RGB de su color y si se
+		 * puede plegar. Sin diseño para ese id devuelve null.
+		 *
+		 * @param {string} id
+		 * @returns {Object|null}
+		 */
+		seccion_de_vender(id) {
+			let meta = this.diseno_de_vender.secciones ? this.diseno_de_vender.secciones[id] : null
+			if (!meta) {
+				return null
+			}
+
+			return Object.assign({}, meta, {
+				id: id,
+				numero: this.ids_de_secciones_de_vender.indexOf(id) + 1,
+				ancho_de_columna: ancho_de_columna_de(this.diseno_de_vender.disposicion, id),
+				rgb: rgb_del_color(meta.color, id),
+				plegable: this.seccion_de_vender_es_plegable(id),
+			})
+		},
+
+		/**
+		 * Si la seccion se puede plegar: tiene `plegado` distinto de 'no' y no es de alto fijo (una
+		 * seccion fija plegada dejaria un hueco en su columna). La etapa 2 nunca se pliega.
+		 *
+		 * @param {string} id
+		 * @returns {boolean}
+		 */
+		seccion_de_vender_es_plegable(id) {
+			let meta = this.diseno_de_vender.secciones ? this.diseno_de_vender.secciones[id] : null
+			return !!meta && id !== SECCION_FIJA && !meta.alto_fijo && meta.plegado !== 'no'
+		},
+
+		/**
+		 * Alineacion de scrollIntoView para llevar un campo de la seccion a la vista: 'center' si la
+		 * seccion esta en la misma columna que la etapa 2 y debajo de ella (el bloque pegado de la
+		 * etapa 2 tapa el tope del area); si no, 'start'. Con el predeterminado: la etapa 1 'start' y
+		 * la etapa 3 'center', como siempre.
+		 *
+		 * @param {string} id
+		 * @returns {string}
+		 */
+		bloque_de_foco_de_seccion(id) {
+			let bloque = 'start'
+			;(this.diseno_de_vender.disposicion || []).forEach(function (banda) {
+				banda.columnas.forEach(function (columna) {
+					let en_la_columna = columna.secciones.indexOf(id)
+					let la_fija = columna.secciones.indexOf(SECCION_FIJA)
+					if (en_la_columna !== -1 && la_fija !== -1 && en_la_columna > la_fija) {
+						bloque = 'center'
+					}
+				})
+			})
+			return bloque
+		},
+
+		/**
+		 * Si la barra de resumen de arriba (VenderStage1SummaryBar) hace falta: repite sucursal,
+		 * metodo de pago, lista de precios y cliente para cuando su seccion esta plegada. Si
+		 * ninguna de las secciones que dibujan esos campos se puede plegar (con el diseño agil la
+		 * columna de la izquierda siempre esta a la vista) la barra repetiria lo mismo y no se
+		 * muestra. Con el predeterminado la etapa 1 es plegable: sin cambios.
+		 *
+		 * @returns {boolean}
+		 */
+		barra_de_resumen_de_vender_hace_falta() {
+			let self = this
+			let hace_falta = false
+
+			;['sucursal', 'metodo_de_pago', 'lista_de_precios', 'cliente'].forEach(function (key) {
+				let id = self.etapa_donde_se_dibuja_elemento_de_vender(key)
+				if (id === null || self.seccion_de_vender_es_plegable(id)) {
+					/* Si no se dibuja en ningun lado, la barra es lo unico que muestra el dato */
+					hace_falta = true
+				}
+			})
+
+			return hace_falta
+		},
+
 		/**
 		 * Los items DISPONIBLES de una etapa: elementos que este negocio/usuario puede usar y
 		 * marcadores (sin los que quedan colgando). Ver elementos_visibles() del contrato.
@@ -276,9 +378,9 @@ export default {
 		},
 
 		/**
-		 * Si la grilla de la etapa se dibuja. Las etapas 1 y 3 enteras se dibujan solo si tienen
-		 * algun campo disponible; la etapa 2 esta siempre (la tabla de articulos es fija), pero su
-		 * grilla solo con campos o con el aviso del tope de items.
+		 * Si la grilla de la seccion se dibuja. Toda seccion que no es la etapa 2 se dibuja solo si
+		 * tiene algun campo disponible; la etapa 2 esta siempre (la tabla de articulos es fija),
+		 * pero su grilla solo con campos o con el aviso del tope de items.
 		 *
 		 * 🔴 Es la UNICA regla de "que grilla se dibuja": la usan las etapas para su v-if y la
 		 * reserva para saber que le toca montar a ella. Si divergieran, un campo quedaria montado
@@ -291,7 +393,7 @@ export default {
 			if (this.etapa_de_vender_tiene_elementos(etapa)) {
 				return true
 			}
-			return etapa === 'etapa_2' && this.tope_de_items_de_vender_alcanzado
+			return etapa === SECCION_FIJA && this.tope_de_items_de_vender_alcanzado
 		},
 
 		/**
@@ -382,7 +484,7 @@ export default {
 		etapa_donde_se_dibuja_elemento_de_vender(key) {
 			let self = this
 			let encontrada = null
-			ETAPAS.forEach(function (etapa) {
+			this.ids_de_secciones_de_vender.forEach(function (etapa) {
 				if (encontrada === null && self.elemento_de_vender_se_dibuja_en_la_etapa(key, etapa)) {
 					encontrada = etapa
 				}
@@ -402,7 +504,7 @@ export default {
 			let self = this
 			let montados = {}
 
-			ETAPAS.forEach(function (etapa) {
+			this.ids_de_secciones_de_vender.forEach(function (etapa) {
 				self.items_de_la_grilla_de_vender(etapa).forEach(function (item) {
 					if (!es_marcador(item.key)) {
 						montados[item.key] = true
