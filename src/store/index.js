@@ -34,6 +34,8 @@ import sub_category from '@/store/sub_category'
 import location from '@/store/location'
 import current_acount from '@/store/current_acount'
 import vender from '@/store/vender/vender'
+// Aviso de la demanda no satisfecha en Vender (misión demanda-sin-stock-vender)
+import demanda_sin_stock from '@/store/vender/demanda_sin_stock'
 import discount from '@/store/discount'
 import surchage from '@/store/surchage'
 import combo from '@/store/combo'
@@ -362,6 +364,7 @@ export default new Vuex.Store({
         location,
         current_acount,
         vender,
+        demanda_sin_stock,
         discount,
         surchage,
         combo,
