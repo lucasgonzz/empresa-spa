@@ -128,6 +128,9 @@ export default {
 			provider_filter: null,
 			// Id de la oferta destacada (null = ninguna).
 			highlighted_offer_id: this.initial_highlight_id,
+			// Timer del próximo reintento del scroll a la fila destacada (null = ninguno) y cuántos intentos van.
+			scroll_timer: null,
+			scroll_attempts: 0,
 		}
 	},
 	computed: {
@@ -184,6 +187,7 @@ export default {
 	beforeDestroy() {
 		this.$root.$off('provider-offers:highlight', this.set_highlight)
 		this.$root.$off('bv::modal::shown', this.on_modal_shown)
+		this.cancel_scroll_retry()
 	},
 	methods: {
 		/**
@@ -239,34 +243,39 @@ export default {
 		},
 		/**
 		 * Evento 'bv::modal::shown' de bootstrap-vue: el modal ya está pintado y con su tamaño final.
-		 * Si es el modal de proveedores del artículo, reintenta llegar a la fila destacada en el acto (el
-		 * DOM ya está listo: no hace falta esperar otro ciclo) por si antes la fila todavía no era
-		 * visible o el modal estaba en plena animación.
+		 * Si es el modal de proveedores del artículo, reintenta llegar a la fila destacada; como bootstrap-vue
+		 * vuelve el scroll a 0 justo después de este evento, el reintento acotado lo corrige.
 		 * @param {Object} bv_event Evento de bootstrap-vue (no se usa).
 		 * @param {String} modal_id Id del modal que se mostró.
 		 * @return {void}
 		 */
 		on_modal_shown(bv_event, modal_id) {
 			if (modal_id === 'article-providers') {
-				this.scroll_row_into_view()
+				this.scroll_to_highlight()
 			}
 		},
 		/**
 		 * Lleva la vista hasta la fila destacada (la oferta a la que se llegó desde "Cambios de
-		 * precios"), esperando al siguiente ciclo de render para que la tabla ya tenga la fila marcada.
-		 * Se llama cuando cambia el destacado y cuando llegan los datos del servidor.
+		 * precios"), con reintentos acotados. Se llama cuando cambia el destacado, cuando llegan los
+		 * datos del servidor y cuando el modal termina de mostrarse. Reinicia la cuenta de intentos y
+		 * arranca el primero en el siguiente ciclo de render.
 		 * @return {void}
 		 */
 		scroll_to_highlight() {
-			this.$nextTick(this.scroll_row_into_view)
+			this.cancel_scroll_retry()
+			this.scroll_attempts = 0
+			this.$nextTick(this.try_scroll_to_highlight)
 		},
 		/**
-		 * Hace scroll hasta la fila marcada como destacada, si existe. Sin destacada, o sin fila todavía
-		 * (datos sin llegar), no hace nada: se reintenta cuando lleguen los datos o el modal termine de
-		 * mostrarse. scrollIntoView mueve el contenedor con scroll más cercano (el propio modal).
+		 * Un intento de llevar la vista a la fila destacada. bootstrap-vue pisa el scroll: después de
+		 * emitir shown, focusFirst() deja modal.scrollTop = 0. Por eso, mientras la fila no esté a la
+		 * vista y queden intentos, se vuelve a intentar cada pocos milisegundos; apenas la fila está a la
+		 * vista termina (no se le roba el scroll al usuario). Sin destacada o sin fila todavía, no scrollea.
+		 * scrollIntoView mueve el contenedor con scroll más cercano (el propio modal).
 		 * @return {void}
 		 */
-		scroll_row_into_view() {
+		try_scroll_to_highlight() {
+			this.scroll_timer = null
 			if (this.highlighted_offer_id === null || typeof this.highlighted_offer_id == 'undefined') {
 				return
 			}
@@ -275,8 +284,40 @@ export default {
 			}
 			// Fila marcada por row_class.
 			let row = this.$el.querySelector('.offer-history-row--highlight')
-			if (row && typeof row.scrollIntoView == 'function') {
-				row.scrollIntoView({ block: 'center', behavior: 'auto' })
+			if (row) {
+				if (this.is_row_in_view(row)) {
+					return
+				}
+				if (typeof row.scrollIntoView == 'function') {
+					row.scrollIntoView({ block: 'center', behavior: 'auto' })
+				}
+			}
+			this.scroll_attempts++
+			if (this.scroll_attempts < 15) {
+				this.scroll_timer = setTimeout(this.try_scroll_to_highlight, 150)
+			}
+		},
+		/**
+		 * True si la fila está completa dentro de la pantalla. Sin medidas (no hay getBoundingClientRect
+		 * o window) se asume que no se ve, y se scrollea.
+		 * @param {Object} row Elemento de la fila.
+		 * @return {Boolean}
+		 */
+		is_row_in_view(row) {
+			if (typeof row.getBoundingClientRect != 'function' || typeof window == 'undefined') {
+				return false
+			}
+			let rect = row.getBoundingClientRect()
+			return rect.top >= 0 && rect.bottom <= window.innerHeight
+		},
+		/**
+		 * Corta el reintento pendiente del scroll, si lo hay.
+		 * @return {void}
+		 */
+		cancel_scroll_retry() {
+			if (this.scroll_timer) {
+				clearTimeout(this.scroll_timer)
+				this.scroll_timer = null
 			}
 		},
 		/**
