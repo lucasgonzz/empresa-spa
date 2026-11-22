@@ -761,12 +761,15 @@ test('ronda 3, A2-6: el historial reintenta al terminar de pintarse el modal (bv
 	raiz.$emit('bv::modal::shown', {}, 'otro-modal')
 	await esperar()
 	assert.equal(llamadas.length, 0, 'un modal ajeno no dispara el scroll')
+	// El re-render por el cambio de highlighted_offer_id (sin DOM) descarta el $el falso: se vuelve a poner.
+	vm.$el = { querySelector() { return { scrollIntoView() { llamadas.push(1) } } } }
 	raiz.$emit('bv::modal::shown', {}, 'article-providers')
 	await esperar()
 	assert.ok(llamadas.length >= 1, 'al mostrarse article-providers tiene que ir a la fila')
 	// Sin fila destacada no hace nada.
 	llamadas.length = 0
 	vm.highlighted_offer_id = null
+	vm.$el = { querySelector() { return { scrollIntoView() { llamadas.push(1) } } } }
 	raiz.$emit('bv::modal::shown', {}, 'article-providers')
 	await esperar()
 	assert.equal(llamadas.length, 0)
