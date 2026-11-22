@@ -2772,7 +2772,8 @@ export default {
 				}
 			}
 
-			if (flags.actualizar_articulos_de_otro_proveedor) {
+			// Esta frase habla del cruce por código de proveedor: sólo la pregunta vieja la enciende.
+			if (flags.update_other_provider_by_provider_code) {
 				texto += ' Se pueden actualizar artículos asignados a otro proveedor.'
 			}
 
@@ -5728,7 +5729,7 @@ export default {
 		 * a los flags que sigue esperando /ai-excel-import/import.
 		 * Permite mantener el contrato del backend sin cambios.
 		 *
-		 * @returns {Object} - Objeto con los 5 flags calculados (0 o 1 cada uno).
+		 * @returns {Object} - Objeto con los flags calculados (0 o 1 cada uno), incluidos los dos de "otro proveedor".
 		 */
 		derive_flags_from_choice() {
 			/*
@@ -5761,9 +5762,12 @@ export default {
 			 *  - por_codigo: la vieja, sobre coincidencias por CÓDIGO DE PROVEEDOR (sólo si se ve).
 			 *  - por_identificacion: la nueva, sobre artículos reconocidos por código de barras, SKU o
 			 *    nombre (sólo si se ve).
-			 * Cualquiera de las dos prende la bandera general; el cruce por código de proveedor viaja
-			 * aparte (update_other_provider_by_provider_code) y sólo lo prende la vieja. Una respuesta de
-			 * una pregunta que no se ve no cuenta.
+			 * Cada pregunta decide SU caso (ADENDA 1 del plan):
+			 *  - update_other_provider_by_identification: sólo la nueva (barras, SKU, nombre).
+			 *  - update_other_provider_by_provider_code: sólo la vieja (código de proveedor).
+			 *  - actualizar_articulos_de_otro_proveedor: el OR de las dos, que se mantiene por
+			 *    compatibilidad con una API vieja que sólo conoce esa bandera.
+			 * Una respuesta de una pregunta que no se ve no cuenta.
 			 */
 			let por_codigo = this.pregunta_otro_proveedor_por_codigo_visible && this.politica_otro_proveedor === 'actualizar'
 			let por_identificacion = this.pregunta_otro_proveedor_por_identificacion_visible && this.other_provider_articles_policy === 'actualizar'
@@ -5772,6 +5776,7 @@ export default {
 				flags.actualizar_articulos_de_otro_proveedor = 1
 			}
 			flags.update_other_provider_by_provider_code = por_codigo ? 1 : 0
+			flags.update_other_provider_by_identification = por_identificacion ? 1 : 0
 			flags.actualizar_proveedor = ((por_codigo || por_identificacion) && Number(this.actualizar_proveedor) === 1) ? 1 : 0
 
 			/*
@@ -5895,6 +5900,12 @@ export default {
 				 * cae en el valor de actualizar_articulos_de_otro_proveedor.
 				 */
 				update_other_provider_by_provider_code:             derived_flags.update_other_provider_by_provider_code,
+				/*
+				 * Misión historial-precios-proveedor: si los artículos de otro proveedor reconocidos por
+				 * código de barras, SKU o nombre se actualizan. Viaja siempre, también en 0, así la
+				 * pregunta vieja ("Actualizar" por código de proveedor) no arrastra a estos artículos.
+				 */
+				update_other_provider_by_identification:            derived_flags.update_other_provider_by_identification,
 				/* Prompt 05 (grupo 239): como interpretar el punto en numeros ambiguos, elegido en el paso 3. */
 				interpretacion_punto:                               this.interpretacion_punto,
 				/*

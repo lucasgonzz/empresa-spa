@@ -366,3 +366,80 @@ test('las ayudas del importador cuentan las dos preguntas nuevas y ya no dicen q
 	assert.doesNotMatch(todas, /actualizar_proveedor queda SIEMPRE en 0/)
 	assert.ok(descripciones['ai-import-otro-proveedor-*'], 'falta la entrada ai-import-otro-proveedor-*')
 })
+
+// ---------------------------------------------------------------- Ronda 2: cada pregunta decide su caso (ADENDA 1)
+
+/** Las cuatro claves que decide derive_flags_from_choice: [otro, por_identificacion, por_codigo, proveedor]. */
+function cuatro_claves(estado) {
+	const flags = armar_modal(estado).derive_flags_from_choice()
+	return [
+		Number(flags.actualizar_articulos_de_otro_proveedor),
+		Number(flags.update_other_provider_by_identification),
+		Number(flags.update_other_provider_by_provider_code),
+		Number(flags.actualizar_proveedor),
+	]
+}
+
+test('ronda 2, matriz completa: cada pregunta decide su caso (nueva oculta/No/Sí x vieja oculta/ignorar/actualizar)', () => {
+	// Pregunta nueva: 'oculta' (sin detección), 'ignorar' (No) o 'actualizar' (Sí). Vieja: oculta, ignorar o actualizar.
+	const nuevas = [['oculta', null], ['No', 'ignorar'], ['Si', 'actualizar']]
+	const viejas = [['oculta', null], ['ignorar', 'ignorar'], ['actualizar', 'actualizar']]
+	nuevas.forEach(nueva => {
+		viejas.forEach(vieja => {
+			[0, 1].forEach(proveedor => {
+				const estado = vieja[0] === 'oculta' ? paso_3() : con_codigos_repetidos({ politica_otro_proveedor: vieja[1] })
+				if (nueva[0] === 'oculta') {
+					estado.other_provider_articles = null
+				} else {
+					estado.other_provider_articles_policy = nueva[1]
+				}
+				estado.actualizar_proveedor = proveedor
+				const por_identificacion = nueva[0] === 'Si' ? 1 : 0
+				const por_codigo = vieja[0] === 'actualizar' ? 1 : 0
+				const esperado = [
+					por_identificacion || por_codigo ? 1 : 0,
+					por_identificacion,
+					por_codigo,
+					(por_identificacion || por_codigo) && proveedor === 1 ? 1 : 0,
+				]
+				assert.deepEqual(cuatro_claves(estado), esperado, 'nueva ' + nueva[0] + ', vieja ' + vieja[0] + ', proveedor ' + proveedor)
+			})
+		})
+	})
+})
+
+test('ronda 2: la pregunta nueva en No con la vieja en actualizar NO deja que los de barras/SKU tomen el costo', () => {
+	// El caso del Taladro de BA: "No" en la nueva, "actualizar" en la vieja.
+	assert.deepEqual(cuatro_claves(con_codigos_repetidos({ politica_otro_proveedor: 'actualizar', other_provider_articles_policy: 'ignorar', actualizar_proveedor: 0 })), [1, 0, 1, 0])
+	// Y al revés: la nueva en Sí con la vieja en ignorar no prende el cruce por código de proveedor.
+	assert.deepEqual(cuatro_claves(con_codigos_repetidos({ politica_otro_proveedor: 'ignorar', other_provider_articles_policy: 'actualizar', actualizar_proveedor: 0 })), [1, 1, 0, 0])
+})
+
+test('ronda 2: importar() manda siempre update_other_provider_by_identification, también en 0', () => {
+	const casos = [
+		{ estado: paso_3({ other_provider_articles: null }), esperado: [0, 0, 0] },
+		{ estado: paso_3({ other_provider_articles_policy: 'actualizar', actualizar_proveedor: 1 }), esperado: [1, 1, 0] },
+		{ estado: con_codigos_repetidos({ politica_otro_proveedor: 'actualizar', other_provider_articles_policy: 'ignorar' }), esperado: [1, 0, 1] },
+	]
+	casos.forEach(caso => {
+		const pedidos = []
+		const vm = armar_modal(Object.assign({ create_and_edit: 1, start_row: 2, finish_row: 10, file_processing: false }, caso.estado), ['importar', 'derive_flags_from_choice'])
+		vm.$api = { post(url, payload) { pedidos.push({ url, payload }); return new Promise(function() {}) } }
+		vm.importar()
+		assert.equal(pedidos.length, 1)
+		const payload = pedidos[0].payload
+		assert.ok('update_other_provider_by_identification' in payload, 'la clave nueva tiene que viajar siempre')
+		assert.deepEqual([
+			Number(payload.actualizar_articulos_de_otro_proveedor),
+			Number(payload.update_other_provider_by_identification),
+			Number(payload.update_other_provider_by_provider_code),
+		], caso.esperado)
+	})
+})
+
+test('ronda 2: la frase "Configuración actual" sólo habla de otro proveedor con la pregunta vieja en actualizar', () => {
+	const con_nueva_si = armar_modal(con_codigos_repetidos({ politica_otro_proveedor: 'ignorar', other_provider_articles_policy: 'actualizar' }))
+	assert.doesNotMatch(con_nueva_si.texto_configuracion_provider_code, /otro proveedor/)
+	const con_vieja_si = armar_modal(con_codigos_repetidos({ politica_otro_proveedor: 'actualizar', other_provider_articles_policy: 'ignorar' }))
+	assert.match(con_vieja_si.texto_configuracion_provider_code, /otro proveedor/)
+})

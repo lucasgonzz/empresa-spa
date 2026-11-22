@@ -155,7 +155,7 @@ export default {
 			'"Sí, pasan a ser de este proveedor": además cambia el proveedor del artículo. Con "No", el artículo sigue siendo de su proveedor actual y conserva su código de proveedor.',
 		],
 		requiere: 'Se pregunta solo con modelo artículo, proveedor elegido y al menos un artículo detectado con otro proveedor. Las dos respuestas arrancan en "No" y no traban Continuar.',
-		nota_interna: 'Viaja como actualizar_articulos_de_otro_proveedor + actualizar_proveedor; el cruce por código de proveedor va aparte en update_other_provider_by_provider_code (sólo lo prende la pregunta vieja, ai-import-politica-otro-*). La detección es resultado.other_provider_articles de get-recomendacion (bandera detect_other_provider_articles).',
+		nota_interna: 'Cada pregunta decide su caso: esta viaja como update_other_provider_by_identification (barras, SKU, nombre) y el cruce por código de proveedor va aparte en update_other_provider_by_provider_code (sólo lo prende la pregunta vieja, ai-import-politica-otro-*). actualizar_articulos_de_otro_proveedor = OR de las dos (compatibilidad con una API vieja) y actualizar_proveedor sólo con alguna en «Sí». La detección es resultado.other_provider_articles de get-recomendacion (bandera detect_other_provider_articles).',
 	},
 
 	/*
