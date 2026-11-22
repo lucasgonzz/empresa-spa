@@ -129,7 +129,7 @@ export default {
 			'"No identificar por código": se crean artículos nuevos aunque el código exista (así aparecen los duplicados a propósito).',
 		],
 		requiere: 'Se pregunta solo si hay códigos de proveedor repetidos en el Excel. Sin la pregunta se actualizan todos los artículos que tengan ese código.',
-		nota_interna: 'derive_flags_from_choice (Index.vue ~4157) traduce a los flags viejos: actualizar_todos prende permitir_provider_code_repetido + en_multi_providers; crear_nuevo apaga actualizar_por_provider_code; saltear_y_reportar deja la combinación que produce AmbiguousMatch. actualizar_proveedor queda SIEMPRE en 0 en este flujo (no hay forma de reasignar proveedor desde el modal de IA; el clásico de compras sí lo permitía).',
+		nota_interna: 'derive_flags_from_choice (Index.vue ~4157) traduce a los flags viejos: actualizar_todos prende permitir_provider_code_repetido + en_multi_providers; crear_nuevo apaga actualizar_por_provider_code; saltear_y_reportar deja la combinación que produce AmbiguousMatch. actualizar_proveedor ya no queda fijo en 0: lo decide la pregunta de «otro proveedor» (misión historial-precios-proveedor) y sólo viaja en 1 si alguna de las dos preguntas de actualizar artículos de otro proveedor está en «Sí».',
 	},
 
 	'ai-import-politica-otro-*': {
@@ -140,6 +140,22 @@ export default {
 			'"Actualizar": las filas pisan los artículos del otro proveedor (para corregir importaciones que entraron con el proveedor equivocado).',
 		],
 		requiere: 'Se pregunta solo si hay códigos de proveedor repetidos en el Excel. Sin la pregunta, los artículos de otro proveedor no se tocan.',
+	},
+
+	/*
+	 * Misión historial-precios-proveedor. Sale en el paso 3 de artículos cuando el análisis detecta
+	 * que algún artículo del Excel (por código de barras o SKU) ya está cargado con otro proveedor.
+	 */
+	'ai-import-otro-proveedor-*': {
+		titulo: 'Artículos que ya están cargados con otro proveedor',
+		que_hace: 'Decide qué pasa con los artículos del Excel que ya tenés cargados con otro proveedor (se reconocen por código de barras o SKU): si toman el costo y los precios de este Excel y, en ese caso, si pasan a ser de este proveedor.',
+		repercute: [
+			'"No, dejarlos como están": el artículo no cambia, pero queda registrado a qué costo lo tiene el proveedor elegido (lo ves en Proveedores, pestaña Historial de precios).',
+			'"Sí, actualizar su costo y precios": el artículo toma el costo y recalcula sus precios con los de este Excel. También se actualizan los que coinciden exactamente por nombre. Queda el vínculo entre el precio del proveedor y el cambio de precio.',
+			'"Sí, pasan a ser de este proveedor": además cambia el proveedor del artículo. Con "No", el artículo sigue siendo de su proveedor actual y conserva su código de proveedor.',
+		],
+		requiere: 'Se pregunta solo con modelo artículo, proveedor elegido y al menos un artículo detectado con otro proveedor. Las dos respuestas arrancan en "No" y no traban Continuar.',
+		nota_interna: 'Viaja como actualizar_articulos_de_otro_proveedor + actualizar_proveedor; el cruce por código de proveedor va aparte en update_other_provider_by_provider_code (sólo lo prende la pregunta vieja, ai-import-politica-otro-*). La detección es resultado.other_provider_articles de get-recomendacion (bandera detect_other_provider_articles).',
 	},
 
 	/*
