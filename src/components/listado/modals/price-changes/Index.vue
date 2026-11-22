@@ -5,6 +5,7 @@ hide-footer
 size="lg"
 id="price-changes"
 @show="al_abrir_modal"
+@shown="scroll_to_highlight"
 @hidden="al_cerrar_modal">
 	<div
 	v-if="!loading">
@@ -212,6 +213,24 @@ export default {
 			this.highlighted_change_id = price_change_id
 		},
 		/**
+		 * Lleva la vista hasta la fila del cambio destacado. Se llama cuando llegan los datos (async) y
+		 * cuando el modal termina de pintarse (@shown de b-modal); espera al siguiente ciclo de render
+		 * para que la tabla ya tenga la fila marcada. El contenido del b-modal se monta fuera del
+		 * componente, por eso se busca en el documento y no en $el. Sin destacado o sin fila no hace nada.
+		 * @return {void}
+		 */
+		scroll_to_highlight() {
+			if (this.highlighted_change_id === null || typeof document == 'undefined') {
+				return
+			}
+			this.$nextTick(() => {
+				let row = document.querySelector('#price-changes tr.historial-cambio-destacado')
+				if (row && typeof row.scrollIntoView == 'function') {
+					row.scrollIntoView({ block: 'center', behavior: 'auto' })
+				}
+			})
+		},
+		/**
 		 * Al cerrar el modal se olvida el destacado, para que la próxima apertura sea la de siempre.
 		 * @return {void}
 		 */
@@ -309,6 +328,8 @@ export default {
 				.then(res => {
 					this.loading = false 
 					this.price_changes = res.data.models 
+					// Con los datos cargados existe la fila destacada: se lleva la vista hasta ella.
+					this.scroll_to_highlight()
 				})
 				.catch(err => {
 					this.loading = false 

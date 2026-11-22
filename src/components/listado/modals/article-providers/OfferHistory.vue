@@ -177,10 +177,13 @@ export default {
 	},
 	created() {
 		this.$root.$on('provider-offers:highlight', this.set_highlight)
+		// Cuando el modal termina de pintarse hay que reintentar el scroll a la fila destacada.
+		this.$root.$on('bv::modal::shown', this.on_modal_shown)
 		this.load_history()
 	},
 	beforeDestroy() {
 		this.$root.$off('provider-offers:highlight', this.set_highlight)
+		this.$root.$off('bv::modal::shown', this.on_modal_shown)
 	},
 	methods: {
 		/**
@@ -209,6 +212,8 @@ export default {
 				let data = res && res.data ? res.data : {}
 				self.offers = Array.isArray(data.models) ? data.models : []
 				self.can_see_cost = data.can_see_cost !== false
+				// Los datos llegan de forma asíncrona: recién ahora existe la fila destacada.
+				self.scroll_to_highlight()
 			})
 			.catch(function(err) {
 				self.$store.commit('auth/setLoading', false)
@@ -230,6 +235,49 @@ export default {
 		set_highlight(offer_id) {
 			this.highlighted_offer_id = offer_id
 			this.provider_filter = null
+			this.scroll_to_highlight()
+		},
+		/**
+		 * Evento 'bv::modal::shown' de bootstrap-vue: el modal ya está pintado y con su tamaño final.
+		 * Si es el modal de proveedores del artículo, reintenta llegar a la fila destacada en el acto (el
+		 * DOM ya está listo: no hace falta esperar otro ciclo) por si antes la fila todavía no era
+		 * visible o el modal estaba en plena animación.
+		 * @param {Object} bv_event Evento de bootstrap-vue (no se usa).
+		 * @param {String} modal_id Id del modal que se mostró.
+		 * @return {void}
+		 */
+		on_modal_shown(bv_event, modal_id) {
+			if (modal_id === 'article-providers') {
+				this.scroll_row_into_view()
+			}
+		},
+		/**
+		 * Lleva la vista hasta la fila destacada (la oferta a la que se llegó desde "Cambios de
+		 * precios"), esperando al siguiente ciclo de render para que la tabla ya tenga la fila marcada.
+		 * Se llama cuando cambia el destacado y cuando llegan los datos (async).
+		 * @return {void}
+		 */
+		scroll_to_highlight() {
+			this.$nextTick(this.scroll_row_into_view)
+		},
+		/**
+		 * Hace scroll hasta la fila marcada como destacada, si existe. Sin destacada, o sin fila todavía
+		 * (datos sin llegar), no hace nada: se reintenta cuando lleguen los datos o el modal termine de
+		 * mostrarse. scrollIntoView mueve el contenedor con scroll más cercano (el propio modal).
+		 * @return {void}
+		 */
+		scroll_row_into_view() {
+			if (this.highlighted_offer_id === null || typeof this.highlighted_offer_id == 'undefined') {
+				return
+			}
+			if (!this.$el || typeof this.$el.querySelector != 'function') {
+				return
+			}
+			// Fila marcada por row_class.
+			let row = this.$el.querySelector('.offer-history-row--highlight')
+			if (row && typeof row.scrollIntoView == 'function') {
+				row.scrollIntoView({ block: 'center', behavior: 'auto' })
+			}
 		},
 		/**
 		 * Clase de cada fila de la tabla: la destacada lleva un marco.
