@@ -138,6 +138,9 @@ export default {
 			// Timer del próximo reintento del scroll a la fila destacada (null = ninguno) y cuántos intentos van.
 			scroll_timer: null,
 			scroll_attempts: 0,
+			// Instante (ms) hasta el cual, tras bv::modal::shown, el chequeo sigue vivo aunque la fila ya se
+			// vea: bootstrap-vue puede pisar el scroll con focusFirst() un rato después de shown. 0 = sin ventana.
+			settle_until: 0,
 		}
 	},
 	computed: {
@@ -258,6 +261,8 @@ export default {
 		 */
 		on_modal_shown(bv_event, modal_id) {
 			if (modal_id === 'article-providers') {
+				// Ventana acotada de asentamiento (800 ms): ver try_scroll_to_highlight.
+				this.settle_until = Date.now() + 800
 				this.scroll_to_highlight()
 			}
 		},
@@ -293,9 +298,13 @@ export default {
 			let row = this.$el.querySelector('.offer-history-row--highlight')
 			if (row) {
 				if (this.is_row_in_view(row)) {
-					return
-				}
-				if (typeof row.scrollIntoView == 'function') {
+					// A la vista: se corta, salvo dentro de la ventana posterior a shown, donde se sigue
+					// vigilando por si focusFirst() de bootstrap-vue la saca de vista. Pasada la ventana
+					// no se le pelea el scroll al usuario.
+					if (Date.now() >= this.settle_until) {
+						return
+					}
+				} else if (typeof row.scrollIntoView == 'function') {
 					row.scrollIntoView({ block: 'center', behavior: 'auto' })
 				}
 			}
