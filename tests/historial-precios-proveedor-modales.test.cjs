@@ -672,3 +672,135 @@ test('ronda 2: sin article.cost Cambios de precios no ofrece "Ver historial del 
 	con_permiso.price_changes = [evento_con_oferta(55, [oferta_en_cambio()])]
 	assert.ok(boton(con_permiso._render(), 'Ver historial del proveedor'))
 })
+
+// ---------------------------------------------------------------- Ronda 3 (ADENDA 2 del PLAN): A2-4, A2-5 y A2-6
+
+const fs_ronda3 = require('node:fs')
+const path_ronda3 = require('node:path')
+
+/** Fuente de un componente de src/ tal como está en disco. */
+function fuente_de(ruta) {
+	return fs_ronda3.readFileSync(path_ronda3.join(__dirname, '..', 'src', ruta), 'utf8')
+}
+
+/** Bloques <style> de un fuente .vue, uno tras otro. */
+function estilos_de(fuente) {
+	const bloques = []
+	fuente.replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (todo, contenido) => { bloques.push(contenido); return todo })
+	return bloques.join('\n')
+}
+
+test('ronda 3, A2-4 tablet: cada columna del historial tiene ancho mínimo y la tabla scrollea dentro del modal', () => {
+	nuevo_entorno()
+	const { vm } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	vm.can_see_cost = true
+	vm.fields.forEach(campo => {
+		assert.ok(campo.thStyle && campo.thStyle.minWidth, 'la columna ' + campo.key + ' no tiene ancho mínimo (thStyle.minWidth)')
+	})
+	const fuente = fuente_de('components/listado/modals/article-providers/OfferHistory.vue')
+	assert.match(fuente, /<b-table[\s\S]*?\bresponsive\b/, 'la tabla conserva el scroll horizontal propio (responsive)')
+})
+
+test('ronda 3, A2-4 tablet: fecha y precios no se parten (sin overflow-wrap:anywhere) y la regla gana a la del modal', () => {
+	const fuente = fuente_de('components/listado/modals/article-providers/OfferHistory.vue')
+	const estilos = estilos_de(fuente)
+	assert.ok(estilos.length > 0, 'OfferHistory.vue necesita su propio <style> para pisar la regla del modal')
+	assert.match(estilos, /#article-providers[^\n]*offer-history-table/, 'el selector tiene que llevar el id del modal para ganarle a la regla general')
+	assert.match(estilos, /white-space:\s*nowrap/)
+	assert.match(estilos, /overflow-wrap:\s*normal/)
+	assert.doesNotMatch(estilos, /overflow-wrap:\s*anywhere/)
+	assert.match(fuente, /table-class="offer-history-table"/)
+	// Fecha y costo llevan la clase que no parte.
+	nuevo_entorno()
+	const { vm } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	;['fecha', 'costo'].forEach(clave => {
+		const campo = vm.fields.find(f => f.key === clave)
+		assert.ok(campo && /offer-history-nowrap/.test(String(campo.tdClass)), 'la columna ' + clave + ' tiene que llevar tdClass offer-history-nowrap')
+	})
+	// SASS sólo con tabs.
+	assert.doesNotMatch(estilos, /^ +\S/m, 'el SASS usa tabs, no espacios')
+})
+
+test('ronda 3, A2-5 teléfono: Cambios de precios apila la tabla en teléfono y el botón del proveedor ocupa el ancho', () => {
+	const fuente = fuente_de('components/listado/modals/price-changes/Index.vue')
+	assert.match(fuente, /<b-table[\s\S]*?stacked="sm"/, 'la tabla se apila bajo 576 px (mismo patrón que el modal de proveedores)')
+	const estilos = estilos_de(fuente)
+	const media = estilos.match(/@media \(max-width: 575\.98px\)[\s\S]*?(?=\n@media|\n[^\s@/]|$)/)
+	assert.ok(media, 'falta el @media (max-width: 575.98px) del teléfono')
+	assert.match(media[0], /historial-cambio-vinculo[\s\S]*?width:\s*100%/, 'el botón ocupa el ancho completo en teléfono')
+	assert.match(media[0], /white-space:\s*normal/, 'las celdas apiladas no heredan el nowrap global')
+	assert.doesNotMatch(estilos, /^ +\S/m, 'el SASS usa tabs, no espacios')
+})
+
+test('ronda 3, A2-6: el historial hace scroll hasta la fila resaltada cuando llegan los datos, no antes', async () => {
+	nuevo_entorno({ respuesta: historial([oferta_ca4()]) })
+	const { vm, raiz } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	const llamadas = []
+	// El DOM falso sólo tiene la fila destacada cuando ya hay datos y la oferta está marcada.
+	const fila = { scrollIntoView(opciones) { llamadas.push(opciones) } }
+	const selectores = []
+	vm.$el = { querySelector(selector) {
+		selectores.push(selector)
+		return vm.items.length && vm.highlighted_offer_id === 91 ? fila : null
+	} }
+	raiz.$emit('provider-offers:highlight', 91)
+	await esperar()
+	assert.ok(selectores.some(s => /offer-history-row--highlight/.test(s)), 'tiene que buscar la fila .offer-history-row--highlight')
+	assert.ok(llamadas.length >= 1, 'después de cargar los datos tiene que hacer scrollIntoView sobre la fila')
+	assert.equal(llamadas[llamadas.length - 1].block, 'center')
+	assert.deepEqual(entorno.errores, [])
+})
+
+test('ronda 3, A2-6: el historial reintenta al terminar de pintarse el modal (bv::modal::shown) sólo para su modal', async () => {
+	nuevo_entorno({ respuesta: historial([oferta_ca4()]) })
+	const { vm, raiz } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	const llamadas = []
+	vm.$el = { querySelector() { return { scrollIntoView() { llamadas.push(1) } } } }
+	vm.highlighted_offer_id = 91
+	raiz.$emit('bv::modal::shown', {}, 'otro-modal')
+	await esperar()
+	assert.equal(llamadas.length, 0, 'un modal ajeno no dispara el scroll')
+	raiz.$emit('bv::modal::shown', {}, 'article-providers')
+	await esperar()
+	assert.ok(llamadas.length >= 1, 'al mostrarse article-providers tiene que ir a la fila')
+	// Sin fila destacada no hace nada.
+	llamadas.length = 0
+	vm.highlighted_offer_id = null
+	raiz.$emit('bv::modal::shown', {}, 'article-providers')
+	await esperar()
+	assert.equal(llamadas.length, 0)
+	vm.$destroy()
+	assert.equal(oyentes(raiz, 'bv::modal::shown'), 0, 'al destruirse suelta el listener de bv::modal::shown')
+})
+
+test('ronda 3, A2-6: Cambios de precios hace scroll hasta el cambio destacado cuando llegan los datos', async () => {
+	const eventos = [evento_con_oferta(55, [oferta_en_cambio()]), Object.assign(evento_con_oferta(56, []), { empleado_nombre: 'Marcos' })]
+	nuevo_entorno({ respuesta: function() { return Promise.resolve({ data: { models: eventos } }) } })
+	const { vm, raiz } = montar('components/listado/modals/price-changes/Index.vue')
+	const llamadas = []
+	const fila = { scrollIntoView(opciones) { llamadas.push(opciones) } }
+	const selectores = []
+	// La fila sólo existe en el DOM cuando terminó de cargar y es la del cambio destacado.
+	global.document = { querySelector(selector) {
+		selectores.push(selector)
+		return !vm.loading && vm.price_changes.length && vm.highlighted_change_id === 55 ? fila : null
+	} }
+	try {
+		raiz.$emit('price-changes:highlight', 55)
+		vm.getPriceChanges()
+		await esperar()
+		assert.ok(selectores.some(s => /historial-cambio-destacado/.test(s)), 'tiene que buscar la fila .historial-cambio-destacado')
+		assert.ok(llamadas.length >= 1, 'después de cargar los datos tiene que hacer scrollIntoView')
+		assert.equal(llamadas[llamadas.length - 1].block, 'center')
+		// Sin destacado no scrollea.
+		llamadas.length = 0
+		vm.highlighted_change_id = null
+		vm.scroll_to_highlight()
+		await esperar()
+		assert.equal(llamadas.length, 0)
+	} finally {
+		delete global.document
+	}
+	assert.match(fuente_de('components/listado/modals/price-changes/Index.vue'), /@shown="scroll_to_highlight"/, 'el modal reintenta cuando termina de mostrarse')
+})
