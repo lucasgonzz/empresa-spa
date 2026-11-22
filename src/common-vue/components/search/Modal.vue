@@ -3,6 +3,8 @@
 :title="title"
 size="xl"
 hide-footer
+content-class="search-modal-content"
+body-class="search-modal-body"
 :id="modal_id"
 :data-tour="ancla_tour"
 :ignore-enforce-focus-selector="ancla_tour ? '.demo-guia-robot, .tour-soporte' : null"
@@ -68,8 +70,10 @@ hide-footer
 			:model_name="model_name"></btn-create-model>
 		</div>
 		<div
+		class="search-modal-cuerpo"
 		v-if="!saving_if_not_exist">
 			<div
+			class="search-modal-lista"
 			v-if="loading || results.length">
 
 				<!--
@@ -106,6 +110,7 @@ hide-footer
 				</div>
 
 				<table-component
+				class="search-modal-tabla"
 				:data-tour="ancla_tour && busqueda_realizada && !loading && results.length ? 'vender.resultados_buscador_articulos' : null"
 				:properties="properties"
 				:selected_index="selected_index"
@@ -1908,10 +1913,71 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
+
+// Alto del modal de busqueda (mision search-modal-paginado-y-busqueda-lenta, 22/11/2026).
+//
+// El modal NUNCA puede ser mas alto que la ventana: antes, con 50 resultados, el contenido pasaba
+// el alto de pantalla y quien scrolleaba era la capa `.modal` (la "pagina"). Ahora el tope lo pone
+// `.modal-content` (margenes de bootstrap: 0.5rem por lado en telefono, 1.75rem desde 576px) y
+// el sobrante lo absorbe SOLO la tabla de resultados, que scrollea dentro de su contenedor.
+//
+// Por que no el `scrollable` de bootstrap-vue: pone `overflow: hidden` en `.modal-content` y
+// `overflow-y: auto` en `.modal-body`, y eso recorta el menu desplegable de propiedades del
+// buscador general (b-dropdown, que se abre hacia abajo dentro del header). Aca el tope es solo
+// de alto y no se recorta nada.
+//
+// La cadena flex hasta la tabla es la que hace posible el scroll interno: cada eslabon lleva
+// `min-height: 0`, porque un hijo flex no baja de su alto de contenido (min-height: auto) y sin
+// eso la tabla empujaria al modal fuera de la ventana. Eslabones, de afuera hacia adentro:
+// .search-modal-content > .search-modal-body > .search-component-modal > .search-modal-cuerpo >
+// .search-modal-lista > .search-modal-tabla > div > .table-component-scroll.
+.search-modal-content
+	// `dvh` descuenta la barra de direcciones del telefono; el `vh` de arriba es el fallback.
+	max-height: calc(100vh - 1rem)
+	max-height: calc(100dvh - 1rem)
+	@media (min-width: 576px)
+		max-height: calc(100vh - 3.5rem)
+		max-height: calc(100dvh - 3.5rem)
+	.modal-header
+		flex: 0 0 auto
+
+.search-modal-body
+	display: flex
+	flex-direction: column
+	flex: 1 1 auto
+	min-height: 0
+	min-width: 0
+
 .search-component-modal
 	width: 100%
 	display: flex
 	flex-direction: column
+	flex: 1 1 auto
+	min-height: 0
+	min-width: 0
+
+	// Cuerpo (estado vacio o lista) y lista de resultados: ocupan el resto del alto y lo reparten
+	// con la tabla; el encabezado "Resultados N + paginador" mide lo que mide y queda fijo arriba.
+	.search-modal-cuerpo, .search-modal-lista
+		display: flex
+		flex-direction: column
+		flex: 1 1 auto
+		min-height: 0
+		min-width: 0
+	.search-modal-resultados
+		flex: 0 0 auto
+
+	// TableComponent (clase puesta desde el template de arriba) y su div intermedio sin clase.
+	// El contenedor con scroll vertical y horizontal propio es .table-component-scroll.
+	.search-modal-tabla, .search-modal-tabla > div
+		display: flex
+		flex-direction: column
+		flex: 1 1 auto
+		min-height: 0
+		min-width: 0
+	.search-modal-tabla .table-component-scroll
+		flex: 1 1 auto
+		min-height: 0
 	.header
 		display: flex
 		flex-direction: row
