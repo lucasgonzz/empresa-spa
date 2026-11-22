@@ -442,8 +442,11 @@ export default {
 				? Math.max(200, this.available_height) + 'px'
 				: '70vh'
 			if (this.is_from_search_modal) {
+				// Sin alto calculado: el tope de alto lo pone la cadena flex del modal de busqueda
+				// (search/Modal.vue, .search-modal-content). El maxHeight de antes se medía con el modal
+				// todavia animando su entrada y sin contar los margenes del modal, y lo dejaba pasar
+				// el alto de la ventana. Solo aplica con is_from_search_modal: los listados no cambian.
 				return {
-					maxHeight: height,
 					overflowY: 'auto',
 					overflowX: 'auto',
 				}
