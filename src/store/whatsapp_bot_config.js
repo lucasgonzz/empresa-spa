@@ -106,6 +106,8 @@ export default __base_store({
 				agent_personality_template: payload.agent_personality_template || null,
 				agent_skills: payload.agent_skills,
 				ai_enabled_default: payload.ai_enabled_default,
+				// Con el número de WhatsApp sin conectar, la pantalla no lo manda (undefined): JSON.stringify
+				// descarta la clave y la API, que usa `has()`, deja el valor guardado como estaba.
 				auto_send_sale_pdf: payload.auto_send_sale_pdf,
 				// Van casteados sí o sí: el input numérico los entrega como string y la
 				// validación del backend es `integer`, así que un "30" pelado la voltea.
