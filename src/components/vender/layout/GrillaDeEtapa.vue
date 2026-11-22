@@ -1,11 +1,18 @@
 <template>
 	<!--
-		Grilla de una etapa de Vender (mision diseno-vender-configurable, 28/9/2026).
+		Grilla de una seccion de Vender (mision diseno-vender-configurable, 28/9/2026; secciones
+		configurables en vender-secciones-personalizables, 22/11/2026).
 
-		Dibuja los campos que el diseño en uso ubica en esta etapa, en su orden y con su ancho, en
+		Dibuja los campos que el diseño en uso ubica en esta seccion, en su orden y con su ancho, en
 		la grilla de 12 columnas de Bootstrap: cada item es `col-12 col-md-N`, o sea que el ancho
 		elegido rige desde 768px y en un telefono todo va a lo ancho (como los buscadores de la
-		etapa 2 de antes). Que campos, en que orden y de que ancho lo decide el mixin
+		etapa 2 de antes).
+
+		Si la seccion vive en una columna angosta (menos de 12) el ancho del campo es relativo a esa
+		columna: desde 992px (donde Vender dibuja las columnas) rige `col-lg-N`, el elegido; entre
+		768 y 991, donde las columnas se apilan a lo ancho, rige `col-md-M` con el ancho equivalente
+		en pantalla (cols_al_apilar), asi un campo de 12 en una columna de 4 no ocupa toda la
+		pantalla de una tablet. Con columna de 12 las clases son exactamente las de siempre. Que campos, en que orden y de que ancho lo decide el mixin
 		mixins/vender/diseno_de_vender.js; que componente dibuja cada uno, layout/componentes.js.
 
 		🔴 Monta TODOS los campos ubicados en la etapa, esten disponibles o no para este negocio
@@ -76,6 +83,7 @@ import {
 	esta_disponible,
 	acotar_cols,
 } from './elementos'
+import { ancho_de_columna_de, cols_al_apilar } from './secciones'
 import { componente_de_elemento } from './componentes'
 import diseno_de_vender from '@/mixins/vender/diseno_de_vender'
 
@@ -84,7 +92,7 @@ export default {
 	mixins: [diseno_de_vender],
 	props: {
 		/**
-		 * Que etapa dibuja: 'etapa_1' | 'etapa_2' | 'etapa_3'.
+		 * Que seccion dibuja: su id ('etapa_1' | 'etapa_2' | 'etapa_3' | 'seccion_4' ... 'seccion_9').
 		 */
 		etapa: {
 			type: String,
@@ -101,6 +109,15 @@ export default {
 		},
 	},
 	computed: {
+		/**
+		 * Ancho (de 12) de la columna donde esta esta seccion en el diseño en uso.
+		 *
+		 * @returns {number}
+		 */
+		ancho_de_columna() {
+			return ancho_de_columna_de(this.diseno_de_vender.disposicion, this.etapa)
+		},
+
 		/**
 		 * Los items de esta etapa que se montan, en orden: todos los campos ubicados (disponibles o
 		 * no) y los marcadores que sobreviven a la limpieza. Con el tope de items por venta
@@ -189,7 +206,13 @@ export default {
 			}
 
 			let cols = es_marcador(item.key) ? 12 : acotar_cols(item.cols, 12)
-			let clases = ['vender-grilla__item', 'col-12', 'col-md-' + cols]
+			let clases = ['vender-grilla__item', 'col-12']
+
+			if (this.ancho_de_columna === 12 || es_marcador(item.key)) {
+				clases.push('col-md-' + cols)
+			} else {
+				clases.push('col-md-' + cols_al_apilar(cols, this.ancho_de_columna), 'col-lg-' + cols)
+			}
 
 			if (this.es_separador(item)) {
 				clases.push('vender-grilla__item--separador')
