@@ -807,3 +807,142 @@ test('ronda 3, A2-6: Cambios de precios hace scroll hasta el cambio destacado cu
 	}
 	assert.match(fuente_de('components/listado/modals/price-changes/Index.vue'), /@shown="scroll_to_highlight"/, 'el modal reintenta cuando termina de mostrarse')
 })
+
+// ---------------------------------------------------------------- Ronda 3b (INTERFAZ-2): scroll con reintento y vínculo del titular
+
+/** Pausa real de n milisegundos (los reintentos del scroll usan timers cortos). */
+function pausa(milisegundos) {
+	return new Promise(resolver => setTimeout(resolver, milisegundos))
+}
+
+/** Fila falsa con rectángulo: 'visible' dice si hoy está dentro de la pantalla (800 px de alto). */
+function fila_con_rectangulo(estado, alAlcanzar) {
+	return {
+		scrollIntoView() { estado.llamadas++; estado.visible = true; if (alAlcanzar) alAlcanzar() },
+		getBoundingClientRect() { return estado.visible ? { top: 100, bottom: 140 } : { top: 1500, bottom: 1540 } },
+	}
+}
+
+test('ronda 3b, A2-6 Cambios de precios: reintenta hasta que b-table pintó la fila de la recarga y scrollea', async () => {
+	nuevo_entorno()
+	const { vm, raiz } = montar('components/listado/modals/price-changes/Index.vue')
+	const estado = { llamadas: 0, visible: false, consultas: 0 }
+	global.window = { innerHeight: 800 }
+	// La fila no existe en las dos primeras consultas (tabla vieja o vacía) y aparece a la tercera.
+	global.document = { querySelector() { estado.consultas++; return estado.consultas >= 3 ? fila_con_rectangulo(estado) : null } }
+	try {
+		raiz.$emit('price-changes:highlight', 55)
+		vm.scroll_to_highlight()
+		await pausa(700)
+		assert.ok(estado.consultas >= 3, 'tenía que reintentar mientras la fila no existía')
+		assert.equal(estado.llamadas, 1, 'scrollea una sola vez y, al verla a la vista, no insiste')
+		const consultas = estado.consultas
+		await pausa(500)
+		assert.equal(estado.consultas, consultas, 'una vez a la vista no hay más reintentos (no se le roba el scroll al usuario)')
+		vm.$destroy()
+	} finally {
+		delete global.document
+		delete global.window
+	}
+})
+
+test('ronda 3b, A2-6 Cambios de precios: sin destacado no consulta nada; al cerrar el modal o destruirse se corta el reintento', async () => {
+	nuevo_entorno()
+	const { vm, raiz } = montar('components/listado/modals/price-changes/Index.vue')
+	let consultas = 0
+	global.window = { innerHeight: 800 }
+	global.document = { querySelector() { consultas++; return null } }
+	try {
+		vm.scroll_to_highlight()
+		await pausa(300)
+		assert.equal(consultas, 0, 'sin destacado no hace nada')
+		raiz.$emit('price-changes:highlight', 55)
+		vm.scroll_to_highlight()
+		await pausa(250)
+		assert.ok(consultas > 0)
+		vm.al_cerrar_modal()
+		const al_cerrar = consultas
+		await pausa(400)
+		assert.equal(consultas, al_cerrar, 'al cerrar el modal se corta el timer')
+		raiz.$emit('price-changes:highlight', 55)
+		vm.scroll_to_highlight()
+		await pausa(100)
+		vm.$destroy()
+		const al_destruir = consultas
+		await pausa(400)
+		assert.equal(consultas, al_destruir, 'al destruirse se limpia el timer')
+		assert.deepEqual(entorno.errores, [])
+	} finally {
+		delete global.document
+		delete global.window
+	}
+})
+
+test('ronda 3b, A2-6 historial: si bootstrap-vue vuelve el scroll a 0 después de shown, vuelve a llevar la fila a la vista', async () => {
+	nuevo_entorno({ respuesta: historial([oferta_ca4()]) })
+	const { vm, raiz } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	vm.highlighted_offer_id = 91
+	await esperar()
+	const estado = { llamadas: 0, visible: false }
+	// focusFirst() de bootstrap-vue hace modal.scrollTop = 0 poco después de shown: la fila deja de verse.
+	const fila = fila_con_rectangulo(estado, () => { if (estado.llamadas === 1) setTimeout(() => { estado.visible = false }, 60) })
+	global.window = { innerHeight: 800 }
+	vm.$el = { querySelector() { return fila } }
+	try {
+		raiz.$emit('bv::modal::shown', {}, 'article-providers')
+		await pausa(900)
+		assert.ok(estado.llamadas >= 2, 'tenía que reintentar tras el reinicio del scroll (llamadas: ' + estado.llamadas + ')')
+		assert.equal(estado.visible, true, 'termina con la fila a la vista')
+		const llamadas = estado.llamadas
+		await pausa(500)
+		assert.equal(estado.llamadas, llamadas, 'a la vista no se vuelve a scrollear')
+		vm.$destroy()
+	} finally {
+		delete global.window
+	}
+})
+
+test('ronda 3b, A2-6 historial: al destruirse corta el reintento pendiente', async () => {
+	nuevo_entorno({ respuesta: historial([oferta_ca4()]) })
+	const { vm, raiz } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	vm.highlighted_offer_id = 91
+	await esperar()
+	let consultas = 0
+	vm.$el = { querySelector() { consultas++; return null } }
+	raiz.$emit('bv::modal::shown', {}, 'article-providers')
+	await pausa(200)
+	assert.ok(consultas > 0)
+	vm.$destroy()
+	const al_destruir = consultas
+	await pausa(500)
+	assert.equal(consultas, al_destruir)
+})
+
+test('ronda 3b, defecto 5: si cambió el titular sin cambiar el costo y hay price_change_id, ofrece "Ver cambio de precio"', async () => {
+	nuevo_entorno({ respuesta: historial([oferta_ca4({ updated_article_cost: 0, changed_article_provider: 1, previous_article_cost: null, price_change_id: 19 })]) })
+	const { vm, emitidos } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	const fila = fila_con(vm._render(), 'Rosario')
+	const dicho = texto(fila)
+	assert.match(dicho, /No cambió el costo/)
+	assert.match(dicho, /el artículo pasó a ser de Rosario/)
+	assert.doesNotMatch(dicho, /Sólo se registró el precio|Actualizó el costo|los precios de venta no cambiaron/)
+	const ver = boton(fila, 'Ver cambio de precio')
+	assert.ok(ver, 'falta el botón "Ver cambio de precio" en la rama "no cambió el costo"')
+	clickear(ver)
+	assert.deepEqual(emitidos.filter(par => par[0] === 'price-changes:highlight'), [['price-changes:highlight', 19]])
+	assert.ok(se_abrio('price-changes', emitidos))
+})
+
+test('ronda 3b, defecto 5: sin price_change_id no hay botón y sólo registrar el precio nunca lo ofrece', async () => {
+	nuevo_entorno({ respuesta: historial([oferta_ca4({ updated_article_cost: 0, changed_article_provider: 1, previous_article_cost: null, price_change_id: null })]) })
+	const { vm } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	assert.equal(boton(fila_con(vm._render(), 'Rosario'), 'Ver cambio de precio'), undefined)
+	nuevo_entorno({ respuesta: historial([oferta_ca4({ updated_article_cost: 0, changed_article_provider: 0, previous_article_cost: null, price_change_id: 19 })]) })
+	const otra = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	assert.equal(boton(fila_con(otra.vm._render(), 'Rosario'), 'Ver cambio de precio'), undefined, 'sólo registrar el precio no provocó ningún cambio de precio que mostrar')
+})
