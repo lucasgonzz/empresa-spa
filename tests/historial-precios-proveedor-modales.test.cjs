@@ -650,3 +650,25 @@ test('ronda 2, api vieja: con 500 hay UN solo aviso claro, el historial queda va
 	await esperar()
 	assert.equal(entorno.toasts.length, 1)
 })
+
+// ---------------------------------------------------------------- Ronda 2: sin article.cost no se ofrece una pestaña oculta
+
+test('ronda 2: sin article.cost Cambios de precios no ofrece "Ver historial del proveedor" (llevaría a una pestaña oculta)', () => {
+	nuevo_entorno({ permisos: [] })
+	const sin_permiso = montar('components/listado/modals/price-changes/Index.vue').vm
+	const oferta = oferta_en_cambio({ id: 93, origen: 'compra', referencia_id: 12 })
+	delete oferta.cost
+	const evento = evento_con_oferta(56, [oferta])
+	delete evento.cost
+	delete evento.price
+	sin_permiso.price_changes = [evento]
+	const vista_sin = sin_permiso._render()
+	assert.match(texto(fila_con(vista_sin, 'Rosario')), /Rosario · Compra/, 'la oferta se sigue mostrando')
+	assert.equal(boton(vista_sin, 'Ver historial del proveedor'), undefined)
+
+	// Con el permiso el vínculo sigue.
+	nuevo_entorno({ permisos: ['article.cost'] })
+	const con_permiso = montar('components/listado/modals/price-changes/Index.vue').vm
+	con_permiso.price_changes = [evento_con_oferta(55, [oferta_en_cambio()])]
+	assert.ok(boton(con_permiso._render(), 'Ver historial del proveedor'))
+})

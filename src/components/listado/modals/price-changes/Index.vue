@@ -46,7 +46,9 @@ id="price-changes"
 				:key="offer.id"
 				class="historial-cambio-lista">
 					<div>{{ etiqueta_de_oferta(offer) }}</div>
+					<!-- La pestaña "Historial de precios" sólo existe con article.cost: sin ese permiso no se ofrece -->
 					<b-button
+					v-if="can('article.cost')"
 					size="sm"
 					variant="outline-primary"
 					class="historial-cambio-vinculo"
