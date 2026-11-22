@@ -14,6 +14,7 @@ id="price-changes"
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
 		head-variant="dark"
 		responsive
+		stacked="sm"
 		striped
 		:fields="fields"
 		:items="items"
@@ -340,4 +341,33 @@ export default {
 #price-changes .table > tbody > tr.historial-cambio-destacado
 	outline: 2px solid var(--color-primary)
 	outline-offset: -2px
+
+// Teléfono (menos de 576 px): la tabla se apila (stacked="sm", el mismo patrón del modal de proveedores)
+// para que "Precio de proveedor" y su botón queden a la vista sin scroll horizontal.
+@media (max-width: 575.98px)
+	#price-changes .table.b-table.b-table-stacked-sm > tbody > tr > [data-label]
+		// En teléfono cada etiqueta ocupa su propia línea y el valor usa el ancho completo; el reparto
+		// 40/60 de Bootstrap heredaría el nowrap global y superpondría etiquetas largas.
+		&::before
+			display: block
+			float: none
+			width: 100%
+			padding: 0
+			margin-bottom: 4px
+			text-align: left
+			white-space: normal
+			color: var(--color-text-secondary)
+			font-size: 0.75rem
+
+		> div
+			display: block
+			width: 100%
+			padding: 0
+			white-space: normal
+
+	// El botón "Ver historial del proveedor" ocupa el ancho completo y es tocable.
+	#price-changes .historial-cambio-vinculo
+		display: block
+		width: 100%
+		min-height: 40px
 </style>
