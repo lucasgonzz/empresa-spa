@@ -213,7 +213,7 @@ export default {
 			this.highlighted_change_id = price_change_id
 		},
 		/**
-		 * Lleva la vista hasta la fila del cambio destacado. Se llama cuando llegan los datos (async) y
+		 * Lleva la vista hasta la fila del cambio destacado. Se llama cuando llegan los datos del servidor y
 		 * cuando el modal termina de pintarse (@shown de b-modal); espera al siguiente ciclo de render
 		 * para que la tabla ya tenga la fila marcada. El contenido del b-modal se monta fuera del
 		 * componente, por eso se busca en el documento y no en $el. Sin destacado o sin fila no hace nada.

@@ -254,7 +254,7 @@ export default {
 		/**
 		 * Lleva la vista hasta la fila destacada (la oferta a la que se llegó desde "Cambios de
 		 * precios"), esperando al siguiente ciclo de render para que la tabla ya tenga la fila marcada.
-		 * Se llama cuando cambia el destacado y cuando llegan los datos (async).
+		 * Se llama cuando cambia el destacado y cuando llegan los datos del servidor.
 		 * @return {void}
 		 */
 		scroll_to_highlight() {
