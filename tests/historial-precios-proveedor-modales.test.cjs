@@ -946,3 +946,53 @@ test('ronda 3b, defecto 5: sin price_change_id no hay botón y sólo registrar e
 	await esperar()
 	assert.equal(boton(fila_con(otra.vm._render(), 'Rosario'), 'Ver cambio de precio'), undefined, 'sólo registrar el precio no provocó ningún cambio de precio que mostrar')
 })
+
+// ---------------------------------------------------------------- Ronda 3c: ventana de asentamiento tras bv::modal::shown
+
+test('ronda 3c, A2-6 historial: datos -> fila a la vista -> shown -> pisotón de focusFirst dentro de la ventana -> vuelve a scrollear', async () => {
+	nuevo_entorno({ respuesta: historial([oferta_ca4()]) })
+	const { vm, raiz } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	vm.highlighted_offer_id = 91
+	await esperar()
+	// La API fue rápida: los datos llegaron y la fila ya está a la vista ANTES de shown.
+	const estado = { llamadas: 0, visible: true }
+	const fila = fila_con_rectangulo(estado)
+	global.window = { innerHeight: 800 }
+	vm.$el = { querySelector() { return fila } }
+	try {
+		raiz.$emit('bv::modal::shown', {}, 'article-providers')
+		await pausa(250)
+		// focusFirst() de bootstrap-vue: modal.scrollTop = 0, la fila deja de verse.
+		estado.visible = false
+		await pausa(400)
+		assert.ok(estado.llamadas >= 1, 'dentro de la ventana el chequeo sigue vivo aunque la fila ya se viera: tenía que volver a scrollear')
+		assert.equal(estado.visible, true)
+		vm.$destroy()
+	} finally {
+		delete global.window
+	}
+})
+
+test('ronda 3c, A2-6 historial: pasada la ventana de asentamiento, si la fila sale de vista NO se vuelve a scrollear', async () => {
+	nuevo_entorno({ respuesta: historial([oferta_ca4()]) })
+	const { vm, raiz } = montar('components/listado/modals/article-providers/OfferHistory.vue')
+	await esperar()
+	vm.highlighted_offer_id = 91
+	await esperar()
+	const estado = { llamadas: 0, visible: true }
+	const fila = fila_con_rectangulo(estado)
+	global.window = { innerHeight: 800 }
+	vm.$el = { querySelector() { return fila } }
+	try {
+		raiz.$emit('bv::modal::shown', {}, 'article-providers')
+		await pausa(1100)
+		// El usuario scrolleó por su cuenta: la fila sale de vista y no se le pelea.
+		estado.visible = false
+		await pausa(500)
+		assert.equal(estado.llamadas, 0, 'terminada la ventana corta definitivamente')
+		vm.$destroy()
+	} finally {
+		delete global.window
+	}
+})
