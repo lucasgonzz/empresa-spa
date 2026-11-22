@@ -63,6 +63,13 @@
 					class="d-block text-muted">
 						{{ data.item.sin_costo_detalle }}
 					</small>
+					<!-- Si el artículo cambió de proveedor y eso movió precios, también se puede ir a ver el cambio -->
+					<b-button
+					v-if="data.item.price_change_id"
+					size="sm"
+					variant="outline-primary"
+					class="offer-history-link"
+					@click="ver_cambio_de_precio(data.item)">Ver cambio de precio</b-button>
 				</div>
 
 				<!-- Actualizó el costo del artículo -->
@@ -429,7 +436,8 @@ export default {
 				titular_texto: titular_distinto,
 				sin_costo_texto: sin_costo_texto,
 				sin_costo_detalle: sin_costo_detalle,
-				price_change_id: uso_costo ? offer.price_change_id : null,
+				// El cambio de precio sólo existe si usó el costo o si el artículo cambió de proveedor.
+				price_change_id: (uso_costo || Number(offer.changed_article_provider) === 1) ? offer.price_change_id : null,
 			}
 		},
 	},
