@@ -30,6 +30,7 @@
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
 		responsive
 		stacked="sm"
+		table-class="offer-history-table"
 		:fields="fields"
 		:items="items"
 		:tbody-tr-class="row_class">
@@ -134,18 +135,20 @@ export default {
 		article() {
 			return this.$store.state.article.model
 		},
-		// Columnas de la tabla; sin permiso de costos no hay columna de costo.
+		// Columnas de la tabla; sin permiso de costos no hay columna de costo. Cada una lleva un ancho
+		// mínimo (thStyle) para que en tablet la tabla scrollee dentro del modal en vez de comprimirse, y
+		// fecha y costo llevan la clase que impide partir fechas e importes (tdClass).
 		fields() {
 			let fields = [
-				{ key: 'fecha', label: 'Fecha' },
-				{ key: 'provider_name', label: 'Proveedor' },
-				{ key: 'provider_code', label: 'Código' },
+				{ key: 'fecha', label: 'Fecha', thStyle: { minWidth: '120px' }, tdClass: 'offer-history-nowrap' },
+				{ key: 'provider_name', label: 'Proveedor', thStyle: { minWidth: '140px' } },
+				{ key: 'provider_code', label: 'Código', thStyle: { minWidth: '100px' } },
 			]
 			if (this.can_see_cost) {
-				fields.push({ key: 'costo', label: 'Costo' })
+				fields.push({ key: 'costo', label: 'Costo', thStyle: { minWidth: '110px' }, tdClass: 'offer-history-nowrap' })
 			}
-			fields.push({ key: 'origen', label: 'Origen' })
-			fields.push({ key: 'uso', label: 'Qué hizo' })
+			fields.push({ key: 'origen', label: 'Origen', thStyle: { minWidth: '170px' } })
+			fields.push({ key: 'uso', label: 'Qué hizo', thStyle: { minWidth: '240px' } })
 			return fields
 		},
 		// Opciones del filtro: "Todos" y cada proveedor presente en el historial (sin repetir).
@@ -343,3 +346,13 @@ export default {
 	},
 }
 </script>
+<style lang="sass">
+// Tablet y escritorio (la tabla no está apilada): fecha e importes no se parten. La regla general del
+// modal (article-providers/Index.vue) parte cualquier palabra en cualquier punto; ésta la pisa
+// con más especificidad sólo en las celdas de fecha y costo. Si no entran, scrollea el contenedor
+// responsive de la tabla, dentro del modal.
+@media (min-width: 576px)
+	#article-providers .table.offer-history-table > tbody > tr > td.offer-history-nowrap
+		white-space: nowrap
+		overflow-wrap: normal
+</style>
