@@ -16,6 +16,9 @@
 	<!-- "Esperando el pago" del cobro con el QR de Mercado Pago del mostrador (misión cobro-qr-mercado-pago) -->
 	<cobro-qr-mercado-pago></cobro-qr-mercado-pago>
 
+	<!-- Aviso de pedido sin stock guardado como sugerencia de compra (misión demanda-sin-stock-vender) -->
+	<aviso-demanda-sin-stock></aviso-demanda-sin-stock>
+
 	<!-- Barra de atajos de teclado activos -->
 	<vender-topbar></vender-topbar>
 
@@ -71,6 +74,10 @@ import BudgetCobro from '@/components/vender/modals/budget-cobro/Index'
 	abriria nada y el cliente podria pagar un cobro que nadie esta mirando: la venta no se guardaria.
 */
 import CobroQrMercadoPago from '@/components/vender/modals/CobroQrMercadoPago'
+/*
+	Estatico: el aviso se monta una sola vez y escucha el store; no hay motivo para diferirlo.
+*/
+import AvisoDemandaSinStock from '@/components/vender/components/AvisoDemandaSinStock'
 
 export default {
 	mixins: [
@@ -90,6 +97,7 @@ export default {
 		PaymentMethods,
 		BudgetCobro,
 		CobroQrMercadoPago,
+		AvisoDemandaSinStock,
 		NewArticle: () => import('@/components/vender/modals/NewArticle'),
 		LoadingAfipTicket: () => import('@/components/vender/modals/LoadingAfipTicket'),
 		SelectVariant: () => import('@/components/vender/modals/SelectVariant'),
