@@ -21,16 +21,18 @@ $vender_stages_padding: 8px
 
 /* Disposicion del diseño de Vender (mision vender-secciones-personalizables, 22/11/2026): el */
 /* contenedor tiene bandas (filas), cada banda columnas y cada columna sus secciones apiladas. */
-/* Los margenes y paddings laterales (-9px / 9px) hacen que una banda con UNA columna de 12 tenga */
-/* exactamente la geometria de antes de las columnas: las tarjetas ocupan el ancho del contenedor. */
-/* Dejan 18px entre columnas, el mismo aire que hay entre secciones apiladas ($vender_stage_gap). */
+/* El margen y el padding laterales son IGUALES al padding de .vender-stages ($vender_stages_padding, */
+/* 8px): la banda ocupa justo el area de contenido del contenedor (ni un pixel de mas: con -9px */
+/* desbordaba 1px y .vender-stages, que ya tiene overflow-y: auto, mostraba scroll horizontal) y una */
+/* banda con UNA columna de 12 tiene exactamente la geometria de antes de las columnas. Entre */
+/* columnas quedan 16px, el mismo gutter que tiene la grilla de campos (GrillaDeEtapa.vue). */
 /* 🔴 Ni la banda ni la columna llevan overflow: el sticky del bloque de buscadores de la etapa 2 */
 /* se pega contra .vender-stages (el que scrollea), y cualquier ancestro con overflow lo rompe. */
 .vender-banda
-	margin: 0 -9px
+	margin: 0 (-$vender_stages_padding)
 
 .vender-banda__columna
-	padding: 0 9px
+	padding: 0 $vender_stages_padding
 	min-width: 0
 
 /* Desde 992px (la clase la pone VenderStages.vue con matchMedia) las columnas van una al lado de la */
