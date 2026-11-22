@@ -201,24 +201,14 @@ export function obligatorios_de_seccion(estado, id) {
 }
 
 /**
- * Quita una sección.
- *
- * - `etapa_2` no se quita (lleva la tabla de artículos).
- * - Si tiene obligatorios a la vista no se quita: hay que moverlos antes a otra sección. El
- *   resultado trae `obligatorios` (las keys) y el motivo los nombra.
- * - Si no: los opcionales visibles van al principio de la bandeja de sacados (como la ✕ de un
- *   campo), los marcadores se descartan y lo que el negocio no puede ver (campos ocultos) se
- *   reubica: los opcionales a los sacados ocultos y los obligatorios a la sección de respaldo
- *   (ver seccion_de_respaldo()), así el día que se prende la extensión no reaparecen en otro lado.
- * - Se borra de la disposición, de los campos, de los metadatos y de los ocultos; la columna o la
- *   banda que queda vacía se saca y su ancho pasa a la vecina.
+ * Si una sección se puede quitar, sin tocar nada (lo usa el botón "Quitar sección" del editor
+ * para deshabilitarse con el motivo).
  *
  * @param {Object} estado estado de trabajo
- * @param {string} id sección a quitar
- * @param {Object} vm componente de la SPA (para el ancho por defecto de lo que va a la bandeja)
+ * @param {string} id
  * @returns {{ok: boolean, motivo: (string|null), estado: Object, obligatorios: (Array<string>|undefined)}}
  */
-export function quitar_seccion(estado, id, vm) {
+export function puede_quitar_seccion(estado, id) {
 	if (id === SECCION_FIJA) {
 		return rechazo(estado, MOTIVO_SECCION_FIJA)
 	}
@@ -238,6 +228,34 @@ export function quitar_seccion(estado, id, vm) {
 			? nombres[0]
 			: nombres.slice(0, nombres.length - 1).join(', ') + ' y ' + nombres[nombres.length - 1]
 		return rechazo(estado, 'Mové primero ' + lista + ' a otra sección.', { obligatorios: obligatorios })
+	}
+
+	return exito(estado)
+}
+
+/**
+ * Quita una sección.
+ *
+ * - `etapa_2` no se quita (lleva la tabla de artículos).
+ * - Si tiene obligatorios a la vista no se quita: hay que moverlos antes a otra sección. El
+ *   resultado trae `obligatorios` (las keys) y el motivo los nombra.
+ * - Si no: los opcionales visibles van al principio de la bandeja de sacados (como la ✕ de un
+ *   campo), los marcadores se descartan y lo que el negocio no puede ver (campos ocultos) se
+ *   reubica: los opcionales a los sacados ocultos y los obligatorios a la sección de respaldo
+ *   (ver seccion_de_respaldo()), así el día que se prende la extensión no reaparecen en otro lado.
+ * - Se borra de la disposición, de los campos, de los metadatos y de los ocultos; la columna o la
+ *   banda que queda vacía se saca y su ancho pasa a la vecina.
+ *
+ * @param {Object} estado estado de trabajo
+ * @param {string} id sección a quitar
+ * @param {Object} vm componente de la SPA (para el ancho por defecto de lo que va a la bandeja)
+ * @returns {{ok: boolean, motivo: (string|null), estado: Object, obligatorios: (Array<string>|undefined)}}
+ */
+export function quitar_seccion(estado, id, vm) {
+	let verificacion = puede_quitar_seccion(estado, id)
+
+	if (!verificacion.ok) {
+		return verificacion
 	}
 
 	let restantes = ids_en_orden(estado.disposicion).filter(function (otra) {
@@ -301,18 +319,13 @@ export function quitar_seccion(estado, id, vm) {
 }
 
 /**
- * Parte la columna de una sección: la sección pasa a una columna nueva a su derecha, con la mitad
- * del ancho (floor(ancho / 2); la original queda con el resto).
- *
- * Se rechaza si la sección está SOLA en su columna (no hay nada que partir: para separarla se
- * cambia el ancho de su columna o se la baja a una fila nueva, decisión del 22/11/2026), si la
- * columna es muy angosta para partirla (menos de 6) o si la fila ya tiene 4 columnas.
+ * Si una sección se puede pasar a una columna nueva, sin tocar nada (ver mover_a_columna_nueva()).
  *
  * @param {Object} estado estado de trabajo
  * @param {string} id
  * @returns {{ok: boolean, motivo: (string|null), estado: Object}}
  */
-export function mover_a_columna_nueva(estado, id) {
+export function puede_mover_a_columna_nueva(estado, id) {
 	let lugar = ubicacion_de_seccion(estado.disposicion, id)
 
 	if (!lugar) {
@@ -334,6 +347,31 @@ export function mover_a_columna_nueva(estado, id) {
 		return rechazo(estado, 'La fila ya tiene ' + MAXIMO_DE_COLUMNAS + ' columnas.')
 	}
 
+	return exito(estado)
+}
+
+/**
+ * Parte la columna de una sección: la sección pasa a una columna nueva a su derecha, con la mitad
+ * del ancho (floor(ancho / 2); la original queda con el resto).
+ *
+ * Se rechaza si la sección está SOLA en su columna (no hay nada que partir: para separarla se
+ * cambia el ancho de su columna o se la baja a una fila nueva, decisión del 22/11/2026), si la
+ * columna es muy angosta para partirla (menos de 6) o si la fila ya tiene 4 columnas.
+ *
+ * @param {Object} estado estado de trabajo
+ * @param {string} id
+ * @returns {{ok: boolean, motivo: (string|null), estado: Object}}
+ */
+export function mover_a_columna_nueva(estado, id) {
+	let verificacion = puede_mover_a_columna_nueva(estado, id)
+
+	if (!verificacion.ok) {
+		return verificacion
+	}
+
+	let lugar = ubicacion_de_seccion(estado.disposicion, id)
+	let banda = estado.disposicion[lugar.banda]
+	let columna = banda.columnas[lugar.columna]
 	let ancho_nuevo = Math.floor(columna.ancho / 2)
 
 	columna.secciones.splice(lugar.posicion, 1)
@@ -344,16 +382,13 @@ export function mover_a_columna_nueva(estado, id) {
 }
 
 /**
- * Baja una sección a una fila nueva (una banda debajo de la suya, con una columna de 12). La
- * columna que deja vacía se saca y su ancho pasa a la vecina.
- *
- * Se rechaza si ya está sola en su fila o si ya hay 6 filas.
+ * Si una sección se puede bajar a una fila nueva, sin tocar nada (ver mover_a_banda_nueva()).
  *
  * @param {Object} estado estado de trabajo
  * @param {string} id
  * @returns {{ok: boolean, motivo: (string|null), estado: Object}}
  */
-export function mover_a_banda_nueva(estado, id) {
+export function puede_mover_a_banda_nueva(estado, id) {
 	let lugar = ubicacion_de_seccion(estado.disposicion, id)
 
 	if (!lugar) {
@@ -369,6 +404,29 @@ export function mover_a_banda_nueva(estado, id) {
 	if (estado.disposicion.length >= MAXIMO_DE_BANDAS) {
 		return rechazo(estado, 'Ya hay ' + MAXIMO_DE_BANDAS + ' filas de secciones, el máximo.')
 	}
+
+	return exito(estado)
+}
+
+/**
+ * Baja una sección a una fila nueva (una banda debajo de la suya, con una columna de 12). La
+ * columna que deja vacía se saca y su ancho pasa a la vecina.
+ *
+ * Se rechaza si ya está sola en su fila o si ya hay 6 filas.
+ *
+ * @param {Object} estado estado de trabajo
+ * @param {string} id
+ * @returns {{ok: boolean, motivo: (string|null), estado: Object}}
+ */
+export function mover_a_banda_nueva(estado, id) {
+	let verificacion = puede_mover_a_banda_nueva(estado, id)
+
+	if (!verificacion.ok) {
+		return verificacion
+	}
+
+	let lugar = ubicacion_de_seccion(estado.disposicion, id)
+	let banda = estado.disposicion[lugar.banda]
 
 	banda.columnas[lugar.columna].secciones.splice(lugar.posicion, 1)
 	estado.disposicion.splice(lugar.banda + 1, 0, { columnas: [{ ancho: 12, secciones: [id] }] })

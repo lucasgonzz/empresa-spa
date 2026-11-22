@@ -32,6 +32,7 @@
 			:en_uso_bloqueado="en_uso_original"
 			:nombre_invalido="nombre_invalido"
 			:nota_del_diseno="nota_del_diseno"
+			:texto_restablecer="texto_restablecer"
 			@update:nombre="nombre_invalido = false"
 			@restablecer="restablecer"></cabecera-del-editor>
 
@@ -39,7 +40,7 @@
 			<ul class="editor-diseno__ayuda">
 				<li>
 					<i class="bi bi-arrows-move"></i>
-					Arrastrá un campo para moverlo, dentro de su etapa o a otra.
+					Arrastrá un campo para moverlo, dentro de su sección o a otra.
 				</li>
 				<li>
 					<i class="bi bi-arrow-left-right"></i>
@@ -49,9 +50,15 @@
 					<i class="bi bi-x-lg"></i>
 					Sacalo con la cruz o soltándolo en la bandeja.
 				</li>
+				<li>
+					<i class="bi bi-grip-vertical"></i>
+					Movés una sección con su agarre; con «Ajustes» le cambiás título, color, alto y columna.
+				</li>
 			</ul>
 			<p class="editor-diseno__nota">
 				El ancho se usa desde tablets en adelante; en el teléfono cada campo va a lo ancho, como siempre.
+				Las columnas y el alto fijo de las secciones rigen desde pantallas de 992 px; en pantallas más chicas
+				las secciones se apilan y el alto es automático.
 			</p>
 
 			<div
@@ -64,21 +71,20 @@
 
 			<div class="editor-diseno__area">
 
-				<!-- El lienzo: las tres etapas y los botones fijos de la venta -->
+				<!-- El lienzo: las secciones en su disposicion (filas y columnas) y los botones fijos de la venta -->
 				<div class="editor-diseno__marco">
 					<div class="editor-diseno__lienzo">
-						<etapa-del-editor
-						v-for="(etapa, indice) in ETAPAS"
-						:key="etapa"
-						:etapa="etapa"
-						:numero="indice + 1"
-						:lista="etapas[etapa]"
+						<disposicion-del-editor
+						:estado="estado_de_trabajo"
 						:move="permitir_movimiento"
-						:bloque_fijo="etapa === 'etapa_2' ? 'Tabla de artículos (fija)' : null"
 						:destacado="destacado"
-						@sacar="sacar_elemento(etapa, $event)"
+						@sacar="sacar_elemento($event.id, $event.item)"
+						@ajuste="al_ajustar_seccion"
+						@ancho-de-columna="cambiar_ancho_de_columna_desde_el_lienzo"
+						@agregar-seccion="agregar_una_seccion"
+						@fin-de-arrastre-de-secciones="dejar_prolija_la_disposicion"
 						@inicio-arrastre="al_empezar_arrastre"
-						@fin-arrastre="al_terminar_arrastre"></etapa-del-editor>
+						@fin-arrastre="al_terminar_arrastre"></disposicion-del-editor>
 
 						<div class="editor-diseno-fijo editor-diseno-fijo--botones">
 							<i class="bi bi-lock-fill"></i>
@@ -90,6 +96,8 @@
 				<bandeja-de-sacados
 				class="editor-diseno__bandeja"
 				:sacados="sacados"
+				:ids_de_secciones="ids_de_secciones"
+				:titulos_de_secciones="titulos_de_secciones"
 				:move="permitir_movimiento"
 				:arrastrando="arrastrando"
 				:destacado="destacado"
@@ -130,16 +138,33 @@
 </template>
 <script>
 import CabeceraDelEditor from './CabeceraDelEditor'
-import EtapaDelEditor from './EtapaDelEditor'
+import DisposicionDelEditor from './DisposicionDelEditor'
 import BandejaDeSacados from './BandejaDeSacados'
 import {
-	ETAPAS,
 	KEY_SEPARADOR,
 	elemento,
 	es_marcador,
 	es_obligatorio,
 } from '@/components/vender/layout/elementos'
 import { serializar_diseno } from '@/components/vender/layout/resolver_diseno'
+import {
+	ancho_de_columna_de,
+	es_layout_de_plantilla,
+	escalar_cols_a_columna,
+	ids_en_orden,
+	layout_de_plantilla,
+	seccion_de_respaldo,
+} from '@/components/vender/layout/secciones'
+import {
+	agregar_seccion,
+	cambiar_alto,
+	cambiar_alto_fijo,
+	cambiar_ancho_de_columna,
+	limpiar_disposicion,
+	mover_a_banda_nueva,
+	mover_a_columna_nueva,
+	quitar_seccion,
+} from './operaciones_de_secciones'
 import {
 	armar_estado_de_trabajo,
 	armar_diseno_completo,
@@ -163,18 +188,9 @@ const TEXTO_FALTA_BUSCADOR = 'Dejá al menos un buscador de artículos (código 
 /* Cuanto dura el resaltado de un campo recien movido con "Agregar" o con la ✕ (ms) */
 const DURACION_DEL_DESTACADO = 1600
 
-/**
- * Listas de trabajo vacias, una por etapa.
- *
- * @returns {Object}
- */
-function etapas_vacias() {
-	let etapas = {}
-	ETAPAS.forEach(function (etapa) {
-		etapas[etapa] = []
-	})
-	return etapas
-}
+/* Texto del boton de restablecer segun a que vuelve el diseño */
+const TEXTO_RESTABLECER_PREDETERMINADO = 'Restablecer el diseño predeterminado'
+const TEXTO_RESTABLECER_AGIL = 'Restablecer el diseño ágil'
 
 /**
  * Modal editor de un Diseño de Vender.
@@ -188,13 +204,12 @@ export default {
 	name: 'EditorDeDisenoDeVender',
 	components: {
 		CabeceraDelEditor,
-		EtapaDelEditor,
+		DisposicionDelEditor,
 		BandejaDeSacados,
 	},
 	data() {
 		return {
 			/* Constantes para el template */
-			ETAPAS: ETAPAS,
 			TEXTO_FALTA_BUSCADOR: TEXTO_FALTA_BUSCADOR,
 			/* id del b-modal (tambien scopea los estilos de los inputs, ver el <style>) */
 			id_del_modal: 'editor-diseno-vender',
@@ -207,21 +222,26 @@ export default {
 			en_uso: false,
 			/* Si ya estaba en uso al abrir (el interruptor queda bloqueado) */
 			en_uso_original: false,
-			/* Estado de trabajo (ver estado_del_editor.js) */
-			etapas: etapas_vacias(),
+			/* Estado de trabajo (ver estado_del_editor.js); `etapas` y `ocultos` van por id de seccion */
+			etapas: {},
 			sacados: [],
-			ocultos: etapas_vacias(),
+			ocultos: {},
 			orden_original: {},
 			sacados_ocultos: [],
+			/* Metadatos de cada seccion, la disposicion en filas y columnas y la plantilla de origen ('agil' o null) */
+			secciones: {},
+			disposicion: [],
+			plantilla: null,
 			/* Huella del estado al abrir: si la de ahora es distinta, hay cambios sin guardar */
 			huella_inicial: '',
 			/*
-				Si la base del lienzo es el diseño del sistema (layout null): un diseño nuevo, uno guardado
-				en null, o cualquiera despues de "Restablecer". Mientras el lienzo no se toque desde esa
-				base, el diseño "sigue al del sistema" (ver sigue_al_sistema y guardar()).
+				Si la base del lienzo es un diseño del sistema (layout null, o solo con la plantilla del
+				diseño ágil): un diseño nuevo, uno guardado asi, o cualquiera despues de "Restablecer".
+				Mientras el lienzo no se toque desde esa base, el diseño "sigue al del sistema" (ver
+				sigue_al_sistema y guardar()).
 			*/
 			base_es_del_sistema: false,
-			/* Si en esta edicion se toco "Restablecer el diseño predeterminado" */
+			/* Si en esta edicion se toco "Restablecer" */
 			restablecido: false,
 			/* Huella de SOLO el diseño en su base (al abrir o al restablecer): si cambia, el lienzo se toco */
 			huella_del_diseno_base: '',
@@ -264,7 +284,48 @@ export default {
 				ocultos: this.ocultos,
 				orden_original: this.orden_original,
 				sacados_ocultos: this.sacados_ocultos,
+				secciones: this.secciones,
+				disposicion: this.disposicion,
+				plantilla: this.plantilla,
 			}
+		},
+		/**
+		 * Ids de las secciones del diseño en orden de lectura.
+		 *
+		 * @returns {Array<string>}
+		 */
+		ids_de_secciones() {
+			return ids_en_orden(this.disposicion)
+		},
+		/**
+		 * Titulo de cada seccion por id (el de la bandeja de sacados: "vuelve a «Titulo»").
+		 *
+		 * @returns {Object}
+		 */
+		titulos_de_secciones() {
+			let titulos = {}
+			let self = this
+			this.ids_de_secciones.forEach(function (id) {
+				titulos[id] = self.secciones[id] ? self.secciones[id].titulo : ''
+			})
+			return titulos
+		},
+		/**
+		 * La base a la que vuelve "Restablecer": el layout de la plantilla de origen del diseño (el ágil)
+		 * o null (el predeterminado).
+		 *
+		 * @returns {Object|null}
+		 */
+		layout_de_origen() {
+			return this.plantilla ? layout_de_plantilla(this.plantilla) : null
+		},
+		/**
+		 * Texto del boton de restablecer: dice a que vuelve el diseño.
+		 *
+		 * @returns {string}
+		 */
+		texto_restablecer() {
+			return this.plantilla === 'agil' ? TEXTO_RESTABLECER_AGIL : TEXTO_RESTABLECER_PREDETERMINADO
 		},
 		/**
 		 * Si hay cambios sin guardar respecto de lo que habia al abrir. Depende de las listas y de los
@@ -308,11 +369,12 @@ export default {
 			if (!this.abierto) {
 				return null
 			}
+			let del_sistema = this.plantilla === 'agil' ? 'Diseño ágil del sistema' : 'Diseño original del sistema'
 			if (this.sigue_al_sistema) {
-				return 'Diseño original del sistema: se acomoda solo a las extensiones y a la preferencia de cada usuario.'
+				return del_sistema + ': se acomoda solo a las extensiones y a la preferencia de cada usuario.'
 			}
 			if (this.base_es_del_sistema) {
-				return 'Con estos cambios, al guardar el diseño queda fijo y deja de seguir al original del sistema.'
+				return 'Con estos cambios, al guardar el diseño queda fijo y deja de seguir al ' + del_sistema.toLowerCase() + '.'
 			}
 			return null
 		},
@@ -351,7 +413,7 @@ export default {
 			this.destacado = null
 
 			/* Un diseño nuevo arranca del predeterminado: su base tambien es la del sistema */
-			this.base_es_del_sistema = !modelo || modelo.layout === null || typeof modelo.layout == 'undefined'
+			this.base_es_del_sistema = !modelo || es_layout_de_plantilla(modelo.layout)
 			this.restablecido = false
 			this.huella_del_diseno_base = huella_del_diseno(this.estado_de_trabajo)
 			this.huella_inicial = huella_del_estado(this.nombre, this.en_uso, this.estado_de_trabajo, this.base_es_del_sistema)
@@ -365,11 +427,19 @@ export default {
 		 * @returns {void}
 		 */
 		aplicar_estado(estado) {
-			this.etapas = estado.etapas
+			/*
+				Los contenedores por id (`etapas`, `ocultos`, `secciones`, `orden_original`) se vuelven a
+				armar como objetos nuevos: una seccion agregada o quitada suma o saca una CLAVE, y Vue 2 no
+				ve las claves nuevas de un objeto que ya observa.
+			*/
+			this.etapas = Object.assign({}, estado.etapas)
 			this.sacados = estado.sacados
-			this.ocultos = estado.ocultos
-			this.orden_original = estado.orden_original
+			this.ocultos = Object.assign({}, estado.ocultos)
+			this.orden_original = Object.assign({}, estado.orden_original)
 			this.sacados_ocultos = estado.sacados_ocultos
+			this.secciones = Object.assign({}, estado.secciones)
+			this.disposicion = estado.disposicion
+			this.plantilla = estado.plantilla || null
 		},
 		/**
 		 * Ya visible: en un diseño nuevo, el nombre queda enfocado y seleccionado para reemplazarlo.
@@ -432,7 +502,7 @@ export default {
 			}
 			this.tope_avisado = true
 			let que = key === KEY_SEPARADOR ? 'separadores' : 'saltos de fila'
-			avisar(this, 'warning', 'Cada etapa admite hasta ' + TOPE_DE_MARCADORES_POR_ETAPA + ' ' + que + '. Quitá alguno de esa etapa para poner otro.')
+			avisar(this, 'warning', 'Cada sección admite hasta ' + TOPE_DE_MARCADORES_POR_ETAPA + ' ' + que + '. Quitá alguno de esa sección para poner otro.')
 		},
 		/**
 		 * Empieza un arrastre: se anota que se arrastra y desde donde, para que la bandeja muestre si
@@ -497,8 +567,10 @@ export default {
 			this.destacar(item)
 		},
 		/**
-		 * "Agregar" de la bandeja: el campo vuelve a su etapa de siempre, al lado del campo que lo
-		 * precede en el diseño predeterminado (indice_por_defecto), y se lo muestra resaltado.
+		 * "Agregar" de la bandeja: el campo vuelve a su seccion de siempre (o, si el diseño ya no la
+		 * tiene, a la de respaldo: la primera que no es la de la tabla de articulos), al lado del
+		 * campo que lo precede en el diseño predeterminado (indice_por_defecto), con su ancho de
+		 * siempre escalado a la columna donde vive la seccion, y se lo muestra resaltado.
 		 *
 		 * @param {Object} item {key, cols}
 		 * @returns {void}
@@ -515,11 +587,112 @@ export default {
 				this.sacados.splice(indice, 1)
 			}
 
-			let lista = this.etapas[definicion.etapa]
+			let destino = seccion_de_respaldo(definicion.etapa, this.ids_de_secciones)
+			let lista = this.etapas[destino]
+
+			item.cols = escalar_cols_a_columna(item.cols, ancho_de_columna_de(this.disposicion, destino))
 			lista.splice(indice_por_defecto(lista, item.key, this), 0, item)
 
 			this.destacar(item)
 			this.llevar_a_la_vista(item)
+		},
+		/**
+		 * Un ajuste de una seccion desde su panel (titulo, descripcion, color, plegado, alto, alto fijo,
+		 * columna nueva, fila nueva o quitar). Los de texto, color y plegado cambian el metadato en el
+		 * lugar; el resto son operaciones de operaciones_de_secciones.js, que si no se pueden avisan
+		 * con su motivo.
+		 *
+		 * @param {Object} ajuste {tipo, id, propiedad?, valor?}
+		 * @returns {void}
+		 */
+		al_ajustar_seccion(ajuste) {
+			let trabajo = this.estado_de_trabajo
+			let resultado = null
+
+			if (ajuste.tipo === 'meta') {
+				if (this.secciones[ajuste.id]) {
+					this.secciones[ajuste.id][ajuste.propiedad] = ajuste.valor
+				}
+				return
+			}
+
+			if (ajuste.tipo === 'alto') {
+				resultado = cambiar_alto(trabajo, ajuste.id, ajuste.valor)
+			} else if (ajuste.tipo === 'fijo') {
+				resultado = cambiar_alto_fijo(trabajo, ajuste.id, ajuste.valor)
+			} else if (ajuste.tipo === 'columna_nueva') {
+				resultado = mover_a_columna_nueva(trabajo, ajuste.id)
+			} else if (ajuste.tipo === 'banda_nueva') {
+				resultado = mover_a_banda_nueva(trabajo, ajuste.id)
+			} else if (ajuste.tipo === 'quitar') {
+				resultado = quitar_seccion(trabajo, ajuste.id, this)
+				if (resultado.ok) {
+					avisar(this, 'info', 'Sección quitada. Sus campos opcionales quedaron en la bandeja de sacados.')
+				}
+			}
+
+			if (resultado) {
+				this.terminar_operacion(trabajo, resultado, false)
+			}
+		},
+		/**
+		 * Cambio de ancho de una columna (manija entre columnas o − / + de su barra). Durante el
+		 * arrastre de la manija no se avisa cada vez que topa con el minimo.
+		 *
+		 * @param {Object} pedido {banda, columna, delta, silencioso?}
+		 * @returns {void}
+		 */
+		cambiar_ancho_de_columna_desde_el_lienzo(pedido) {
+			let trabajo = this.estado_de_trabajo
+			let resultado = cambiar_ancho_de_columna(trabajo, pedido.banda, pedido.columna, pedido.delta)
+			this.terminar_operacion(trabajo, resultado, !!pedido.silencioso)
+		},
+		/**
+		 * "Agregar sección": una vacia en una fila nueva al final, y el lienzo la muestra.
+		 *
+		 * @returns {void}
+		 */
+		agregar_una_seccion() {
+			let self = this
+			let trabajo = this.estado_de_trabajo
+			let resultado = agregar_seccion(trabajo, this)
+
+			this.terminar_operacion(trabajo, resultado, false)
+
+			if (resultado.ok) {
+				this.$nextTick(function () {
+					let modal = document.getElementById(self.id_del_modal)
+					let tarjeta = modal ? modal.querySelector('.editor-etapa[data-seccion="' + resultado.id + '"]') : null
+					if (tarjeta && typeof tarjeta.scrollIntoView == 'function') {
+						tarjeta.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+					}
+				})
+			}
+		},
+		/**
+		 * Termina una operacion de secciones: vuelve a asignar los contenedores al componente (para
+		 * que Vue vea las claves nuevas o las que se fueron) y, si no se pudo hacer, avisa por que.
+		 *
+		 * @param {Object} trabajo el estado de trabajo que mutó la operacion
+		 * @param {{ok: boolean, motivo: (string|null)}} resultado
+		 * @param {boolean} silencioso true para no avisar cuando no se pudo
+		 * @returns {void}
+		 */
+		terminar_operacion(trabajo, resultado, silencioso) {
+			this.aplicar_estado(trabajo)
+
+			if (!resultado.ok && !silencioso && resultado.motivo) {
+				avisar(this, 'warning', resultado.motivo)
+			}
+		},
+		/**
+		 * Despues de arrastrar una seccion de una columna a otra: saca las columnas y filas que
+		 * quedaron vacias (su ancho pasa a la vecina) y rehace los anchos para que sumen 12.
+		 *
+		 * @returns {void}
+		 */
+		dejar_prolija_la_disposicion() {
+			limpiar_disposicion(this.estado_de_trabajo)
 		},
 		/**
 		 * Resalta un item un momento (el que se acaba de mover con un boton).
@@ -558,11 +731,13 @@ export default {
 			})
 		},
 		/**
-		 * Vuelve al diseño predeterminado del sistema (resolver_diseno(null)), sin tocar el nombre ni
-		 * el "En uso", y lo marca como del sistema: si se guarda sin tocar nada mas del lienzo, viaja
-		 * `layout: null` y el diseño vuelve a acomodarse solo a las extensiones y a cada usuario.
+		 * Vuelve al diseño de origen del sistema, sin tocar el nombre ni el "En uso": el ágil si el
+		 * diseño viene de esa plantilla (this.plantilla), y si no el predeterminado (resolver_diseno(null)).
+		 * Lo marca como del sistema: si se guarda sin tocar nada mas del lienzo, viaja la base del
+		 * sistema (`layout: null`, o solo la plantilla) y el diseño vuelve a acomodarse solo a las
+		 * extensiones y a cada usuario.
 		 *
-		 * Si el lienzo ya es el predeterminado no hay nada que perder: no pregunta (y si ademas ya era
+		 * Si el lienzo ya es el de origen no hay nada que perder: no pregunta (y si ademas ya era
 		 * del sistema, no hace nada). Si no, pregunta, porque se pierde lo armado hasta ahora aunque
 		 * todavia no este guardado.
 		 *
@@ -570,24 +745,25 @@ export default {
 		 */
 		restablecer() {
 			let self = this
-			let predeterminado = armar_estado_de_trabajo(null, this)
+			let origen = armar_estado_de_trabajo(this.layout_de_origen, this)
+			let nombre_del_origen = this.plantilla === 'agil' ? 'el diseño ágil' : 'el diseño predeterminado'
 
 			let actual = huella_del_diseno(this.estado_de_trabajo)
-			let original = huella_del_diseno(predeterminado)
+			let original = huella_del_diseno(origen)
 
 			if (actual === original) {
 				if (this.sigue_al_sistema) {
 					avisar(this, 'info', 'Este diseño ya es el original del sistema.')
 					return
 				}
-				/* Un diseño fijo identico al predeterminado: se lo marca para que vuelva a ser el del sistema */
+				/* Un diseño fijo identico al de origen: se lo marca para que vuelva a ser el del sistema */
 				this.marcar_como_del_sistema()
 				avisar(this, 'info', 'Listo: al guardar, este diseño vuelve a ser el original del sistema.')
 				return
 			}
 
-			this.$bvModal.msgBoxConfirm('Cada campo vuelve a su lugar y a su ancho de siempre, y los sacados vuelven a Vender. El nombre y el "En uso" no cambian, y nada se guarda hasta que toques Guardar. Si guardás sin mover nada más, el diseño vuelve a acomodarse solo, como el original del sistema.', {
-				title: '¿Restablecer el diseño predeterminado?',
+			this.$bvModal.msgBoxConfirm('Cada sección y cada campo vuelven a su lugar, ancho y alto de siempre, y los sacados vuelven a Vender. El nombre y el "En uso" no cambian, y nada se guarda hasta que toques Guardar. Si guardás sin mover nada más, el diseño vuelve a acomodarse solo, como el original del sistema.', {
+				title: '¿Restablecer ' + nombre_del_origen + '?',
 				okTitle: 'Restablecer',
 				okVariant: 'primary',
 				cancelTitle: 'Cancelar',
@@ -595,7 +771,7 @@ export default {
 			})
 			.then(function (confirmado) {
 				if (confirmado) {
-					self.aplicar_estado(armar_estado_de_trabajo(null, self))
+					self.aplicar_estado(armar_estado_de_trabajo(self.layout_de_origen, self))
 					self.marcar_como_del_sistema()
 				}
 			})
@@ -619,8 +795,9 @@ export default {
 		 * Un diseño existente sin cambios no se manda: se cierra y listo.
 		 *
 		 * 🔴 El `layout` viaja SOLO si el lienzo se toco (o si hay que volver al diseño del sistema):
-		 * - Lienzo sin tocar desde el diseño del sistema (nuevo, o restablecido): `layout: null`.
-		 * - Guardado en null y sin tocar (solo cambio el nombre o el "En uso"): sin la clave.
+		 * - Lienzo sin tocar desde el diseño del sistema (nuevo, o restablecido): `layout: null` (o, si
+		 *   viene del diseño ágil, solo su plantilla).
+		 * - Guardado como del sistema y sin tocar (solo cambio el nombre o el "En uso"): sin la clave.
 		 * - Diseño fijo sin tocar: sin la clave.
 		 * - Lienzo tocado: el diseño completo, explicito.
 		 * Mandarlo siempre "congelaba" el predeterminado al renombrarlo: los anchos quedaban fijados
@@ -666,9 +843,9 @@ export default {
 			if (this.sigue_al_sistema) {
 				/* Nuevo o restablecido, sin tocar el lienzo: nace (o vuelve a ser) el diseño del sistema */
 				if (!this.modelo_id || this.restablecido) {
-					datos.layout = null
+					datos.layout = this.layout_de_origen
 				}
-				/* Guardado en null y sin tocar: la clave no viaja y el backend no toca el layout */
+				/* Guardado como del sistema y sin tocar: la clave no viaja y el backend no toca el layout */
 			} else if (!this.modelo_id || this.diseno_tocado) {
 				/* Lienzo tocado: el diseño completo, explicito */
 				datos.layout = serializar_diseno(armar_diseno_completo(this.estado_de_trabajo))
@@ -775,11 +952,14 @@ export default {
 			this.nombre = ''
 			this.en_uso = false
 			this.en_uso_original = false
-			this.etapas = etapas_vacias()
+			this.etapas = {}
 			this.sacados = []
-			this.ocultos = etapas_vacias()
+			this.ocultos = {}
 			this.orden_original = {}
 			this.sacados_ocultos = []
+			this.secciones = {}
+			this.disposicion = []
+			this.plantilla = null
 			this.huella_inicial = ''
 			this.base_es_del_sistema = false
 			this.restablecido = false
@@ -898,8 +1078,14 @@ export default {
 		gap: 20px
 		align-items: start
 
+	// El lienzo con varias columnas tiene un ancho minimo (ver DisposicionDelEditor.vue): si el marco
+	// es mas angosto, se desliza de costado ADENTRO de el. El padding y el margen negativo dejan que
+	// las manijas de los costados asomen sobre el gutter sin que el marco las recorte.
 	.editor-diseno__marco
 		min-width: 0
+		overflow-x: auto
+		margin: 0 -12px
+		padding: 0 12px
 
 	// En escritorio la bandeja acompaña el scroll del modal: siempre a mano para soltar un campo
 	.editor-diseno__bandeja
@@ -927,11 +1113,6 @@ export default {
 // scrollea de costado.
 @media (max-width: 767.98px)
 	.editor-diseno
-		.editor-diseno__marco
-			overflow-x: auto
-			margin: 0 -12px
-			padding: 0 12px
-
 		.editor-diseno__lienzo
 			min-width: 560px
 

@@ -16,7 +16,7 @@
 
 		<!-- Fuente de los marcadores: se clonan, nunca se vacia ni recibe nada -->
 		<div class="editor-bandeja__marcadores">
-			<p class="editor-bandeja__seccion">Para ordenar las etapas</p>
+			<p class="editor-bandeja__seccion">Para ordenar las secciones</p>
 			<draggable
 			class="editor-bandeja__fuente"
 			:list="fuente_de_marcadores"
@@ -80,7 +80,7 @@
 		<p
 		v-if="!rechaza"
 		class="editor-bandeja__ayuda">
-			No se ven en Vender. Para volver a usar uno, arrastralo a una etapa o tocá <strong>Agregar</strong>.
+			No se ven en Vender. Para volver a usar uno, arrastralo a una sección o tocá <strong>Agregar</strong>.
 		</p>
 		<div
 		v-else
@@ -162,7 +162,8 @@
 </template>
 <script>
 import draggable from 'vuedraggable'
-import { KEY_SEPARADOR, KEY_SALTO_DE_FILA, TITULOS_DE_ETAPAS, elemento, es_marcador } from '@/components/vender/layout/elementos'
+import { KEY_SEPARADOR, KEY_SALTO_DE_FILA, elemento, es_marcador } from '@/components/vender/layout/elementos'
+import { seccion_de_respaldo } from '@/components/vender/layout/secciones'
 import { nuevo_id_de_marcador } from '@/components/vender/layout/resolver_diseno'
 
 /* Mismo grupo que las etapas (EtapaDelEditor.vue): los campos van y vienen entre todos */
@@ -230,6 +231,20 @@ export default {
 			type: String,
 			default: null,
 		},
+		/* Ids de las secciones del diseño en orden de lectura (para saber a cual vuelve un campo) */
+		ids_de_secciones: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
+		/* Titulo de cada seccion por id ({etapa_1: 'Configuración inicial', ...}) */
+		titulos_de_secciones: {
+			type: Object,
+			default: function () {
+				return {}
+			},
+		},
 	},
 	data() {
 		return {
@@ -247,8 +262,8 @@ export default {
 					cols: 12,
 					nombre: 'Separador',
 					icono: 'bi-dash-lg',
-					explicacion: 'Una línea que divide la etapa.',
-					pista: 'Arrastralo a una etapa para dividirla con una línea',
+					explicacion: 'Una línea que divide la sección.',
+					pista: 'Arrastralo a una sección para dividirla con una línea',
 				},
 				{
 					key: KEY_SALTO_DE_FILA,
@@ -257,7 +272,7 @@ export default {
 					nombre: 'Salto de fila',
 					icono: 'bi-arrow-return-left',
 					explicacion: 'Empieza una fila nueva. En Vender no se ve.',
-					pista: 'Arrastralo a una etapa: lo que sigue empieza en una fila nueva',
+					pista: 'Arrastralo a una sección: lo que sigue empieza en una fila nueva',
 				},
 			],
 		}
@@ -312,14 +327,19 @@ export default {
 			return el ? el.nombre : key
 		},
 		/**
-		 * Titulo de la etapa a la que vuelve un campo con "Agregar".
+		 * Titulo de la seccion a la que vuelve un campo con "Agregar": la suya de siempre si el
+		 * diseño la tiene; si no, la de respaldo (seccion_de_respaldo()).
 		 *
 		 * @param {string} key
 		 * @returns {string}
 		 */
 		etapa_por_defecto(key) {
 			let el = elemento(key)
-			return el ? TITULOS_DE_ETAPAS[el.etapa] : ''
+			if (!el) {
+				return ''
+			}
+			let id = seccion_de_respaldo(el.etapa, this.ids_de_secciones)
+			return this.titulos_de_secciones[id] || ''
 		},
 		/**
 		 * Lo que conviene saber de un campo mientras esta sacado, o null. Primero el `motivo_forzado`
