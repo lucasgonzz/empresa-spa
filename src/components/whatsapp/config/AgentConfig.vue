@@ -315,15 +315,21 @@ export default {
 			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
 		/**
-		 * Indica si el envío automático del comprobante debe mostrarse bloqueado. El número NO está
-		 * listo sólo si hay config cargada y la API manda `numero_listo_para_envios` en `false`
-		 * estricto. Con una API vieja (campo ausente/undefined), null u otro valor, o sin config
-		 * cargada todavía, NO se bloquea: la pantalla anda como antes.
+		 * Indica si el envío automático del comprobante debe mostrarse bloqueado (número no listo).
+		 * Se bloquea en dos casos: (1) hay config y la API manda `numero_listo_para_envios` en
+		 * `false` estricto; (2) el GET de la config ya terminó bien (`config_loaded`) y no hay fila
+		 * de WhatsApp. NO se bloquea mientras carga ni si el GET falló (error de red), ni con una
+		 * API vieja (fila sin el campo, undefined), null u otro valor.
 		 *
 		 * @returns {boolean} true si hay que deshabilitar el switch.
 		 */
 		auto_send_disabled() {
-			return !!this.config && this.config.numero_listo_para_envios === false
+			// Bandera del store: true sólo cuando el fetch inicial terminó bien.
+			let config_loaded = !!this.$store.state.whatsapp_bot_config.config_loaded
+			if (!this.config) {
+				return config_loaded
+			}
+			return this.config.numero_listo_para_envios === false
 		},
 		/**
 		 * Valor que muestra el switch del comprobante automático. Bloqueado se ve siempre apagado,
@@ -552,12 +558,6 @@ export default {
 			return found ? found.key : null
 		},
 		/**
-		 * Guarda la personalidad, las habilidades, el objetivo de la conversación (con sus
-		 * indicaciones), los toggles y los dos tiempos de espera. Usa
-		 * el indicador global de carga (además del loading local del botón) según la convención
-		 * del proyecto.
-		 */
-		/**
 		 * Arma lo que se manda a la API al guardar: una copia del form. Si el envío automático
 		 * está bloqueado (número no listo) se OMITE `auto_send_sale_pdf`: la API sólo actualiza los
 		 * campos que llegan, así que el dato guardado queda como estaba, sin reenviar true ni
@@ -573,6 +573,12 @@ export default {
 			}
 			return payload
 		},
+		/**
+		 * Guarda la personalidad, las habilidades, el objetivo de la conversación (con sus
+		 * indicaciones), los toggles y los dos tiempos de espera. Usa
+		 * el indicador global de carga (además del loading local del botón) según la convención
+		 * del proyecto.
+		 */
 		save() {
 			this.loading = true
 			this.$store.commit('auth/setMessage', 'Guardando configuración del agente')
