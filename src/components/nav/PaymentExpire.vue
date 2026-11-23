@@ -2,7 +2,7 @@
 	<div
 	class="p-t-50 scale-up-center"
 	show
-	v-if="user && days_before_expire < 3">
+	v-if="user && mostrar_cartel">
 
 	    <confirm
 	    not_show_delete_text
@@ -66,6 +66,7 @@
 </template>
 <script>
 import moment from 'moment'
+import { debe_mostrar_cartel_de_pago, debe_abrir_aviso_vencido } from '@/components/nav/payment_expire_reglas'
 export default {
 	watch: {
 		authenticated() {
@@ -79,28 +80,32 @@ export default {
 		update() {
 			location.reload()
 		},
+		/**
+		 * Programa la apertura periódica del modal de aviso vencido. No hace nada en una prueba
+		 * gratuita vigente (la regla vive en payment_expire_reglas.js).
+		 */
 		mostrar_alerta() {
 			if (!this.authenticated || !this.owner || !this.owner.payment_expired_at) {
 				return
 			}
-			if (this.days_before_expire < 1) {
-
-				const today = moment()
-
-				if (today.day() === 0) {
-				    console.log('Es domingo')
-				} else if (today.day() === 6) {
-				    console.log('Es sábado')
-				} else {
-					setInterval(() => {
+			// La regla ya descarta prueba vigente, fines de semana y pagos al día.
+			if (debe_abrir_aviso_vencido(this.user, this.owner, new Date())) {
+				setInterval(() => {
+					// Se vuelve a consultar en cada vuelta: la sesión puede pasar a prueba/contratada.
+					if (debe_abrir_aviso_vencido(this.user, this.owner, new Date())) {
 						this.$bvModal.show('aviso-vencido')
-					}, 60000)
-				}
-				
+					}
+				}, 60000)
 			}
 		},
 	},
 	computed: {
+		/**
+		 * ¿Se dibuja el cartel de pago? Falso durante la prueba gratuita vigente.
+		 */
+		mostrar_cartel() {
+			return debe_mostrar_cartel_de_pago(this.user, this.owner, new Date())
+		},
 		dolar() {
 			return this.$store.state.dolar.promedio 
 		},
