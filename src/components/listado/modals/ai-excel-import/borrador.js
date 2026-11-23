@@ -39,6 +39,8 @@ export const CAMPOS_DEL_BORRADOR = [
 	'interpretacion_punto',
 	'politica_colision',
 	'politica_otro_proveedor',
+	// Misión historial-precios-proveedor: ¿se actualizan los artículos que ya están con otro proveedor?
+	'other_provider_articles_policy',
 	'politica_intra_archivo',
 	'desempatar_por_nombre',
 	// Misión importacion-formula-precio (20/11/2026): tildes del análisis del precio.
