@@ -39,6 +39,10 @@ export function dias_para_vencer(owner, hoy) {
 		return 999
 	}
 	const fecha = parsear_fecha_local(owner.payment_expired_at)
+	// Fecha inválida ('basura', '0000-00-00 00:00:00', '2026-13-45'): sin fecha usable no hay cobro (999).
+	if (isNaN(fecha.getTime())) {
+		return 999
+	}
 	// Días enteros transcurridos desde el vencimiento (truncados hacia cero), con el signo invertido.
 	const dias = Math.trunc((hoy.getTime() - fecha.getTime()) / MS_POR_DIA) * -1
 	// Evita devolver -0.
