@@ -157,9 +157,13 @@ export default {
 				Por eso: si llega el MISMO usuario (mismo id) sin la clave, se conserva la que ya
 				había. Si la clave viene (true o false), manda la que viene; y si es otro usuario (se
 				cerró sesión y entró otro), no se arrastra nada.
+
+				`prueba` (misión embudo-juan-pipeline, E4): idem. La API la arma en GET /api/user, y
+				los reemplazos con el modelo pelado (logo/foto en Cropper.vue) la perdían: volvía el
+				cartel de pago en plena prueba gratuita.
 			*/
 			if (user && state.user && user.id === state.user.id) {
-				['skip_offline_articles_sync', 'master_login_mode', 'es_acceso_maestro', 'es_sesion_soporte', 'asistente_personal_autorizado', 'soporte_agentes_privado', 'robotito_soporte_habilitado'].forEach(clave => {
+				['skip_offline_articles_sync', 'master_login_mode', 'es_acceso_maestro', 'es_sesion_soporte', 'asistente_personal_autorizado', 'soporte_agentes_privado', 'robotito_soporte_habilitado', 'prueba'].forEach(clave => {
 					if (typeof user[clave] === 'undefined' && typeof state.user[clave] !== 'undefined') user[clave] = state.user[clave]
 				})
 			}
