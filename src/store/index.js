@@ -91,6 +91,7 @@ import provider_order_extra_cost from '@/store/provider_order_extra_cost'
 import article_used_in_recipes from '@/store/article_used_in_recipes'
 import update_feature from '@/store/update_feature'
 import synced_version_notification from '@/store/synced_version_notification'
+import installed_version from '@/store/installed_version'
 import task from '@/store/task'
 import inventory_linkage from '@/store/inventory_linkage'
 import inventory_linkage_scope from '@/store/inventory_linkage_scope'
@@ -418,6 +419,7 @@ export default new Vuex.Store({
         article_used_in_recipes,
         update_feature,
         synced_version_notification,
+        installed_version,
         task,
         inventory_linkage,
         inventory_linkage_scope,
