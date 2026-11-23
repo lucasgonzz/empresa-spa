@@ -81,6 +81,20 @@
 		            <i class="icon-redo"></i>
 		            Cambiar contraseña
 		        </div>
+		        <!--
+		        Versión instalada del sistema (misión version-instalada-historial): sólo si el SPA tiene el
+		        store installed_version (este componente lo comparten otros proyectos). Abre el modal.
+		        -->
+		        <div
+		        v-if="hay_version_instalada"
+		        class="item"
+		        data-testid="menu-version-instalada"
+		        v-b-modal="'version-instalada'">
+		            <i class="bi bi-info-circle"></i>
+		            {{ texto_item_version }}
+		        </div>
+		        <version-instalada-modal
+		        v-if="hay_version_instalada"></version-instalada-modal>
 		    </div>
 		</div>
 	</div>
@@ -88,6 +102,7 @@
 <script>
 import nav from '@/common-vue/mixins/nav'
 import { apply_dark_mode_class } from '@/utils/dark_mode'
+import { texto_del_item } from '@/utils/version_instalada'
 
 /**
  * Bloque inferior del menú lateral: usuario, logout y accesos de configuración.
@@ -96,6 +111,8 @@ export default {
 	mixins: [nav],
 	components: {
 		IosToggle: () => import('@/common-vue/components/IosToggle'),
+		// Modal con la versión instalada y su historial (sólo existe en el SPA de empresa).
+		VersionInstaladaModal: () => import('@/components/version-instalada/Index'),
 	},
 	data() {
 		return {
@@ -116,6 +133,22 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * El store installed_version es del SPA de empresa; el item sólo se dibuja si existe.
+		 *
+		 * @returns {boolean}
+		 */
+		hay_version_instalada() {
+			return Boolean(this.$store.state.installed_version)
+		},
+		/**
+		 * Texto del item: "Versión 4.5.0" o "Versión sin registrar".
+		 *
+		 * @returns {string}
+		 */
+		texto_item_version() {
+			return texto_del_item(this.$store.state.installed_version ? this.$store.state.installed_version.current : null)
+		},
 		/**
 		 * Preferencia de modo oscuro del usuario autenticado (defensivo ante `user` nulo).
 		 *
@@ -160,7 +193,32 @@ export default {
 			return this.$store.getters['background_processes/titulo_conexion']
 		},
 	},
+	watch: {
+		/**
+		 * Si el usuario pasa a ser administrador (la sesión carga después de montar), pide la versión.
+		 *
+		 * @returns {void}
+		 */
+		is_admin() {
+			this.cargar_version_instalada()
+		},
+	},
+	mounted() {
+		this.cargar_version_instalada()
+	},
 	methods: {
+		/**
+		 * Pide la versión instalada en segundo plano (sin indicador global de carga: es de fondo y
+		 * no debe tapar la pantalla). Sólo para administradores y una vez por sesión.
+		 *
+		 * @returns {void}
+		 */
+		cargar_version_instalada() {
+			if (!this.is_admin || !this.hay_version_instalada || this.$store.state.installed_version.loaded) {
+				return
+			}
+			this.$store.dispatch('installed_version/fetch')
+		},
 		/**
 		 * Abre el modal de configuración general del usuario.
 		 *
