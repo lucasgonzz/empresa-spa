@@ -2,7 +2,7 @@
 	<div>
 		<b-pagination
 		class="m-0"
-		v-if="total_results > per_page"
+		v-if="mostrar_paginador"
 		pills 
 		v-model="currentPage"
 		:total-rows="total_results"
@@ -12,6 +12,7 @@
 	</div>
 </template>
 <script>
+import { debe_mostrar_paginador, pagina_inicial_del_paginador } from '@/common-vue/components/search/paginado_del_modal'
 export default {
 	props: {
 		per_page: Number,
@@ -25,9 +26,18 @@ export default {
 	},
 	data() {
 		return {
-			currentPage: 1,
+			// Pagina que marca la pildora. Este componente nace de nuevo en cada apertura del modal
+			// (el b-modal destruye su contenido al cerrar), asi que arranca en la pagina que el modal
+			// conservo y no siempre en 1.
+			currentPage: pagina_inicial_del_paginador(this.current_page),
 			se_inicio_nueva_busqueda: false,
 		}
+	},
+	computed: {
+		// Hay mas de una pagina de resultados: recien ahi se dibuja el paginador.
+		mostrar_paginador() {
+			return debe_mostrar_paginador(this.total_results, this.per_page)
+		},
 	},
 	watch: {
 		current_page() {

@@ -10,7 +10,7 @@
 
 		<div class="disenos-de-vender__cabecera">
 			<p class="disenos-de-vender__intro">
-				Elegí cómo se ve Vender: en qué etapa va cada campo, en qué orden y de qué ancho.
+				Elegí cómo se ve Vender: qué secciones tiene, cómo se acomodan en columnas, en qué sección va cada campo, en qué orden y de qué ancho.
 				Todo el negocio vende con el diseño que está <strong>En uso</strong>.
 			</p>
 			<b-button
@@ -72,6 +72,7 @@ import TarjetaDeDiseno from './TarjetaDeDiseno'
 */
 import EditorDeDiseno from './editor/Index'
 import { resolver_diseno, serializar_diseno, diseno_en_uso } from '@/components/vender/layout/resolver_diseno'
+import { es_layout_de_plantilla } from '@/components/vender/layout/secciones'
 import { crear_diseno, actualizar_diseno, eliminar_diseno, mensaje_de_error } from './api_de_disenos'
 import { avisar } from './avisos'
 
@@ -175,8 +176,8 @@ export default {
 		/**
 		 * "Duplicar": crea una copia sin estar en uso.
 		 *
-		 * Un diseño guardado en null (el "Diseño original del sistema") se duplica en null: la copia
-		 * tambien sigue al del sistema. Serializarlo lo congelaria con los anchos de QUIEN duplica (el
+		 * Un diseño "del sistema" (guardado en null, o solo con la plantilla del diseño ágil) se
+		 * duplica tal cual: la copia tambien sigue al del sistema. Serializarlo lo congelaria con los anchos de QUIEN duplica (el
 		 * buscador depende de las extensiones y de si ese usuario pide la cantidad al vender), el mismo
 		 * problema que evita el editor al renombrar. Un diseño fijo se copia resuelto y serializado.
 		 *
@@ -186,13 +187,13 @@ export default {
 		duplicar(modelo) {
 			let self = this
 			let nombre = (String(modelo.name || 'Diseño') + ' (copia)').slice(0, LARGO_MAXIMO_DEL_NOMBRE)
-			let es_del_sistema = modelo.layout === null || typeof modelo.layout == 'undefined'
+			let es_del_sistema = es_layout_de_plantilla(modelo.layout)
 
 			this.empezar_carga('Duplicando el diseño')
 
 			crear_diseno(this, {
 				name: nombre,
-				layout: es_del_sistema ? null : serializar_diseno(resolver_diseno(modelo.layout, this)),
+				layout: es_del_sistema ? (modelo.layout || null) : serializar_diseno(resolver_diseno(modelo.layout, this)),
 				en_uso: false,
 			})
 			.then(function () {

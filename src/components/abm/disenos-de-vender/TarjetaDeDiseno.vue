@@ -87,8 +87,9 @@
 </template>
 <script>
 import MiniaturaDeDiseno from './MiniaturaDeDiseno'
-import { ETAPAS, es_marcador, esta_disponible } from '@/components/vender/layout/elementos'
+import { es_marcador, esta_disponible } from '@/components/vender/layout/elementos'
 import { resolver_diseno, elementos_visibles } from '@/components/vender/layout/resolver_diseno'
+import { es_layout_de_plantilla, ids_en_orden } from '@/components/vender/layout/secciones'
 
 /**
  * Tarjeta de un Diseño de Vender en la solapa (mision diseno-vender-configurable, 28/9/2026).
@@ -113,8 +114,9 @@ export default {
 	},
 	computed: {
 		/**
-		 * La linea de detalle: si es el diseño del sistema, cuantos campos se ven en Vender y cuantos
-		 * estan sacados (de los que este negocio puede usar).
+		 * La linea de detalle: si es un diseño del sistema (el original o el ágil), cuantas secciones
+		 * tiene, cuantos campos se ven en Vender y cuantos estan sacados (de los que este negocio
+		 * puede usar).
 		 *
 		 * @returns {string}
 		 */
@@ -124,7 +126,9 @@ export default {
 			let campos = 0
 			let sacados = 0
 
-			ETAPAS.forEach(function (etapa) {
+			let ids = ids_en_orden(resuelto.disposicion)
+
+			ids.forEach(function (etapa) {
 				elementos_visibles(resuelto, etapa, self).forEach(function (item) {
 					if (!es_marcador(item.key)) {
 						campos++
@@ -142,8 +146,11 @@ export default {
 
 			if (this.modelo.layout === null || typeof this.modelo.layout == 'undefined') {
 				partes.push('Diseño original del sistema')
+			} else if (es_layout_de_plantilla(this.modelo.layout)) {
+				partes.push('Diseño ágil del sistema')
 			}
 
+			partes.push(ids.length + (ids.length === 1 ? ' sección' : ' secciones'))
 			partes.push(campos + (campos === 1 ? ' campo' : ' campos'))
 
 			if (sacados) {

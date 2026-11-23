@@ -19,6 +19,14 @@
 	                    `sacados`, las keys sacadas en el orden en que vinieron.
 	- sacados_ocultos   las keys sacadas que no estan disponibles, como {key, indice}.
 
+	Desde la mision vender-secciones-personalizables (22/11/2026) "etapa" quiere decir SECCION:
+	`etapas`, `ocultos` y `orden_original` estan indexados por los ids de seccion del diseño
+	(etapa_1..3 y seccion_4..9, en cualquier cantidad entre 1 y 6), y el estado suma:
+
+	- secciones         los metadatos de cada seccion {titulo, descripcion, color, alto, alto_fijo, plegado}.
+	- disposicion       las bandas y columnas: [{columnas: [{ancho, secciones: [ids]}]}].
+	- plantilla         la plantilla del sistema de la que viene el diseño ('agil') o null.
+
 	🔴 Por que existen `ocultos` y `sacados_ocultos`. El editor muestra solo lo que Vender le muestra
 	a ESTE negocio, pero un diseño ubica TODO el catalogo (el resolver lo garantiza). Si al guardar se
 	descartara lo que no se ve, el dia que el negocio prende la extension -- o le dan el permiso a un
@@ -30,7 +38,6 @@
 	diseño: con eso se mide si hay cambios sin guardar (huella_del_estado).
 */
 import {
-	ETAPAS,
 	es_marcador,
 	elemento,
 	esta_disponible,
@@ -38,6 +45,7 @@ import {
 } from '@/components/vender/layout/elementos'
 import { resolver_diseno } from '@/components/vender/layout/resolver_diseno'
 import diseno_predeterminado from '@/components/vender/layout/diseno_predeterminado'
+import { copiar_json, ids_en_orden } from '@/components/vender/layout/secciones'
 
 /*
 	Los dos elementos que agregan un articulo BUSCANDOLO. Combos, promociones, servicio y cantidad
@@ -108,11 +116,11 @@ function posicion_de_identidad(lista, id) {
 
 /**
  * Arma el estado de trabajo del editor a partir de un layout guardado (o de null, que es el diseño
- * predeterminado del sistema).
+ * predeterminado del sistema, o de `{version: 2, plantilla: 'agil'}`, el diseño ágil).
  *
  * @param {Object|string|null} layout lo que vino en vender_layouts.layout
  * @param {Object} vm componente de la SPA (para disponibilidad y anchos por defecto)
- * @returns {{etapas: Object, sacados: Array, ocultos: Object, orden_original: Object, sacados_ocultos: Array}}
+ * @returns {{etapas: Object, sacados: Array, ocultos: Object, orden_original: Object, sacados_ocultos: Array, secciones: Object, disposicion: Array, plantilla: (string|null)}}
  */
 export function armar_estado_de_trabajo(layout, vm) {
 	/* Siempre trae TODOS los elementos del catalogo, cada uno una vez (contrato del resolver) */
@@ -126,9 +134,12 @@ export function armar_estado_de_trabajo(layout, vm) {
 			sacados: resuelto.sacados.slice(),
 		},
 		sacados_ocultos: [],
+		secciones: copiar_json(resuelto.secciones),
+		disposicion: copiar_json(resuelto.disposicion),
+		plantilla: resuelto.plantilla || null,
 	}
 
-	ETAPAS.forEach(function (etapa) {
+	ids_en_orden(resuelto.disposicion).forEach(function (etapa) {
 		estado.etapas[etapa] = []
 		estado.ocultos[etapa] = []
 		estado.orden_original[etapa] = []
@@ -167,32 +178,55 @@ export function armar_estado_de_trabajo(layout, vm) {
 }
 
 /**
+ * Los ids de seccion del estado de trabajo, en orden de lectura de la disposicion. Los que tienen
+ * lista de campos pero no estan en la disposicion (no deberia pasar) van al final, para no perderlos.
+ *
+ * @param {Object} estado estado de trabajo
+ * @returns {Array<string>}
+ */
+export function ids_del_estado(estado) {
+	let ids = ids_en_orden(estado.disposicion)
+
+	Object.keys(estado.etapas || {}).forEach(function (id) {
+		if (ids.indexOf(id) === -1) {
+			ids.push(id)
+		}
+	})
+
+	return ids
+}
+
+/**
  * Rearma el diseño completo (lo que se ve + lo oculto) para mandarlo a serializar_diseno().
  *
- * Cada elemento oculto vuelve a su etapa pegado al vecino que tenia antes en el diseño original:
- * se busca hacia atras, en el orden original, el item mas cercano que siga estando en la etapa
+ * Cada elemento oculto vuelve a su seccion pegado al vecino que tenia antes en el diseño original:
+ * se busca hacia atras, en el orden original, el item mas cercano que siga estando en la seccion
  * (aunque el usuario lo haya movido de lugar), y el oculto va inmediatamente despues. Si no queda
- * ninguno de sus vecinos anteriores en la etapa, va al principio. Los ocultos se recorren en su
+ * ninguno de sus vecinos anteriores en la seccion, va al principio. Los ocultos se recorren en su
  * orden original, asi que dos ocultos seguidos siguen quedando seguidos.
  *
  * El plan pedia "al final de su etapa"; pegarlo a su vecino es lo mismo cuando el usuario no toco
  * nada de alrededor, y ademas hace que abrir y guardar sin cambios devuelva el diseño identico.
  *
+ * Las secciones, la disposicion y la plantilla viajan tal cual estan (la disposicion no se
+ * normaliza aca: lo hace serializar_diseno() al guardar, y la huella tiene que ver cualquier cambio).
+ *
  * @param {Object} estado estado de trabajo (armar_estado_de_trabajo)
- * @returns {{etapas: Object, sacados: Array}}
+ * @returns {{etapas: Object, sacados: Array, secciones: Object, disposicion: Array, plantilla: (string|undefined)}}
  */
 export function armar_diseno_completo(estado) {
 	let etapas = {}
+	let secciones = {}
 
-	ETAPAS.forEach(function (etapa) {
+	ids_del_estado(estado).forEach(function (etapa) {
 		let lista = []
 
-		estado.etapas[etapa].forEach(function (item) {
+		;(estado.etapas[etapa] || []).forEach(function (item) {
 			lista.push(copiar_item(item))
 		})
 
-		let orden = estado.orden_original[etapa] || []
-		let ocultos = estado.ocultos[etapa] || []
+		let orden = (estado.orden_original && estado.orden_original[etapa]) || []
+		let ocultos = (estado.ocultos && estado.ocultos[etapa]) || []
 
 		ocultos.forEach(function (oculto) {
 			/* Por defecto al principio: el oculto no tenia ningun vecino anterior que siga aca */
@@ -210,6 +244,10 @@ export function armar_diseno_completo(estado) {
 		})
 
 		etapas[etapa] = lista
+
+		if (estado.secciones && estado.secciones[etapa]) {
+			secciones[etapa] = copiar_json(estado.secciones[etapa])
+		}
 	})
 
 	/* Los sacados ocultos vuelven con el mismo criterio de vecino, contra el orden en que vinieron */
@@ -235,10 +273,18 @@ export function armar_diseno_completo(estado) {
 		sacados.splice(insertar_en, 0, oculto.key)
 	})
 
-	return {
+	let completo = {
 		etapas: etapas,
 		sacados: sacados,
+		secciones: secciones,
+		disposicion: copiar_json(estado.disposicion || []),
 	}
+
+	if (estado.plantilla) {
+		completo.plantilla = estado.plantilla
+	}
+
+	return completo
 }
 
 /**
@@ -326,7 +372,7 @@ export function indice_por_defecto(lista, key, vm) {
  * buscador por nombre, y ninguno de los dos esta ubicado en una etapa. Solo cuentan los que se
  * ven (las listas de trabajo solo tienen disponibles): un buscador oculto no le sirve a nadie.
  *
- * @param {Object} etapas listas de trabajo por etapa
+ * @param {Object} etapas listas de trabajo por seccion
  * @param {Object} vm
  * @returns {boolean}
  */
@@ -341,7 +387,7 @@ export function falta_buscador(etapas, vm) {
 
 	let ubicado = false
 
-	ETAPAS.forEach(function (etapa) {
+	Object.keys(etapas || {}).forEach(function (etapa) {
 		(etapas[etapa] || []).forEach(function (item) {
 			if (disponibles.indexOf(item.key) !== -1) {
 				ubicado = true

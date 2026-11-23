@@ -25,6 +25,13 @@ export default __base_store({
 		 * empresa-api): la pantalla anda igual, solo que sin esa vista previa.
 		 */
 		objective_context: null,
+		/**
+		 * `true` recién cuando el GET de la config TERMINÓ bien (haya o no fila). Permite distinguir
+		 * "todavía cargando" o "falló la red" de "cargó y no hay fila de WhatsApp": sólo en el
+		 * segundo caso la pantalla bloquea el envío automático del comprobante. Un error del GET
+		 * (`.catch`) lo deja en false, para no bloquear por un problema de red.
+		 */
+		config_loaded: false,
 	},
 	mutations: {
 		/**
@@ -35,6 +42,15 @@ export default __base_store({
 		 */
 		setObjectiveContext(state, value) {
 			state.objective_context = value || null
+		},
+		/**
+		 * Marca que el GET inicial de la config terminó bien.
+		 *
+		 * @param {Object} state
+		 * @param {boolean} value true cuando terminó el fetch.
+		 */
+		setConfigLoaded(state, value) {
+			state.config_loaded = !!value
 		},
 	},
 	actions: {
@@ -59,6 +75,8 @@ export default __base_store({
 					// Contexto del objetivo del agente: opcional en el contrato. Una API vieja no
 					// lo manda (undefined) y queda en null, que es "sin vista previa".
 					commit('setObjectiveContext', res.data.objective_context || null)
+					// Recién ahora se sabe si hay fila o no (en .catch no se marca: error de red no bloquea).
+					commit('setConfigLoaded', true)
 				})
 				.catch(err => {
 					commit('setLoading', false)
@@ -106,6 +124,8 @@ export default __base_store({
 				agent_personality_template: payload.agent_personality_template || null,
 				agent_skills: payload.agent_skills,
 				ai_enabled_default: payload.ai_enabled_default,
+				// Con el número de WhatsApp sin conectar, la pantalla no lo manda (undefined): JSON.stringify
+				// descarta la clave y la API, que usa `has()`, deja el valor guardado como estaba.
 				auto_send_sale_pdf: payload.auto_send_sale_pdf,
 				// Van casteados sí o sí: el input numérico los entrega como string y la
 				// validación del backend es `integer`, así que un "30" pelado la voltea.
