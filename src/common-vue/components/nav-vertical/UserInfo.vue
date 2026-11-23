@@ -81,20 +81,20 @@
 		            <i class="icon-redo"></i>
 		            Cambiar contraseña
 		        </div>
-		        <!--
-		        Versión instalada del sistema (misión version-instalada-historial): sólo si el SPA tiene el
-		        store installed_version (este componente lo comparten otros proyectos). Abre el modal.
-		        -->
-		        <div
-		        v-if="hay_version_instalada"
-		        class="item"
-		        data-testid="menu-version-instalada"
-		        v-b-modal="'version-instalada'">
-		            <i class="bi bi-info-circle"></i>
-		            {{ texto_item_version }}
-		        </div>
-		        <version-instalada-modal
-		        v-if="hay_version_instalada"></version-instalada-modal>
+				<!--
+				Versión instalada del sistema (misión version-instalada-historial): sólo si el SPA tiene el
+				store installed_version (este componente lo comparten otros proyectos). Abre el modal.
+				-->
+				<div
+				v-if="hay_version_instalada"
+				class="item"
+				data-testid="menu-version-instalada"
+				v-b-modal="'version-instalada'">
+					<i class="bi bi-info-circle"></i>
+					{{ texto_item_version }}
+				</div>
+				<version-instalada-modal
+				v-if="hay_version_instalada"></version-instalada-modal>
 		    </div>
 		</div>
 	</div>
