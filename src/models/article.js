@@ -1035,8 +1035,9 @@ export default {
 			description: 'En centímetros. Lo usa la tienda para cotizar el envío',
 			use_to_update: true,
 		},
+		// El rótulo dice 'Largo' (no 'profundidad'): es el largo que pide Zipnova; la key 'profundidad' no se renombra.
 		{
-			text: 'Largo / profundidad (cm)',
+			text: 'Largo (cm)',
 			key: 'profundidad',
 			type: 'number',
 			not_show: true,
