@@ -97,7 +97,8 @@ export default {
 		{
 			key: 'payment_method_installments',
 			text: 'Cuotas',
-			v_if: ['payment_method_type_id', '=', 2],
+			// Por NOMBRE del tipo (Payway), no por id: el id 2 ya puede ser «Tarjeta Mercado Pago».
+			v_if_function: 'es_metodo_de_pago_payway',
 			has_many: {
 				text: 'Cuotas',
 				model_name: 'payment_method_installment',

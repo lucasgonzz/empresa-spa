@@ -1376,6 +1376,22 @@ export default {
             return nombre.replace(/\s+/g, '').toLowerCase() === 'mercadopago'
         },
         /**
+         * `v_if_function` del editor «Cuotas» (payment_method_installments) de un método de pago de la
+         * tienda (src/models/payment_method.js): ese editor es de Payway, así que solo se ve si el tipo
+         * del método se llama «Payway» (sin espacios ni mayúsculas).
+         *
+         * 🔴 Por NOMBRE y no por id: antes era `v_if: ['payment_method_type_id', '=', 2]`, y como
+         * Payway ya no se siembra, en instalaciones nuevas el id 2 es «Tarjeta Mercado Pago» (que ignora
+         * ese editor). Los ids de `payment_method_types` no son fijos entre instalaciones.
+         *
+         * @param {object} prop La fila declarada.
+         * @param {object} model El método de pago de la tienda.
+         * @returns {boolean}
+         */
+        es_metodo_de_pago_payway(prop, model) {
+            return this.nombre_del_tipo_de_metodo_de_pago(model).replace(/\s+/g, '').toLowerCase() === 'payway'
+        },
+        /**
          * `v_if_function` del select "Método de pago de cuenta corriente" (src/models/payment_method.js)
          * desde la misión tienda-cobro-tarjeta (24/11/2026): el vínculo con las cuotas se ofrece en un
          * método de tipo MercadoPago Y en uno de tipo "Tarjeta Mercado Pago" (cobro con tarjeta dentro
