@@ -28,12 +28,12 @@ export default {
 			// if_has_extencion: 'resumen_caja',
 		},
 		{
-			text: 'Empleado',
+			text: 'Caja preferida de',
 			key: 'employee_id',
 			type: 'select',
 			use_store_models: true,
 			descriptions: [
-				'Complete solo en caso de que quiera asignar esta caja a un unico empleado',
+				'Se la propone primero a este empleado en Vender. No limita quién la ve ni quién la usa.',
 			]
 			// if_has_extencion: 'resumen_caja',
 		},
@@ -71,13 +71,13 @@ export default {
 		// 	}
 		// },
 		{
-			text: 'Empleados que pueden operar esta caja',
+			text: 'Quiénes la USAN en Vender',
 			store: 'employee',
 			search_on_models_by: 'name',
 			type: 'search',
 			key: 'users',
 			descriptions: [
-				'Quiénes pueden usar esta caja para vender y cobrar, y elegirla en los selectores de caja por método de pago.',
+				'Pueden elegirla al vender y cobrar. Si la dejás vacía, la pueden usar todos los empleados.',
 			],
 			belongs_to_many: {
 				model_name: 'users',
@@ -90,13 +90,13 @@ export default {
 			}
 		},
 		{
-			text: 'Empleados que ven esta caja en tesorería',
+			text: 'Quiénes la VEN en Tesorería',
 			store: 'employee',
 			search_on_models_by: 'name',
 			type: 'search',
 			key: 'treasury_users',
 			descriptions: [
-				'Quiénes pueden ver esta caja en el listado del módulo de tesorería (no tiene que ver con poder operarla). Si no agrega empleados aquí, se usa la lista de «Empleados que pueden operar esta caja». Si ambas listas quedan vacías, todos los empleados ven la caja en tesorería.',
+				'Ven la caja, su saldo, aperturas y movimientos en Tesorería. Si la dejás vacía, se usa la lista de Vender; si las dos están vacías, la ven todos los empleados que entran a Tesorería. El dueño y los administradores ven todas.',
 			],
 			belongs_to_many: {
 				model_name: 'users',
