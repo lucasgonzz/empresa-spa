@@ -30,6 +30,8 @@ export default {
 			show: true,
 			// Redibuja el formulario: de este select depende que aparezca el vínculo de más abajo.
 			on_change: 'redibujar_formulario_al_cambiar',
+			// tienda-cobro-tarjeta (24/11/2026): explica el tipo nuevo.
+			description: '"Tarjeta Mercado Pago" cobra con tarjeta (crédito o débito) dentro de la página de la tienda, sin salir al sitio de Mercado Pago. Las cuotas que ofrece salen del método de cuenta corriente que vincules más abajo. "MercadoPago" lleva al comprador al sitio de Mercado Pago.',
 		},
 		/*
 		 * Vínculo con las cuotas de la tienda (misión tienda-cuotas-mercado-pago, 15/10/2026).
@@ -73,7 +75,10 @@ export default {
 			store: 'current_acount_payment_method',
 			dynamic_options_function: 'metodos_de_pago_de_cuenta_corriente_para_vincular',
 			value_function: 'metodo_de_pago_vinculado_inicial',
-			v_if_function: 'es_metodo_de_pago_de_mercado_pago',
+			// Desde tienda-cobro-tarjeta (24/11/2026) también se ofrece en "Tarjeta Mercado Pago": las
+			// cuotas de la tarjeta salen del mismo vínculo. `es_metodo_de_pago_de_mercado_pago` queda
+			// en el mixin para sus otros usos.
+			v_if_function: 'metodo_de_pago_admite_cuotas_en_la_tienda',
 			descriptions:
 			[
 				'Elegí el método de cuenta corriente cuyas cuotas cargaste: se ofrecen en tu tienda, con el recargo ya incluido en cada cuota.',
