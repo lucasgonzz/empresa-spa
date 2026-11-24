@@ -9,7 +9,7 @@
 	class="resumen-permisos"
 	data-testid="resumen-permisos">
 
-		<h6>Quién ve y quién usa esta caja</h6>
+		<h6 class="resumen-permisos__titulo">Quién ve y quién usa esta caja</h6>
 
 		<table class="resumen-permisos__tabla">
 			<thead>
@@ -47,8 +47,8 @@
 					<td
 					class="resumen-permisos__motivo"
 					data-label="Motivo">
-						<span>Tesorería: {{ fila.motivo_tesoreria }}</span>
-						<span>Vender: {{ fila.motivo_vender }}</span>
+						<span class="motivo-linea"><b>Tesorería:</b> {{ fila.motivo_tesoreria }}</span>
+						<span class="motivo-linea"><b>Vender:</b> {{ fila.motivo_vender }}</span>
 					</td>
 				</tr>
 			</tbody>
@@ -96,65 +96,125 @@ export default {
 	},
 }
 </script>
-<style lang="sass">
+<style scoped lang="sass">
+// Tabla «Quién ve y quién usa esta caja». Colores: las mismas variables de la caja que usa EstadoCaja.vue
+// (src/sass/_dark_theme.sass), definidas en tema claro y oscuro: verde = sí, gris = no.
+// Nada se anima, así que no hay transiciones que cuidar.
 .resumen-permisos
-	margin-top: 10px
+	// Aire arriba (separa del botón de sucursal) y abajo (separa del campo que sigue).
+	margin: 18px 0 20px
+	// En tablet, si no entra, la tabla tiene su propio scroll horizontal y no el de la página.
 	overflow-x: auto
+	border: 1px solid var(--caja-cerrada-acento)
+	border-radius: 8px
 
-	h6
-		font-weight: 600
-		margin-bottom: 6px
+.resumen-permisos__titulo
+	margin: 0
+	padding: 10px 14px
+	font-size: 14px
+	font-weight: 600
 
 .resumen-permisos__tabla
 	width: 100%
+	min-width: 640px
 	border-collapse: collapse
 	font-size: 13px
 
+	// Encabezado con fondo propio y borde inferior marcado, para distinguirlo del cuerpo.
+	thead th
+		background: var(--caja-cerrada-fondo-hover)
+		color: var(--caja-cerrada-texto)
+		font-size: 12px
+		font-weight: 700
+		text-transform: uppercase
+		letter-spacing: .04em
+		border-top: 1px solid var(--caja-cerrada-acento)
+		border-bottom: 2px solid var(--caja-cerrada-acento)
+
 	th, td
-		padding: 6px 8px
-		border-bottom: 1px solid rgba(128, 128, 128, .25)
+		padding: 10px 14px
 		text-align: left
 		vertical-align: top
 
-	.pastilla
-		display: inline-block
-		padding: 1px 10px
-		border-radius: 999px
-		font-size: 12px
-		font-weight: 600
+	tbody td
+		border-bottom: 1px solid var(--caja-cerrada-fondo-hover)
 
-	.pastilla--si
-		background: rgba(25, 135, 84, .15)
-		color: #146c43
+	tbody tr:last-child td
+		border-bottom: 0
 
-	.pastilla--no
-		background: rgba(220, 53, 69, .12)
-		color: #b02a37
+.resumen-permisos__nombre
+	font-weight: 600
 
-.resumen-permisos__motivo
-	span
+// Pastilla de «Ve / Usa» (verde) y «No ve / No usa» (gris).
+.pastilla
+	display: inline-block
+	padding: 2px 12px
+	border: 1px solid transparent
+	border-radius: 999px
+	font-size: 12px
+	font-weight: 700
+	white-space: nowrap
+
+.pastilla--si
+	background: var(--caja-abierta-fondo)
+	border-color: var(--caja-abierta-acento)
+	color: var(--caja-abierta-texto)
+
+.pastilla--no
+	background: var(--caja-cerrada-fondo)
+	border-color: var(--caja-cerrada-acento)
+	color: var(--caja-cerrada-texto)
+
+// Motivo: una línea por lista, cada una con su rótulo.
+.motivo-linea
+	display: block
+	line-height: 1.5
+
+// Teléfono (360-390 px): cada empleado es una tarjeta, sin scroll horizontal. Empleado arriba, después las
+// pastillas con su rótulo (data-label) y los motivos debajo.
+@media (max-width: 575px)
+	.resumen-permisos
+		overflow-x: visible
+
+	.resumen-permisos__tabla
+		min-width: 0
 		display: block
 
-// Teléfono: cada empleado se apila en una tarjeta, con Empleado arriba y las pastillas debajo.
-@media (max-width: 575px)
-	.resumen-permisos__tabla
 		thead
 			display: none
 
+		tbody
+			display: block
+
 		tr
 			display: block
-			padding: 6px 0
-			border-bottom: 1px solid rgba(128, 128, 128, .25)
+			padding: 10px 14px
+			border-bottom: 1px solid var(--caja-cerrada-acento)
 
-		td
-			display: inline-block
+		tbody tr:last-child
 			border-bottom: 0
-			padding: 2px 6px
+
+		tbody td
+			display: inline-block
+			padding: 4px 10px 4px 0
+			border-bottom: 0
+
+		tbody td::before
+			content: attr(data-label) ": "
+			font-size: 11px
+			color: var(--caja-cerrada-texto)
 
 		.resumen-permisos__nombre
 			display: block
-			font-weight: 600
+			font-size: 15px
+
+		.resumen-permisos__nombre::before
+			content: none
 
 		.resumen-permisos__motivo
 			display: block
-			font-size: 12px
+			padding-top: 6px
+
+		.resumen-permisos__motivo::before
+			content: none
+</style>

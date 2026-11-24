@@ -55,6 +55,6 @@ export default {
 </script>
 <style lang="sass">
 .permisos-caja
-	margin-top: 6px
+	margin-top: 8px
 	margin-bottom: 10px
 </style>
