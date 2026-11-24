@@ -1,5 +1,6 @@
 <template>
 	<div>
+		<avisos-en-dispositivo v-if="view == 'pedidos'"></avisos-en-dispositivo>
 		<payment-card-info></payment-card-info>
 		<payment-details></payment-details>
 
@@ -126,6 +127,7 @@
 // El badge va con import estático y no lazy como el resto: es una píldora de unas pocas líneas, y
 // con un import diferido cada fila dibujaría primero el nombre y después "empujaría" la columna
 // cuando llegara el chunk del badge.
+import AvisosEnDispositivo from '@/components/online/components/orders/AvisosEnDispositivo'
 import BadgeSinVincular from '@/components/online/components/vincular-comprador/BadgeSinVincular'
 import sin_vincular from '@/components/online/components/vincular-comprador/sin_vincular'
 import {
@@ -149,6 +151,7 @@ import {
 */
 export default {
 	components: {
+		AvisosEnDispositivo,
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		PaymentCardInfo: () => import('@/components/online/modals/orders/PaymentCardInfo'),
 		PaymentDetails: () => import('@/components/online/modals/orders/payment-details/Index'),
