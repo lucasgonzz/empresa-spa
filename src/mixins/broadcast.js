@@ -1,11 +1,16 @@
 import online from '@/mixins/online'
+import { avisador_pedidos } from '@/utils/aviso_pedido_dispositivo'
 export default {
     mixins: [online],
     data() {
         return {
             canales_de_soporte: [],
+            aviso_echo_connection: null,
+            aviso_echo_estado: null,
+            echo_connected_callback: null,
             /** Nombre del canal order.created.* actualmente suscrito, para no suscribirse dos veces. */
             order_created_echo_channel: null,
+            order_created_echo_user: null,
             /** Nombre del canal article_embeddings.* actualmente suscrito, para no suscribirse dos veces. */
             embeddings_echo_channel: null,
             /** true una vez que se engancho el listener de reconexion de Echo (se engancha una sola vez). */
@@ -24,15 +29,25 @@ export default {
          * Tras auth/me el usuario puede llegar después de `authenticated`; re-suscribe al canal correcto.
          */
         'user.id'() {
+            this.escuchar_pedidos_nuevos()
             this.listenSupportChannel()
             this.listenSessionForcedLogoutChannel()
         },
         authenticated() {
+            this.escuchar_pedidos_nuevos()
             this.listenSupportChannel()
         },
+        owner_id() { this.escuchar_pedidos_nuevos() },
+        'owner.online'() { this.escuchar_pedidos_nuevos() },
         soporte_privado_habilitado() {
             this.listenSupportChannel()
         },
+    },
+    beforeDestroy() {
+        this.limpiar_conexion_de_avisos()
+        if (this.Echo && this.order_created_echo_channel) this.Echo.leave(this.order_created_echo_channel)
+        this.order_created_echo_channel = null
+        avisador_pedidos.contexto(null, null)
     },
 	computed: {
 		soporte_privado_habilitado() {
@@ -157,6 +172,9 @@ export default {
          * @return {void}
          */
         escuchar_pedidos_nuevos() {
+            const usuario = this.authenticated && this.user && this.user.id
+            avisador_pedidos.contexto(usuario && this.owner && this.owner.online ? this.owner_id : null, usuario)
+            this.escuchar_reconexion_de_echo()
             if (!this.Echo) {
                 return
             }
@@ -166,14 +184,14 @@ export default {
              * null si este comercio no tiene tienda online: no hay pedidos que escuchar, que es la
              * misma guarda que usa el polling de start_methods.js.
              */
-            const order_created_channel = (this.owner && this.owner.online && this.owner_id)
+            const order_created_channel = (usuario && this.owner && this.owner.online && this.owner_id)
                 ? 'order.created.' + this.owner_id
                 : null
 
             // listenChannelsLocal() corre en el watch de `authenticated`, que puede dispararse mas
             // de una vez en la misma sesion: sin esta guarda se acumularian listeners y cada
             // pedido nuevo dispararia N requests.
-            if (this.order_created_echo_channel === order_created_channel) {
+            if (this.order_created_echo_channel === order_created_channel && this.order_created_echo_user === usuario) {
                 return
             }
             // 🔴 El Echo.leave va ANTES de cortar por "no hay canal nuevo", no despues. Si en la
@@ -184,6 +202,7 @@ export default {
                 this.Echo.leave(this.order_created_echo_channel)
             }
             this.order_created_echo_channel = order_created_channel
+            this.order_created_echo_user = usuario
 
             if (!order_created_channel) {
                 return
@@ -203,7 +222,11 @@ export default {
                 mensajes de la tienda, que se saco de este archivo el 28/9/2026).
             */
             this.Echo.channel(order_created_channel)
-            .notification(() => {
+            .notification((payload) => {
+                // El callback de un canal abandonado no puede actuar sobre la sesión nueva.
+                if (this.order_created_echo_channel !== order_created_channel || !this.authenticated
+                    || !this.user || this.user.id !== usuario) return
+                avisador_pedidos.recibir(payload)
                 /*
                     El evento solo avisa que hay que ir a buscar: la lista se pide a empresa-api y
                     NO se arma con el payload. El payload trae order_id y order_num, y salen de la
@@ -227,20 +250,38 @@ export default {
          *
          * @return {void}
          */
+        limpiar_conexion_de_avisos() {
+            if (this.aviso_echo_connection) {
+                this.aviso_echo_connection.unbind('state_change', this.aviso_echo_estado)
+                this.aviso_echo_connection.unbind('connected', this.echo_connected_callback)
+            }
+            this.aviso_echo_connection = null
+            this.reconexion_de_echo_enganchada = false
+            avisador_pedidos.conexion(false)
+        },
         escuchar_reconexion_de_echo() {
-            if (this.reconexion_de_echo_enganchada) {
+            if (!this.authenticated) {
+                this.limpiar_conexion_de_avisos()
                 return
             }
 
             // El conector de Pusher lo expone Echo (ver la config de main.js). Se chequea en vez
             // de asumirlo: si algun dia cambia el broadcaster, esto deja de existir y lo unico que
             // se pierde es el refresco al reconectar, no la pantalla.
-            if (!this.Echo.connector || !this.Echo.connector.pusher || !this.Echo.connector.pusher.connection) {
+            if (!this.Echo || !this.Echo.connector || !this.Echo.connector.pusher || !this.Echo.connector.pusher.connection) {
                 return
             }
 
             /** Conexion de Pusher, que es la que emite los cambios de estado. */
             const connection = this.Echo.connector.pusher.connection
+            if (this.aviso_echo_connection === connection) return
+            this.limpiar_conexion_de_avisos()
+            this.aviso_echo_connection = connection
+            this.aviso_echo_estado = function actualizar_estado(cambio) {
+                avisador_pedidos.conexion(cambio.current === 'connected')
+            }
+            connection.bind('state_change', this.aviso_echo_estado)
+            avisador_pedidos.conexion(connection.state === 'connected')
 
             // Si ya esta conectado cuando nos enganchamos --que es lo normal, porque Echo se crea
             // en main.js y conecta mucho antes de que resuelva la sesion--, entonces cualquier
@@ -248,7 +289,7 @@ export default {
             this.echo_ya_estuvo_conectado = connection.state == 'connected'
             this.reconexion_de_echo_enganchada = true
 
-            connection.bind('connected', () => {
+            this.echo_connected_callback = () => {
                 if (!this.echo_ya_estuvo_conectado) {
                     // Primera conexion: los sin confirmar ya los pide startMethods(), pedirlos de
                     // nuevo aca seria un request al pedo en cada arranque.
@@ -270,7 +311,8 @@ export default {
                     console.log('Echo reconecto: se vuelve a pedir el listado de procesos en segundo plano')
                     this.$store.dispatch('background_processes/getModels')
                 }
-            })
+            }
+            connection.bind('connected', this.echo_connected_callback)
         },
         /**
          * Empresa emite Agentes por su canal privado. El público conserva los avisos de tickets
