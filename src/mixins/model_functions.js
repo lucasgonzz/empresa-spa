@@ -1427,6 +1427,23 @@ export default {
                 : ''
         },
         /**
+         * «N° de pago de Mercado Pago» del pedido: el `payment_id` del cobro, como texto.
+         *
+         * 🔴 Existe porque la clave de la fila (`payment_id`) termina en `_id`: sin `function`,
+         * `propertyText` (common-vue/mixins/generals.js) la toma por una relación, busca `model.payment`
+         * y devuelve null, y el detalle dibuja la fila con un span vacío. No "simplificar" quitando la
+         * `function` de la fila en src/models/order.js.
+         *
+         * @param {object} order El pedido.
+         * @returns {string} '' si el pedido no tiene número de pago.
+         */
+        getOrderNumeroDePago(order) {
+            if (!order || !(Number(order.payment_id) > 0)) {
+                return ''
+            }
+            return String(order.payment_id)
+        },
+        /**
          * `v_if_function` de la fila «Medio de pago elegido» (src/models/order.js): se ve si el pedido
          * tiene un método de pago con nombre, sea cual sea su tipo.
          *

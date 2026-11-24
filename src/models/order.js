@@ -80,6 +80,8 @@ export default {
 			type: 'text',
 			only_show: true,
 			not_show: true,
+			// Obligatoria: una clave terminada en _id sin `function` se trata como relación y sale vacía.
+			function: 'getOrderNumeroDePago',
 			v_if_function: 'mostrar_order_numero_de_pago',
 			description: 'El número del pago en Mercado Pago. Con él lo encontrás en tu cuenta de Mercado Pago, por ejemplo para hacer una devolución. Solo aparece en pedidos pagados con Mercado Pago o con tarjeta.',
 		},
