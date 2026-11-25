@@ -3,9 +3,10 @@ import dates from '@/common-vue/mixins/dates'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import db from '@/offline/db'
 import { normalizar_telefono } from '@/utils/whatsapp_phone'
+import { texto_de_calle } from '@/utils/texto_de_calle'
 import { es_perfil_de_ticket } from '@/constants/vender_print_shortcut_options'
 /* Formas de envío del pedido: Zipnova o forma propia, y el costo a convenir (misión formas-envio-direcciones-maps). */
-import { es_forma_propia_a_convenir, envio_va_por_zipnova, precio_de_forma_propia } from '@/utils/formas_de_envio'
+import { es_forma_propia_a_convenir, envio_va_por_zipnova, envio_va_por_andreani, precio_de_forma_propia } from '@/utils/formas_de_envio'
 export default {
     mixins: [select_payment_methods],
     computed: {
@@ -1006,7 +1007,7 @@ export default {
 		},
         getOrderAddress(prop, model) {
             if (this.model.address) {
-                return this.model.address.street+' '+this.model.address.street_number
+                return texto_de_calle(this.model.address)
             }
         },
         /**
@@ -1023,6 +1024,10 @@ export default {
         getOrderDeliverLabel(order) {
             if (envio_va_por_zipnova(order)) {
                 return 'Envío a domicilio (Zipnova)'
+            }
+            // Misión envios-andreani: el pedido eligió Andreani en la tienda (se despacha a mano)
+            if (envio_va_por_andreani(order)) {
+                return 'Envío por Andreani'
             }
             if (Number(order.deliver) === 1) {
                 if (order.delivery_zone && order.delivery_zone.name) {
@@ -1078,6 +1083,10 @@ export default {
             if (envio_va_por_zipnova(order)) {
                 return 'Sin generar'
             }
+            // Misión envios-andreani: no hay nada que generar por API, el comercio lo carga en el portal
+            if (envio_va_por_andreani(order)) {
+                return 'Andreani (a despachar)'
+            }
             if (Number(order.deliver) === 1) {
                 if (order.delivery_zone && order.delivery_zone.name) {
                     return 'Envío propio: ' + order.delivery_zone.name
@@ -1088,7 +1097,7 @@ export default {
         },
         /**
          * "Envío elegido" del formulario del pedido: "{correo} · {servicio} · $ {precio} · llega
-         * {dd/mm}" para una opción de Zipnova, o la forma de envío propia del negocio con su costo
+         * {dd/mm}" para una opción de Zipnova o de Andreani, o la forma de envío propia del negocio con su costo
          * ("Acordar con el vendedor · A convenir", "Reparto en la ciudad · $ 3.000").
          *
          * 🔴 Una forma propia con el costo a convenir dice "A convenir", nunca "Gratis" ni "$ 0": no
@@ -1098,7 +1107,7 @@ export default {
          * @returns {string}
          */
         getOrderEnvioResumen(order) {
-            let opcion = envio_va_por_zipnova(order) ? this.order_envio_opcion(order) : null
+            let opcion = (envio_va_por_zipnova(order) || envio_va_por_andreani(order)) ? this.order_envio_opcion(order) : null
             if (opcion) {
                 let partes = []
                 if (opcion.carrier_name) {

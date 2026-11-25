@@ -103,3 +103,197 @@ export function precio_de_forma_propia(delivery_zone) {
 	let precio = Number(delivery_zone.price)
 	return isNaN(precio) ? 0 : precio
 }
+
+/**
+ * Si el envío del pedido sale por Andreani (misión envios-andreani, 25/11/2026). Espejo de
+ * `Order::envio_va_por_andreani()` de empresa-api.
+ *
+ * Hacen falta las DOS cosas: `envio_opcion` con algo adentro (el comprador eligió una opción de
+ * Andreani en la tienda) y `envio_proveedor === 'andreani'`. Es la pregunta contraria a
+ * `envio_va_por_zipnova()`, que ya excluye cualquier proveedor que no sea el suyo: un pedido nunca
+ * da verdadero en las dos.
+ *
+ * 🔴 En esta etapa NO se genera la orden ni la etiqueta por la API de Andreani (decisión del
+ * dueño del producto, 25/11/2026): el comercio carga el envío a mano en el portal de Andreani con
+ * los datos que arma `texto_datos_andreani()`.
+ *
+ * @param {Object|null} order
+ * @returns {Boolean}
+ */
+export function envio_va_por_andreani(order) {
+	if (!order) {
+		return false
+	}
+	let opcion = json_del_pedido(order.envio_opcion)
+	if (!opcion || !Object.keys(opcion).length) {
+		return false
+	}
+	let proveedor = order.envio_proveedor === null || typeof order.envio_proveedor == 'undefined'
+		? ''
+		: String(order.envio_proveedor).trim().toLowerCase()
+	return proveedor === 'andreani'
+}
+
+/**
+ * Un valor como texto recortado ('' para null, undefined u objetos).
+ *
+ * @param {*} valor
+ * @returns {String}
+ */
+function texto_simple(valor) {
+	if (valor === null || typeof valor == 'undefined' || typeof valor == 'object') {
+		return ''
+	}
+	return String(valor).trim()
+}
+
+/**
+ * Un número como lo escribe un argentino: coma decimal y punto de miles ("15.000", "2,5").
+ * Los enteros no llevan decimales; el resto, hasta 3 (los kilos de un bulto) sin ceros de sobra.
+ *
+ * @param {*} valor
+ * @returns {String} '' si no es un número.
+ */
+function numero_legible(valor) {
+	let numero = Number(valor)
+	if (valor === null || typeof valor == 'undefined' || valor === '' || !isFinite(numero)) {
+		return ''
+	}
+	let partes = String(Math.round(numero * 1000) / 1000).split('.')
+	partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+	return partes.join(',')
+}
+
+/**
+ * Texto plano con todo lo que el comercio necesita para cargar el envío a mano en el portal de
+ * Andreani: es lo que copia el botón "Copiar datos" del modal Envío de un pedido Andreani.
+ *
+ * Se arma sólo con lo que hay (lectura tolerante, contrato PLAN §10.1): sin bultos, sin destino o
+ * sin la tarjeta conectada, igual sale el resto. Cada bulto va en su propia línea.
+ *
+ * 🔴 Nunca incluye credenciales: del `integracion.config` se leen SÓLO `cliente`,
+ * `contrato_domicilio` y `contrato_sucursal`; cualquier otra clave (usuario, contraseña, token)
+ * se ignora aunque llegue por error.
+ *
+ * El destinatario es el del destino que armó la tienda (`envio_destino`); si no hay, el comprador
+ * del pedido. En un retiro en sucursal se imprime SÓLO la sucursal elegida (no el domicilio) y el
+ * contrato de sucursal; a domicilio, la dirección y el contrato de domicilio.
+ *
+ * @param {Object} order Pedido de la tienda (con envio_opcion, envio_destino, buyer...).
+ * @param {Object|null} integracion Item `andreani` de `GET integraciones` (puede ser null).
+ * @returns {String}
+ */
+export function texto_datos_andreani(order, integracion) {
+	let pedido = order || {}
+	let opcion = json_del_pedido(pedido.envio_opcion) || {}
+	let destino = json_del_pedido(pedido.envio_destino)
+	let buyer = pedido.buyer || {}
+	let config = integracion && integracion.config ? integracion.config : {}
+	let andreani = opcion.andreani || {}
+	let es_sucursal = !!opcion.es_punto_de_retiro || andreani.tipo === 'sucursal' || opcion.service_type === 'sucursal'
+	let lineas = []
+
+	// --- Pedido y servicio ---
+	lineas.push('PEDIDO N° ' + (pedido.num ? pedido.num : pedido.id))
+	lineas.push('Servicio: ' + (es_sucursal ? 'Retiro en sucursal Andreani' : 'Envío a domicilio'))
+	if (Number(opcion.precio) > 0) {
+		lineas.push('Costo del envío cobrado al comprador: $ ' + numero_legible(opcion.precio))
+	}
+
+	// --- Cuenta de Andreani (de la tarjeta) ---
+	let contrato = es_sucursal ? config.contrato_sucursal : config.contrato_domicilio
+	if (texto_simple(config.cliente)) {
+		lineas.push('N° de cliente: ' + texto_simple(config.cliente))
+	}
+	if (texto_simple(contrato)) {
+		lineas.push('Contrato de ' + (es_sucursal ? 'sucursal' : 'domicilio') + ': ' + texto_simple(contrato))
+	}
+
+	// --- Destinatario ---
+	let nombre = []
+	let telefono = ''
+	let email = ''
+	let documento = ''
+	if (destino && (destino.nombre || destino.apellido)) {
+		nombre = [destino.nombre, destino.apellido]
+		telefono = destino.telefono
+		email = destino.email
+	} else {
+		nombre = [buyer.name, buyer.surname]
+		telefono = buyer.phone
+		email = buyer.email
+	}
+	if (destino && destino.documento) {
+		documento = destino.documento
+	}
+	lineas.push('')
+	lineas.push('DESTINATARIO')
+	let nombre_completo = nombre.filter(parte => !!texto_simple(parte)).join(' ')
+	if (nombre_completo) {
+		lineas.push('Nombre: ' + nombre_completo)
+	}
+	if (texto_simple(documento)) {
+		lineas.push('DNI: ' + texto_simple(documento))
+	}
+	if (texto_simple(telefono)) {
+		lineas.push('Teléfono: ' + texto_simple(telefono))
+	}
+	if (texto_simple(email)) {
+		lineas.push('Email: ' + texto_simple(email))
+	}
+
+	// --- Dirección o sucursal ---
+	if (es_sucursal) {
+		let point_id = destino && destino.point_id ? destino.point_id : opcion.point_id
+		let puntos = Array.isArray(opcion.puntos_de_retiro) ? opcion.puntos_de_retiro : []
+		let punto = puntos.filter(item => texto_simple(item.point_id) === texto_simple(point_id))[0]
+		let linea_sucursal = 'Sucursal: N° ' + texto_simple(point_id)
+		if (punto) {
+			let calle = [texto_simple(punto.street), texto_simple(punto.street_number)].filter(parte => !!parte).join(' ')
+			linea_sucursal += ' · ' + [texto_simple(punto.description), calle, texto_simple(punto.city)].filter(parte => !!parte).join(' · ')
+		}
+		lineas.push(linea_sucursal)
+		if (destino && texto_simple(destino.codigo_postal)) {
+			lineas.push('Código postal: ' + texto_simple(destino.codigo_postal))
+		}
+	} else {
+		let direccion = ''
+		if (destino && texto_simple(destino.calle)) {
+			let calle = [texto_simple(destino.calle), texto_simple(destino.numero)].filter(parte => !!parte).join(' ')
+			direccion = [calle, texto_simple(destino.piso_depto)].filter(parte => !!parte).join(' ')
+			let zona = [texto_simple(destino.localidad), texto_simple(destino.provincia)].filter(parte => !!parte).join(', ')
+			direccion = [direccion, zona].filter(parte => !!parte).join(', ')
+			if (texto_simple(destino.codigo_postal)) {
+				direccion += ' (CP ' + texto_simple(destino.codigo_postal) + ')'
+			}
+		} else {
+			direccion = texto_simple(pedido.address)
+		}
+		if (direccion) {
+			lineas.push('Dirección: ' + direccion)
+		}
+		if (destino && texto_simple(destino.referencia)) {
+			lineas.push('Referencia: ' + texto_simple(destino.referencia))
+		}
+	}
+
+	// --- Bultos (uno por línea) y valor declarado ---
+	let bultos = Array.isArray(andreani.bultos) ? andreani.bultos : []
+	if (bultos.length) {
+		lineas.push('')
+		lineas.push('BULTOS')
+		bultos.forEach((bulto, indice) => {
+			let linea = 'Bulto ' + (indice + 1) + ': ' + numero_legible(bulto.kilos) + ' kg'
+			linea += ' · ' + numero_legible(bulto.alto_cm) + ' x ' + numero_legible(bulto.ancho_cm) + ' x ' + numero_legible(bulto.largo_cm) + ' cm (alto x ancho x largo)'
+			if (Number(bulto.valor_declarado) > 0) {
+				linea += ' · valor declarado $ ' + numero_legible(bulto.valor_declarado)
+			}
+			lineas.push(linea)
+		})
+	}
+	if (Number(andreani.valor_declarado_total) > 0) {
+		lineas.push('Valor declarado total: $ ' + numero_legible(andreani.valor_declarado_total))
+	}
+
+	return lineas.join('\n')
+}

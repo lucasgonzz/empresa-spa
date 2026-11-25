@@ -1,8 +1,9 @@
 import moment from 'moment'
+import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
 
 /**
  * Mixin compartido por la solapa "Tienda online" del ABM de Integraciones y por sus
- * tarjetas (Mercado Pago, Zipnova).
+ * tarjetas (Mercado Pago, Zipnova, Andreani).
  *
  * Centraliza la lógica que se repetiría en cada tarjeta: el cálculo del estado visual
  * (Desconectado / Conectado / Conexión por vencer), las llamadas a los endpoints OAuth
@@ -169,6 +170,85 @@ export default {
 				skip_global_error_event: true,
 				skip_global_validation_toast: true,
 			})
+		},
+
+		// --------------------------------- Andreani ---------------------------------
+		//
+		// Andreani (misión envios-andreani, 25/11/2026) tampoco es OAuth: el comercio carga su
+		// número de cliente y su contrato (dato comercial, no un secreto de acceso). El backend
+		// los valida contra Andreani con una tarifa de prueba, los guarda en el conector de
+		// plataforma y la tarjeta los vuelve a leer de `config` (nunca viaja ninguna credencial).
+		// Todos responden `{integracion}` con la misma forma que un item de
+		// `GET /api/integraciones`. El disconnect es el genérico:
+		// `requestIntegrationDisconnect('andreani')`. Mismas banderas que Zipnova: la tarjeta
+		// muestra cada error con su propio alert o toast.
+
+		/**
+		 * Conecta Andreani con el número de cliente y los contratos del comercio.
+		 *
+		 * Un 422 trae `{codigo: 'validacion'|'credenciales', message}`; un 502, `{codigo: 'andreani'}`.
+		 *
+		 * @param {Object} payload `{cliente, contrato_domicilio, contrato_sucursal?, sucursal_origen?}`.
+		 * @returns {Promise} Promesa de axios; `res.data.integracion` trae el item ya conectado.
+		 */
+		requestAndreaniConectar(payload) {
+			return this.$api.post('integraciones/andreani/conectar', payload, {
+				skip_global_error_event: true,
+				skip_global_validation_toast: true,
+			})
+		},
+
+		/**
+		 * Guarda la configuración de Andreani (todas las claves opcionales: omitir preserva, null limpia).
+		 *
+		 * @param {Object} payload `{bulto_default?, declarar_valor?, envio_gratis_desde?, ofrecer_en_tienda?, contrato_sucursal?, sucursal_origen?}`.
+		 * @returns {Promise} Promesa de axios; `res.data.integracion` trae el item actualizado.
+		 */
+		requestAndreaniConfig(payload) {
+			return this.$api.put('integraciones/andreani/config', payload, {
+				skip_global_error_event: true,
+				skip_global_validation_toast: true,
+			})
+		},
+
+		/**
+		 * Cotiza un envío de prueba con el paquete por defecto, para ver lo mismo que ve el cliente.
+		 *
+		 * @param {String} zipcode Código postal de destino.
+		 * @returns {Promise} Promesa de axios; `res.data.cotizacion` trae `{zipcode, opciones, motivo}`.
+		 */
+		requestAndreaniCotizarPrueba(zipcode) {
+			return this.$api.post('integraciones/andreani/cotizar-prueba', {
+				zipcode: zipcode,
+			}, {
+				skip_global_error_event: true,
+				skip_global_validation_toast: true,
+			})
+		},
+
+		/**
+		 * Mensaje legible de un error de axios de una tarjeta de integración: los mensajes de
+		 * validación de Laravel si vienen (`errors: {campo: [...]}`; el `message` de esos 422 es
+		 * "The given data was invalid." y no sirve), si no el `message` del 422/502 del backend, si
+		 * no el texto genérico que pasa la tarjeta.
+		 *
+		 * @param {Object} err Error de axios.
+		 * @param {String} fallback Texto si el backend no mandó mensaje.
+		 * @returns {String}
+		 */
+		mensajeDeErrorDeIntegracion(err, fallback) {
+			let data = err && err.response && err.response.data ? err.response.data : null
+			if (!data || typeof data != 'object') {
+				return fallback
+			}
+			let mensajes = collect_laravel_validation_messages(data)
+			if (mensajes.length) {
+				return mensajes.join(' ')
+			}
+			if (data.message) {
+				return data.message
+			}
+			return fallback
 		},
 	},
 }
