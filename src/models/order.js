@@ -55,6 +55,36 @@ export default {
 		 * `medio_de_pago_cobrado` guarda el `payment_type_id` crudo de Mercado Pago (credit_card,
 		 * debit_card, account_money...) y se muestra traducido por `getOrderMedioDePagoCobrado`.
 		 */
+		/*
+		 * Cobro con tarjeta en la tienda (misión tienda-cobro-tarjeta, 24/11/2026). Dos filas de SOLO
+		 * LECTURA en el detalle del pedido:
+		 *  - «Medio de pago elegido»: el nombre del método que eligió el comprador, para todo pedido que
+		 *    tenga uno (también transferencia o efectivo).
+		 *  - «N° de pago de Mercado Pago»: el `payment_id` del cobro, sólo si el método es de tipo
+		 *    MercadoPago o Tarjeta Mercado Pago.
+		 * Cada una decide si se ve con su `v_if_function` (src/mixins/model_functions.js).
+		 */
+		{
+			text: 'Medio de pago elegido',
+			key: 'payment_method_id',
+			type: 'text',
+			only_show: true,
+			not_show: true,
+			function: 'getOrderMetodoDePagoElegido',
+			v_if_function: 'mostrar_order_metodo_de_pago',
+			description: 'El medio de pago que el comprador eligió en el checkout de la tienda (transferencia, efectivo, tarjeta, Mercado Pago...). Es lo que eligió, no lo que se cobró: lo cobrado está más abajo.',
+		},
+		{
+			text: 'N° de pago de Mercado Pago',
+			key: 'payment_id',
+			type: 'text',
+			only_show: true,
+			not_show: true,
+			// Obligatoria: una clave terminada en _id sin `function` se trata como relación y sale vacía.
+			function: 'getOrderNumeroDePago',
+			v_if_function: 'mostrar_order_numero_de_pago',
+			description: 'El número del pago en Mercado Pago. Con él lo encontrás en tu cuenta de Mercado Pago, por ejemplo para hacer una devolución. Solo aparece en pedidos pagados con Mercado Pago o con tarjeta.',
+		},
 		{
 			text: 'Cuotas elegidas',
 			key: 'cuotas',
@@ -80,7 +110,7 @@ export default {
 			only_show: true,
 			not_show: true,
 			v_if_function: 'mostrar_order_dato_de_cuotas',
-			description: 'Las cuotas con las que Mercado Pago dice que se cobró de verdad (lo anota el aviso de pago). Puede ser distinto de las cuotas elegidas: en Mercado Pago el comprador puede pagar en menos cuotas o con dinero en cuenta, siempre por el mismo total.',
+			description: 'Las cuotas con las que Mercado Pago dice que se cobró de verdad (se anota en todo pago aprobado). Puede ser distinto de las cuotas elegidas: en Mercado Pago el comprador puede pagar en menos cuotas o con dinero en cuenta, siempre por el mismo total.',
 		},
 		{
 			text: 'Medio de pago cobrado',
@@ -90,7 +120,7 @@ export default {
 			not_show: true,
 			function: 'getOrderMedioDePagoCobrado',
 			v_if_function: 'mostrar_order_dato_de_cuotas',
-			description: 'El tipo de medio de pago con el que Mercado Pago cobró (tarjeta de crédito, tarjeta de débito, dinero en cuenta, etc.). Lo anota el aviso de pago, así que solo aparece en los pedidos que ya se cobraron por Mercado Pago.',
+			description: 'El tipo de medio de pago con el que Mercado Pago cobró (tarjeta de crédito, tarjeta de débito, dinero en cuenta, etc.). Se anota en todo pago aprobado, así que solo aparece en los pedidos que ya se cobraron por Mercado Pago o con tarjeta.',
 		},
 		{
 			text: 'Estado',

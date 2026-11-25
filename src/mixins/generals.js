@@ -2,6 +2,7 @@ import { inicializar_cotizacion, convertir_importe } from '@/utils/cotizacion_po
 import { trae_precios_propios_por_moneda } from '@/utils/lista_precio_final'
 import moment from 'moment'
 import { env } from '@/runtime_config'
+import { opera_en_vender } from '@/utils/visibilidad_de_caja'
 /* Código de barras sin espacios y siempre como texto: un campo vacío no tira (misión prueba-defectos-asistente-y-vender). */
 import { codigo_escaneado } from '@/utils/codigo_de_barras'
 /* El criterio unico de las ofertas por cantidad, espejo del helper de empresa-api. */
@@ -489,29 +490,11 @@ export default {
             }
 
 
-            // Solo las cajas a las que el usuario tiene acceso
+            // Solo las cajas a las que el usuario tiene acceso: la regla (administrador siempre; si la caja
+            // tiene lista de empleados, solo los de la lista; sin lista, todos) vive en un solo lugar,
+            // src/utils/visibilidad_de_caja.js, y es la misma que aplica la API.
             cajas_disponibles = cajas_disponibles.filter(caja => {
-
-                // Si es administrador, siempre va a tener acceso
-                if (this.is_admin) {
-                    return true
-                }
-
-                // Si la caja tiene asignados empleados con acceso, se cheque que el usuario logeado este en esa lista
-                if (caja.users.length) {
-
-                    let usuario_con_acceso = false
-
-                    caja.users.forEach(user_caja => {
-
-                        if (user_caja.id == this.user.id) {
-                            usuario_con_acceso = true 
-                        } 
-                    })
-
-                    return usuario_con_acceso
-                }
-                return true 
+                return opera_en_vender(caja, this.user)
             })
 
             // Formate de nombres, se agrega nombre de empleado (en caso que pertenezca a uno) y la moneda (en caso de que sea USD) y la sucursal

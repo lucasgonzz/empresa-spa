@@ -50,16 +50,30 @@
 				<estado-caja
 				:abierta="!!props.model.abierta"></estado-caja>
 			</template>
+
+			<!--
+				Permisos de la caja (misión cajas-permisos-claros): debajo de cada lista de empleados se ve el
+				estado actual (qué pasa si queda vacía) y, debajo de la de Tesorería, la tabla con lo que ve y usa
+				cada empleado. `prop_extras` es el punto de extensión ADITIVO de ModelForm: no reemplaza campos.
+			-->
+			<template #prop_extras="{ prop, model }">
+				<permisos-caja
+				:prop="prop"
+				:model="model"></permisos-caja>
+			</template>
 		</view-component>
 	</div>
 </template>
 <script>
+import { ve_en_tesoreria } from '@/utils/visibilidad_de_caja'
+
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		HorizontalNavCenter: () => import('@/components/caja/components/horizontal-nav-center/Index'),
 		TableButtons: () => import('@/components/caja/components/table-buttons/Index'),
 		EstadoCaja: () => import('@/components/caja/components/EstadoCaja'),
+		PermisosCaja: () => import('@/components/caja/components/permisos/Index'),
 		SucursalConFoto: () => import('@/components/common/SucursalConFoto'),
 
 		SaleModal: () => import('@/components/common/SaleModal'),
@@ -118,25 +132,15 @@ export default {
 		},
 		/**
 		 * Determina si el usuario logueado debe ver la fila de esta caja en el módulo de tesorería.
-		 * Orden: si hay `treasury_users`, solo ellos ven; si no hay, se usa `users`; si ambas listas están vacías, todos ven.
+		 * La regla vive en src/utils/visibilidad_de_caja.js (espejo de la de la API): si hay `treasury_users`,
+		 * solo ellos ven; si no hay, se usa `users`; si ambas listas están vacías, todos ven. Si la caja trae
+		 * `ve_en_tesoreria` calculado por el servidor, se usa ese.
 		 *
 		 * @param {Object} caja Modelo caja del store (con `treasury_users` y `users`).
 		 * @returns {boolean}
 		 */
 		user_can_view_caja_in_tesoreria(caja) {
-			const treasury_users = caja.treasury_users || []
-
-			if (treasury_users.length) {
-				return typeof treasury_users.find(user => user.id == this.user.id) !== 'undefined'
-			}
-
-			const users = caja.users || []
-
-			if (users.length) {
-				return typeof users.find(user => user.id == this.user.id) !== 'undefined'
-			}
-
-			return true
+			return ve_en_tesoreria(caja, this.user)
 		},
 	},
 }

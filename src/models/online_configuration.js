@@ -42,6 +42,12 @@ export default {
 			type: 'number',
 		},
 		{
+			text: 'Mostrar en la tienda la leyenda de descuento por medio de pago',
+			key: 'mostrar_leyenda_de_descuento',
+			type: 'checkbox',
+			description: 'Si se activa, la tienda muestra debajo del precio una leyenda como "Con Transferencia o Efectivo, 10 % de descuento". El texto se arma solo con los nombres de los métodos de pago que tienen el mayor descuento (Tienda Online → Métodos de pago). Si ningún método tiene descuento, no se muestra nada.',
+		},
+		{
 			text: 'Texto para precio pausado',
 			key: 'text_precio_pausado',
 			type: 'text',

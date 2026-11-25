@@ -1376,6 +1376,117 @@ export default {
             return nombre.replace(/\s+/g, '').toLowerCase() === 'mercadopago'
         },
         /**
+         * `v_if_function` del editor «Cuotas» (payment_method_installments) de un método de pago de la
+         * tienda (src/models/payment_method.js): ese editor es de Payway, así que solo se ve si el tipo
+         * del método se llama «Payway» (sin espacios ni mayúsculas).
+         *
+         * 🔴 Por NOMBRE y no por id: antes era `v_if: ['payment_method_type_id', '=', 2]`, y como
+         * Payway ya no se siembra, en instalaciones nuevas el id 2 es «Tarjeta Mercado Pago» (que ignora
+         * ese editor). Los ids de `payment_method_types` no son fijos entre instalaciones.
+         *
+         * @param {object} prop La fila declarada.
+         * @param {object} model El método de pago de la tienda.
+         * @returns {boolean}
+         */
+        es_metodo_de_pago_payway(prop, model) {
+            return this.nombre_del_tipo_de_metodo_de_pago(model).replace(/\s+/g, '').toLowerCase() === 'payway'
+        },
+        /**
+         * `v_if_function` del select "Método de pago de cuenta corriente" (src/models/payment_method.js)
+         * desde la misión tienda-cobro-tarjeta (24/11/2026): el vínculo con las cuotas se ofrece en un
+         * método de tipo MercadoPago Y en uno de tipo "Tarjeta Mercado Pago" (cobro con tarjeta dentro
+         * de la página), y en ningún otro (Transferencia, Efectivo...).
+         *
+         * Compara el nombre del tipo sin espacios ni mayúsculas, igual que
+         * `es_metodo_de_pago_de_mercado_pago`, que se conserva para sus otros usos.
+         *
+         * @param {object} prop El select que declara este v_if_function.
+         * @param {object} model El método de pago de la tienda.
+         * @returns {boolean}
+         */
+        metodo_de_pago_admite_cuotas_en_la_tienda(prop, model) {
+            let nombre = this.nombre_del_tipo_de_metodo_de_pago(model).replace(/\s+/g, '').toLowerCase()
+            return nombre === 'mercadopago' || nombre === 'tarjetamercadopago'
+        },
+        /**
+         * Nombre normalizado (sin espacios ni mayúsculas) del tipo del método de pago de un PEDIDO.
+         * Usa el tipo embebido que trae la API (`payment_method.payment_method_type`) y, si no vino,
+         * lo busca en el store de tipos por `payment_method.payment_method_type_id`.
+         *
+         * @param {object} order El pedido de la tienda.
+         * @returns {string} '' si no se puede resolver.
+         */
+        nombre_normalizado_del_tipo_del_pedido(order) {
+            let metodo = order ? order.payment_method : null
+            if (!metodo) {
+                return ''
+            }
+            let nombre = ''
+            if (metodo.payment_method_type && metodo.payment_method_type.name) {
+                nombre = String(metodo.payment_method_type.name)
+            } else {
+                nombre = this.nombre_del_tipo_de_metodo_de_pago(metodo)
+            }
+            return nombre.replace(/\s+/g, '').toLowerCase()
+        },
+        /**
+         * "Medio de pago elegido" del pedido: el nombre del método de pago que el comprador eligió en
+         * el checkout (Transferencia, Efectivo, Tarjeta...). Distinto de «Medio de pago cobrado», que
+         * es lo que Mercado Pago informó.
+         *
+         * @param {object} order El pedido.
+         * @returns {string} '' si el pedido no tiene método de pago.
+         */
+        getOrderMetodoDePagoElegido(order) {
+            return order && order.payment_method && order.payment_method.name
+                ? String(order.payment_method.name)
+                : ''
+        },
+        /**
+         * «N° de pago de Mercado Pago» del pedido: el `payment_id` del cobro, como texto.
+         *
+         * 🔴 Existe porque la clave de la fila (`payment_id`) termina en `_id`: sin `function`,
+         * `propertyText` (common-vue/mixins/generals.js) la toma por una relación, busca `model.payment`
+         * y devuelve null, y el detalle dibuja la fila con un span vacío. No "simplificar" quitando la
+         * `function` de la fila en src/models/order.js.
+         *
+         * @param {object} order El pedido.
+         * @returns {string} '' si el pedido no tiene número de pago.
+         */
+        getOrderNumeroDePago(order) {
+            if (!order || !(Number(order.payment_id) > 0)) {
+                return ''
+            }
+            return String(order.payment_id)
+        },
+        /**
+         * `v_if_function` de la fila «Medio de pago elegido» (src/models/order.js): se ve si el pedido
+         * tiene un método de pago con nombre, sea cual sea su tipo.
+         *
+         * @param {object} prop La fila declarada.
+         * @param {object} model El pedido.
+         * @returns {boolean}
+         */
+        mostrar_order_metodo_de_pago(prop, model) {
+            return this.getOrderMetodoDePagoElegido(model) !== ''
+        },
+        /**
+         * `v_if_function` de la fila «N° de pago de Mercado Pago» (src/models/order.js): se ve si el
+         * pedido tiene un `payment_id` mayor que 0 y su método es de tipo MercadoPago o
+         * "Tarjeta Mercado Pago". Una transferencia no muestra la fila aunque traiga un número.
+         *
+         * @param {object} prop La fila declarada.
+         * @param {object} model El pedido.
+         * @returns {boolean}
+         */
+        mostrar_order_numero_de_pago(prop, model) {
+            if (!model || !(Number(model.payment_id) > 0)) {
+                return false
+            }
+            let tipo = this.nombre_normalizado_del_tipo_del_pedido(model)
+            return tipo === 'mercadopago' || tipo === 'tarjetamercadopago'
+        },
+        /**
          * `dynamic_options_function` del select "Método de pago de cuenta corriente" de un método de
          * pago de la tienda (src/models/payment_method.js): los métodos de pago de cuenta corriente
          * de siempre, pero con "Seleccione ..." en `null` y no en 0.
