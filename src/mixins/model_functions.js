@@ -1269,8 +1269,34 @@ export default {
             // Una API anterior no guarda estos campos: evitar ofrecer una edición sin efecto.
             return !!model && typeof model[prop.key] != 'undefined'
         },
+        /**
+         * `v_if_function` de la casilla «Recibir por WhatsApp el aviso de pedido nuevo de tu asistente personal»
+         * (src/models/online_configuration.js, misión whatsapp-aviso-pedido, 25/11/2026). Se ve sólo con la
+         * extensión Agentes de IA y si la API ya devuelve el campo (una API anterior no lo guarda: evita ofrecer
+         * una casilla sin efecto).
+         *
+         * @param {Object} prop Definición del campo (viene del modelo declarativo).
+         * @param {Object} model Configuración de la tienda que se está editando.
+         * @returns {boolean}
+         */
+        mostrar_aviso_pedido_por_whatsapp(prop, model) {
+            return !!model && typeof model[prop.key] != 'undefined' && !!this.hasExtencion('agentes_ia')
+        },
         mostrar_reservar_stock_pedidos_web(prop, model) {
             return !!(this.is_owner && model && typeof model.reservar_stock_pedidos_web != 'undefined')
+        },
+        /**
+         * `v_if_function` genérico para casillas que una API vieja todavía no persiste (misión
+         * carritos-ajuste-stock): se muestra sólo si el modelo trae la clave de la propiedad,
+         * con cualquier valor (incluidos false y 0). Sin la clave la casilla se dibujaría
+         * apagada sin que la tienda respete esa elección.
+         *
+         * @param {object} prop Propiedad declarada en el modelo (usa `prop.key`).
+         * @param {object} model Modelo que llega de la API.
+         * @returns {boolean} true si hay que mostrar la casilla.
+         */
+        mostrar_si_la_api_manda_la_clave(prop, model) {
+            return !!model && typeof model[prop.key] != 'undefined'
         },
         mostrar_permitir_pedidos_sin_stock(prop, model) {
             return !!model && typeof model.permitir_pedidos_sin_stock != 'undefined'
