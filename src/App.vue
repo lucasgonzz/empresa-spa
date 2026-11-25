@@ -44,6 +44,12 @@
             subieron (misión ingreso-sin-internet, 23/10/2026). Se gatea solo con el store.
         -->
         <aviso-sin-conexion></aviso-sin-conexion>
+        <!--
+            Aviso de actualización del sistema (misión aviso-actualizacion-sistema, 25/11/2026): el modal del
+            pedido de OK y la pastilla "Faltan N computadoras". Se gatean solos con el store.
+        -->
+        <actualizacion-pedido-ok-modal></actualizacion-pedido-ok-modal>
+        <actualizacion-faltan-aviso></actualizacion-faltan-aviso>
         <offline-articles-progress
         :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
@@ -181,6 +187,10 @@ import check_version from '@/mixins/check_version'
 import offline from '@/offline/index'
 import db from '@/offline/db'
 import AvisoSinConexion from '@/components/common/AvisoSinConexion'
+// Imports estáticos: tienen que dibujarse aunque el chunk ya no exista porque se está reemplazando el SPA.
+import ActualizacionPedidoOkModal from '@/components/common/ActualizacionPedidoOkModal'
+import ActualizacionFaltanAviso from '@/components/common/ActualizacionFaltanAviso'
+import actualizacion_del_sistema from '@/mixins/actualizacion_del_sistema'
 import { apply_dark_mode_class, store_dark_mode } from '@/utils/dark_mode'
 
 /**
@@ -208,7 +218,7 @@ const RUTA_INFORME_COMPARTIDO = '/informe/'
 const RUTA_ACCESO_SOPORTE = '/acceso-soporte'
 
 export default {
-    mixins: [app, start_methods, broadcast, check_version, offline],
+    mixins: [app, start_methods, broadcast, check_version, offline, actualizacion_del_sistema],
     components: {
         ErrorModal,
         PruebaPrimerIngresoModal: () => import('@/components/prueba/PrimerIngresoModal'),
@@ -223,6 +233,8 @@ export default {
         AppInstaladaVieja,
         // Import estático: tiene que poder dibujarse sin conexión aunque su chunk no haya bajado.
         AvisoSinConexion,
+        ActualizacionPedidoOkModal,
+        ActualizacionFaltanAviso,
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
