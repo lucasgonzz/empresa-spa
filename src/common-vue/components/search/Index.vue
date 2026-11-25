@@ -38,6 +38,7 @@
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
 		@setSelected="setSelected"
+		@search-hidden="$emit('search-hidden')"
 		@requestClientAfipLookup="onRequestClientAfipLookupFromModal">
 			
 			<template #search_input_right>
@@ -783,7 +784,7 @@ export default {
 				input.setSelectionRange(valor.length, valor.length)
 			}
 		},
-		setSelected(model, results) {
+		setSelected(model, results, con_enter = false) {
 			console.log('se va a emitir setSelected con results:')
 			console.log(results)
 			this.selected_model = model 
@@ -792,7 +793,8 @@ export default {
 				prop: this.prop,
 				query: this.query,				
 				received_model: this.model,				
-				results: results,				
+				results: results,
+				con_enter,
 			})
 			if (this.clear_query) {
 				this.query = ''

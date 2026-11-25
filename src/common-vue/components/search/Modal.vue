@@ -778,6 +778,7 @@ export default {
 		onModalHidden() {
 			this.modal_visible = false
 			this.$emit('setNotShowModel', false)
+			this.$emit('search-hidden')
 		},
 		/**
 		 * El usuario toco el boton de limpiar del pill (icono de deshacer). El buscador general ya
@@ -1748,7 +1749,7 @@ export default {
 			if (!this.loading) {
 				if (this.selected_index != -1 && this.results.length) {
 					// this.$emit('setSelected', this.results[this.selected_index])
-					this.emitSetSelected(this.results[this.selected_index])
+					this.emitSetSelected(this.results[this.selected_index], this.modal_visible)
 				} else if (this.save_if_not_exist) {
 					if (
 						this.tax_id_afip_lookup_on_second_enter
@@ -1892,12 +1893,12 @@ export default {
 		 * La guarda se levanta solo si hay un cierre real por venir. Si el modal no estaba
 		 * visible no habria evento `hidden` que la baje, y el campo quedaria muerto para siempre.
 		 */
-		emitSetSelected(model) {
+		emitSetSelected(model, con_enter = false) {
 			if (this.modal_visible) {
 				this.$emit('setNotShowModel', true)
 			}
 
-			this.$emit('setSelected', model, this.results)
+			this.$emit('setSelected', model, this.results, con_enter)
 			if (this.ancla_tour && this.modal_visible && model) {
 				document.dispatchEvent(new Event('vender:articulo-elegido-en-buscador'))
 			}

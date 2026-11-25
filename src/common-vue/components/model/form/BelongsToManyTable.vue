@@ -71,7 +71,7 @@
 		:loading="false"
 		:models="model[prop.key]"
 		:model_name="prop.store"
-		:pivot="active_belongs_to_many"
+		:pivot="pivot_para_tabla"
 		:order_list_by="prop.belongs_to_many.order_list_by"
 		:order_list_from_pivot="true"
 		:set_model_on_row_selected="false"
@@ -111,6 +111,7 @@ export default {
 		ColumnsPreferencesConfigModal,
 	},
 	props: {
+		campo_pivot_requerido: String,
 		/* Definición de la propiedad belongs_to_many (key, store, belongs_to_many config, etc.) */
 		prop: {
 			type: Object,
@@ -157,6 +158,18 @@ export default {
 		}
 	},
 	computed: {
+		pivot_para_tabla() {
+			const pivot = this.active_belongs_to_many
+			const key = this.campo_pivot_requerido
+			if (!key || (pivot.properties_to_set || []).some(prop => prop.key === key)) {
+				return pivot
+			}
+
+			const requerido = this.prop.belongs_to_many.properties_to_set.find(prop => prop.key === key)
+			return requerido
+				? { ...pivot, properties_to_set: [...(pivot.properties_to_set || []), requerido] }
+				: pivot
+		},
 		/*
 		 * Identificador único del modal para esta relación específica.
 		 * Combina modelo padre y clave de relación para evitar colisiones entre distintas relaciones.
