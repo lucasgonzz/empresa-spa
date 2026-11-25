@@ -494,6 +494,20 @@ export default {
 		},
 
 		{
+			// Misión whatsapp-aviso-pedido (25/11/2026): grupo con la casilla del aviso de pedido nuevo por
+			// WhatsApp. Sólo se ve con la extensión Agentes de IA (v_if_function de la casilla): ModelForm
+			// oculta solo un grupo sin campos visibles.
+			group_title: 'Avisos por WhatsApp'
+		},
+		{
+			text: 'Recibir por WhatsApp el aviso de pedido nuevo de tu asistente personal',
+			key: 'notificar_pedido_por_whatsapp',
+			type: 'checkbox',
+			description: 'Cada pedido nuevo de la tienda te llega al WhatsApp de tu asistente personal, con el número, el comprador, el total, la entrega, el pago y los artículos.',
+			v_if_function: 'mostrar_aviso_pedido_por_whatsapp',
+		},
+
+		{
 			group_title: 'Correo para notificaciones a clientes'
 		},
 		{
