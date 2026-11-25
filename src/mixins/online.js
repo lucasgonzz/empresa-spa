@@ -5,6 +5,7 @@
 	nuevo de Mensajes tiene su propio store (store/tienda_mensajes.js) y el modulo viejo se borro.
 */
 import { precio_de_forma_propia } from '@/utils/formas_de_envio'
+import { texto_de_calle } from '@/utils/texto_de_calle'
 
 export default {
 	methods: {
@@ -31,7 +32,7 @@ export default {
 		},
 		getAddress(address) {
 			if (address) {
-				return address.street + ' ' + address.street_number 
+				return texto_de_calle(address)
 			}
 		},
 		total(order, with_cupon = true, with_delivery_zone = true) {

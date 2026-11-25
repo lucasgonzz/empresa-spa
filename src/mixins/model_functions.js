@@ -3,6 +3,7 @@ import dates from '@/common-vue/mixins/dates'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import db from '@/offline/db'
 import { normalizar_telefono } from '@/utils/whatsapp_phone'
+import { texto_de_calle } from '@/utils/texto_de_calle'
 import { es_perfil_de_ticket } from '@/constants/vender_print_shortcut_options'
 /* Formas de envío del pedido: Zipnova o forma propia, y el costo a convenir (misión formas-envio-direcciones-maps). */
 import { es_forma_propia_a_convenir, envio_va_por_zipnova, envio_va_por_andreani, precio_de_forma_propia } from '@/utils/formas_de_envio'
@@ -1006,7 +1007,7 @@ export default {
 		},
         getOrderAddress(prop, model) {
             if (this.model.address) {
-                return this.model.address.street+' '+this.model.address.street_number
+                return texto_de_calle(this.model.address)
             }
         },
         /**
