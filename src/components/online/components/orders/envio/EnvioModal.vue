@@ -3,7 +3,8 @@
 	:id="modal_id"
 	:title="titulo"
 	size="lg"
-	hide-footer>
+	hide-footer
+	@show="al_abrir">
 		<div class="envio-modal">
 			<!--
 				Destinatario: nombre y teléfono del comprador (del destino de Zipnova si lo hay, si no
@@ -100,6 +101,22 @@
 						</div>
 					</div>
 				</div>
+				<!-- Andreani: se despacha a mano en el portal de Andreani (misión envios-andreani) -->
+				<div
+				v-else-if="va_por_andreani"
+				class="envio-modal__opcion"
+				:data-testid="'forma-envio-andreani-' + order.id">
+					<span class="envio-modal__opcion-icono">
+						<i class="bi bi-truck"></i>
+					</span>
+					<div class="envio-modal__opcion-texto">
+						<strong>{{ opcion.carrier_name ? opcion.carrier_name : 'Andreani' }}</strong>
+						<span
+						v-if="opcion.service_name"
+						class="envio-modal__opcion-servicio"> · {{ opcion.service_name }}</span>
+						<div class="envio-modal__opcion-detalle">{{ texto_precio_opcion }}</div>
+					</div>
+				</div>
 				<div
 				v-else-if="forma_propia"
 				class="envio-modal__opcion"
@@ -128,7 +145,7 @@
 				</div>
 				<!-- Con el teléfono del comprador a mano, la ayuda lo nombra (sin botones nuevos) -->
 				<p
-				v-if="!va_por_zipnova"
+				v-if="!va_por_zipnova && !va_por_andreani"
 				class="envio-modal__ayuda"
 				:data-testid="'envio-ayuda-coordinar-' + order.id">
 					{{ texto_ayuda_coordinar }}
@@ -137,7 +154,7 @@
 
 			<!-- Estado del envío en Zipnova (solo si ya se generó, o se intentó) -->
 			<div
-			v-if="envio"
+			v-if="envio && !va_por_andreani"
 			class="envio-modal__seccion">
 				<p class="envio-modal__titulo">Envío en Zipnova</p>
 				<div class="envio-modal__grilla">
@@ -230,6 +247,52 @@
 			</div>
 
 			<!--
+				Andreani (misión envios-andreani, 25/11/2026): no hay orden ni etiqueta por la API en esta
+				etapa. El estado es fijo, "A despachar en Andreani", y el comercio carga el envío a mano en
+				el portal de Andreani con los datos de este bloque, que se copian con un botón. El texto que
+				se ve es EXACTAMENTE el que se copia (`texto_datos_andreani`).
+			-->
+			<div
+			v-if="va_por_andreani"
+			class="envio-modal__seccion"
+			:data-testid="'envio-andreani-' + order.id">
+				<p class="envio-modal__titulo">Envío en Andreani</p>
+				<div class="envio-modal__grilla">
+					<div class="envio-modal__fila">
+						<span class="envio-modal__etiqueta">Estado</span>
+						<span class="envio-modal__valor">
+							<b-badge
+							variant="warning"
+							:data-testid="'order-envio-estado-' + order.id">A despachar en Andreani</b-badge>
+						</span>
+					</div>
+				</div>
+				<p class="envio-modal__titulo m-t-15">Para cargar en Andreani</p>
+				<pre
+				class="envio-modal__datos-andreani"
+				:data-testid="'envio-andreani-datos-' + order.id">{{ texto_datos_de_andreani }}</pre>
+				<p
+				v-if="!tarjeta_andreani_conectada"
+				class="envio-modal__vacio m-t-10"
+				:data-testid="'envio-andreani-sin-tarjeta-' + order.id">
+					Para ver tu número de cliente y tu contrato acá, conectá Andreani en Integraciones → Tienda online.
+				</p>
+				<p class="envio-modal__ayuda">
+					Todavía no generamos la orden por la API de Andreani: cargala vos en el portal de Andreani con
+					estos datos y avisale al comprador.
+				</p>
+				<div class="envio-modal__acciones">
+					<btn-loader
+					:block="false"
+					icon_class="bi bi-clipboard"
+					text="Copiar datos"
+					variant="primary"
+					:data-testid="'order-envio-andreani-copiar-' + order.id"
+					@clicked="copiar_datos_andreani"></btn-loader>
+				</div>
+			</div>
+
+			<!--
 				Fila en `generando` dentro de la ventana: hay un request a Zipnova en curso (o que
 				acaba de salir). No hay nada que operar todavía; se ofrece volver a leer el pedido.
 			-->
@@ -304,9 +367,10 @@
 <script>
 import moment from 'moment'
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import IntegrationConnector from '@/mixins/integration_connector'
 import MapaDireccion from '@/components/online/components/orders/envio/MapaDireccion'
 import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
-import { envio_va_por_zipnova, es_forma_propia_a_convenir } from '@/utils/formas_de_envio'
+import { envio_va_por_zipnova, envio_va_por_andreani, texto_datos_andreani, es_forma_propia_a_convenir } from '@/utils/formas_de_envio'
 import { direccion_de_envio_del_pedido, direccion_desde_envio_direccion } from '@/utils/direccion_de_envio'
 
 /**
@@ -348,11 +412,18 @@ import { direccion_de_envio_del_pedido, direccion_desde_envio_direccion } from '
  *   ruta no sirve: un 422 ("la etiqueta todavía no está lista") dejaba una pestaña con JSON
  *   crudo, y la ruta vive en `auth:sanctum`, que con una navegación depende del Referer.
  *
+ * 🔴 Andreani (misión envios-andreani, 25/11/2026): un pedido con `envio_proveedor = 'andreani'`
+ * (`envio_va_por_andreani`) NO se genera por ninguna API. El modal muestra la opción elegida, el estado
+ * fijo "A despachar en Andreani" y el bloque "Para cargar en Andreani" con los datos del pedido y de la
+ * tarjeta (cliente y contrato, de `GET integraciones`), más el botón "Copiar datos". Sin botones de
+ * generar, etiqueta ni cancelar.
+ *
  * El pedido normalmente genera el envío solo al confirmarse (OrderController@update); este modal
  * es para ver el estado y para los casos donde eso falló (Zipnova caído, credenciales vencidas):
  * el error queda en `envio.error_message` y el botón permite reintentar.
  */
 export default {
+	mixins: [IntegrationConnector],
 	components: {
 		BtnLoader,
 		MapaDireccion,
@@ -398,6 +469,9 @@ export default {
 			// Espejo de OrderStatusHelper::AVANCE sin "Sin confirmar": los únicos estados en los que
 			// se puede generar el envío. Uno desconocido (o que no se puede resolver) no habilita.
 			estados_confirmados: ['Confirmado', 'Terminado', 'Entregado'],
+			// Item `andreani` de GET integraciones (cliente y contratos para el texto de "Copiar datos").
+			// Se pide al abrir el modal de un pedido Andreani; null mientras no llegó o si no hay tarjeta.
+			integracion_andreani: null,
 		}
 	},
 	computed: {
@@ -448,8 +522,21 @@ export default {
 			}
 			return 'Sin costo para el comprador'
 		},
+		// El envío sale por Andreani (espejo de Order::envio_va_por_andreani(), ver utils/formas_de_envio.js)
+		va_por_andreani() {
+			return envio_va_por_andreani(this.order)
+		},
+		// La tarjeta de Andreani está conectada (si no, el texto no trae cliente ni contrato)
+		tarjeta_andreani_conectada() {
+			return !!(this.integracion_andreani && this.integracion_andreani.connected)
+		},
+		// El texto de "Copiar datos", que es también lo que se ve en el bloque "Para cargar en Andreani"
+		texto_datos_de_andreani() {
+			return texto_datos_andreani(this.order, this.integracion_andreani)
+		},
+		// Retiro en una sucursal del correo (Zipnova o Andreani)
 		es_punto_de_retiro() {
-			return !!(this.va_por_zipnova && this.opcion && this.opcion.es_punto_de_retiro)
+			return !!((this.va_por_zipnova || this.va_por_andreani) && this.opcion && this.opcion.es_punto_de_retiro)
 		},
 		// Nombre y apellido: del destino de Zipnova si lo hay, si no del comprador del pedido
 		nombre_destinatario() {
@@ -710,6 +797,76 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Al abrir el modal de un pedido Andreani, trae la tarjeta de Andreani (cliente y contratos)
+		 * para el texto de "Copiar datos". No se pide al montar: cada fila del listado monta su modal.
+		 * Si falla (o no hay tarjeta) el texto sale igual, sólo sin cliente ni contrato.
+		 *
+		 * @returns {void}
+		 */
+		al_abrir() {
+			if (!this.va_por_andreani || this.integracion_andreani) {
+				return
+			}
+			let self = this
+			this.requestIntegraciones()
+			.then(res => {
+				let lista = res.data && res.data.integraciones ? res.data.integraciones : []
+				self.integracion_andreani = lista.filter(item => item.slug == 'andreani')[0] || null
+			})
+			.catch(err => {
+				console.log(err)
+			})
+		},
+		/**
+		 * Copia al portapapeles el texto de "Para cargar en Andreani". Usa la API moderna cuando
+		 * existe y, si no (HTTP sin certificado o permisos bloqueados), un textarea temporal con
+		 * `execCommand('copy')`, igual que el código de vinculación de las impresoras.
+		 *
+		 * @returns {void}
+		 */
+		copiar_datos_andreani() {
+			let self = this
+			let texto = this.texto_datos_de_andreani
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(texto)
+				.then(() => {
+					self.$toast.success('Datos copiados: pegalos en el portal de Andreani')
+				})
+				.catch(() => {
+					self.copiar_con_textarea(texto)
+				})
+				return
+			}
+			this.copiar_con_textarea(texto)
+		},
+		/**
+		 * Plan B del copiado: un textarea fuera de pantalla, seleccionado y copiado con execCommand.
+		 *
+		 * @param {String} texto Texto a copiar.
+		 * @returns {void}
+		 */
+		copiar_con_textarea(texto) {
+			let area = document.createElement('textarea')
+			area.value = texto
+			area.setAttribute('readonly', '')
+			area.style.position = 'fixed'
+			area.style.left = '-9999px'
+			document.body.appendChild(area)
+			area.select()
+			let copiado = false
+			try {
+				copiado = document.execCommand('copy')
+			} catch (e) {
+				copiado = false
+			}
+			document.body.removeChild(area)
+			if (copiado) {
+				this.$toast.success('Datos copiados: pegalos en el portal de Andreani')
+			} else {
+				this.$toast.error('No se pudo copiar: seleccioná el texto y copialo a mano')
+			}
+		},
 		/**
 		 * Abre el mapa con la dirección de entrega (se apila arriba de este modal).
 		 *
@@ -1103,6 +1260,21 @@ export default {
 
 		i
 			margin-right: 4px
+
+	// Texto de "Para cargar en Andreani": es lo que copia el botón, así que se ve tal cual, con sus
+	// saltos de línea, y los renglones largos bajan en vez de ensanchar el modal.
+	.envio-modal__datos-andreani
+		margin: 0
+		padding: 12px 15px
+		font-family: inherit
+		font-size: 0.875rem
+		line-height: 1.5
+		white-space: pre-wrap
+		word-break: break-word
+		color: var(--color-text-primary)
+		background: var(--bg-section)
+		border: 1px solid var(--color-border)
+		border-radius: 8px
 
 	.envio-modal__error
 		font-size: 0.875rem
