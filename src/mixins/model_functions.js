@@ -1272,6 +1272,19 @@ export default {
         mostrar_reservar_stock_pedidos_web(prop, model) {
             return !!(this.is_owner && model && typeof model.reservar_stock_pedidos_web != 'undefined')
         },
+        /**
+         * `v_if_function` genérico para casillas que una API vieja todavía no persiste (misión
+         * carritos-ajuste-stock): se muestra sólo si el modelo trae la clave de la propiedad,
+         * con cualquier valor (incluidos false y 0). Sin la clave la casilla se dibujaría
+         * apagada sin que la tienda respete esa elección.
+         *
+         * @param {object} prop Propiedad declarada en el modelo (usa `prop.key`).
+         * @param {object} model Modelo que llega de la API.
+         * @returns {boolean} true si hay que mostrar la casilla.
+         */
+        mostrar_si_la_api_manda_la_clave(prop, model) {
+            return !!model && typeof model[prop.key] != 'undefined'
+        },
         mostrar_permitir_pedidos_sin_stock(prop, model) {
             return !!model && typeof model.permitir_pedidos_sin_stock != 'undefined'
         },

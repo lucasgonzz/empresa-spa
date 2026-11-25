@@ -392,6 +392,27 @@ export default {
 			key: 'enviar_whatsapp_al_terminar_pedido',
 			type: 'checkbox',
 		},
+		{
+			/*
+				Misión carritos-ajuste-stock (25/11/2026): con el stock bajando (ventas del sistema o
+				pedidos de otros compradores), los carritos abiertos pasan a la cantidad que todavía se
+				puede comprar. Solo se ve si la API manda la clave: contra una API vieja la casilla
+				se dibujaría apagada sin que la tienda respete esa elección.
+			*/
+			text: 'Ajustar los carritos cuando baja el stock',
+			key: 'ajustar_carritos_por_stock',
+			type: 'checkbox',
+			v_if_function: 'mostrar_si_la_api_manda_la_clave',
+			description: 'Si el stock baja por una venta o por un pedido confirmado, los carritos abiertos de tu tienda pasan a la cantidad que todavía se puede comprar y el comprador ve un aviso en ese producto. Cuando repongas, se le completa la cantidad original si dejó marcada esa opción. No se aplica a los productos que la tienda vende sin control de stock (por ejemplo con «Ignorar el stock en la Tienda»). Si la apagás, los carritos no se tocan y la disponibilidad la revisás al confirmar el pedido.',
+		},
+		{
+			// Misión carritos-ajuste-stock: aviso en el carrito cuando otros carritos suman más que el stock.
+			text: 'Avisar en el carrito que un producto puede agotarse',
+			key: 'avisar_puede_agotarse',
+			type: 'checkbox',
+			v_if_function: 'mostrar_si_la_api_manda_la_clave',
+			description: 'Si un producto del carrito también está en carritos de otros clientes y entre todos superan el stock, el comprador ve: «Este producto está en el carrito de otros clientes; si mandan su pedido antes, puede agotarse». No se muestra cuántos clientes ni cuántas unidades.',
+		},
 
 		/*
 			El grupo "Login con Google" (google_login_enabled, google_client_id y
@@ -462,6 +483,14 @@ export default {
 			key: 'avisar_ingreso_stock_por_mail',
 			type: 'checkbox',
 			description: 'Aplica a los clientes que tocaron "Avisarme cuando este disponible" en un articulo sin stock. Antes esto se configuraba en el servidor; ahora lo manejas vos desde aca.',
+		},
+		{
+			// Misión carritos-ajuste-stock: mail al comprador cuando se le recorta o se le completa el carrito.
+			text: 'Avisar por mail al comprador cuando se ajusta su carrito',
+			key: 'avisar_ajuste_carrito_por_mail',
+			type: 'checkbox',
+			v_if_function: 'mostrar_si_la_api_manda_la_clave',
+			description: 'Le llega un mail cuando le bajamos la cantidad de un producto por falta de stock y cuando se la completamos al reponer.',
 		},
 
 		{
