@@ -70,6 +70,26 @@ export default {
 			description: 'Lo que se le suma al total del pedido cuando el comprador elige esta forma de envío.',
 		},
 		{
+			// Misión truvari-carrito-entrega-pago (26/11/2026). Vacío = nunca es gratis por monto. Se
+			// compara contra el total del carrito (artículos y promociones, antes del envío).
+			text: 'Envío gratis desde (monto de compra)',
+			key: 'envio_gratis_desde',
+			type: 'number',
+			value: '',
+			not_show: true,
+			v_if_function: 'mostrar_envio_gratis_de_forma',
+			description: 'Si el comprador llega a este monto de compra, la tienda le muestra y le cobra el envío gratis. Dejalo vacío si no querés envío gratis por monto. Por ejemplo: 80000 para envío gratis desde $ 80.000.',
+		},
+		{
+			// Misión truvari-carrito-entrega-pago. Cuenta tanto un combo como una promoción.
+			text: 'Envío gratis si el pedido tiene un combo o promoción',
+			key: 'envio_gratis_con_combo',
+			type: 'checkbox',
+			not_show: true,
+			v_if_function: 'mostrar_envio_gratis_de_forma',
+			description: 'Si lo tildás, un pedido que incluye al menos un combo o una promoción tiene el envío gratis aunque no llegue al monto mínimo.',
+		},
+		{
 			// Columna de la tabla, solo lectura: el precio, o "A convenir" si el costo se coordina
 			// con el comprador. No es una columna de la base: no viaja al guardar.
 			text: 'Costo',
@@ -80,7 +100,7 @@ export default {
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Define tus propias formas de envío a domicilio para la tienda online, además del envío por correo con Zipnova. Cada forma puede cobrar un precio fijo (por ejemplo, "Reparto en la ciudad") o dejar el costo a coordinar con el comprador (por ejemplo, "Acordar con el vendedor").',
-		implicancias: 'El comprador elige la forma de envío al finalizar el pedido. Si la forma tiene precio, ese precio se suma al total de la compra. Si tildás "El costo se coordina con el comprador", la tienda no cobra nada por el envío y le muestra "A coordinar con el vendedor": vos acordás la entrega y el costo cuando gestionás el pedido. Ninguna forma propia genera envíos en Zipnova.',
+		implicancias: 'El comprador elige la forma de envío al finalizar el pedido. Si la forma tiene precio, ese precio se suma al total de la compra. Si tildás "El costo se coordina con el comprador", la tienda no cobra nada por el envío y le muestra "A coordinar con el vendedor": vos acordás la entrega y el costo cuando gestionás el pedido. Ninguna forma propia genera envíos en Zipnova. Podés ofrecer envío gratis cuando la compra llega a un monto mínimo, o cuando el pedido incluye un combo o una promoción: en esos casos la tienda le muestra "Gratis" al comprador y el pedido queda con el envío sin costo.',
 		como_se_utiliza: 'Creá cada forma con un nombre y, si querés, una descripción. Después, o cargás el precio, o tildás "El costo se coordina con el comprador (no se cobra en la tienda)". Para que el comprador las vea tiene que estar activado "Ofrecer opcion de envio en la Tienda" en la configuración de la tienda online; ahí mismo podés destildar "Ofrecer envío por correo con Zipnova" para ofrecer solo tus formas propias.',
 		palabras_clave: ['envio', 'formas de envio', 'costo', 'reparto', 'zonas', 'a convenir', 'acordar con el vendedor', 'tienda'],
 	},

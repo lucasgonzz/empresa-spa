@@ -134,7 +134,8 @@
 									:limpiar_resultados_de_busqueda="prop.limpiar_resultados_de_busqueda"
 									:function_props_to_send_to_api="prop.function_props_to_send_to_api"
 									:preference_scope="search_preference_scope(prop)"
-									@set-selected="setSelected">
+									@set-selected="setSelected"
+									@search-hidden="enfocar_cantidad_agregada(prop)">
 
 										<!--
 											A la derecha del buscador de la relacion: el boton que elige que
@@ -364,6 +365,10 @@
 								:prop="prop"
 								:model="model"
 								:parent_model_name="model_name"
+								:data-teclado-deposito="teclado_deposito_activo(prop) ? 'activo' : null"
+								:campo_pivot_requerido="teclado_deposito_activo(prop) ? 'amount' : null"
+								@keydown.enter.native.capture="enter_en_cantidad(prop, $event)"
+								@keyup.enter.native.capture="enter_en_cantidad(prop, $event)"
 								:show_columns_config_btn="!show_belongs_to_many_columns_btn(prop)"
 								:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
 								@remove-model="removeModel(prop, $event)">
@@ -663,6 +668,7 @@ export default {
 	},
 	data() {
 		return {
+			fila_pendiente_de_foco: null,
 			/*
 				Guarda el último valor chequeado por cada `prop.key` para evitar requests duplicadas
 				cuando el usuario presiona Enter y el input pierde foco inmediatamente después.
@@ -1423,6 +1429,61 @@ export default {
 			this.$store.commit(prop.store+'/setModel', {model: null, properties: properties})
 			this.$bvModal.show(this.routeString(this.modelNameFromRelationKey(prop)))
 		},
+		teclado_deposito_activo(prop) {
+			return this.model_name === 'deposit_movement' && prop.key === 'articles'
+				&& !this.form_to_filter && !this.model.id
+				&& this.hasExtencion('teclado_nuevo_movimiento_deposito')
+		},
+		enfocar_cantidad_agregada(prop) {
+			if (prop.key !== 'articles' || !this.fila_pendiente_de_foco) {
+				return
+			}
+
+			const fila = this.fila_pendiente_de_foco
+			this.fila_pendiente_de_foco = null
+			// Esperar a que BootstrapVue devuelva el foco y se renderice el pivote de la fila.
+			this.$nextTick(() => {
+				const buscador = this.$el.querySelector('input[id="deposit_movement-articles"]')
+				this.intentar_enfocar_cantidad(prop, fila, buscador, document.activeElement, 20)
+			})
+		},
+		intentar_enfocar_cantidad(prop, fila, buscador, foco_al_cerrar, intentos) {
+			if (!buscador || !this.$el.isConnected || !this.teclado_deposito_activo(prop)) {
+				return
+			}
+			if (document.activeElement !== foco_al_cerrar) {
+				return
+			}
+
+			const tabla = this.$el.querySelector('[data-teclado-deposito="activo"]')
+			const indice = this.model.articles.length - 1
+			if (!tabla || this.model.articles[indice] !== fila) {
+				return
+			}
+
+			const cantidades = tabla.querySelectorAll('input[data-testid^="article-amount-"]')
+			const cantidad = cantidades[indice]
+			if (cantidad) {
+				cantidad.focus()
+			} else if (intentos > 0) {
+				setTimeout(() => this.intentar_enfocar_cantidad(prop, fila, buscador, foco_al_cerrar, intentos - 1), 50)
+			}
+		},
+		enter_en_cantidad(prop, event) {
+			if (!this.teclado_deposito_activo(prop)
+				|| !event.target.matches('input[data-testid^="article-amount-"]')) {
+				return
+			}
+
+			event.preventDefault()
+			event.stopPropagation()
+			if (event.type === 'keyup') {
+				const buscador = this.$el.querySelector('input[id="deposit_movement-articles"]')
+				if (buscador) {
+					buscador.focus()
+				}
+			}
+		},
 		setSelected(result) {
 
 			let prop = result.prop
@@ -1441,7 +1502,8 @@ export default {
 			}
 
 			if (prop.belongs_to_many) {
-				let model_to_add = result.model 
+				const carga_por_teclado = this.teclado_deposito_activo(prop)
+				let model_to_add = carga_por_teclado ? { ...result.model } : result.model
 				if (this.checkBelongsToManyExist(prop, model_to_add, result)) {
 
 					this.setBelongsToManyPivotProps(prop, model_to_add, result)
@@ -1664,7 +1726,11 @@ export default {
 			this.model[prop.key].push(model_to_add)
 			// this.$set(this.model, prop.key, this.model[prop.key])
 
-			this.setTableFocus(prop, model_to_add)
+			if (result.con_enter && this.teclado_deposito_activo(prop)) {
+				this.fila_pendiente_de_foco = model_to_add
+			} else {
+				this.setTableFocus(prop, model_to_add)
+			}
 
 			this.$store.commit(this.model_name+'/setModel', {
 				model: {

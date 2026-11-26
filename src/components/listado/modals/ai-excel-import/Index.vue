@@ -1569,6 +1569,9 @@ import {
 	paso_a_retomar,
 } from './borrador'
 
+/* Mensaje cuando no se pudo detectar la última fila (ni en el navegador ni en el servidor). */
+const MENSAJE_SIN_FILAS = 'No se pudo leer el archivo para detectar filas. Podés analizar igual; el servidor ajustará el rango.'
+
 export default {
 	/* Prueba gratuita (misión prueba-experiencia-empresa, 3/11/2026): el aviso antes del primer import. */
 	mixins: [prueba],
@@ -1745,6 +1748,14 @@ export default {
 			 * del Excel para nada.
 			 */
 			workbook_cache: null,
+
+			/*
+			 * true cuando las hojas y la última fila con contenido las informó el servidor
+			 * porque SheetJS no pudo leer el .xlsx (por ejemplo, zip64 de un Excel enorme).
+			 * En ese caso no hay libro en memoria ni encabezado detectado en el navegador:
+			 * el encabezado se toma después del análisis del backend.
+			 */
+			filas_desde_el_servidor: false,
 
 			/*
 			 * Defecto 3 (encabezado corrido): fila 1-based donde está el encabezado, según
@@ -3323,6 +3334,29 @@ export default {
 			 * fuente correcta, y pisarlos con un cálculo imposible sería peor.
 			 */
 			if (!this.workbook_cache) {
+				/*
+				 * Excepción: las hojas que informó el servidor (SheetJS no pudo leer el
+				 * archivo) traen su última fila con contenido. Las de la rehidratación no
+				 * traen esa clave y siguen saliendo por el return de siempre.
+				 */
+				let hoja_del_servidor = (this.hojas || [])[Number(nuevo_indice)]
+
+				if (hoja_del_servidor && typeof hoja_del_servidor.ultima_fila_con_contenido === 'number') {
+					let ultima_fila_servidor = hoja_del_servidor.ultima_fila_con_contenido
+
+					this.hoja_leida = Number(nuevo_indice)
+
+					if (ultima_fila_servidor > 0) {
+						this.finish_row            = ultima_fila_servidor
+						this.finish_row_original   = ultima_fila_servidor
+						this.excel_rows_read_error = ''
+					} else {
+						this.finish_row            = ''
+						this.finish_row_original   = ''
+						this.excel_rows_read_error = 'No se pudo leer esa hoja para detectar filas. Probá con otra hoja.'
+					}
+				}
+
 				return
 			}
 
@@ -3525,6 +3559,7 @@ export default {
 				this.finish_row = ''
 				this.finish_row_original = ''
 				this.excel_rows_read_error = ''
+				this.filas_desde_el_servidor = false
 				return
 			}
 
@@ -3675,6 +3710,7 @@ export default {
 			self.hoja_leida           = null
 			self.encabezado_fila      = null
 			self.encabezado_confianza = 'alta'
+			self.filas_desde_el_servidor = false
 
 			if (self.es_archivo_pdf(file)) {
 				self.file_processing = false
@@ -3699,9 +3735,48 @@ export default {
 						resolve(ultima_fila_con_contenido)
 					} catch (err) {
 						console.error('Error al leer filas del Excel:', err)
-						self.file_processing = false
-						self.excel_rows_read_error = 'No se pudo leer el archivo para detectar filas. Podés analizar igual; el servidor ajustará el rango.'
-						reject(err)
+
+						/* Sólo los .xlsx se pueden consultar al servidor: el resto queda como siempre. */
+						if (!self.es_archivo_xlsx(file)) {
+							self.file_processing = false
+							self.excel_rows_read_error = MENSAJE_SIN_FILAS
+							reject(err)
+							return
+						}
+
+						/* file_processing sigue en true: se ve "Leyendo filas..." y analizar() espera. */
+						self.pedir_filas_al_servidor(file).then(function(hojas) {
+							/* El usuario cambió de archivo mientras el servidor contestaba. */
+							if (self.file !== file) {
+								resolve()
+								return
+							}
+
+							let ultima_fila_servidor = self.aplicar_hojas_del_servidor(hojas)
+
+							if (ultima_fila_servidor > 0) {
+								self.finish_row = ultima_fila_servidor
+								self.finish_row_original = ultima_fila_servidor
+								self.excel_rows_read_error = ''
+							} else {
+								self.finish_row = ''
+								self.finish_row_original = ''
+								self.excel_rows_read_error = MENSAJE_SIN_FILAS
+							}
+
+							self.file_processing = false
+							resolve(ultima_fila_servidor)
+						}).catch(function(error_servidor) {
+							if (self.file !== file) {
+								resolve()
+								return
+							}
+
+							console.error('El servidor tampoco pudo detectar las filas del Excel:', error_servidor)
+							self.file_processing = false
+							self.excel_rows_read_error = MENSAJE_SIN_FILAS
+							reject(error_servidor)
+						})
 					}
 				}
 
@@ -3724,6 +3799,89 @@ export default {
 
 				reader.readAsArrayBuffer(file)
 			})
+		},
+
+		/**
+		 * Indica si el archivo es un .xlsx (el único formato que el servidor sabe inspeccionar).
+		 *
+		 * @param {File} file - Archivo elegido
+		 * @returns {Boolean} true si el nombre termina en .xlsx (sin distinguir mayúsculas)
+		 */
+		es_archivo_xlsx(file) {
+			return !!(file && file.name && /\.xlsx$/i.test(file.name))
+		},
+
+		/**
+		 * Le pide al servidor las hojas del Excel y su última fila con contenido, para cuando
+		 * el navegador (SheetJS) no puede leer el archivo. No guarda nada en el servidor.
+		 * Prende y apaga el indicador global de carga.
+		 *
+		 * @param {File} file - Archivo .xlsx elegido
+		 * @returns {Promise<Array>} Hojas: [{ indice, nombre, filas, ultima_fila_con_contenido }]
+		 */
+		pedir_filas_al_servidor(file) {
+			let self = this
+
+			/* Cuerpo multipart con el mismo nombre de campo que usa /analyze. */
+			let form_data = new FormData()
+			form_data.append('excel_file', file)
+
+			self.$store.commit('auth/setMessage', 'Detectando las filas del Excel')
+			self.$store.commit('auth/setLoading', true)
+
+			return self.$api.post('ai-excel-import/inspeccionar-filas', form_data, {
+				headers: { 'content-type': 'multipart/form-data' },
+				timeout: 120000,
+			}).then(function(res) {
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
+
+				let hojas = res && res.data ? res.data.hojas : null
+
+				if (!Array.isArray(hojas) || hojas.length === 0) {
+					throw new Error('Respuesta sin hojas')
+				}
+
+				return hojas
+			}).catch(function(err) {
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
+				throw err
+			})
+		},
+
+		/**
+		 * Arma el estado del paso 1 con las hojas informadas por el servidor (no hay libro de
+		 * SheetJS ni encabezado detectado en el navegador).
+		 *
+		 * @param {Array} hojas - Hojas devueltas por el servidor
+		 * @returns {Number} Última fila con contenido de la primera hoja (0 si no tiene)
+		 */
+		aplicar_hojas_del_servidor(hojas) {
+			let hojas_armadas = []
+
+			hojas.forEach(function(hoja, posicion) {
+				hojas_armadas.push({
+					indice: Number(hoja.indice !== undefined ? hoja.indice : posicion),
+					nombre: hoja.nombre,
+					filas: Number(hoja.filas) || 0,
+					ultima_fila_con_contenido: Number(hoja.ultima_fila_con_contenido) || 0,
+				})
+			})
+
+			this.workbook_cache = null
+			this.hojas = hojas_armadas
+			this.hoja_seleccionada = hojas_armadas.length === 1 ? 0 : null
+			/* Se "leyó" la hoja 0, igual que en el camino de SheetJS. */
+			this.hoja_leida = 0
+			this.encabezado_fila = null
+			this.encabezado_confianza = 'alta'
+			/* Orden a propósito: primero start_row y después has_header_row. */
+			this.start_row = 2
+			this.has_header_row = true
+			this.filas_desde_el_servidor = true
+
+			return hojas_armadas[0].ultima_fila_con_contenido
 		},
 
 		/*
@@ -4920,6 +5078,15 @@ export default {
 
 			this.hoja_elegida_del_backend = resultado.hoja_elegida || null
 			this.encabezado_del_backend   = resultado.encabezado_detectado || null
+
+			/*
+			 * Si las filas vinieron del servidor, el navegador no detectó el encabezado: se toma el
+			 * del análisis del backend (los datos arrancan en la fila siguiente).
+			 */
+			if (this.filas_desde_el_servidor && this.encabezado_del_backend && this.encabezado_del_backend.fila) {
+				this.start_row = Number(this.encabezado_del_backend.fila) + 1
+				this.has_header_row = true
+			}
 
 			if (this.hoja_elegida_del_backend && this.hoja_elegida_del_backend.indice !== null && this.hoja_elegida_del_backend.indice !== undefined) {
 				/*
@@ -7372,6 +7539,7 @@ export default {
 			this.hoja_seleccionada           = null
 			this.hoja_leida                  = null
 			this.workbook_cache              = null
+			this.filas_desde_el_servidor     = false
 			this.encabezado_fila             = null
 			this.encabezado_confianza        = 'alta'
 			this.columnas_sin_nombre         = []

@@ -68,6 +68,8 @@
 		<div class="login-page__right">
 			<div class="login-page__form-wrap">
 				<vinculacion-navegador-maestro v-if="$route.query.vincular === '1'" />
+				<!-- Aviso de actualización del sistema (misión aviso-actualizacion-sistema): sólo se ve mientras dura -->
+				<aviso-sistema-actualizando />
 				<login-form :split_layout="true" />
 				<!-- Mobile: nota de seguridad debajo del botón -->
 				<div class="login-page__security login-page__security--mobile">
@@ -89,6 +91,7 @@
 <script>
 import LoginForm from '@/common-vue/components/login/LoginForm'
 import VinculacionNavegadorMaestro from '@/common-vue/components/login/VinculacionNavegadorMaestro'
+import AvisoSistemaActualizando from '@/components/common/AvisoSistemaActualizando'
 
 /**
  * Vista de login split-screen (desktop) y apilada (mobile).
@@ -99,6 +102,7 @@ export default {
 	components: {
 		LoginForm,
 		VinculacionNavegadorMaestro,
+		AvisoSistemaActualizando,
 	},
 }
 </script>

@@ -105,6 +105,79 @@ export function precio_de_forma_propia(delivery_zone) {
 }
 
 /**
+ * Si un valor guardado en el pedido es un número usable (la foto del precio del envío). Null,
+ * undefined, '' y textos no numéricos significan "el pedido no tiene foto".
+ *
+ * @param {*} valor
+ * @returns {Boolean}
+ */
+function es_numero_guardado(valor) {
+	return valor !== null && typeof valor != 'undefined' && String(valor).trim() !== '' && isFinite(Number(valor))
+}
+
+/**
+ * Lo que la forma de envío propia le sumó al total de UN pedido (misión
+ * truvari-carrito-entrega-pago, 26/11/2026).
+ *
+ * La tienda deja en el pedido la foto de lo que cobró (`orders.envio_zona_precio`): si la forma
+ * tenía "envío gratis desde $ X" o "gratis con combos", el precio pudo ser 0 aunque la forma
+ * cueste más hoy. Se usa esa foto cuando existe; si no (pedido viejo o tienda vieja) se lee el
+ * precio vivo de la forma, como siempre.
+ *
+ * 🔴 Una forma a convenir aporta 0 SIEMPRE, con o sin foto.
+ *
+ * @param {Object|null} order Pedido (con `delivery_zone` y `envio_zona_precio`).
+ * @returns {Number}
+ */
+export function precio_de_forma_propia_del_pedido(order) {
+	if (!order) {
+		return 0
+	}
+	if (es_forma_propia_a_convenir(order.delivery_zone)) {
+		return 0
+	}
+	if (es_numero_guardado(order.envio_zona_precio)) {
+		return Number(order.envio_zona_precio)
+	}
+	return precio_de_forma_propia(order.delivery_zone)
+}
+
+/**
+ * Texto del costo de la forma propia de un pedido, para el modal de envío.
+ *
+ * "A convenir" / "Gratis (compras desde $ 80.000)" / "Gratis (con combos)" / "Gratis" / el importe
+ * cobrado / "Sin costo para el comprador" (pedido sin foto y forma de $0).
+ *
+ * @param {Object|null} order Pedido (con `delivery_zone`, `envio_zona_precio`, `envio_zona_gratis_motivo`).
+ * @param {Function} formato_precio Convierte un número en "$ 7.000" (el `price` de la app).
+ * @returns {String}
+ */
+export function texto_costo_forma_propia_del_pedido(order, formato_precio) {
+	if (!order || !order.delivery_zone) {
+		return ''
+	}
+	let zona = order.delivery_zone
+	if (es_forma_propia_a_convenir(zona)) {
+		return 'A convenir'
+	}
+	let precio = precio_de_forma_propia_del_pedido(order)
+	if (precio > 0) {
+		return formato_precio(precio)
+	}
+	// Precio 0: gratis si hay foto (la tienda lo resolvió así); si no hay foto es una forma de $0.
+	if (!es_numero_guardado(order.envio_zona_precio)) {
+		return 'Sin costo para el comprador'
+	}
+	if (order.envio_zona_gratis_motivo == 'monto' && Number(zona.envio_gratis_desde) > 0) {
+		return 'Gratis (compras desde ' + formato_precio(zona.envio_gratis_desde) + ')'
+	}
+	if (order.envio_zona_gratis_motivo == 'combo') {
+		return 'Gratis (con combos)'
+	}
+	return 'Gratis'
+}
+
+/**
  * Si el envío del pedido sale por Andreani (misión envios-andreani, 25/11/2026). Espejo de
  * `Order::envio_va_por_andreani()` de empresa-api.
  *
