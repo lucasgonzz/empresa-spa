@@ -48,8 +48,6 @@ import GuiaDeVenta from '@/components/asistente-ia/GuiaDeVenta'
 import mostrador_acceso from '@/mixins/mostrador_acceso'
 import { abre_en_soporte } from '@/components/asistente-ia/prueba_en_soporte'
 
-const CONTROLES = 'a, button, label, input, textarea, select, summary, [contenteditable], [tabindex], [role="button"], [role="link"], [draggable=true]'
-
 export default {
 	mixins: [mostrador_acceso],
 	components: {
@@ -104,24 +102,11 @@ export default {
 		this.$root.$on('agentes:abrir', this.abrir_desde_navegacion)
 		this.$root.$on('agentes:cerrar', this.cerrar)
 		document.addEventListener('keydown', this.atajo_del_asistente)
-		document.addEventListener('pointerdown', this.iniciar_pulsacion, true)
-		document.addEventListener('pointermove', this.mover_pulsacion, true)
-		document.addEventListener('pointerup', this.cancelar_pulsacion, true)
-		document.addEventListener('pointercancel', this.cancelar_pulsacion, true)
-		document.addEventListener('dragstart', this.cancelar_pulsacion, true)
-		window.addEventListener('blur', this.cancelar_pulsacion)
 	},
 	beforeDestroy() {
-		this.cancelar_pulsacion()
 		this.$root.$off('agentes:abrir', this.abrir_desde_navegacion)
 		this.$root.$off('agentes:cerrar', this.cerrar)
 		document.removeEventListener('keydown', this.atajo_del_asistente)
-		document.removeEventListener('pointerdown', this.iniciar_pulsacion, true)
-		document.removeEventListener('pointermove', this.mover_pulsacion, true)
-		document.removeEventListener('pointerup', this.cancelar_pulsacion, true)
-		document.removeEventListener('pointercancel', this.cancelar_pulsacion, true)
-		document.removeEventListener('dragstart', this.cancelar_pulsacion, true)
-		window.removeEventListener('blur', this.cancelar_pulsacion)
 		if (this.ai_chat_echo_channel && this.Echo) {
 			this.Echo.leave(this.ai_chat_echo_channel)
 		}
@@ -174,7 +159,6 @@ export default {
 			},
 		},
 		$route(destino, origen) {
-			this.cancelar_pulsacion()
 			if (destino.name === 'agentes' && origen.name && origen.name !== 'login' && origen.name !== 'agentes') {
 				this.ultima_ruta = origen.fullPath
 			}
@@ -214,25 +198,6 @@ export default {
 		cerrar() {
 			this.$store.commit('ai_chat/setPanelAbierto', false)
 			if (this.en_modulo) this.volver_al_sistema()
-		},
-		iniciar_pulsacion(evento) {
-			this.cancelar_pulsacion()
-			if (!this.should_show || this.abierto || evento.pointerType !== 'mouse' || evento.button !== 0 || evento.altKey || evento.metaKey || evento.ctrlKey || evento.shiftKey) return
-			if (!evento.target.closest || !evento.target.closest('#app') || evento.target.closest(CONTROLES + ', .modal, .driver-popover')) return
-			this._pulsacion = { x: evento.clientX, y: evento.clientY }
-			this._pulsacion_temporizador = setTimeout(() => {
-				this.cancelar_pulsacion()
-				if (!this.should_show || this.abierto || window.getSelection().toString() || document.querySelector('.modal.show, .driver-active')) return
-				this.abrir_desde_navegacion('lateral')
-			}, 1000)
-		},
-		mover_pulsacion(evento) {
-			const inicio = this._pulsacion
-			if (inicio && (evento.buttons !== 1 || Math.hypot(evento.clientX - inicio.x, evento.clientY - inicio.y) > 6)) this.cancelar_pulsacion()
-		},
-		cancelar_pulsacion() {
-			clearTimeout(this._pulsacion_temporizador)
-			this._pulsacion = null
 		},
 		atajo_del_asistente(evento) {
 			if (!this.should_show || !this.$el || evento.defaultPrevented || evento.repeat || evento.isComposing || !evento.altKey || !evento.shiftKey || evento.ctrlKey || evento.metaKey || evento.code !== 'KeyA') return
