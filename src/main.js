@@ -10,6 +10,7 @@ import { env } from '@/runtime_config'
 import { envolver_echo } from '@/utils/canales_en_vivo'
 import { iniciar_diagnostico_conexion } from '@/utils/diagnostico_conexion'
 import { interceptor_cookie_xsrf_propia } from '@/utils/cookie_xsrf_propia'
+import { es_respuesta_de_actualizacion, mensaje_de_actualizacion } from '@/utils/actualizacion_del_sistema'
 
 let diagnostico_de_conexion = null
 
@@ -412,6 +413,26 @@ function global_api_error_interceptor(error) {
         store.commit('auth/setMessage', '')
         if (router.currentRoute.name !== 'pruebaTerminada') {
             router.replace({ name: 'pruebaTerminada' }).catch(() => {})
+        }
+        return Promise.reject(error)
+    }
+
+    /*
+     * Sistema en actualización (misión aviso-actualizacion-sistema, 25/11/2026): empresa-api contesta 503
+     * `sistema_actualizando` en toda ruta con sesión, en el login y durante el `down` del deploy. No es un
+     * error: se prende el bloqueo (lo muestra la tarjeta de la pantalla de ingreso) y, si había sesión, se
+     * la cierra en el front para que el watch de App.vue lleve al login. Sin toast.
+     */
+    if (es_respuesta_de_actualizacion(error)) {
+        store.commit('actualizacion_del_sistema/set_bloqueado', mensaje_de_actualizacion(error))
+        store.commit('auth/setLoading', false)
+        store.commit('auth/setMessage', '')
+        // El servidor contestó: no se está sin conexión (el login no tiene que decir "Sin conexión").
+        store.commit('auth/set_sesion_sin_conexion', null)
+        store.commit('auth/set_online', true)
+        if (is_authenticated) {
+            store.commit('auth/setAuthenticated', false)
+            store.commit('auth/setUser', null)
         }
         return Promise.reject(error)
     }

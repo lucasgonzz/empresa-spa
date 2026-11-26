@@ -154,6 +154,7 @@
 </template>
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import { es_respuesta_de_actualizacion } from '@/utils/actualizacion_del_sistema'
 
 export default {
 	components: {
@@ -266,6 +267,15 @@ export default {
 							&& err.response.data && err.response.data.error === 'prueba_vencida') {
 							return
 						}
+						/*
+							Sistema en actualización (misión aviso-actualizacion-sistema, 25/11/2026): la API
+							contesta 503 `sistema_actualizando` y el interceptor de main.js ya dejó el aviso en
+							la tarjeta de arriba del formulario (mismo texto que manda la API). Es un estado
+							normal, no un error de ingreso: sin toast.
+						*/
+						if (es_respuesta_de_actualizacion(err)) {
+							return
+						}
 						this.$toast.error('Error al ingresar. Recargá la página e intentá de nuevo.')
 					})
 			}
@@ -297,6 +307,11 @@ export default {
 				.catch(err => {
 					console.log(err)
 					this.forcing_login = false
+					// Sistema en actualización: la tarjeta del login ya lo explica (ver login()).
+					if (es_respuesta_de_actualizacion(err)) {
+						this.$bvModal.hide('sesion-en-otro-dispositivo')
+						return
+					}
 					this.$toast.error('No se pudo cerrar la otra sesión. Probá de nuevo en unos segundos.')
 				})
 		},

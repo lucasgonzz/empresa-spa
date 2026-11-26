@@ -77,6 +77,11 @@ export default {
             this.listenSupportChannel()
             // Escucha si ESTE dispositivo es expulsado por un login forzado en otro (candado de sesión única).
             this.listenSessionForcedLogoutChannel()
+            // Aviso de actualización del sistema (misión aviso-actualizacion-sistema): pedido de OK en vivo y
+            // polling de presencia. El método vive en mixins/actualizacion_del_sistema.js (mezclado en App.vue).
+            if (typeof this.escuchar_actualizacion_del_sistema === 'function') {
+                this.escuchar_actualizacion_del_sistema()
+            }
 		},
         /**
          * Se suscribe al canal por el que `empresa-api` avisa que TERMINO una tanda de generacion

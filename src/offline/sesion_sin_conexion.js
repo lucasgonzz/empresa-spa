@@ -29,6 +29,7 @@
 	privada, cuota llena) no puede romper el inicio de sesión ni el arranque.
 */
 import db from './db'
+import { es_respuesta_de_actualizacion } from '@/utils/actualizacion_del_sistema'
 
 /**
  * Clave de la sesión guardada en la tabla `meta`.
@@ -217,6 +218,9 @@ export function borrar_catalogos() {
  * - 5xx: el servidor está caído o saturado (un 502/503 del proxy, un 500 del arranque).
  *
  * Un 401/419 (sesión vencida) o un 403 NO entran: ahí el servidor contestó y dijo que no.
+ * Tampoco entra la marca 503 `sistema_actualizando` (misión aviso-actualizacion-sistema): el servidor
+ * contestó, está actualizándose a propósito, y la sesión guardada no tiene que reabrir el sistema
+ * sin conexión sino mandar al login, donde se explica.
  * Un error que no es de axios (un TypeError en un `.then`) tampoco: no es la red.
  *
  * @param {*} err
@@ -228,6 +232,9 @@ export function es_falta_de_conexion(err) {
 	}
 	if (!err.response) {
 		return true
+	}
+	if (es_respuesta_de_actualizacion(err)) {
+		return false
 	}
 	return err.response.status >= 500
 }
