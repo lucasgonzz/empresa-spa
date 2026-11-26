@@ -427,6 +427,9 @@ function global_api_error_interceptor(error) {
         store.commit('actualizacion_del_sistema/set_bloqueado', mensaje_de_actualizacion(error))
         store.commit('auth/setLoading', false)
         store.commit('auth/setMessage', '')
+        // El servidor contestó: no se está sin conexión (el login no tiene que decir "Sin conexión").
+        store.commit('auth/set_sesion_sin_conexion', null)
+        store.commit('auth/set_online', true)
         if (is_authenticated) {
             store.commit('auth/setAuthenticated', false)
             store.commit('auth/setUser', null)
