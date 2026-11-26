@@ -44,6 +44,12 @@ export default {
 		mensaje: '',
 		/* El bloqueo terminó mientras la pantalla de ingreso estaba abierta: "Ya podés ingresar". */
 		terminada: false,
+		/*
+			Cuántas veces el SERVIDOR dijo que un pedido abierto se rechazó ("Ahora no") o se canceló. Es un
+			contador y no un estado: el aviso "se pasó para la noche" lo dispara un cambio de este número y
+			nada más. Un reseteo local (logout, marca 503, bloqueo) NO lo toca: `limpiar_pedido` no pasa por acá.
+		*/
+		cancelaciones: 0,
 	},
 	getters: {
 		/**
@@ -86,7 +92,13 @@ export default {
 		set_estado(state, datos) {
 			// Cuerpo tolerante: sin objeto se toma como "libre".
 			const cuerpo = datos && typeof datos === 'object' ? datos : {}
+			// ¿Había un pedido abierto antes de esta respuesta del servidor?
+			const venia_pidiendo_ok = state.estado === 'pidiendo_ok'
 			state.estado = cuerpo.estado || 'libre'
+			// El servidor cerró el pedido sin pasar a `actualizando`: alguien dijo "Ahora no" o se canceló.
+			if (venia_pidiendo_ok && (state.estado === 'rechazado' || state.estado === 'libre')) {
+				state.cancelaciones++
+			}
 			state.mi_respuesta = cuerpo.mi_respuesta || null
 			state.total = Number(cuerpo.total) || 0
 			state.aceptaron = Number(cuerpo.aceptaron) || 0
@@ -153,7 +165,7 @@ export default {
 		 * @param {Object} contexto
 		 * @returns {Promise<Object|null>} El cuerpo de la respuesta, o null si no hubo.
 		 */
-		consultar({ commit, state }) {
+		consultar({ commit, state, rootState }) {
 			// API sin el aviso: no se vuelve a pedir.
 			if (state.sin_soporte) {
 				return Promise.resolve(null)
@@ -169,6 +181,18 @@ export default {
 			.catch(err => {
 				if (err && err.response && err.response.status === 404) {
 					commit('set_sin_soporte', true)
+				} else if (err && err.response && err.response.status === 401
+					&& rootState.auth && rootState.auth.authenticated === true) {
+					/*
+						Pestaña zombi: con 2+ pestañas del mismo navegador la primera recibe la marca y la API
+						invalida la sesión compartida; las otras reciben 401 (no la marca). Con la sesión del
+						front todavía abierta se la cierra, igual que hace el interceptor con la marca, y el
+						watch de App.vue lleva al login. NO se prende el bloqueo (no se sabe si es una
+						actualización): la tarjeta del login lo averigua con el estado público. Con la sesión
+						del front ya cerrada (logout en curso, sesión cerrada en otro dispositivo) no se toca nada.
+					*/
+					commit('auth/setAuthenticated', false, { root: true })
+					commit('auth/setUser', null, { root: true })
 				} else if (es_respuesta_de_actualizacion(err)) {
 					// El interceptor también lo hace; acá queda cubierto si el pedido salió con otro cliente axios.
 					commit('set_bloqueado', mensaje_de_actualizacion(err))
