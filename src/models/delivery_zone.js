@@ -70,6 +70,26 @@ export default {
 			description: 'Lo que se le suma al total del pedido cuando el comprador elige esta forma de envío.',
 		},
 		{
+			// Misión truvari-carrito-entrega-pago (26/11/2026). Vacío = nunca es gratis por monto. Se
+			// compara contra el total del carrito (artículos y promociones, antes del envío).
+			text: 'Envío gratis desde (monto de compra)',
+			key: 'envio_gratis_desde',
+			type: 'number',
+			value: '',
+			not_show: true,
+			v_if_function: 'mostrar_envio_gratis_de_forma',
+			description: 'Si el comprador llega a este monto de compra, la tienda le muestra y le cobra el envío gratis. Dejalo vacío si no querés envío gratis por monto. Por ejemplo: 80000 para envío gratis desde $ 80.000.',
+		},
+		{
+			// Misión truvari-carrito-entrega-pago. Cuenta tanto un combo como una promoción.
+			text: 'Envío gratis si el pedido tiene un combo o promoción',
+			key: 'envio_gratis_con_combo',
+			type: 'checkbox',
+			not_show: true,
+			v_if_function: 'mostrar_envio_gratis_de_forma',
+			description: 'Si lo tildás, un pedido que incluye al menos un combo o una promoción tiene el envío gratis aunque no llegue al monto mínimo.',
+		},
+		{
 			// Columna de la tabla, solo lectura: el precio, o "A convenir" si el costo se coordina
 			// con el comprador. No es una columna de la base: no viaja al guardar.
 			text: 'Costo',
