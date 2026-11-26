@@ -109,6 +109,38 @@ class="cc-lista">
             </template>
         </table-component>
     </div>
+
+    <!--
+        Ticket #182: modal del boton "Detalle" de un movimiento manual (nota de debito cargada a
+        mano), que no tiene venta, presupuesto ni compra para abrir. Muestra el texto completo de
+        la descripcion aunque la columna "Descripcion" este oculta o recortada en la tabla.
+    -->
+    <b-modal
+    id="detalle-movimiento-manual"
+    :title="detalle_manual.titulo"
+    ok-only
+    ok-title="Cerrar"
+    ok-variant="secondary"
+    size="md">
+        <div class="cc-detalle-manual" data-testid="detalle-movimiento-manual">
+            <div class="cc-detalle-manual__datos">
+                <span v-if="detalle_manual.fecha">Fecha: <strong>{{ detalle_manual.fecha }}</strong></span>
+                <span>Importe: <strong>$ {{ importe_del_detalle_manual }}</strong></span>
+            </div>
+            <p
+            v-if="detalle_manual.tiene_texto"
+            class="cc-detalle-manual__texto">{{ detalle_manual.texto }}</p>
+            <div
+            v-else
+            class="cc-detalle-manual__vacio">
+                <p class="cc-detalle-manual__vacio-titulo">Esta nota no tiene descripción cargada.</p>
+                <p class="cc-detalle-manual__vacio-detalle">
+                    No hay otra información para leer de este movimiento. Si necesitás saber de qué es,
+                    consultalo con quien la cargó o revisá el comprobante del proveedor.
+                </p>
+            </div>
+        </div>
+    </b-modal>
 </div>
 </template>
 <script>
@@ -117,6 +149,7 @@ import TableComponent from '@/common-vue/components/display/TableComponent'
 import current_acounts from '@/mixins/current_acounts' 
 import print from '@/mixins/current_acounts/print' 
 import { consolidada_en } from '@/utils/consolidar_desde_cuenta_corriente'
+import { abre_detalle_propio, detalle_de_movimiento_manual } from '@/utils/detalle_movimiento_manual'
 export default {
     mixins: [current_acounts, print],
     components: {
@@ -148,7 +181,20 @@ export default {
             }
         },
     },
+    data() {
+        return {
+            // Lo que muestra el modal 'detalle-movimiento-manual' (ticket #182).
+            detalle_manual: detalle_de_movimiento_manual(null),
+        }
+    },
     computed: {
+        /**
+         * Importe de la nota del modal con separador de miles argentino.
+         * @returns {String}
+         */
+        importe_del_detalle_manual() {
+            return Number(this.detalle_manual.importe).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})
+        },
         consulta_filtrada() {
             return this.$store.state.current_acount.periodo.modo != 'defecto'
         },
@@ -299,6 +345,12 @@ export default {
             } else if (current_acount.provider_order_id) {
                 model_name = 'provider_order'
                 model_id = current_acount.provider_order_id
+            } else if (abre_detalle_propio(current_acount)) {
+                // Ticket #182: movimiento manual (nota de debito) sin venta, presupuesto ni
+                // compra: el boton Detalle abre un modal con su descripcion completa. Nunca
+                // puede quedar sin accion.
+                this.detalle_manual = detalle_de_movimiento_manual(current_acount)
+                this.$bvModal.show('detalle-movimiento-manual')
             }
             if (model_name) {
                 this.show_model(model_name, model_id)
@@ -408,6 +460,47 @@ export default {
 	.cc-vacio__detalle
 		margin: 6px 0 0
 		max-width: 420px
+		font-size: 0.85rem
+		color: var(--color-text-secondary)
+
+// ─── Modal del detalle de un movimiento manual (ticket #182) ───
+// El b-modal se renderiza fuera de este componente (portal), por eso el <style> es global.
+.cc-detalle-manual
+	.cc-detalle-manual__datos
+		display: flex
+		flex-wrap: wrap
+		gap: 8px 20px
+		margin-bottom: 12px
+		font-size: 0.85rem
+		color: var(--color-text-secondary)
+
+	// Texto completo de la nota: respeta los saltos de linea y parte las palabras largas.
+	.cc-detalle-manual__texto
+		margin: 0
+		padding: 12px 14px
+		background: var(--bg-section)
+		border: 1px solid var(--color-border)
+		border-radius: 8px
+		color: var(--color-text-primary)
+		white-space: pre-wrap
+		overflow-wrap: anywhere
+		max-height: 50vh
+		overflow-y: auto
+
+	.cc-detalle-manual__vacio
+		padding: 20px 16px
+		text-align: center
+		background: var(--bg-section)
+		border: 1px dashed var(--color-border)
+		border-radius: 8px
+
+	.cc-detalle-manual__vacio-titulo
+		margin: 0
+		font-weight: 600
+		color: var(--color-text-primary)
+
+	.cc-detalle-manual__vacio-detalle
+		margin: 6px 0 0
 		font-size: 0.85rem
 		color: var(--color-text-secondary)
 </style>
