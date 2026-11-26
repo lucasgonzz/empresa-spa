@@ -29,12 +29,12 @@ export default {
 	},
 	computed: {
 		/**
-		 * Estado del pedido en el store (`libre`, `pidiendo_ok`, `rechazado`, `actualizando`).
+		 * Cuántas veces el servidor dijo que el pedido se rechazó o se canceló (ver `cancelaciones` en el store).
 		 *
-		 * @returns {String}
+		 * @returns {Number}
 		 */
-		actualizacion_estado() {
-			return this.$store.state.actualizacion_del_sistema.estado
+		actualizacion_cancelaciones() {
+			return this.$store.state.actualizacion_del_sistema.cancelaciones
 		},
 	},
 	watch: {
@@ -52,17 +52,15 @@ export default {
 			}
 		},
 		/**
-		 * Si el pedido se cancela (alguien apretó "Ahora no" o el admin lo canceló), todas las
-		 * computadoras lo cuentan con un aviso breve.
+		 * Si el SERVIDOR dice que el pedido se rechazó (alguien apretó "Ahora no") o se canceló, todas las
+		 * computadoras lo cuentan con un aviso breve. Se mira un contador que sólo sube con una respuesta
+		 * del servidor: ni el pase a `actualizando` (la marca cierra la sesión) ni un logout lo mueven,
+		 * porque eso es un reseteo local del pedido y no una cancelación.
 		 *
-		 * @param {String} nuevo Estado nuevo.
-		 * @param {String} anterior Estado anterior.
 		 * @returns {void}
 		 */
-		actualizacion_estado(nuevo, anterior) {
-			if (anterior === 'pidiendo_ok' && (nuevo === 'rechazado' || nuevo === 'libre')) {
-				this.$toast.info('La actualización se pasó para la noche.')
-			}
+		actualizacion_cancelaciones() {
+			this.$toast.info('La actualización se pasó para la noche.')
 		},
 	},
 	beforeDestroy() {
