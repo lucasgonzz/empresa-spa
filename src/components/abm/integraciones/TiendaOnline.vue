@@ -1,7 +1,7 @@
 <template>
 	<div class="integraciones-tienda-online">
 		<p class="integraciones-tienda-online__intro">
-			Conectá tu propia cuenta de Mercado Pago y de Zipnova para cobrar y ofrecer envíos desde tu tienda online.
+			Conectá tu propia cuenta de Mercado Pago, de Zipnova y de Andreani para cobrar y ofrecer envíos desde tu tienda online.
 		</p>
 
 		<div
@@ -26,7 +26,7 @@
 		</b-alert>
 
 		<!--
-			La tarjeta de Zipnova va a todo el ancho: trae un formulario de configuración, el paso a
+			Las tarjetas de Zipnova y de Andreani van a todo el ancho: traen un formulario de configuración, el paso a
 			paso y la prueba de cotización, y en media columna (384px en una tablet de 768) queda
 			ilegible. Mercado Pago sigue a la mitad, como antes.
 		-->
@@ -39,7 +39,7 @@
 			<template v-for="integracion in integraciones_tienda_online">
 				<b-col
 				:key="integracion.slug"
-				:md="integracion.slug == 'zipnova' ? 12 : 6"
+				:md="(integracion.slug == 'zipnova' || integracion.slug == 'andreani') ? 12 : 6"
 				class="m-b-15">
 					<mercado-pago-card
 					v-if="integracion.slug == 'mercado_pago'"
@@ -51,6 +51,13 @@
 					:integracion="integracion"
 					@actualizar="cargarIntegraciones"
 					@actualizado="reemplazarIntegracion"></zipnova-card>
+
+					<!-- Andreani (misión envios-andreani): misma mecánica que Zipnova, carpeta andreani/ -->
+					<andreani-card
+					v-else-if="integracion.slug == 'andreani'"
+					:integracion="integracion"
+					@actualizar="cargarIntegraciones"
+					@actualizado="reemplazarIntegracion"></andreani-card>
 				</b-col>
 
 				<b-col
@@ -70,11 +77,11 @@ import IntegrationConnector from '@/mixins/integration_connector'
 /**
  * Solapa "Tienda online" del ABM de Integraciones.
  *
- * Arma el layout de las tarjetas de integracion del grupo `tienda_online` (Mercado Pago y
- * Zipnova) leyendo el estado real de `GET /api/integraciones`. Toda la logica de conectar y
+ * Arma el layout de las tarjetas de integracion del grupo `tienda_online` (Mercado Pago,
+ * Zipnova y Andreani) leyendo el estado real de `GET /api/integraciones`. Toda la logica de conectar y
  * desconectar vive en cada tarjeta; aca solo se pide el listado y se lo vuelve a pedir
  * cuando una tarjeta avisa que cambio algo (`actualizar`), o se reemplaza el item en la
- * lista cuando la tarjeta ya trae el nuevo (`actualizado`, lo usa Zipnova: sus endpoints
+ * lista cuando la tarjeta ya trae el nuevo (`actualizado`, lo usan Zipnova y Andreani: sus endpoints
  * responden con el item actualizado y asi la tarjeta no se desmonta ni pierde lo que el
  * dueño estaba mirando).
  *
@@ -89,6 +96,8 @@ export default {
 	components: {
 		MercadoPagoCard: () => import('@/components/abm/integraciones/MercadoPagoCard'),
 		ZipnovaCard: () => import('@/components/abm/integraciones/ZipnovaCard'),
+		/* Envíos con Andreani (misión envios-andreani): orquestador de la carpeta andreani/ */
+		AndreaniCard: () => import('@/components/abm/integraciones/andreani/Index'),
 		/* Cobro con el QR de Mercado Pago en el mostrador (misión cobro-qr-mercado-pago) */
 		MercadoPagoQrCard: () => import('@/components/abm/integraciones/mercado-pago-qr/Index'),
 	},
