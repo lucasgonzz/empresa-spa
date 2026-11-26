@@ -219,6 +219,14 @@ export default {
 				commit('auth/setLoading', false, { root: true })
 				commit('auth/setMessage', '', { root: true })
 				commit('set_estado', res.data)
+				/*
+					La última aceptación: el pedido pasó a `actualizando` en esta misma respuesta. Se consulta el
+					estado ya, para recibir la marca 503 (que cierra el front y lleva al login) sin esperar el
+					siguiente polling, con el resto de las computadoras ya cerradas.
+				*/
+				if (res.data && res.data.estado === 'actualizando') {
+					return dispatch('consultar').then(() => true)
+				}
 				return true
 			})
 			.catch(err => {
