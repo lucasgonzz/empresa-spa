@@ -19,11 +19,19 @@
 			error genérico y saca un toast con el mismo texto que ya muestra el modal. El alert
 			del propio formulario sigue funcionando para todos los demás errores.
 		-->
+		<!--
+			Eliminar pedido (misión eliminar-pedidos-tienda): el botón sale con el permiso
+			`order.delete`, la confirmación usa el texto propio (explica que la venta NO se elimina
+			y que el stock reservado se libera) y al eliminar se refresca el globito del menú.
+		-->
 		<view-component
 		v-if="view == 'pedidos'"
 		change_from_dates_option
 		show_btn_pdf
-		:show_btn_delete="false"
+		:show_btn_delete="puede_eliminar_pedidos"
+		not_show_delete_text
+		:delete_text="texto_confirmar_eliminar"
+		@modelDeleted="pedido_eliminado"
 		:show_btn_create="false"
 		skip_global_error_event
 		save_check_function="check_pedido_puede_avanzar_de_estado"
@@ -136,6 +144,7 @@ import {
 	momento_de_refrescar,
 	puede_consultar_por_visibilidad,
 } from '@/utils/pedidos_nuevos'
+import { TEXTO_CONFIRMAR_ELIMINAR_PEDIDO } from '@/utils/eliminar_pedido'
 
 /*
 	Pedidos online.
@@ -177,12 +186,23 @@ export default {
 			modal_de_pedido_abierto: false,
 			/** Momento (ms) de la última consulta por volver a la pestaña; 0 = ninguna. */
 			ultima_consulta_por_visibilidad: 0,
+			/** Texto del modal de confirmación al eliminar un pedido (ver utils/eliminar_pedido.js). */
+			texto_confirmar_eliminar: TEXTO_CONFIRMAR_ELIMINAR_PEDIDO,
 		}
 	},
 	created() {
 		this.$store.dispatch('order/getModels')
 	},
 	computed: {
+		/**
+		 * ¿El usuario puede eliminar pedidos? El dueño y los empleados con `admin_access` siempre;
+		 * el resto, sólo con el permiso `order.delete`. El backend vuelve a controlarlo.
+		 *
+		 * @returns {Boolean}
+		 */
+		puede_eliminar_pedidos() {
+			return !!this.can('order.delete')
+		},
 		/**
 		 * Ids de los pedidos sin confirmar (`order.unconfirmed_models`), los del globito del menú. Los
 		 * actualizan el aviso en vivo de un pedido nuevo (Pusher), la reconexión, el arranque y, con
@@ -265,6 +285,15 @@ export default {
 		document.removeEventListener('visibilitychange', this.consultar_al_volver_a_la_pestana)
 	},
 	methods: {
+		/**
+		 * Se eliminó un pedido: la fila ya la saca el store; acá se refresca el globito de pedidos
+		 * sin confirmar del menú, que el store no actualiza al borrar.
+		 *
+		 * @returns {void}
+		 */
+		pedido_eliminado() {
+			this.$store.dispatch('order/getUnconfirmedModels')
+		},
 		/**
 		 * Refresca la tabla si se puede ahora; si el dueño tiene filas tildadas o un pedido abierto, lo
 		 * deja pendiente; si la sección a la vista no es Pedidos, no hace nada (al volver se pide igual).
