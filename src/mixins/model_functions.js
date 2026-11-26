@@ -6,7 +6,7 @@ import { normalizar_telefono } from '@/utils/whatsapp_phone'
 import { texto_de_calle } from '@/utils/texto_de_calle'
 import { es_perfil_de_ticket } from '@/constants/vender_print_shortcut_options'
 /* Formas de envío del pedido: Zipnova o forma propia, y el costo a convenir (misión formas-envio-direcciones-maps). */
-import { es_forma_propia_a_convenir, envio_va_por_zipnova, envio_va_por_andreani, precio_de_forma_propia } from '@/utils/formas_de_envio'
+import { es_forma_propia_a_convenir, envio_va_por_zipnova, envio_va_por_andreani, precio_de_forma_propia_del_pedido } from '@/utils/formas_de_envio'
 export default {
     mixins: [select_payment_methods],
     computed: {
@@ -1130,8 +1130,15 @@ export default {
                 let texto = order.delivery_zone.name
                 if (es_forma_propia_a_convenir(order.delivery_zone)) {
                     texto += ' · A convenir'
-                } else if (order.delivery_zone.price) {
-                    texto += ' · ' + this.price(order.delivery_zone.price)
+                } else {
+                    // Lo que se cobró (foto del pedido) o el precio vivo; una foto en 0 es envío gratis.
+                    let precio_cobrado = precio_de_forma_propia_del_pedido(order)
+                    let foto = order.envio_zona_precio
+                    if (precio_cobrado > 0) {
+                        texto += ' · ' + this.price(precio_cobrado)
+                    } else if (foto !== null && typeof foto != 'undefined' && foto !== '') {
+                        texto += ' · Gratis'
+                    }
                 }
                 return texto
             }
@@ -1239,6 +1246,34 @@ export default {
             return false
         },
         /**
+         * `v_if_function` de los dos campos de envío gratis de la forma de envío (misión
+         * truvari-carrito-entrega-pago, 26/11/2026): "Envío gratis desde (monto de compra)" y
+         * "Envío gratis si el pedido tiene un combo o promoción".
+         *
+         * No se ofrecen en una forma a convenir (no cobra nada) ni contra una API vieja, que no
+         * guardaría los campos. Mismo criterio que `mostrar_costo_a_convenir`: una forma guardada
+         * dice la verdad por sí misma; una nueva mira la primera forma cargada en el store. Sin
+         * ninguna señal no se ofrecen.
+         *
+         * @param {object} prop
+         * @param {object} model La forma de envío.
+         * @returns {boolean}
+         */
+        mostrar_envio_gratis_de_forma(prop, model) {
+            if (!model || es_forma_propia_a_convenir(model)) {
+                return false
+            }
+            if (model.id) {
+                return typeof model.envio_gratis_desde != 'undefined'
+            }
+            let store_formas = this.$store.state.delivery_zone
+            let formas = store_formas && Array.isArray(store_formas.models) ? store_formas.models : []
+            if (formas.length) {
+                return typeof formas[0].envio_gratis_desde != 'undefined'
+            }
+            return false
+        },
+        /**
          * Columna "Costo" de la tabla de Formas de envío propias: "A convenir" si el costo se
          * coordina con el comprador, o el precio. Nunca "$ 0" para una forma a convenir: el precio
          * guardado es 0 justamente porque no se cobra en la tienda.
@@ -1253,7 +1288,15 @@ export default {
             if (es_forma_propia_a_convenir(model)) {
                 return 'A convenir'
             }
-            return this.price(model.price)
+            let texto = this.price(model.price)
+            // Reglas de envío gratis (misión truvari-carrito-entrega-pago): sólo si están cargadas.
+            if (Number(model.envio_gratis_desde) > 0) {
+                texto += ' · gratis desde ' + this.price(model.envio_gratis_desde)
+            }
+            if (Number(model.envio_gratis_con_combo) === 1) {
+                texto += ' · gratis con combos'
+            }
+            return texto
         },
         /**
          * `v_if_function` de "Ofrecer envío por correo con Zipnova" en la configuración de la
@@ -1795,7 +1838,7 @@ export default {
             }
             // La forma de envío propia suma su precio, salvo que el costo sea a convenir: esa no
             // se cobró en la tienda y aporta 0 (misión formas-envio-direcciones-maps).
-            total += precio_de_forma_propia(model.delivery_zone)
+            total += precio_de_forma_propia_del_pedido(model)
             if (formated) {
                 return dates.methods.price(total)
             }

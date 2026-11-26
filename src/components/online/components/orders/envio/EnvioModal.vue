@@ -370,7 +370,7 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 import IntegrationConnector from '@/mixins/integration_connector'
 import MapaDireccion from '@/components/online/components/orders/envio/MapaDireccion'
 import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
-import { envio_va_por_zipnova, envio_va_por_andreani, texto_datos_andreani, es_forma_propia_a_convenir } from '@/utils/formas_de_envio'
+import { envio_va_por_zipnova, envio_va_por_andreani, texto_datos_andreani, texto_costo_forma_propia_del_pedido } from '@/utils/formas_de_envio'
 import { direccion_de_envio_del_pedido, direccion_desde_envio_direccion } from '@/utils/direccion_de_envio'
 
 /**
@@ -506,21 +506,16 @@ export default {
 		 * Costo de la forma propia, para el renglón de "Forma de envío elegida". 🔴 Una forma a
 		 * convenir dice "A convenir", nunca "Gratis" ni "$ 0": el costo lo arregla el vendedor.
 		 *
-		 * Sin afirmar nada sobre lo que se cobró: el pedido apunta a la forma VIVA
-		 * (`delivery_zone_id`), no a una foto. Si el comercio cambió la forma después de la compra,
-		 * lo que se ve acá es la forma de hoy, no necesariamente lo que vio el comprador.
+		 * Con la foto del pedido (`envio_zona_precio`, misión truvari-carrito-entrega-pago) dice lo
+		 * que se cobró de verdad ("Gratis (compras desde $ 80.000)", "Gratis (con combos)" o el
+		 * importe). Sin foto (pedido viejo) lee la forma VIVA: si el comercio la cambió después de
+		 * la compra, lo que se ve es la forma de hoy, no necesariamente lo que vio el comprador.
 		 */
 		texto_costo_forma_propia() {
 			if (!this.forma_propia) {
 				return ''
 			}
-			if (es_forma_propia_a_convenir(this.forma_propia)) {
-				return 'A convenir'
-			}
-			if (Number(this.forma_propia.price) > 0) {
-				return this.price(this.forma_propia.price)
-			}
-			return 'Sin costo para el comprador'
+			return texto_costo_forma_propia_del_pedido(this.order, valor => this.price(valor))
 		},
 		// El envío sale por Andreani (espejo de Order::envio_va_por_andreani(), ver utils/formas_de_envio.js)
 		va_por_andreani() {
