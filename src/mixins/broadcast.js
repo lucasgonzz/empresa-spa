@@ -135,8 +135,10 @@ export default {
             this.Echo.channel(embeddings_channel)
             .listen('.ArticleEmbeddingsBatchGenerated', (payload) => {
                 // El backend ya no emite cuando no genero nada, pero el chequeo queda igual: un
-                // toast que dice "0 articulos" es peor que no avisar.
-                if (!payload || !payload.generados) {
+                // toast que dice "0 articulos" es peor que no avisar. Ademas, si la tanda tiene
+                // proceso visible en "Procesos en segundo plano" (`con_proceso`), el aviso lo da esa
+                // pantalla y el toast quedaria duplicado.
+                if (!this.debe_avisar_embeddings_generados(payload)) {
                     return
                 }
 
@@ -149,6 +151,23 @@ export default {
             // suscripcion es permanente por sesion: el scheduler emite cada 30 minutos sin que el
             // usuario haya pedido nada. Si se abandonara el canal despues del primer aviso, el
             // segundo no llegaria nunca.
+        },
+        /**
+         * Decide si el aviso de una tanda de embeddings merece el toast "Asistente actualizado".
+         *
+         * No avisa si no hay payload, si no se genero nada, ni si la tanda tiene un proceso visible
+         * (`con_proceso` true): en ese caso lo informa la pantalla de procesos en segundo plano. Un
+         * payload de una API anterior, sin `con_proceso`, se comporta como siempre (avisa).
+         *
+         * @param {Object|null} payload Datos del evento ArticleEmbeddingsBatchGenerated.
+         * @return {Boolean} true si hay que mostrar el toast.
+         */
+        debe_avisar_embeddings_generados(payload) {
+            if (!payload || !payload.generados) {
+                return false
+            }
+
+            return !payload.con_proceso
         },
         /**
          * Texto del toast de embeddings, con el singular y el plural resueltos.
