@@ -162,8 +162,7 @@ test('CA7 mensaje_de_error_de_reporte: 422 con errors devuelve el primer error; 
 const SESION = 'Tu sesión venció o no tenés permiso para ver este reporte. Volvé a ingresar y probá de nuevo.'
 
 test('CA7 401/403: las 4 acciones en paralelo dejan el mensaje de sesión en castellano y no despachan errorEvent a mano', () => {
-	// El aviso de sesión lo da el interceptor de main.js (con su filtro debe_avisar_este_401): el store
-	// no re-despacha nada, o saldrían avisos duplicados.
+	// El aviso de sesión lo da Reportes (un toast en buscar()): el store no despacha errorEvent.
 	const eventos = []
 	global.CustomEvent = class { constructor(tipo, init) { this.type = tipo; this.detail = init && init.detail } }
 	global.document = { dispatchEvent: evento => eventos.push(evento) }
@@ -192,7 +191,7 @@ test('CA7 mensaje_de_error_de_reporte: 401 y 403 devuelven el aviso de sesión e
 	assert.equal(modulo.mensaje_de_error_de_reporte({ response: { status: 403, data: { message: 'Forbidden' } } }), SESION)
 })
 
-test('CA8 buscar(): con sesión vencida no suma un toast propio (el aviso es el del interceptor global)', () => {
+test('CA8 buscar(): con sesión vencida (las 4 secciones iguales) muestra UN toast en castellano con el aviso de sesión', () => {
 	const avisos = []
 	const estado = { error_reportes: SESION, error_estado_resultados: SESION, error_posicion_fiscal: SESION, error_flujo_caja: SESION }
 	const vista = {
@@ -200,7 +199,8 @@ test('CA8 buscar(): con sesión vencida no suma un toast propio (el aviso es el 
 		$toast: { error: texto => avisos.push(texto) },
 	}
 	return SeleccionarFecha.methods.buscar.call(vista).then(() => {
-		assert.deepEqual(avisos, [])
+		assert.deepEqual(avisos, [SESION])
+		assert.ok(!/unauthenticated|unauthorized|server error/i.test(avisos[0]))
 	})
 })
 
