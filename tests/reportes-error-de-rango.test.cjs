@@ -209,8 +209,6 @@ test('CA8 buscar(): con sesión vencida (las 4 secciones iguales) muestra UN toa
 // ---------------------------------------------------------------------------------------------------
 const SeleccionarFecha = cargar('components/reportes/components/seleccionar-fecha/Index.vue', {
 	'@/common-vue/mixins/horizontal_nav_scroll': { __esModule: true, default: {} },
-	// El selector importa solo la constante del store; el store real se prueba arriba.
-	'@/store/reportes/index': { MENSAJE_SESION_REPORTE: 'Tu sesión venció o no tenés permiso para ver este reporte. Volvé a ingresar y probá de nuevo.' },
 }).default
 
 test('CA8 buscar(): cuatro pedidos que fallan con el mismo mensaje muestran un solo aviso', () => {

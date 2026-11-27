@@ -48,8 +48,8 @@ export function fecha_moneda_params(state, incluir_moneda) {
 /* Texto genérico para cuando el servidor no explicó el problema (5xx, red caída, timeout) */
 export const MENSAJE_GENERICO_REPORTE = 'No pudimos calcular el reporte para esas fechas. Probá de nuevo en un momento; si sigue pasando, avisanos por soporte.'
 
-/* Sesión vencida o sin permiso (401/403): el aviso de sesión lo da el interceptor global de main.js,
-   acá solo se deja este texto en pantalla (nunca el «Unauthenticated.» en inglés del servidor) */
+/* Sesión vencida o sin permiso (401/403): texto en castellano que se muestra en pantalla y en el aviso
+   de la búsqueda (nunca el «Unauthenticated.» en inglés del servidor). El store no despacha errorEvent. */
 export const MENSAJE_SESION_REPORTE = 'Tu sesión venció o no tenés permiso para ver este reporte. Volvé a ingresar y probá de nuevo.'
 
 /**
@@ -94,8 +94,7 @@ export function mensaje_de_error_de_reporte(err) {
 
 /**
  * Banderas de axios para los pedidos de reportes: el aviso lo arma el store/`buscar()` (uno solo por
- * búsqueda) en vez de que el interceptor global apile un toast por cada pedido que falla. Los 401/403
- * son la excepción: main.js los sigue atendiendo aunque lleven la bandera, con su filtro de avisos.
+ * búsqueda) en vez de que el interceptor global apile un toast por cada pedido que falla.
  */
 const CONFIG_SIN_AVISO_GLOBAL = {
 	skip_global_error_event: true,
