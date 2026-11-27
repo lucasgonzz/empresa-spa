@@ -137,7 +137,18 @@ export default {
 			this.from_filter = from_filter
 			this.$bvModal.show(this.model_name+'-delete-models')
 		},
-		update(form) {
+		/**
+		 * Encola la actualización masiva. Siempre avisa a la API que revise qué porcentaje del inventario
+		 * alcanza (check_inventory_percentage); si pasa del 75% la API responde 422 con requires_confirmation
+		 * y acá se le pregunta a la persona antes de reenviar la misma petición ya confirmada.
+		 *
+		 * @param {Object} form Campos a actualizar (update_form).
+		 * @param {boolean} [confirmed] true cuando la persona ya confirmó el aviso de porcentaje.
+		 * @returns {void}
+		 */
+		update(form, confirmed) {
+			// Referencia al componente para usarla dentro de los callbacks.
+			let self = this
 			this.loading = true
 			this.$store.commit('auth/setMessage', 'Encolando actualización masiva')
 			this.$store.commit('auth/setLoading', true)
@@ -147,6 +158,10 @@ export default {
 				filter_form: this.$store.state[this.model_name].filters,
 				update_form: form,
 				models_id: this.selecteds_id,
+				// Pide a la API que revise el porcentaje de inventario afectado (sólo la mira en artículos).
+				check_inventory_percentage: true,
+				// true únicamente en el reenvío posterior a la confirmación de la persona.
+				confirmed_massive: confirmed === true,
 			}, {
 				// El error se explica acá con su causa; evita que el aviso global lo repita en otro toast.
 				skip_global_error_event: true,
@@ -168,6 +183,24 @@ export default {
 				this.loading = false
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
+
+				// La API pide confirmar porque la actualización afecta a más del 75% del inventario.
+				if (err.response && err.response.status === 422 && err.response.data && err.response.data.requires_confirmation === true) {
+					self.$bvModal.msgBoxConfirm(err.response.data.message, {
+						title: 'Confirmá la actualización masiva',
+						okTitle: 'Sí, actualizar',
+						okVariant: 'primary',
+						cancelTitle: 'Cancelar',
+						centered: true,
+					})
+					.then(function (accepted) {
+						// Si cancela no se envía nada: el modal de actualización queda abierto y sin loading.
+						if (accepted) {
+							self.update(form, true)
+						}
+					})
+					return
+				}
 
 				// Mensaje con la causa real del rechazo (lo que respondió la API, o el motivo según el tipo de fallo).
 				let message = this.get_update_error_message(err)
