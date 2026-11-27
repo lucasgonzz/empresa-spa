@@ -45,6 +45,67 @@ export function fecha_moneda_params(state, incluir_moneda) {
 	return params
 }
 
+/* Texto genérico para cuando el servidor no explicó el problema (5xx, red caída, timeout) */
+export const MENSAJE_GENERICO_REPORTE = 'No pudimos calcular el reporte para esas fechas. Probá de nuevo en un momento; si sigue pasando, avisanos por soporte.'
+
+/**
+ * Texto que se muestra cuando falla un pedido de reportes. Nunca devuelve el «Server Error» crudo
+ * de Laravel: si el servidor explicó el problema (4xx con mensaje, p. ej. un 422 por fechas
+ * inválidas) se usa su texto, y para todo lo demás un texto genérico.
+ *
+ * @param {Object} err - error de axios (puede no tener `response`)
+ * @returns {String} mensaje en castellano para el usuario
+ */
+export function mensaje_de_error_de_reporte(err) {
+	let respuesta = err && err.response
+	let datos = respuesta && respuesta.data
+
+	if (!respuesta || respuesta.status < 400 || respuesta.status >= 500 || !datos) {
+		return MENSAJE_GENERICO_REPORTE
+	}
+
+	/* Con `errors` (validación) el primer mensaje es el que dice qué hacer */
+	let mensaje = ''
+	if (datos.errors && typeof datos.errors == 'object') {
+		Object.keys(datos.errors).forEach(campo => {
+			let lista = [].concat(datos.errors[campo])
+			if (!mensaje && lista.length && lista[0]) {
+				mensaje = String(lista[0])
+			}
+		})
+	}
+	if (!mensaje && datos.message) {
+		mensaje = String(datos.message)
+	}
+
+	if (!mensaje || /server error/i.test(mensaje)) {
+		return MENSAJE_GENERICO_REPORTE
+	}
+	return mensaje
+}
+
+/**
+ * Banderas de axios para los pedidos de reportes: el aviso lo arma el store/`buscar()` (uno solo por
+ * búsqueda) en vez de que el interceptor global apile un toast por cada pedido que falla.
+ */
+const CONFIG_SIN_AVISO_GLOBAL = {
+	skip_global_error_event: true,
+	skip_global_validation_toast: true,
+}
+
+/**
+ * Las banderas anteriores también silencian el manejo global de sesión vencida (401/403). Para no
+ * perderlo, esos estados se re-despachan al mismo `errorEvent` que usa el interceptor de main.js.
+ *
+ * @param {Object} err - error de axios
+ */
+function avisar_sesion_si_corresponde(err) {
+	let status = err && err.response && err.response.status
+	if ((status === 401 || status === 403) && typeof document !== 'undefined') {
+		document.dispatchEvent(new CustomEvent('errorEvent', {detail: err}))
+	}
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -66,6 +127,13 @@ export default {
 		 * null y no se usa para nada -- ver encolar_fetch_de_widget().
 		 */
 		cadena_widgets: null,
+
+		/* Mensaje de error de cada pedido ('' = sin error). Se muestran con AvisoErrorReporte en lugar
+		   de los totales, que en un error se limpian para no confundir con los del período anterior. */
+		error_reportes: '',
+		error_estado_resultados: '',
+		error_posicion_fiscal: '',
+		error_flujo_caja: '',
 
 		/* Estado de Resultados devengado (api/reportes/estado-resultados) */
 		estado_resultados: {},
@@ -138,6 +206,19 @@ export default {
 		/* Cola de encadenado de los widgets de esta pantalla. Ver el comentario de cadena_widgets en el state. */
 		setCadenaWidgets(state, value) {
 			state.cadena_widgets = value
+		},
+
+		setErrorReportes(state, value) {
+			state.error_reportes = value
+		},
+		setErrorEstadoResultados(state, value) {
+			state.error_estado_resultados = value
+		},
+		setErrorPosicionFiscal(state, value) {
+			state.error_posicion_fiscal = value
+		},
+		setErrorFlujoCaja(state, value) {
+			state.error_flujo_caja = value
 		},
 
 		setEstadoResultados(state, value) {
@@ -270,11 +351,12 @@ export default {
 		 */
 		getEstadoResultados({state, commit}) {
 			commit('setEstadoResultadosLoading', true)
+			commit('setErrorEstadoResultados', '')
 
 			// El return es necesario: encolar_fetch_de_widget encadena sobre esta promesa
 			// para que el siguiente widget espere la respuesta HTTP real, no el tick en que
 			// arranca el pedido (sin return, Vuex resuelve el dispatch al toque).
-			return axios.get('api/reportes/estado-resultados', {params: fecha_moneda_params(state, true)})
+			return axios.get('api/reportes/estado-resultados', Object.assign({params: fecha_moneda_params(state, true)}, CONFIG_SIN_AVISO_GLOBAL))
 			.then(res => {
 				commit('setEstadoResultadosLoading', false)
 				commit('setEstadoResultados', res.data.estado_resultados)
@@ -282,6 +364,10 @@ export default {
 			.catch(err => {
 				console.log(err)
 				commit('setEstadoResultadosLoading', false)
+				// Sin datos viejos a la vista: se limpia y se deja el mensaje para AvisoErrorReporte
+				commit('setEstadoResultados', {})
+				commit('setErrorEstadoResultados', mensaje_de_error_de_reporte(err))
+				avisar_sesion_si_corresponde(err)
 			})
 		},
 
@@ -290,9 +376,10 @@ export default {
 		 */
 		getPosicionFiscal({state, commit}) {
 			commit('setPosicionFiscalLoading', true)
+			commit('setErrorPosicionFiscal', '')
 
 			// Return necesario -- ver comentario de getEstadoResultados, misma razon.
-			return axios.get('api/reportes/posicion-fiscal', {params: fecha_moneda_params(state, false)})
+			return axios.get('api/reportes/posicion-fiscal', Object.assign({params: fecha_moneda_params(state, false)}, CONFIG_SIN_AVISO_GLOBAL))
 			.then(res => {
 				commit('setPosicionFiscalLoading', false)
 				commit('setPosicionFiscal', res.data.posicion_fiscal)
@@ -300,6 +387,9 @@ export default {
 			.catch(err => {
 				console.log(err)
 				commit('setPosicionFiscalLoading', false)
+				commit('setPosicionFiscal', {})
+				commit('setErrorPosicionFiscal', mensaje_de_error_de_reporte(err))
+				avisar_sesion_si_corresponde(err)
 			})
 		},
 
@@ -308,9 +398,10 @@ export default {
 		 */
 		getFlujoCaja({state, commit}) {
 			commit('setFlujoCajaLoading', true)
+			commit('setErrorFlujoCaja', '')
 
 			// Return necesario -- ver comentario de getEstadoResultados, misma razon.
-			return axios.get('api/reportes/flujo-caja', {params: fecha_moneda_params(state, true)})
+			return axios.get('api/reportes/flujo-caja', Object.assign({params: fecha_moneda_params(state, true)}, CONFIG_SIN_AVISO_GLOBAL))
 			.then(res => {
 				commit('setFlujoCajaLoading', false)
 				commit('setFlujoCaja', res.data.flujo_caja)
@@ -318,6 +409,9 @@ export default {
 			.catch(err => {
 				console.log(err)
 				commit('setFlujoCajaLoading', false)
+				commit('setFlujoCaja', {})
+				commit('setErrorFlujoCaja', mensaje_de_error_de_reporte(err))
+				avisar_sesion_si_corresponde(err)
 			})
 		},
 
@@ -363,6 +457,7 @@ export default {
 			console.log(state.rango_temporal)
 
 			commit('setLoading', true)
+			commit('setErrorReportes', '')
 
 			let link = 'api/company-performance'
 
@@ -380,7 +475,7 @@ export default {
 			}
 
 			// Return necesario -- ver comentario de getEstadoResultados, misma razon.
-			return axios.get(link, {params})
+			return axios.get(link, Object.assign({params}, CONFIG_SIN_AVISO_GLOBAL))
 			.then(res => {
 				console.log('reportes/getReportes')
 				console.log(res.data)
@@ -410,6 +505,10 @@ export default {
 			.catch(err => {
 				console.log(err)
 				commit('setLoading', false)
+				commit('setModel', {})
+				commit('setMesesAnteriores', [])
+				commit('setErrorReportes', mensaje_de_error_de_reporte(err))
+				avisar_sesion_si_corresponde(err)
 			})
 		}
 	},

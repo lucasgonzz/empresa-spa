@@ -8,6 +8,11 @@
 		v-if="loading"
 		:bloques="[{titulo: false, renglones: ['linea','linea','subtotal','linea','subtotal','linea','subtotal','linea','linea','final']}]"></skeleton-cascada>
 
+		<!-- Si el pedido falló no se muestran totales (ni los del período anterior): el aviso ocupa su lugar -->
+		<aviso-error-reporte
+		v-else-if="error"
+		:mensaje="error"></aviso-error-reporte>
+
 		<div
 		v-else
 		class="cascada-card cascada-fundido">
@@ -268,6 +273,7 @@ export default {
 		ExplicacionDeNumero,
 		Composicion: () => import('@/components/reportes/components/estado-resultados/composicion/Index'),
 		GastosCategorias: () => import('@/components/reportes/components/estado-resultados/gastos-categorias/Index'),
+		AvisoErrorReporte: () => import('@/components/reportes/components/AvisoErrorReporte'),
 		SkeletonCascada: () => import('@/components/reportes/components/SkeletonCascada'),
 	},
 	created() {
@@ -288,6 +294,10 @@ export default {
 		},
 		loading() {
 			return this.$store.state.reportes.estado_resultados_loading
+		},
+		/* Mensaje de error del último pedido ('' = sin error) */
+		error() {
+			return this.$store.state.reportes.error_estado_resultados
 		},
 		/**
 		 * Las explicaciones de todas las filas, calculadas juntas: dependen del mismo modelo y se

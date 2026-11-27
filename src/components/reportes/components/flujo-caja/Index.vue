@@ -12,6 +12,11 @@
 			{titulo: false, renglones: ['final']}
 		]"></skeleton-cascada>
 
+		<!-- Si el pedido falló no se muestran totales (ni los del período anterior): el aviso ocupa su lugar -->
+		<aviso-error-reporte
+		v-else-if="error"
+		:mensaje="error"></aviso-error-reporte>
+
 		<!-- Antes era un <template v-else>, que no puede llevar clase. El div intermedio es
 		seguro: el sass de abajo usa selectores descendientes (.flujo-caja .cascada-card),
 		no hijo directo -->
@@ -190,6 +195,7 @@ import detalle_drilldown from '@/mixins/reportes/detalle_drilldown'
 export default {
 	mixins: [detalle_drilldown],
 	components: {
+		AvisoErrorReporte: () => import('@/components/reportes/components/AvisoErrorReporte'),
 		SkeletonCascada: () => import('@/components/reportes/components/SkeletonCascada'),
 	},
 	created() {
@@ -203,6 +209,10 @@ export default {
 		},
 		loading() {
 			return this.$store.state.reportes.flujo_caja_loading
+		},
+		/* Mensaje de error del último pedido ('' = sin error) */
+		error() {
+			return this.$store.state.reportes.error_flujo_caja
 		},
 		/* Suma de las liquidaciones pendientes (plata en transito), para mostrar el mismo total que abre el drill-down */
 		total_liquidaciones_pendientes() {
