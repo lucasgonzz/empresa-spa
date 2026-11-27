@@ -138,6 +138,15 @@ export const TIPOS = {
 		etiqueta: 'Importación desde Mercado Libre',
 		detalle: DETALLE_GENERICO,
 	},
+	// Preparación de la búsqueda inteligente de artículos (misión embeddings-lote-cola, 27/11/2026):
+	// la lanza el comando de embeddings por lotes cuando hay 100 o más artículos pendientes.
+	// Violeta, como el resto de los procesos de IA (análisis del Excel, descripciones).
+	embeddings_articulos: {
+		icono: 'bi-search',
+		acento: '111, 66, 193',
+		etiqueta: 'Búsqueda inteligente de artículos',
+		detalle: DETALLE_GENERICO,
+	},
 }
 
 /** Lo que se muestra para un `tipo` que la SPA todavía no conoce. */
@@ -202,6 +211,11 @@ export const ETIQUETAS_DE_RESULTADO = {
 	// ya tenían etiqueta (la comparten con las categorías y las descripciones).
 	no_asignadas: 'Sin imagen',
 	busquedas: 'Búsquedas',
+	// Resultado de `embeddings_articulos` (misión embeddings-lote-cola): {preparados, al_dia,
+	// con_error} y, si la tanda venció antes de terminar, `pendientes` (`al_dia` y `con_error`
+	// ya tenían etiqueta).
+	preparados: 'Preparados',
+	pendientes: 'Pendientes',
 }
 
 /**
