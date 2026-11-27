@@ -22,6 +22,11 @@
 			{titulo: true, renglones: ['linea','linea','subtotal']}
 		]"></skeleton-cascada>
 
+		<!-- Si el pedido falló no se muestran totales (ni los del período anterior): el aviso ocupa su lugar -->
+		<aviso-error-reporte
+		v-else-if="error"
+		:mensaje="error"></aviso-error-reporte>
+
 		<!-- Antes era un <template v-else>, que no puede llevar clase. El div intermedio es
 		seguro: el sass de abajo usa selectores descendientes (.posicion-fiscal .cascada-card),
 		no hijo directo -->
@@ -296,6 +301,7 @@ import { env } from '@/runtime_config'
 export default {
 	mixins: [detalle_drilldown],
 	components: {
+		AvisoErrorReporte: () => import('@/components/reportes/components/AvisoErrorReporte'),
 		SkeletonCascada: () => import('@/components/reportes/components/SkeletonCascada'),
 	},
 	created() {
@@ -309,6 +315,10 @@ export default {
 		},
 		loading() {
 			return this.$store.state.reportes.posicion_fiscal_loading
+		},
+		/* Mensaje de error del último pedido ('' = sin error) */
+		error() {
+			return this.$store.state.reportes.error_posicion_fiscal
 		},
 		iva() {
 			return this.model.posicion_iva || {}
