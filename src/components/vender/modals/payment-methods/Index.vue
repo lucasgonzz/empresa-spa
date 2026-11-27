@@ -62,6 +62,7 @@
 import MultiPaymentMethods from '@/components/common/payment-methods/Index'
 import Buttons from '@/components/vender/modals/payment-methods/Buttons'
 import TotalRepartir from '@/components/vender/modals/payment-methods/TotalRepartir'
+import { metodo_de_pago_por_defecto } from '@/mixins/metodos_de_pago_reglas'
 export default {
     name: 'SelectPaymentMethods',
     components: {
@@ -167,7 +168,12 @@ export default {
             // Objeto base para vender (agregá props extra si las necesitás)
             return {
                 __row_id: Date.now() + '_' + Math.random().toString(16).slice(2),
-                current_acount_payment_method_id: 3,
+                /*
+                    Efectivo (3) sólo si el negocio lo tiene en su catálogo; si no, 0 ("Seleccione el
+                    método de pago"). Un 3 fijo dejaba una fila sin método visible y con id inexistente
+                    (ticket #177).
+                */
+                current_acount_payment_method_id: metodo_de_pago_por_defecto(this.$store.state.current_acount_payment_method.models),
                 amount: '',
 
 
