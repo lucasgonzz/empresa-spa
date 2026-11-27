@@ -72,7 +72,7 @@
 				<p
 				v-if="rango_temporal == 'rango-de-fechas' && fecha_invalida"
 				class="date-range-error">
-					La fecha de inicio no puede ser posterior a la fecha de fin.
+					{{ texto_fecha_invalida }}
 				</p>
 
 			</div>
@@ -81,6 +81,24 @@
 </template>
 <script>
 import horizontal_nav_scroll from '@/common-vue/mixins/horizontal_nav_scroll'
+
+/**
+ * Dice si alguna de las fechas no tiene formato AAAA-MM-DD o su año está fuera de 2000-2100.
+ *
+ * @param {String} desde - fecha de inicio
+ * @param {String} hasta - fecha de fin
+ * @returns {Boolean}
+ */
+function tiene_fecha_mal_escrita(desde, hasta) {
+	let invalida = false
+	;[desde, hasta].forEach(fecha => {
+		let partes = /^(\d{4})-\d{2}-\d{2}$/.exec(fecha)
+		if (!partes || Number(partes[1]) < 2000 || Number(partes[1]) > 2100) {
+			invalida = true
+		}
+	})
+	return invalida
+}
 
 export default {
 	mixins: [horizontal_nav_scroll],
@@ -99,12 +117,29 @@ export default {
 			return false
 		},
 
-		/* Fecha inicio seleccionada posterior a la fecha fin */
+		/**
+		 * Rango inválido: una fecha mal escrita (el input de Chrome acepta años de 5 dígitos, p. ej.
+		 * 20261-11-27, o 0202) o la fecha de inicio posterior a la de fin. Una fecha vacía no es
+		 * inválida acá: ya la cubre `disabled`.
+		 */
 		fecha_invalida() {
 			if (!this.mes_inicio || !this.mes_fin) {
 				return false
 			}
-			return this.mes_inicio > this.mes_fin
+			return tiene_fecha_mal_escrita(this.mes_inicio, this.mes_fin) || this.mes_inicio > this.mes_fin
+		},
+
+		/* Alguna de las dos fechas no tiene formato AAAA-MM-DD o su año está fuera de 2000-2100 */
+		anio_invalido() {
+			return tiene_fecha_mal_escrita(this.mes_inicio, this.mes_fin)
+		},
+
+		/* Texto del aviso de rango inválido según la causa */
+		texto_fecha_invalida() {
+			if (this.anio_invalido) {
+				return 'Revisá el año de las fechas.'
+			}
+			return 'La fecha de inicio no puede ser posterior a la fecha de fin.'
 		},
 
 		rango_temporal: {
@@ -152,10 +187,29 @@ export default {
 		 * 3 secciones nuevas tambien dependen de este mismo selector de rango.
 		 */
 		buscar() {
-			this.$store.dispatch('reportes/getReportes')
-			this.$store.dispatch('reportes/getEstadoResultados')
-			this.$store.dispatch('reportes/getPosicionFiscal')
-			this.$store.dispatch('reportes/getFlujoCaja')
+			let pedidos = [
+				this.$store.dispatch('reportes/getReportes'),
+				this.$store.dispatch('reportes/getEstadoResultados'),
+				this.$store.dispatch('reportes/getPosicionFiscal'),
+				this.$store.dispatch('reportes/getFlujoCaja'),
+			]
+
+			// Cuando terminan los cuatro se avisa UNA sola vez con los mensajes distintos (los pedidos
+			// ya no disparan su propio toast global); cada sección muestra además su aviso en pantalla.
+			return Promise.all(pedidos).then(() => {
+				let estado = this.$store.state.reportes
+				let mensajes = []
+				let campos = ['error_reportes', 'error_estado_resultados', 'error_posicion_fiscal', 'error_flujo_caja']
+				campos.forEach(campo => {
+					// Mensajes repetidos (p. ej. el de sesión vencida en las 4 secciones) salen una sola vez
+					if (estado[campo] && mensajes.indexOf(estado[campo]) == -1) {
+						mensajes.push(estado[campo])
+					}
+				})
+				if (mensajes.length) {
+					this.$toast.error(mensajes.join(' '))
+				}
+			})
 		},
 	},
 }
