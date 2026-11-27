@@ -137,7 +137,18 @@ export default {
 			this.from_filter = from_filter
 			this.$bvModal.show(this.model_name+'-delete-models')
 		},
-		update(form) {
+		/**
+		 * Encola la actualización masiva. Siempre avisa a la API que revise qué porcentaje del inventario
+		 * alcanza (check_inventory_percentage); si pasa del 75% la API responde 422 con requires_confirmation
+		 * y acá se le pregunta a la persona antes de reenviar la misma petición ya confirmada.
+		 *
+		 * @param {Object} form Campos a actualizar (update_form).
+		 * @param {boolean} [confirmed] true cuando la persona ya confirmó el aviso de porcentaje.
+		 * @returns {void}
+		 */
+		update(form, confirmed) {
+			// Referencia al componente para usarla dentro de los callbacks.
+			let self = this
 			this.loading = true
 			this.$store.commit('auth/setMessage', 'Encolando actualización masiva')
 			this.$store.commit('auth/setLoading', true)
@@ -147,6 +158,14 @@ export default {
 				filter_form: this.$store.state[this.model_name].filters,
 				update_form: form,
 				models_id: this.selecteds_id,
+				// Pide a la API que revise el porcentaje de inventario afectado (sólo la mira en artículos).
+				check_inventory_percentage: true,
+				// true únicamente en el reenvío posterior a la confirmación de la persona.
+				confirmed_massive: confirmed === true,
+			}, {
+				// El error se explica acá con su causa; evita que el aviso global lo repita en otro toast.
+				skip_global_error_event: true,
+				skip_global_validation_toast: true,
 			})
 			.then(res => {
 				this.loading = false
@@ -165,13 +184,55 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
 
-				let message = 'No se pudo iniciar la actualización masiva'
-				if (err.response && err.response.data && err.response.data.message) {
-					message = err.response.data.message
+				// La API pide confirmar porque la actualización afecta a más del 75% del inventario.
+				if (err.response && err.response.status === 422 && err.response.data && err.response.data.requires_confirmation === true) {
+					self.$bvModal.msgBoxConfirm(err.response.data.message, {
+						title: 'Confirmá la actualización masiva',
+						okTitle: 'Sí, actualizar',
+						okVariant: 'primary',
+						cancelTitle: 'Cancelar',
+						centered: true,
+					})
+					.then(function (accepted) {
+						// Si cancela no se envía nada: el modal de actualización queda abierto y sin loading.
+						if (accepted) {
+							self.update(form, true)
+						}
+					})
+					return
 				}
-				this.$toast.error(message, { duration: 4000 })
+
+				// Mensaje con la causa real del rechazo (lo que respondió la API, o el motivo según el tipo de fallo).
+				let message = this.get_update_error_message(err)
+				this.$toast.error(message, { duration: 12000 })
 				console.log(err)
 			})
+		},
+		/**
+		 * Arma el texto de error de la actualización masiva con la causa del fallo.
+		 *
+		 * @param {Object} err Error de axios.
+		 * @returns {string} Mensaje para mostrar a la persona.
+		 */
+		get_update_error_message(err) {
+			let base = 'No se pudo iniciar la actualización masiva. '
+			if (!err.response) {
+				return base + 'Causa: no hubo respuesta del servidor (revisá tu conexión o si tardó demasiado).'
+			}
+			let data = err.response.data
+			if (data && data.message) {
+				// Los 422 del helper ya traen el motivo completo; el resto se prefija con el contexto.
+				return err.response.status === 422 ? data.message : base + 'Causa: ' + data.message
+			}
+			// Errores de validación de Laravel: { errors: { campo: [mensajes] } }
+			if (data && data.errors) {
+				let detalles = []
+				Object.keys(data.errors).forEach(campo => {
+					detalles.push([].concat(data.errors[campo]).join(' '))
+				})
+				return base + 'Causa: ' + detalles.join(' | ')
+			}
+			return base + 'Causa: el servidor respondió con el error ' + err.response.status + ' (' + (err.response.statusText || 'sin detalle') + ').'
 		},
 		deleteModels() {
 			this.$store.commit('auth/setMessage', 'Eliminando '+this.plural(this.model_name))

@@ -51,6 +51,8 @@
 import metodos_de_pago_validacion from '@/mixins/metodos_de_pago_validacion'
 /* El mismo armado de descuentos / recargos desde las filas que usa la reapertura de un presupuesto. */
 import { ajustes_del_cobro_de_filas } from '@/mixins/vender/previus_sale/index'
+/* Reglas puras del reparto: arma las opciones del segundo paso sin dejar pasar metodos inexistentes. */
+import { armar_opciones_del_segundo_paso } from '@/mixins/metodos_de_pago_reglas'
 export default {
 	mixins: [metodos_de_pago_validacion],
 	props: {
@@ -234,83 +236,30 @@ export default {
 
 		    if (!this.chequear_total_repartido()) return
 
-		    /* 
-		    	Aca guardo los metodos de pago elegidos en la primer instancia de repartir el total,
-		    	Seteo tambien el discount_amount para mostrar en el modal y calcular el total en mixins/vender_set_total.setTotal()
+		    /*
+		    	Aca se arman los metodos elegidos en la primer instancia de repartir el total (opciones del
+		    	select del segundo paso, con su discount_amount para mostrar en el modal y calcular el total en
+		    	mixins/vender_set_total.setTotal()). La cuenta vive en una funcion pura
+		    	(mixins/metodos_de_pago_reglas.js) para poder probarla: nunca devuelve una opcion sin id ni nombre.
 		    */
-		    let modal_payment_methods = []
-		    let next_selected = []
+		    let armado = armar_opciones_del_segundo_paso(
+		        this.selected_payment_methods_,
+		        this.payment_methods,
+		        this.payment_method_discounts,
+		        this.$store.state.cuota.models
+		    )
 
-		    this.selected_payment_methods_.forEach(pay => {
+		    /*
+		    	Una fila con plata cuyo metodo no esta en el catalogo corta ACA: no se avanza a "Listo" ni se toca
+		    	el reparto, asi el usuario lo corrige. (Ticket #177: antes empujaba una opcion "null".)
+		    */
+		    if (armado.fila_invalida) {
+		        this.$toast.error('El método de pago ' + (armado.fila_invalida.indice + 1) + ' no está disponible en tu sistema. Elegí otro método o borrá esa fila')
+		        return
+		    }
 
-		        /*
-		        	Una fila sin metodo elegido se saltea. La guarda de arriba ya freno las que
-		        	tienen monto, asi que lo que puede llegar acá es una fila en blanco y en cero:
-		        	sin esto, `payment_method` queda undefined y el spread de mas abajo empuja al
-		        	select del segundo paso una opcion con value y text en undefined.
-		        */
-		        if (!Number(pay.current_acount_payment_method_id)) {
-		            return
-		        }
-
-		        let discount_amount = null
-		        let surchage_amount = null
-
-		        let payment_method = this.payment_methods.find(p => p.id == pay.current_acount_payment_method_id)
-
-		        if (pay.cuota_id) {
-		        	let cuota = this.$store.state.cuota.models.find(c => c.id == pay.cuota_id)
-		        	if (typeof cuota != 'undefined') {
-
-		        		if (cuota.descuento) {
-
-		            		discount_amount = Number(pay.amount) * Number(cuota.descuento) / 100
-
-		        		} else if (cuota.recargo) {
-
-		            		surchage_amount = Number(pay.amount) * Number(cuota.recargo) / 100
-		        		}
-		        	}
-		        }
-		        
-		        let discount = this.payment_method_discounts.find(d => d.current_acount_payment_method_id == pay.current_acount_payment_method_id)
-
-		        if (typeof discount != 'undefined') {
-		            discount_amount = Number(pay.amount) * Number(discount.discount_percentage) / 100
-		        }
-
-		        // 1) options del select (si realmente las querés diferentes)
-		        modal_payment_methods.push({
-		            ...payment_method,
-		            amount: '',
-		            discount_amount: discount_amount,
-		            surchage_amount: surchage_amount,
-		            caja_id: pay.caja_id,
-		        })
-
-		        // 2) filas (source of truth del MultiPaymentMethods)
-		        next_selected.push({
-		            /*
-		            	El __row_id se arrastra. Este objeto literal REEMPLAZA a la fila del
-		            	MultiPaymentMethods, asi que sin el la fila vuelve a identificarse por indice
-		            	en el :key del v-for --el bug del 21/8/2026 por el que Vue 2 reutiliza nodos
-		            	entre filas y mezcla los selects de metodo, moneda y caja--. Y queda peor que
-		            	uniforme: si en el segundo paso se agrega una fila, esa SI trae __row_id y las
-		            	demas no, asi que conviven dos formas de key.
-		            */
-		            __row_id: pay.__row_id,
-		            current_acount_payment_method_id: pay.current_acount_payment_method_id,
-		            moneda_id: pay.moneda_id,
-		            caja_id: pay.caja_id,
-		            amount: '', // <-- acá se resetea lo que ves
-		            cuota_id: pay.cuota_id,
-		            discount_amount: discount_amount,
-		            surchage_amount: surchage_amount,
-		        })
-		    })
-
-		    this.$emit('set_modal_payment_methods', modal_payment_methods)
-		    this.$emit('set_selected_payment_methods', next_selected) // <-- NUEVO
+		    this.$emit('set_modal_payment_methods', armado.opciones)
+		    this.$emit('set_selected_payment_methods', armado.filas_siguientes) // <-- NUEVO
 
 		    this.calculado = true
 		},
