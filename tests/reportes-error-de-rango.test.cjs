@@ -159,19 +159,48 @@ test('CA7 mensaje_de_error_de_reporte: 422 con errors devuelve el primer error; 
 	assert.equal(mensaje({ response: { status: 400, data: { message: 'Server Error' } } }), GENERICO)
 })
 
-test('CA7 un 401 se re-despacha al manejador global de sesión (no queda en silencio)', () => {
+const SESION = 'Tu sesión venció o no tenés permiso para ver este reporte. Volvé a ingresar y probá de nuevo.'
+
+test('CA7 401/403: las 4 acciones en paralelo dejan el mensaje de sesión en castellano y no despachan errorEvent a mano', () => {
+	// El aviso de sesión lo da el interceptor de main.js (con su filtro debe_avisar_este_401): el store
+	// no re-despacha nada, o saldrían avisos duplicados.
 	const eventos = []
 	global.CustomEvent = class { constructor(tipo, init) { this.type = tipo; this.detail = init && init.detail } }
 	global.document = { dispatchEvent: evento => eventos.push(evento) }
-	const { modulo } = cargar_store(() => rechazo(401, { message: 'Unauthenticated.' }))
-	const ctx = contexto(modulo)
-	return modulo.default.actions.getEstadoResultados(ctx).then(() => {
-		assert.equal(eventos.length, 1)
-		assert.equal(eventos[0].type, 'errorEvent')
-		assert.equal(eventos[0].detail.response.status, 401)
+	const campos = { getEstadoResultados: 'error_estado_resultados', getPosicionFiscal: 'error_posicion_fiscal', getFlujoCaja: 'error_flujo_caja', getReportes: 'error_reportes' }
+	const intentos = [401, 403].map(status => {
+		const { modulo } = cargar_store(() => rechazo(status, { message: status == 401 ? 'Unauthenticated.' : 'This action is unauthorized.' }))
+		const ctx = contexto(modulo)
+		return Promise.all(Object.keys(campos).map(accion => modulo.default.actions[accion](ctx))).then(() => {
+			Object.keys(campos).forEach(accion => {
+				assert.equal(ctx.state[campos[accion]], SESION)
+				assert.ok(!/unauthenticated|unauthorized|server error/i.test(ctx.state[campos[accion]]))
+			})
+		})
+	})
+	return Promise.all(intentos).then(() => {
+		assert.equal(eventos.length, 0)
 	}).finally(() => {
 		delete global.document
 		delete global.CustomEvent
+	})
+})
+
+test('CA7 mensaje_de_error_de_reporte: 401 y 403 devuelven el aviso de sesión en castellano', () => {
+	const { modulo } = cargar_store(() => Promise.resolve({ data: {} }))
+	assert.equal(modulo.mensaje_de_error_de_reporte({ response: { status: 401, data: { message: 'Unauthenticated.' } } }), SESION)
+	assert.equal(modulo.mensaje_de_error_de_reporte({ response: { status: 403, data: { message: 'Forbidden' } } }), SESION)
+})
+
+test('CA8 buscar(): con sesión vencida no suma un toast propio (el aviso es el del interceptor global)', () => {
+	const avisos = []
+	const estado = { error_reportes: SESION, error_estado_resultados: SESION, error_posicion_fiscal: SESION, error_flujo_caja: SESION }
+	const vista = {
+		$store: { state: { reportes: estado }, dispatch: () => Promise.resolve() },
+		$toast: { error: texto => avisos.push(texto) },
+	}
+	return SeleccionarFecha.methods.buscar.call(vista).then(() => {
+		assert.deepEqual(avisos, [])
 	})
 })
 
