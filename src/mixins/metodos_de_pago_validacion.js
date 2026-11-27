@@ -18,18 +18,27 @@
  * Por eso la fila en blanco y esta validacion son la misma unidad de trabajo: la primera abre el
  * agujero, la segunda lo tapa del lado del usuario, donde todavia se puede corregir.
  */
+import { metodo_de_pago_existe } from '@/mixins/metodos_de_pago_reglas'
+
 export default {
 	methods: {
 
 		/**
+		 * Una fila con monto cuenta como "sin elegir" en dos casos: el select está en "Seleccione" (id 0) o el
+		 * id apunta a un método que el negocio no tiene en su catálogo (ticket #177: la fila nacía con el 3
+		 * fijo y el select se veía vacío). Cada caso avisa con su texto.
+		 *
 		 * @param {Array} payment_methods Filas del bloque de metodos de pago.
-		 * @returns {boolean} true si hay alguna fila con monto y sin metodo elegido (y ya avisó).
+		 * @returns {boolean} true si hay alguna fila con monto y sin metodo elegido o con uno inexistente (y ya avisó).
 		 */
 		hay_metodo_de_pago_sin_elegir(payment_methods) {
 
 			if (!Array.isArray(payment_methods)) {
 				return false
 			}
+
+			// Catálogo de métodos de pago del negocio (puede no estar cargado: la regla pura no bloquea en ese caso).
+			let catalogo = this.$store.state.current_acount_payment_method.models
 
 			for (let index = 0; index < payment_methods.length; index++) {
 
@@ -39,9 +48,13 @@ export default {
 					continue
 				}
 
-				if (Number(fila.current_acount_payment_method_id)) {
+				// Método elegido y presente en el catálogo: la fila está bien.
+				if (metodo_de_pago_existe(fila.current_acount_payment_method_id, catalogo)) {
 					continue
 				}
+
+				// Distingue "sin elegir" (id 0) de "elegido pero inexistente" para decir qué pasa.
+				let sin_elegir = !Number(fila.current_acount_payment_method_id)
 
 				/*
 				 * Se mira el monto en la moneda de la fila Y el cotizado: una fila en otra moneda
@@ -53,7 +66,11 @@ export default {
 
 				if (monto > 0 || monto_cotizado > 0) {
 
-					this.$toast.error('Elegí el método de pago ' + (index + 1) + ', o borrá esa fila')
+					if (sin_elegir) {
+						this.$toast.error('Elegí el método de pago ' + (index + 1) + ', o borrá esa fila')
+					} else {
+						this.$toast.error('El método de pago ' + (index + 1) + ' no está disponible en tu sistema. Elegí otro método o borrá esa fila')
+					}
 
 					return true
 				}
