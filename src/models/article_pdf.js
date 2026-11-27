@@ -25,10 +25,18 @@ export default {
 			key: 'motrar_fecha_impresion',
 			type: 'checkbox',
 		},
+		{
+			// Activa el formato de cartel con recuadro de precio pagando en efectivo/transferencia.
+			// El porcentaje sale solo de los descuentos de los métodos de pago (el mismo que se usa al cobrar).
+			text: 'Cartel con precio en efectivo o transferencia',
+			key: 'mostrar_precio_efectivo',
+			type: 'checkbox',
+			description: 'Muestra el precio con el descuento de efectivo/transferencia configurado en los métodos de pago, en un recuadro amarillo. Oculta el precio sin impuestos y el precio anterior.',
+		},
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Define plantillas para generar el PDF de ofertas de artículos con imágenes, ideal para difundir promociones.',
-		implicancias: 'Cada plantilla define título, texto personalizado y opciones como mostrar el precio anterior o la fecha de impresión. Al generar el PDF de ofertas, el diseño sale de la plantilla elegida.',
+		implicancias: 'Cada plantilla define título, texto personalizado y opciones como mostrar el precio anterior o la fecha de impresión. También podés activar el cartel con el precio pagando en efectivo o transferencia: usa el descuento ya configurado en tus métodos de pago y oculta el precio sin impuestos y el precio anterior. Al generar el PDF de ofertas, el diseño sale de la plantilla elegida.',
 		como_se_utiliza: 'Creá la plantilla con su configuración y usala al exportar el PDF de ofertas desde el listado de artículos.',
 		palabras_clave: ['ofertas', 'catalogo', 'promociones', 'pdf', 'plantilla'],
 	},
