@@ -81,6 +81,7 @@
 </template>
 <script>
 import horizontal_nav_scroll from '@/common-vue/mixins/horizontal_nav_scroll'
+import { MENSAJE_SESION_REPORTE } from '@/store/reportes/index'
 
 /**
  * Dice si alguna de las fechas no tiene formato AAAA-MM-DD o su año está fuera de 2000-2100.
@@ -201,7 +202,8 @@ export default {
 				let mensajes = []
 				let campos = ['error_reportes', 'error_estado_resultados', 'error_posicion_fiscal', 'error_flujo_caja']
 				campos.forEach(campo => {
-					if (estado[campo] && mensajes.indexOf(estado[campo]) == -1) {
+					// El aviso de sesión vencida ya lo dio el interceptor global: no se duplica acá
+					if (estado[campo] && estado[campo] != MENSAJE_SESION_REPORTE && mensajes.indexOf(estado[campo]) == -1) {
 						mensajes.push(estado[campo])
 					}
 				})

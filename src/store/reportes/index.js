@@ -48,6 +48,10 @@ export function fecha_moneda_params(state, incluir_moneda) {
 /* Texto genérico para cuando el servidor no explicó el problema (5xx, red caída, timeout) */
 export const MENSAJE_GENERICO_REPORTE = 'No pudimos calcular el reporte para esas fechas. Probá de nuevo en un momento; si sigue pasando, avisanos por soporte.'
 
+/* Sesión vencida o sin permiso (401/403): el aviso de sesión lo da el interceptor global de main.js,
+   acá solo se deja este texto en pantalla (nunca el «Unauthenticated.» en inglés del servidor) */
+export const MENSAJE_SESION_REPORTE = 'Tu sesión venció o no tenés permiso para ver este reporte. Volvé a ingresar y probá de nuevo.'
+
 /**
  * Texto que se muestra cuando falla un pedido de reportes. Nunca devuelve el «Server Error» crudo
  * de Laravel: si el servidor explicó el problema (4xx con mensaje, p. ej. un 422 por fechas
@@ -59,6 +63,10 @@ export const MENSAJE_GENERICO_REPORTE = 'No pudimos calcular el reporte para esa
 export function mensaje_de_error_de_reporte(err) {
 	let respuesta = err && err.response
 	let datos = respuesta && respuesta.data
+
+	if (respuesta && (respuesta.status === 401 || respuesta.status === 403)) {
+		return MENSAJE_SESION_REPORTE
+	}
 
 	if (!respuesta || respuesta.status < 400 || respuesta.status >= 500 || !datos) {
 		return MENSAJE_GENERICO_REPORTE
@@ -86,24 +94,12 @@ export function mensaje_de_error_de_reporte(err) {
 
 /**
  * Banderas de axios para los pedidos de reportes: el aviso lo arma el store/`buscar()` (uno solo por
- * búsqueda) en vez de que el interceptor global apile un toast por cada pedido que falla.
+ * búsqueda) en vez de que el interceptor global apile un toast por cada pedido que falla. Los 401/403
+ * son la excepción: main.js los sigue atendiendo aunque lleven la bandera, con su filtro de avisos.
  */
 const CONFIG_SIN_AVISO_GLOBAL = {
 	skip_global_error_event: true,
 	skip_global_validation_toast: true,
-}
-
-/**
- * Las banderas anteriores también silencian el manejo global de sesión vencida (401/403). Para no
- * perderlo, esos estados se re-despachan al mismo `errorEvent` que usa el interceptor de main.js.
- *
- * @param {Object} err - error de axios
- */
-function avisar_sesion_si_corresponde(err) {
-	let status = err && err.response && err.response.status
-	if ((status === 401 || status === 403) && typeof document !== 'undefined') {
-		document.dispatchEvent(new CustomEvent('errorEvent', {detail: err}))
-	}
 }
 
 export default {
@@ -367,7 +363,6 @@ export default {
 				// Sin datos viejos a la vista: se limpia y se deja el mensaje para AvisoErrorReporte
 				commit('setEstadoResultados', {})
 				commit('setErrorEstadoResultados', mensaje_de_error_de_reporte(err))
-				avisar_sesion_si_corresponde(err)
 			})
 		},
 
@@ -389,7 +384,6 @@ export default {
 				commit('setPosicionFiscalLoading', false)
 				commit('setPosicionFiscal', {})
 				commit('setErrorPosicionFiscal', mensaje_de_error_de_reporte(err))
-				avisar_sesion_si_corresponde(err)
 			})
 		},
 
@@ -411,7 +405,6 @@ export default {
 				commit('setFlujoCajaLoading', false)
 				commit('setFlujoCaja', {})
 				commit('setErrorFlujoCaja', mensaje_de_error_de_reporte(err))
-				avisar_sesion_si_corresponde(err)
 			})
 		},
 
@@ -508,7 +501,6 @@ export default {
 				commit('setModel', {})
 				commit('setMesesAnteriores', [])
 				commit('setErrorReportes', mensaje_de_error_de_reporte(err))
-				avisar_sesion_si_corresponde(err)
 			})
 		}
 	},

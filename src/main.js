@@ -448,8 +448,12 @@ function global_api_error_interceptor(error) {
 
     if (is_validation && !skip_validation_toast) {
         show_laravel_validation_toast(data)
-    } else if (response && is_authenticated && !skip_global_error_event) {
-        if (status === 401 && !debe_avisar_este_401()) {
+    } else if (response && is_authenticated && (!skip_global_error_event || status === 401 || status === 403)) {
+        /*
+         * Los pedidos con `skip_global_error_event` (p. ej. los 4 de Reportes) siguen pasando por acá
+         * cuando la sesión se venció (401/403): el filtro de abajo deja un solo aviso por ráfaga.
+         */
+        if ((status === 401 || (status === 403 && skip_global_error_event)) && !debe_avisar_este_401()) {
             /*
              * 🔴 Camino deduplicado: este 401 llegó pegado a otro que ya se avisó, así que NO
              * se despacha `errorEvent` y el usuario ve un solo aviso en vez de quince toasts
