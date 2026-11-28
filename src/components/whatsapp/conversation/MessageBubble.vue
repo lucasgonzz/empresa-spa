@@ -64,6 +64,33 @@
 			alt="Imagen del mensaje">
 		</button>
 
+		<!-- Fotos 2 a 4 de la respuesta del agente (`ai_extra_media_urls`). Sólo se dibujan mientras la
+		respuesta espera aprobación: la primera foto sale en la imagen de arriba y las demás salen
+		como mensajes aparte al confirmar, así que el operador tiene que verlas ANTES de aprobar.
+		Ya enviadas, cada una es su propia fila del chat y no se repiten acá. -->
+		<div
+		v-if="muestra_fotos_extra"
+		class="whatsapp-bubble__extras">
+			<div class="whatsapp-bubble__extras-lista">
+				<button
+				v-for="(url_foto, indice_foto) in fotos_extra_del_agente"
+				:key="'extra-' + indice_foto"
+				type="button"
+				class="whatsapp-bubble__extra-btn"
+				title="Ver la foto completa"
+				@click="abrir_lightbox_de(url_foto)">
+					<img
+					:src="url_foto"
+					class="whatsapp-bubble__extra-img"
+					referrerpolicy="origin"
+					alt="Foto extra de la respuesta">
+				</button>
+			</div>
+			<span class="whatsapp-bubble__extras-texto">
+				{{ texto_fotos_extra }}
+			</span>
+		</div>
+
 		<audio-player
 		v-else-if="muestra_audio"
 		:src="message.media_src"
@@ -468,6 +495,45 @@ export default {
 			return this.message.media_type == 'image' && !!this.message.media_src
 		},
 		/**
+		 * URLs de las fotos extra (2 a 4) que el agente armó para esta respuesta, en orden.
+		 *
+		 * Sólo existen para la burbuja que espera aprobación (CA-S3): una vez enviada, cada foto
+		 * es una fila propia del chat y mostrarla acá la duplicaría. Tolera `null`, ausente (API
+		 * vieja), un valor que no sea arreglo y strings vacíos o en blanco, que se descartan.
+		 *
+		 * @returns {string[]}
+		 */
+		fotos_extra_del_agente() {
+			if (!this.espera_confirmacion) {
+				return []
+			}
+			let urls = this.message.ai_extra_media_urls
+			if (!Array.isArray(urls)) {
+				return []
+			}
+			return urls.filter(url => typeof url == 'string' && url.trim() !== '')
+		},
+		/**
+		 * Hay al menos una foto extra para dibujar debajo de la imagen principal.
+		 *
+		 * @returns {boolean}
+		 */
+		muestra_fotos_extra() {
+			return this.fotos_extra_del_agente.length > 0
+		},
+		/**
+		 * Texto chico que acompaña las miniaturas, con la cantidad en singular o plural.
+		 *
+		 * @returns {string}
+		 */
+		texto_fotos_extra() {
+			let cantidad = this.fotos_extra_del_agente.length
+			if (cantidad == 1) {
+				return 'También se envía 1 foto más con esta respuesta'
+			}
+			return 'También se envían ' + cantidad + ' fotos más con esta respuesta'
+		},
+		/**
 		 * Ídem para la nota de voz. La transcripción no vive acá: viaja en el `body` y se dibuja
 		 * abajo del reproductor como cualquier texto.
 		 *
@@ -861,6 +927,15 @@ export default {
 		abrir_lightbox() {
 			this.$store.commit('whatsapp_chat/setLightboxUrl', this.message.media_src)
 		},
+		/**
+		 * Abre el visor con una foto puntual (las miniaturas de las fotos extra). Igual que
+		 * `abrir_lightbox`, avisa por el store en vez de emitir un evento.
+		 *
+		 * @param {string} url_foto URL absoluta de la foto que se quiere ver completa.
+		 */
+		abrir_lightbox_de(url_foto) {
+			this.$store.commit('whatsapp_chat/setLightboxUrl', url_foto)
+		},
 	},
 }
 </script>
@@ -996,6 +1071,39 @@ export default {
 		width: auto
 		object-fit: cover
 		border-radius: 6px
+	// Fotos extra de la respuesta del agente pendiente de aprobación: miniaturas en fila que
+	// hacen wrap, para no desbordar la burbuja ni siquiera a 360px de ancho.
+	&__extras
+		display: flex
+		flex-direction: column
+		gap: 4px
+		max-width: 100%
+		margin: 0 0 4px 0
+	&__extras-lista
+		display: flex
+		flex-wrap: wrap
+		gap: 4px
+		max-width: 100%
+	&__extra-btn
+		display: block
+		flex: 0 0 auto
+		max-width: 100%
+		margin: 0
+		padding: 0
+		border: none
+		background: transparent
+		cursor: zoom-in
+	&__extra-img
+		display: block
+		width: 72px
+		height: 72px
+		max-width: 100%
+		object-fit: cover
+		border-radius: 6px
+	&__extras-texto
+		font-size: 11px
+		opacity: .75
+		line-height: 1.3
 	// El reproductor viene del molde con `min-width: 200px`, que sumado al padding de la burbuja
 	// no entra en el 70% de un sidebar puesto en su ancho minimo (320px) y se desbordaba. Aca se
 	// lo deja encoger: el waveform es flexible y aguanta perfecto un poco menos de ancho.
